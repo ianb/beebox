@@ -11,7 +11,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 **Testing** — `pnpm test:changed` runs the tests your diff implicates (or a named file: `pnpm exec tap test/<path>.doctest.md`). `pnpm test` is the full suite: an hourly schedule runs it on `main`; don't run it in a worktree without a reason. Pre-commit hook runs typecheck + lint automatically. Why: `docs/plans/change-based-test-selection.md`.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
 - `pnpm lint:changed` — ESLint over what your diff touched (seconds); `pnpm lint` is the whole tree — run it when you changed something many files import. Both are behind the machine-wide run semaphore/eslint cache; why: `../issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md`.
-- Tests are doctests (`.doctest.md`) in `test/`. See `.claude/rules/doctest.md` for syntax.
+- Tests are doctests (`.doctest.md`) in `test/`. See [doctest syntax](../agent-doctest/docs/syntax.md).
 - Three tiers: pure function doctests, route doctests (`makeTestServer()`), filesystem doctests (`makeTmpBox()`)
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run `pnpm test:changed` before committing. Every selected test is one your change implicates, so a failure is yours to fix.
@@ -105,7 +105,7 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 ## Behavioral Notes
 
 - **Read before writing.** Don't guess file formats, XML structures, or API shapes. Read the schema, read the existing code, read the test patterns. This project has specific conventions that differ from defaults.
-- **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
+- **Doctests are the primary test format.** They're markdown files with executable code blocks. Read [doctest syntax](../agent-doctest/docs/syntax.md) before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
 - **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `pnpm typecheck`.
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read frontend.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
@@ -137,7 +137,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |
 | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
-| Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |
+| Doctest syntax | [Doctest syntax](../agent-doctest/docs/syntax.md) |
 | Adding a card type | `docs/adding-schemas.md` |
 | Card format reference | `docs/cards-as-markdown.md` |
 | Card format design history (RFC) | `docs/implemented-plans/cards-as-markdown-rfc.md` |

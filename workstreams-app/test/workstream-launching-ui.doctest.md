@@ -73,5 +73,10 @@ JSON.stringify({
   live: workstreamActionVerbs(live),
   removed: workstreamActionVerbs(removed),
 })
-=> {"dormant":["resume"],"dormantSection":"Dormant","live":["focus","close"],"removed":["resume"]}
+=> {"dormant":["resume","archive"],"dormantSection":"Dormant","live":["focus","close"],"removed":["resume"]}
 ```
+
+A dormant row gained `archive` on 2026-09-12 — the verb existed in the CLI and
+the shared list but had no button. `removed` here carries `merged: false`, work
+that never landed, and the CLI refuses to archive that so no button is offered
+for it either (see `workstream-archive-actions.doctest.md`).

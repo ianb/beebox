@@ -101,3 +101,24 @@ test("parseAddedLines ignores deletions and /dev/null (deleted files)", () => {
   const diff = ["--- a/gone.txt", "+++ /dev/null", "@@ -1 +0,0 @@", "-was here"].join("\n");
   assert.deepEqual(parseAddedLines(diff), []);
 });
+
+// `--check-text` runs ONE string through the same matcher, for a durable name
+// that never appears as a staged line — a workstream name becomes a branch, a
+// worktree path, a registry record and a `Workstream:` trailer, none of which
+// the staged-diff check can see. The mode is a thin wrapper over findBlocked,
+// so what matters is that a name is matched the same way a diff line is.
+test("a name is matched, allowed and ignored exactly as a diff line is", () => {
+  const entries = parseBlocklist(["zzsecret", "!zzsecret-ok", "file:notes/**"].join("\n"));
+  const asName = (text: string, file?: string) =>
+    findBlocked([{ file: file ?? "<name>", lineno: 1, text }], entries);
+
+  assert.equal(asName("my-zzsecret-branch").length, 1, "a blocked term in a name is a hit");
+  assert.equal(asName("clean-branch").length, 0, "an unrelated name passes");
+  assert.equal(asName("zzsecret-ok").length, 0, "an allow rule covers the name");
+
+  // The `<name>` pseudo-path must not collide with a file: ignore glob — a
+  // name is not a file, and an ignore written for docs must not silently
+  // disable the name check.
+  assert.equal(asName("my-zzsecret-branch", "notes/x.md").length, 0, "the glob ignores that FILE");
+  assert.equal(asName("my-zzsecret-branch").length, 1, "but the name is still checked");
+});

@@ -103,14 +103,6 @@ export interface TranscriptionError extends Error {
   body?: string;
 }
 
-/** `≤500` chars — enough to see the provider's reason without logging megabytes. */
-const UPSTREAM_BODY_MAX_CHARS = 500;
-
-/** Truncate an upstream error body to the length the manifest/job are willing to carry. */
-export function truncateUpstreamBody(body: string): string {
-  return body.length > UPSTREAM_BODY_MAX_CHARS ? body.slice(0, UPSTREAM_BODY_MAX_CHARS) : body;
-}
-
 /**
  * Pull the `{status, body, permanent}` triple the HQ job's `classifyHqError`
  * needs out of any HQ arm's thrown error. Every arm (whisper, voxtral,

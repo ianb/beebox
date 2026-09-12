@@ -55,5 +55,15 @@ Design questions (`needs: [design]`):
   (`core/chat/features.ts`) handles non-boolean values, and the sticky-HQ
   precedent applies to stickiness.
 
+- **The composer now locks during dictation, on purpose.** As of
+  2026-09-12 the native composer disables text entry while the microphone is
+  live (`NativeComposerView.isTextEntryLocked`). That is not an obstacle this
+  mode has to route around — it is the same "mic owns the composer" fact stated
+  honestly, because a dictation transcript replaces the whole field on every
+  update (`setDictationTranscript`) and anything typed mid-turn was silently
+  overwritten. Interleaving typed notes with a live stream needs the transcript
+  to own a *span* rather than the field; that is the mechanical core of this
+  item, not a detail of it.
+
 Related: `2026-05-19-spark-mode.md` (ambient-adjacent, different intent);
 iOS parity matters (`bbx-ios-overlap`) since interviews happen on the phone.

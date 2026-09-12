@@ -39,8 +39,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
        beyond the task"
      - beebox/code-style.md — the mechanical rules
      - the most recent shipped precedent for this kind of work (denser than docs)
-     Every design choice below must trace to one of these; if it can't, name
-     the missing principle or drop the choice. -->
+     Explain actual tradeoffs against these preferences; ordinary implementation
+     choices need no principle mapping. Do not invent a missing principle. -->
 
 ## What already exists
 
@@ -51,12 +51,13 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Prior art (external)
 
-<!-- Web search is the default. Three kinds: library/framework limitations
+<!-- Research external premises that a design decision depends on. Examples:
+     library/framework limitations
      ("<tool> <thing you want>" — issues, discussions), bugs/surprising
      behaviour you may hit, and named patterns that cover a mechanism you're
      inventing. One line + URL per finding. "No prior art found for X" is a
-     finding; write it. Skip-with-rationale only when nothing external is in
-     play. -->
+     finding when it bears on the decision; write it. If no decision depends
+     on an external premise, state that briefly and skip the search. -->
 
 ## Tracks / scope
 

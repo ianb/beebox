@@ -199,8 +199,19 @@ Object.keys(pkg.dependencies)
 => [
   "beebox",
   "react",
-  "react-dom"
+  "react-dom",
+  "zod"
 ]
+```
+
+`zod` is a dependency, not a nicety: every box-local card schema imports it,
+and a box scaffolded without it loaded those schemas to a bare
+`Cannot find package 'zod'` warning while cards of that type silently
+validated as if no schema existed.
+
+```ts continue
+typeof pkg.dependencies["zod"]
+=> string
 ```
 
 The `beebox` spec defaults to `link:<engine checkout>` when the

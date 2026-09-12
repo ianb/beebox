@@ -57,7 +57,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   `BeeBoxApp.onReceive`) can fire for one URL, producing two redeem POSTs; the second fails on
   the single-use token and is swallowed. Carried as an open risk (§9).
 
-### 1.2 Pairing-ticket mint (owner-gated)
+### 1.2 Pairing-ticket mint (any box access)
 
 - **Direction:** box web UI (Settings) → box server. **Not called by native code.**
 - **Wire shape:** output `PairingTicket { token: string; expiresAt: string /* ISO */ }`. Token is
@@ -66,8 +66,13 @@ composer not suppressed, wrong attribution — with no error surfaced).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`ownerProcedure`) |
+  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`authedProcedure`) |
   | box impl | `src/core/mobile/pairing.ts` — `createMobilePairingTicket(boxRoot, { createdBy })`, `pendingPairings`, `DEFAULT_PAIRING_TTL_MS`, `pruneExpiredPairings` |
+- **Who may mint:** anyone with access to the box, not the owner alone — you pair your OWN
+  device (changed 2026-09-12; it was `ownerProcedure`). The ticket records `createdBy`, and the
+  device then acts as that person, so a non-owner's phone gets exactly that person's access.
+  `pairing.devices` and `pairing.revokeDevice` follow the same rule (§1.4): if you can pair a
+  phone you can see it and unpair it.
 - **Drift:** LOUD (tRPC error surfaces in Settings).
 
 ### 1.3 `POST /api/pairing/redeem`
@@ -95,7 +100,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   |---|---|
   | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
-  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,lastUsedAt?,revokedAt? }`, `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
+  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
   | hub wall allowance | `src/hub/hub-server.ts` — `isMobilePairingRedeem` |
   | box-scope allowance | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` |
 - **Drift:** LOUD server-side (401/400); SILENT on iOS (maps to `false`, no toast).
@@ -105,8 +110,16 @@ composer not suppressed, wrong attribution — with no error surfaced).
 ### 1.4 Device listing / revocation (box UI only, not native)
 
 - `pairing.devices` (query) → `listMobileDevices`; `pairing.revokeDevice` (mutation) →
-  `revokeMobileDevice`. Both `ownerProcedure`. UI in `CompanionPairingSection.tsx`. No native
-  participation.
+  `revokeMobileDevice`. Both `authedProcedure`, scoped by `mayManageMobileDevice` (changed
+  2026-09-12; both were `ownerProcedure`, which left a member unable to unpair their own lost
+  phone). UI in `CompanionPairingSection.tsx`. No native participation.
+- **Scope:** the owner reaches every device on the box; anyone else reaches the devices they
+  paired (`createdBy === ctx.user.email`). A device with `createdBy: null` — paired before the
+  pairer was recorded — belongs to nobody and stays owner-only; the rule requires a real address
+  on both sides, so a machine credential that cleared the auth wall as nobody reaches nothing.
+  `devices` returns `{ scope: "box" | "own", devices }` so the UI names the list it got rather
+  than implying a short one is the whole box. `revokeDevice` answers NOT_FOUND, not FORBIDDEN,
+  for somebody else's device: a distinct refusal would confirm the id exists on this box.
 
 ---
 
@@ -169,12 +182,17 @@ cookie** minted from that token.
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
 | `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
-### 2.3 Identity NOT unified (structural)
+### 2.3 Identity: a device acts as whoever paired it
 
-A pure mobile request sets `authed: true` but leaves `user: null` and `isOwner: false` in the tRPC
-context (`server-box-scope.ts` — `createContext`). Native chat sends therefore attribute to nobody.
-This is a known open risk (§9), not an incidental bug — a platform implementer must expect
-authenticated-but-unattributed behavior.
+A mobile request resolves to the person recorded in the device's `createdBy`
+(`server-box-scope.ts` — `createContext` reads `resolveMobileRequestAuth`, not just its
+truthiness). So `user` is that person and `isOwner` is true only when that person is the owner.
+A session identity on the same request still wins; the device credential fills in when there is
+no session.
+
+Changed 2026-09-12. Previously a pure mobile request set `authed: true` but left `user: null` and
+`isOwner: false`, so native chat sends attributed to nobody and a paired phone could never be its
+owner — nor correctly fail to be, when a non-owner paired it.
 
 ### 2.4 Failure semantics
 
@@ -287,9 +305,12 @@ the contract.
   unavailable (contextDir/reason). Attention carries surface, optional in-box
   focusedRef, and visible/hidden transcript. Native acknowledges valid publication
   through `window.beeboxComposerBindingVersion = 1` and the
-  `beebox:composer-binding-ready` event. Until then updated iOS retains its draft
-  and explains that sending requires an updated host. URL-derived session state
-  is only the pre-negotiation fallback; ordinary route movement never retargets.
+  `beebox:composer-binding-ready` event. Until a binding is ready iOS retains its
+  draft and names the state it is actually in — no publication yet, resolving, or
+  unavailable-with-reason — rather than blaming host version skew: the web side
+  always publishes, and its first publication on every load is `resolving`.
+  URL-derived session state is only the pre-negotiation fallback; ordinary route
+  movement never retargets.
 - **Workspace attention:** phone layouts display one card or the transcript.
   Showing the transcript preserves cards and browser Back returns to the card.
   Desktop panes can show two cards with ambient chat. Hidden mounted cards do not
@@ -769,8 +790,13 @@ is not a substitute for it.
     pause while the box speaks (§4.5) and the reply streaming in before that speech starts. Those
     gaps are exactly when nobody is speaking or touching, and the turn will reopen the microphone at
     the end of them. The turn ends — and the hold with it — when the microphone closes, the message
-    is sent and closed, or dictation fails (denied permission, audio-engine failure, a phone call, a
-    route change), because in each of those the microphone is already down.
+    is sent and closed, dictation fails (denied permission, audio-engine failure, a phone call, a
+    route change), or dictation simply goes idle with no start pending, because in each of those
+    the microphone is already down. That last case exists because not every stop announces itself
+    — an audio session that never associates, a start cancelled below the turn — and without it the
+    turn held the screen awake indefinitely for a recording that was not happening
+    (`NativeVoiceTurnEvent.dictationWentIdle`). The deliberate pause while the box speaks is idle
+    too, and is excluded by name: it is the one idle the turn intends to reopen from.
   - page speech playing (§4.5 `{playing:true}`), which a screen lock would cut off mid-sentence.
   - native capture recording audio — the same open-microphone break on a different surface.
 - **Native does not hold it for** an idle foregrounded chat, or a turn streaming in outside a voice
@@ -1111,7 +1137,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
-| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}`; 500 `{error,permanent,code?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
@@ -1276,10 +1302,11 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `test/core/mobile/pairing-store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
-- **Identity not fully unified.** Mobile requests are `authed` but the tRPC context still carries
-  `user=null`/`isOwner=false`. Chat sends no longer attribute to nobody, though: `POST /api/chat/send`
-  now falls back to `resolveMobileSender`, resolving the paired device's `createdBy` identity
-  (`test/webapp/routes/chat-mobile-sender.doctest.md`). Unifying the tRPC context itself remains open.
+- **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
+  device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
+  the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
+  `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
+  remaining piece.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending

@@ -224,7 +224,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         openAccess: instance.openAccess,
       });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
-      const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
+      // Keep the resolved auth, not just a boolean: a paired device records WHO
+      // paired it (`createdBy`), and that person is who the device acts as.
+      const mobileAuth = await resolveMobileRequestAuth(box.boxRoot, req.headers);
+      const mobileOk = mobileAuth !== null;
       // The browse key must be recognized HERE too, not only in the preHandler:
       // a request it let through would otherwise reach a protected procedure
       // with `authed: false`, so the credential would open every public read
@@ -248,7 +251,14 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // construction option), so this reads it instead of re-deriving from the
       // gate (principle #8).
       const identityIsOpen = identity.source === "open";
-      const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
+      // A mobile device carries the identity of whoever paired it. Without this
+      // the device authenticated as a device and as nobody: `user` stayed null,
+      // so the phone could never be its owner — nor correctly NOT be, when a
+      // non-owner paired it. A session identity on the same request still wins;
+      // the device credential only fills in when there is no session.
+      const mobileEmail = mobileAuth?.createdBy ?? null;
+      const email = identity.email ?? mobileEmail;
+      const user = email ? { email, name: identity.name ?? email } : null;
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,

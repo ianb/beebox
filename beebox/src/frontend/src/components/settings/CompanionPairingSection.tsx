@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import qrcode from "qrcode-generator";
 import { getApiBase } from "../../api";
+import { useBoxName } from "../../hooks/useBoxName";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -8,7 +9,8 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 
-type MobileDevice = RouterOutput["pairing"]["devices"][number];
+type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
+type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
 
 interface PairingTicket {
   deepLink: string;
@@ -21,15 +23,16 @@ function boxBaseUrl(): string {
   return new URL(boxPath, window.location.origin).toString().replace(/\/$/, "");
 }
 
-function boxLabel(): string {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  return parts.at(-1) === "settings" ? parts.at(-2) ?? "Bee Box" : parts.at(-1) ?? "Bee Box";
-}
-
-function pairingDeepLink(token: string): string {
+/**
+ * The `label` the phone files this box under. It used to be guessed from the
+ * last path segment (with a special case for a `/settings` suffix), which named
+ * every newly paired box after the route instead of the box — "chat", once
+ * Settings became a card. The box's real display name is already in hand.
+ */
+function pairingDeepLink(token: string, boxName: string): string {
   const params = new URLSearchParams({
     baseURL: boxBaseUrl(),
-    label: boxLabel(),
+    label: boxName || "Bee Box",
     pairingToken: token,
   });
   return `beebox://pair?${params.toString()}`;
@@ -40,6 +43,12 @@ function qrSvg(value: string): string {
   qr.addData(value);
   qr.make();
   return qr.createSvgTag({ cellSize: 5, margin: 3 });
+}
+
+/** The list is scoped to what the caller may reach, so the heading says which
+ *  list this is rather than implying a short one is the whole box. */
+function deviceHeading(scope: DeviceScope | undefined): string {
+  return scope === "own" ? "Your paired devices" : "Paired devices";
 }
 
 function formatDate(value: string): string {
@@ -65,7 +74,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
         <Text size="xs" tone="muted" className="ml-1">
           Paired {formatDate(device.createdAt)}
           {device.lastUsedAt ? ` - last used ${formatDate(device.lastUsedAt)}` : ""}
-          {device.revokedAt ? ` - revoked ${formatDate(device.revokedAt)}` : ""}
+          {device.revokedAt ? ` - unpaired ${formatDate(device.revokedAt)}` : ""}
         </Text>
       </Text>
       {!device.revokedAt ? (
@@ -75,7 +84,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
           loading={revokeMutation.isPending}
           onClick={() => revokeMutation.mutate({ deviceId: device.id })}
         >
-          Revoke
+          Unpair
         </Button>
       ) : null}
     </Row>
@@ -83,6 +92,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
 }
 
 export function CompanionPairingSection() {
+  const { boxName } = useBoxName();
   const devicesQuery = trpc.pairing.devices.useQuery();
   const createMutation = trpc.pairing.createTicket.useMutation();
   const [ticket, setTicket] = useState<PairingTicket | null>(null);
@@ -96,7 +106,7 @@ export function CompanionPairingSection() {
 
   const createTicket = async () => {
     const next = await createMutation.mutateAsync();
-    setTicket({ deepLink: pairingDeepLink(next.token), expiresAt: next.expiresAt });
+    setTicket({ deepLink: pairingDeepLink(next.token, boxName), expiresAt: next.expiresAt });
   };
 
   const copyLink = async () => {
@@ -152,19 +162,30 @@ export function CompanionPairingSection() {
         ) : null}
 
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">Paired devices</Text>
+          <Text as="h3" size="sm" weight="semibold">{deviceHeading(devicesQuery.data?.scope)}</Text>
           {devicesQuery.isLoading ? (
             <Text size="sm" tone="muted">Loading devices...</Text>
           ) : devicesQuery.error ? (
-            <Text size="sm" tone="danger">{devicesQuery.error.message}</Text>
-          ) : devicesQuery.data && devicesQuery.data.length > 0 ? (
-            <div className="divide-y divide-warm-100">
-              {devicesQuery.data.map((device) => (
-                <DeviceRow key={device.id} device={device} />
-              ))}
-            </div>
+            <Text size="sm" tone="danger">Devices could not be loaded. {devicesQuery.error.message}</Text>
+          ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (
+            <>
+              <div className="divide-y divide-warm-100">
+                {devicesQuery.data.devices.map((device) => (
+                  <DeviceRow key={device.id} device={device} />
+                ))}
+              </div>
+              {devicesQuery.data.scope === "own" ? (
+                <Text size="xs" tone="muted">
+                  Devices you paired. Only the box owner sees every device on this box.
+                </Text>
+              ) : null}
+            </>
           ) : (
-            <Text size="sm" tone="muted">No devices paired yet.</Text>
+            <Text size="sm" tone="muted">
+              {devicesQuery.data?.scope === "own"
+                ? "You have not paired a device with this box."
+                : "No devices paired yet."}
+            </Text>
           )}
         </Stack>
       </Stack>

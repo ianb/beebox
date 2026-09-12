@@ -9,6 +9,7 @@
 
 import { Command } from "commander";
 import * as crypto from "node:crypto";
+import type * as http from "node:http";
 import {
   loadHubConfig,
   defaultHubConfigPath,
@@ -178,7 +179,7 @@ export const hubCommand = new Command("hub")
       if (shuttingDown) return;
       shuttingDown = true;
       console.log(`\nReceived ${signal}, shutting down hub...`);
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await closeServer(server);
       await supervisor.stopAll();
       process.exit(0);
     };
@@ -197,5 +198,43 @@ export const hubCommand = new Command("hub")
       console.log(`  ${slug}: http://${host}:${port}/${slug}/`);
     }
   });
+
+/**
+ * Stop the HTTP server without waiting on connections that will never end.
+ *
+ * `server.close()` refuses new connections and then waits for every EXISTING
+ * one to close. The hub serves WebSocket upgrades (chat holds one open for as
+ * long as a tab is open) and keep-alive HTTP, so that callback may never fire:
+ * the handler logged "shutting down hub…" and then hung until systemd's
+ * `TimeoutStopSec=60` expired and SIGKILLed the control group.
+ *
+ * That was worse than a slow restart. `supervisor.stopAll()` runs AFTER this,
+ * and its whole job is to SIGTERM each box child and wait — because, in its own
+ * words, "a git killed mid-index-write leaves the box unable to commit at all".
+ * Hanging here meant that never ran, so every deploy killed box children
+ * abruptly rather than draining them.
+ *
+ * So: stop accepting, end idle connections at once, and force the rest after a
+ * linger window. The outer deadline is the backstop — whatever happens, this
+ * resolves and `stopAll()` gets its turn well inside the 60s budget.
+ */
+const SERVER_CLOSE_LINGER_MS = 2_000;
+const SERVER_CLOSE_DEADLINE_MS = 8_000;
+
+export async function closeServer(server: http.Server): Promise<void> {
+  const closed = new Promise<void>((resolve) => server.close(() => resolve()));
+  // Ends connections sitting between requests. It does NOT end a WebSocket, nor
+  // a socket that connected and never sent a request — neither is "idle" by
+  // Node's reckoning — which is exactly why the forced close below exists and
+  // why the linger window is short.
+  server.closeIdleConnections();
+  const force = setTimeout(() => server.closeAllConnections(), SERVER_CLOSE_LINGER_MS);
+  const deadline = new Promise<void>((resolve) => setTimeout(resolve, SERVER_CLOSE_DEADLINE_MS));
+  try {
+    await Promise.race([closed, deadline]);
+  } finally {
+    clearTimeout(force);
+  }
+}
 
 registerAddBoxSubcommand(hubCommand);

@@ -23,7 +23,7 @@ line (`docs/testing.md` opens with this).
   with executable blocks. Three flavors: pure-function; route
   (`makeTestServer()` — NOTE it prefixes URLs with `/test`;
   `rootRequest()` escapes); filesystem (`makeTmpBox()`). Syntax:
-  `.claude/rules/doctest.md` (loads automatically when editing one);
+  `agent-doctest/docs/syntax.md` (monorepo-relative; the path rule points here);
   deeper reference in the monorepo `agent-doctest/docs/`.
 - **Scenario tests** (`src/scenario/`) — multi-step end-to-end fixtures
   driving a real box through wakeup cycles. For pipeline behavior that

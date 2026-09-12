@@ -234,3 +234,36 @@ Applied the shared contract plus conditional [Codex runner](../../../.claude/ski
 The Claude runner now explicitly distinguishes committed branch diffs from working-tree/new-file review targets. Supporting references resolve through the existing Codex skill directory symlink; no mirror generator change is needed. Other four proposed rewrites remain unimplemented.
 
 Validation: doc-check, whitespace, unchanged skill frontmatter, and all source/mirrored reference links pass. An independent Claude review traced plan/diff routing and stalled-run recovery across the four driving models. It prompted explicit moved-template references, restoration of the foreground-run consequence and delegated prompt clause, and removal of a newly added challenge-default sentence. Its proposed target-based model policy was not adopted: the original default and explicit plan-mode override remain. The literal diff-review prompt and authority block remain intact. These are static review traces, not empirical runs of all four models or an activation evaluation.
+
+## Follow-on: reduce unnecessary reading and work
+
+The human approved seven audit recommendations after the cross-model chunk
+landed. These edits are applied locally:
+
+| Instruction purpose | Change |
+|---|---|
+| Prove box guidance is usable | `bbx-context` selects knowledge-audit expectations by intended loading tier: recall, known reference, or discovery. |
+| Establish a bug's cause | `bbx-debug` stops minimizing at a cheap diagnostic repro and tests plausible hypotheses without a fixed count. Its evidence-before-fix requirement remains. |
+| Explain and verify a design | `bbx-plan` maps actual tradeoffs to preferences and verifies external premises the design depends on. Source citations remain required. |
+| Keep tool output useful | Root guidance fixes introduced/relevant diagnostics and records pre-existing out-of-scope noise once for focused cleanup. |
+| Close resolved issues | The finish agent starts with supplied and branch-added candidates; concrete sibling links or evidence of a missing issue justify expanding the search. |
+| Make rules discoverable | Debug, context, and codehealth consolidate repeated rule summaries, preserving unique obligations in their relevant sections. |
+| Teach doctest syntax when needed | The path rule becomes a pointer to the consolidated [syntax reference](../../../agent-doctest/docs/syntax.md), also linked from the doctest skill and beebox guidance. The generator stays unchanged. |
+
+This is dev-repo guidance and a documentation-map label, not a change to
+box-agent prompts or the audit harness. It does not require box knowledge-audit runs. The four larger editorial
+proposals above remain future work; this pass does not change their scope.
+
+Static validation: regenerated 18 AGENTS mirrors and verified the root source
+and shortened doctest rule are reflected. The rule's body fell from 512 to 29
+words; full grammar remains in the syntax reference. Skill descriptions and
+frontmatter are unchanged, Markdown targets resolve, original rule details
+survive consolidation, and doc-check/whitespace checks pass. These checks do
+not claim empirical activation or behavior results across the four models.
+
+Independent review confirmed the grammar transfer and retained obligations.
+Corrections made: explicitly re-run after each repro reduction, retain bounded
+inbound issue-slug searches, repoint older syntax references, and distinguish
+the Bee Box fence-label convention from the shared runner's accepted syntax.
+The documentation-map label passes focused ESLint; `pnpm test:changed` selected
+zero tests because none import that changed source path. No full suite was run.

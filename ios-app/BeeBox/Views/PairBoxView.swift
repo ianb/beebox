@@ -90,9 +90,18 @@ struct PairBoxView: View {
             }
             .navigationTitle("Pair Box")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                // A checkmark, not the word "Done", and in `.confirmationAction`
+                // rather than the leading cancel slot it used to occupy. The word
+                // read as a link rather than a confirm — a plain-text bar button
+                // is what Accessibility's Button Shapes underlines, and no
+                // placement change escapes that; a glyph does. The accessibility
+                // label stays "Done" for VoiceOver and the control scan.
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
                         dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }
