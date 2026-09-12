@@ -94,10 +94,13 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
   `pnpm --dir beebox doc-check --fix`, then `pnpm doc-graph` in `beebox/`.
 
 ## 6. Close resolved issues
-Candidates: the sheet's `issues`, the plan's frontmatter `issues:`, the briefing, and
-a grep of `issues/` for the files, symbols, and symptoms this branch touched. For
-each, follow its cross-links and grep its slug too — a fix commonly resolves a
-sibling, and closing one while its twin stays open is the rot this prevents.
+Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,
+and issues added on this branch. Follow concrete sibling/duplicate links from
+those candidates, and search each candidate's slug in `issues/` for inbound
+references. Expand beyond those links only when the work or a candidate gives
+specific evidence of a missing related issue; search that symptom or identifier,
+not every file and symbol in the diff. Do not re-search candidates already
+reconciled in this work unit unless later changes affect their resolution.
 For each issue this work **actually resolves**: `git mv issues/<category>/<x>.md
 issues/closed/<category>/`, then in the moved file add `resolution:
 implemented|wontfix|superseded`, set `workstream:` to the bare workstream name, and

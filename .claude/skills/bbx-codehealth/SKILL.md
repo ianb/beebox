@@ -203,23 +203,3 @@ docs, and config — not just the code.
   with an external ideal.
 - **Maintain balance** — don't over-abstract or simplify clean code; scope to
   what's genuinely crufty.
-
-## Common rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "It works, leave it." | Working ≠ healthy. Cruft compounds silently; this pass is the deliberate paydown before it forces a rewrite. |
-| "I'll extract a pure function for testability." | If the bug hides in *how it's called*, you've added a shallow module and lost locality. Deepen the real seam, don't shave a helper off. |
-| "More files = cleaner." | Not if you bounce between them to understand one concept. Split by responsibility; things that change together live together. |
-| "One adapter, let me add the interface now." | One adapter is a hypothetical seam. Wait for the second before abstracting — premature interfaces are their own cruft. |
-| "While I'm here, I'll simplify all of it." | Scope to the cruft. Churning clean code adds review burden and risk for no health gain. |
-| "Tests pass, the refactor is safe." | Hyrum's Law: a caller may depend on behaviour no test covers. Be intentional about the interface; don't assume green = safe. |
-| "The code is clear, it doesn't need a doc or an index." | If a caller has to read the implementation to use the module correctly, it isn't deep yet. A small *documented* surface (index + a usage doc) is the deepening, not an extra. |
-
-## Red flags — you're shaving, not deepening
-
-"Extract this for testability" (when the bug is in the caller) · proposing an
-interface for a single implementation · splitting a file just to get under the
-line cap (rather than by responsibility) · bundling three refactors into one ·
-"simplifying" code that was already clear · deleting code without deleting its
-tests/docs/config.
