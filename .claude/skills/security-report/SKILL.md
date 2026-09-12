@@ -21,16 +21,10 @@ surfaces. It is hand-maintained and stable; this skill must never rewrite it or
 recreate a `beebox/SECURITY.md`. Touch it only if a *link* here goes
 stale.
 
-The honesty claim these artifacts make is a **process claim**: a reader
-cannot verify the report wasn't influenced by error or malice, but they can
-read this rubric, the diff of every regeneration, and the review trail.
-Follow the rubric literally; where you deviate, say so in the draft.
-
-**Never auto-commit either artifact.** The loop is: agent drafts →
-boxholder reviews → commit. An agent-generated security document that
-self-commits could assert false safety. The provenance header's
-`reviewed-by` records the human; a draft carries `reviewed-by: DRAFT —
-unreviewed` until then.
+Follow this rubric; disclose deviations in the draft. Completion is a draft
+and diff presented for human review. **Never auto-commit either artifact:**
+agent drafts → boxholder reviews → commit. Keep `reviewed-by: DRAFT —
+unreviewed` until the human reviews it; then record that reviewer.
 
 ## Provenance header
 
@@ -44,18 +38,10 @@ model: <model id that produced the draft>
 reviewed-by: <human first name or handle, or "DRAFT — unreviewed">
 ```
 
-`generated-at-rev` is the **update anchor** — the claim "this accounting
-reflects the tree as of this rev." It must be the **HEAD the report
-actually reflects at review time**, i.e. the commit the reviewed draft is
-current against — NOT the rev an inventory was first derived from.
-
-This distinction is load-bearing and was gotten wrong on the first
-creation: the anchor was set to the pre-work rev the inventory started
-from, so the *next* update's `<anchor>..HEAD` range dragged in the report
-system's entire construction history as diff noise. Set it to the current
-`HEAD` at draft time (step 7 does this), and on a fresh creation set it to
-the **sign-off HEAD**, not wherever the inventory began. Correct anchoring
-is what makes the update range == "the commits not yet reflected."
+`generated-at-rev` identifies the HEAD the report actually reflects at review
+time. Set it to current HEAD when drafting, and reconcile intervening changes
+before advancing it to the sign-off HEAD. Never use the inventory's starting
+rev as the anchor for a report that reflects later work.
 
 ## Update procedure (the normal case)
 
@@ -69,19 +55,11 @@ is what makes the update range == "the commits not yet reflected."
    archive). If a change doesn't alter the security posture, it needs no
    edit.
 
-   **Reason by ancestry, never by commit dates.** With a correct anchor,
-   every commit in `<anchor>..HEAD` is unreflected *by construction* —
-   adjudicate each on its merits. Do NOT conclude a change is "already
-   handled" because its commit date looks old, because it landed on
-   another branch before the last report edit, or because a nearby
-   cross-reference happens to look current. A merge-heavy range routinely
-   contains commits *dated* before the report's own edits that were not in
-   the report's tree until a later merge. If you must ask whether a
-   specific commit was in the reflected tree, answer with
-   `git merge-base --is-ancestor <commit> <generated-at-rev>` (true = it
-   was reflected) — never a timestamp comparison. (First-run evidence: an
-   updater mislabeled correctly-caught drift as a pre-existing report bug
-   precisely by trusting commit-date order over ancestry.)
+   **Reason by ancestry, never commit dates.** An old-dated commit may only
+   have entered the reflected tree through a later merge. To check whether a
+   commit was already reflected, use
+   `git merge-base --is-ancestor <commit> <generated-at-rev>`; nearby current
+   cross-references do not prove it was handled.
 4. Sweep for **new surface outside the map**: `git diff --stat` the full
    range unscoped; any new route registration, `process.env` secret,
    outbound `fetch`/SDK client, or spawned process in files the map missed
@@ -97,20 +75,10 @@ is what makes the update range == "the commits not yet reflected."
    the last report? A fixed one becomes ordinary public history — move it
    back to the public queue and let the report reference it directly.
    Are there new private items to reference by class?
-6. Re-derive any security-overview.md paragraph whose underlying items changed —
-   and expect that to be **few or none**. The two artifacts have different
-   jobs: **every** security-relevant detail belongs in
-   `security-report.md`; security-overview.md changes **only** when the
-   reader-facing overall picture does (a new egress destination, a changed
-   blast-radius claim, a new accepted risk, a materially different auth
-   story). Do not feel obligated to touch security-overview.md just because you
-   edited the structured report — most per-item accounting changes need no
-   security-overview.md edit at all, and a change that's already represented there
-   often needs no *more* exposure than it has. When security-overview.md does need
-   to move, **prefer a small edit to an addition**: if an existing
-   sentence can be clarified or corrected in place, do that rather than
-   append new content. The structured report grows with detail; security-overview.md
-   stays a tight synthesis.
+6. Update `security-overview.md` only when affected items change its overall
+   picture: egress destinations, blast radius, accepted risks, or auth story.
+   Most structured-report edits need no overview change. Prefer correcting
+   an existing sentence to adding one; completeness belongs in the report.
 7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
 
@@ -122,27 +90,14 @@ survive.
 
 ## When to update
 
-Anchored to events, not a calendar (there is no reliable do-at-a-cadence
-process to lean on):
+Update at release boundaries that will be shown to people, when a surface-map
+`git diff --stat <generated-at-rev>..HEAD -- <paths>` signals drift, or on demand.
+Use the incremental procedure normally; full regeneration is for first creation
+or suspected drift. This is also tracked in `beebox/docs/maintenance.md`.
 
-- **At release boundaries** — regenerate as a step in any release / cut
-  that will be shown to people. This is the primary human trigger, and it
-  rides something that already happens.
-- **When the staleness signal fires** — `generated-at-rev` plus the
-  surface map answer "have security surfaces changed since this report?"
-  Surfacing that drift (a `git diff --stat <rev>..HEAD -- <map>` that
-  comes back non-empty) is what tells you it's time; it converts a
-  cadence you don't keep into a signal you can see. This report is also
-  listed in `beebox/docs/maintenance.md` alongside knowledge-audits
-  as slow-drift maintenance.
-- **On demand** — invoking `/security-report` is always the thing that
-  does the update; the triggers above just say *when* to invoke it.
-
-Deliberately **not** a cron job or a blocking commit gate: this is
-judgment work under human review, so it must not fire unattended or block
-unrelated commits. A scheduled *reminder* that only runs the staleness
-check and notifies (never writing) is an acceptable future addition — it
-automates the nudge, never the judgment.
+Do not run the report writer unattended or make it a blocking commit gate.
+A scheduled read-only staleness reminder is permitted; scheduling does not
+replace the human review required for report changes.
 
 ## Surface map
 
@@ -184,36 +139,18 @@ the layout may fit the section):
 Severity+reachability exist so a reader can sort: a `high`/`public` gap is
 a launch blocker; a `low`/`unreachable` accepted risk is a footnote.
 
-**Two calls must never be made silently — make both fail-closed and
-surface them to the reviewer, never resolve them alone:**
+**Draft these classifications for human review; default conservatively:**
 
-- **`accepted` vs `gap`.** `accepted` asserts *a human deliberately chose
-  to live with this* — putting words in the boxholder's mouth, in the
-  direction that reads as safe. Default: **no recorded decision (a dated
-  call, an issue resolution, a doc) ⇒ `gap`, not `accepted`.** If a
-  weakness has a real control but no accept-decision, it is `mitigated`,
-  not `accepted`. Do not mark `accepted` to describe the status quo.
-- **Public issue vs private (the disclosure rule).** The repo is
-  source-available, so a public issue is world-readable. Before filing a
-  weakness publicly, ask: **does disclosing it hand an attacker
-  materially more than reading the architecture already does?**
-  - *No* — it is inherent, class-level, or evident from the design
-    (prompt injection, the agent blast radius, boxes sharing an origin,
-    the `secret`-tier capability URL). File **public**, and if it is
-    scary, say so loudly. Concealing an architectural risk only deceives
-    the operator deciding whether to trust the system.
-  - *Yes* — it is a specific, unpatched defect where the disclosure *is*
-    the recipe (a route + line where a check is missing, on a live
-    surface). File in **`private-issues/security/`**; the public report
-    references it **by class only** — no `file:line`, no link (a
-    public→private link dangles and is forbidden). Such an item is
-    private *until fixed*, then it becomes ordinary public history.
-  - When genuinely unsure which side it falls on: **private until someone
-    decides** (over-hiding costs some transparency; under-hiding hands
-    out a roadmap).
-
-  Both calls are the boxholder's to confirm — draft your classification,
-  then let the human adjudicate the borderline ones at review.
+- **`accepted` vs `gap`:** `accepted` requires a recorded human decision
+  (a dated call, issue resolution, or doc). Without one, use `gap`, or
+  `mitigated` if a specific control exists. The status quo is not acceptance.
+- **Public vs private disclosure:** public issues are world-readable. File
+  inherent, class-level, or design-evident risks publicly. File a specific
+  unpatched defect privately when disclosure would give an attacker a recipe
+  beyond what the architecture reveals: use `private-issues/security/` until
+  fixed. The public report references such defects by class only, with no
+  `file:line` or public-to-private link. When unsure, keep it private pending
+  the boxholder's decision. Surface borderline classifications at review.
 
 ### 1. Endpoints, auth, abilities
 
@@ -242,8 +179,7 @@ user-initiated), exactly what data (card bodies? images? audio? email?),
 credential used, per-box scoping, opt-out and what breaks without it. This
 section must be complete across providers — Anthropic, OpenAI, Google,
 Cloudflare, Tailscale, Telegram, push services, git remotes, and any
-outbound URL fetch. "We only talk to Google" was the old, wrong story;
-completeness here is the section's whole value.
+outbound URL fetch. Include every provider, not only the examples listed here.
 
 ### 4. Internal security practices
 
@@ -329,20 +265,9 @@ backed by an item there. Shape:
 7. **Known limitations and accepted risks** — the roll-up, readable.
 8. Link to the structured version for the full accounting.
 
-Register: honest, specific, unpromotional. Weaknesses are stated as
-plainly as strengths — the OpenClaw lesson is that an explicit blast-radius
-doc is what earns trust, not reassurance.
-
-**What reaches this document — and what doesn't.** security-overview.md is a
-synthesis, not a mirror of the structured report. Its job is to give a
-reader an accurate *overall picture*; it is not obligated to surface every
-item, and an item it already covers rarely needs more prominence. A great
-many structured-report changes leave security-overview.md untouched, and that is the
-correct outcome — the pressure to "reflect the update somewhere visible" is
-a trap that bloats the synthesis and buries the picture. When you do edit
-it, reach for the smallest change that keeps it true: correct or clarify an
-existing sentence in place before adding a new one. Length is a cost here;
-the structured report is where completeness lives.
+State weaknesses as plainly as strengths. Keep the overview a concise
+synthesis; apply the update criteria in step 6 rather than mirroring every
+structured-report change.
 
 ## README linkage
 
