@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import qrcode from "qrcode-generator";
 import { getApiBase } from "../../api";
+import { useBoxName } from "../../hooks/useBoxName";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -21,15 +22,16 @@ function boxBaseUrl(): string {
   return new URL(boxPath, window.location.origin).toString().replace(/\/$/, "");
 }
 
-function boxLabel(): string {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  return parts.at(-1) === "settings" ? parts.at(-2) ?? "Bee Box" : parts.at(-1) ?? "Bee Box";
-}
-
-function pairingDeepLink(token: string): string {
+/**
+ * The `label` the phone files this box under. It used to be guessed from the
+ * last path segment (with a special case for a `/settings` suffix), which named
+ * every newly paired box after the route instead of the box — "chat", once
+ * Settings became a card. The box's real display name is already in hand.
+ */
+function pairingDeepLink(token: string, boxName: string): string {
   const params = new URLSearchParams({
     baseURL: boxBaseUrl(),
-    label: boxLabel(),
+    label: boxName || "Bee Box",
     pairingToken: token,
   });
   return `beebox://pair?${params.toString()}`;
@@ -83,6 +85,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
 }
 
 export function CompanionPairingSection() {
+  const { boxName } = useBoxName();
   const devicesQuery = trpc.pairing.devices.useQuery();
   const createMutation = trpc.pairing.createTicket.useMutation();
   const [ticket, setTicket] = useState<PairingTicket | null>(null);
@@ -96,7 +99,7 @@ export function CompanionPairingSection() {
 
   const createTicket = async () => {
     const next = await createMutation.mutateAsync();
-    setTicket({ deepLink: pairingDeepLink(next.token), expiresAt: next.expiresAt });
+    setTicket({ deepLink: pairingDeepLink(next.token, boxName), expiresAt: next.expiresAt });
   };
 
   const copyLink = async () => {
