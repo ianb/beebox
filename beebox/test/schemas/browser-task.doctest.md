@@ -54,6 +54,20 @@ parseCardText("---\ntype: browser-task\nsource: not a url\n---\nx\n", { source: 
 => throws CardIOError
 ```
 
+## The prompt must not lean on the box
+
+The reader has a browser and no box. A link to a card, a box path, the
+briefing, or a `bbx` command is a warning at validate time, one per kind:
+
+```ts
+const warn = (bodyText: string) => (BrowserTaskSchema.validate ? BrowserTaskSchema.validate({ fields: { status: "open", source: "https://x.test", body: bodyText } }) : []).map((i) => `${i.severity}: ${i.message}`);
+JSON.stringify(warn("Scan the page and record each show. See https://example.test/about for context."))
+=> []
+
+JSON.stringify(warn("Use the rule in the briefing; file into _content/events/ as Show.record.card via bbx create."))
+=> ["warning: the prompt refers to a card file; the reader has a browser and no box, so name the thing itself (a URL, a date, a name)","warning: the prompt refers to a box path; the reader has a browser and no box, so name the thing itself (a URL, a date, a name)","warning: the prompt refers to the briefing; the reader has a browser and no box, so name the thing itself (a URL, a date, a name)","warning: the prompt refers to a bbx command; the reader has a browser and no box, so name the thing itself (a URL, a date, a name)"]
+```
+
 ## The submission contract
 
 The card refuses when closed and accepts when open:

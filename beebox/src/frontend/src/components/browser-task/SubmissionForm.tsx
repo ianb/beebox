@@ -156,7 +156,9 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
         ) : null}
         {upload.phase === "uploading" ? <Text as="p" size="sm">Uploading… {String(upload.percent)}%</Text> : null}
         {upload.phase === "accepted" ? (
-          <Text as="p" tone="strong">Accepted batch {upload.batch} with {String(upload.count)} records.</Text>
+          <Text as="p" tone="strong">
+            Done. Batch {upload.batch} accepted with {String(upload.count)} records. Nothing more to do here; the box will file them.
+          </Text>
         ) : null}
         {upload.phase === "refused" ? (
           <Stack gap="xs">

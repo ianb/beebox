@@ -23,6 +23,7 @@ import { locationRouter } from "./routers/location.js";
 import { pushRouter } from "./routers/push.js";
 import { viewsRouter } from "./routers/views.js";
 import { clerkRouter } from "./routers/clerk.js";
+import { browserTaskRouter } from "./routers/browser-task.js";
 import { pairingRouter } from "./routers/pairing.js";
 import { captureRouter } from "./routers/capture.js";
 import { scanTokensRouter } from "./routers/scan-tokens.js";
@@ -57,6 +58,7 @@ export const appRouter = router({
   push: pushRouter,
   views: viewsRouter,
   clerk: clerkRouter,
+  browserTask: browserTaskRouter,
   pairing: pairingRouter,
   capture: captureRouter,
   scanTokens: scanTokensRouter,

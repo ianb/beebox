@@ -20,6 +20,10 @@ import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Accordion } from "./ui/Accordion";
+import { Toggle } from "./ui/Toggle";
+import { trpc } from "../lib/trpc";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import { ExternalLink } from "./ui/ExternalLink";
 import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
@@ -98,23 +102,32 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     : attach.schemaProblem;
 
 
+  // Order: what state the task is in and the form to act on it come first;
+  // the prompt and schema are reference material the executor copies once,
+  // so they fold away rather than pushing everything else off the page.
   return (
     <div className="p-4 max-w-3xl mx-auto" {...bbxSource("card", data.path)}>
       <Stack gap="md">
-        <StatusLine status={status} lastUpload={lastUpload} attach={attach} />
+        <StatusLine status={status} lastUpload={lastUpload} attach={attach} cardPath={data.path} />
 
-        <Card padding="md">
+        <Row gap="sm" align="center" wrap>
+          <Button intent="secondary" size="sm" flash={{ label: "Copied" }} onClick={() => navigator.clipboard.writeText(copyBlock)}>
+            Copy prompt, schema and watermark
+          </Button>
+          <Text as="span" size="sm" tone="subtle">Everything the executor needs, as one block.</Text>
+        </Row>
+
+        <SubmissionForm cardPath={data.path} validate={validate} disabledReason={disabledReason} onAccepted={() => void reload()} />
+
+        <Accordion title={<Text as="h2" size="lg" weight="bold">Prompt</Text>} defaultOpen={false}>
           <Stack gap="sm">
-            <PromptHeader copyBlock={copyBlock} />
             {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
             {watermark !== null ? <Text as="p" size="sm">Watermark: <Text as="span" mono>{watermark}</Text></Text> : null}
             <Markdown onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
           </Stack>
-        </Card>
+        </Accordion>
 
         <SchemaCard attach={attach} />
-
-        <SubmissionForm cardPath={data.path} validate={validate} disabledReason={disabledReason} onAccepted={() => void reload()} />
 
         <BatchList heading="Inbox" batches={attach?.inbox ?? []} empty="Nothing waiting." onNavigate={onNavigate} />
         <BatchList heading="Processed" batches={attach?.processed ?? []} empty="Nothing drained yet." onNavigate={onNavigate} />
@@ -123,13 +136,14 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   );
 }
 
-function StatusLine({ status, lastUpload, attach }: { status: "open" | "closed"; lastUpload: string | null; attach: AttachState | null }) {
+function StatusLine({ status, lastUpload, attach, cardPath }: { status: "open" | "closed"; lastUpload: string | null; attach: AttachState | null; cardPath: string }) {
   const staleDays = lastUpload === null || attach === null ? null : Math.floor((attach.loadedAt - new Date(lastUpload).getTime()) / 86_400_000);
   const draining = attach?.inbox.filter((b) => b.filed.length > 0 && b.records !== null && b.filed.length < b.records).length ?? 0;
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
         <Badge tone={status === "open" ? "success" : "neutral"}>{status}</Badge>
+        <StatusToggle status={status} cardPath={cardPath} />
         {attach !== null ? (
           <Text as="span" size="sm">
             {String(attach.inbox.length)} in inbox, {String(attach.processed.length)} processed
@@ -167,14 +181,23 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
   );
 }
 
-function PromptHeader({ copyBlock }: { copyBlock: string }) {
+/** The boxholder's open/closed control. Owner only; an executor never sees it. */
+function StatusToggle({ status, cardPath }: { status: "open" | "closed"; cardPath: string }) {
+  const user = useCurrentUser();
+  const utils = trpc.useUtils();
+  const mutation = trpc.browserTask.setStatus.useMutation({
+    onSuccess: async () => {
+      await utils.card.get.invalidate({ path: cardPath });
+    },
+  });
+  if (user === null || !user.isOwner) return null;
   return (
-    <Row gap="sm" align="center" justify="between">
-      <Text as="h2" size="lg" weight="bold">Prompt</Text>
-      <Button intent="secondary" size="sm" flash={{ label: "Copied" }} onClick={() => navigator.clipboard.writeText(copyBlock)}>
-        Copy prompt, schema and watermark
-      </Button>
-    </Row>
+    <Toggle
+      checked={status === "open"}
+      disabled={mutation.isPending}
+      label={status === "open" ? "Accepting batches" : "Closed"}
+      onChange={(open) => mutation.mutate({ path: cardPath, status: open ? "open" : "closed" })}
+    />
   );
 }
 
