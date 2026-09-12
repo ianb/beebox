@@ -44,7 +44,9 @@ their logins. The box never sees the site; it sees your batch.
    native picker would block you). Each call replaces the input's selection
    but the form accumulates, so upload in rounds of under 10 MB. Read the
    issues list on the page; when it says "Ready", click **Submit batch** and
-   read the result line ("Accepted batch ...").
+   read the result line ("Accepted batch ..."). If nothing changes within a
+   few seconds, `find` the button again and click once more; a stale page
+   can swallow the first click.
 6. **Report** in this session what you scanned, what you skipped and why,
    and the batch id. Never write those notes into the records.
 

@@ -694,3 +694,38 @@ unreferenced file) and asserts the attach layout and the commit trailer.
 Done when those pass, typecheck and lint are clean, both knowledge audits
 have run, and the exhibit exists. No migration: new type, no existing cards.
 Ships as one piece when the boxholder says so.
+
+## Implementation notes (2026-09-12)
+
+Built on branch `worktree-browser-tasks`, Tracks 1 to 4, and exercised
+end to end against the worktree's test box: two batches submitted through
+the card page from the boxholder's own Chrome via Claude in Chrome, both
+accepted, annexed, and committed with the `card-submission` trailer; the
+view refreshed live; `browser-task-drain` filed one record card with its
+image, recognized the second batch as a duplicate, moved both to
+`processed/`, and left the watermark alone. Both knowledge audits pass.
+
+Deviations from the plan above:
+
+- `CardSubmissionResult` may carry a `manifest` on success. The generic
+  accept helper persists that validated shape plus `files`, so a stray
+  top-level key in the request never reaches disk.
+- The attachment walk refuses a composition that mixes an attachment branch
+  with another string branch (a file name versus a URL is undecidable);
+  an attachment alongside `null` stays allowed.
+- The card path goes through the box namespace resolver in write mode, the
+  same fence as the file-write routes, so a symlink cannot walk the batch
+  out of the box.
+- A commit failure after the batch is renamed into place rolls the card and
+  the batch back and answers 500 with the reason, instead of leaving an
+  accepted-looking batch uncommitted.
+- Text parts (`card`, `records`) have their own caps (4 KB, 8 MB); duplicate
+  protocol parts and duplicate file names are 400s.
+- Once during testing a Submit click from the extension produced no request
+  while the same click by script did; a fresh page load fixed it and it did
+  not recur. The executor skill says to confirm the result line and click
+  once more if nothing changes.
+
+One round of Codex review on the branch diff produced nine findings; all
+were applied before the branch was declared done.
+

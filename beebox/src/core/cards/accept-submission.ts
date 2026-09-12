@@ -23,6 +23,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import type { EventBus } from "../event-bus.js";
 import { attachDirFor } from "../../shared/attach-path.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { parseCardText } from "../card-io.js";
 import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../cards/index.js";
@@ -43,7 +44,7 @@ export interface AcceptSubmissionInput {
 
 export type AcceptSubmissionResult =
   | { ok: true; batch: string; count: number; dir: string }
-  | { ok: false; status: 404 | 409 | 400; message: string; issues?: SubmissionIssue[] };
+  | { ok: false; status: 404 | 409 | 400 | 500; message: string; issues?: SubmissionIssue[] };
 
 /**
  * Raised when two allocation attempts for a batch id both collide with an
@@ -90,13 +91,16 @@ async function removeTempDir(tempDir: string): Promise<void> {
 
 export async function acceptSubmission(input: AcceptSubmissionInput): Promise<AcceptSubmissionResult> {
   const { boxRoot, cardRel, tempDir, fileNames, manifest, eventBus, now } = input;
-  const absCardPath = path.resolve(boxRoot, cardRel);
-  // Fail closed on a path that leaves the box or does not name a card: the
-  // client chose `cardRel`, and everything below trusts it as a box path.
-  if (!absCardPath.startsWith(path.resolve(boxRoot) + path.sep) || !cardRel.endsWith(".card")) {
+  // Fail closed on a path that leaves the box, follows a symlink out of it,
+  // or does not name a card: the client chose `cardRel`, and everything
+  // below trusts it as a box path. Same fence as the file-write routes.
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: cardRel, mode: "write" });
+  const attachNs = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: attachDirFor(cardRel), mode: "write" });
+  if (!ns.ok || !attachNs.ok || !cardRel.endsWith(".card")) {
     await removeTempDir(tempDir);
     return { ok: false, status: 404, message: `card not found: ${cardRel}` };
   }
+  const absCardPath = ns.resolved;
 
   return withCardLock(absCardPath, async () => {
     const cardText = await readIfPresent(absCardPath);
@@ -119,7 +123,7 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
       return { ok: false, status: 409, message: refusal };
     }
 
-    const attachDir = path.join(boxRoot, attachDirFor(cardRel));
+    const attachDir = attachNs.resolved;
     const readAttachment = async (name: string): Promise<string | null> => {
       if (name.includes("/") || name.startsWith(".")) return null;
       const text = await readIfPresent(path.join(attachDir, name));
@@ -169,27 +173,37 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
       await removeTempDir(tempDir);
     }
 
-    // The manifest is untrusted JSON from the request; preserve it under its
-    // own key rather than silently dropping it if it ever arrives as
-    // something other than an object (a schema's `validate` is expected to
-    // have already required an object shape, but this module is generic over
-    // any schema's contract).
-    const manifestOut: Record<string, unknown> = isRecord(manifest) ? { ...manifest, files } : { manifest, files };
-    await fs.writeFile(path.join(targetDir, "records.json"), `${JSON.stringify(manifestOut, null, 2)}\n`, "utf8");
-
-    const fields = parseFrontmatterObject(cardText) ?? {};
-    fields["last-upload"] = timestamp.toISOString();
-    const split = splitCardContent(cardText);
-    await fs.writeFile(absCardPath, renderFrontmatterBlock(fields, split.body), "utf8");
+    // Persist the validated manifest when the schema returned one; otherwise
+    // the raw request object. Either way `files` is the server's addition.
+    const persisted = validation.manifest ?? manifest;
+    const manifestOut: Record<string, unknown> = isRecord(persisted) ? { ...persisted, files } : { manifest: persisted, files };
 
     const batchDirRel = path.relative(boxRoot, targetDir);
     const recordsRel = path.join(batchDirRel, "records.json");
 
-    await stageAndCommitPaths(boxRoot, {
-      paths: [cardRel, batchDirRel],
-      message: `Accept submission ${batch} for ${cardRel}`,
-      trailers: { "Created-By": "card-submission" },
-    });
+    // From here on the batch is on disk. A failure past this point must not
+    // leave an accepted-looking batch plus an edited card in the working
+    // tree: put the card back, remove the batch, and say so.
+    try {
+      await fs.writeFile(path.join(targetDir, "records.json"), `${JSON.stringify(manifestOut, null, 2)}\n`, "utf8");
+
+      const fields = parseFrontmatterObject(cardText) ?? {};
+      fields["last-upload"] = timestamp.toISOString();
+      const split = splitCardContent(cardText);
+      await fs.writeFile(absCardPath, renderFrontmatterBlock(fields, split.body), "utf8");
+
+      await stageAndCommitPaths(boxRoot, {
+        paths: [cardRel, batchDirRel],
+        message: `Accept submission ${batch} for ${cardRel}`,
+        trailers: { "Created-By": "card-submission" },
+      });
+    } catch (e: unknown) {
+      await fs.writeFile(absCardPath, cardText, "utf8");
+      await fs.rm(targetDir, { recursive: true, force: true });
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(`[card-submission] batch ${batch} for ${cardRel} could not be committed; rolled back:`, e);
+      return { ok: false, status: 500, message: `the box could not commit the batch: ${message}` };
+    }
 
     const eventTimestamp = timestamp.toISOString();
     eventBus.emitTransient("file-change", { event: "change", path: cardRel, timestamp: eventTimestamp });

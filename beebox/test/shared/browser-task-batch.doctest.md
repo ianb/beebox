@@ -115,6 +115,16 @@ JSON.stringify(kinds(validateBatch({ schemaJson: { type: "spaceship" }, manifest
 => ["schema"]
 ```
 
+A composition that mixes an attachment branch with another string branch is
+ambiguous (is the value a file name or a URL?) and is refused by path:
+
+```ts
+const mixed = { type: "object", properties: { media: { anyOf: [{ type: "string", format: "attachment" }, { type: "string", format: "uri" }] } } };
+const amb = validateBatch({ schemaJson: mixed, manifest: { coverage, records: [] }, fileNames: [] });
+JSON.stringify(amb.ok ? [] : amb.issues.map((i) => `${i.kind}: ${i.message}`))
+=> ["schema: schema.json \"properties.media.anyOf\" mixes an attachment branch with another string branch; an attachment field must be the only string alternative"]
+```
+
 ## Attachments inside composition keywords
 
 `anyOf` branches are tried against the same value, so an attachment reached

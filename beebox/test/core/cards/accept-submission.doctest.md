@@ -61,6 +61,7 @@ await writeFile(join(validTemp, "photo.png"), PNG_BYTES);
 const validManifest = {
   coverage: { scanned: 1, stoppedAt: "https://example.com/feed/post-1", reason: "end-of-feed" },
   records: [{ permalink: "https://example.com/feed/post-1", text: "Show announcement", photo: "photo.png" }],
+  notes: "this key is not part of the manifest shape",
 };
 
 const accepted = await acceptSubmission({
@@ -90,6 +91,14 @@ JSON.stringify(recordsOut.files)
 
 recordsOut.coverage.reason
 => end-of-feed
+```
+
+Only the validated shape is persisted, plus the server's `files`; a stray
+top-level key in the request manifest does not reach disk:
+
+```ts continue
+JSON.stringify(Object.keys(recordsOut).toSorted())
+=> ["coverage","files","records"]
 ```
 
 The card's `last-upload` is set, and the commit carries both paths under

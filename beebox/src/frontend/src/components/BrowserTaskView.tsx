@@ -71,14 +71,15 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     void reload();
   }, [reload]);
 
-  const attachDir = attachDirFor(data.path);
+  const cardRel = boxRelativePath(data.path);
+  const attachRel = boxRelativePath(attachDirFor(data.path));
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const change = busEventData(event, "file-change");
       if (!change) return;
-      const changed = boxRelativePath(change.path);
-      if (changed === boxRelativePath(data.path) || changed.startsWith(`${attachDir}/`)) void reload();
-    }, [data.path, attachDir, reload]),
+      const changed = boxRelativePath(change.path).replace(/\/$/, "");
+      if (changed === cardRel || changed === attachRel || changed.startsWith(`${attachRel}/`)) void reload();
+    }, [cardRel, attachRel, reload]),
   });
 
   const validate = useCallback(

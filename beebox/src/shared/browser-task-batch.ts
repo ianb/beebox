@@ -115,6 +115,44 @@ function findUnsupportedKeyword(node: unknown, path: string): string | null {
 }
 
 /**
+ * A composition (`anyOf`/`oneOf`/`allOf`) that mixes an attachment branch
+ * with another branch that could also accept a string is ambiguous: the
+ * walk cannot tell an uploaded-file name from, say, a URL. Refuse it by
+ * path so the author picks one meaning. A `null` or non-string sibling
+ * branch (the "optional attachment" idiom) is fine.
+ */
+function findAmbiguousAttachment(node: unknown, path: string): string | null {
+  if (Array.isArray(node)) {
+    for (const [i, entry] of node.entries()) {
+      const found = findAmbiguousAttachment(entry, `${path}[${String(i)}]`);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+  if (!isRecord(node)) return null;
+  for (const keyword of ["anyOf", "oneOf", "allOf"]) {
+    const branches = node[keyword];
+    if (!Array.isArray(branches)) continue;
+    const hasAttachment = branches.some((b) => isRecord(b) && b["format"] === "attachment");
+    const hasOtherString = branches.some((b) => isRecord(b) && b["format"] !== "attachment" && acceptsString(b));
+    if (hasAttachment && hasOtherString) return path === "" ? keyword : `${path}.${keyword}`;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    const found = findAmbiguousAttachment(value, path === "" ? key : `${path}.${key}`);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/** True when a schema branch admits a string value: `type: string`, a type list with string, or no type at all. */
+function acceptsString(branch: Record<string, unknown>): boolean {
+  const type = branch["type"];
+  if (type === undefined) return true;
+  if (type === "string") return true;
+  return Array.isArray(type) && type.includes("string");
+}
+
+/**
  * Walk a value alongside its schema and collect every string that sits under
  * a `"format": "attachment"` declaration. Composition keywords are tried
  * against the same value; a string reached twice is reported once.
@@ -168,6 +206,13 @@ export function validateBatch(input: ValidateBatchInput): BatchValidation {
     return {
       ok: false,
       issues: [{ kind: "schema", path: "schema", message: `schema.json uses "${unsupported}", which the attachment walk does not support; write a flat schema` }],
+    };
+  }
+  const ambiguous = findAmbiguousAttachment(input.schemaJson, "");
+  if (ambiguous !== null) {
+    return {
+      ok: false,
+      issues: [{ kind: "schema", path: "schema", message: `schema.json "${ambiguous}" mixes an attachment branch with another string branch; an attachment field must be the only string alternative` }],
     };
   }
   if (!isRecord(input.schemaJson)) {

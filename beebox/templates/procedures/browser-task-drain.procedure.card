@@ -13,13 +13,13 @@ steps:
       shells:
         - |-
           count=0
-          for card in $(find _content -name '*.browser-task.card' 2>/dev/null); do
+          while IFS= read -r -d '' card; do
             base="${card%.browser-task.card}"
             for batch in "$base.attach"/inbox/*/; do
               [ -d "$batch" ] || continue
               count=$((count + 1))
             done
-          done
+          done < <(find _content -name '*.browser-task.card' -print0 2>/dev/null)
           if [ "$count" -eq 0 ]; then
             exit $CHECK_SKIP
           fi
@@ -100,18 +100,29 @@ steps:
       shells:
         - |-
           bad=0
-          for card in $(find _content -name '*.browser-task.card' 2>/dev/null); do
+          while IFS= read -r -d '' card; do
             base="${card%.browser-task.card}"
             for batch in "$base.attach"/inbox/*/; do
               [ -d "$batch" ] || continue
               if [ ! -f "$batch/filed.json" ]; then
                 echo "Batch not started: $batch"
                 bad=$((bad + 1))
+                continue
+              fi
+              if node -e '
+                const fs = require("node:fs");
+                const dir = process.argv[1];
+                const records = JSON.parse(fs.readFileSync(dir + "/records.json", "utf8")).records.length;
+                const filed = new Set(JSON.parse(fs.readFileSync(dir + "/filed.json", "utf8"))).size;
+                process.exit(filed >= records ? 0 : 1);
+              ' "$batch"; then
+                echo "Batch fully filed but still in inbox (must move to processed/): $batch"
+                bad=$((bad + 1))
               fi
             done
-          done
+          done < <(find _content -name '*.browser-task.card' -print0 2>/dev/null)
           [ "$bad" -eq 0 ]
       whys:
-        - Every batch that was waiting has at least started filing (a filed.json exists); a batch still in inbox/ with no filed.json was never touched
+        - Every batch that was waiting has at least started filing (a filed.json exists), and no batch whose every record is filed is still sitting in inbox/ — draining moves items out
       severity: review
 ---

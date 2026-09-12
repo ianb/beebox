@@ -256,7 +256,10 @@ export interface CardSubmissionInput {
   readAttachment: (name: string) => Promise<string | null>;
 }
 
-export type CardSubmissionResult = { ok: true; count: number } | { ok: false; issues: SubmissionIssue[] };
+export type CardSubmissionResult =
+  /** `manifest`, when present, is the validated shape to persist in place of the raw request body. */
+  | { ok: true; count: number; manifest?: unknown }
+  | { ok: false; issues: SubmissionIssue[] };
 
 /**
  * A card type's submission contract. The route and the form are generic; the

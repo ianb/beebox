@@ -69,7 +69,7 @@ Validation reads `schema.json` from the attach scope through the injected reader
 ```ts continue
 const good = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [{ permalink: "p", poster: "a.jpg" }] }, fileNames: ["a.jpg"], readAttachment: attachments({ "schema.json": recordSchema }) });
 JSON.stringify(good)
-=> {"ok":true,"count":1}
+=> {"ok":true,"count":1,"manifest":{"coverage":{"scanned":3,"stoppedAt":"x","reason":"end-of-feed"},"records":[{"permalink":"p","poster":"a.jpg"}]}}
 
 const noSchema = await sub.validate({ fields: { status: "open" }, manifest: { coverage, records: [] }, fileNames: [], readAttachment: attachments({}) });
 JSON.stringify(noSchema)

@@ -32,7 +32,7 @@ async function validateBrowserTaskSubmission(input: CardSubmissionInput): Promis
   if (!result.ok) {
     return { ok: false, issues: result.issues.map(({ path, message }) => ({ path, message })) };
   }
-  return { ok: true, count: result.count };
+  return { ok: true, count: result.count, manifest: { coverage: result.coverage, records: result.records } };
 }
 
 export const BrowserTaskSchema = cardSchema("browser-task", {

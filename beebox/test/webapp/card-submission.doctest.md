@@ -153,6 +153,20 @@ rejected requests never landed a batch:
 => 1
 ```
 
+## Two file parts with the same name are refused
+
+```ts continue
+const dupBody = buildMultipart([
+  { name: "card", value: "_content/tasks/Task.browser-task.card" },
+  { name: "records", filename: "records.json", contentType: "application/json", value: JSON.stringify({ coverage: { scanned: 1, stoppedAt: "x", reason: "end-of-feed" }, records: [] }) },
+  { name: "photo.png", filename: "photo.png", contentType: "image/png", value: PNG_BYTES },
+  { name: "photo.png", filename: "photo.png", contentType: "image/png", value: PNG_BYTES },
+]);
+const dup = await server.request({ method: "POST", url: "/api/cards/submit", payload: dupBody, headers: MULTIPART_HEADERS });
+JSON.stringify([dup.statusCode, dup.body.message])
+=> [400,"duplicate file name: photo.png"]
+```
+
 ```ts cleanup
 await server.cleanup();
 ```

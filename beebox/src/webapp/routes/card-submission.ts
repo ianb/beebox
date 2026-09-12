@@ -19,6 +19,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import type { Readable } from "node:stream";
 import type { EventBus } from "../../core/event-bus.js";
 import { acceptSubmission } from "../../core/cards/accept-submission.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
@@ -37,17 +38,38 @@ interface RegisterCardSubmissionRoutesOptions {
 }
 
 /** A multipart field/file part's value as text, whichever form busboy handed us. */
-async function partText(part: { type: "field" | "file"; value?: unknown; file?: AsyncIterable<Buffer | string> }): Promise<string> {
-  if (part.type === "field") {
-    return typeof part.value === "string" ? part.value : String(part.value);
+/** The `card` path field and the `records` manifest are the only text parts; each has its own cap. */
+const MAX_CARD_FIELD_BYTES = 4096;
+const MAX_RECORDS_BYTES = 8 * 1024 * 1024;
+
+/** A text part grew past its cap; the route answers 413 and drains the rest. */
+class TextPartTooLargeError extends Error {
+  constructor(name: string, cap: number) {
+    super(`${name} exceeds ${String(cap)} bytes`);
+    this.name = "TextPartTooLargeError";
   }
-  // A file part is read off its stream directly. `part.toBuffer()` is not
-  // used: under `request.parts()` it reaches for an internal buffer that
-  // only exists on attached-field parsing and throws on `_buf`.
+}
+
+async function partText(
+  part: { fieldname: string; type: "field" | "file"; value?: unknown; file?: AsyncIterable<Buffer | string> },
+  maxBytes: number,
+): Promise<string> {
+  if (part.type === "field") {
+    const value = typeof part.value === "string" ? part.value : String(part.value);
+    if (Buffer.byteLength(value) > maxBytes) throw new TextPartTooLargeError(part.fieldname, maxBytes);
+    return value;
+  }
+  // A file part is read off its stream directly, under the same cap as a
+  // field. `part.toBuffer()` is not used: under `request.parts()` it reaches
+  // for an internal buffer that only exists on attached-field parsing.
   if (part.file === undefined) return "";
   const chunks: Buffer[] = [];
+  let total = 0;
   for await (const chunk of part.file) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    total += buf.length;
+    if (total > maxBytes) throw new TextPartTooLargeError(part.fieldname, maxBytes);
+    chunks.push(buf);
   }
   return Buffer.concat(chunks).toString("utf8");
 }
@@ -63,6 +85,45 @@ interface SubmitErrorBody {
   issues?: SubmissionIssue[];
 }
 
+type ReceiveFilePartResult =
+  | { ok: true; name: string; size: number }
+  | { ok: false; status: 400 | 413; message: string };
+
+/**
+ * Stream one uploaded file part into the temp dir under the running byte
+ * budget. Refuses duplicates, non-bare names, and the file-count cap before
+ * writing; drains a refused part so the multipart iterator can continue.
+ */
+async function receiveFilePart(opts: {
+  part: { filename: string; file: Readable };
+  tempDir: string;
+  fileNames: readonly string[];
+  remainingBytes: number;
+}): Promise<ReceiveFilePartResult> {
+  const { part, tempDir, fileNames, remainingBytes } = opts;
+  const name = part.filename;
+  let refusal: ReceiveFilePartResult | null = null;
+  if (fileNames.includes(name)) refusal = { ok: false, status: 400, message: `duplicate file name: ${name}` };
+  else if (!isBareFileName(name)) refusal = { ok: false, status: 400, message: `invalid file name: ${name}` };
+  else if (fileNames.length >= MAX_SUBMISSION_FILES) {
+    refusal = { ok: false, status: 413, message: `submission carries more than ${MAX_SUBMISSION_FILES} files` };
+  }
+  if (refusal !== null) {
+    part.file.resume();
+    return refusal;
+  }
+  await fs.mkdir(tempDir, { recursive: true });
+  try {
+    const written = await hashStreamToFile({ source: part.file, destPath: path.join(tempDir, name), maxBytes: remainingBytes });
+    return { ok: true, name, size: written.size };
+  } catch (e) {
+    if (e instanceof StreamByteLimitError) {
+      return { ok: false, status: 413, message: `submission exceeds the ${MAX_STAGED_BYTES}-byte cap` };
+    }
+    throw e;
+  }
+}
+
 export function registerCardSubmissionRoutes(options: RegisterCardSubmissionRoutesOptions): void {
   const { server, boxRoot, eventBus } = options;
 
@@ -72,7 +133,6 @@ export function registerCardSubmissionRoutes(options: RegisterCardSubmissionRout
     }
 
     const tempDir = path.join(await ensureBoxTmpDir(boxRoot), "submissions", randomUUID());
-    let tempDirCreated = false;
     let cardRel: string | undefined;
     let manifestSeen = false;
     let manifest: unknown;
@@ -85,12 +145,21 @@ export function registerCardSubmissionRoutes(options: RegisterCardSubmissionRout
 
     try {
       for await (const part of request.parts()) {
+        if (part.fieldname === "card" || part.fieldname === "records") {
+          // Each protocol part arrives exactly once; a second copy is a
+          // malformed request, not "the later one wins".
+          if ((part.fieldname === "card" && cardRel !== undefined) || (part.fieldname === "records" && manifestSeen)) {
+            if (part.type === "file") part.file.resume();
+            await cleanup();
+            return reply.status(400).send({ ok: false, message: `duplicate ${part.fieldname} part` } satisfies SubmitErrorBody);
+          }
+        }
         if (part.fieldname === "card") {
-          cardRel = await partText(part);
+          cardRel = await partText(part, MAX_CARD_FIELD_BYTES);
           continue;
         }
         if (part.fieldname === "records") {
-          const text = await partText(part);
+          const text = await partText(part, MAX_RECORDS_BYTES);
           manifestSeen = true;
           try {
             manifest = JSON.parse(text);
@@ -102,45 +171,19 @@ export function registerCardSubmissionRoutes(options: RegisterCardSubmissionRout
         }
         if (part.type !== "file") continue;
 
-        const name = part.filename;
-        if (!isBareFileName(name)) {
-          part.file.resume();
+        const received = await receiveFilePart({ part, tempDir, fileNames, remainingBytes });
+        if (!received.ok) {
           await cleanup();
-          return reply.status(400).send({ ok: false, message: `invalid file name: ${name}` } satisfies SubmitErrorBody);
+          return reply.status(received.status).send({ ok: false, message: received.message } satisfies SubmitErrorBody);
         }
-        if (fileNames.length >= MAX_SUBMISSION_FILES) {
-          part.file.resume();
-          await cleanup();
-          return reply
-            .status(413)
-            .send({ ok: false, message: `submission carries more than ${MAX_SUBMISSION_FILES} files` } satisfies SubmitErrorBody);
-        }
-
-        if (!tempDirCreated) {
-          await fs.mkdir(tempDir, { recursive: true });
-          tempDirCreated = true;
-        }
-
-        try {
-          const written = await hashStreamToFile({
-            source: part.file,
-            destPath: path.join(tempDir, name),
-            maxBytes: remainingBytes,
-          });
-          remainingBytes -= written.size;
-        } catch (e) {
-          await cleanup();
-          if (e instanceof StreamByteLimitError) {
-            return reply
-              .status(413)
-              .send({ ok: false, message: `submission exceeds the ${MAX_STAGED_BYTES}-byte cap` } satisfies SubmitErrorBody);
-          }
-          throw e;
-        }
-        fileNames.push(name);
+        remainingBytes -= received.size;
+        fileNames.push(received.name);
       }
     } catch (e) {
       await cleanup();
+      if (e instanceof TextPartTooLargeError) {
+        return reply.status(413).send({ ok: false, message: e.message } satisfies SubmitErrorBody);
+      }
       throw e;
     }
 
@@ -152,9 +195,8 @@ export function registerCardSubmissionRoutes(options: RegisterCardSubmissionRout
       await cleanup();
       return reply.status(400).send({ ok: false, message: "missing records part" } satisfies SubmitErrorBody);
     }
-    if (!tempDirCreated) {
-      await fs.mkdir(tempDir, { recursive: true });
-    }
+    // A batch with no file parts still needs its (empty) temp dir for the helper.
+    await fs.mkdir(tempDir, { recursive: true });
 
     const result = await acceptSubmission({
       boxRoot,
