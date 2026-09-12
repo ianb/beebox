@@ -92,6 +92,7 @@ const { boxRoot } = await fullInit(tmp);
 
 await listFiles(boxRoot, "_config/procedures")
 =>
+browser-task-drain.procedure.card
 process-pages.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
