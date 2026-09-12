@@ -258,8 +258,8 @@ struct NativeComposerView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
 
-            if requiresConversationBinding {
-                Text(composerDestinationText)
+            if requiresConversationBinding, let composerBindingStatusText {
+                Text(composerBindingStatusText)
                     .font(.caption).foregroundStyle(.secondary)
                     .accessibilityIdentifier("bbx-composer-destination")
             }
@@ -287,10 +287,8 @@ struct NativeComposerView: View {
         }
     }
 
-    private var composerDestinationText: String {
-        if let contextDir = pendingStore.composerBinding?.sendBinding?.target.contextDir {
-            return contextDir.isEmpty ? "Send to: / (box root)" : "Send to: \(contextDir)"
-        }
+    private var composerBindingStatusText: String? {
+        guard pendingStore.composerBinding?.sendBinding == nil else { return nil }
         return pendingStore.composerBinding?.selection?.label
             ?? pendingStore.composerBinding?.selection?.reason
             ?? "Waiting for conversation. Sending requires an updated host."
