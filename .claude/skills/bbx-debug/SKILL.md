@@ -30,7 +30,7 @@ disproportionate effort here; be aggressive and creative.
 - **A doctest** — the default, and per `docs/testing.md` it's also your
   regression test (write it first). Pick the tier: pure-function
   (`.doctest.md`), route (`makeTestServer()`), or filesystem (`makeTmpBox()`).
-  See `beebox/.claude/rules/doctest.md`, `beebox/test/helpers/`.
+  See `agent-doctest/docs/syntax.md`, `beebox/test/helpers/` (monorepo-relative).
 - **`bbx scenario run <name>`** — multi-step end-to-end (wakeup, connectors,
   agent runs). Runs from the beginning every time (no checkpoint-resume);
   `--dry-run` only parses the card — it proves nothing about runtime behavior.
@@ -44,8 +44,8 @@ disproportionate effort here; be aggressive and creative.
   `.beebox/client-debug.log`. Often *is* the evidence for a frontend bug.
 - **A knowledge audit / pressure scenario** — when the bug is the *box agent*
   doing the wrong thing (paraphrasing, forgetting a convention). `pnpm
-  knowledge-audit run --box <box> --filter <id>`. 0 reads + wrong answer is a
-  red loop.
+  knowledge-audit run --box <box> --filter <id>`. A wrong answer is a red loop;
+  set the expected knowledge level to the intended loading path.
 - **git as history** — `git log -S '<symbol>'`, `git log -- <path>`, `git blame`
   to find *what changed*. Recent commits are the prime suspect.
 
@@ -72,18 +72,21 @@ instrumentation, hand the boxholder a headlined script, read the trace back).
 ## Phase 2 — Reproduce + minimise
 
 Run the loop; watch it go red. Confirm it's the **user's** symptom, not a
-nearby one (wrong bug = wrong fix). Then **minimise**: cut inputs, callers,
-config, and steps **one at a time**, re-running after each cut, until every
-remaining element is load-bearing (removing any makes it go green). A minimal
-repro shrinks the hypothesis space and becomes the clean regression test.
+nearby one (wrong bug = wrong fix). Then **minimise until the repro is cheap and
+diagnostic**: cut inputs, callers, config, and steps one at a time. Re-run after
+each cut; revert any cut that changes or clears the symptom. Stop when further
+reduction costs more than it
+teaches. The result should shrink the hypothesis space and be suitable for a
+regression test.
 
 ## Phase 3 — Hypothesise
 
-Generate **3–5 ranked, falsifiable hypotheses** *before* testing any — single
-hypotheses anchor on the first plausible idea. Each states its prediction:
-*"if X is the cause, changing Y makes it disappear."* No prediction = a vibe;
-sharpen or discard. **Show the ranked list to the boxholder** before testing —
-they often re-rank instantly ("we just changed #3"). Don't block if they're AFK.
+When evidence is ambiguous, generate plausible alternative hypotheses and rank
+them before testing. Each states a falsifiable prediction: *"if X is the cause,
+changing Y makes it disappear."* No prediction means sharpen or discard it.
+Show the ranked alternatives to the boxholder; don't block if they're AFK. When
+the evidence already isolates one cause, test it directly instead of inventing
+a quota of alternatives.
 
 ## Search the web when the bug is in someone else's code
 
@@ -159,23 +162,3 @@ attempt #4.** When each fix reveals a new problem somewhere else, or requires
 "massive refactoring," that's not a failed hypothesis, it's the **wrong
 architecture**. Question the fundamentals with the boxholder instead of patching
 again.
-
-## Common rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "It's simple, I don't need a loop." | Simple bugs have root causes too, and a loop for a simple bug is cheap. If it's *truly* one line, you're not in this skill. |
-| "Emergency, no time for the process." | Systematic is *faster* than guess-and-check thrashing. The loop is the shortcut. |
-| "I'll just try this change and see." | The first move sets the pattern. A red loop first, always. |
-| "I'll write the test after I confirm the fix." | Untested fixes don't stick, and you lose the proof the fix addressed *this* bug. Test (loop) first. |
-| "Let me fix a few things at once." | You can't tell which one worked, and you've added new bugs. One variable at a time. |
-| "I see the problem, let me fix it." | Seeing a symptom ≠ understanding the root cause. Trace to the source. |
-| "One more fix attempt." (after 2+) | 3+ failures = architecture, not another patch. Hit the circuit-breaker. |
-| "I'll work out the workaround myself." | If the bug is a library or platform quirk, someone already hit it and wrote the fix down. Search first — that's the move you under-reach for. |
-
-## Red flags — stop and return to Phase 1
-
-Catching yourself thinking any of these means you've skipped the loop:
-"quick fix now, investigate later" · "just change X and see" · "it's probably X"
-· "skip the test, I'll verify by hand" · proposing fixes before you can name the
-red command · "one more fix" after two failures · each fix breaking something new.

@@ -107,7 +107,7 @@ export const PILLARS: Pillar[] = [
     entry: "docs/testing.md",
     entryNote: "Philosophy. 537 lines on why doctests, then how.",
     supporting: [
-      { path: ".claude/rules/doctest.md", note: "Syntax cheatsheet. Read once, refer often." },
+      { path: ".claude/rules/doctest.md", note: "Conditional pointer to the doctest syntax reference." },
       { path: "docs/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
       { path: "docs/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
     ],

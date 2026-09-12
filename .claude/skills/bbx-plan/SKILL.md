@@ -52,10 +52,10 @@ writing and when reviewing.
   cites where). "CLAUDE.md says to read before writing" is a paraphrase;
   `beebox/CLAUDE.md:101`: *"Read before writing…"* is a citation.
   "Probably" / "likely" / "I think" are guesses: verify or mark unverified.
-- **Trace every choice to a stated preference** — a numbered principle in
-  `docs/engineering-principles.md`, a CLAUDE.md or code-style rule, or the most
-  recent shipped precedent. A choice that can't be traced means either a weak
-  choice or a missing principle; both are worth saying.
+- **Explain actual tradeoffs against stated preferences.** Cite the relevant
+  human decision, engineering principle, repo rule, or shipped precedent when
+  it informs the choice. Ordinary implementation choices need no principle
+  mapping; do not invent a principle to justify them.
 - **Two sections are gates, not prose.** *Could this be simpler?* — name the
   simplest version and what the fuller plan buys, per a principle; if you can't,
   shrink. *NOT in scope* — a plan touching more than one module, a transition
@@ -106,12 +106,14 @@ Resume only on their choice, and record the new budget in the plan.
 ## Reviewing an existing plan
 
 Read the plan; check every template section is present and every claim cited.
+For external prior art, verify the premises the design relies on; do not repeat
+searches that have no bearing on a design decision.
 Write findings to a sibling `<plan>.review.md`:
 
 ```
 # Plan Engineering Review — <topic>
 ## What already exists
-## Prior art (external) — verified      ← redo the planner's search; confirm or contradict
+## Prior art (external) — verified      ← verify external premises the design depends on
 ## Stated preferences this plan trades against
 ## Could this be simpler? (verified)
 ## Failure modes
@@ -130,7 +132,7 @@ One finding per item, never batched:
 **Issue:** what's wrong, risky, or missing
 **Why it matters:** the failure mode or burden
 **Suggested action:** concrete next step
-**Traces to preference:** one sentence naming the principle
+**Relevant preference:** name it when the finding concerns a stated preference or tradeoff; otherwise omit
 ```
 
 A missing template section is itself a finding; flag it for the planner rather
