@@ -1201,6 +1201,29 @@ leaked.results[0]!.errors[0]!.message
 => Absolute machine path in card content: /Users/beebox/ — use a box ref (leading `/`) or a repo-relative form, never a real machine path
 ```
 
+An extfile card is the one shape whose `href` is REQUIRED to be a `file:` URL,
+so its absolute machine path is the card's purpose. Scanning it made every real
+extfile card unfixably invalid — the schema demanded exactly what the leak guard
+rejected. The href is exempt; a leak anywhere else in the same card still errors:
+
+```ts continue
+const box5 = await makeTmpBox();
+await box5.write(
+  "_content/store/review/Live.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/beebox/src/project/src/foo.ts\ntitle: live source\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
+);
+await box5.write(
+  "_content/store/review/Both.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/beebox/src/project/src/foo.ts\ntitle: also mentions /Users/beebox/src/elsewhere\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
+);
+const ext = await lintCardsDispatch(
+  [box5.path("_content/store/review/Live.extfile.card"), box5.path("_content/store/review/Both.extfile.card")],
+  { boxRoot: box5.root, ctx },
+);
+JSON.stringify([ext.results[0]!.errors.length, ext.results[1]!.errors.length])
+=> [0,1]
+```
+
 The `/Users/me`/`/Users/you` placeholder forms (used in `file:` URL examples)
 are not flagged:
 

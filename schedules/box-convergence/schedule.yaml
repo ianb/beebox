@@ -1,0 +1,11 @@
+# Prod boxes converge on every deploy (deploy.sh walks /home/beebox/boxes and
+# runs `bbx migrate --sweep` per box). Nothing does that for the developer's
+# LOCAL boxes, so they drift from the shipped code until someone happens to
+# notice a missing card — which is how a box was found 12 migrations and 6 days
+# behind (issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
+#
+# Daily, not hourly: drift accrues at the speed of landings, and a local box
+# the developer is actively working in should not be nagged.
+description: "Daily: report local boxes that have drifted behind shipped migrations"
+cadence: 1d
+timeout: 1h
