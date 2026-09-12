@@ -1,6 +1,6 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSubmissionInput, type CardSubmissionResult } from "../cards/index.js";
+import { body, cardSchema, type CardSubmissionInput, type CardSubmissionResult, type LintIssue } from "../cards/index.js";
 import { validateBatch } from "../shared/browser-task-batch.js";
 
 export const BrowserTaskStatus = z.enum(["open", "closed"]);
@@ -35,9 +35,39 @@ async function validateBrowserTaskSubmission(input: CardSubmissionInput): Promis
   return { ok: true, count: result.count, manifest: { coverage: result.coverage, records: result.records } };
 }
 
+/**
+ * The prompt is read by someone outside the box. A link to a card, a box
+ * path, or "the briefing" means nothing to them, and it is the most common
+ * way the authoring agent leaks its own context into the prompt. Warn, so the
+ * author sees it at write time.
+ */
+const BOX_REFERENCE_PATTERNS: ReadonlyArray<{ re: RegExp; what: string }> = [
+  { re: /\.card\b/, what: "a card file" },
+  { re: /(^|[\s(])\/?_(content|config|bookkeeping|publish|tmp)\//, what: "a box path" },
+  { re: /\bthe briefing\b/i, what: "the briefing" },
+  { re: /\bbbx\s+\w+/, what: "a bbx command" },
+  { re: /\bview:|\bcontrol:/, what: "an in-box link scheme" },
+];
+
+function promptReferencesBox(fields: Record<string, unknown>): LintIssue[] {
+  const text = typeof fields["body"] === "string" ? fields["body"] : "";
+  const issues: LintIssue[] = [];
+  for (const { re, what } of BOX_REFERENCE_PATTERNS) {
+    if (re.test(text)) {
+      issues.push({
+        type: "validation",
+        severity: "warning",
+        message: `the prompt refers to ${what}; the reader has a browser and no box, so name the thing itself (a URL, a date, a name)`,
+      });
+    }
+  }
+  return issues;
+}
+
 export const BrowserTaskSchema = cardSchema("browser-task", {
   description: "A prompt for someone with a logged-in browser, and the inbox that receives what they found",
   category: "authored",
+  validate: ({ fields }) => promptReferencesBox(fields),
   fields: {
     status: BrowserTaskStatus.default("open"),
     // Where the executor starts: the feed, listing, or page to scan.
@@ -84,7 +114,13 @@ box. Say, in this order: what to look for (a pottery show announcement, a
 meeting notice), what does not count, how far to go (a number of posts or a
 number of days — always bound the scan), the watermark to stop at, and what
 each record must contain. Do not describe the box, the drain, or card types;
-the executor never sees them.
+the executor never sees them. Never link to a card, a box path, the briefing,
+or a \`bbx\` command from the prompt: the reader cannot follow any of them.
+Name the thing itself instead (the page URL, the date, the person's name).
+\`bbx validate\` warns when a prompt does this.
+
+The task card's page has an Open/Closed control for the boxholder. Closing
+stops submissions; an executor never closes a task.
 
 ## The record schema
 
