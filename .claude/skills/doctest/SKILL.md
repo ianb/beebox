@@ -5,10 +5,9 @@ description: Write, run, and triage beebox `.doctest.md` tests, including distin
 
 # Doctests: author, run, triage
 
-Directs the workflow. Per-file syntax mechanics live in
-`beebox/.claude/rules/doctest.md` (auto-loads when you edit a
-`.doctest.md` file) and the deeper reference in the monorepo's
-`agent-doctest/docs/`. Whether a doctest is even the right tier —
+Directs the workflow. Read the [syntax reference](../../../agent-doctest/docs/syntax.md)
+before writing or changing examples; the path-scoped rule points there too.
+Whether a doctest is even the right tier —
 pure/route/filesystem, vs scenario/knowledge-audit/browser-probe — is
 `bbx-guide-testing`'s call, not this skill's; read it first if that's
 still open.
@@ -17,10 +16,9 @@ still open.
 
 Create `test/<name>.doctest.md` (path mirrors the `src/` file under
 test, per `beebox/CLAUDE.md`). Write prose, then fenced examples.
-Don't restate syntax here — when in doubt, read the rule file and an
-existing doctest near the code you're touching. Blocks are full
+Read an existing doctest near the code you're touching. Blocks are full
 TypeScript (esbuild); the traps are in assertion semantics (see the
-rule file's string-comparison rules), not syntax.
+syntax reference's string-comparison rules), not syntax.
 
 ## Running
 

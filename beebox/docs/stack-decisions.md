@@ -767,7 +767,7 @@ Infrastructure includes:
 - `makeTestServer()` — Fastify inject, no network
 - `createFakeAgent()` — records invocations, configurable responses
 - `print()` — accumulates lines for multi-line assertions
-- Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus named extractions (`«name=*»`, `«name=type»`). See `.claude/rules/doctest.md`.
+- Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus named extractions (`«name=*»`, `«name=type»`). See [doctest syntax](../../agent-doctest/docs/syntax.md).
 
 ### Display serializers
 

@@ -53,7 +53,7 @@ Doctest files are executable markdown documents. The prose explains behavior; fe
 
 **When to use:** The default for most testing. Pure functions, template generators, stateful sequences with setup helpers, anything where showing examples is more readable than `t.equal()` assertions.
 
-**Syntax:** See `.claude/rules/doctest.md` for the full reference.
+**Syntax:** See [doctest syntax](../../agent-doctest/docs/syntax.md) for the full reference.
 
 ````markdown
 ```ts setup
@@ -223,7 +223,7 @@ await box.cleanup();
 
 ### Doctest limitations
 
-Doctest blocks are full TypeScript (compiled via esbuild's `ts` loader) — `import type`, non-null assertions, and type annotations all work, in setup and test blocks alike. The real limitations are structural: assertions compare serialized output (see the string-comparison rules in `.claude/rules/doctest.md`), and code blocks can't express trailing newlines.
+Doctest blocks are full TypeScript (compiled via esbuild's `ts` loader) — `import type`, non-null assertions, and type annotations all work, in setup and test blocks alike. The real limitations are structural: assertions compare serialized output (see the string-comparison rules in [doctest syntax](../../agent-doctest/docs/syntax.md)), and code blocks can't express trailing newlines.
 
 ## 2. Traditional TAP Tests
 
@@ -718,7 +718,7 @@ run never auto-files.
 ## Adding New Tests
 
 ### New doctest (preferred)
-Create `test/<name>.doctest.md`. Write prose explaining the behavior, with fenced code blocks containing examples. See `.claude/rules/doctest.md` for syntax. Runs automatically with `npm test`.
+Create `test/<name>.doctest.md`. Write prose explaining the behavior, with fenced code blocks containing examples. See [doctest syntax](../../agent-doctest/docs/syntax.md) for syntax. Runs automatically with `npm test`.
 
 ### New traditional test
 Create `test/<name>.test.ts`, import from `tap`. Use for route integration tests, meta-tests, or anything needing complex setup that doesn't read well as documentation.
