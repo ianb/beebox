@@ -8,8 +8,9 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  * lives in the `PlacePill`'s two menus (switch / here), box tools in the
  * pill's Box submenu, and the box's own `nav.card` entries in the switch
  * menu's custom section. What's left beside the pill is attention and meta —
- * the plate badge, the error badge, and the profile menu — plus the chip slot
- * chat pages portal their session/voice chips into (Track C2).
+ * the questions badge, the plate badge, the error badge, and the profile menu
+ * — plus the chip slot chat pages portal their session/voice chips into
+ * (Track C2).
  *
  * The bar is deliberately ONE responsive element rather than a mobile/desktop
  * pair. Nothing here diverges by width once the link row is gone: the pill
@@ -108,6 +109,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.navStatus.useQuery();
   const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
+  const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
 
   // A burst of card-created/file-change events (e.g. a bulk upload) would
   // otherwise fire one invalidate per event; coalesce to one per burst, and
@@ -119,9 +121,17 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   useBusSubscription({
     onEvent: useCallback(
       (event: RealtimeEvent) => {
-        // Todos live in cards and files. The question events this used to
-        // watch moved out with the questions badge.
-        if (event.event === "card-created" || event.event === "file-change") {
+        // Todos live in cards and files; a question card's arrival is a
+        // card-created. The question lifecycle events are what the count
+        // cannot see from a file write alone — an answered/dismissed/expired
+        // question leaves the pending set without a new card appearing.
+        if (
+          event.event === "card-created" ||
+          event.event === "file-change" ||
+          event.event === "question-answered" ||
+          event.event === "question-dismissed" ||
+          event.event === "question-expired"
+        ) {
           triggerNavStatusResync();
         }
       },
@@ -143,12 +153,54 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />
+          <QuestionsBadge base={base} count={pendingQuestions} />
           <PlateBadge base={base} count={onPlateTodos} />
           <ErrorBadge onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>
     </nav>
+  );
+}
+
+/**
+ * Pending questions the box is waiting on an answer for — links to the
+ * `/questions` page, which is otherwise unreachable from the bar (the switch
+ * menu's Box submenu carries Dashboard/Browse/History/Storage summary, and a
+ * box only gets a Questions row by naming it in its own `nav.card`). Zero
+ * renders nothing, like {@link PlateBadge}.
+ *
+ * The bar carried this badge until Track C3 removed it with the link row
+ * (`docs/implemented-plans/top-nav-ia.md`), on the way to an "inline
+ * questions" replacement that was never specified. What shipped in between
+ * was a box whose pending questions appeared only on the dashboard, while
+ * `getNavCounts` kept counting them for nobody. Restored here rather than
+ * dropping the count; inline questions can still supersede both.
+ */
+function QuestionsBadge({ base, count }: { base: string; count: number }) {
+  if (count === 0) return null;
+  return (
+    <Link
+      id="bbx-nav-questions"
+      to={href(`${base}/questions`)}
+      className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
+      title={`${count} question${count !== 1 ? "s" : ""} waiting for you`}
+      aria-label={`${count} question${count !== 1 ? "s" : ""} waiting for you`}
+    >
+      <QuestionIcon />
+      {count}
+    </Link>
+  );
+}
+
+/** A speech bubble carrying a question mark — asked, not yet answered. */
+function QuestionIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+      <path d="M2.5 4.25A1.75 1.75 0 0 1 4.25 2.5h7.5a1.75 1.75 0 0 1 1.75 1.75v5a1.75 1.75 0 0 1-1.75 1.75H7l-3 2.5v-2.5h-.25A1.25 1.25 0 0 1 2.5 9.75Z" strokeWidth="1.25" strokeLinejoin="round" />
+      <path d="M6.4 5.9a1.6 1.6 0 0 1 3.1.55c0 1.05-1.55 1.3-1.55 2.3" strokeWidth="1.25" strokeLinecap="round" />
+      <circle cx="7.95" cy="10.4" r="0.55" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 
