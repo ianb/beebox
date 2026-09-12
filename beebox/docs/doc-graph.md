@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-11T19:02:43Z
-Total documents: 346
+Generated: 2026-09-12T15:32:41Z
+Total documents: 351
 
 ## Issues
 
@@ -50,7 +50,7 @@ These documents are not referenced by any other document.
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
-- **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (139 lines)
+- **docs/plans/public-site-box-authoring-export.md** — "Author public-site cards in a box and export them to the repository" (394 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
@@ -174,6 +174,7 @@ Referenced by:
 - docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/migrations.md:414 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
 - docs/model-policy.md:99 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
+- docs/plans/agent-docs.md:87 (mention) — add over my own CLAUDE.md and scripts, is it a framework or a product, how
 - docs/plans/asset-offbox-storage.md:355 (mention) — remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:381 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:941 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
@@ -191,6 +192,7 @@ Referenced by:
 - docs/plans/ios-companion-review-2026-07-09.md:62 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/operator-member-password-reset.md:87 (mention) — - **HTTP route boundary.** `CLAUDE.md:110` says: *“HTTP endpoints go in tRPC by
 - docs/plans/prompt-surface-ia-review.md:145 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
+- docs/plans/public-site-box-authoring-export.md:71 (mention) — - **The box workbench spaces now exist.** The authoring box's `CLAUDE.md` defines
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-pages.md:150 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
@@ -202,7 +204,7 @@ Referenced by:
 - docs/prompt-logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompt-surface-review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
-- docs/stack-decisions.md:1193 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
+- docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:412 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
 - docs/unimplemented-plans/design-vision-superseded.md:67 (mention) — - Small additions like a `CLAUDE.md` file with custom prompts are preferred to elaborate new structures
 - user-stories/catalog/2026-06-26.md:1485 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
@@ -498,7 +500,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 191 lines
+Title: "Frontend Conventions" | 201 lines
 
 Referenced by:
 - CLAUDE.md:66 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
@@ -522,7 +524,7 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:59 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
-- frontend.md:176 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- frontend.md:186 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/bbx-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`beebox/frontend.md`**;
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:72 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
@@ -678,7 +680,6 @@ References:
 - → docs/activities-design.md (link)
 - → CLAUDE.md (mention)
 - → docs/plans/narration-mode.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/implemented-plans/mvp-implementation-guide.md (mention)
 
 #### docs/adding-a-box.md
@@ -692,6 +693,7 @@ Referenced by:
 - docs/implemented-plans/one-root-box-layout.md:374 (mention) — `box-shape.ts:20`); `adding-a-box.md`, `deploy/README.md` path updates; the
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/adding-a-box.md:91`,
 - docs/implemented-plans/secret-custody.md:540 (mention) — "copy the grant list", not the files. Update `docs/adding-a-box.md`. New-box
+- docs/plans/agent-docs.md:376 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/adding-a-box.md`), `bbx upgrade` is the per-box engine-upgrade
 - docs/plans/docs-reorg.gap-analysis.md:138 (mention) — `docs/adding-a-box.md`.
 - docs/plans/source-available-release.md:68 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
@@ -746,6 +748,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
 - docs/migrations.md:439 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- docs/plans/agent-docs.md:374 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/adding-schemas.md` never mentions it and
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
@@ -768,6 +771,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:534 (mention) — `docs/agent-install.md` gain the first-run account step;
 - docs/implemented-plans/remove-open-mode.md:51 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:545 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
+- docs/plans/agent-docs.md:47 (mention) — `raw.githubusercontent.com/.../agent-install.md`.
 - docs/plans/container-first.md:586 (mention) — does the same; `docs/agent-install.md:28-29` says the engine is *"this
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/developer-install.md`, `docs/docker-install.md`, `docs/agent-install.md`
@@ -787,6 +791,7 @@ Referenced by:
 - CLAUDE.md:148 (mention) — | Assets (git-annex) | `docs/assets.md` |
 - docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
 - docs/implemented-plans/asset-manifests.md:9 (link) — **Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
+- docs/plans/agent-docs.md:376 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/asset-annex.md:537 (mention) — The agent row has no code fix. It gets a `docs/assets.md` sentence and
 - docs/plans/container-first-pass2.review.md:91 (mention) — `docs/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
 - docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
@@ -833,11 +838,13 @@ Referenced by:
 - docs/implemented-plans/user-location.md:80 (mention) — at `docs/box-layout.md:18-22`. State files there are never committed.
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
+- docs/plans/agent-docs.md:373 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/design-reconciliation.md:594 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/plans/docs-reorg.gap-analysis.md:44 (mention) — `docs/box-layout.md`.
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-ia-review.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
+- docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards-as-markdown.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/plans/source-available-release.md:66 (mention) — and documented at `beebox/docs/box-layout.md:194`. No credential values
 - docs/testing.md:328 (mention) — **Directory structure:** `bbx init` scaffolds the one-root layout by default (`package.json`/`tsconfig`/`src/` plus the
 - user-stories/catalog/2026-06-26.md:4938 (mention) — The user story is accurately implemented across both claimed files. `beebox/src/cli/commands/init.ts` provides the CLI o
@@ -873,6 +880,7 @@ Referenced by:
 - docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
 - docs/implemented-plans/mvp-implementation-guide.md:692 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/calendar.md` updated ([46]).
+- docs/plans/agent-docs.md:368 (mention) — `telegram-setup.md`, `calendar.md`.
 - user-stories/catalog/2026-06-26.md:2278 (mention) — Key limitation from docs/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed back to Googl
 
 #### docs/card-validation.md
@@ -882,6 +890,7 @@ Title: "Card validation hooks" | 77 lines
 Referenced by:
 - CLAUDE.md:42 (mention) — **Validation**: Cards validate on load; `bbx validate` checks all cards, a file list, or `--staged`. `bbx init` installs
 - docs/cards-as-markdown.md:126 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/plans/agent-docs.md:374 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/docs-reorg.md:318 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
 
 References:
@@ -908,8 +917,10 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards-as-markdown.md` gains the tag reference; the issue file closes
 - docs/migrations.md:437 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/plans/agent-docs.md:363 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/docs-reorg.md:110 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
-- docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
+- docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards-as-markdown.md:22-24`, `beebox/docs/box-layout.md:240-250`).
+- docs/reports/stack-decisions-2026-09-04.md:20 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
 - ../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.md:8 (mention) — **Closed:** Implemented: the card format moved to YAML frontmatter + Markdown body, and the legacy XML card format, its
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:20 (mention) — entry). Agent guide, `docs/cards-as-markdown.md`, and `knowledge-audits.yaml`
@@ -947,6 +958,7 @@ Referenced by:
 - docs/design/processing.md:22 (link) — ([`../chat-schedules.md`](../chat-schedules.md)).
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/mvp-implementation-guide.md:245 (mention) — See `docs/scheduler.md` and `docs/chat-schedules.md` for scheduling examples.
+- docs/plans/agent-docs.md:365 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 - docs/plans/docs-reorg.md:173 (mention) — `chat-schedules.md` (current and load-bearing — the worst case),
 
@@ -961,6 +973,7 @@ Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:146 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:370 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
+- docs/plans/agent-docs.md:379 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/chat-scroll-model.md:199 (mention) — Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
 - docs/plans/chat-scroll-model.md:227 (link) — opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
 - docs/testing.md:547 (link) — [chat-scroll-testing.md](chat-scroll-testing.md). Note that `/fakestream`
@@ -1043,6 +1056,7 @@ Referenced by:
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/knowledge-taxonomy.md:205 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
+- docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/docs-reorg.gap-analysis.md:24 (mention) — `docs/connectors.md`. The strongest "confidently wrong, silent data
 - docs/plans/docs-reorg.md:96 (mention) — 2. `connectors.md` — Google Calendar row says service-injection "Not yet
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
@@ -1068,6 +1082,7 @@ Referenced by:
 - CLAUDE.md:170 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:444 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/implemented-plans/webapp-production-mode.md:74 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
+- docs/plans/agent-docs.md:374 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - docs/security-report.md:212 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
@@ -1097,6 +1112,7 @@ Referenced by:
 - docker/README.md:18 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `de
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
+- docs/plans/agent-docs.md:366 (mention) — - install: `agent-install.md`, `docker-install.md`, `developer-install.md`,
 - docs/plans/container-first.md:587 (mention) — repository (or a Docker image built from it)"*; `docs/developer-install.md:1-6`
 - docs/plans/installation-story.md:124 (mention) — in `docs/developer-install.md`.
 - docs/plans/operator-member-password-reset.md:490 (mention) — `docs/developer-install.md` where they describe invite/password lifecycle.
@@ -1117,6 +1133,7 @@ Referenced by:
 - docs/README.md:39 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
 - docs/implemented-plans/remove-bbx-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
+- docs/plans/agent-docs.md:71 (mention) — `doc-graph.md` mentions `private-issues`. `box-docs/` has two benign hits
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/testing.md:746 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
@@ -1138,6 +1155,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/implemented-plans/remove-open-mode.md:50 (mention) — - Docs mentioning the opt-out: `docs/docker-install.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:68 (mention) — - **The documented-but-untested path.** `beebox/docs/docker-install.md:119`
+- docs/plans/agent-docs.md:366 (mention) — - install: `agent-install.md`, `docker-install.md`, `developer-install.md`,
 - docs/plans/container-first.md:325 (mention) — `docs/docker-install.md`; it leaves the `beebox/docs` tree and the docs
 - docs/plans/container-first.review.md:714 (mention) — *"Docker install (local + VPS) | `docs/docker-install.md`"* points at the file
 - docs/plans/installation-story.md:423 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
@@ -1237,13 +1255,15 @@ Referenced by:
 - docs/plans/general-browser.md:71 (mention) — - `beebox/docs/engineering-principles.md` — **3** (validate at
 - docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
 - docs/plans/installation-story.md:43 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
-- docs/plans/interface-as-cards.md:54 (link) — [Engineering principles](../engineering-principles.md): §1 type structure,
+- docs/plans/interface-as-cards.md:60 (link) — [Engineering principles](../engineering-principles.md): §1 type structure,
+- docs/plans/interface-cards-consolidation.md:47 (link) — - [Engineering principles](../engineering-principles.md) §8, “One way to do
 - docs/plans/invite-links-and-password-change.md:36 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
 - docs/plans/ios-companion-app.md:23 (mention) — - `beebox/docs/engineering-principles.md` — the ones this plan leans on:
 - docs/plans/ios-input-plane-parity.md:17 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:17 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - docs/plans/ios-share-extension-capture.md:36 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
 - docs/plans/operator-member-password-reset.md:50 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
+- docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
@@ -1290,6 +1310,7 @@ Referenced by:
 - docs/implemented-plans/agent-field-tests.md:329 (mention) — - `persona.md` — who the operator is (drawn from `docs/example-names.md`,
 - docs/implemented-plans/card-prominence.md:629 (mention) — from `docs/example-names.md` (a plan card marked primary beside unmarked
 - docs/implemented-plans/todo-annotation.md:57 (mention) — hardcode personal names" (examples below use the `docs/example-names.md`
+- docs/plans/agent-docs.md:457 (mention) — from `example-names.md`, not a real box; bare (non-link) mentions of
 - docs/plans/source-available-release.md:71 (mention) — - **Fictional example roster — reuse.** `docs/example-names.md` and
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:36 (mention) — (`beebox/docs/example-names.md`) — never real names — and kept
 
@@ -1301,6 +1322,7 @@ Referenced by:
 - CLAUDE.md:181 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
+- docs/plans/agent-docs.md:363 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:146 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -1344,6 +1366,7 @@ Referenced by:
 - docs/connectors.md:34 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
 - docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
 - docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/gmail-setup.md` (the shorthand section currently describes it as legacy),
+- docs/plans/agent-docs.md:367 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
 - user-stories/catalog/2026-06-26.md:2054 (mention) — - docs/gmail-setup.md lines 37-41 (user documentation with examples)
@@ -1360,6 +1383,7 @@ Referenced by:
 - docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
 - docs/implemented-plans/connector-sync-isolation.md:288 (mention) — 1. Update `docs/google-drive.md` and the Drive skill text in
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/google-drive.md:141-150` "Folder Mounts" section.
+- docs/plans/agent-docs.md:367 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - user-stories/catalog/2026-06-26.md:2713 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
 
@@ -1375,6 +1399,7 @@ Referenced by:
 - docs/google-drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
 - docs/health-checks.md:182 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
+- docs/plans/agent-docs.md:367 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/google-setup.md` already walks an operator through consent screen +
 
@@ -1398,6 +1423,7 @@ Referenced by:
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/health-checks.md`.
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:448 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reacha
+- docs/plans/agent-docs.md:376 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/asset-annex.md:479 (mention) — the deploy runbooks (`docs/health-checks.md`) without touching
 - docs/plans/docs-reorg.md:178 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) —
@@ -1511,6 +1537,7 @@ Referenced by:
 - docs/implemented-plans/open-chat-from-card.md:97 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
 - docs/implemented-plans/top-nav-ia.md:201 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/landmark-curation.md:5 (mention) — For the design and schema of the card itself, see `docs/landmarks.md` and `node_modules/beebox/box-docs/card-landmark.md
+- docs/plans/agent-docs.md:364 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
 - docs/unimplemented-plans/query-cards.md:20 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
 - user-stories/catalog/2026-06-26.md:743 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
@@ -1538,6 +1565,7 @@ Referenced by:
 - docs/implemented-plans/scheduled-workstreams.md:253 (mention) — **Why this needs to change.** Today the catalog (`docs/maintenance.md`
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
 - docs/migrations.md:438 (mention) — - `docs/maintenance.md` — where `bbx migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- docs/plans/agent-docs.md:378 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
 - docs/plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
@@ -1588,6 +1616,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:330 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` + `docs/migrations.md` — migration runner and
 - docs/maintenance.md:66 (mention) — | Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and
+- docs/plans/agent-docs.md:375 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
 - docs/plans/asset-annex.md:752 (mention) — since it accurately records a system that existed. `docs/migrations.md`
 - docs/plans/asset-offbox-storage.md:569 (mention) — nothing in `docs/migrations.md`. The only state change is Track A2
 - docs/plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
@@ -1618,7 +1647,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1384 lines
+Title: "Cross-Platform Mobile Contract" | 1388 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1631,6 +1660,7 @@ Referenced by:
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
 - docs/implemented-plans/secret-entry-guidance.md:532 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
+- docs/plans/agent-docs.md:373 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
 - docs/plans/capture-fast-landing.md:293 (mention) — (`docs/mobile-contract.md` unaffected).
@@ -1670,6 +1700,7 @@ Referenced by:
 - ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md:49 (mention) — reload path (`docs/mobile-contract.md`; bbx-ios-overlap territory).
 - ../issues/features/2026-08-08-ios-siri-app-intent-capture.md:76 (link) — and the contract is [mobile-contract.md](../../beebox/docs/mobile-contract.md).)
 - ../issues/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:42 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
+- ../issues/features/2026-09-11-bias-apple-speech-with-box-vocabulary.md:53 (mention) — (`beebox/docs/mobile-contract.md`) is where that would live.
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
 
 References:
@@ -1715,7 +1746,8 @@ Referenced by:
 - CLAUDE.md:168 (mention) — | Which model a box thinks with | `docs/model-policy.md` |
 - docs/box-layout.md:202 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
-- docs/mobile-contract.md:864 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:868 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/plans/agent-docs.md:365 (mention) — `model-policy.md`, `chat-schedules.md`.
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
@@ -1753,6 +1785,7 @@ Referenced by:
 - docs/health-checks.md:40 (mention) — cases — see `docs/procedure-implementation.md` → Instructions.
 - docs/implemented-plans/agent-applied-migrations.md:35 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/procedure-validation-completion.md:15 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
+- docs/plans/agent-docs.md:364 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/plans/email-tracking.md:63 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
 - docs/scheduler.md:41 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
@@ -1787,6 +1820,7 @@ Title: "Prompt Logging for Agent Invocations" | 210 lines
 Referenced by:
 - CLAUDE.md:157 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 - docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompt-logging.md` says so.
+- docs/plans/agent-docs.md:70 (mention) — example; `prompt-logging.md` shows `/Users/...` as a redaction example;
 - docs/plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
 
@@ -1820,6 +1854,7 @@ Referenced by:
 - CLAUDE.md:160 (mention) — | Questions subsystem design | `docs/questions.md` |
 - docs/implemented-plans/questions-end-to-end.md:465 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/implemented-plans/todo-annotation.md:65 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
+- docs/plans/agent-docs.md:364 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:15 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
@@ -1842,6 +1877,7 @@ Referenced by:
 - docs/cards-as-markdown.md:20 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
 - docs/knowledge-taxonomy.md:43 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - docs/plans/README.md:74 (mention) — applies the naming conventions (`docs/README.md`). The 2026-07-04
+- docs/plans/agent-docs.md:279 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - docs/plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
@@ -1852,7 +1888,6 @@ References:
 - → docs/name-history.md (link)
 - → docs/plans/README.md (mention)
 - → docs/README.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/box/what-you-could-do.md (link)
 - → docs/box/interface-cards.md (link)
 - → docs/doc-graph.md (mention)
@@ -1864,6 +1899,7 @@ Title: "Scan Upload Wire Contract" | 146 lines
 
 Referenced by:
 - docs/implemented-plans/scan-uploader-pairing.md:54 (mention) — (`docs/scan-upload-contract.md`); the installation-story plan's
+- docs/plans/agent-docs.md:373 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/scan-guide-card.md:184 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
 - docs/plans/scanner-ingest.md:270 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
@@ -1885,6 +1921,7 @@ Referenced by:
 - docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
 - docs/implemented-plans/mvp-implementation-guide.md:14 (mention) — > (never built — scheduling is `bbx tick`, `../scheduler.md`), `agents.json` +
+- docs/plans/agent-docs.md:69 (mention) — - Leak scan of the candidate set: `scheduler.md` names a real box in an
 - docs/plans/asset-annex.md:586 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
 - docs/plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 - docs/plans/docs-reorg.gap-analysis.md:140 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
@@ -1912,6 +1949,7 @@ Referenced by:
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
+- docs/plans/agent-docs.md:284 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/security-report.md:144 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/telegram-setup.md:39 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
@@ -1929,6 +1967,7 @@ Title: "Security overview" | 226 lines
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
 - docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
+- docs/plans/agent-docs.md:292 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
@@ -1962,6 +2001,7 @@ Title: "Security report — structured version" | 433 lines
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
+- docs/plans/agent-docs.md:379 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/security-overview.md:18 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update beebox's security report — the structured accounting in beebox/docs/security-report.md a
@@ -2005,6 +2045,7 @@ Referenced by:
 - docs/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - docs/implemented-plans/box-migration.subplan.md:163 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:494 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
+- docs/plans/agent-docs.md:378 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
 - docs/plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/plans/scanner-ingest.md:200 (mention) — `docs/server-operations.md`.
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:367 (mention) — - **`BBX_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.
@@ -2022,42 +2063,13 @@ References:
 - → docs/assets.md (link)
 - → docs/adding-a-box.md (link)
 
-#### docs/stack-decisions.md
-
-Title: "Stack Decisions" | 1211 lines
-
-Referenced by:
-- docs/README.md:29 (mention) — `stack-decisions.md`; answers *why*, never *how to*.
-- docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
-- docs/architecture/CLAUDE.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
-- docs/design/README.md:3 (link) — Why the system is shaped the way it is. Peer of [`../stack-decisions.md`](../stack-decisions.md)
-- docs/implemented-plans/architectural-review.md:828 (mention) — 5. **Doc drift:** `docs/stack-decisions.md` cites deleted `sseMachine.ts`;
-- docs/implemented-plans/remove-bbx-render.md:334 (mention) — `frontend.md:60`; `docs/stack-decisions.md:20,182-183,786,788,931,941` — these
-- docs/plans/README.md:104 (mention) — `design-vision.md`, `stack-decisions.md` were judged reference and stayed
-- docs/plans/design-reconciliation.md:26 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
-- docs/plans/docs-reorg.gap-analysis.md:113 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
-- docs/plans/docs-reorg.md:90 (mention) — `stack-decisions.md`, the Google/Telegram setup runbooks, CSP docs) verified
-- docs/plans/installation-story.md:113 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
-- docs/plans/publish-pages.md:40 (mention) — - **Designed-but-unbuilt authorization.** `docs/stack-decisions.md:581`: *`## Decision 11: Authorization — Typed Princip
-- docs/unimplemented-plans/design-vision-superseded.md:19 (mention) — > `../stack-decisions.md` Decision 18).
-- user-stories/catalog/2026-06-26.md:4812 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `bbx
-- ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:46 (mention) — pixel screenshots for exactly this (stack-decisions.md Decision 1, §931).
-- ../issues/code-quality/2026-07-04-xstate-store-never-adopted.md:8 (mention) — `beebox/docs/stack-decisions.md` (~line 143) records `@xstate/store`
-- ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:59 (mention) — `docs/stack-decisions.md`, and the rationale paragraphs in plan docs all serve
-
-References:
-- → docs/cards-as-markdown.md (mention)
-- → docs/plans/docs-reorg.md (mention)
-- → docs/implemented-plans/state-management-comparison.md (mention)
-- → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
-- → CLAUDE.md (mention)
-
 #### docs/telegram-setup.md
 
 Title: "Telegram Connector Setup" | 120 lines
 
 Referenced by:
 - docs/connectors.md:32 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](telegram-setup.md) |
+- docs/plans/agent-docs.md:368 (mention) — `telegram-setup.md`, `calendar.md`.
 - docs/plans/docs-reorg.md:174 (mention) — `telegram-setup.md`, `todo-security.md`,
 
 References:
@@ -2103,6 +2115,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:586 (mention) — - **Tests first, as a design tool** (`docs/testing.md`): pure-function
 - docs/implemented-plans/view-render-testing.md:37 (mention) — - `beebox/docs/testing.md` — tests as a design tool; doctests are the
 - docs/implemented-plans/web-push-notifications.md:488 (mention) — - **Test posture.** Doctests as a design tool (`docs/testing.md`): the load-bearing
+- docs/plans/agent-docs.md:377 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
 - docs/plans/asset-annex.md:1019 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
 - docs/plans/asset-offbox-storage.md:548 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
 - docs/plans/change-based-test-selection.md:424 (mention) — implication about worth. `docs/testing.md:5-11` puts decomposition and
@@ -2110,14 +2123,14 @@ Referenced by:
 - docs/plans/clerk-tab-arrangements.md:437 (mention) — - **Package gates.** Run Clerk test/typecheck/lint/build and the focused beebox doctests/typecheck/lint. Run the full be
 - docs/plans/docs-reorg.gap-analysis.md:56 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
-- docs/plans/interface-as-cards.md:503 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
+- docs/plans/interface-as-cards.md:509 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
 - docs/plans/publish-pages.md:270 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:517 (mention) — Tests named while designing, per `docs/testing.md`:
-- docs/plans/workspace-pane-controls.md:479 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
+- docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/tours.md:29 (link) — ([testing.md](testing.md)); "does the app boot at all" is the smoke tier
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:3 (mention) — description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding h
@@ -2176,6 +2189,7 @@ Referenced by:
 - CLAUDE.md:139 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
 - docs/implemented-plans/card-themes.md:564 (link) — exhibit. Check contrast independently because [tours](../tours.md) documents that
+- docs/plans/agent-docs.md:377 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:656 (link) — rule, and when NOT to use them: [tours.md](tours.md).
@@ -2210,6 +2224,7 @@ Referenced by:
 - docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:34 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/plans/README.md:88 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
+- docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
 - docs/plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/plans/scanner-ingest.md:599 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
@@ -2235,6 +2250,7 @@ Title: "What Is This Thing?" | 66 lines
 Referenced by:
 - docs/architecture/CLAUDE.md:7 (mention) — The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
 - docs/design/identity.md:32 (mention) — multiple people (the household box of `../architecture/01-what-is-this.md` is
+- docs/plans/agent-docs.md:370 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
 - docs/plans/design-reconciliation.md:39 (mention) — - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
 
 #### docs/architecture/02-cards-and-memory.md
@@ -2243,6 +2259,7 @@ Title: "Cards and Memory" | 99 lines
 
 Referenced by:
 - docs/architecture/CLAUDE.md:7 (mention) — The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
+- docs/plans/agent-docs.md:370 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
 - docs/plans/design-reconciliation.md:310 (mention) — history" (02-cards-and-memory.md:96; also 02:72-77, 83-91). The code agrees
 
 #### docs/architecture/CLAUDE.md
@@ -2255,7 +2272,6 @@ Referenced by:
 - src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:
-- → docs/stack-decisions.md (mention)
 - → docs/plans/design-reconciliation.md (mention)
 - → docs/architecture/spirit.md (mention)
 - → docs/architecture/01-what-is-this.md (mention)
@@ -2324,11 +2340,11 @@ Referenced by:
 
 #### docs/box/interface-cards.md
 
-Title: "Interface cards" | 70 lines
+Title: "Interface cards" | 106 lines
 
 Referenced by:
 - docs/README.md:35 (link) — [interface cards](box/interface-cards.md).
-- docs/plans/interface-as-cards.md:611 (mention) — | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-a
+- docs/plans/interface-as-cards.md:617 (mention) — | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-a
 
 #### docs/box/what-you-could-do.md
 
@@ -2370,6 +2386,7 @@ Title: "Identity — what Bee Box is" | 47 lines
 
 Referenced by:
 - docs/design/README.md:21 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
+- docs/plans/agent-docs.md:104 (mention) — on me. Shared boxes are a design ruling (`design/identity.md`); what
 - docs/plans/publish-pages.md:42 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../plans/design
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
@@ -2406,6 +2423,7 @@ Title: "Interface as cards — earlier design background" | 480 lines
 Referenced by:
 - docs/design/README.md:18 (link) — - [Interface-as-cards background](interface-as-cards-background.md) — earlier exploration preserved for context; the lin
 - docs/plans/interface-as-cards.md:25 (link) — The [earlier design](../design/interface-as-cards-background.md) preserves the
+- docs/plans/interface-cards-consolidation.md:152 (mention) — (`docs/design/interface-as-cards-background.md:299`: `Permission boundary`).
 
 References:
 - → docs/plans/interface-as-cards.md (link)
@@ -2437,9 +2455,10 @@ Title: "docs/design/ — engineering rationale" | 42 lines
 Referenced by:
 - CLAUDE.md:136 (mention) — | Design rationale | `docs/design/README.md` |
 - docs/implemented-plans/mvp-implementation-guide.md:10 (mention) — > that postdate it; current design rationale is `../design/README.md`. Known
+- docs/reports/stack-decisions-2026-09-04.md:3 (link) — > Historical. Frozen as of 2026-09-04 and moved out of the live reference area: it records why the stack was chosen, not
 
 References:
-- → docs/stack-decisions.md (link)
+- → docs/reports/stack-decisions-2026-09-04.md (link)
 - → docs/architecture/CLAUDE.md (link)
 - → docs/architecture/spirit.md (link)
 - → docs/plans/design-reconciliation.md (link)
@@ -2599,7 +2618,6 @@ References:
 - → frontend.md (mention)
 - → docs/chat-session-lifecycle.md (mention)
 - → docs/testing.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/landmarks.md (mention)
 
 #### docs/implemented-plans/architectural-review.review.md **[ORPHAN]**
@@ -2810,7 +2828,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:130 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:894 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:898 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2865,7 +2883,7 @@ Title: "Card prominence: visibility lives on the card, landmarks derive from it"
 Referenced by:
 - docs/implemented-plans/card-themes.md:20 (link) — [card prominence](../implemented-plans/card-prominence.md).
 - docs/landmarks.md:19 (mention) — - **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the dir
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), an
+- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 - ../issues/closed/bugs/2026-09-06-landmark-symbol-migration-reflows-long-lines.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/bugs/2026-09-06-prominence-attach-scope-lint-misses-own-landmark-exception.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/features/2026-06-12-card-level-prominence.md:10 (mention) — > Closed 2026-09-06 (card-visibility): implemented by `docs/implemented-plans/card-prominence.md` — the `prominence` fro
@@ -2910,6 +2928,7 @@ Title: "Card themes: paper, Post-it, and plain" | 813 lines
 
 Referenced by:
 - docs/implemented-plans/card-themes.review.md:3 (link) — Review target: [Card themes](card-themes.md). This review concerns a draft plan,
+- ../issues/decisions/2026-09-11-theme-is-a-closed-builtin-that-blocks-box-themes.md:68 (mention) — - `beebox/docs/implemented-plans/card-themes.md` — the theme system as shipped
 
 References:
 - → ../issues/features/2026-07-20-public-site.md (link)
@@ -2957,7 +2976,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/migrations.md:437 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
-- docs/stack-decisions.md:804 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
+- docs/reports/stack-decisions-2026-09-04.md:806 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 - ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
 
 References:
@@ -3495,7 +3514,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines
 
 Referenced by:
-- docs/mobile-contract.md:660 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:664 (mention) — `docs/plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -3691,7 +3710,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:1261 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1265 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3740,7 +3759,6 @@ Title: "Follow a card after its path moves" | 213 lines
 References:
 - → ../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md (frontmatter)
 - → docs/engineering-principles.md (mention)
-- → ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md (mention)
 
 #### docs/implemented-plans/mvp-implementation-guide.md
 
@@ -3954,7 +3972,6 @@ References:
 - → ../issues/closed/bugs/2026-07-07-bbx-render-ssr-window-undefined.md (link)
 - → frontend.md (mention)
 - → docs/plans/publish-pages.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/plans/cli-restructure.md (mention)
 - → docs/plans/docs-reorg.gap-analysis.md (mention)
 - → docs/doc-graph.md (mention)
@@ -4204,9 +4221,9 @@ Referenced by:
 - docs/security-report.md:158 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - user-stories/catalog/2026-08-21.md:9055 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
+- ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:10 (mention) — (`docs/implemented-plans/secret-custody.md`): provisioning is now grants, not
 - ../issues/closed/features/2026-08-17-secret-custody-broker.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/secret-custody.md
-- ../issues/code-quality/2026-08-17-remove-legacy-secret-support.md:13 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
 - ../issues/decisions/2026-09-05-publish-connector-env-credential-bypasses-grants.md:14 (mention) — (`docs/implemented-plans/secret-custody.md`). One path is outside that model.
 - ../issues/features/2026-07-19-write-only-secret-capture-in-chat.md:82 (mention) — `beebox/docs/implemented-plans/secret-custody.md` ("Guided entry +
 
@@ -4274,7 +4291,7 @@ Title: "Selection Commentary — referencing document text in chat input" | 712 
 Referenced by:
 - docs/plans/README.md:82 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
 - docs/plans/box-commentary-surface.md:102 (mention) — selection-commentary feature (`docs/implemented-plans/selection-commentary.md`) and the
-- ../issues/features/2026-09-11-select-transcript-text-into-the-composer.md:20 (mention) — `beebox/docs/implemented-plans/selection-commentary.md`: "a way to attach a text
+- ../issues/closed/features/2026-09-11-select-transcript-text-into-the-composer.md:24 (mention) — `beebox/docs/implemented-plans/selection-commentary.md`: "a way to attach a text
 
 References:
 - → test/manual/selection-commentary.manual.md (mention)
@@ -4312,7 +4329,7 @@ References:
 Title: "Sidecar shell: survive a transient failure, keep tabs, pin one" | 624 lines
 
 Referenced by:
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), an
+- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 
 References:
 - → ../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md (frontmatter)
@@ -4360,7 +4377,7 @@ Title: "State Management Comparison: Zustand vs MobX-State-Tree vs Valtio vs XSt
 
 Referenced by:
 - docs/plans/docs-reorg.md:79 (mention) — `state-management-comparison.md` (bake-off record, unclear adoption), and
-- docs/stack-decisions.md:157 (mention) — Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted.
+- docs/reports/stack-decisions-2026-09-04.md:159 (mention) — Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted.
 
 #### docs/implemented-plans/sticky-hq-transcription-preference.md **[ORPHAN]**
 
@@ -4431,9 +4448,10 @@ Referenced by:
 - docs/landmarks.md:142 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - user-stories/catalog/2026-08-21.md:9059 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
-- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:32 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
+- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:43 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:42 (link) — [top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
-- ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
+- ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
+- ../issues/closed/code-quality/2026-08-21-nav-counts-questions-nothing-renders.md:17 (mention) — `eaa86c79` (Track C3 of `docs/implemented-plans/top-nav-ia.md`, 2026-08-02)
 - ../issues/features/2026-07-20-first-run-experience.md:12 (mention) — **Update 2026-08-02** (`beebox/docs/implemented-plans/top-nav-ia.md`): new users
 
 References:
@@ -4568,6 +4586,7 @@ Title: "`.webpage.card` + commentary-as-attachment" | 464 lines
 
 Referenced by:
 - docs/plans/docs-reorg.md:206 (mention) — - `webpage-card-and-commentary.md` (implemented) vs `web-page-commentary.md`
+- ../issues/features/2026-09-11-server-side-webpage-capture.md:75 (link) — - [webpage card and commentary](../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
 
 References:
 - → docs/implemented-plans/clerk-webpage-capture.md (link)
@@ -4640,12 +4659,70 @@ References:
 
 ### docs/plans/
 
+#### docs/plans/agent-docs.md
+
+Title: "Agent documentation" | 472 lines
+
+Referenced by:
+- ../issues/features/2026-09-12-agent-documentation.md:30 (link) — [the plan](../../beebox/docs/plans/agent-docs.md). Shares `site/`'s build
+
+References:
+- → ../issues/features/2026-09-12-agent-documentation.md (frontmatter)
+- → docs/plans/public-site.md (link)
+- → docs/agent-install.md (mention)
+- → docs/connectors.md (mention)
+- → docs/triage.md (mention)
+- → docs/plans/README.md (mention)
+- → docs/scheduler.md (mention)
+- → docs/prompt-logging.md (mention)
+- → docs/doc-graph.md (mention)
+- → ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md (link)
+- → CLAUDE.md (mention)
+- → docs/design/identity.md (mention)
+- → docs/README.md (mention)
+- → docs/secrets.md (mention)
+- → docs/security-overview.md (mention)
+- → ../issues/features/2026-09-06-container-install-is-the-primary-path.md (link)
+- → docs/glossary.md (mention)
+- → docs/cards-as-markdown.md (mention)
+- → docs/questions.md (mention)
+- → docs/landmarks.md (mention)
+- → docs/procedure-implementation.md (mention)
+- → docs/model-policy.md (mention)
+- → docs/chat-schedules.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/developer-install.md (mention)
+- → docs/google-setup.md (mention)
+- → docs/gmail-setup.md (mention)
+- → docs/google-drive.md (mention)
+- → docs/telegram-setup.md (mention)
+- → docs/calendar.md (mention)
+- → docs/architecture/01-what-is-this.md (mention)
+- → docs/architecture/02-cards-and-memory.md (mention)
+- → docs/box-layout.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/scan-upload-contract.md (mention)
+- → docs/content-security-policy.md (mention)
+- → docs/adding-schemas.md (mention)
+- → docs/card-validation.md (mention)
+- → docs/migrations.md (mention)
+- → docs/health-checks.md (mention)
+- → docs/assets.md (mention)
+- → docs/adding-a-box.md (mention)
+- → docs/testing.md (mention)
+- → docs/tours.md (mention)
+- → docs/maintenance.md (mention)
+- → docs/server-operations.md (mention)
+- → docs/security-report.md (mention)
+- → docs/chat-scroll-testing.md (mention)
+- → docs/example-names.md (mention)
+
 #### docs/plans/agent-points-at-ui.md
 
 Title: "The agent sees the interface and points at controls in it" | 1306 lines
 
 Referenced by:
-- docs/mobile-contract.md:544 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:548 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
@@ -4780,12 +4857,13 @@ References:
 
 #### docs/plans/chat-everywhere.md
 
-Title: "Chat everywhere: one input, explicit conversational focus" | 894 lines
+Title: "Chat everywhere: one input, explicit conversational focus" | 914 lines
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:19 (link) — [chat everywhere](../plans/chat-everywhere.md), and
 - docs/mobile-parity.md:25 (link) — | Conversation-bound input across box pages | done in [chat-everywhere](plans/chat-everywhere.md) worktree — V3 destinat
 - docs/plans/chat-everywhere.review.md:3 (link) — Review of [Chat everywhere](chat-everywhere.md), 2026-09-07. The independent
+- docs/plans/interface-cards-consolidation.md:27 (link) — and the conversation lifecycle in [chat everywhere](chat-everywhere.md).
 - docs/plans/workspace-pane-controls.md:50 (link) — The existing [chat-everywhere plan](chat-everywhere.md) is the recipient/attention
 - ../issues/features/2026-08-30-chat-input-everywhere.md:17 (link) — Planning is in [Chat everywhere](../../beebox/docs/plans/chat-everywhere.md)
 
@@ -4802,6 +4880,7 @@ References:
 - → docs/implemented-plans/sidecar-shell.md (link)
 - → docs/implemented-plans/card-prominence.md (link)
 - → docs/plans/interface-as-cards.md (link)
+- → docs/plans/interface-cards-consolidation.md (link)
 - → docs/engineering-principles.md (link)
 - → ../issues/closed/bugs/2026-08-30-chat-card-panel-missing-landmark-context.md (link)
 - → docs/mobile-contract.md (mention)
@@ -4833,7 +4912,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 513 lines
 
 Referenced by:
-- docs/mobile-contract.md:893 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:897 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -5007,7 +5086,6 @@ References:
 - → docs/architecture/spirit.md (mention)
 - → docs/architecture/outline.md (mention)
 - → docs/glossary.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/activities-retrospective.md (mention)
@@ -5044,7 +5122,6 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/testing.md (mention)
 - → docs/plans/docs-reorg.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/composer-input-machine.md (mention)
 - → docs/adding-a-box.md (mention)
 - → docs/scheduler.md (mention)
@@ -5060,7 +5137,7 @@ Title: "Documentation reorganization" | 416 lines
 Referenced by:
 - docs/plans/design-reconciliation.md:11 (mention) — (see the Direction section of `docs/plans/docs-reorg.md`: "Design docs require
 - docs/plans/docs-reorg.gap-analysis.md:87 (mention) — answered — remain open questions in `docs-reorg.md`.
-- docs/stack-decisions.md:145 (mention) — - **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is over
+- docs/reports/stack-decisions-2026-09-04.md:147 (mention) — - **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is over
 
 References:
 - → CLAUDE.md (mention)
@@ -5087,7 +5164,6 @@ References:
 - → docs/server-operations.md (mention)
 - → docs/procedure-implementation.md (mention)
 - → docs/glossary.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/connectors.md (mention)
 - → docs/prompt-audits.md (mention)
 - → docs/cards-as-markdown.md (mention)
@@ -5170,7 +5246,7 @@ Title: "One browser" | 655 lines
 
 Referenced by:
 - docs/plans/document-comments.md:332 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
-- ../issues/code-quality/2026-08-22-retire-doc-browser-dead-code.md:12 (link) — ([general-browser](../../beebox/docs/plans/general-browser.md), Track 5),
+- ../issues/closed/code-quality/2026-08-22-retire-doc-browser-dead-code.md:29 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md), Track 5),
 - ../issues/features/2026-08-22-file-asks-agent-flagged-attention.md:67 (link) — - [general-browser](../../beebox/docs/plans/general-browser.md) — its
 - ../issues/features/2026-08-22-issues-browser-has-no-workstream-filter.md:22 (link) — ([general-browser](../../beebox/docs/plans/general-browser.md)), which
 
@@ -5223,7 +5299,6 @@ References:
 - → docs/plans/source-available-release.md (mention)
 - → docs/implemented-plans/scan-uploader-pairing.md (mention)
 - → docs/engineering-principles.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/developer-install.md (mention)
 - → docs/box-layout.md (mention)
 - → deploy/README.md (mention)
@@ -5231,7 +5306,7 @@ References:
 
 #### docs/plans/interface-as-cards.md
 
-Title: "Interface as cards — canonical Dashboard, Settings, and Browse" | 625 lines
+Title: "Interface as cards — canonical Dashboard, Settings, and Browse" | 631 lines
 
 Referenced by:
 - CLAUDE.md:177 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
@@ -5241,26 +5316,29 @@ Referenced by:
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
 - docs/implemented-plans/card-themes.md:18 (link) — [interface as cards](../plans/interface-as-cards.md),
 - docs/implemented-plans/nav-card.md:26 (mention) — First implementation slice of `docs/plans/interface-as-cards.md`. Small on
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), an
+- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 - docs/plans/design-reconciliation.md:26 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.md:41 (mention) — files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
 - docs/plans/input-widget.md:11 (mention) — the frame-model notes in `docs/plans/interface-as-cards.md` ("The input
 - docs/plans/interface-as-cards.review.md:5 (link) — are adjudicated against the final [plan](interface-as-cards.md), not instructions
+- docs/plans/interface-cards-consolidation.md:24 (link) — This follows [canonical interface cards](interface-as-cards.md). It supersedes
 - docs/unimplemented-plans/README.md:19 (mention) — | `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on i
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:58 (mention) — - The repository has a materialization precedent. `beebox/docs/plans/interface-as-cards.md:248-253`: *"Addressing is fre
 - docs/unimplemented-plans/query-cards.md:28 (mention) — species deferred from `docs/plans/interface-as-cards.md` — the piece that
 - ../issues/closed/exploration/2026-05-11-interface-itself-as-cards.md:8 (link) — **Closed:** Superseded by [interface-as-cards.md](../../../beebox/docs/plans/interface-as-cards.md) (2026-07 design expl
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:234 (mention) — `docs/plans/interface-as-cards.md:419-450` takes an explicit position:
+- ../issues/exploration/2026-09-11-explicit-but-rich.md:50 (link) — [interface as cards](../../beebox/docs/plans/interface-as-cards.md) that the
 
 References:
 - → ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md (frontmatter)
 - → ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md (link)
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
-- → ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md (link)
+- → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (link)
 - → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
 - → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
 - → docs/design/interface-as-cards-background.md (link)
 - → docs/plans/interface-as-cards.review.md (link)
+- → docs/plans/interface-cards-consolidation.md (link)
 - → docs/engineering-principles.md (link)
 - → docs/testing.md (link)
 - → ../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md (link)
@@ -5275,6 +5353,48 @@ Referenced by:
 
 References:
 - → docs/plans/interface-as-cards.md (link)
+
+#### docs/plans/interface-cards-consolidation-removal-report.md
+
+Title: "Interface card consolidation — removal report" | 350 lines
+
+Referenced by:
+- docs/plans/interface-cards-consolidation.md:363 (link) — **Direction:** Maintain the [removal report](interface-cards-consolidation-removal-report.md)
+
+References:
+- → docs/plans/interface-cards-consolidation.md (link)
+
+#### docs/plans/interface-cards-consolidation.md
+
+Title: "One workspace for interface cards — retire parallel page UI" | 598 lines
+
+Referenced by:
+- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- docs/plans/interface-as-cards.md:36 (link) — The follow-on [workspace consolidation plan](interface-cards-consolidation.md)
+- docs/plans/interface-cards-consolidation-removal-report.md:9 (link) — The [consolidation plan](interface-cards-consolidation.md) replaces separate page and
+- docs/plans/workspace-pane-controls.md:250 (link) — [interface-card consolidation plan](interface-cards-consolidation.md); the
+- ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md:11 (link) — > Closed by the [interface-card consolidation](../../../beebox/docs/plans/interface-cards-consolidation.md), starting at
+
+References:
+- → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (link)
+- → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
+- → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
+- → docs/plans/interface-as-cards.md (link)
+- → docs/plans/workspace-pane-controls.md (link)
+- → docs/plans/chat-everywhere.md (link)
+- → docs/plans/interface-cards-consolidation.review.md (link)
+- → docs/engineering-principles.md (link)
+- → docs/design/interface-as-cards-background.md (mention)
+- → docs/plans/interface-cards-consolidation-removal-report.md (link)
+- → ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md (link)
+
+#### docs/plans/interface-cards-consolidation.review.md
+
+Title: "Plan Engineering Review — One workspace for interface cards" | 139 lines
+
+Referenced by:
+- docs/plans/interface-cards-consolidation.md:31 (link) — [Engineering review and dispositions](interface-cards-consolidation.review.md)
 
 #### docs/plans/invite-links-and-password-change.md
 
@@ -5326,7 +5446,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:1255 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1259 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -5464,9 +5584,26 @@ References:
 - → code-style.md (mention)
 - → docs/implemented-plans/job-xml-purge.subplan.md (mention)
 
-#### docs/plans/public-site-orientation.md **[ORPHAN]**
+#### docs/plans/public-site-box-authoring-export.md **[ORPHAN]**
+
+Title: "Author public-site cards in a box and export them to the repository" | 394 lines
+
+References:
+- → ../issues/exploration/2026-08-19-site-authored-in-a-box.md (frontmatter)
+- → ../issues/features/2026-07-20-public-site.md (frontmatter)
+- → docs/plans/public-site.md (mention)
+- → docs/plans/public-site-orientation.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/cards-as-markdown.md (mention)
+- → docs/box-layout.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/plans/public-site-orientation.md
 
 Title: "Public site — orientation & re-entry map" | 139 lines
+
+Referenced by:
+- docs/plans/public-site-box-authoring-export.md:32 (mention) — authoring/export open (`beebox/docs/plans/public-site-orientation.md:20-43`).
 
 References:
 - → docs/plans/public-site.md (link)
@@ -5497,6 +5634,8 @@ References:
 Title: "Public site" | 541 lines
 
 Referenced by:
+- docs/plans/agent-docs.md:18 (link) — ([public-site.md](public-site.md)); it is the machine layer that site's
+- docs/plans/public-site-box-authoring-export.md:27 (mention) — site is generated from repository content (`beebox/docs/plans/public-site.md:9-20`).
 - docs/plans/public-site-orientation.md:15 (link) — [the site plan](public-site.md) and
 - docs/plans/public-site-story-extraction.subplan.md:52 (link) — format ([public-site.md](public-site.md), Track E). Eval runs add
 - ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:13 (link) — [plan doc](../../beebox/docs/plans/public-site.md)) builds and deploys through
@@ -5539,7 +5678,6 @@ References:
 - → docs/plans/ios-companion-app.md (mention)
 - → docs/implemented-plans/remove-bbx-render.md (mention)
 - → docs/content-security-policy.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/architecture/outline.md (mention)
 - → docs/design/identity.md (mention)
 - → CLAUDE.md (mention)
@@ -5553,6 +5691,7 @@ Referenced by:
 - docs/README.md:14 (mention) — opens with a `**Status:**` line; see `docs/plans/README.md` for the full
 - docs/implemented-plans/workstreams.md:706 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
+- docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1071 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
@@ -5574,7 +5713,6 @@ References:
 - → docs/plans/narration-mode.md (mention)
 - → docs/activities-design.md (mention)
 - → docs/event-bus.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/unimplemented-plans/design-vision-superseded.md (mention)
 - → docs/unimplemented-plans/design-card-views-superseded.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -5787,6 +5925,7 @@ References:
 Title: "Workspace panes, focus, and conversation" | 580 lines
 
 Referenced by:
+- docs/plans/interface-cards-consolidation.md:26 (link) — It preserves the pane mechanisms in [workspace controls](workspace-pane-controls.md)
 - docs/plans/workspace-pane-controls.review.md:4 (link) — against source and revised [the plan](workspace-pane-controls.md). The reviewer
 - ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md:30 (link) — This is deferred from the [workspace pane plan](../../../beebox/docs/plans/workspace-pane-controls.md).
 - ../issues/features/2026-07-28-directories-as-viewable-things.md:43 (link) — The [workspace pane plan](../../beebox/docs/plans/workspace-pane-controls.md)
@@ -5798,6 +5937,7 @@ References:
 - → docs/engineering-principles.md (link)
 - → docs/plans/chat-everywhere.md (link)
 - → docs/mobile-contract.md (mention)
+- → docs/plans/interface-cards-consolidation.md (link)
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
 - → ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md (link)
 - → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
@@ -5885,6 +6025,21 @@ References:
 - → docs/triage.md (mention)
 - → docs/landmark-curation.md (mention)
 
+#### docs/reports/stack-decisions-2026-09-04.md
+
+Title: "Stack Decisions" | 1213 lines
+
+Referenced by:
+- docs/design/README.md:4 (link) — decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026
+
+References:
+- → docs/design/README.md (link)
+- → docs/cards-as-markdown.md (mention)
+- → docs/plans/docs-reorg.md (mention)
+- → docs/implemented-plans/state-management-comparison.md (mention)
+- → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
+- → CLAUDE.md (mention)
+
 ### docs/scheduled/
 
 #### docs/scheduled/csp-violation-review.md
@@ -5971,7 +6126,6 @@ References:
 - → docs/landmarks.md (mention)
 - → docs/design/extensibility.md (mention)
 - → docs/triage.md (mention)
-- → docs/stack-decisions.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/unimplemented-plans/email-volume-and-materialization-superseded.md
@@ -6139,7 +6293,7 @@ No references in or out.
 
 #### src/frontend/src/components/chat/CLAUDE.md
 
-Title: "Chat UI" | 159 lines
+Title: "Chat UI" | 166 lines
 
 Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:344 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
@@ -6265,7 +6419,6 @@ References:
 - → docs/calendar.md (mention)
 - → docs/google-drive.md (mention)
 - → docs/implemented-plans/figure-card-type.md (mention)
-- → docs/stack-decisions.md (mention)
 - → docs/box-layout.md (mention)
 - → MAP.md (at-include) **[BROKEN]**
 - → docs/knowledge-audits.md (mention)

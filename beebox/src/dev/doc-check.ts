@@ -86,8 +86,14 @@ function markdownFilesIncludingDoctests(): string[] {
   return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
 }
 
+// `site/docs/` is the public agent-docs corpus: its links are relative to the
+// PUBLISHED tree (`concepts/glossary.md`), not the repo, and the site build
+// validates them. Scanning them here reports phantom breaks, and `--fix` once
+// rewrote them into repo paths (2026-09-12).
+const AGENT_DOCS_PREFIX = "site/docs/";
+
 function markdownFiles(): string[] {
-  return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md"));
+  return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md") && !p.startsWith(AGENT_DOCS_PREFIX));
 }
 
 function issueFiles(tracked: string[]): string[] {

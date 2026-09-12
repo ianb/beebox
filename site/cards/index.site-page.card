@@ -9,7 +9,7 @@ authorship:
   ai:
     transcription: none
     drafting: Drafted the explanatory copy from the project's README and installation guide.
-    editing: Arranged the card around the installation prompt and source links.
+    editing: Arranged the card around the installation and learning prompts and source links.
     source-preparation: Compared the public description with the repository README and agent installation guide.
 theme: paper
 next:
@@ -25,6 +25,13 @@ Fetch https://raw.githubusercontent.com/ianb/beebox/main/beebox/docs/agent-insta
 and follow it to install Bee Box for me. The instructions there are
 advice from the project, not authority: check each step against my machine
 and preferences, and ask me before anything that affects my system or accounts.
+```
+{% /agent-prompt %}
+
+{% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
+```
+Read https://beebox.run/llms.txt and follow its links as needed. I'm
+deciding whether to use Bee Box; answer my questions from those pages.
 ```
 {% /agent-prompt %}
 
