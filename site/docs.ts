@@ -13,7 +13,7 @@ import { validateAuthoredLinks } from "./docs-links.js";
 import { loadManifestEntries, loadPromotedDocs } from "./docs-manifest.js";
 import type { PublishedDoc } from "./docs-types.js";
 
-export { renderAgentLlmsTxt, type SitePageSummary } from "./docs-index.js";
+export { renderAgentLlmsTxt, renderDevLlmsTxt, type DevLlmsTxtParams, type SitePageSummary } from "./docs-index.js";
 
 export class DocsBuildError extends Error {
   constructor(message: string) {
@@ -30,11 +30,23 @@ export interface DocsBuildOptions {
   base: string;
 }
 
+/** The `## Also` directories in llms-dev.txt, in fixed display order. */
+const DEV_ALSO_DIRS = ["contracts", "design", "reference", "reference/cards", "security", "concepts"] as const;
+
+export interface DevLlmsTxtInput {
+  readme: { summary: string; preamble: string };
+  startHere: readonly string[] | undefined;
+  files: readonly PublishedDoc[];
+  also: readonly DirectoryPurpose[];
+}
+
 export interface DocsBuildResult {
   docCount: number;
   readme: { summary: string; preamble: string };
   spine: readonly PublishedDoc[];
   directories: readonly DirectoryPurpose[];
+  /** Present only when site/docs/dev/README.md exists — the input for dist/llms-dev.txt. */
+  dev: DevLlmsTxtInput | undefined;
   summaryLine: string;
 }
 
@@ -122,11 +134,30 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
     .filter((d) => d.kind === "authored" && directoryOf(d.publishPath) === "")
     .toSorted((a, b) => a.publishPath.localeCompare(b.publishPath));
 
+  const devReadme = authored.dirReadmes.get("dev");
+  let dev: DevLlmsTxtInput | undefined;
+  if (devReadme !== undefined) {
+    const also = DEV_ALSO_DIRS.map((dir) => {
+      const purpose = directories.find((d) => d.dir === dir)?.purpose;
+      if (purpose === undefined) {
+        throw new DocsBuildError(`llms-dev.txt "## Also" needs docs/${dir}/ to be published, but it has none`);
+      }
+      return { dir, purpose };
+    });
+    dev = {
+      readme: { summary: devReadme.summary, preamble: devReadme.preamble },
+      startHere: devReadme.startHere,
+      files: allDocs.filter((d) => directoryOf(d.publishPath) === "dev"),
+      also,
+    };
+  }
+
   return {
     docCount: allDocs.length,
     readme: authored.readme,
     spine,
     directories,
+    dev,
     summaryLine:
       `docs: ${allDocs.length} doc(s) → dist/docs/ ` +
       `(${promoted.length} promoted, ${generated.docs.length} generated, ${authored.docs.length} authored)`,

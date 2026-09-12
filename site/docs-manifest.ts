@@ -41,7 +41,11 @@ const ADMISSIBLE_PUBLISH_DIRS = [
   "design/",
   "compared/",
   "contracts/",
+  "dev/",
 ] as const;
+
+/** Individual repo files admitted as manifest sources, beyond the prefix rules below. Closed set. */
+const ADMISSIBLE_SOURCE_FILES: readonly string[] = ["CONTRIBUTING.md", "beebox/CLAUDE.md", "beebox/code-style.md", "beebox/frontend.md"];
 
 // A repo-relative posix path with no traversal: the prefix checks below run on
 // the literal string, so `beebox/docs/design/../../issues/x.md` must be refused
@@ -54,6 +58,7 @@ function isPlainRelativePath(p: string): boolean {
 function isAdmissibleSource(source: string): boolean {
   if (!isPlainRelativePath(source)) return false;
   if (source === "README.md") return true;
+  if (ADMISSIBLE_SOURCE_FILES.includes(source)) return true;
   if (source.startsWith("beebox/docs/design/")) return true;
   if (source.startsWith("beebox/docs/architecture/")) return true;
   return /^beebox\/docs\/[^/]+\.md$/.test(source);
@@ -85,7 +90,8 @@ export function loadManifestEntries(manifestPath: string): ManifestEntry[] {
     if (!isAdmissibleSource(entry.source)) {
       throw new DocsManifestError(
         `${path.basename(manifestPath)}: source "${entry.source}" is outside the admissible prefixes ` +
-          "(beebox/docs/<flat file>.md, beebox/docs/design/, beebox/docs/architecture/, root README.md)",
+          "(beebox/docs/<flat file>.md, beebox/docs/design/, beebox/docs/architecture/, root README.md, " +
+          `${ADMISSIBLE_SOURCE_FILES.join(", ")})`,
       );
     }
     if (!isAdmissiblePublish(entry.publish)) {

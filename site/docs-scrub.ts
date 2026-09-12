@@ -26,7 +26,7 @@ const LITERAL_PATTERNS = ["private-issues"] as const;
 const BOX_PATH = /(?:~|\$HOME|\/home\/[^\s/]+|\/Users\/[^\s/]+)\/(?:src\/(?:boxes|box-worktrees)|boxes)\/([^\s"')/`]+)/g;
 // The shared test box, tooling subfolders, the fictional roster in
 // beebox/docs/example-names.md, and generic example names.
-const ALLOWED_BOX_NAMES = new Set(["test1", "scenarios", "backups", "hearth", "ledger", "studio", "seminar", "hearth-test"]);
+const ALLOWED_BOX_NAMES = new Set(["test1", "scenarios", "backups", "field-runs", "hearth", "ledger", "studio", "seminar", "hearth-test"]);
 const PLACEHOLDER_BOX_NAME = /^(?:<|{|\$|my-?box|example|your-?box|dev\d*$|box\d*$)/;
 
 function isPlaceholderBoxName(name: string): boolean {

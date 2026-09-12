@@ -52,6 +52,33 @@ test("loadAuthoredDocs: missing frontmatter fails naming file and line", async (
   await assert.rejects(loadAuthoredDocs({ docsDir: dir, repoRoot: dir }), FrontmatterError);
 });
 
+test("loadAuthoredDocs: a directory README.md is a preamble, keyed by directory, never published", async () => {
+  const dir = await tmpDocsDir({
+    "01-what-bee-box-is.md": '---\ndescription: "What it is."\n---\n# What Bee Box is\n\nBody.\n',
+    "README.md": '---\ndescription: "One line."\n---\nRoot preamble.\n',
+    "dev/index.md": '---\ndescription: "Dev process."\n---\n',
+    "dev/README.md": '---\ndescription: "For contributors."\nstart-here: [contributing.md]\n---\nDev preamble.\n',
+    "dev/contributing.md": '---\ndescription: "How a change lands."\n---\nbody\n',
+  });
+  const corpus = await loadAuthoredDocs({ docsDir: dir, repoRoot: dir });
+  assert.equal(corpus.docs.length, 2);
+  assert.ok(!corpus.docs.some((d) => d.publishPath.endsWith("README.md")));
+  assert.deepEqual(corpus.dirReadmes.get("dev"), {
+    summary: "For contributors.",
+    preamble: "Dev preamble.",
+    startHere: ["contributing.md"],
+  });
+});
+
+test("loadAuthoredDocs: a directory README.md without start-here has it undefined", async () => {
+  const dir = await tmpDocsDir({
+    "concepts/index.md": '---\ndescription: "Core vocabulary."\n---\n',
+    "concepts/README.md": '---\ndescription: "Concepts."\n---\nPreamble.\n',
+  });
+  const corpus = await loadAuthoredDocs({ docsDir: dir, repoRoot: dir });
+  assert.equal(corpus.dirReadmes.get("concepts")?.startHere, undefined);
+});
+
 test("loadAuthoredDocs: an empty docs/ directory (not yet created) is legal", async () => {
   const dir = path.join(os.tmpdir(), "docs-authored-missing-does-not-exist");
   const corpus = await loadAuthoredDocs({ docsDir: dir, repoRoot: dir });

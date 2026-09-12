@@ -15,7 +15,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
-import { buildDocsCorpus, renderAgentLlmsTxt, type SitePageSummary } from "./docs.js";
+import { buildDocsCorpus, renderAgentLlmsTxt, renderDevLlmsTxt, type SitePageSummary } from "./docs.js";
 import { baseFromBranch, normalizeBase, resolveInternalHref } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
@@ -247,9 +247,23 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
         spine: docsResult.spine,
         directories: docsResult.directories,
         sitePages: sitePageSummaries(built),
+        hasDevEntry: docsResult.dev !== undefined,
       }),
       "utf8",
     );
+    if (docsResult.dev !== undefined) {
+      await fs.writeFile(
+        path.join(distDir, "llms-dev.txt"),
+        renderDevLlmsTxt({
+          base,
+          readme: docsResult.dev.readme,
+          startHere: docsResult.dev.startHere,
+          files: docsResult.dev.files,
+          also: docsResult.dev.also,
+        }),
+        "utf8",
+      );
+    }
   }
 
   // Input manifest LAST, once all output exists: the dev router compares it

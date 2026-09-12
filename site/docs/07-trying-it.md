@@ -20,7 +20,7 @@ the container.
 **The from-source path is for modifying the engine.** It needs Node 24,
 pnpm, and several system binaries, and it ends with a `doctor` command that
 checks every prerequisite and prints a remedy for anything missing.
-Details: [install/developer.md](install/developer.md).
+Details: [dev/developer-install.md](dev/developer-install.md).
 
 **The agent-driven install.** The project publishes an install guide written
 for your own coding agent, so you can ask Claude Code or Codex to do the

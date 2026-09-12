@@ -74,9 +74,6 @@
 
 # --- install ----------------------------------------------------------------
 
-- source: beebox/docs/developer-install.md
-  publish: install/developer.md
-  description: "From-source install for contributors."
 
 - source: beebox/docs/google-setup.md
   publish: install/google.md
@@ -152,26 +149,140 @@
   publish: contracts/scan-upload.md
   description: "The HTTP contract a scanner uploader uses to send documents into a box."
 
-- source: beebox/docs/adding-schemas.md
-  publish: contracts/adding-a-card-type.md
-  description: "How a new card type is defined, worked example included."
 
 - source: beebox/docs/card-validation.md
   publish: contracts/card-validation.md
   description: "How card validation reaches agents and blocks bad commits."
 
-- source: beebox/docs/migrations.md
-  publish: contracts/migrations.md
-  description: "How box data migrations are applied and written."
 
 - source: beebox/docs/scheduler.md
   publish: contracts/scheduler.md
   description: "The background daemon that wakes boxes on a schedule."
 
-- source: beebox/docs/health-checks.md
-  publish: contracts/health-checks.md
-  description: "Runbooks for checking a deployed server's health."
 
 - source: beebox/docs/assets.md
   publish: contracts/assets.md
   description: "How media stays tracked by git without its bytes (git-annex)."
+
+# --- dev (the contributor entry point, llms-dev.txt) --------------------------
+
+- source: CONTRIBUTING.md
+  publish: dev/contributing.md
+  description: "How a change is made and lands: setup, tests, lint, docs, where things live."
+
+- source: beebox/CLAUDE.md
+  publish: dev/claude-md.md
+  description: "The engine's agent instruction file: what the maintainer's own coding agent reads first."
+
+- source: beebox/code-style.md
+  publish: dev/code-style.md
+  description: "Code conventions: types, errors, lint, naming, file limits."
+
+- source: beebox/frontend.md
+  publish: dev/frontend.md
+  description: "Frontend conventions: UI primitives, palette, the className rule."
+
+- source: beebox/docs/developer-install.md
+  publish: dev/developer-install.md
+  description: "From-source install for contributors."
+
+- source: beebox/docs/testing.md
+  publish: dev/testing.md
+  description: "Testing philosophy and the doctest tiers."
+
+- source: beebox/docs/engineering-principles.md
+  publish: dev/engineering-principles.md
+  description: "The durable design principles the code style implements."
+
+- source: beebox/docs/module-map.md
+  publish: dev/module-map.md
+  description: "The lib/shared/types boundary diagram."
+
+- source: beebox/docs/adding-api-endpoints.md
+  publish: dev/adding-api-endpoints.md
+  description: "Adding an HTTP endpoint: tRPC by default, raw Fastify for the exceptions."
+
+- source: beebox/docs/adding-schemas.md
+  publish: dev/adding-a-card-type.md
+  description: "How a new card type is defined, worked example included."
+
+- source: beebox/docs/migrations.md
+  publish: dev/migrations.md
+  description: "How box data migrations are applied and written."
+
+- source: beebox/docs/tours.md
+  publish: dev/tours.md
+  description: "Browser walk-throughs for UI and accessibility review."
+
+- source: beebox/docs/maintenance.md
+  publish: dev/maintenance.md
+  description: "Periodic code cleanup: dead code, circular deps."
+
+- source: beebox/docs/server-operations.md
+  publish: dev/server-operations.md
+  description: "Runbooks for a deployed server."
+
+- source: beebox/docs/health-checks.md
+  publish: dev/health-checks.md
+  description: "Health-check runbooks for a deployed server."
+
+- source: beebox/docs/event-bus.md
+  publish: dev/event-bus.md
+  description: "The in-process pub/sub event system."
+
+- source: beebox/docs/chat-session-lifecycle.md
+  publish: dev/chat-session-lifecycle.md
+  description: "Chat session state and recovery."
+
+- source: beebox/docs/chat-review.md
+  publish: dev/chat-review.md
+  description: "Nightly chat titles and summaries."
+
+- source: beebox/docs/client-debug-log.md
+  publish: dev/client-debug-log.md
+  description: "The browser and iOS debug log format."
+
+- source: beebox/docs/prompt-logging.md
+  publish: dev/prompt-logging.md
+  description: "Capturing full agent API traffic for debugging."
+
+- source: beebox/docs/prompt-audits.md
+  publish: dev/prompt-audits.md
+  description: "Lens catalog for reviewing what an agent is shown."
+
+- source: beebox/docs/prompt-surface-review.md
+  publish: dev/prompt-surface-review.md
+  description: "Workflow for auditing agent context."
+
+- source: beebox/docs/knowledge-audits.md
+  publish: dev/knowledge-audits.md
+  description: "Tests that prompt a real box agent and check what it knows."
+
+- source: beebox/docs/knowledge-taxonomy.md
+  publish: dev/knowledge-taxonomy.md
+  description: "Where each kind of box knowledge lives."
+
+- source: beebox/docs/composer-states.md
+  publish: dev/composer-states.md
+  description: "The chat input state machine."
+
+- source: beebox/docs/composer-input-machine.md
+  publish: dev/composer-input-machine.md
+  description: "Composer input validation and submission logic."
+
+- source: beebox/docs/image-orientation.md
+  publish: dev/image-orientation.md
+  description: "The EXIF orientation contract."
+
+- source: beebox/docs/image-transforms.md
+  publish: dev/image-transforms.md
+  description: "Image transform operations."
+
+- source: beebox/docs/mobile-parity.md
+  publish: dev/mobile-parity.md
+  description: "iOS versus Android capability matrix."
+
+- source: beebox/docs/example-names.md
+  publish: dev/example-names.md
+  description: "The fictional roster docs and tests use instead of real names."
+

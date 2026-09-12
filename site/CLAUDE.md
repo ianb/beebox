@@ -150,14 +150,34 @@ across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-manifest.ts`,
 called once from `build.ts` and skipped for box-export dry-runs
 (`buildAgentDocs: false`).
 
+**A second entry point, `dist/llms-dev.txt`, for contributors.** Rendered by
+`renderDevLlmsTxt` (`docs-index.ts`, beside `renderAgentLlmsTxt`) from
+`site/docs/dev/README.md`: its `description:` and body become the summary and
+preamble, its optional `start-here: [filenames]` orders a `## Start here`
+section, everything else published under `dev/` falls into `## Files`
+(sorted), and a fixed `## Also` points at `contracts/`, `design/`,
+`reference/`, `reference/cards/`, `security/`, `concepts/`, and `llms.txt`
+itself. No `dev/README.md` means no `llms-dev.txt` — not a build failure.
+When it *is* written, `llms.txt` gains a `## Contributing` section (after
+`## Directories`) pointing at `llms-dev.txt` and `dev/`.
+
+**A directory's own `README.md`** works like the corpus-root one (never
+published, `description:` + optional `start-here:` frontmatter) but scoped to
+that directory — `docs-authored.ts` keys them by directory
+(`AuthoredCorpus.dirReadmes`). Only `dev/`'s is consumed today (by
+`renderDevLlmsTxt`); any other directory's README parses and scrub-gates like
+every authored file but currently goes unused.
+
 **Three source kinds, one published set.** Authored (`docs/**/*.md`, mirroring
 the published tree, frontmatter `description:` and — under `compared/` only —
 a `compared:` block); promoted (`docs-manifest.yaml`, one line per admitted
-repo file — the loader hard-codes both the admissible source prefixes and the
-admissible publish directories, so a manifest entry outside either fails the
-build regardless); generated (`beebox/scripts/export-box-docs.ts`, run via
-`pnpm --dir beebox exec tsx` on every build — no filesystem side effect, ~1s —
-producing `reference/` and `reference/cards/`).
+repo file — the loader hard-codes both the admissible source prefixes (plus
+three individually admitted files: `beebox/CLAUDE.md`, `beebox/code-style.md`,
+`beebox/frontend.md`) and the admissible publish directories (including
+`dev/`), so a manifest entry outside either fails the build regardless);
+generated (`beebox/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
+exec tsx` on every build — no filesystem side effect, ~1s — producing
+`reference/` and `reference/cards/`).
 
 **The scrub gate** (`docs-scrub.ts`) runs on every doc kind before it reaches
 `dist/docs/`: a real home path (reusing `bin/path-leak-check.ts`'s `HOME_PATH`

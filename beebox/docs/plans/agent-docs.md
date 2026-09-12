@@ -381,6 +381,29 @@ to write from.
 
 **Generated.** The engine doc set, as `reference/`.
 
+## The contributor entry point (added 2026-09-12)
+
+The builder persona gets a second entry, `beebox.run/llms-dev.txt`: a
+preamble (`site/docs/dev/README.md`: repo layout, running from source,
+tests, how a change lands), a `## Start here` list in reading order, then
+every doc under `docs/dev/`, then the directories a contributor also needs.
+`llms.txt` links it under `## Contributing`. The dev set is the formerly
+held-back process docs plus the engine's own agent instruction files
+(`beebox/CLAUDE.md`, `code-style.md`, `frontend.md`), which are the most
+useful contributor pages of all. Anything authored for contributors that a
+repo agent could also use lives in the repo and is promoted, not authored on
+the site: the contributing page is the root `CONTRIBUTING.md`. Excluded
+roots are unchanged; `stack-decisions.md` was frozen as a dated report
+rather than admitted. `doc-check` now skips `site/docs/`, whose links are
+published-relative.
+
+Prompt for this entry:
+
+```
+Read https://beebox.run/llms-dev.txt and follow its links as needed. I'm
+going to work on the Bee Box codebase; answer my questions from those pages.
+```
+
 ## Not in scope
 
 - The box-specific agent guide (`.beebox/agent-guide.md`) needs a box to

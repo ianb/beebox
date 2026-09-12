@@ -50,6 +50,21 @@ test("loadManifestEntries: malformed manifest (missing required field) fails the
   assert.throws(() => loadManifestEntries(file), DocsManifestError);
 });
 
+test("loadManifestEntries: beebox/code-style.md is admitted as a literal-allowlisted source", () => {
+  const file = writeManifest("- source: beebox/code-style.md\n  publish: dev/code-style.md\n  description: x\n");
+  assert.equal(loadManifestEntries(file).length, 1);
+});
+
+test("loadManifestEntries: beebox/deploy/README.md is refused (not on the literal allowlist)", () => {
+  const file = writeManifest("- source: beebox/deploy/README.md\n  publish: dev/deploy.md\n  description: x\n");
+  assert.throws(() => loadManifestEntries(file), DocsManifestError);
+});
+
+test("loadManifestEntries: dev/ is an admissible publish directory", () => {
+  const file = writeManifest("- source: beebox/CLAUDE.md\n  publish: dev/claude.md\n  description: x\n");
+  assert.equal(loadManifestEntries(file).length, 1);
+});
+
 test("loadManifestEntries: traversal in a source or publish path is refused before the prefix check", () => {
   const source = writeManifest("- source: beebox/docs/design/../../../issues/features/x.md\n  publish: design/x.md\n  description: x\n");
   assert.throws(() => loadManifestEntries(source), DocsManifestError);
