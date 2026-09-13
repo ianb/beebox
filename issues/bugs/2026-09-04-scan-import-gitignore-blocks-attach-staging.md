@@ -7,7 +7,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — Track A2 (one-root box layout), 2026-09-04
 priority: normal
-next-action: reconfirm
 ---
 
 `bbx scan-import` (photo flow and PDF extraction) writes originals and derived
@@ -50,3 +49,31 @@ boxes); or exempt scan-imported originals from the ignore block / give
 `stageFiles`/`stageAndCommitPaths` a `force` option these callers opt into;
 or decide scan intake requires an annex-converted box and fail with a clear
 message.
+
+## Reconfirmed live 2026-09-13 — reproduced, not fixed
+
+The `reconfirm?` guess does not hold: this is still broken, and I reproduced the
+mechanism rather than reading for it. On a fresh `makeTmpBox({ git: true })` box
+with no annex conversion — the shape a real fresh box has — writing
+`_content/inbox/scan-x.attach/page-001.jpg` and calling `stageFiles`:
+
+```
+{"ignored":true,
+ "rule":"**/*.attach/**/*.jpg	_content/inbox/scan-x.attach/page-001.jpg",
+ "staged":"FAILED: The following paths are ignored by one of your .gitignore files:"}
+```
+
+`git check-ignore -v` names the stock rule, and the staging call fails, exactly as
+filed. `stageFiles` still has no `force` option (grepped `src/lib/git.ts`).
+
+What has changed nearby, and why it is not this: `c47fd2be1` (2026-09-06, "Catch
+path-anchored asset ignore rules, not just one spelling") fixed `isAssetIgnoreRule`
+missing a path-anchored spelling of these rules, which had left one production box
+with every asset reaching neither git nor the annex. Adjacent — same ignore
+block — but it repairs the *detection* of those rules, not scan-import's inability
+to stage past them.
+
+Field removed. Still open on its original terms: the issue lists three candidate
+resolutions and says it needs a product decision, which is the boxholder's call,
+not something to pick while reconfirming. The next pass can skip the reproduction
+and start from that decision.

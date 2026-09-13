@@ -43,4 +43,4 @@ First experiment when picked up: `page` schema in a test box, author the
 walkthrough prototype as a card there, crude export to `site/content/`.
 
 Related: [public site](../features/2026-07-20-public-site.md),
-[Bee Box rename](../decisions/2026-08-19-bee-box-rename.md).
+[Bee Box rename](../closed/decisions/2026-08-19-bee-box-rename.md).

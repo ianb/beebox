@@ -7,7 +7,6 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the landmark hq transcription toggle is very slow to respond (is it doing a whole git thing there?)"
 priority: normal
-next-action: reconfirm
 ---
 
 Yes, it is doing a whole git thing. The landmark-scope HQ toggle in the voice
@@ -55,3 +54,35 @@ Related: `issues/decisions/2026-08-30-rethink-box-autocommit.md` (what
 should commit, and when); `issues/features/2026-08-26-sticky-hq-transcription-
 preference.md` (the scope controls this toggle belongs to, still on its iOS
 manual-testing gate).
+
+## Reconfirmed live 2026-09-13 — unchanged, with the cost measured
+
+The `reconfirm?` guess does not hold. Both halves of the mechanism are exactly as
+filed:
+
+- `src/core/landmark/hq-preference.ts` still `await`s `stageAndCommitPaths` inside
+  the request, returning `commitWarning` after it.
+- `VoiceChip.tsx` still updates only in the mutation's `onSuccess` (invalidate on
+  success), so there is no optimistic flip — the control waits for the round trip
+  *and* the commit.
+
+Nothing touched either file since the filing; the commits near them are voice
+service-picker and HQ-fallback work.
+
+**Measured, since "very slow" deserves a number.** An empty commit through the
+managed pre-commit hook on the primary test box, warm machine, nothing staged:
+
+```
+real  0m1.302s
+```
+
+So the floor for a toggle flip is ~1.3s of hook before any lock wait or annex
+work, on the fastest box there is. The issue's estimate ("about a second with
+nothing staged") was right, and a hosted box pays more. The probe commit was
+reset away; the box is unchanged.
+
+Field removed, issue kept open. Its "Directions, none decided" list is the reason:
+respond-after-write changes when durability happens, which is a product call, and
+sorting the twelve other `stageAndCommitPaths` callers into interactions versus
+jobs is the bigger half. The optimistic-UI direction is the one piece that is
+worth doing regardless of how the server question lands.
