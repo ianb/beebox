@@ -271,6 +271,30 @@ export async function readCodexSessionHistory(options: {
   return adaptCodexThreadHistory(raw, options.slice);
 }
 
+/**
+ * `readCodexSessionHistory`, with "Codex has no such thread" as an answer
+ * rather than a throw — `null` for a thread that does not exist.
+ *
+ * The Claude side of the same question has always been tolerant: its reader
+ * treats ENOENT on the transcript file as an empty transcript. Codex's reader
+ * had no equivalent, so an id Codex did not know propagated an RPC error all
+ * the way to a chat error banner instead of an empty chat. A genuine failure
+ * (the app-server died, the request timed out, the box has no codex binary)
+ * still throws.
+ */
+export async function readCodexSessionHistoryIfPresent(options: {
+  boxRoot: string;
+  sessionId: string;
+  slice: SessionLogSlice;
+}): Promise<{ entries: SessionEntry[]; total: number } | null> {
+  try {
+    return await readCodexSessionHistory(options);
+  } catch (error) {
+    if (error instanceof CodexHistoryRpcError && error.isNotFound) return null;
+    throw error;
+  }
+}
+
 /** Last native update time, used where Claude uses transcript mtime. */
 export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: string): Promise<Date> {
   const raw = await readThread(boxRoot, sessionId);
@@ -306,7 +330,7 @@ export async function codexSessionExists(boxRoot: string, sessionId: string): Pr
     await readThread(boxRoot, sessionId);
     return true;
   } catch (error) {
-    if (error instanceof CodexHistoryRpcError && /not found|not loaded|unknown thread/i.test(error.rpcMessage)) return false;
+    if (error instanceof CodexHistoryRpcError && error.isNotFound) return false;
     throw error;
   }
 }

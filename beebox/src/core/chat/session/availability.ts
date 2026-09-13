@@ -3,7 +3,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry.js";
-import { resolveChatEngine } from "./engine.js";
+import { resolveRecordedChatEngine } from "./engine.js";
 import { codexSessionExists } from "./codex-transcript.js";
 import { localOrigin } from "./origin.js";
 
@@ -82,9 +82,19 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
   // never before: a chat being deleted stays refused whatever else is true.
   if (args.registry.getReservation(args.sessionId) !== null) return { kind: "resumable" };
   // The husk is read before the engine question, not after: it carries the
-  // `engine` stamp `resolveChatEngine` prefers, and both branches below want it.
+  // `engine` stamp the engine resolver prefers, and both branches below want it.
   const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
-  if (await resolveChatEngine(args.boxRoot, { sessionId: args.sessionId, husk }) === "codex") {
+  // The RECORDED engine, never the box default. An id with no husk stamp, no
+  // history row and no reservation is a session this box has no record of, and
+  // the box default is not an answer about it — asking Codex whether it holds a
+  // thread for such an id made a clean "no transcript here" depend on Codex's
+  // error WORDING (`isNotFound`), and an unrecognized phrasing surfaced the raw
+  // RPC error instead (2026-09-03). Unrecorded falls through to the local
+  // transcript file: present means resumable whatever wrote it, and absent
+  // means `missingTranscript`, whose `unknown` transcript state is already the
+  // "no record of this session" the chat surfaces render.
+  const engine = await resolveRecordedChatEngine(args.boxRoot, { sessionId: args.sessionId, husk });
+  if (engine === "codex") {
     if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
     return missingTranscript(husk);
   }
