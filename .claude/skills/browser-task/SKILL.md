@@ -25,8 +25,8 @@ their logins. The box never sees the site; it sees your batch.
    read every post. Screenshot-driven scrolling is the cost driver
    practitioners report. Scroll at a human pace. Stop at the prompt's limit
    or when you reach the watermark, whichever comes first.
-3. **Write the batch** in this session's scratchpad directory (the only
-   place the browser upload tool may read from):
+3. **Write the batch** in a `batch/` subdirectory of this session's scratchpad
+   (the browser upload tool may only read files under that scratchpad):
    - `records.json`: `{ "coverage": { "scanned": N, "stoppedAt": "<permalink or date>", "reason": "<reason>" }, "records": [ ... ] }`.
      `reason` is one of `reached-watermark`, `reached-limit`, `end-of-feed`,
      `login-wall`, `rate-limited`, `error`. A login wall or rate limit is a
@@ -40,12 +40,16 @@ their logins. The box never sees the site; it sees your batch.
      `upload_image`. Say what you could not do in `coverage.notes`.
    - Every field marked `"format": "attachment"` in the schema must name a
      file you uploaded, and every uploaded file must be named by a record.
-4. **Validate before uploading.** From the monorepo checkout:
+4. **Optionally validate locally** before selecting files for a large batch
+   or while debugging records. The card page validates before submission using
+   the same validator as the server, so a separate local pass is not required.
+   For a local pass, save the task's JSON Schema as `schema.json` beside `batch/`
+   in the scratchpad. Upload only `batch/records.json` and its attachments,
+   never the schema. From the monorepo checkout:
    ```bash
    node --import tsx -e 'import("./beebox/src/shared/browser-task-batch.ts").then(async (m) => { const fs = await import("node:fs"); const dir = process.argv[1]; const files = fs.readdirSync(dir).filter((f) => f !== "records.json"); const r = m.validateBatch({ schemaJson: JSON.parse(fs.readFileSync(process.argv[2], "utf8")), manifest: JSON.parse(fs.readFileSync(dir + "/records.json", "utf8")), fileNames: files }); console.log(JSON.stringify(r, null, 2)); process.exit(r.ok ? 0 : 1); })' <batch-dir> <schema.json>
    ```
-   Fix every issue it names; the server runs the same check and refuses the
-   batch as a unit.
+   Fix any issues it names. The server refuses invalid batches as a unit.
 5. **Submit through the card page.** `find` the file input under "Submit a
    batch". Use `file_upload` with the file paths; never click the input (a
    native picker would block you). Each call replaces the input's selection

@@ -398,15 +398,19 @@ it was seen, in what conditions), then apply whichever of these holds:
 
 ## Taking on an issue (agents)
 
-Before you start working an issue, **search the queue for related and
-duplicate items** — `bin/issues similar <path> --all` (semantic; add `--docs`
-to include plans/design docs as prior art), then grep by the issue's slug,
-its keywords, the files/symbols it names, and the symptom. A fix often resolves a sibling too, and there are frequently near-dupes
-filed from different angles. Decide up front which of the cluster this work should
-address *together* (fixing one and leaving its twin open is wasted future work),
-and **list every issue in the cluster in the plan** (bbx-plan's "Issues addressed"
-header) so `/finish` knows the full set to reconcile — issues that aren't listed
-are the ones that get forgotten.
+Before starting, make one bounded duplicate and ownership check: read the
+issue's links and `workstream:`, then run `bin/issues similar <path> --all`.
+Do not turn one chosen issue into a queue-wide survey by default. Expand into
+the full cluster workflow in `bbx-pick-issues` only when the issue links
+siblings, the initial results show a plausible shared mechanism, or the
+developer asked for a cluster. Then inspect the relevant code and grep by the
+issue's slug, symbols, paths, and symptom; use `--docs` when plans or design
+documents are relevant prior art. Decide which issues the work should address
+together without expanding the human's approved scope.
+
+For a single issue or a cluster, record every issue this work addresses in the
+plan's "Issues addressed" header when there is a plan; otherwise retain their
+paths in the workstream briefing or handoff so `/finish` can reconcile them.
 
 ## Filing (agents)
 

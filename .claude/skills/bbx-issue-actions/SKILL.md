@@ -202,14 +202,17 @@ together.
 
 ## Fixing in place
 
-Some of these are small enough to just fix — that is the point of surfacing them
-as agent tasks. This never applies to `discuss`, regardless of blast radius.
-For the provisional values, judge by blast radius, not by category:
+Working provisional tags includes permission to fix a contained, verifiable
+problem inline (a lint fix, a wrong string, or a one-file bug with a test). This
+never applies to `discuss`, regardless of blast radius, and it does not override
+a `needs: [manual-testing]` gate.
 
-- **Fix inline** when it is contained and verifiable here (a lint fix, a wrong
-  string, a one-file bug with a test).
-- **Spin up a worktree session** (`launch-worktree-session` skill) when it
-  touches a deployed path, spans surfaces, needs a device, or wants a plan.
+For larger fixes—deployed paths, multiple surfaces, device work, or work needing
+a plan—follow the developer's existing implementation scope. If that scope is
+not already authorized, report the proposed work rather than starting it.
+A tag alone does not authorize a separate worktree launch; use
+`launch-worktree-session` when the developer has explicitly requested one.
+Do not ask again for authorization already given in this conversation.
 
 Working from the main checkout: a commit touching `beebox/` **deploys**.
 Know that before you commit, not after.
