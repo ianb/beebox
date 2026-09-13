@@ -9,22 +9,26 @@ current truth.
 - **`docs/*.md`** (flat) — current reference and operational docs: how the
   system works *now*. Kept up to date; not a place to park a proposal or a
   finished plan. The deliberate exception is [name history](name-history.md),
-  the single in-tree record of product naming changes.
-- **`docs/plans/`** — active proposals, not yet (fully) shipped. Every plan
-  opens with a `**Status:**` line; see `docs/plans/README.md` for the full
-  status-header convention and how plans move between directories.
+  the single in-tree record of product naming changes. The security report is
+  also deliberately maintained here: its revision/date provenance records the
+  latest reviewed accounting; it is not an immutable experiment report.
+- **`docs/plans/`** — active proposals, not yet (fully) shipped. Plans use YAML
+  frontmatter `status: draft`, `active`, or `partial`, not a duplicate prose
+  status line. See [plan conventions](plans/README.md) for required fields.
 - **`docs/implemented-plans/`** — plans whose work has shipped, moved here
   (not deleted) so the reasoning behind past work stays findable without
-  masquerading as current reference.
+  masquerading as current reference. `status: implemented` means the work
+  shipped, not that every sentence is current. Link current operating guides
+  from history when available, and label incoming historical links as such.
 - **`docs/unimplemented-plans/`** — plans retired or parked without shipping.
   Each entry in the directory's `README.md` disposition table says what
-  superseded or shelved it.
+  superseded or shelved it. Their status is `parked` or `superseded`.
 - **`docs/reports/`** — point-in-time snapshots: audits, investigations,
   one-off analyses. Filenames are date-stamped (`<topic>-YYYY-MM-DD.md`)
   because a report describes a moment, not an evolving truth — don't update
   one in place to reflect later reality; write a new one.
 - **`docs/design/`** — the engineering-rationale reference: why the system is
-  shaped this way, one small file per topic (split from the former
+  shaped this way, maintained as decisions change, one small file per topic (split from the former
   `design.md`, reconciled to boxholder rulings 2026-07-04). Answers *why*, never *how to*. (The old `stack-decisions.md` log is
   frozen under `reports/`.)
 - **`docs/box/`** — prose docs written for box agents, shipped into every
@@ -49,6 +53,12 @@ archives and exempt), or a **duplicate basename under `issues/`** — the
 unique-basename invariant that makes issue-link repair possible. Prints nothing
 on success; on failure, fix the links and regenerate the index (`pnpm
 doc-graph`).
+
+Plan status/location consistency is also checked against the complete staged
+Git index on every commit, and against the candidate branch before `bin/land`
+merges. The shared validator rejects unreadable metadata and never assigns a
+shipped status automatically. Run `node --import tsx bin/doc-lifecycle-check.ts
+--index` from the monorepo root to check the staged state.
 
 `pnpm doc-check --fix` repairs decayed links. When a file moves (an issue
 resolving `bugs/foo.md` → `closed/bugs/foo.md` is the common case) every

@@ -440,7 +440,7 @@ In `executeScanImport` (both photo entry points), replacing the two
   consequence of a wrong rotation is a mis-rotated rendering with the
   original pixels intact (the field is advisory), so this is an
   accepted quality regression, noted in the plan postscript and the
-  scan section of `docs/plans/scanner-ingest.md`.
+  scan section of `docs/implemented-plans/scanner-ingest.md`.
 
 ### Config / deploy surface
 
@@ -456,7 +456,7 @@ In `executeScanImport` (both photo entry points), replacing the two
   the other consumer; verify `audio-question.ts`'s key use at
   implementation time), `hub/child-env.ts` passthrough (stays, +
   `BBX_SCAN_VISION`), `env.ts` secret names (stay).
-- `docs/plans/scanner-ingest.md` gets a model note (photo flow default
+- `docs/implemented-plans/scanner-ingest.md` gets a model note (photo flow default
   = Claude Sonnet 5 via agent SDK; Gemini opt-in), and
   `scratch/model-comparison/REPORT.md` gets a one-line decision
   postscript. No Docling-adjacent decision shifts (document mode is

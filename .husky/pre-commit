@@ -67,6 +67,11 @@ echo "[pre-commit] .: pnpm commit-blocklist-check"
 echo "[pre-commit] .: pnpm mobile-contract-check"
 (cd "$REPO_DIR" && pnpm --silent mobile-contract-check)
 
+# Validate the complete candidate index, rather than the working tree, so a
+# partially staged plan move cannot land a status/directory mismatch.
+echo "[pre-commit] .: document lifecycle check"
+(cd "$REPO_DIR" && node --import tsx bin/doc-lifecycle-check.ts --index)
+
 # A schedule that fails lint is a schedule that fails at 03:00 on a Sunday with
 # nobody watching, so the check happens at commit time. Silent on success; one
 # line per finding otherwise. schedules/ is outside every package's lint, so

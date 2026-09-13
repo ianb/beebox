@@ -228,7 +228,7 @@ For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox
 
 ## Prod git-annex migration (manifest → annex cutover)
 
-`docs/plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
+`docs/implemented-plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
 manifest asset scheme onto git-annex before
 scan-import ships — it stages raw asset bytes and assumes annex
 unconditionally (no manifest-writing code path exists). Track 2's upload

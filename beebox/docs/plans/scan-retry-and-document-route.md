@@ -107,7 +107,7 @@ retries. Not a duplicate; noted so the two don't grow into each other.
 ## Prior art (external)
 
 Searched to re-verify the conclusions in
-[`scanner-ingest.md`](scanner-ingest.md), because Track 3 depends on them.
+[`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
 **They still hold**; this is a confirmation, not a change.
 
 - Conditional "OCR only pages without a text layer" is still an unimplemented

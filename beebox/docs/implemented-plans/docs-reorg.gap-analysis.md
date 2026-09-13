@@ -1,10 +1,10 @@
 ---
 title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions"
-status: active
-workstream: unknown
-issues: []
 ---
 # Docs-reorg companion: gap analysis — non-obvious, undocumented conventions
+
+Historical assessment accompanying [the shipped reorganization](docs-reorg.md).
+Its findings describe that checkpoint, not a verified current backlog.
 
 Premise (from the plan's Direction section): document only what contradicts
 a fresh agent's intuition; flag possibly-incidental divergences as questions

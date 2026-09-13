@@ -13,14 +13,19 @@
 // deliverable orientation docs the boxholder wants to browse". What changes is
 // the scope — every file, not only `.md`.
 
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import { execa } from "execa";
 
 import { kindForPath } from "./document-read.js";
 import type { DocumentKind } from "../shared/documents.js";
+import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "../../../beebox/src/dev/document-lifecycle.js";
 
 export interface IndexedPath {
   relPath: string;
   kind: DocumentKind;
+  lifecycle: DocumentLifecycle | null;
 }
 
 function splitLines(stdout: string): string[] {
@@ -64,9 +69,18 @@ async function scratchMarkdown(root: string): Promise<string[]> {
 /** Every browsable path in one checkout, sorted, deduplicated. */
 export async function listBrowsablePaths(root: string): Promise<IndexedPath[]> {
   const [listed, scratch] = await Promise.all([listedByGit(root), scratchMarkdown(root)]);
-  return [...new Set([...listed, ...scratch])]
+  return Promise.all([...new Set([...listed, ...scratch])]
     .toSorted()
-    .map((relPath) => ({ relPath, kind: kindForPath(relPath) }));
+    .map(async (relPath) => {
+      const lifecycle = documentLifecycle(relPath, null);
+      if (lifecycle === null || lifecycle.status !== null || lifecycle.role === "reference" || lifecycle.role === "report" || lifecycle.role === "design-rationale") {
+        return { relPath, kind: kindForPath(relPath), lifecycle };
+      }
+      // A scratch file can disappear while the index is being assembled; keep it
+      // browsable with an unknown status until the next refresh drops the path.
+      const source = await fs.readFile(path.join(root, relPath), "utf8").catch(() => "");
+      return { relPath, kind: kindForPath(relPath), lifecycle: documentLifecycle(relPath, planStatusFromSource(source)) };
+    }));
 }
 
 /**

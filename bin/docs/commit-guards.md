@@ -36,8 +36,11 @@ Root `pnpm install` activates hooks through relative `core.hooksPath=.husky/_`.
 `bin/land [branch]` resolves main from the common Git directory and merges
 `--no-ff --no-edit`. It requires clean main on `main` and a branch containing
 current main. With no argument a worktree lands itself; main selects only one
-unambiguous candidate. `--list` and `--dry-run` preview. A refusal after prior
-verification means main moved, so merge main and reverify in the worktree. Main
+unambiguous candidate. `--list` and `--dry-run` preview. Before merging, it
+validates plan status/location metadata from the committed candidate tree using
+`bin/doc-lifecycle-check.ts`. Pre-commit checks the same
+invariant against the full staged index, including direct commits on main.
+Fix lifecycle errors in the worktree; if main moved, merge main and reverify. Main
 post-merge hooks decide deployment from changed paths; worktree commits do not
 deploy.
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DOCUMENT_ROLES } from "../../../beebox/src/dev/document-lifecycle.js";
 
 export const issuePrioritySchema = z.enum([
   "important",
@@ -176,12 +177,18 @@ export type RelatedResult = z.infer<typeof relatedResultSchema>;
  * (see `general-browser.md`, "The boundary this plan must not cross").
  */
 export const documentKindSchema = z.enum(["markdown", "code", "directory", "page", "data"]);
+export const documentLifecycleSchema = z.object({
+  role: z.enum(DOCUMENT_ROLES),
+  label: z.string(),
+  status: z.string().nullable(),
+}).nullable();
 
 /** One entry in a directory listing. */
 export const directoryEntrySchema = z.object({
   name: z.string(),
   relPath: z.string(),
   kind: documentKindSchema,
+  lifecycle: documentLifecycleSchema,
 });
 
 export const documentSchema = z.object({
@@ -190,6 +197,7 @@ export const documentSchema = z.object({
   /** Which checkout this reading came from: a workstream name, or null for main. */
   workstream: z.string().nullable(),
   kind: documentKindSchema,
+  lifecycle: documentLifecycleSchema,
   /** Tracked in git. Decides which comment namespace the path belongs to. */
   tracked: z.boolean(),
   /** Source text. Null for a directory, and for anything not read as text. */
@@ -222,6 +230,7 @@ export const documentSchema = z.object({
 export const indexedPathSchema = z.object({
   relPath: z.string(),
   kind: documentKindSchema,
+  lifecycle: documentLifecycleSchema,
 });
 
 export const pathIndexSchema = z.object({

@@ -388,7 +388,7 @@ change — no frontmatter edit) and rewrites inbound `.document.card`
 references across every `.md`/`.card` file in the box. `document` collided
 with the unrelated `doc.card` type, and the pipeline only reads PDFs today,
 so the generic name (chosen to avoid a future rename — see
-`docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
+`docs/implemented-plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 `gsheet-rename.ts`: no XML variant exists to guard against (the type
 post-dates the XML→frontmatter migration), so it's a pure rename + ref
 rewrite, same shape as `gsheet-rename`. See
