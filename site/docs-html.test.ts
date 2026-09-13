@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { SHALLOW_DIRS } from "./docs-index.js";
 import {
   corpusNavHtml,
   escapeMarkdocBraces,
@@ -125,6 +126,7 @@ test("complete-index renderer: every published path appears once, spine first, g
   const directories = [
     { dir: "uses", purpose: "Real workflows.", docs: [doc({ publishPath: "uses/a.md", description: "A" }), doc({ publishPath: "uses/b.md", description: "B" })] },
     { dir: "concepts", purpose: "Vocabulary.", docs: [doc({ publishPath: "concepts/c.md", description: "C" })] },
+    { dir: "reference/cards", purpose: "Every card type.", docs: [doc({ publishPath: "reference/cards/x.md", description: "X" }), doc({ publishPath: "reference/cards/y.md", description: "Y" })] },
   ];
   const markdown = renderAgentLlmsTxt({
     base: "/beebox/",
@@ -138,8 +140,13 @@ test("complete-index renderer: every published path appears once, spine first, g
   const html = renderRootPageHtml({ markdown, fallbackTitle: "Bee Box", sourceLabel: "dist/llms.txt", base: "/beebox/" });
 
   const liCount = (html.match(/<li>/g) ?? []).length;
-  const publishedPaths = [...spine, ...directories.flatMap((d) => d.docs)].map((d) => d.publishPath);
-  assert.equal(liCount, publishedPaths.length + 4); // + install/ and llms-install.txt, dev/ and llms-dev.txt pointer rows
+  const deep = directories.filter((d) => !SHALLOW_DIRS.has(d.dir));
+  const publishedPaths = [...spine, ...deep.flatMap((d) => d.docs)].map((d) => d.publishPath);
+  // + one pointer row for the shallow directory, + install/ and llms-install.txt, dev/ and llms-dev.txt
+  assert.equal(liCount, publishedPaths.length + 1 + 4);
+  // A shallow directory's children are not listed; its index pointer carries the page count.
+  assert.doesNotMatch(html, /docs\/reference\/cards\/(?!index\.html)/);
+  assert.match(html, /reference\/cards\/<\/a>: Every card type\. \(2 pages\)/);
   for (const p of publishedPaths) {
     // The front page is itself HTML, so its embedded links point at each
     // page's rendered .html form, not the .md source (docs-html.ts's own
