@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the landmark hq transcription toggle is very slow to respond (is it doing a whole git thing there?)"
 priority: normal
+resolution: wontfix
 ---
 
 Yes, it is doing a whole git thing. The landmark-scope HQ toggle in the voice
@@ -86,3 +87,27 @@ respond-after-write changes when durability happens, which is a product call, an
 sorting the twelve other `stageAndCommitPaths` callers into interactions versus
 jobs is the bigger half. The optimistic-UI direction is the one piece that is
 worth doing regardless of how the server question lands.
+
+## Closed 2026-09-13 — the felt lag is gone; the 1.3s to take effect is accepted
+
+Boxholder: "I don't notice a UI delay anymore. That it doesn't really 'take
+effect' for 1.3 seconds is fine, it just shouldn't feel laggy."
+
+That settles it on the axis that matters. The complaint was never about durability
+timing — it was that a toggle felt like it was doing work. The mechanism measured
+above is unchanged (the mutation still awaits the commit, and there is still no
+optimistic flip), so what improved is the felt latency rather than the code path.
+Closing as accepted rather than fixed, because nothing here was changed.
+
+If it ever feels laggy again, the fix direction is already worked out and does not
+need re-deriving: flip the control immediately and reconcile on the
+`hqPreferences` refetch (optimistic UI), which is worth doing on its own; and if
+the request path is still the cost, return once the card is written and let the
+commit run detached — `hq-preference.ts` already treats the commit as best-effort
+by returning `commitWarning` instead of failing.
+
+The broader question this issue raised — sorting the twelve other
+`stageAndCommitPaths` callers into user-facing interactions versus jobs — is not
+closed with it. That belongs to
+[rethink-box-autocommit](../../decisions/2026-08-30-rethink-box-autocommit.md), which
+already owns "what should commit, and when".

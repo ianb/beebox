@@ -3,6 +3,7 @@ title: "A message sent while the agent is thinking is queued but stays in the co
 workstream: unattached
 area: beebox
 priority: normal
+resolution: implemented
 labels: [chat, ui]
 filed-by: agent
 discovered-by: Ian
@@ -83,3 +84,19 @@ who hits this state in normal use: start a genuinely long turn, send while the
 "1 message queued" bar is visible, and look at the composer. If it is clear, this
 closes as fixed by the send-path rework; if it is not, the cause is somewhere
 other than the two places this issue named, and that is worth knowing.
+
+## Closed 2026-09-13 — boxholder's call, on the evidence above
+
+"If it isn't applicable then it should be closed." Both mechanisms this issue
+named are gone from the code, and a real mid-stream send cleared the composer, so
+the most likely resolver is `d1556e750` ("close the send-path holes an adversarial
+review found", 2026-09-06 — the day after this was filed), which reworked the
+typed send into the single `submitTypedDraft` funnel that clears unconditionally.
+
+Recorded honestly: the *queued* path itself was never exercised — no
+`N message queued` bar appeared during the reproduction, so this closes on a
+mechanism argument plus a send-while-streaming observation, not on seeing the
+screenshot's state fail to recur. If a queued message ever stays in the composer
+again, start somewhere other than the two places this issue named, and note that
+`TargetStrip.tsx` renders `Thinking…` and the queue count as siblings, so a
+missing working indicator would mean `status.state` stopped being `busy`.
