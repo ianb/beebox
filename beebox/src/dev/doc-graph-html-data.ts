@@ -183,8 +183,8 @@ export const CURATOR: CuratorSection[] = [
       { path: "docs/plans/narration-mode.md", note: "Speculative voice/narration mode for the agent." },
       { path: "docs/plans/pdf-intake-design.md", note: "PDF processing path. Partly implemented." },
       { path: "docs/unimplemented-plans/capture-pipeline-redesign.md", note: "Plan for redoing the capture pipeline. Parked." },
-      { path: "docs/activities-design.md", note: "Designed a thing called Activities…" },
-      { path: "docs/activities-retrospective.md", note: "…then took it apart. Both docs left as the trail." },
+      { path: "docs/reports/activities-design-2026-04-19.md", note: "Designed a thing called Activities…" },
+      { path: "docs/reports/activities-retrospective-2026-05-14.md", note: "…then took it apart. Both docs left as the trail." },
     ],
   },
   {

@@ -28,9 +28,12 @@ me before anything that affects my system or accounts.
 
 To work on the code: [`CONTRIBUTING.md`](CONTRIBUTING.md), or point your agent at `https://beebox.run/llms-dev.txt`.
 
+The [documentation map](docs/README.md) separates current guides, proposals,
+and historical records across the monorepo.
+
 ## Layout
 
-Four projects in one repo:
+Packages in this monorepo include:
 
 - **beebox/** — the main system. See its `CLAUDE.md`.
   Setting up from a fresh clone with no prior box?

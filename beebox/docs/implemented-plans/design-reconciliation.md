@@ -25,7 +25,7 @@ Sources compared: `docs/design.md`, `docs/implementation.md`,
 chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 `docs/implemented-plans/boxes-as-packages-v2.md`,
-`docs/activities-retrospective.md`).
+`docs/reports/activities-retrospective-2026-05-14.md`).
 
 ---
 
@@ -433,7 +433,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   box-local schemas under `config/schemas/`, box skills (courseware's
   `build-course`), and interface-as-cards' extensible view tier —
   "box-authored `.tsx` views as the extensible tier"
-  (interface-as-cards.md:62-64). Meanwhile activities-retrospective.md:19
+  (interface-as-cards.md:62-64). Meanwhile activities-retrospective-2026-05-14.md:19
   ruled *against* framework-shaped extension: "Build piecemeal features that
   different instructions can opt into." Are box views/skills the vision's
   fulfillment (compose small pieces, no marketplace) or its quiet revision
@@ -459,7 +459,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - **Reality/tension** — the mode-container idea was built (Activities) and
   removed: "The framework was correct but premature … the unit of
   customization that emerged from real use was a feature flag plus some
-  prose, not a class hierarchy" (activities-retrospective.md:17-23).
+  prose, not a class hierarchy" (activities-retrospective-2026-05-14.md:17-23).
   Narration shipped as "three features and a system-prompt overlay"
   (docs/implemented-plans/narration-mode-design.md:19). Nothing in the
   current system is called a mode; "chat instructions" as a term appears
