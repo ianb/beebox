@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckIcon, CopyIcon, Pill } from "./ui.js";
 import { issueNextActionSchema } from "../../shared/documents.js";
+import { issueProvenance } from "../../shared/issue-provenance.js";
 import type { Issue, NextAction, Priority } from "../types.js";
 
 const PRIORITIES: Array<{ value: Priority; symbol: string; label: string }> = [{ value: "important", symbol: "!", label: "Important" }, { value: "normal", symbol: "−", label: "Normal" }, { value: "backlog", symbol: "↓", label: "Backlog" }, { value: "uncategorized", symbol: "?", label: "Uncategorized" }];
@@ -19,12 +20,21 @@ export function NextActionSelect({ value, onChange }: { value?: NextAction | und
 }
 
 export function IssueTags({ issue }: { issue: Issue }) {
+  const provenance = issueProvenance(issue.frontmatter.discoveredIn);
+  const discoveredBy = issue.frontmatter.discoveredBy;
   const tags = [
     ...issue.frontmatter.needs.toSorted((a, b) => Number(b === "manual-testing") - Number(a === "manual-testing")).map((need) => <Pill tone={need === "manual-testing" ? "manual" : "neutral"} key={`need-${need}`}>needs:{need}</Pill>),
     issue.frontmatter.area ? <Pill key="area">{issue.frontmatter.area}</Pill> : null,
     ...issue.frontmatter.labels.map((label) => <Pill tone="accent" key={`label-${label}`}>{label}</Pill>),
     issue.frontmatter.filedBy ? <Pill key="filed">filed:{issue.frontmatter.filedBy}</Pill> : null,
-    issue.frontmatter.discoveredBy ? <Pill key="discoverer">discovered:{issue.frontmatter.discoveredBy}</Pill> : null,
+    // WHERE it was noticed, which is the half that helps route or judge an issue.
+    // The context clause is a sentence and is shown in the detail pane instead;
+    // here it is the pill's tooltip so a scan can still reach it.
+    provenance ? <Pill key="from" title={provenance.context ?? undefined}>from:{provenance.source}</Pill> : null,
+    // Who found it, but only when that says something: `agent` duplicates the
+    // `filed:agent` pill sitting next to it, and a queue of `discovered:agent`
+    // was what hid the provenance above.
+    discoveredBy !== undefined && discoveredBy !== "agent" ? <Pill key="discoverer">discovered:{discoveredBy}</Pill> : null,
   ];
   return <div className="issue-tags">{tags}</div>;
 }

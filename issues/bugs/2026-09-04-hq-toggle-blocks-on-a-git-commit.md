@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the landmark hq transcription toggle is very slow to respond (is it doing a whole git thing there?)"
 priority: normal
+next-action: reconfirm
 ---
 
 Yes, it is doing a whole git thing. The landmark-scope HQ toggle in the voice

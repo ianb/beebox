@@ -7,6 +7,7 @@ labels: [chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "when I submit a message while the agent is thinking, it goes into the queue but then also stays in the textbox (on the web, typing)"
+next-action: reconfirm
 ---
 
 On the web, typing a message and sending it while the agent is still working
