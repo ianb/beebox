@@ -8,18 +8,10 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { isRecord } from "@shared/is-record";
+import type { BrowserTaskRunEntry } from "@schemas/browser-task";
 
-interface RunRow {
-  batch: string;
-  at: string;
-  scanned: number;
-  kept: number;
-  filed: number;
-  skipped: number;
-  reason: string;
-  stoppedAt: string;
-  note: string | null;
-}
+/** Reason is widened to `string`: a card written by an older schema version may carry a value outside the current enum, and this table only ever displays it as text. */
+type RunRow = Omit<BrowserTaskRunEntry, "note" | "reason"> & { note: string | null; reason: string };
 
 /** Narrow the frontmatter `runs` value to rows the table can show; malformed entries are dropped. */
 export function parseRuns(value: unknown): RunRow[] {
