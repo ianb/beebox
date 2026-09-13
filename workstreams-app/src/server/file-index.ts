@@ -76,6 +76,8 @@ export async function listBrowsablePaths(root: string): Promise<IndexedPath[]> {
       if (lifecycle === null || lifecycle.status !== null || lifecycle.role === "reference" || lifecycle.role === "report" || lifecycle.role === "design-rationale") {
         return { relPath, kind: kindForPath(relPath), lifecycle };
       }
+      // A scratch file can disappear while the index is being assembled; keep it
+      // browsable with an unknown status until the next refresh drops the path.
       const source = await fs.readFile(path.join(root, relPath), "utf8").catch(() => "");
       return { relPath, kind: kindForPath(relPath), lifecycle: documentLifecycle(relPath, planStatusFromSource(source)) };
     }));

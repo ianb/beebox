@@ -1,6 +1,6 @@
 ---
 title: "Make current documentation and historical records distinguishable"
-status: active
+status: implemented
 workstream: prompt-calibration
 issues: []
 ---
@@ -96,10 +96,9 @@ browser check for the navigation changes. Do not claim that all historical
 prose has been revalidated. Defer broad content sweeps, freshness scores,
 automatic semantic classification, and scheduled document audits.
 
-## Implementation checkpoint — 2026-09-13
+## Implementation — 2026-09-13
 
-All four sections are implemented in the prompt-calibration worktree. The plan
-remains active until landing; this checkpoint is not a claim that main has it.
+All four sections are implemented.
 
 - The shared lifecycle validator checks the complete staged index and the
   committed landing candidate before main changes, including missing or invalid
