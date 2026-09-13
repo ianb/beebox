@@ -22,6 +22,27 @@ priority: normal
 
 **How this was established.** Grepped every trailer writer in `beebox/src` and every trailer reader in `beebox/src/frontend/src`. Then counted trailers in the worktree's test box (`~/src/box-worktrees/user-stories-refresh/test1`): `git log --format='%(trailers:only,unfold)'` yields 1857 `Triggered-By`, 104 `Workflow`, 54 `Procedure`, 97 `Step`, 0 `Run-By`; every `Workflow:` commit has a `[workflow] …` subject (pre-rename) while current runs subject as `[procedure] …` and carry `Procedure:`. An independent browser pass over `/history` in the same box confirmed the working half (rows badged "triggered by bbx wakeup", session chip filtering to a run) and noted that rows without a `Triggered-By` — including procedure commits — show no badge at all.
 
+## Still true 2026-09-13 (survey, no code change)
+
+Re-checked every claim against current `main`, since the issue is three weeks old:
+
+- Readers: `CommitTimeline.tsx:158` and `CommitDetail-commit.tsx:105` still read
+  `Triggered-By` only; `CommitDetail-commit.tsx:33` still strips
+  `Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed`. A grep for
+  `Procedure`, `Step` or `Run-By` as trailer keys across `src/frontend/src`
+  returns nothing (the one `"Procedure"` hit is an unrelated Gmail-filter label).
+- Facet axis: still keyed `Workflow` in all three places —
+  `lib/git-log.ts:230`, `webapp/trpc/routers/history.ts:43`, and the control's
+  label in `HistoryFilterBar.tsx:75`.
+- Writers: still `Procedure:`/`Step:` (`engine.ts:175`,
+  `engine-step.ts:178`, `engine-phase.ts:233`, `engine-orchestrate.ts:132`) and
+  `Run-By: trick/<name>` (`cli/commands/trick.ts:42`). A grep for anything
+  writing a `Workflow:` trailer in `src/core`, `src/cli` or `src/connectors`
+  returns nothing, so that filter can still only match pre-rename history.
+
+`bin/issues similar --all` finds no live sibling: its nearest neighbours are
+closed issues from the same 2026-08-21 audit, whose fixes do not touch trailers.
+
 ## Updating the user-story catalog
 
 This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
