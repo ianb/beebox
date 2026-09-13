@@ -5,6 +5,7 @@ import type { HistoryFilterState } from "./HistoryFilterBar";
 import { paramsToFilter } from "./history-filter";
 import { HISTORY_VIEW_PARAMS } from "@shared/named-views";
 import { triggerId } from "@shared/commit-trailers";
+import { isRecord } from "@shared/is-record";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { withoutShellParams } from "../../lib/system-card-navigation";
 import { viewStateSearchValue } from "../../lib/view-url";
@@ -22,7 +23,23 @@ const HISTORY_CARD_STATE = z.object({
 }).strict();
 export type HistoryCardState = z.infer<typeof HISTORY_CARD_STATE>;
 
-export function parseHistoryCardState(value: ViewState | null) { return HISTORY_CARD_STATE.safeParse(value ?? {}); }
+/**
+ * Pre-rename state spelled the triggered-by axis `workflows`, holding bare run
+ * names. History state is serialized into the URL, so a link saved or shared
+ * before the rename still carries it — migrate it here rather than render the
+ * whole card as invalid state.
+ */
+function migrateLegacyFilter(value: ViewState): ViewState {
+  const filter = value.filter;
+  if (!isRecord(filter) || !("workflows" in filter)) return value;
+  const { workflows, ...rest } = filter;
+  return {
+    ...value,
+    filter: "triggers" in rest ? rest : { ...rest, triggers: triggerIds(workflows) },
+  };
+}
+
+export function parseHistoryCardState(value: ViewState | null) { return HISTORY_CARD_STATE.safeParse(migrateLegacyFilter(value ?? {})); }
 
 function strings(value: unknown): ViewStateValue {
   if (typeof value === "string") return value === "" ? [] : value.split(",").filter(Boolean);

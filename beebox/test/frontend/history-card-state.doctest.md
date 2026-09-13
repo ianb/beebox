@@ -34,6 +34,16 @@ parseHistoryCardState({ filter: { connectors: [], triggers: [], touchpoint: fals
 => true
 ```
 
+A link saved before the rename carries the old axis inside its serialized
+state. It migrates to the current vocabulary instead of failing the strict
+parse and blanking the card.
+
+```ts
+const legacy = parseHistoryCardState({ filter: { connectors: [], workflows: ["process-news"], touchpoint: false, feedback: false, session: null, path: null }, commit: "abc123" });
+JSON.stringify([legacy.success, legacy.data?.filter?.triggers, legacy.data?.commit])
+=> [true,["procedure/process-news"],"abc123"]
+```
+
 Canonical targets normalize without a metadata lookup.
 
 ```ts
