@@ -7,7 +7,7 @@ dropped), or the idea may simply have been shelved.
 Contrast with the siblings:
 
 - `docs/plans/` — active proposals, not yet shipped.
-- `docs/implemented-plans/` — shipped as written (moved there by `/finish`).
+- `docs/implemented-plans/` — work that shipped (moved there by `/finish`); design details may have changed.
 - `docs/unimplemented-plans/` — retired without shipping; each file's header should say what
   superseded or shelved it.
 

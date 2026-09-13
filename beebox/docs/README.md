@@ -42,7 +42,8 @@ current truth.
   design-rationale reference (that's `docs/design/`).
 - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
   cross-reference index and narrative showcase. Regenerate with
-  `pnpm doc-graph` after moving or renaming docs; never hand-edit.
+  `pnpm doc-graph` and `pnpm doc-graph-html` in `beebox/` after moving or
+  renaming docs; never hand-edit.
 
 ## Enforcement (`pnpm doc-check`)
 

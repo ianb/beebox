@@ -1,5 +1,9 @@
 # ESLint rule-suppression audit
 
+Historical report from the audit begun on 2026-05-30, archived here on
+2026-09-13. Completion claims below describe that work, not a fresh audit.
+For current rules, read the [coding conventions](../../beebox/code-style.md).
+
 **Status:** ✅ COMPLETE — beebox (backend + frontend) and cardworks all have
 every silenced rule re-enabled and zero suppressions. The personal-vibe-check
 preset itself was updated (0.4.0) where rules were retired/adjusted.

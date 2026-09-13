@@ -6,7 +6,7 @@ issues: []
 ---
 # Narration Mode — Design
 
-> Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective.md](../activities-retrospective.md). The narration-as-piecemeal-feature direction described here is what stuck.
+> Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective-2026-09-13.md](../reports/activities-retrospective-2026-09-13.md). The narration-as-piecemeal-feature direction described here is what stuck.
 
 ## Motivation
 
@@ -334,7 +334,7 @@ Display of `<ack>` and `<callout>` lives in the Display design subsection of fea
 
 ## Interactions with existing systems
 
-- **Activities** (`docs/activities-design.md`): being phased out in favor of composable feature flags. Narration is the first feature designed under the new model and explicitly does **not** extend `ActivityMode`.
+- **Activities** (`docs/reports/activities-design-2026-09-13.md`): being phased out in favor of composable feature flags. Narration is the first feature designed under the new model and explicitly does **not** extend `ActivityMode`.
 - **Existing voice path** (`realtimeTranscriptionMachine.ts`, `voiceRecorderMachine.ts`, `speech-keywords.ts`): unchanged for non-narration chat. Narration layers in a parallel HQ-transcription path and changes the rule for when realtime transcripts become user messages.
 - **`<speech>` tag** (`speech-parsing.ts`): unchanged. `<ack>`, `<callout>`, and `<chat-app>` are new, parsed alongside, with their own rendering paths.
 - **`<self-note>` and existing structural tags**: untouched. The new tags sit beside them.

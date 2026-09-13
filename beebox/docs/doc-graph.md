@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-13T16:14:40Z
-Total documents: 365
+Generated: 2026-09-13T18:06:29Z
+Total documents: 368
 
 ## Issues
 
@@ -101,9 +101,7 @@ Referenced by:
 - CLAUDE.md:61 (mention) — When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for pack
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
-- docs/README.md:68 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
-- docs/activities-design.md:46 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
-- docs/activities-retrospective.md:21 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
+- docs/README.md:69 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/adding-schemas.md:273 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/agent-coding.md:13 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
 - docs/agent-testing.md:39 (mention) — agent absorbed from the guidance a box loads: its `CLAUDE.md`, generated agent
@@ -212,6 +210,8 @@ Referenced by:
 - docs/prompt-logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompt-surface-review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
+- docs/reports/activities-design-2026-09-13.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
+- docs/reports/activities-retrospective-2026-09-13.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/reports/prompt-calibration-pilot-2026-09-12.md:27 (mention) — - Authority: the same five requests with complete root CLAUDE.md, launch skill,
 - docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:412 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
@@ -634,38 +634,6 @@ References:
 
 ### docs/
 
-#### docs/activities-design.md
-
-Title: "Activities — Design Proposal" | 311 lines | current reference
-
-Referenced by:
-- docs/activities-retrospective.md:7 (link) — An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.
-- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
-- docs/plans/README.md:105 (mention) — reference-vs-proposal before moving: `activities-design.md`,
-- docs/plans/narration-mode.md:337 (mention) — - **Activities** (`docs/activities-design.md`): being phased out in favor of composable feature flags. Narration is the
-
-References:
-- → docs/activities-retrospective.md (link)
-- → CLAUDE.md (mention)
-
-#### docs/activities-retrospective.md
-
-Title: "Activities — Retrospective" | 44 lines | current reference
-
-Referenced by:
-- docs/activities-design.md:3 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
-- docs/design/extensibility.md:19 (link) — ([`../activities-retrospective.md`](../activities-retrospective.md)).
-- docs/implemented-plans/design-reconciliation.md:28 (mention) — `docs/activities-retrospective.md`).
-- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
-- docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
-- ../research/openclaw-hermes/deep-bbx-retro.md:11 (mention) — line-by-line below). Note: `beebox/docs/activities-retrospective.md` is an
-
-References:
-- → docs/activities-design.md (link)
-- → CLAUDE.md (mention)
-- → docs/plans/narration-mode.md (mention)
-- → docs/implemented-plans/mvp-implementation-guide.md (mention)
-
 #### docs/adding-a-box.md
 
 Title: "Adding a Box" | 175 lines | current reference
@@ -681,7 +649,7 @@ Referenced by:
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/adding-a-box.md`), `bbx upgrade` is the per-box engine-upgrade
 - docs/plans/source-available-release.md:68 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
-- docs/server-operations.md:454 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+- docs/server-operations.md:242 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:73 (mention) — - **Reconcile the docs.** `docs/adding-a-box.md` describes the generic shape
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:23 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 - ../issues/closed/features/2026-08-17-no-surface-for-changing-who-can-use-a-box.md:68 (link) — [`docs/adding-a-box.md`](../../../beebox/docs/adding-a-box.md) says so.
@@ -812,7 +780,7 @@ References:
 
 #### docs/assets.md
 
-Title: "Assets" | 241 lines | current reference
+Title: "Assets" | 231 lines | current reference
 
 Referenced by:
 - docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
@@ -825,12 +793,13 @@ Referenced by:
 - docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
 - docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/assets.md:6-21`
 - docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/assets.md`) and "artifact" (collides
-- docs/server-operations.md:238 (link) — [`assets.md`](./assets.md).
+- docs/reports/git-annex-conversion-2026-08-01.md:6 (link) — > production server. See [`../assets.md`](../assets.md) for the current model,
+- docs/server-operations.md:232 (link) — [`assets.md`](./assets.md). Periodic operational checks belong in
 - ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/assets.md` records "3,655 manifests removed", the old
 - ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
 
 References:
-- → docs/implemented-plans/asset-manifests.md (link)
+- → docs/reports/git-annex-conversion-2026-08-01.md (link)
 - → docs/plans/asset-offbox-storage.md (link)
 
 #### docs/attribution.md
@@ -1056,22 +1025,25 @@ References:
 
 #### docs/composer-input-machine.md
 
-Title: "Composer input machine — design note" | 305 lines | current reference
+Title: "Composer input machine" | 79 lines | current reference
 
 Referenced by:
 - docs/composer-states.md:5 (mention) — us, doing UI polish. Companion to `docs/composer-input-machine.md`, which
 - docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
 - docs/implemented-plans/docs-reorg.gap-analysis.md:118 (mention) — 10. `docs/composer-input-machine.md` leads with an unshipped 5-state
+- docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../composer-input-machine.md). It is not authorized runtime work. The
 
 References:
-- → docs/composer-states.md (mention)
+- → docs/composer-states.md (link)
+- → docs/plans/composer-child-actors.md (link)
 
 #### docs/composer-states.md
 
 Title: "Composer states" | 282 lines | current reference
 
 Referenced by:
-- docs/composer-input-machine.md:6 (mention) — us. The companion doc `composer-states.md` enumerates the rendered states with screenshots; this
+- docs/composer-input-machine.md:4 (link) — [`composer-states.md`](composer-states.md) enumerates rendered states with
+- docs/plans/composer-child-actors.md:113 (mention) — 4. Keep the rendered states in `composer-states.md` reachable and unchanged.
 
 References:
 - → docs/composer-input-machine.md (mention)
@@ -1369,7 +1341,7 @@ Title: "Event Bus" | 145 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
-- docs/plans/README.md:106 (mention) — `event-bus.md`, `photo-storage-investigation.md`. Left in place
+- docs/reports/plan-directory-migration-history-2026-09-13.md:36 (mention) — `event-bus.md`, `photo-storage-investigation.md`. Left in place
 
 #### docs/example-names.md
 
@@ -1576,6 +1548,7 @@ Referenced by:
 - docs/implemented-plans/top-nav-ia.md:448 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reacha
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/asset-annex.md:479 (mention) — the deploy runbooks (`docs/health-checks.md`) without touching
+- docs/reports/git-annex-conversion-2026-08-01.md:8 (link) — > and [`../health-checks.md`](../health-checks.md) for current health checks.
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) —
 - src/hub/CLAUDE.md:15 (mention) — `docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:83 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
@@ -2027,7 +2000,7 @@ References:
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 92 lines | current reference
+Title: "docs/ — map and naming conventions" | 93 lines | current reference
 
 Referenced by:
 - CLAUDE.md:65 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2038,7 +2011,7 @@ Referenced by:
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/knowledge-taxonomy.md:43 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
-- docs/plans/README.md:74 (mention) — applies the naming conventions (`docs/README.md`). The 2026-07-04
+- docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
@@ -2203,7 +2176,7 @@ References:
 
 #### docs/server-operations.md
 
-Title: "Server Operations" | 455 lines | current reference
+Title: "Server Operations" | 243 lines | current reference
 
 Referenced by:
 - CLAUDE.md:65 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2214,6 +2187,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/implemented-plans/scanner-ingest.md:200 (mention) — `docs/server-operations.md`.
 - docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
+- docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > [`../server-operations.md`](../server-operations.md) for current operations,
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:367 (mention) — - **`BBX_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:14 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server-operations.md`).
@@ -2225,8 +2199,8 @@ References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/health-checks.md (link)
 - → docs/client-debug-log.md (link)
-- → docs/implemented-plans/scanner-ingest.md (mention)
 - → docs/assets.md (link)
+- → docs/reports/git-annex-conversion-2026-08-01.md (link)
 - → docs/adding-a-box.md (link)
 
 #### docs/technologies.md
@@ -2414,10 +2388,10 @@ Referenced by:
 - docs/implemented-plans/scanner-ingest.md:599 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
 - docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:34 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
-- docs/plans/README.md:93 (mention) — operation is in `docs/triage.md` and the mixed design record is in
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
+- docs/reports/plan-directory-migration-history-2026-09-13.md:23 (mention) — operation is in `docs/triage.md` and the mixed design record is in
 - docs/reports/triage-design-2026-09-13.md:4 (link) — instructions, see [the triage guide](../triage.md).
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - user-stories/catalog/2026-06-26.md:1669 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
@@ -2562,12 +2536,14 @@ Title: "Extensibility — knowledge, not plugins" | 47 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:27 (link) — - [`extensibility.md`](extensibility.md) — knowledge over plugins (active plan; neither exists yet); composition over ne
+- docs/reports/activities-design-2026-09-13.md:5 (link) — [feature composition](../design/extensibility.md).
+- docs/reports/activities-retrospective-2026-09-13.md:5 (link) — [feature composition](../design/extensibility.md).
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:14 (mention) — > `../design/extensibility.md` (ruling 18 — active plan, neither knowledge nor
 - ../research/pai/README.md:101 (mention) — composition over plugins — `beebox/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
 
 References:
-- → docs/activities-retrospective.md (link)
+- → docs/reports/activities-retrospective-2026-09-13.md (link)
 - → CLAUDE.md (mention)
 
 #### docs/design/identity.md
@@ -2824,16 +2800,15 @@ References:
 Title: "Asset Manifests" | 315 lines | shipped history | implemented
 
 Referenced by:
-- docs/assets.md:18 (link) — [`implemented-plans/asset-manifests.md`](implemented-plans/asset-manifests.md)
 - docs/glossary.md:48 (mention) — **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's
 - docs/implemented-plans/attach-directories-superseded.md:9 (mention) — **Shipped differently than this draft describes.** The `.attach/` convention landed, but as part of the asset-manifest s
 - docs/implemented-plans/bulk-file-upload.md:42 (mention) — - **`docs/asset-manifests.md`** — the box's large-asset model: "*Manifest in
 - docs/implemented-plans/design-md-retired-sections.md:14 (mention) — survived as the attach-scope design (`../asset-manifests.md`).*
 - docs/implemented-plans/docs-reorg.gap-analysis.md:163 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-- docs/plans/README.md:115 (mention) — to `implemented-plans/` (superseded by `docs/asset-manifests.md`, now
 - docs/plans/asset-annex.md:18 (mention) — `docs/asset-manifests.md` describes a system we built in May: assets
 - docs/plans/asset-offbox-storage.md:28 (mention) — attachments tracked by `docs/asset-manifests.md`) currently exist on
 - docs/plans/pdf-intake-design.md:117 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
+- docs/reports/plan-directory-migration-history-2026-09-13.md:45 (mention) — to `implemented-plans/` (superseded by `docs/asset-manifests.md`, now
 - user-stories/catalog/2026-06-26.md:724 (mention) — 1. **Pre-commit hook integration missing**: The design doc (docs/asset-manifests.md) says "A pre-commit hook keeps the m
 - ../issues/closed/bugs/2026-07-20-worktree-box-clone-missing-attachments.md:27 (mention) — `beebox/docs/asset-manifests.md` and the `bbx-assets` block in the box
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:12 (mention) — extension. Documented in `docs/asset-manifests.md` ("Arbitrary-extension attach
@@ -2850,7 +2825,7 @@ References:
 Title: "Implementation spec: `.attach/` directories" | 350 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/README.md:116 (mention) — `attach-directories-superseded.md`), and
+- docs/reports/plan-directory-migration-history-2026-09-13.md:46 (mention) — `attach-directories-superseded.md`), and
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -3531,7 +3506,7 @@ References:
 - → docs/glossary.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
-- → docs/activities-retrospective.md (mention)
+- → docs/reports/activities-retrospective-2026-09-13.md (mention)
 - → docs/architecture/01-what-is-this.md (mention)
 - → frontend.md (mention)
 - → CLAUDE.md (mention)
@@ -3648,8 +3623,8 @@ References:
 - → docs/google-setup.md (mention)
 - → docs/gmail-setup.md (mention)
 - → docs/google-drive.md (mention)
-- → docs/activities-design.md (mention)
-- → docs/activities-retrospective.md (mention)
+- → docs/reports/activities-design-2026-09-13.md (mention)
+- → docs/reports/activities-retrospective-2026-09-13.md (mention)
 - → src/hub/CLAUDE.md (mention)
 - → docs/card-validation.md (mention)
 - → docs/implemented-plans/design-reconciliation.md (mention)
@@ -4003,7 +3978,7 @@ Title: "Markdoc.format Investigation" | 453 lines | shipped history | implemente
 Referenced by:
 - docs/implemented-plans/markdoc-tags-plan.md:402 (mention) — `docs/implemented-plans/markdoc-format-investigation.md`; the catalogue covers ~70
 - docs/implemented-plans/remove-cardworks-and-xml.md:163 (mention) — `docs/implemented-plans/markdoc-format-investigation.md:5`: *"safe for
-- docs/plans/README.md:85 (mention) — (+ `.review.md`, `.review-adapted-trial.md`), `markdoc-format-investigation.md`,
+- docs/reports/plan-directory-migration-history-2026-09-13.md:15 (mention) — (+ `.review.md`, `.review-adapted-trial.md`), `markdoc-format-investigation.md`,
 
 #### docs/implemented-plans/markdoc-tags-plan.md
 
@@ -4014,7 +3989,7 @@ Referenced by:
 - docs/implemented-plans/markdoc-tags-plan.review.md:3 (mention) — Review of `markdoc-tags-plan.md` following the `bbx-plan-review` skill's
 - docs/implemented-plans/remove-cardworks-and-xml.md:112 (mention) — `docs/implemented-plans/markdoc-tags-plan.md`. Track 4 (ref tracking
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:9 (mention) — A subplan of `markdoc-tags-plan.md`. The Markdoc work needs the same
-- docs/plans/README.md:84 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
+- docs/reports/plan-directory-migration-history-2026-09-13.md:14 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
 
 References:
 - → docs/implemented-plans/shared-frontend-backend-code.subplan.md (link)
@@ -4117,8 +4092,8 @@ References:
 Title: "Bee Box: Implementation Guide (MVP era)" | 1035 lines | shipped history | implemented
 
 Referenced by:
-- docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
 - docs/implemented-plans/docs-reorg.md:333 (mention) — implementation.md → implemented-plans/mvp-implementation-guide.md
+- docs/reports/activities-retrospective-2026-09-13.md:47 (mention) — The original design docs ([activities-design-2026-09-13.md](activities-design-2026-09-13.md), and references in `narrati
 - ../issues/closed/code-quality/2026-07-04-git-replay-testing.md:16 (mention) — (`implemented-plans/mvp-implementation-guide.md`).
 
 References:
@@ -4261,7 +4236,7 @@ References:
 - → ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md (link)
 - → docs/implemented-plans/docs-reorg.md (link)
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
-- → ../docs/eslint-rule-suppression-audit.md (link)
+- → ../docs/reports/eslint-rule-suppression-audit-2026-05-30.md (link)
 - → ../beebox/CLAUDE.md (link)
 - → ../beebox-clerk/CLAUDE.md (link)
 - → ../ios-app/CLAUDE.md (link)
@@ -4601,7 +4576,6 @@ Referenced by:
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
 - docs/scan-upload-contract.md:16 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
-- docs/server-operations.md:231 (mention) — `docs/implemented-plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:8 (mention) — Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfPro
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:96 (link) — [`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
@@ -4738,8 +4712,8 @@ References:
 Title: "Selection Commentary — referencing document text in chat input" | 712 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/README.md:84 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
 - docs/plans/box-commentary-surface.md:102 (mention) — selection-commentary feature (`docs/implemented-plans/selection-commentary.md`) and the
+- docs/reports/plan-directory-migration-history-2026-09-13.md:14 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
 - ../issues/closed/features/2026-09-11-select-transcript-text-into-the-composer.md:24 (mention) — `beebox/docs/implemented-plans/selection-commentary.md`: "a way to attach a text
 
 References:
@@ -4767,7 +4741,7 @@ Title: "Shared Frontend/Backend Code — Subplan" | 325 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/markdoc-tags-plan.md:176 (link) — [shared-frontend-backend-code subplan](shared-frontend-backend-code.subplan.md).
-- docs/plans/README.md:86 (mention) — `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
+- docs/reports/plan-directory-migration-history-2026-09-13.md:16 (mention) — `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
 
 References:
 - → docs/implemented-plans/markdoc-tags-plan.md (mention)
@@ -5237,7 +5211,7 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 589 lines | proposal | active
 
 Referenced by:
-- docs/assets.md:237 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/assets.md:227 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:43 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 - ../issues/closed/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:38 (mention) — Historical mentions in `docs/plans/asset-offbox-storage.md`,
 
@@ -5470,6 +5444,17 @@ Referenced by:
 References:
 - → ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (link)
+
+#### docs/plans/composer-child-actors.md
+
+Title: "Composer child-actor ownership" | 138 lines | proposal | draft
+
+Referenced by:
+- docs/composer-input-machine.md:6 (link) — [`plans/composer-child-actors.md`](plans/composer-child-actors.md).
+
+References:
+- → docs/composer-input-machine.md (link)
+- → docs/composer-states.md (mention)
 
 #### docs/plans/container-first-pass2.review.md **[ORPHAN]**
 
@@ -5852,16 +5837,16 @@ References:
 Title: "Narration Mode — Design" | 469 lines | proposal | active
 
 Referenced by:
-- docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
-- docs/plans/README.md:97 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
+- docs/reports/activities-retrospective-2026-09-13.md:47 (mention) — The original design docs ([activities-design-2026-09-13.md](activities-design-2026-09-13.md), and references in `narrati
+- docs/reports/plan-directory-migration-history-2026-09-13.md:27 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
 - user-stories/catalog/2026-06-26.md:1578 (mention) — The design doc (narration-mode.md line 240) explicitly states: "The chat has a `...` menu where settings live; the expli
 - ../issues/features/2026-05-19-spark-mode.md:9 (link) — Conceptual inverse of narration mode (see [narration-mode.md](../../beebox/docs/plans/narration-mode.md)). Narration is
 
 References:
-- → docs/activities-retrospective.md (link)
+- → docs/reports/activities-retrospective-2026-09-13.md (link)
 - → frontend.md (mention)
-- → docs/activities-design.md (mention)
+- → docs/reports/activities-design-2026-09-13.md (mention)
 
 #### docs/plans/operator-member-password-reset.md **[ORPHAN]**
 
@@ -5887,7 +5872,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/scanner-ingest.md:43 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
 - docs/implemented-plans/user-story-audit-followups.md:61 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
-- docs/plans/README.md:89 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (partially implemented; its
+- docs/reports/plan-directory-migration-history-2026-09-13.md:19 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (partially implemented; its
 - ../issues/closed/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md:70 (mention) — because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:21 (link) — [pdf-intake-design](../../beebox/docs/plans/pdf-intake-design.md), as
 
@@ -6012,7 +5997,7 @@ References:
 
 #### docs/plans/README.md
 
-Title: "docs/plans/ — proposals and in-flight plans" | 118 lines | current reference
+Title: "docs/plans/ — proposals and in-flight plans" | 79 lines | current reference
 
 Referenced by:
 - docs/README.md:17 (link) — status line. See [plan conventions](plans/README.md) for required fields.
@@ -6026,28 +6011,15 @@ Referenced by:
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
+- docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
 - ../.claude/skills/bbx-plan/SKILL.md:27 (mention) — Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:23 (mention) — `docs/plans/README.md` (`**Status:** implemented YYYY-MM …`), which can't be
 
 References:
 - → docs/plans/README.md (mention)
-- → docs/README.md (mention)
-- → docs/implemented-plans/selection-commentary.md (mention)
-- → docs/implemented-plans/markdoc-tags-plan.md (mention)
-- → docs/implemented-plans/markdoc-format-investigation.md (mention)
-- → docs/implemented-plans/shared-frontend-backend-code.subplan.md (mention)
-- → docs/plans/pdf-intake-design.md (mention)
-- → docs/plans/source-editor.md (mention)
-- → docs/triage.md (mention)
-- → docs/reports/triage-design-2026-09-13.md (mention)
-- → docs/plans/narration-mode.md (mention)
-- → docs/activities-design.md (mention)
-- → docs/event-bus.md (mention)
-- → docs/unimplemented-plans/design-vision-superseded.md (mention)
-- → docs/unimplemented-plans/design-card-views-superseded.md (mention)
-- → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/implemented-plans/attach-directories-superseded.md (mention)
-- → docs/unimplemented-plans/capture-pipeline-redesign.md (mention)
+- → ../.claude/agents/finish.md (link)
+- → docs/README.md (link)
+- → docs/reports/plan-directory-migration-history-2026-09-13.md (link)
 
 #### docs/plans/route-splitting.md
 
@@ -6168,7 +6140,7 @@ Title: "Source Editor Plan" | 150 lines | proposal | active
 Referenced by:
 - docs/guides.md:61 (link) — | Source editor proposal (unimplemented) | [docs/plans/source-editor.md](plans/source-editor.md) |
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
-- docs/plans/README.md:91 (mention) — `source-editor.md` (unimplemented proposal). The intake → triage → handle
+- docs/reports/plan-directory-migration-history-2026-09-13.md:21 (mention) — `source-editor.md` (unimplemented proposal). The intake → triage → handle
 
 #### docs/plans/sticky-hq-ios-parity.md **[ORPHAN]**
 
@@ -6299,6 +6271,54 @@ References:
 
 ### docs/reports/
 
+#### docs/reports/activities-design-2026-09-13.md
+
+Title: "Activities — Design Proposal" | 315 lines | dated report
+
+Referenced by:
+- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-09-13.md` + `activities-retrospective-2026-09-13.md` pair (the model for
+- docs/plans/narration-mode.md:337 (mention) — - **Activities** (`docs/reports/activities-design-2026-09-13.md`): being phased out in favor of composable feature flags
+- docs/reports/activities-retrospective-2026-09-13.md:11 (link) — An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.
+- docs/reports/plan-directory-migration-history-2026-09-13.md:35 (mention) — reference-vs-proposal before moving: `activities-design-2026-09-13.md`,
+
+References:
+- → docs/design/extensibility.md (link)
+- → docs/reports/activities-retrospective-2026-09-13.md (link)
+- → CLAUDE.md (mention)
+
+#### docs/reports/activities-retrospective-2026-09-13.md
+
+Title: "Activities — Retrospective" | 49 lines | dated report
+
+Referenced by:
+- docs/design/extensibility.md:19 (link) — ([Activities retrospective](../reports/activities-retrospective-2026-09-13.md)).
+- docs/implemented-plans/design-reconciliation.md:28 (mention) — `docs/reports/activities-retrospective-2026-09-13.md`).
+- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-09-13.md` + `activities-retrospective-2026-09-13.md` pair (the model for
+- docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- docs/reports/activities-design-2026-09-13.md:7 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
+- ../research/openclaw-hermes/deep-bbx-retro.md:11 (mention) — line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-09-13.md` is an
+
+References:
+- → docs/design/extensibility.md (link)
+- → docs/reports/activities-design-2026-09-13.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/narration-mode.md (mention)
+- → docs/implemented-plans/mvp-implementation-guide.md (mention)
+
+#### docs/reports/git-annex-conversion-2026-08-01.md
+
+Title: "Git-annex conversion report — 2026-08-01" | 101 lines | dated report
+
+Referenced by:
+- docs/assets.md:8 (link) — [2026-08-01 conversion report](reports/git-annex-conversion-2026-08-01.md).
+- docs/server-operations.md:235 (link) — [dated historical report](./reports/git-annex-conversion-2026-08-01.md); do not
+
+References:
+- → docs/assets.md (link)
+- → docs/server-operations.md (link)
+- → docs/health-checks.md (link)
+- → ../issues/closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md (link)
+
 #### docs/reports/knowledge-audit-rerun-2026-07-03.md
 
 Title: "Knowledge-audit full rerun — 2026-07-03" | 465 lines | dated report
@@ -6310,6 +6330,32 @@ Referenced by:
 References:
 - → docs/triage.md (mention)
 - → docs/landmark-curation.md (mention)
+
+#### docs/reports/plan-directory-migration-history-2026-09-13.md
+
+Title: "Plan-directory migration history" | 48 lines | dated report
+
+Referenced by:
+- docs/plans/README.md:76 (link) — The [plan-directory migration history](../reports/plan-directory-migration-history-2026-09-13.md)
+
+References:
+- → docs/plans/README.md (link)
+- → docs/implemented-plans/selection-commentary.md (mention)
+- → docs/implemented-plans/markdoc-tags-plan.md (mention)
+- → docs/implemented-plans/markdoc-format-investigation.md (mention)
+- → docs/implemented-plans/shared-frontend-backend-code.subplan.md (mention)
+- → docs/plans/pdf-intake-design.md (mention)
+- → docs/plans/source-editor.md (mention)
+- → docs/triage.md (mention)
+- → docs/reports/triage-design-2026-09-13.md (mention)
+- → docs/plans/narration-mode.md (mention)
+- → docs/reports/activities-design-2026-09-13.md (mention)
+- → docs/event-bus.md (mention)
+- → docs/unimplemented-plans/design-vision-superseded.md (mention)
+- → docs/unimplemented-plans/design-card-views-superseded.md (mention)
+- → docs/implemented-plans/asset-manifests.md (mention)
+- → docs/implemented-plans/attach-directories-superseded.md (mention)
+- → docs/unimplemented-plans/capture-pipeline-redesign.md (mention)
 
 #### docs/reports/prompt-calibration-pilot-2026-09-12.md
 
@@ -6345,7 +6391,7 @@ References:
 Title: "Triage design history" | 287 lines | dated report
 
 Referenced by:
-- docs/plans/README.md:94 (mention) — `docs/reports/triage-design-2026-09-13.md`.
+- docs/reports/plan-directory-migration-history-2026-09-13.md:24 (mention) — `docs/reports/triage-design-2026-09-13.md`.
 - docs/triage.md:5 (link) — [triage design history](reports/triage-design-2026-09-13.md).
 
 References:
@@ -6408,7 +6454,7 @@ Title: "Capture Pipeline Redesign" | 136 lines | past proposal | parked
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:76 (mention) — done"), `capture-pipeline-redesign.md` (no implementation evidence,
-- docs/plans/README.md:117 (mention) — `capture-pipeline-redesign.md` to `unimplemented-plans/` (parked 2026-03).
+- docs/reports/plan-directory-migration-history-2026-09-13.md:47 (mention) — `capture-pipeline-redesign.md` to `unimplemented-plans/` (parked 2026-03).
 - docs/unimplemented-plans/README.md:20 (mention) — | `capture-pipeline-redesign.md` | Parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vend
 
 References:
@@ -6419,7 +6465,7 @@ References:
 Title: "Card View Plugin System" | 884 lines | past proposal | parked
 
 Referenced by:
-- docs/plans/README.md:114 (mention) — `design-card-views-superseded.md`), `attach-implementation.md`
+- docs/reports/plan-directory-migration-history-2026-09-13.md:44 (mention) — `design-card-views-superseded.md`), `attach-implementation.md`
 - docs/unimplemented-plans/README.md:18 (mention) — | `design-card-views-superseded.md` | Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the fil
 
 References:
@@ -6430,7 +6476,7 @@ References:
 Title: "Bee Box: Design Vision and Architecture" | 86 lines | past proposal | parked
 
 Referenced by:
-- docs/plans/README.md:111 (mention) — `unimplemented-plans/design-vision-superseded.md`).
+- docs/reports/plan-directory-migration-history-2026-09-13.md:41 (mention) — `unimplemented-plans/design-vision-superseded.md`).
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 
 References:

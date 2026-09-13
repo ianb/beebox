@@ -1,10 +1,14 @@
 # Activities — Retrospective
 
+Archived here on 2026-09-13 from the earlier design record; this is not a new
+assessment of current behavior. Current extensibility rationale:
+[feature composition](../design/extensibility.md).
+
 **Status:** the Activities system was removed from beebox in May 2026. This doc records what was tried, what happened, and what replaced it.
 
 ## What was built
 
-An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.). The framework, designed in [activities-design.md](activities-design.md), shipped end to end:
+An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.). The framework, designed in [activities-design-2026-09-13.md](activities-design-2026-09-13.md), shipped end to end:
 
 - Backend runtime under `src/activities/` — `Activity` / `ActivityInstance` / `ActivityMode` base classes, registry, session pool, event-bus wiring, fake spawner for tests.
 - One built-in activity (Polyglot) with a setup MCP tool and a `main` tutor mode.
@@ -40,4 +44,5 @@ In other words: the unit of customization that emerged from real use was a featu
 - `activityRegistry` / `activityChatPool` from the server, tRPC context, SSR context, and `test/helpers/test-server.ts`
 - 8 `test/activities-*.doctest.md` files and `test/manual/activity-chat-live.ts`
 
-The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-decisions.md`, the retired MVP implementation guide (`implemented-plans/mvp-implementation-guide.md`), etc.) are left in place as historical record with a banner pointing back here.
+The original design docs ([activities-design-2026-09-13.md](activities-design-2026-09-13.md), and references in `narration-mode.md`, `stack-decisions.md`, the retired MVP implementation guide (`implemented-plans/mvp-implementation-guide.md`), etc.) are preserved as historical records. The Activities design and retrospective
+now live together in this reports directory.

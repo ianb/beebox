@@ -225,7 +225,7 @@ hosted in dev docs) may deserve an explicit home.
 
 - Honest staleness banners + retrospectives: `DESIGN.md`,
   `IMPLEMENTATION.md`, `migrations.md`'s self-disclosed stale table, and the
-  `activities-design.md` + `activities-retrospective.md` pair (the model for
+  `activities-design-2026-09-13.md` + `activities-retrospective-2026-09-13.md` pair (the model for
   recording removed features). Caveat: a banner alone isn't enough when a
   prominent CLAUDE.md link still presents the file as authoritative
   (EXAMPLE_FILES.md).

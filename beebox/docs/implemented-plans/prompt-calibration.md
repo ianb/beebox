@@ -136,7 +136,7 @@ Concrete link choices for the root implementation:
 - Link browser work to the `browse` skill and review work to `cross-model`. The directory symlink layout preserves relative skill resources for Codex.
 - Link recurring work to `bbx-authoring-schedules`; link catalog/lifecycle details into the existing bin sections. Do not split the 910-line bin file in this pass.
 - Link exhibits to `workstreams-app/docs/exhibits.md`, current behavior rather than its design plan. Link issue formats to `issues/CLAUDE.md` without repeating them.
-- Remove the root's link to the [completed lint-suppression audit](../../../docs/eslint-rule-suppression-audit.md) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable; the complete active restriction stays in the root.
+- Remove the root's link to the [completed lint-suppression audit](../../../docs/reports/eslint-rule-suppression-audit-2026-05-30.md) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable; the complete active restriction stays in the root.
 - Keep generated preamble ownership in `bin/generate-agents-md.ts`; do not paste its session-specific worktree context into tracked root guidance. Regeneration affects files, not already-loaded session context or other worktrees.
 
 ### Reviewed root assembly
