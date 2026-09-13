@@ -40,7 +40,7 @@ test("scrubText: a private-issues reference fails naming file:line", () => {
     () => scrubText("one\ntwo\nsee private-issues/foo.md\n", { sourceLabel: "docs/y.md", repoRoot, blocklist: true }),
     (e: unknown) => {
       assert.ok(e instanceof ScrubError);
-      assert.equal(e.message, 'docs/y.md:3 disallowed reference: "private-issues"');
+      assert.equal(e.message, "docs/y.md:3 references into private-issues");
       return true;
     },
   );
@@ -80,3 +80,13 @@ test("scrubText: clean content passes", () => {
   const repoRoot = tmpRepoRoot();
   assert.doesNotThrow(() => scrubText("A box is a directory. It holds cards.\n", { sourceLabel: "docs/clean.md", repoRoot, blocklist: true }));
 });
+
+test("scrubText: naming the private-issues boundary passes; a path or link into it fails", () => {
+  const repoRoot = tmpRepoRoot();
+  const opts = { sourceLabel: "docs/p.md", repoRoot, blocklist: true };
+  assert.doesNotThrow(() => scrubText("Follow the root's `private-issues/` boundary.\n", opts));
+  assert.doesNotThrow(() => scrubText("Private issues live in private-issues (a separate repo).\n", opts));
+  assert.throws(() => scrubText("see private-issues/bugs/x.md\n", opts), ScrubError);
+  assert.throws(() => scrubText("[the note](../private-issues/x.md)\n", opts), ScrubError);
+});
+

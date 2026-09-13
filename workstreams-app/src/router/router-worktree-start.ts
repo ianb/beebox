@@ -192,7 +192,7 @@ async function spawnGeneration(state: CoreState, plan: StartPlan): Promise<Gener
   });
   const fastifyOutput = captureOutput(fastify, logStream);
 
-  // pnpm workspace with `node-linker=hoisted` (see /.npmrc) puts all binaries
+  // pnpm workspace with `nodeLinker: hoisted` (see /pnpm-workspace.yaml) puts all binaries
   // at the workspace root's node_modules/.bin — per-package node_modules/.bin
   // dirs aren't populated. Resolve vite from the worktree's monorepo root.
   const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");

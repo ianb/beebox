@@ -81,13 +81,23 @@ tests. Some plans exceed ~3× the smallest fix. Others add a subproject,
 protocol, or vocabulary that the request did not ask for. Either kind goes to
 the boxholder as a choice between the two before you write the rest.
 
-**During implementation it trips when any of these holds:**
+**During implementation, compare like-for-like with the budget.** Count the
+source/test categories it estimates; report documentation or generated output
+separately unless the budget explicitly includes them. Do not silently raise a
+budget to absorb growth.
+
+**It trips when any of these holds:**
 - the diff passes 1.5× the budgeted lines, or reaches a subproject or track
   the budget did not list;
 - a state, protocol, or subsystem appears that the plan did not name;
-- the same mechanism takes a second fix-and-review round;
-- the plan is edited a third time to carry implementation findings forward;
 - the boxholder asks why it is so big.
+
+Before correcting the same mechanism again in response to implementation
+findings, reassess whether the design still holds. Revision/review counts alone
+are not stop conditions, and routine plan-text corrections need no reassessment.
+Continue within the approved scope; stop if the findings invalidate the approach
+or trip a gate above. Record changed decisions, not a ritual no-change report. The separate
+`bbx-debug` three-failed-fix limit still applies during debugging.
 
 **When it trips:**
 1. Stop launching work and stop committing.
@@ -96,7 +106,10 @@ the boxholder as a choice between the two before you write the rest.
 3. Run a scope review with the other model family (`cross-model`, challenge
    mode). It classifies each built piece against the boxholder's own words as
    required, justified-but-optional, or scope creep, and names the smallest
-   version that still meets the request.
+   version that still meets the request. Use an existing review if it already
+   answers this scope question at the current state. Respect `cross-model`'s
+   two-round limit; after it, bring the scope decision to the human without
+   inviting another fresh-findings pass.
 4. Give the boxholder the options: stop and revert, step back to the smallest
    fix, salvage the required core, or continue under a new budget. Say what
    each option keeps and what it loses.
