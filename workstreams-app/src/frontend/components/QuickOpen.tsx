@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { searchPaths } from "../lib/path-search.js";
 import { trpc } from "../trpc.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
+import { DocumentLifecyclePills } from "./DocumentLifecyclePills.js";
 
 /**
  * Cmd-P over every browsable path — ported from the retired doc browser's
@@ -95,6 +96,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
                 onClick={() => { choose(match.relPath); }}
               >
                 {match.relPath}
+                <span className="quick-open-lifecycle"><DocumentLifecyclePills lifecycle={match.lifecycle} /></span>
               </button>
             </li>
           ))}

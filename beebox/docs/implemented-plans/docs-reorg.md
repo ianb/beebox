@@ -39,7 +39,7 @@ findability), each spot-checking claims against the code tree.
 
 `docs/plans/` claims to hold active proposals; in reality **only ~5 of 52
 files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
-`pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
+`pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 
 - **35 of 52 files aren't plans at all** — the `openclaw-hermes/` (30) and
@@ -225,7 +225,7 @@ hosted in dev docs) may deserve an explicit home.
 
 - Honest staleness banners + retrospectives: `DESIGN.md`,
   `IMPLEMENTATION.md`, `migrations.md`'s self-disclosed stale table, and the
-  `activities-design.md` + `activities-retrospective.md` pair (the model for
+  `activities-design-2026-04-19.md` + `activities-retrospective-2026-05-14.md` pair (the model for
   recording removed features). Caveat: a banner alone isn't enough when a
   prominent CLAUDE.md link still presents the file as authoritative
   (EXAMPLE_FILES.md).

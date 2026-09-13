@@ -14,7 +14,7 @@ deprecated, warning-logged fallback. Scanner priors join the established
 scan questions accrete into the guide through the existing question
 `learning:` contract.
 
-This is a subplan of `docs/plans/scanner-ingest.md` (Track 6 reshaped).
+This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshaped).
 
 ## Stated preferences this plan trades against
 

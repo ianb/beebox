@@ -20,6 +20,7 @@ where to put new material.
 | Testing what agents know and do | [docs/agent-testing.md](agent-testing.md) |
 | Technologies and AI services | [docs/technologies.md](technologies.md) |
 | Testing philosophy | [docs/testing.md](testing.md) |
+| Field tests (current runbook) | [docs/field-testing.md](field-testing.md) |
 | Tours (browser walks for UI/a11y review) | [docs/tours.md](tours.md) |
 | Doctest syntax | [Doctest syntax](../../agent-doctest/docs/syntax.md) |
 | Adding a card type | [docs/adding-schemas.md](adding-schemas.md) |
@@ -40,8 +41,8 @@ where to put new material.
 | Agent-set chat timers (`<schedule>` tag) | [docs/chat-schedules.md](chat-schedules.md) |
 | Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
 | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt-audits.md](prompt-audits.md)) |
-| Triage pipeline design | [docs/triage.md](triage.md) |
-| Questions subsystem design | [docs/questions.md](questions.md) |
+| Triage pipeline current guide | [docs/triage.md](triage.md) |
+| Questions subsystem current reference | [docs/questions.md](questions.md) |
 | Deployment | [deploy/README.md](../deploy/README.md) |
 | Server operations | [docs/server-operations.md](server-operations.md) |
 | Adding a box | [docs/adding-a-box.md](adding-a-box.md) |
@@ -56,8 +57,8 @@ where to put new material.
 | Knowledge audits | [docs/knowledge-audits.md](knowledge-audits.md) |
 | Docs shipped to box agents ([box-docs/](../box-docs)) | [docs/box/](box) (prose sources) + [src/core/docs-gen/package-docs.ts](../src/core/docs-gen/package-docs.ts) (generated reference) |
 | Calendar integration | [docs/calendar.md](calendar.md) |
-| PDF intake design | [docs/plans/pdf-intake-design.md](plans/pdf-intake-design.md) |
-| Source editor plan | [docs/plans/source-editor.md](plans/source-editor.md) |
+| PDF intake partial design history | [docs/plans/pdf-intake-design.md](plans/pdf-intake-design.md) |
+| Source editor proposal (unimplemented) | [docs/plans/source-editor.md](plans/source-editor.md) |
 | Interface-as-cards design | [docs/plans/interface-as-cards.md](plans/interface-as-cards.md) |
 | Feature ideas & open issues | [/issues/](../../issues) (monorepo root) |
 | OpenClaw/Hermes comparison & idea triage | [research/openclaw-hermes/README.md](../../research/openclaw-hermes/README.md) |

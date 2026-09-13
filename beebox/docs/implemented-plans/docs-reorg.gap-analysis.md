@@ -1,10 +1,10 @@
 ---
 title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions"
-status: active
-workstream: unknown
-issues: []
 ---
 # Docs-reorg companion: gap analysis — non-obvious, undocumented conventions
+
+Historical assessment accompanying [the shipped reorganization](docs-reorg.md).
+Its findings describe that checkpoint, not a verified current backlog.
 
 Premise (from the plan's Direction section): document only what contradicts
 a fresh agent's intuition; flag possibly-incidental divergences as questions
@@ -130,7 +130,7 @@ answered — remain open questions in `docs-reorg.md`.
 3. **CODE-STYLE.md claims knip enforces export minimalism; `knip.json`
    excludes `"exports"`.**
 4. **`eslint.config.ts` references `eslint-suppressions.json` and a
-   `docs/eslint-rule-suppression-audit.md` path that don't resolve** (the
+   `docs/reports/eslint-rule-suppression-audit-2026-05-30.md` path that don't resolve** (the
    audit doc lives at monorepo-root `docs/`, not beebox's).
 5. **`src/hub/hub-server.ts:1-14` comment says the hub never lazy-spawns —
    contradicted by `resolveEndpoint()` and `supervisor.ts` `lazy: true`**

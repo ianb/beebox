@@ -13,7 +13,7 @@ The skill descriptions and root assembly have been approved. The descriptions we
 
 **Done for this pass:** descriptions retain meaningful triggers and exclusions; every root topic has a purpose, necessity decision, compact form, and destination; a complete proposed root demonstrates the grouping; links and generation paths are checked; an independent cross-model review is adjudicated. This does not claim measured improvement in skill activation.
 
-**Issues addressed:** the description-rewrite portion of [Run trigger evals on our skills](../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md). The issue stays open: empirical activation testing and its broader questions remain unfinished. [Documentation reorganization](../plans/docs-reorg.md) is prior in-repo work, not a mandate to execute that older plan.
+**Issues addressed:** the description-rewrite portion of [Run trigger evals on our skills](../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md). The issue stays open: empirical activation testing and its broader questions remain unfinished. [Documentation reorganization](docs-reorg.md) is prior in-repo work, not a mandate to execute that older plan.
 
 ## Smallest fix and budget
 
@@ -23,7 +23,7 @@ Two tracks: edit the 23 skill descriptions; assess and apply the root rewrite. T
 
 The root and description work landed at `8af2a5aff`; subsequent instruction
 checkpoints landed through `64930f05e`. The final issue-contract grouping and
-[pilot](../prompt-calibration-pilot.md) complete the authorized calibration scope.
+[pilot](../reports/prompt-calibration-pilot-2026-09-12.md) complete the authorized calibration scope.
 The pilot corrected example contamination in launch briefings. It measured
 stated routing and permission decisions, not native skill activation. Full
 activation evaluation stays in the existing issue, which remains open.
@@ -136,7 +136,7 @@ Concrete link choices for the root implementation:
 - Link browser work to the `browse` skill and review work to `cross-model`. The directory symlink layout preserves relative skill resources for Codex.
 - Link recurring work to `bbx-authoring-schedules`; link catalog/lifecycle details into the existing bin sections. Do not split the 910-line bin file in this pass.
 - Link exhibits to `workstreams-app/docs/exhibits.md`, current behavior rather than its design plan. Link issue formats to `issues/CLAUDE.md` without repeating them.
-- Remove the root's link to the [completed lint-suppression audit](../../../docs/eslint-rule-suppression-audit.md) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable; the complete active restriction stays in the root.
+- Remove the root's link to the [completed lint-suppression audit](../../../docs/reports/eslint-rule-suppression-audit-2026-05-30.md) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable; the complete active restriction stays in the root.
 - Keep generated preamble ownership in `bin/generate-agents-md.ts`; do not paste its session-specific worktree context into tracked root guidance. Regeneration affects files, not already-loaded session context or other worktrees.
 
 ### Reviewed root assembly
@@ -275,4 +275,4 @@ The second cross-model pass found no material root implementation defects and co
 
 ## Follow-on assessment
 
-[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Cross-model and bin splits, the launch rewrite, targeted issue-workflow changes, and security-report compression are applied, along with the follow-on coding guidance recorded there. Those checkpoints landed through `64930f05e`. The final pass grouped the issue contract, reconciled progress notes, and completed a [bounded four-model behavioral pilot](../prompt-calibration-pilot.md). The approved editorial scope is implemented. Broader native skill-activation measurements remain tracked by the linked issue; they are not a pending rewrite under this plan.
+[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Cross-model and bin splits, the launch rewrite, targeted issue-workflow changes, and security-report compression are applied, along with the follow-on coding guidance recorded there. Those checkpoints landed through `64930f05e`. The final pass grouped the issue contract, reconciled progress notes, and completed a [bounded four-model behavioral pilot](../reports/prompt-calibration-pilot-2026-09-12.md). The approved editorial scope is implemented. Broader native skill-activation measurements remain tracked by the linked issue; they are not a pending rewrite under this plan.

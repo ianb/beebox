@@ -16,7 +16,7 @@ not establish native skill activation rates.
 
 The historically vendored `.agents/skills/skill-creator/scripts/run_eval.py`
 path is absent from this checkout. The installed skill-creator is outside the
-repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/prompt-calibration-pilot.md)
+repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/reports/prompt-calibration-pilot-2026-09-12.md)
 is complete: 12 routing cases and five authority cases per model, plus a targeted
 briefing-template recheck. It found and corrected example contamination; it did
 not exercise native skill loading. Native loading, repeats, and full-catalog

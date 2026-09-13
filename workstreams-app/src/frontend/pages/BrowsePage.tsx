@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import { CodeBlock, languageForPath } from "../components/CodeBlock.js";
 import { CommentLayer } from "../components/CommentLayer.js";
+import { DocumentLifecyclePills } from "../components/DocumentLifecyclePills.js";
 
 import { Markdown } from "../components/Markdown.js";
 import { Button, Pill } from "../components/ui.js";
@@ -23,6 +24,7 @@ function KindPill({ document }: { document: BrowsedDocument }) {
   return (
     <>
       <Pill tone={tone}>{document.kind}</Pill>
+      <DocumentLifecyclePills lifecycle={document.lifecycle} />
       {document.tracked ? null : <Pill tone="warning">untracked</Pill>}
       {document.workstream === null ? null : <Pill tone="accent">{document.workstream}</Pill>}
     </>
@@ -74,6 +76,7 @@ function DirectoryView({ entries, workstream }: { entries: DirectoryEntry[]; wor
           >
             {entry.name}{entry.kind === "directory" ? "/" : ""}
           </Link>
+          <DocumentLifecyclePills lifecycle={entry.lifecycle} />
         </li>
       ))}
     </ul>

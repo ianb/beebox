@@ -65,6 +65,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repository"
 GIT_COMMON="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
 MONO="$(dirname "$GIT_COMMON")"
 [ -d "$MONO/.git" ] || die "could not resolve the main checkout (got '$MONO')"
+LAND_SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Are we inside a linked worktree? In the main checkout --absolute-git-dir and
 # --git-common-dir agree; in a worktree they diverge. Used only to pick the
@@ -159,6 +160,12 @@ if ! g merge-base --is-ancestor main "$BRANCH"; then
     git merge main    # from the worktree, then re-run verification
   then run: bin/land $BRANCH"
 fi
+
+# Validate the branch's committed candidate tree before dry-run reporting or
+# merging. Never read the caller's working tree: it may be a different linked
+# worktree, and main must remain untouched when this refuses.
+(cd "$LAND_SOURCE_ROOT" && node --import tsx bin/doc-lifecycle-check.ts --repo "$MONO" --tree "$BRANCH") ||
+  die "$BRANCH has document lifecycle errors; main was not changed"
 
 AHEAD="$(g rev-list --count main.."$BRANCH")"
 

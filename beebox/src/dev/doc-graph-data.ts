@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
 
 export const ROOT = PACKAGE_ROOT;
 
@@ -33,12 +34,10 @@ export interface Reference {
 }
 
 export interface DocInfo {
-  path: string;
-  title: string;
-  lineCount: number;
-  mtimeMs: number;
-  outgoing: Reference[];
+  path: string; title: string; lineCount: number;
+  mtimeMs: number; outgoing: Reference[];
   incoming: Reference[];
+  lifecycle: DocumentLifecycle | null;
 }
 
 function findMarkdownFiles(): string[] {
@@ -316,6 +315,7 @@ export function buildGraphExtended(): { docs: Map<string, DocInfo>; externalRefs
       mtimeMs: stat.mtimeMs,
       outgoing: [],
       incoming: [],
+      lifecycle: documentLifecycle(`beebox/${f}`, planStatusFromSource(content)),
     });
   }
 

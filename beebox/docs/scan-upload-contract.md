@@ -13,7 +13,7 @@ Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload*.ts`),
 the client's HTTP layer (`scan-uploader/src/`), and the server route doctests
 (`test/webapp/routes/scan-upload.doctest.md`) — the doctests exercise this
 contract exactly as the client sends it and are its executable form. Design
-history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
+history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 
 ## Auth
 

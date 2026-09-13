@@ -1,6 +1,6 @@
 ---
 title: "Make current documentation and historical records distinguishable"
-status: draft
+status: implemented
 workstream: prompt-calibration
 issues: []
 ---
@@ -11,8 +11,8 @@ change, or records past work. Status and directory must agree before changes
 land on main. Implemented means work shipped; it does not certify that the plan
 remains a current operating manual.
 
-This is a lightweight plan at the human's request. No implementation or extra
-model review is part of this planning pass. Use existing checks and directory
+The human approved implementation on 2026-09-13 after the lightweight planning
+pass. Use existing checks and directory
 conventions rather than adding a documentation management system.
 
 ## 1. Enforce lifecycle consistency at landing
@@ -95,3 +95,30 @@ and navigation exposes their role. Verify links and gate behavior; use a small
 browser check for the navigation changes. Do not claim that all historical
 prose has been revalidated. Defer broad content sweeps, freshness scores,
 automatic semantic classification, and scheduled document audits.
+
+## Implementation — 2026-09-13
+
+All four sections are implemented.
+
+- The shared lifecycle validator checks the complete staged index and the
+  committed landing candidate before main changes, including missing or invalid
+  metadata. Git integration doctests exercise rejection, bootstrap, and valid
+  landing behavior.
+- The three known completed plans and their reviews moved to shipped history;
+  the calibration experiment and its result artifact moved to dated reports.
+- Triage and field testing have current guides linked to preserved history.
+  Questions, PDF intake, source editor, and the guide index state their roles.
+- Browse, Quick Open, and both generated graph forms display document roles;
+  plans also display their existing status. Search ranking is unchanged.
+
+Focused validator and Git doctests, navigation doctests, affected typechecks
+and lint passed. A browser check confirmed current-reference, dated-report,
+partial-proposal, and shipped-history labels and Quick Open navigation.
+
+Source verification found an existing handler transport defect, filed separately
+as [TRIAGE_ITEMS truncation](../../../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md).
+The current guide describes that limitation; runtime repair is outside this pass.
+
+Independent review corrected stale bare-path references, a contradictory history
+summary, and overly broad classification of root-level docs. It also prompted a
+batched Git snapshot read to avoid one subprocess per plan on every commit.

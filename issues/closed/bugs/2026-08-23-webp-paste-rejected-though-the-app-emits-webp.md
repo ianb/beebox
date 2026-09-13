@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, from assets an agent had wrongly converted to WebP
 priority: normal
+resolution: wontfix
 ---
 
 > **Not reproducible, 2026-08-25** (worktree-composer-intake). The stated
@@ -36,6 +37,26 @@ priority: normal
 > canvas dimension down to 0 (which would surface as `canvas.toBlob failed`).
 > It needs a ratio beyond 3840:1, and `cwebp` refuses to encode anything that
 > shape — unreachable in practice, left alone.
+
+## Closed 2026-09-13 — the premise never held
+
+Boxholder: close the unreproducible ones. The asymmetry this issue was filed on
+— that the app produces WebP on a path that refuses a user's WebP — is the part
+that was tested and found false: every WebP shape that could be constructed
+(lossy, lossless, oversized, animated, extreme aspect ratio) went through the
+real `decodeOriented` → canvas → `encodeCanvasBlob` pipeline in Chromium and
+re-encoded fine. Nothing in the composer treats WebP differently from JPEG.
+
+So the two files that failed were specific files, not a category, and the most
+likely explanation is malformed output from the ad-hoc conversion that produced
+them — which is also how they came to exist. The evidence that would have
+identified them is gone: the debug log dropped the error `message` at the time
+(fixed since, in `ab5f483e`).
+
+This closes as a premise that never held rather than as a fixed defect. If a
+WebP is ever refused again, the log now names the failing step, so one
+recurrence **with the file and that log line** is worth reopening on — a fresh
+description alone would put us back exactly here, with nothing to test.
 
 Two WebP images pasted into the chat composer were rejected. The composer
 reported that the files could not be added, and the console recorded
@@ -75,6 +96,6 @@ is for, so this is filed as noticed, not as scheduled work.
 Reproducing it is now cheap: paste a WebP into the composer and read the debug
 log, which since `ab5f483e` carries the reason.
 
-Related: [implementation-vocab-leaks-into-ui](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
+Related: [implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md)
 — the message the user saw named neither the format nor the reason; that half
 is fixed in `8cecbe33`.
