@@ -15,7 +15,7 @@ import { touchesDeployedPath } from "./deployed-paths.js";
 
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint" | "smoke";
+  kind: "tests" | "typecheck" | "lint" | "smoke" | "site";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -157,6 +157,11 @@ export function isDocsOnly(paths: string[]): boolean {
   return paths.every((path) => isDocPath(path) || (path.split("/").includes("docs") && !isDoctest(path)));
 }
 
+/** Anything the public site build reads: site/ itself, or any markdown (the docs manifest promotes repo docs). */
+export function touchesSiteInput(paths: string[]): boolean {
+  return paths.some((path) => path.startsWith("site/") || isDocPath(path));
+}
+
 /** Any non-test, non-doc source in the diff — what Track O and lint exist for. */
 export function hasCodeChange(paths: string[]): boolean {
   return paths.some((path) => !isDocPath(path) && !isTestPath(path));
@@ -295,6 +300,22 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   // ios-app/ changes nothing a running box would show.
   if (touchesDeployedPath(input.paths)) {
     add({ kind: "smoke", command: "bin/smoke", cwd: ".", argv: ["bin/smoke"] });
+  }
+
+  // The public site's canonical build: what Cloudflare runs on every push of
+  // main. It consumes site/ AND every markdown the docs manifest promotes
+  // (README, CONTRIBUTING, beebox/docs, the engine's CLAUDE.md), and it fails
+  // closed on a scrub-gate hit or a broken link. It is the one check a
+  // docs-only diff must NOT skip: docs are exactly its input. Without it a
+  // merge that breaks the site build is silent until someone looks at
+  // beebox.run (2026-09-12: six merges shipped nothing for two hours).
+  if (touchesSiteInput(input.paths)) {
+    commands.push({
+      kind: "site",
+      command: "pnpm --dir site build --base /",
+      cwd: ".",
+      argv: ["pnpm", "--dir", "site", "build", "--base", "/"],
+    });
   }
 
   const linting = packages.filter((pkg) => input.hasScript(pkg, "lint"));

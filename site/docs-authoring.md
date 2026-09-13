@@ -116,6 +116,6 @@ doc's own internal links are rewritten automatically (see `site/CLAUDE.md`)
 
 ## What fails the build, and why
 
-- **A real home path, `private-issues`, or a named box under a boxes directory (`~/src/boxes/<name>`; `test1` and placeholders pass), anywhere in the text.** Applies to every doc kind, including generated ones. Authored pages are also scanned against your gitignored `.commit-blocklist`. It's mechanical and
+- **A real home path, a path or link into `private-issues/`, or a named box under a boxes directory (`~/src/boxes/<name>`; `test1` and placeholders pass), anywhere in the text.** Applies to every doc kind, including generated ones. Authored pages are also scanned against your gitignored `.commit-blocklist`. It's mechanical and
 
 Each failure names the file and, where it applies, the line.

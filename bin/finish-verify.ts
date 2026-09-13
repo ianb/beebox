@@ -46,7 +46,7 @@ class PreflightFailedError extends Error {
 
 class BadOnlyKindError extends Error {
   constructor() {
-    super("--only takes tests, typecheck, lint or smoke");
+    super("--only takes tests, typecheck, lint, smoke or site");
     this.name = "BadOnlyKindError";
   }
 }
@@ -213,7 +213,7 @@ export function main(argv: string[]): number {
   const sheet = readSheet(argv);
   const onlyIndex = argv.indexOf("--only");
   const only = onlyIndex === -1 ? null : argv[onlyIndex + 1];
-  if (only !== null && !["tests", "typecheck", "lint", "smoke"].includes(only ?? "")) {
+  if (only !== null && !["tests", "typecheck", "lint", "smoke", "site"].includes(only ?? "")) {
     throw new BadOnlyKindError();
   }
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));

@@ -4,7 +4,7 @@ import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
  *
- * `.npmrc` sets `node-linker=hoisted`, so every package's dependencies are
+ * `pnpm-workspace.yaml` sets `nodeLinker: hoisted`, so every package's dependencies are
  * installed into the root `node_modules` — `beebox/node_modules` holds
  * two entries. Run per-package, knip cannot map a binary a script invokes
  * (`eslint`, `tsc`, `tap`) back to the package declaring it, and reports the

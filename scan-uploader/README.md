@@ -61,7 +61,7 @@ and mints the token; the steps in full:
 
    That's it — `bin/scan-uploader` runs the CLI straight from source via
    `tsx`, so a checkout is always current; no build step. (Note: the
-   workspace's `node-linker=hoisted`, root `.npmrc`, means the filtered
+   workspace's `nodeLinker: hoisted`, root `pnpm-workspace.yaml`, means the filtered
    install still materializes the full hoisted tree (~1.3 GB) — it works
    verbatim from a clean clone, verified by `smoke-install.sh`, but isn't
    lighter than a full install.)

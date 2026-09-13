@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   groupPaths,
+  touchesSiteInput,
   hasCodeChange,
   isDocsOnly,
   parseTrailers,
@@ -208,7 +209,9 @@ test("a docs-only diff names every command as skipped rather than hiding it", ()
     skipTypecheckLint: NO_SKIP,
   });
   assert.ok(commands.length > 0);
-  assert.ok(commands.every((c) => c.skip === "docs-only diff"));
+  // Every command is named and skipped, except the site build: docs are its input.
+  assert.ok(commands.filter((c) => c.kind !== "site").every((c) => c.skip === "docs-only diff"));
+  assert.equal(commands.find((c) => c.kind === "site")?.skip, undefined);
 });
 
 test("skipTypecheckLint keys on what pre-commit never saw", () => {
@@ -300,3 +303,26 @@ test("a docs-only diff names the smoke walk as skipped rather than dropping it",
   assert.equal(smoke?.command, "bin/smoke");
   assert.equal(smoke?.skip, "docs-only diff");
 });
+
+test("the canonical site build runs for site/ or any markdown change, and is never skipped as docs-only", () => {
+  assert.equal(touchesSiteInput(["site/docs/01-what-bee-box-is.md"]), true);
+  assert.equal(touchesSiteInput(["beebox/CLAUDE.md"]), true);
+  assert.equal(touchesSiteInput(["beebox/src/core/box.ts"]), false);
+  const commands = verificationCommands({
+    paths: ["issues/features/x.md", "beebox/docs/glossary.md"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  const site = commands.find((c) => c.kind === "site");
+  assert.equal(site?.command, "pnpm --dir site build --base /");
+  assert.equal(site?.skip, undefined);
+  const code = verificationCommands({
+    paths: ["beebox/src/core/box.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  assert.equal(code.some((c) => c.kind === "site"), false);
+});
+
