@@ -13,6 +13,16 @@ phone, a clipped page, a chat, each suited to a different kind of thing you
 might want to keep. And you should be able to review and refer back to what
 is there, with the assistant alongside you.
 
+What it is for: keeping the ongoing things of a life in one place the
+assistant can act on. Getting the threads that matter out of your inbox,
+with replies drafted for you. Turning a shoebox of receipts, or a shelf of
+things, into records you can ask about. Talking through what is in your
+head and having it come back as notes, todos, and questions. Keeping
+recipes that scale, people and places it recognizes, a project's working
+memory, a course it built for something you are learning. Teaching it your
+preferences once and having them stick. Each of these has a page under
+"uses" below, with what is still rough.
+
 Alongside those ideas, a few choices. The assistant is a coding agent,
 Claude Code or Codex, rather than something built here: you bring your own,
 very possibly one you already pay for, and the progress in those tools is
