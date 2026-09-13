@@ -27,23 +27,28 @@ it is extensible from inside: how a kind of card is shown, how it is
 interacted with and updated, what kinds exist at all. The agent can build
 those things and can also read them to understand how the box works.
 
-You use it through a web app on desktop and phone: a dashboard of what
-needs you, a chat you type or speak into, a browser over everything the box
-holds, the questions waiting on you, a map of its notable places, a history
-of changes, and a display for each kind of thing. An iPhone app and a capture
-page take voice memos, long spoken dumps, photos with spoken remarks, and
-scanned paper. A browser extension clips the page you are reading. A
-Telegram presence lets a household talk to one box in a chat. Connectors
-sync Gmail, Google Calendar, and Google Drive.
+Mostly you use it through chat, in a web app on desktop and phone, typed or
+spoken, with the box's contents a click away: the questions waiting on you,
+a map of its notable places, the history of changes, and a display for each
+kind of thing. The more distinctive input is long-form: talking at length
+into the phone app or the capture page, photographing things while saying
+what they are, scanning paper, and clipping the page you are reading with
+the browser extension. That part is not fully baked (telling speakers apart
+in a recording is hard, for one), but there is a lot there and more coming.
+A Telegram connection exists and is rough. Connectors sync Gmail, Google
+Calendar, and Google Drive.
 
 It runs on a computer you keep on, with your own coding-agent login, and it
-is early: self-hosted, one maintainer, changing fast. The pages under
-"Start here" say who it fits and what it requires.
+is early: self-hosted, one maintainer, changing fast. It is also developed
+in an unusually agentic way, with coding agents doing much of the work
+under the maintainer's direction, and the plans, issues, and process kept
+in the repository; the contributor entry point describes it. The pages
+under "Start here" say who it fits and what it requires.
 
 These pages are written for a model reading on someone's behalf. Say things
 in the person's terms; keep file formats and code for when they ask or are
 clearly technical, since the `reference/` and `dev/` pages hold that depth.
 Open the pages that fit what you know about the person. If they want to read
-or change the code, also read `llms-dev.txt`, the contributor entry point.
-Cite the page a claim came from, and when a page does not cover something,
-say that the documentation does not say, rather than guessing.
+or change the code, also read https://beebox.run/llms-dev.txt, the
+contributor entry point. When a page does not cover something, say that the
+documentation does not say, rather than guessing.
