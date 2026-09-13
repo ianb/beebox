@@ -45,7 +45,7 @@ const ADMISSIBLE_PUBLISH_DIRS = [
 ] as const;
 
 /** Individual repo files admitted as manifest sources, beyond the prefix rules below. Closed set. */
-const ADMISSIBLE_SOURCE_FILES: readonly string[] = ["CONTRIBUTING.md", "beebox/CLAUDE.md", "beebox/code-style.md", "beebox/frontend.md"];
+const ADMISSIBLE_SOURCE_FILES: readonly string[] = ["CONTRIBUTING.md", "CLAUDE.md", "beebox/CLAUDE.md", "beebox/code-style.md", "beebox/frontend.md"];
 
 // A repo-relative posix path with no traversal: the prefix checks below run on
 // the literal string, so `beebox/docs/design/../../issues/x.md` must be refused
