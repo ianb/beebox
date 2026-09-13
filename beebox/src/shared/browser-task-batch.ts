@@ -27,6 +27,7 @@ export const RESERVED_BATCH_FILES: ReadonlyArray<string> = ["records.json", "fil
 export const COVERAGE_REASONS = [
   "reached-watermark",
   "reached-limit",
+  "reached-date",
   "end-of-feed",
   "login-wall",
   "rate-limited",
@@ -34,10 +35,20 @@ export const COVERAGE_REASONS = [
 ] as const;
 export type CoverageReason = (typeof COVERAGE_REASONS)[number];
 
+/**
+ * The envelope a batch's `records.json` must have, as one line an executor
+ * can read. Shown in the copy block, the form, and every envelope error, so
+ * nobody has to reverse-engineer it from a bundle.
+ */
+export const MANIFEST_SHAPE_HINT =
+  `records.json is { "coverage": { "scanned": <int, items looked at>, "stoppedAt": "<permalink or date where the scan stopped>", "reason": "<one of ${COVERAGE_REASONS.join(" | ")}>", "notes": "<optional: what you could not do>" }, "records": [ ...one object per record... ] }`;
+
 const CoverageSchema = z.object({
   scanned: z.number().int().nonnegative(),
   stoppedAt: z.string(),
   reason: z.enum(COVERAGE_REASONS),
+  /** What the executor could not do (images it could not fetch, a section it could not open). */
+  notes: z.string().optional(),
 });
 export type BatchCoverage = z.infer<typeof CoverageSchema>;
 
@@ -232,6 +243,8 @@ export function validateBatch(input: ValidateBatchInput): BatchValidation {
       const { path, message } = formatZodIssue(zi);
       issues.push({ kind: "coverage", path: path === "" ? "manifest" : `manifest${path}`, message });
     }
+    // One extra line saying what was expected, so the envelope is never a guessing game.
+    issues.push({ kind: "coverage", path: "manifest", message: MANIFEST_SHAPE_HINT });
     return { ok: false, issues };
   }
 
