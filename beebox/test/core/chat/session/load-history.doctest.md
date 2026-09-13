@@ -184,8 +184,7 @@ reached
 ```
 
 The fallback is not "assume Claude" — it is "read what is on this disk". A
-transcript file under an unrecorded id is still served, so the change cannot hide
-a conversation that exists:
+transcript FILE under an unrecorded id is still served:
 
 ```ts continue
 await seed(codexBox.root, 4);
@@ -193,6 +192,17 @@ const stillServed = await loadSessionHistory(codexBox.root, { sessionId: SESSION
 stillServed.entries.length
 => 4
 ```
+
+A native Codex thread is the case this does NOT cover, and that is a deliberate
+trade rather than an oversight. Codex threads live outside the box, so records
+can be rewound while the thread survives — and for such an id the box default
+used to be right, so a codex-default box would have loaded it. It now reads
+empty. The trade: probing Codex for every unrecorded id would restore that
+recovery, but Codex holds an unknown-thread read open until the client's own
+3-minute timeout, so the incident case would become a hung history request
+instead of a fast wrong one. Fast and empty beats slow and eventually-empty for
+the common case; recovering an orphaned Codex thread is a deliberate action, not
+something a history poll should discover.
 
 ```ts cleanup
 delete process.env["BBX_CLAUDE_PROJECTS_DIR"];

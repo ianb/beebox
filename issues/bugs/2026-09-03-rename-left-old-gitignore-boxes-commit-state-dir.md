@@ -126,7 +126,8 @@ named `box.json`, one tracked config and one untracked identity.
 
 The marker's three fields settle where it belongs. `version: "1.0.0"` is a
 hardcoded literal that reaches the dashboard as "v1.0.0" (`core/state.ts:145` →
-`SystemInfo.tsx:23`); `created` is the box's birth date; `shapeVersion`
+`src/frontend/src/components/dashboard/SystemInfo.tsx:23`); `created` is the
+box's birth date; `shapeVersion`
 describes the layout of the TRACKED tree. None of the three is machine-local.
 The marker is not state, and it sits in the state directory because the
 2026-08-30 rename needed somewhere hidden to put it.
@@ -173,8 +174,10 @@ and the minimum-version constant, so there are two resolvers to change in
 lockstep (worth collapsing while in there);
 `workstreams-app/src/router/box-entry.ts:58-146` reads the marker and branches on
 `shapeVersion === 2` for slug derivation; `schedules/cross-box-leak-scan/box-manifest.ts:39`;
-`beebox/deploy/add-box.sh:373`; `deploy/deploy.sh:722`; `docker/entrypoint.sh:41`;
-and roughly twenty test fixtures and doctests that hand-write markers.
+`beebox/deploy/add-box.sh:373`; `deploy/deploy.sh:722`;
+`deploy/hetzner/setup-server.sh:196`, which tests for the marker before deciding
+whether to initialize and commit a box; `docker/entrypoint.sh:41`; and roughly
+twenty test fixtures and doctests that hand-write markers.
 `feedback-review/collect.ts:25` keys on the `.beebox` DIRECTORY and is
 unaffected. Verification has to include a fresh clone of a box becoming a box,
 not only green unit tests.
@@ -191,6 +194,23 @@ an unrecorded id was routed to Codex and only a recognized phrasing became a
 `false`. And `CodexHistoryRpcError`'s user-visible `message` omitted the RPC
 message it held on a field beside it, which is why the banner said only "Codex
 history request failed" — it now carries the operation and the RPC message.
+
+One case is deliberately NOT recovered: a native Codex thread whose box records
+are all gone. Codex threads live outside the box, so a reset can rewind the
+records while the thread survives, and for such an id the box default used to be
+right. Probing Codex for every unrecorded id would restore that, but Codex holds
+an unknown-thread read open until the client's 3-minute timeout, so the incident
+case would become a hung history request rather than a fast wrong one. Recovering
+an orphaned Codex thread should be a deliberate action, not something a history
+poll discovers. Cross-model review raised this; accepted as a trade and recorded
+in the doctest prose.
+
+Two adjacent doors to the same hazard were left out of scope and filed as
+`2026-09-13-unrecorded-session-id-rematerialized-by-controls.md`: `setModel` and
+`setFeature` re-materialize an unrecorded id through `registry.getOrCreate`, after
+which `hasAssignedSession` makes availability answer `resumable` before the
+recorded-engine check runs; and `ChatThreadSession` preflights a guessed engine
+with no availability check at all. Both predate this fix.
 
 `test/webapp/chat-reservation-restart.doctest.md` asserted the broken behavior:
 its prose narrated this exact mechanism and expected the throw. Worth noting
