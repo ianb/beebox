@@ -32,10 +32,15 @@
 # `--allow-dirty-main` exists because the main checkout is also where issue
 # maintenance and doc close-outs get done, so it is routinely mid-edit while a
 # worktree is ready to land, and that edit is usually someone else's to commit.
-# It is not a blanket override: the dirty paths are intersected with the paths
-# the merge would change, and an overlap still refuses. It also refuses rather
-# than guess when git quotes a dirty path (a space or non-ASCII character),
-# since an unparsed path could hide an overlap.
+# It is not a blanket override. It permits exactly what git itself tolerates:
+# unstaged modifications and untracked files on paths the merge does not touch.
+# It still refuses on
+#   - any overlap between a dirty path and a path the merge changes;
+#   - any STAGED change (index ahead of HEAD), because git's merge refuses
+#     whenever an index entry disagrees with HEAD for a path it walks, even one
+#     whose content the merge would leave alone — a staged rename of an
+#     untouched file is enough. Without this check the flag would promise a
+#     landing and then hand back git's own refusal.
 #
 # Call it bare from a worktree; don't build the branch name with `$(…)`, which
 # an isolated session refuses as "too complex to verify".
@@ -136,6 +141,15 @@ $(g status --short | sed 's/^/    /')
     this merge touches — re-run with --allow-dirty-main, which checks exactly that."
   fi
   MAIN_DIRTY=1
+fi
+
+# Staged changes are the ones git will not merge around — see the header.
+if [ "$MAIN_DIRTY" = 1 ] && ! g diff --cached --quiet; then
+  die "main checkout ($MONO) has STAGED changes; --allow-dirty-main cannot cover those.
+$(g diff --cached --name-status | sed 's/^/    /')
+    git refuses to merge whenever the index disagrees with HEAD for a path it
+    walks, even one this merge would not change. Commit or unstage that work
+    first — it belongs to whoever staged it."
 fi
 
 # Every path the dirty main checkout has an opinion about. `-z` so a path with
