@@ -142,19 +142,16 @@ For already approved implementation, use a close such as:
 > Commit in the worktree; merge to main or deploy only if the human has also
 > authorized that action, as recorded in this briefing.
 
-Example of shared context for an exploratory handoff:
+Briefing shape (fill only from the actual discussion; omit unknown fields or
+label them unresolved):
 
-> We traced missing messages to the connector's date filter: applying a label
-> to older mail does not make it newer than the filter. The existing issue
-> considers widening the window or using the provider's history API. We ruled
-> out removing deduplication, because repeated messages would be processed again.
-> The human asked for an approach, not implementation. Read the query builder
-> and cursor handling, verify this diagnosis, and explain which option fits the
-> current structure. Preserve the bounded scan and identify any migration need
-> before proposing a change.
-
-Use actual paths and findings from the conversation in a real briefing; do not
-copy this example's diagnosis or choices into unrelated work.
+> The human wants [outcome] because [observed problem]. We established
+> [finding and actual source path]. The agreed approach is [decision], or
+> remains open between [discussed alternatives]. We ruled out [option] because
+> [reason established in the discussion]. Preserve [actual constraints].
+> The human authorized [diagnosis / planning / implementation / landing];
+> [remaining decision or permission] is still reserved. Next, [action within
+> that authorization], then report [the requested result or evidence].
 
 Codex reads generated `AGENTS.md` files and `$skill` names; Claude reads
 `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
