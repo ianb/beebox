@@ -13,17 +13,19 @@ phone, a clipped page, a chat, each suited to a different kind of thing you
 might want to keep. And you should be able to review and refer back to what
 is there, with the assistant alongside you.
 
-The mechanics follow from that. The assistant is a coding agent (Claude
-Code or Codex). The engine gives it a box: a folder of cards, each a file
-with a checked header and markdown text, kept under git, which is where the
-history lives. Every kind of card has a shape; the text is the overflow.
-Links between cards are parsed and checked, and follow the files when they
-move. A small set of marks in the text carries provenance and lets a task
-be noted in place. New input is triaged into the box; the agent's questions are cards; corrections become
-rules it reads next time; recurring work runs on a schedule and on what
-email and calendar bring in. The agent builds inside the box too: a display
-for a kind of card, a dashboard, a routine, a new kind of record. What it
-builds is a file, versioned like everything else.
+Alongside those ideas, a few choices. The assistant is a coding agent,
+Claude Code or Codex, rather than something built here: you bring your own,
+very possibly one you already pay for, and the progress in those tools is
+not something Bee Box tries to compete with. The engine that hosts the
+agent is kept separate from it, so a different agent can be swapped in
+later. Inside, everything has a schema, and every card is also a container
+for other files: a photo, a recording, a PDF, a document travels with the
+card it belongs to. Links between cards are parsed and checked, and follow
+files when they move; the box is hypertext, and it stays coherent as it
+grows. Email and calendar act as triggers as well as sources. And all of
+it is extensible from inside: how a kind of card is shown, how it is
+interacted with and updated, what kinds exist at all. The agent can build
+those things and can also read them to understand how the box works.
 
 You use it through a web app on desktop and phone: a dashboard of what
 needs you, a chat you type or speak into, a browser over everything the box
