@@ -55,6 +55,19 @@ JSON.stringify([after.includes("source: https://example.test/feed"), after.trim(
 => [true,true]
 ```
 
+## Listing tasks with their state
+
+`browserTask.list` walks `_content` for task cards and derives each one's
+lifecycle state; the dashboard shows the due and never-scanned ones.
+
+```ts continue
+await box.write("_content/tasks/Weekly.browser-task.card", "---\ntype: browser-task\ntitle: Weekly feed\nsource: https://example.test/w\nrescan-after: P7D\nlast-upload: 2020-01-01T00:00:00Z\n---\nScan it.\n");
+box.commitAll("seed weekly");
+const listed = await caller(box.root).browserTask.list();
+JSON.stringify(listed.items.map((t) => [t.path, t.title, t.status, t.state.kind, t.inboxCount, t.runCount]))
+=> [["_content/tasks/Task.browser-task.card","Scan","open","never-scanned",0,0],["_content/tasks/Weekly.browser-task.card","Weekly feed","open","due",0,0]]
+```
+
 ## Refusals
 
 Not an owner, not a browser-task card, not a card at all:

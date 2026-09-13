@@ -2,40 +2,36 @@
  * BrowserTaskView — renderer for `browser-task` cards.
  *
  * The card is a prompt for someone with a logged-in browser, and the inbox
- * for what they bring back. The view shows, top to bottom: the task's state
- * and inbox status; the prompt with a one-click copy of everything the
- * executor needs; the record schema; the submission form (validated in the
- * browser with the same function the server runs); and the batches that
- * have arrived or been drained.
+ * for what they bring back. Top to bottom: the task's state (open, due,
+ * never scanned) and the owner's control; the copy block the executor needs;
+ * the submission form, validated in the browser with the same function the
+ * server runs; the prompt and schema, folded; the inbox and processed
+ * batches as review tables; and the scan history.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import type { RendererProps } from "../renderers";
 import { Markdown } from "./Markdown";
-import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
-import { FriendlyDate } from "./ui/FriendlyDate";
 import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 import { Accordion } from "./ui/Accordion";
-import { Toggle } from "./ui/Toggle";
-import { trpc } from "../lib/trpc";
-import { useCurrentUser } from "../hooks/useCurrentUser";
 import { ExternalLink } from "./ui/ExternalLink";
-import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { busEventData } from "../lib/bus-events";
 import { attachDirFor } from "@shared/attach-path";
 import { boxRelativePath } from "@shared/box-path";
 import { validateBatch, MANIFEST_SHAPE_HINT } from "@shared/browser-task-batch";
+import { isRecord } from "@shared/is-record";
 import { SubmissionForm, type SubmissionValidation } from "./browser-task/SubmissionForm";
+import { TaskStatus } from "./browser-task/TaskStatus";
+import { BatchList } from "./browser-task/BatchList";
+import { RunsTable } from "./browser-task/RunsTable";
 import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/browser-task-data";
-
-const STALE_AFTER_DAYS = 14;
 
 interface AttachState {
   schemaText: string | null;
@@ -51,10 +47,7 @@ interface AttachState {
 
 export function BrowserTaskView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const status = frontmatter["status"] === "closed" ? "closed" : "open";
-  const source = typeof frontmatter["source"] === "string" ? frontmatter["source"] : null;
-  const watermark = typeof frontmatter["watermark"] === "string" ? frontmatter["watermark"] : null;
-  const lastUpload = typeof frontmatter["last-upload"] === "string" ? frontmatter["last-upload"] : null;
+  const { status, source, watermark, lastUpload, rescanAfter, subjectRef, limit } = readTaskFields(frontmatter);
   const body = data.body ?? "";
   const [attach, setAttach] = useState<AttachState | null>(null);
 
@@ -94,7 +87,6 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     [attach?.schemaJson],
   );
 
-  const limit = describeLimit(frontmatter["limit"]);
   const copyBlock = buildCopyBlock({ body, source, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
 
   const disabledReason =
@@ -102,14 +94,21 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     : attach === null ? "Loading the record schema…"
     : attach.schemaProblem;
 
-
-  // Order: what state the task is in and the form to act on it come first;
-  // the prompt and schema are reference material the executor copies once,
-  // so they fold away rather than pushing everything else off the page.
   return (
     <div className="p-4 max-w-3xl mx-auto" {...bbxSource("card", data.path)}>
       <Stack gap="md">
-        <StatusLine status={status} lastUpload={lastUpload} attach={attach} cardPath={data.path} />
+        <TaskStatus
+          cardPath={data.path}
+          status={status}
+          lastUpload={lastUpload}
+          rescanAfter={rescanAfter}
+          subjectRef={subjectRef}
+          inbox={attach?.inbox ?? []}
+          processedCount={attach?.processed.length ?? 0}
+          loadedAt={attach?.loadedAt ?? null}
+          error={attach?.error ?? null}
+          onNavigate={onNavigate}
+        />
 
         <Row gap="sm" align="center" wrap>
           <Button intent="secondary" size="sm" flash={{ label: "Copied" }} onClick={() => navigator.clipboard.writeText(copyBlock)}>
@@ -131,38 +130,11 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
         <SchemaCard attach={attach} />
 
-        <BatchList heading="Inbox" batches={attach?.inbox ?? []} empty="Nothing waiting." onNavigate={onNavigate} />
-        <BatchList heading="Processed" batches={attach?.processed ?? []} empty="Nothing drained yet." onNavigate={onNavigate} />
+        <BatchList heading="Inbox" batches={attach?.inbox ?? []} empty="Nothing waiting." schemaJson={attach?.schemaJson} onNavigate={onNavigate} />
+        <BatchList heading="Processed" batches={attach?.processed ?? []} empty="Nothing drained yet." schemaJson={attach?.schemaJson} onNavigate={onNavigate} />
+        <RunsTable runs={frontmatter["runs"]} />
       </Stack>
     </div>
-  );
-}
-
-function StatusLine({ status, lastUpload, attach, cardPath }: { status: "open" | "closed"; lastUpload: string | null; attach: AttachState | null; cardPath: string }) {
-  const staleDays = lastUpload === null || attach === null ? null : Math.floor((attach.loadedAt - new Date(lastUpload).getTime()) / 86_400_000);
-  const draining = attach?.inbox.filter((b) => b.filed.length > 0 && b.records !== null && b.filed.length < b.records).length ?? 0;
-  return (
-    <Stack gap="xs">
-      <Row gap="sm" align="center" wrap>
-        <Badge tone={status === "open" ? "success" : "neutral"}>{status}</Badge>
-        <StatusToggle status={status} cardPath={cardPath} />
-        {attach !== null ? (
-          <Text as="span" size="sm">
-            {String(attach.inbox.length)} in inbox, {String(attach.processed.length)} processed
-            {draining > 0 ? `, ${String(draining)} being drained` : ""}
-          </Text>
-        ) : null}
-        {lastUpload !== null ? (
-          <Text as="span" size="sm" tone="subtle">last upload <FriendlyDate iso={lastUpload} /></Text>
-        ) : (
-          <Text as="span" size="sm" tone="subtle">no uploads yet</Text>
-        )}
-      </Row>
-      {status === "open" && staleDays !== null && staleDays >= STALE_AFTER_DAYS ? (
-        <Text as="p" tone="emphasis" size="sm">No upload in {String(staleDays)} days. Run the task or close it.</Text>
-      ) : null}
-      {attach?.error ? <Text as="p" tone="danger">{attach.error}</Text> : null}
-    </Stack>
   );
 }
 
@@ -173,34 +145,40 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;
   return (
-    <Card padding="md">
-      <Stack gap="sm">
-        <Text as="h2" size="lg" weight="bold">Record schema</Text>
-        {content}
-        {problem !== null ? <Text as="p" tone="danger" size="sm">{problem}</Text> : null}
-      </Stack>
-    </Card>
+    <Accordion title={<Text as="h2" size="lg" weight="bold">Record schema</Text>} defaultOpen={false}>
+      <Card padding="sm" border="none">
+        <Stack gap="sm">
+          {content}
+          {problem !== null ? <Text as="p" tone="danger" size="sm">{problem}</Text> : null}
+        </Stack>
+      </Card>
+    </Accordion>
   );
 }
 
-/** The boxholder's open/closed control. Owner only; an executor never sees it. */
-function StatusToggle({ status, cardPath }: { status: "open" | "closed"; cardPath: string }) {
-  const user = useCurrentUser();
-  const utils = trpc.useUtils();
-  const mutation = trpc.browserTask.setStatus.useMutation({
-    onSuccess: async () => {
-      await utils.card.get.invalidate({ path: cardPath });
-    },
-  });
-  if (user === null || !user.isOwner) return null;
-  return (
-    <Toggle
-      checked={status === "open"}
-      disabled={mutation.isPending}
-      label={status === "open" ? "Accepting batches" : "Closed"}
-      onChange={(open) => mutation.mutate({ path: cardPath, status: open ? "open" : "closed" })}
-    />
-  );
+interface TaskFields {
+  status: "open" | "closed";
+  source: string | null;
+  watermark: string | null;
+  lastUpload: string | null;
+  rescanAfter: string | null;
+  subjectRef: string | null;
+  limit: string | null;
+}
+
+/** Narrow the card's frontmatter to what the view shows; a malformed value reads as absent. */
+function readTaskFields(fm: Record<string, unknown>): TaskFields {
+  const str = (key: string): string | null => (typeof fm[key] === "string" ? fm[key] : null);
+  const subject = fm["subject"];
+  return {
+    status: fm["status"] === "closed" ? "closed" : "open",
+    source: str("source"),
+    watermark: str("watermark"),
+    lastUpload: str("last-upload"),
+    rescanAfter: str("rescan-after"),
+    subjectRef: isRecord(subject) && typeof subject["ref"] === "string" ? subject["ref"] : null,
+    limit: describeLimit(fm["limit"]),
+  };
 }
 
 /** Everything the executor needs, as one block to paste into its own session. */
@@ -217,11 +195,10 @@ function buildCopyBlock(opts: { body: string; source: string | null; watermark: 
 
 /** The `limit` field as one readable line, or null when unset or malformed. */
 function describeLimit(value: unknown): string | null {
-  if (typeof value !== "object" || value === null) return null;
-  const rec: Record<string, unknown> = { ...value };
+  if (!isRecord(value)) return null;
   const parts: string[] = [];
-  if (typeof rec["posts"] === "number") parts.push(`at most ${String(rec["posts"])} posts`);
-  if (typeof rec["since"] === "string") parts.push(`nothing older than ${rec["since"]}`);
+  if (typeof value["posts"] === "number") parts.push(`at most ${String(value["posts"])} posts`);
+  if (typeof value["since"] === "string") parts.push(`nothing older than ${value["since"]}`);
   return parts.length === 0 ? null : parts.join(", ");
 }
 
@@ -240,30 +217,4 @@ function probeSchema(schemaText: string | null): { schemaJson: unknown; schemaPr
     if (schemaIssue !== undefined) return { schemaJson, schemaProblem: schemaIssue.message };
   }
   return { schemaJson, schemaProblem: null };
-}
-
-function BatchList({ heading, batches, empty, onNavigate }: { heading: string; batches: BatchSummary[]; empty: string; onNavigate: RendererProps["onNavigate"] }) {
-  return (
-    <Card padding="md">
-      <Stack gap="sm">
-        <Text as="h2" size="lg" weight="bold">{heading}</Text>
-        {batches.length === 0 ? <Text as="p" tone="subtle">{empty}</Text> : (
-          <ul className="text-sm">
-            {batches.map((b) => (
-              <li key={b.id}>
-                <Row gap="sm" align="center" wrap>
-                  <InlineAction intent="emphatic" onClick={() => onNavigate({ path: `${b.dir}/records.json`, viewer: null, params: {}, viewState: null })}>{b.id}</InlineAction>
-                  <Text as="span">{b.records === null ? "records.json unreadable" : `${String(b.records)} records`}</Text>
-                  {b.coverage !== null ? (
-                    <Text as="span" tone="subtle">scanned {String(b.coverage.scanned)}, stopped: {b.coverage.reason}{b.coverage.stoppedAt !== "" ? ` at ${b.coverage.stoppedAt}` : ""}</Text>
-                  ) : null}
-                  {b.filed.length > 0 ? <Text as="span" tone="subtle">{String(b.filed.length)} filed</Text> : null}
-                </Row>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Stack>
-    </Card>
-  );
 }
