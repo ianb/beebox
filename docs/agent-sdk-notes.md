@@ -32,30 +32,27 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.267`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.268`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.269` (SDK), `2.1.269` (Claude Code), `0.154.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.270` (SDK), `2.1.270` (Claude Code), `0.154.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved this turn — Agent SDK to
-  `0.3.267` and Codex to `0.154.0`, each the newest settled version.
-  `0.3.267` is the release whose system-prompt recording default changes
-  behavior on paths beebox leans on. **Correction (2026-09-12):** the resumed
-  sessions bug filed on 2026-09-10 described a loss that was already fixed
-  upstream by `0.3.266` — re-probed today, the first append is retained on both
-  `0.3.266` and `0.3.267`, so it was live only while the pin was `0.3.263`.
-  That issue is re-scoped and lowered to `normal`
-  (`issues/bugs/2026-09-10-resumed-sessions-drop-appended-system-prompt.md`);
-  what remains is beebox depending on an upstream default that flipped twice in
-  a week, plus a changed append being ignored on resume.
-  Pending: `0.3.268` (~44h, settles 2026-09-12 — **decide
-  `issues/decisions/2026-09-11-todowrite-leaves-default-tools-on-current-models.md`
-  first**, since neither Claude path passes `allowedTools` today) and `0.3.269`
-  (~20h). No Codex release since `0.154.0`.
+- **Current recommendation:** `0.3.268` was taken this turn as the newest settled
+  version. The TodoWrite condition this ledger put on it **was disproven before
+  bumping**: reading the session's `system/init` tool list shows the
+  task-tracking tools already absent on `0.3.267` for `claude-sonnet-5`,
+  `claude-opus-5` and the default, so `0.3.268` changed nothing here (details in
+  its entry).
+  **Do not take `0.3.269` on its own.** 2.1.270 is a single-line repair of a
+  2.1.269 regression — read-only git commands in Bash start asking for
+  permission once a session has been running a while — so `0.3.269` and
+  `0.3.270` are a pair, like `0.3.265`/`0.3.266` before them. `0.3.269` settles
+  2026-09-13T18:15Z and `0.3.270` on 2026-09-14T18:53Z; the settled path would
+  otherwise take the broken half tomorrow. No Codex release since `0.154.0`.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -71,7 +68,24 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.269 / Claude Code 2.1.269 — pending (published 2026-09-11T18:15Z, ~20h at this turn)
+### 0.3.270 / Claude Code 2.1.270 — pending (published 2026-09-12T18:53Z, ~20h at this turn)
+
+- **Upstream:** the SDK entry is parity-only, and 2.1.270 is one line: *"Fixed
+  read-only git commands in Bash unexpectedly asking for permission after a
+  session had been running for a while (regression in 2.1.269)."*
+- **Beebox applicability:** it repairs the release immediately below it, which
+  is the whole point of recording it now. Box agents run
+  `permissionMode: "bypassPermissions"` and never prompt, so the regression
+  itself barely touches them; where it bites is a session that does enforce —
+  the boxholder's interactive sessions, and the `dontAsk` `manual-tests`
+  schedule, where an unexpected prompt becomes a refusal. The installed CLI is
+  already 2.1.270, so the boxholder's side is fixed.
+- **Action:** Settled path, and **paired with `0.3.269`** — takeable 2026-09-14,
+  when `0.3.270` clears the window. Taking `0.3.269` alone on 2026-09-13 would
+  pin the regression.
+- **Sources:** [Claude Code 2.1.270](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21270)
+
+### 0.3.269 / Claude Code 2.1.269 — pending (published 2026-09-11T18:15Z, ~45h at 2026-09-13; NOT to be taken without 0.3.270)
 
 - **SDK:** `permission_denials` in the result no longer omits Read, Edit and
   Write calls blocked by a **path-scoped deny rule** — which is what
@@ -107,7 +121,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-09-13.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03269), [Claude Code 2.1.269](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21269)
 
-### 0.3.268 / Claude Code 2.1.268 — pending (published 2026-09-10T18:43Z, ~44h at 2026-09-12; settles 2026-09-12, TodoWrite decision still open)
+### 0.3.268 / Claude Code 2.1.268 — APPLIED 2026-09-13 (published 2026-09-10T18:43Z)
 
 - **The change that reaches beebox's defaults:** *"Changed the task-tracking
   tools (TaskCreate/Get/Update/List, TodoWrite) to be default tools only on
@@ -121,6 +135,18 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   activity, `known-tools.ts`, the session report, and Codex plan items mapped onto
   a synthetic TodoWrite). Filed as a decision:
   `issues/decisions/2026-09-11-todowrite-leaves-default-tools-on-current-models.md`.
+  **Corrected 2026-09-13, before taking the release.** Read the `system/init`
+  tool list instead of inferring from the changelog: on `0.3.267` *and*
+  `0.3.268`, for `claude-sonnet-5`, `claude-opus-5` and the default, the list is
+  identical (69 tools) and already contains no `TodoWrite`, `TaskCreate`,
+  `TaskUpdate`, `TaskList` or `TaskGet` — only `Task`, `TaskOutput` and
+  `TaskStop`, which are the subagent tools, a different family. The
+  task-tracking tools were therefore gone for beebox's models **before** this
+  release, and taking it changed nothing. beebox's "Updated task list" rendering
+  kept working because `codex-tool-activity.ts` synthesizes `TodoWrite` from
+  Codex plan items. The decision issue is corrected and lowered to `backlog`:
+  the live question is whether to opt these tools back in via `allowedTools`,
+  and no release forces it.
 - **Also relevant in 0.3.268:** `resume_reason` on the automatic re-run of a
   turn a host restart interrupted — beebox restarts box children, so this labels
   a situation it produces; `user_message_uuid` on that re-run now names the
@@ -154,8 +180,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   touches beebox's `BBX_LOG_PROMPTS=1` path only if the local prompt-logger
   proxy rejects that schema; it forwards to Anthropic, so it should not —
   unverified, and debug-only.
-- **Action:** Settled path; takeable 2026-09-12 at the earliest — decide the
-  TodoWrite issue first.
+- **Action:** Applied 2026-09-13 on the settled path (~68h old), once the
+  TodoWrite condition was disproven. `pnpm -C beebox test`: **10,293 pass, 0 fail** — which also clears the four
+  baseline reds (`validate-box-checks`, `landmark-schema`, `loader-registry`,
+  `trpc-presentation`) that the previous turn inherited from `main`; they were
+  fixed there, not here. `sdk-steering-probe`: all four steering behaviors
+  pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03268), [Claude Code 2.1.268](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21268)
 
 ### Codex 0.154.0 — APPLIED 2026-09-12 (published 2026-09-09T22:40Z)
