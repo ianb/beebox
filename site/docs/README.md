@@ -1,24 +1,26 @@
 ---
 description: "Documentation for Bee Box: a personal assistant built from a coding agent and a folder of files you own, its design choices, and the ways you use it."
 ---
-Bee Box starts from a few convictions. An assistant should accumulate:
-what you tell it and what it learns should still be there in a year, and it
-should know more about your life each month. Its memory should be ordinary
-files you can open, read, and correct, and the record of every change
-should be yours. The agent should have real tools and be allowed to act,
-and when it is unsure it should ask rather than guess. And the shape of the
-data should match the shape of the idea: a recipe stored as a recipe, a
-person as a person, so the assistant can reason over structure rather than
-over a transcript.
+A few ideas run through Bee Box. An assistant should accumulate, and you
+should be able to see not just what it knows but how that came to be: the
+history of a card, of a decision, of the box itself, is kept and readable,
+so you can look back at how things developed. For the same reason the whole
+thing is open source: you should be able to see how it works. Things are
+represented in sensible shapes, a recipe as a recipe, a person as a person,
+and there is always an overflow, so the fullness of what you know is kept
+even when it does not fit the shape yet. Where a fact came from, and whose
+words these are, can be marked, so the record stays honest. You put things
+in explicitly, but there are many convenient ways to do it, from a spoken
+remark to a photographed page, and separately there are connectors that
+bring email, calendar, and documents in on their own.
 
 The mechanics follow from that. The assistant is a coding agent (Claude
 Code or Codex). The engine gives it a box: a folder of cards, each a file
-with a checked header and markdown text, kept under git. Every kind of card
-has a shape, and what does not fit a shape yet stays as text until it does.
+with a checked header and markdown text, kept under git, which is where the
+history lives. Every kind of card has a shape; the text is the overflow.
 Links between cards are parsed and checked, and follow the files when they
-move. A small set of marks in the text carries whose words these are and
-where a fact came from, and lets a task be noted in place. New input is
-triaged into the box; the agent's questions are cards; corrections become
+move. A small set of marks in the text carries provenance and lets a task
+be noted in place. New input is triaged into the box; the agent's questions are cards; corrections become
 rules it reads next time; recurring work runs on a schedule and on what
 email and calendar bring in. The agent builds inside the box too: a display
 for a kind of card, a dashboard, a routine, a new kind of record. What it
