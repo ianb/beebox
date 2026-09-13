@@ -14,6 +14,11 @@ where to put new material.
 | Module map (lib/shared/types boundary) | [docs/module-map.md](module-map.md) |
 | Design rationale | [docs/design/README.md](design/README.md) |
 | Card examples | [docs/cards-as-markdown.md](cards-as-markdown.md) (format), [docs/adding-schemas.md](adding-schemas.md) (worked example), `src/schemas/templates*.ts` (template registry) |
+| How development happens (overview) | [docs/development-process.md](development-process.md) |
+| Agent coding, and the checks around it | [docs/agent-coding.md](agent-coding.md) |
+| Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-workflow.md) |
+| Testing what agents know and do | [docs/agent-testing.md](agent-testing.md) |
+| Technologies and AI services | [docs/technologies.md](technologies.md) |
 | Testing philosophy | [docs/testing.md](testing.md) |
 | Field tests (current runbook) | [docs/field-testing.md](field-testing.md) |
 | Tours (browser walks for UI/a11y review) | [docs/tours.md](tours.md) |

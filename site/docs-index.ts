@@ -31,6 +31,15 @@ export const DEEP_DIRS = [
   "reference/cards",
 ] as const;
 
+/**
+ * Directories the front page points at rather than lists: their pages are
+ * many and uniform (every card type, every comparison, every contract), so
+ * the directory's own index is the right hop. The boxholder, 2026-09-13:
+ * "The links go much further than I expected! But probably too far in some
+ * cases, like compared/ contracts/ reference/cards/".
+ */
+export const SHALLOW_DIRS: ReadonlySet<string> = new Set(["compared", "contracts", "reference/cards"]);
+
 function humanizeDir(dir: string): string {
   const last = dir.split("/").at(-1) ?? dir;
   return last.charAt(0).toUpperCase() + last.slice(1);
@@ -103,10 +112,12 @@ function deepEntryRow(base: string, doc: PublishedDoc): string {
 /**
  * `/llms.txt`: `# Bee Box`, a one-line summary, the README preamble, the
  * spine (`## Start here`), then one `## <dir>/` per deep directory listing
- * every page in it, an `## Install` and `## Contributing` pointer to their
- * own entry pages, then the existing human-site page twins (`## Site
- * pages`). Every published path outside `dev/`/`install/` appears exactly
- * once; `dev/`/`install/` are represented only by their entry-page pointer.
+ * every page in it, an `## Also` section pointing at the SHALLOW_DIRS
+ * indexes with a page count, an `## Install` and `## Contributing` pointer
+ * to their own entry pages, then the existing human-site page twins (`## Site
+ * pages`). Every published path outside the shallow directories and
+ * `dev/`/`install/` appears exactly once; those are represented by one
+ * pointer each.
  */
 export function renderAgentLlmsTxt(params: LlmsTxtParams): string {
   const { base, readme, spine, directories, installDir, devDir, sitePages } = params;
@@ -114,9 +125,17 @@ export function renderAgentLlmsTxt(params: LlmsTxtParams): string {
   const lines = ["# Bee Box", "", `> ${readme.summary}`, "", readme.preamble, "", "## Start here", ""];
   for (const doc of spine) lines.push(deepEntryRow(base, doc));
 
-  for (const section of directories) {
+  for (const section of directories.filter((d) => !SHALLOW_DIRS.has(d.dir))) {
     lines.push("", `## ${section.dir}/`, "", section.purpose, "");
     for (const doc of sortByFilename(section.docs)) lines.push(deepEntryRow(base, doc));
+  }
+
+  const shallow = directories.filter((d) => SHALLOW_DIRS.has(d.dir));
+  if (shallow.length > 0) {
+    lines.push("", "## Also", "");
+    for (const section of shallow) {
+      lines.push(`- [${section.dir}/](${origin}${base}docs/${section.dir}/index.md): ${section.purpose} (${String(section.docs.length)} pages)`);
+    }
   }
 
   if (installDir !== undefined) {

@@ -22,7 +22,7 @@ export class ScrubError extends Error {
 // public in the repo; a path segment after it, or a link target containing
 // it, is a reference into private material.
 const PRIVATE_ISSUES_PATH = /private-issues\/[^\s"')>`]/;
-const PRIVATE_ISSUES_LINK = /]\([^)]*private-issues/;
+const PRIVATE_ISSUES_LINK = /]\([^)]*private-issues\//;
 
 // A named box under a boxes directory: `~/src/boxes/<name>`, `~/src/box-worktrees/<name>/…`,
 // or the server's `/home/<user>/boxes/<name>`. The directory itself is a public

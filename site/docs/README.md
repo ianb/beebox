@@ -59,7 +59,12 @@ A Telegram connection exists and is rough. Connectors sync Gmail, Google
 Calendar, and Google Drive.
 
 It runs on a computer you keep on, with your own coding-agent login, and it
-is early: self-hosted, one maintainer, changing fast. It is also developed
+is early: self-hosted, one maintainer, changing fast. Besides the model
+provider behind the coding agent, which sees every agent turn, the outside
+AI services are ones you choose to configure: transcription (Mistral,
+Deepgram, or OpenAI), spoken replies (OpenAI, or Gemini through OpenRouter),
+embeddings for search (OpenAI), and Gemini for a few audio and scanning
+tasks; the contributor pages list them in full. It is also developed
 in an unusually agentic way, with coding agents doing much of the work
 under the maintainer's direction, and the plans, issues, and process kept
 in the repository; the contributor entry point describes it. The pages
