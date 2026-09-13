@@ -11,7 +11,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { isRenderable, loadNuggets, NuggetError, renderNugget, type Nugget } from "./nuggets.js";
 import { FrontmatterError } from "./render.js";
-import { listSourceRelPaths } from "./sources.js";
+import { hashSources, listSourceRelPaths } from "./sources.js";
 
 const SITE_DIR = import.meta.dirname;
 const REPO_ROOT = path.resolve(SITE_DIR, "..");
@@ -207,6 +207,33 @@ test("the input manifest covers both the nugget files and the sources they cite"
   for (const nugget of nuggets) {
     assert.ok(rels.includes(nugget.file), `manifest is missing the nugget file ${nugget.file}`);
     assert.ok(rels.includes(`../${nugget.source}`), `manifest is missing the cited source ${nugget.source}`);
+  }
+});
+
+test("an optional input is listed when present and skipped when absent", async () => {
+  // `hashSources` throws on a listed file it cannot read, by contract — so the
+  // list must never name a file that is not there. `docs-manifest.yaml` was
+  // listed unconditionally while `loadManifestEntries` right below it already
+  // treated a missing manifest as "promotes nothing", which failed every build
+  // and all 13 serveSite router tests in a checkout without one
+  // (issues/bugs/2026-09-10-servesite-content-hash-rebuild-tests-fail.md).
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "site-optional-"));
+  try {
+    const siteDir = path.join(repoRoot, "site");
+    await fs.mkdir(siteDir, { recursive: true });
+    await fs.writeFile(path.join(siteDir, "package.json"), "{}\n", "utf8");
+
+    const without = await listSourceRelPaths(siteDir);
+    assert.equal(without.includes("docs-manifest.yaml"), false);
+    await hashSources(siteDir); // must not throw
+
+    await fs.writeFile(path.join(siteDir, "docs-manifest.yaml"), "[]\n", "utf8");
+    const withManifest = await listSourceRelPaths(siteDir);
+    assert.equal(withManifest.includes("docs-manifest.yaml"), true);
+    // Appearing changes the hashed set, so a site built without one rebuilds.
+    assert.equal((await hashSources(siteDir)).length, without.length + 1);
+  } finally {
+    await fs.rm(repoRoot, { recursive: true, force: true });
   }
 });
 

@@ -61,19 +61,31 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   // beebox/box-docs/.hash, which `ensurePackageDocs` refreshes on any
   // `generateDocs` run — tolerated absent, since a fresh checkout may not
   // have run it yet).
-  rels.push("docs-manifest.yaml");
-  for (const entry of loadManifestEntries(path.join(siteDir, "docs-manifest.yaml"))) {
+  // The manifest is tolerated absent for the same reason `loadManifestEntries`
+  // returns [] for a missing file: a site dir without one simply promotes no
+  // repo docs. Listing it unconditionally made `hashSources` — which throws on
+  // a listed file it cannot read, by contract — fail every build and every
+  // router site test in a checkout that has no manifest.
+  const manifestPath = path.join(siteDir, "docs-manifest.yaml");
+  if (await fileExists(manifestPath)) rels.push("docs-manifest.yaml");
+  for (const entry of loadManifestEntries(manifestPath)) {
     rels.push(`../${entry.source}`);
   }
-  const boxDocsHash = path.join(siteDir, "..", "beebox", "box-docs", ".hash");
-  try {
-    await fs.access(boxDocsHash);
+  if (await fileExists(path.join(siteDir, "..", "beebox", "box-docs", ".hash"))) {
     rels.push("../beebox/box-docs/.hash");
-  } catch (_e) {
-    // absent — tolerated per the file contract
   }
 
   return rels.toSorted((a, b) => a.localeCompare(b));
+}
+
+/** Whether an optional source input is present; absent inputs are left off the list. */
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 async function readdirDirents(dir: string): Promise<Dirent[]> {
