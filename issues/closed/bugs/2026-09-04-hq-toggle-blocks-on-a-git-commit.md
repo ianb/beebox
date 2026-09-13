@@ -7,7 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the landmark hq transcription toggle is very slow to respond (is it doing a whole git thing there?)"
 priority: normal
-next-action: reconfirm
+resolution: wontfix
 ---
 
 Yes, it is doing a whole git thing. The landmark-scope HQ toggle in the voice
@@ -55,3 +55,59 @@ Related: `issues/decisions/2026-08-30-rethink-box-autocommit.md` (what
 should commit, and when); `issues/features/2026-08-26-sticky-hq-transcription-
 preference.md` (the scope controls this toggle belongs to, still on its iOS
 manual-testing gate).
+
+## Reconfirmed live 2026-09-13 — unchanged, with the cost measured
+
+The `reconfirm?` guess does not hold. Both halves of the mechanism are exactly as
+filed:
+
+- `src/core/landmark/hq-preference.ts` still `await`s `stageAndCommitPaths` inside
+  the request, returning `commitWarning` after it.
+- `VoiceChip.tsx` still updates only in the mutation's `onSuccess` (invalidate on
+  success), so there is no optimistic flip — the control waits for the round trip
+  *and* the commit.
+
+Nothing touched either file since the filing; the commits near them are voice
+service-picker and HQ-fallback work.
+
+**Measured, since "very slow" deserves a number.** An empty commit through the
+managed pre-commit hook on the primary test box, warm machine, nothing staged:
+
+```
+real  0m1.302s
+```
+
+So the floor for a toggle flip is ~1.3s of hook before any lock wait or annex
+work, on the fastest box there is. The issue's estimate ("about a second with
+nothing staged") was right, and a hosted box pays more. The probe commit was
+reset away; the box is unchanged.
+
+Field removed, issue kept open. Its "Directions, none decided" list is the reason:
+respond-after-write changes when durability happens, which is a product call, and
+sorting the twelve other `stageAndCommitPaths` callers into interactions versus
+jobs is the bigger half. The optimistic-UI direction is the one piece that is
+worth doing regardless of how the server question lands.
+
+## Closed 2026-09-13 — the felt lag is gone; the 1.3s to take effect is accepted
+
+Boxholder: "I don't notice a UI delay anymore. That it doesn't really 'take
+effect' for 1.3 seconds is fine, it just shouldn't feel laggy."
+
+That settles it on the axis that matters. The complaint was never about durability
+timing — it was that a toggle felt like it was doing work. The mechanism measured
+above is unchanged (the mutation still awaits the commit, and there is still no
+optimistic flip), so what improved is the felt latency rather than the code path.
+Closing as accepted rather than fixed, because nothing here was changed.
+
+If it ever feels laggy again, the fix direction is already worked out and does not
+need re-deriving: flip the control immediately and reconcile on the
+`hqPreferences` refetch (optimistic UI), which is worth doing on its own; and if
+the request path is still the cost, return once the card is written and let the
+commit run detached — `hq-preference.ts` already treats the commit as best-effort
+by returning `commitWarning` instead of failing.
+
+The broader question this issue raised — sorting the twelve other
+`stageAndCommitPaths` callers into user-facing interactions versus jobs — is not
+closed with it. That belongs to
+[rethink-box-autocommit](../../decisions/2026-08-30-rethink-box-autocommit.md), which
+already owns "what should commit, and when".
