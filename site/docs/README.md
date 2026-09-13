@@ -24,6 +24,9 @@ in emerges, and the box takes that shape.
 
 It also synthesizes: notes and thoughts talked through over weeks come back
 as something you can read, with the todos and open questions pulled out.
+And it keeps literal track of what you said versus what it thought: your
+words are kept as your words, and the assistant's inferences are marked as
+its own, so you can always tell the two apart.
 Email is handled from within the box, with replies drafted for you. Recipes
 scale; people and places are recognized; a project gets a working memory;
 something you are learning gets a course built for it. And what you correct
