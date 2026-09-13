@@ -4,12 +4,13 @@ import { EMPTY_FILTER } from "./history-filter";
 import type { HistoryFilterState } from "./HistoryFilterBar";
 import { paramsToFilter } from "./history-filter";
 import { HISTORY_VIEW_PARAMS } from "@shared/named-views";
+import { triggerId } from "@shared/commit-trailers";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { withoutShellParams } from "../../lib/system-card-navigation";
 import { viewStateSearchValue } from "../../lib/view-url";
 
 const HISTORY_FILTER_STATE = z.object({
-  connectors: z.array(z.string()), workflows: z.array(z.string()),
+  connectors: z.array(z.string()), triggers: z.array(z.string()),
   touchpoint: z.boolean(), feedback: z.boolean(),
   session: z.string().nullable(), path: z.string().nullable(),
 }).strict();
@@ -28,6 +29,13 @@ function strings(value: unknown): ViewStateValue {
   if (Array.isArray(value) && value.every(item => typeof item === "string")) return value;
   return typeof value === "number" || typeof value === "boolean" || value === null ? value : String(value);
 }
+/** Pre-rename `workflow=` names, as procedure trigger ids. */
+function triggerIds(value: unknown): ViewStateValue {
+  const names = strings(value);
+  if (!Array.isArray(names)) return names;
+  // Invalid values survive verbatim for localized rendering, as in `strings`.
+  return names.map((name) => (typeof name === "string" ? triggerId("procedure", name) : name));
+}
 function bool(value: unknown): ViewStateValue {
   if (value === true || value === "true" || value === "1") return true;
   if (value === false || value === "false" || value === "0") return false;
@@ -41,7 +49,10 @@ function scalar(value: unknown): ViewStateValue {
 export function legacyHistoryState(search: Record<string, unknown>, options?: { commit?: string; defaults?: HistoryFilterState }): ViewState {
   const filter: Record<string, ViewStateValue> = { ...EMPTY_FILTER, ...options?.defaults };
   if (search.connector !== undefined) filter.connectors = strings(search.connector);
-  if (search.workflow !== undefined) filter.workflows = strings(search.workflow);
+  // `workflow` is the pre-rename spelling; its bare run names are procedure
+  // trigger ids now, so an old link still selects the same runs.
+  if (search.trigger !== undefined) filter.triggers = strings(search.trigger);
+  else if (search.workflow !== undefined) filter.triggers = triggerIds(search.workflow);
   if (search.touchpoint !== undefined) filter.touchpoint = bool(search.touchpoint);
   if (search.feedback !== undefined) filter.feedback = bool(search.feedback);
   if (search.session !== undefined) filter.session = scalar(search.session);
@@ -49,7 +60,7 @@ export function legacyHistoryState(search: Record<string, unknown>, options?: { 
   return { filter, ...(options?.commit === undefined ? {} : { commit: options.commit }) };
 }
 
-const HISTORY_LEGACY_QUERY_KEYS = ["connector", "workflow", "touchpoint", "feedback", "session", "path"] as const;
+const HISTORY_LEGACY_QUERY_KEYS = ["connector", "trigger", "workflow", "touchpoint", "feedback", "session", "path"] as const;
 function hasLegacyHistoryQuery(params: Record<string, string>): boolean {
   return HISTORY_LEGACY_QUERY_KEYS.some(key => params[key] !== undefined);
 }

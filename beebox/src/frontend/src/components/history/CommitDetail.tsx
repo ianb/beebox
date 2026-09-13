@@ -10,7 +10,8 @@ import { bbxSource } from "../../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { MobileBackButton } from "../ui/MobileBackButton";
 import { parseDiff } from "./CommitDetail-diff";
-import { CommitTab, stripTrailers, trailerString } from "./CommitDetail-commit";
+import { stripTrailers, trailerString } from "@shared/commit-trailers";
+import { CommitTab } from "./CommitDetail-commit";
 import { DiffTab, MovedTab, NewFilesTab } from "./CommitDetail-tabs";
 
 interface CommitDetailProps {
@@ -21,8 +22,8 @@ interface CommitDetailProps {
   onFilterSession?: (sessionId: string) => void;
   /** Add this connector value to the active connector filter. */
   onFilterConnector?: (connector: string) => void;
-  /** Add this workflow value to the active workflow filter. */
-  onFilterWorkflow?: (workflow: string) => void;
+  /** Add this trigger id to the active triggered-by filter. */
+  onFilterTrigger?: (triggerId: string) => void;
   idPrefix: string;
 }
 
@@ -63,7 +64,7 @@ export function CommitDetail({
   onBack,
   onFilterSession,
   onFilterConnector,
-  onFilterWorkflow,
+  onFilterTrigger,
   idPrefix,
 }: CommitDetailProps) {
   const sessionId = trailerString(commit.trailers?.Session);
@@ -100,7 +101,7 @@ export function CommitDetail({
         bodyText={bodyText}
         onFilterSession={onFilterSession}
         onFilterConnector={onFilterConnector}
-        onFilterWorkflow={onFilterWorkflow}
+        onFilterTrigger={onFilterTrigger}
       />
 
       {/* Divider */}

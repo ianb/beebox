@@ -11,14 +11,26 @@ const canonical = "_config/interface/history.card";
 The complete legacy filter vocabulary becomes validated card state.
 
 ```ts
-parseHistoryCardState(legacyHistoryState({ connector: "github,gmail", workflow: "docs", touchpoint: "true", feedback: "0", session: "chat-1", path: "notes/a.card" }, { commit: "abc123" })).success
+parseHistoryCardState(legacyHistoryState({ connector: "github,gmail", trigger: "procedure/docs", touchpoint: "true", feedback: "0", session: "chat-1", path: "notes/a.card" }, { commit: "abc123" })).success
 => true
+```
+
+`workflow=` is the pre-rename spelling of `trigger=`. An old link keeps
+working: its bare run names read as the procedure ids those runs have now, and
+an explicit `trigger=` wins over it.
+
+```ts
+JSON.stringify(legacyHistoryState({ workflow: "process-news,process-pages" }).filter.triggers)
+=> ["procedure/process-news","procedure/process-pages"]
+
+JSON.stringify(legacyHistoryState({ trigger: "command/bbx wakeup", workflow: "process-news" }).filter.triggers)
+=> ["command/bbx wakeup"]
 ```
 
 Explicit empty and cleared-detail state remains distinct from absent state.
 
 ```ts
-parseHistoryCardState({ filter: { connectors: [], workflows: [], touchpoint: false, feedback: false, session: null, path: null }, commit: null }).success
+parseHistoryCardState({ filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: null, path: null }, commit: null }).success
 => true
 ```
 
@@ -42,7 +54,7 @@ authored defaults.
 ```ts
 let release;
 const gate = new Promise(resolve => { release = resolve; });
-const pending = normalizeHistoryViewRouteTarget({ path: "saved.view.card", viewer: null, params: { session: "filter-chat" }, viewState: null }, async () => { await gate; return { type: "view", frontmatter: { view: "history", params: { workflows: ["generateDocs"] } } }; });
+const pending = normalizeHistoryViewRouteTarget({ path: "saved.view.card", viewer: null, params: { session: "filter-chat" }, viewState: null }, async () => { await gate; return { type: "view", frontmatter: { view: "history", params: { triggers: ["command/generateDocs"] } } }; });
 let settled = false;
 void pending.then(() => { settled = true; });
 await Promise.resolve();
@@ -56,8 +68,8 @@ const authored = await pending;
 authored?.viewState?.filter
 => {
   "connectors": [],
-  "workflows": [
-    "generateDocs"
+  "triggers": [
+    "command/generateDocs"
   ],
   "touchpoint": false,
   "feedback": false,
@@ -119,14 +131,14 @@ JSON.stringify({ lookupFailed, hasOuterSession: "session" in failureSearch, nati
 The final redirect separates renderer filter state from shell state.
 
 ```ts
-historyViewRedirectSearch({ path: canonical, viewer: null, params: { session: "filter", contextDir: "wrong", extra: "content" }, viewState: { filter: { connectors: [], workflows: [], touchpoint: false, feedback: false, session: "filter", path: null } } }, { session: "recipient", nativeComposer: "1", contextDir: "chat" })
+historyViewRedirectSearch({ path: canonical, viewer: null, params: { session: "filter", contextDir: "wrong", extra: "content" }, viewState: { filter: { connectors: [], triggers: [], touchpoint: false, feedback: false, session: "filter", path: null } } }, { session: "recipient", nativeComposer: "1", contextDir: "chat" })
 => {
   "nativeComposer": "1",
   "extra": "content",
   "viewState": {
     "filter": {
       "connectors": [],
-      "workflows": [],
+      "triggers": [],
       "touchpoint": false,
       "feedback": false,
       "session": "filter",
