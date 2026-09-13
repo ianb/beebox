@@ -56,6 +56,16 @@ time.
 > The drafts-are-not-per-chat half stands as originally written and is
 > unaffected by the above.
 
+**Kept open 2026-09-13.** Reviewed alongside the WebP issue when the boxholder
+said to close the unreproducible ones. This one is a different shape and should
+not go with it: the corrupted turn is real and still on disk — one `<typed>`
+wrapper with a whole other message inside it — so a send did mangle a person's
+text. What was disproved is the stated *mechanism*, not the event, and the note
+above leaves a specific live suspect (a DOM caret surviving a programmatic value
+replacement). Closing it would discard a genuine data-corruption sighting with a
+named place to look. What it needs is a reproduction attempt at that suspect —
+restore landing while the composer is focused — not a disposition.
+
 Both messages read like deliberate manual testing — one is literally a test of
 whether a draft survives — so this was probably produced while exercising draft
 persistence, which is where it would show up.
