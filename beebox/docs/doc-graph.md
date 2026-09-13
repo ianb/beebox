@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-13T18:06:29Z
+Generated: 2026-09-13T18:09:56Z
 Total documents: 368
 
 ## Issues
@@ -210,8 +210,8 @@ Referenced by:
 - docs/prompt-logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompt-surface-review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
-- docs/reports/activities-design-2026-09-13.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
-- docs/reports/activities-retrospective-2026-09-13.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
+- docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
+- docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/reports/prompt-calibration-pilot-2026-09-12.md:27 (mention) — - Authority: the same five requests with complete root CLAUDE.md, launch skill,
 - docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:412 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
@@ -2536,14 +2536,14 @@ Title: "Extensibility — knowledge, not plugins" | 47 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:27 (link) — - [`extensibility.md`](extensibility.md) — knowledge over plugins (active plan; neither exists yet); composition over ne
-- docs/reports/activities-design-2026-09-13.md:5 (link) — [feature composition](../design/extensibility.md).
-- docs/reports/activities-retrospective-2026-09-13.md:5 (link) — [feature composition](../design/extensibility.md).
+- docs/reports/activities-design-2026-04-19.md:5 (link) — [feature composition](../design/extensibility.md).
+- docs/reports/activities-retrospective-2026-05-14.md:5 (link) — [feature composition](../design/extensibility.md).
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:14 (mention) — > `../design/extensibility.md` (ruling 18 — active plan, neither knowledge nor
 - ../research/pai/README.md:101 (mention) — composition over plugins — `beebox/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
 
 References:
-- → docs/reports/activities-retrospective-2026-09-13.md (link)
+- → docs/reports/activities-retrospective-2026-05-14.md (link)
 - → CLAUDE.md (mention)
 
 #### docs/design/identity.md
@@ -3506,7 +3506,7 @@ References:
 - → docs/glossary.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
-- → docs/reports/activities-retrospective-2026-09-13.md (mention)
+- → docs/reports/activities-retrospective-2026-05-14.md (mention)
 - → docs/architecture/01-what-is-this.md (mention)
 - → frontend.md (mention)
 - → CLAUDE.md (mention)
@@ -3623,8 +3623,8 @@ References:
 - → docs/google-setup.md (mention)
 - → docs/gmail-setup.md (mention)
 - → docs/google-drive.md (mention)
-- → docs/reports/activities-design-2026-09-13.md (mention)
-- → docs/reports/activities-retrospective-2026-09-13.md (mention)
+- → docs/reports/activities-design-2026-04-19.md (mention)
+- → docs/reports/activities-retrospective-2026-05-14.md (mention)
 - → src/hub/CLAUDE.md (mention)
 - → docs/card-validation.md (mention)
 - → docs/implemented-plans/design-reconciliation.md (mention)
@@ -4093,7 +4093,7 @@ Title: "Bee Box: Implementation Guide (MVP era)" | 1035 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:333 (mention) — implementation.md → implemented-plans/mvp-implementation-guide.md
-- docs/reports/activities-retrospective-2026-09-13.md:47 (mention) — The original design docs ([activities-design-2026-09-13.md](activities-design-2026-09-13.md), and references in `narrati
+- docs/reports/activities-retrospective-2026-05-14.md:47 (mention) — The original design docs ([activities-design-2026-04-19.md](activities-design-2026-04-19.md), and references in `narrati
 - ../issues/closed/code-quality/2026-07-04-git-replay-testing.md:16 (mention) — (`implemented-plans/mvp-implementation-guide.md`).
 
 References:
@@ -5838,15 +5838,15 @@ Title: "Narration Mode — Design" | 469 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
-- docs/reports/activities-retrospective-2026-09-13.md:47 (mention) — The original design docs ([activities-design-2026-09-13.md](activities-design-2026-09-13.md), and references in `narrati
+- docs/reports/activities-retrospective-2026-05-14.md:47 (mention) — The original design docs ([activities-design-2026-04-19.md](activities-design-2026-04-19.md), and references in `narrati
 - docs/reports/plan-directory-migration-history-2026-09-13.md:27 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
 - user-stories/catalog/2026-06-26.md:1578 (mention) — The design doc (narration-mode.md line 240) explicitly states: "The chat has a `...` menu where settings live; the expli
 - ../issues/features/2026-05-19-spark-mode.md:9 (link) — Conceptual inverse of narration mode (see [narration-mode.md](../../beebox/docs/plans/narration-mode.md)). Narration is
 
 References:
-- → docs/reports/activities-retrospective-2026-09-13.md (link)
+- → docs/reports/activities-retrospective-2026-05-14.md (link)
 - → frontend.md (mention)
-- → docs/reports/activities-design-2026-09-13.md (mention)
+- → docs/reports/activities-design-2026-04-19.md (mention)
 
 #### docs/plans/operator-member-password-reset.md **[ORPHAN]**
 
@@ -6271,36 +6271,36 @@ References:
 
 ### docs/reports/
 
-#### docs/reports/activities-design-2026-09-13.md
+#### docs/reports/activities-design-2026-04-19.md
 
 Title: "Activities — Design Proposal" | 315 lines | dated report
 
 Referenced by:
-- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-09-13.md` + `activities-retrospective-2026-09-13.md` pair (the model for
-- docs/plans/narration-mode.md:337 (mention) — - **Activities** (`docs/reports/activities-design-2026-09-13.md`): being phased out in favor of composable feature flags
-- docs/reports/activities-retrospective-2026-09-13.md:11 (link) — An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.
-- docs/reports/plan-directory-migration-history-2026-09-13.md:35 (mention) — reference-vs-proposal before moving: `activities-design-2026-09-13.md`,
+- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-04-19.md` + `activities-retrospective-2026-05-14.md` pair (the model for
+- docs/plans/narration-mode.md:337 (mention) — - **Activities** (`docs/reports/activities-design-2026-04-19.md`): being phased out in favor of composable feature flags
+- docs/reports/activities-retrospective-2026-05-14.md:11 (link) — An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.
+- docs/reports/plan-directory-migration-history-2026-09-13.md:35 (mention) — reference-vs-proposal before moving: `activities-design-2026-04-19.md`,
 
 References:
 - → docs/design/extensibility.md (link)
-- → docs/reports/activities-retrospective-2026-09-13.md (link)
+- → docs/reports/activities-retrospective-2026-05-14.md (link)
 - → CLAUDE.md (mention)
 
-#### docs/reports/activities-retrospective-2026-09-13.md
+#### docs/reports/activities-retrospective-2026-05-14.md
 
 Title: "Activities — Retrospective" | 49 lines | dated report
 
 Referenced by:
-- docs/design/extensibility.md:19 (link) — ([Activities retrospective](../reports/activities-retrospective-2026-09-13.md)).
-- docs/implemented-plans/design-reconciliation.md:28 (mention) — `docs/reports/activities-retrospective-2026-09-13.md`).
-- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-09-13.md` + `activities-retrospective-2026-09-13.md` pair (the model for
+- docs/design/extensibility.md:19 (link) — ([Activities retrospective](../reports/activities-retrospective-2026-05-14.md)).
+- docs/implemented-plans/design-reconciliation.md:28 (mention) — `docs/reports/activities-retrospective-2026-05-14.md`).
+- docs/implemented-plans/docs-reorg.md:228 (mention) — `activities-design-2026-04-19.md` + `activities-retrospective-2026-05-14.md` pair (the model for
 - docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
-- docs/reports/activities-design-2026-09-13.md:7 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
-- ../research/openclaw-hermes/deep-bbx-retro.md:11 (mention) — line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-09-13.md` is an
+- docs/reports/activities-design-2026-04-19.md:7 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
+- ../research/openclaw-hermes/deep-bbx-retro.md:11 (mention) — line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-05-14.md` is an
 
 References:
 - → docs/design/extensibility.md (link)
-- → docs/reports/activities-design-2026-09-13.md (link)
+- → docs/reports/activities-design-2026-04-19.md (link)
 - → CLAUDE.md (mention)
 - → docs/plans/narration-mode.md (mention)
 - → docs/implemented-plans/mvp-implementation-guide.md (mention)
@@ -6349,7 +6349,7 @@ References:
 - → docs/triage.md (mention)
 - → docs/reports/triage-design-2026-09-13.md (mention)
 - → docs/plans/narration-mode.md (mention)
-- → docs/reports/activities-design-2026-09-13.md (mention)
+- → docs/reports/activities-design-2026-04-19.md (mention)
 - → docs/event-bus.md (mention)
 - → docs/unimplemented-plans/design-vision-superseded.md (mention)
 - → docs/unimplemented-plans/design-card-views-superseded.md (mention)

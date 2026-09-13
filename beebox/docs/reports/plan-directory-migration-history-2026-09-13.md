@@ -32,7 +32,7 @@ discussion" and was never actually implemented; its earlier placement in
 - Regenerate the doc graph (`pnpm doc-graph`) — it's generated and still shows
   the old paths; it self-heals on the next run.
 - A few more plan-shaped docs remain in `docs/` and need a judgment call on
-  reference-vs-proposal before moving: `activities-design-2026-09-13.md`,
+  reference-vs-proposal before moving: `activities-design-2026-04-19.md`,
   `event-bus.md`, `photo-storage-investigation.md`. Left in place
   (some read more like vision/reference than active proposals — `design.md`,
   `design-vision.md`, `stack-decisions.md` were judged reference and stayed

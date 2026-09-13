@@ -16,7 +16,7 @@ raw material, not the fulfillment. Empirical support for the no-framework
 side: Activities, a built framework for reusable interaction containers, was
 removed because the unit of customization that emerged from real use was "a
 feature flag plus some prose, not a class hierarchy"
-([Activities retrospective](../reports/activities-retrospective-2026-09-13.md)).
+([Activities retrospective](../reports/activities-retrospective-2026-05-14.md)).
 
 ## Composition over new infrastructure
 

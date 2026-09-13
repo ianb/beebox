@@ -8,7 +8,7 @@ schedule default `beebox/src/core/box-defaults.ts:252-272`, prose pointer
 `beebox/src/core/agent-guide/behavior.ts:62-68`, design doc
 `beebox/docs/implemented-plans/box-retrospectives.md` (the original plan;
 frozen as historical record, largely still accurate against the code — verified
-line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-09-13.md` is an
+line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-05-14.md` is an
 unrelated document (post-mortem of a removed "Activities" chat framework) — a
 grep false-positive, not part of this pipeline.
 

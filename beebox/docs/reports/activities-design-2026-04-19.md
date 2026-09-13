@@ -4,7 +4,7 @@ Archived here on 2026-09-13 from the earlier design record; this is not a new
 assessment of current behavior. Current extensibility rationale:
 [feature composition](../design/extensibility.md).
 
-> **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in features. See [activities-retrospective-2026-09-13.md](activities-retrospective-2026-09-13.md). The rest of this doc is kept as historical record.
+> **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in features. See [activities-retrospective-2026-05-14.md](activities-retrospective-2026-05-14.md). The rest of this doc is kept as historical record.
 
 ## Motivation
 
