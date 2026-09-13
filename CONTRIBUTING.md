@@ -11,6 +11,9 @@ pull requests are not yet solicited. Read
 [`beebox/CLAUDE.md`](beebox/CLAUDE.md) and [`beebox/code-style.md`](beebox/code-style.md) first: they
 are what the maintainer's own coding agent reads before touching this
 codebase, and a change that ignores them will need rework.
+[How development happens here](beebox/docs/development-process.md) is the
+overview of the process around those instructions, and links the pages on agent
+coding, the workflow, agent testing, and the technologies in use.
 
 ## Set up
 

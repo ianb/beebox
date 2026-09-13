@@ -170,6 +170,30 @@
   publish: dev/contributing.md
   description: "How a change is made and lands: setup, tests, lint, docs, where things live."
 
+- source: beebox/docs/development-process.md
+  publish: dev/development-process.md
+  description: "How development happens here: one maintainer directing coding agents; workstreams, issues, plans, skills, verification, schedules, and what it is like."
+
+- source: beebox/docs/agent-coding.md
+  publish: dev/agent-coding.md
+  description: "Entirely agent-coded under one maintainer's direction, and the strictness and checks around that."
+
+- source: beebox/docs/development-workflow.md
+  publish: dev/development-workflow.md
+  description: "Workstreams in their own worktrees and sessions, the issue queue, planning, recurring work, document comments, and exhibits."
+
+- source: beebox/docs/agent-testing.md
+  publish: dev/agent-testing.md
+  description: "Testing what agents know and do: knowledge audits, the verified capability catalog, fakes, smoke, tours."
+
+- source: beebox/docs/technologies.md
+  publish: dev/technologies.md
+  description: "The stack, and every outside AI service the system can be configured to use."
+
+- source: CLAUDE.md
+  publish: dev/monorepo-claude-md.md
+  description: "The monorepo's working instructions: where to work, how to work safely in a checkout, how to verify, record, and land."
+
 - source: beebox/CLAUDE.md
   publish: dev/claude-md.md
   description: "The engine's agent instruction file: what the maintainer's own coding agent reads first."
