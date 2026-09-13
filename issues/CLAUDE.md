@@ -1,400 +1,258 @@
 # issues/
 
-The idea and issue queue for the monorepo. Most items here are **tensions, not
-resolutions** — half-thought-out design ideas, noticed problems whose right fix
-isn't obvious, questions that need research before they're actionable. An item
-being filed is *not* license to implement it: researching or designing an item
-is real work on it; implementing it happens when the developer chooses it.
+The monorepo issue queue holds unresolved tensions: bugs, ideas, design choices,
+research, and maintenance that should survive the current session. Filing an
+item does not authorize implementation; researching or designing it is real
+work that can advance it without implementation. Fix a small in-scope
+problem directly; file work that is out of scope or whose resolution is not yet
+clear.
 
-Something you can just fix, fix — don't file it. File when the thing you noticed
-is outside your current work, or when the resolution is genuinely unsettled.
+## Private issues (`private-issues/` — a SEPARATE repo)
+
+Choose public or private before creating a file. This repository is
+source-available, so everything under `issues/` is public.
+
+Use the separate per-developer `private-issues/` repository for personal box
+content, operational tasks, private infrastructure, non-public people or
+domains, credentials-adjacent details, or examples that need those facts to be
+useful. Public issues describe the code with public, reproducible context. If
+unsure, ask the developer before filing publicly. If sanitizing loses the
+substance, create a sanitized public issue and a private companion; the private
+file may link to the public one, but public files must never link into
+`private-issues/` (`doc-check` rejects this).
+
+For maintenance or debugging on a developer's real content (not a `test1`
+clone), nothing learned there
+enters the public repository until the developer has scrubbed and approved it.
+This includes issue text, commit messages, comments, and fixtures. Until then,
+use `private-issues/` or hold the finding and ask. Structural facts such as
+command shapes, file names and sizes, card types, counts, durations,
+timestamps, and errors emitted by our code are safe when they reveal no private
+content. If those facts are insufficient, keep the item private.
+
+`private-issues/` is a different Git repository mounted through a gitignored
+symlink. Stage and commit from inside it: `git add -A` at the monorepo root
+stages none of its contents because the mount is gitignored; that is the leak
+guard working. `bin/private-issues init <checkout>`
+creates the peer repository and mount; worktree creation mounts a corresponding
+private branch. `/finish` lands its branch with the public workstream, while
+unmerged private work survives worktree cleanup and is reported by
+`bin/workstreams sweep`. See `bin/private-issues help` and `bin/CLAUDE.md`.
+Private issues appear in the owner-session-gated issues browser marked
+`private`.
 
 ## Layout: category subdirectories
 
-Open items live in one of seven **category subdirectories** (the category *is*
-the directory — like `closed/` is the status, there is no `type:` field):
+Open items live at `<category>/YYYY-MM-DD-<slug>.md`; the directory is the
+category and the date is the filing date. There is no `type:` field.
 
-- **`bugs/`** — actual defects: wrong behavior, data loss, crashes, flakes.
-- **`features/`** — new user/agent-facing capability.
-- **`code-quality/`** — refactors, tech-debt, lint/type raises, tests, internal
-  consistency. (Usually the largest bucket — mostly architectural-review fallout.)
-- **`docs-and-chores/`** — documentation, process, and maintenance chores.
-- **`decisions/`** — items whose deliverable is a *call to make*, not a build
-  (unify-or-not, keep-or-drop, evaluate-and-decide).
-- **`exploration/`** — not ready to implement: half-thought-out ideas,
-  external-tool evaluations ("check out X"), research, agent-cognition tensions.
-- **`watch/`** — not actionable now, and not by us. Each item names an
-  **upstream/external trigger** and what to re-check when it fires (an upstream
-  bug we work around, a missing capability in a dependency). Visit a watch item
-  when its trigger lands — a dependency upgrade, a release note — not on a
-  schedule and not by picking it off the queue. If you *can* act on it today it
-  belongs in another category.
+- `bugs/` — defects, crashes, data loss, and flakes.
+- `features/` — new user-facing or agent-facing capability.
+- `code-quality/` — refactors, debt, lint or type improvements, tests, and
+  internal consistency.
+- `docs-and-chores/` — documentation, process, and maintenance.
+- `decisions/` — the deliverable is a decision rather than an implementation.
+- `exploration/` — early ideas, external-tool evaluations, research, and
+  agent-cognition tensions that are not ready to implement.
+- `watch/` — an external or upstream trigger must occur before action. Each
+  issue names the trigger and what to re-check. Do not pick these from the
+  ordinary queue or schedule periodic checks; move actionable work elsewhere.
 
-Each item is one file, `<category>/YYYY-MM-DD-<slug>.md` (date = when filed; slug
-is the ID — pick a descriptive name). Before filing, search the whole tree —
-`bin/issues search --all "<symptom or idea>"` (hybrid keyword + semantic; see
-`bin/CLAUDE.md`) plus a grep for the file/symbol names — and extend a matching
-item rather than duplicating. Pick the
-*dominant* category — a bug whose fix is a refactor is still a `bug`. Reclassify
-by `git mv`-ing between category dirs (and fix any inbound links).
+Choose the dominant category: a bug whose likely fix is a refactor remains a
+bug. Reclassify with `git mv`.
+
+## Frontmatter
+
+Every issue requires `title:` and `workstream:`. The schema is closed; the
+following keys are the complete vocabulary (plus the deferred-only keys below):
+
+```yaml
+---
+title: "Short human title"
+workstream: unattached
+needs: [design, decision]
+design: ../../beebox/docs/plans/foo.md
+area: beebox
+labels: [soft-launch]
+priority: important
+next-action: discuss
+filed-by: agent
+discovered-by: Ian
+discovered-in: worktree-foo — while doing X
+resolution: implemented
+---
+```
+
+Unknown keys are reported by
+`workstreams-app/src/server/issue-domain.ts`; adding a real field requires
+updating both this contract and `KNOWN_FRONTMATTER_KEYS` there.
+
+### Identity and grouping
+
+- `title:` replaces an H1; the body starts with the tension.
+- `workstream:` is ownership. Use a bare workstream name only after that
+  workstream accepts responsibility; otherwise use `unattached`. `unknown` is
+  historical backfill only. `/finish` records the resolving workstream even
+  when `manual-testing` keeps the issue open.
+- `discovered-in:` is provenance, never ownership. Use
+  `worktree-<bare-name> — <context>`. A finding can remain
+  `workstream: unattached`.
+- `discovered-by:` names who first identified the issue; `filed-by:` names who
+  created the file; omit `filed-by` when the developer filed it. Use the
+  person's preferred name when known or `agent` for
+  an agent-originated finding.
+- `area:` identifies the owning product area (e.g. `beebox`, `router`,
+  `vibe-check`, `clerk`, `docs`). `labels:` is an optional list of
+  kebab-case cross-cutting group names; use it instead of inventing schema
+  fields. Category, area, and labels are independent; labels are a facet in the
+  `workstreams/issues/` browser.
+- `design:` links the applicable plan.
+
+Names belong in authorship metadata because they are data. In prose use “the
+developer” (or “the boxholder” in Bee Box documentation), never a personal
+name.
+
+### Human-owned signals
+
+- `priority:` is `important`, `normal`, or `backlog`; omission appears as the
+  derived `uncategorized` state. Agents never set or change priority unless the
+  developer explicitly supplies it. The browser sorts important, normal,
+  uncategorized, then backlog, newest first within each group; all four states
+  are filters and newest-filed is the default order.
+- `needs:` may contain `design`, `decision`, or `manual-testing`. `design`
+  requires a plan; `decision` requires the developer to choose. These are
+  standing properties and are independent of the `decisions/` category.
+  Research state belongs in the body, not `needs:`. An issue may carry both
+  `needs: [decision]` and `next-action: discuss`: one is a standing gate and the
+  other is the current queue action.
+- `next-action:` is a removable request from the developer. Values are
+  `discuss`, `reconfirm`, `duplicate`, `invalid`, `fixed`,
+  `manually-confirmed`, and `verify-without-me`. Agents normally answer these
+  values rather than set them; the narrow exception is `discuss` when work
+  reaches a concrete human judgment call. Explain that call in the body.
+
+`discuss` means surface the decision and do not implement. `reconfirm`,
+`duplicate`, `invalid`, and `fixed` are provisional hypotheses, not permission
+to close blindly. Verify them, act on the evidence, and remove the field after
+acting or disproving it. Remove `discuss` after the conversation produces a
+disposition.
+
+`manually-confirmed` is authoritative: the developer confirmed the fix. Read
+the issue to ensure the confirmation covers its full scope, then close it as
+`implemented`. It explicitly authorizes removing a `manual-testing` gate while
+closing.
+
+`verify-without-me` releases a `manual-testing` gate the developer cannot or
+will not exercise. Verify everything available through code, tests, browser,
+and simulator. Close only if that evidence carries the claim, naming the
+remaining uncertainty; otherwise remove `manual-testing`, leave the issue open,
+and record the concrete residual risk. It is not an instruction to close or to
+pretend unbuilt work is merely untested. Distinguish evidence that truly needs a
+device from a check nobody has run yet.
+
+### Manual-testing lifecycle
+
+`needs: [manual-testing]` means the fix is committed and ready for the developer
+to test, but an agent cannot complete the real-device, real-browser,
+live-credential, real-network, or human-eye verification. Never add it to an
+unfixed issue. State exactly what to try and the expected result under the
+literal heading:
+
+```markdown
+## Manual testing
+```
+
+The browser and `bin/confirm-tested` depend on that stable heading.
+`bin/issues list --needs manual-testing` lists the waiting items. When the
+fix has landed, put this status directly after frontmatter:
+
+```markdown
+> **⏳ Awaiting manual testing** — fix landed in `<commit>`; <what to try>. Only the developer clears this.
+```
+
+The developer clears this gate after a successful test, either directly or
+through `next-action: manually-confirmed`. Agents remove it only through two
+explicit transitions: a fresh re-encounter proves the fix failed, or
+`verify-without-me` releases the human gate for an evidence-based disposition.
+
+Persistent stock `test1` content belongs on a clone branch named `keep`, rooted at the
+source test1's `origin/main`; select only intentional content onto it. Snapshot
+a reusable but disposable scenario as `test-setup`, which prevents culling
+until confirmation deletes it. Link test instructions as
+`/<workstream>/test1/browse/<card-path>` before merge and
+`/main/test1/browse/<card-path>` after stock content lands.
+
+## Body
+
+State what was observed, why resolution is not obvious, and enough context and
+`file:line` pointers to resume cold. Use Simplified Technical English (ASD-STE100, in spirit): short, active,
+unambiguous sentences, one idea per sentence, and consistent terminology.
+For user-facing features, use a Job To Be Done when the user's situation,
+motivation, and outcome affect the design; do not force it for bugs, refactors,
+or generic robustness work.
+
+Research always stays in the body. Pending research uses the exact sentinel:
+
+```markdown
+## Research (incomplete)
+```
+
+When completed, rename it to `## Research (YYYY-MM-DD)`. These headings drive
+`bin/issues list --research awaiting` and researched-state detection.
+
+## Titles + cross-links
+
+Link related issues with relative Markdown links: a bare filename within one
+category, `../<category>/<file>.md` across categories, and a full relative path
+from docs. Give external URLs descriptive link text. Plain text may name an
+issue that does not exist yet.
+
+Issue basenames must be unique across the tree; duplicates fail doc-check.
+After any move, close,
+reclassification, or rename, run `pnpm --dir beebox doc-check --fix`; it repairs
+inbound links for moved files by unique basename and reports true renames,
+deletions, or ambiguity for manual repair.
 
 ## Deferred items
 
-Work that becomes actionable on a known future date lives outside the active
-queue in `deferred/`. The directory is flat. Keep the ordinary filing-date
-filename and record the activation date and destination category in frontmatter:
+Known-date work lives in flat `deferred/` with its ordinary filing-date name and
+two required, deferred-only fields:
 
 ```yaml
 activate-on: 2026-09-07
 category: code-quality
 ```
 
-Both fields are required in `deferred/` and forbidden after activation. The
-hourly `deferred-issues` schedule moves due files into their category directory,
-removes these two fields, repairs links with the normal updater, and commits the
-move. A missed tick catches up on the next run. Deferred files do not appear in
-normal issue lists, searches, or automatic issue picking before activation.
-They remain explicitly addressable so a link or manual worktree launch can open
-one early. They are still documents: links to and from them must resolve, their basenames
-must remain unique across the entire issue tree, and `doc-check --fix` updates
-links when activation moves them.
+The hourly `deferred-issues` schedule activates due files, removes both fields,
+repairs links, and commits the move; a missed tick catches up later. Deferred
+items are excluded from normal lists, searches, and automatic picking but
+remain directly addressable. Their links and unique basenames remain enforced.
 
 ## Closed items
 
-Closed items move to **`closed/<category>/`** with `git mv` — directory placement
-is the status (open = a category dir, done = under `closed/`), and the category
-is preserved. Closed items aren't interesting; git history is the archive, and
-long-closed files can be deleted in periodic sweeps.
-
-## Titles + cross-links
-
-The **title lives in frontmatter** (`title:`), not an `# H1` — the body starts
-straight into the tension. Cross-link related issues with relative markdown
-links: same category → bare `<file>.md`; cross-category →
-`../<category>/<file>.md` (e.g.
-`[knip-exports](../code-quality/2026-07-04-knip-exports-enforcement.md)`). A doc
-elsewhere links in as `…/issues/<category>/<file>.md`. Links to items that don't
-exist yet are fine as plain text naming the idea. `doc-check` validates every
-link, so moving/reclassifying an item breaks its inbound links — from other
-issues AND from `docs/`.
-
-**After moving ANY issue** (closing → `closed/`, reclassifying between category
-dirs, or a rename), run **`pnpm --dir beebox doc-check --fix`** — it
-re-resolves every broken issue link by its (unique) basename and rewrites the
-path to the file's new location, so you don't hand-edit inbound links. It heals
-moves; a true rename or delete it reports as unfixable (fix those by hand). Issue
-basenames must stay unique (`doc-check` hard-errors on a duplicate) — that's what
-makes the auto-repair reliable.
-
-**External URLs get a title too** — `[Orwell's six rules](https://…)`, not a bare
-URL. A bare URL makes the reader parse a link to find out what it is. (The dev
-docs renderer autolinks bare ones as a fallback, but that only makes them
-clickable, not informative.)
-
-## Frontmatter
-
-`title:` and `workstream:` are required; everything else is optional — omit
-what doesn't apply.
-
-```yaml
----
-title: "Short human title"    # required — the H1 replacement
-workstream: unattached        # bare workstream name; unknown is backfill-only
-needs: [design, decision]     # what must happen before this can be called done
-design: ../../beebox/docs/plans/foo.md   # link once a design/plan exists
-area: beebox            # beebox | router | vibe-check | clerk | docs | ...
-labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
-priority: important           # important | normal | backlog; omitted is uncategorized
-next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed | manually-confirmed | verify-without-me
-filed-by: agent               # omit when the developer filed it
-discovered-by: Ian            # person or agent that first identified the issue
-discovered-in: worktree-foo — while doing X    # workstream/context provenance
-resolution: implemented       # closed/ only: implemented | wontfix | superseded
----
-```
-
-**The schema is closed.** These are the only frontmatter fields; anything else is
-dropped by every consumer. The parser
-(`workstreams-app/src/server/issue-domain.ts`) reports unrecognised keys as
-`unknownKeys` rather than swallowing them — eleven issues carried an invented
-`stories:` list for two months, reaching no filter, facet or `--json` output,
-because nothing said a word. If you want to group issues by something the schema
-does not name, that is what `labels:` is for; if a field genuinely belongs in the
-schema, add it here **and** to `KNOWN_FRONTMATTER_KEYS` in that parser.
-
-- `workstream:` records **ownership**: the bare name of the workstream that has
-  taken responsibility for resolving the issue. Use `unattached` when no
-  workstream owns it yet, including for out-of-scope work merely discovered
-  while doing something else. `unknown` exists only for lost historical
-  provenance and is never written for a new issue. When another workstream
-  resolves an issue, `/finish` stamps the resolving workstream even if
-  `manual-testing` keeps the issue open.
-- `discovered-in:` records **provenance**: where the issue was noticed and what
-  was happening. It does not assign the issue to that workstream.
-  Its machine-readable prefix is the exact token `worktree-<bare-name>`,
-  followed by a spaced em dash and the human context shown in the example.
-  An issue can be discovered by one workstream and owned by another. It can also
-  be discovered in a workstream while remaining `workstream: unattached` for
-  later triage.
-- `discovered-by:` records **attribution**: the person or agent that first
-  identified or reported the issue. Use a human's preferred name when known,
-  such as `Ian`, or `agent` when an agent independently found it. This differs
-  from `filed-by:`, which records who created the issue file. An agent can file
-  an issue that has `discovered-by: Ian` and `filed-by: agent`.
-
-**Don't use the developer's name in prose.** Those two frontmatter fields are
-the good reason to write it: a name is *data* there — the record of who found
-or authored something, the same way a commit has an author. Everywhere else,
-say **"the developer"** (or "the boxholder" in beebox docs, matching the
-surrounding register). It reads as a role because it *is* a role: this is how
-any developer talks back to an agent, and the guidance holds whoever is sitting
-there.
-
-The failure is easy to fall into, because the person you are talking to is
-right there and naming them feels precise. It isn't — it bakes one person into
-text that describes a general relationship, in a source-available repo. If a
-sentence still makes sense with "the developer" substituted in, it should have
-said that. This restates the broader rule in `beebox/CLAUDE.md` ("Keep
-source and docs generic — never hardcode personal names"), which applies to
-agent-facing docs and skills as much as to shipped source.
-
-- `needs:` values: `design` (needs a design/plan written), `decision` (a fork
-  only the developer can resolve), `manual-testing` (see below). Research-needed is
-  signalled in the body instead — see below. `needs: [decision]` is
-  **orthogonal** to the `decisions/` category: a *feature* can carry
-  `needs: [decision]` and still live in `features/`; `decisions/` is only for
-  items whose *whole deliverable* is the call.
-  `needs: [decision]` is a standing property: the issue cannot be completed
-  without the developer choosing a direction. `next-action: discuss` is a removable queue
-  signal that discussion is the next step. An issue can carry both when both
-  facts matter.
-- `needs: [manual-testing]` means **the code is written and ready to test, but an
-  agent cannot finish verifying it — the developer has to exercise it themselves.** Unlike the
-  other two it's usually added *after* the code lands, not before: the work is
-  written and tests pass, but the thing it actually fixes can only be confirmed by
-  a human (on a phone, in a real browser, against live external credentials, over
-  a real network, or by looking at whether it *feels* right). Add it rather than
-  closing an item on green tests, and say in the body **what specifically to try
-  and what should happen** — a year from now "needs testing" alone is useless. An
-  agent should never remove this itself; only the developer clears it, by testing. Every
-  flagged issue must use a `## Manual testing` section; the browser links to its
-  stable `#manual-testing` anchor. `bin/issues list --needs manual-testing` is
-  the list of things waiting on them.
-  - **Ready-to-test is the whole point — do NOT use it for an unfixed bug.** If no
-    fix has landed (the item just describes a problem, or only proposes fix
-    directions), it is *not* awaiting testing — it is awaiting a fix, so it gets
-    **no** `needs` value (or `[design]`/`[decision]` if it genuinely needs those).
-    A "verify on a real device" note in the body is guidance for *when* a fix
-    lands, not license to pre-set the label. The list `bin/issues list --needs
-    manual-testing` produces must be things the developer can actually pick up and test *today*; an unfixed
-    bug in it wastes their time. Only add the label once the fix is committed.
-  - **When the code has already landed** (the common case — the fix shipped and
-    only a real-device / browser check remains), make that the item's *headline*:
-    lead the body with a one-line status callout so "done except for the phone
-    check" is visible at a glance, not buried in a `## Fixed in X` section partway
-    down. A blockquote right after the frontmatter:
-    `> **⏳ Awaiting manual testing** — fix landed in \`<commit>\`; <one line of
-    what to try>. Only the developer clears this.` The reader (and the developer scanning the queue)
-    should see the true status in the first line.
-  - Persistent stock test1 content belongs on a clone branch named `keep`,
-    rooted at the source test1's `origin/main`; select only intentional content
-    onto it. A re-runnable but disposable scenario is snapshotted as
-    `test-setup`, which blocks culling until confirmation deletes it. Link test
-    instructions as `/<workstream>/test1/browse/<card-path>` before merge and
-    `/main/test1/browse/<card-path>` after stock content lands.
-- `labels:` is a freeform cross-cutting tag — an optional YAML list of
-  kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
-  the six categories and the `area` field don't capture (multiple allowed). It's
-  orthogonal to `category` (the directory) and `area`: e.g. `labels:
-  [soft-launch]` marks every issue that belongs to the soft-launch effort
-  regardless of which category dir it lives in. Deliberately generic — reach for
-  it whenever a set of issues wants a shared handle. Browsable as a facet in the
-  `workstreams/issues/` browser.
-- `priority:` controls attention within the issue queue: `important` deserves
-  prominent review, `normal` has been deliberately triaged as ordinary, and
-  `backlog` is intentionally deprioritized. Omission means `uncategorized`: no
-  priority decision has been made yet. `uncategorized` is a derived UI state,
-  not an authored frontmatter value. The issue browser defaults to newest-filed
-  order. Its priority sort groups important, normal, uncategorized, then backlog,
-  with newest-filed order inside each group. All four states are filters.
-  **Agents do not set this field.** Priority is the developer's attention budget, and an
-  agent guessing at it produces a queue that looks triaged when it isn't —
-  `backlog` in particular buries an item nobody decided to bury. Omit the field
-  unless the developer has indicated a priority in the request; `uncategorized` is the
-  honest state for a freshly filed issue and is a filter they can work through.
-  Write the field only when they say what it is, or when they ask you to record a
-  priority they have already given.
-- `next-action:` says what should happen next before the issue leaves the queue.
-  It is separate from priority.
-
-  **This field is the developer's, and it is how they hand an idea back to an agent.** They
-  read the queue, form a suspicion about an item, and write it here for
-  whoever picks it up next — so in practice they set every value, and an agent's
-  job is to answer the tag rather than to write one. (The `discuss` carve-out
-  below is the sole exception, and it is deliberately narrow.) Reading a tag as
-  a peer's note misses the point: it is the boxholder thinking out loud at the
-  one moment they had the whole queue in view, addressed to you.
-
-  `discuss` means bring the issue to the developer for discussion;
-  do not start implementing it. The provisional values ask the next agent to
-  verify a suspected outcome and apply it only when the evidence confirms it.
-  The issue browser renders those values with question marks to keep their
-  provisional meaning visible: `reconfirm` means reassess whether the issue is
-  still live; `duplicate` means confirm that another issue owns the same work;
-  `invalid` means confirm that the premise does not hold; and `fixed` means
-  confirm that the reported behavior is already resolved. A matching tag is not
-  permission to close blindly. Remove the field after acting on it or disproving
-  it; remove `discuss` after the discussion produces a disposition.
-- `next-action: manually-confirmed` is authoritative, not provisional. It means
-  the developer personally confirmed that the fix applies. Read the issue once
-  to ensure the confirmation covers the whole item, then close it as
-  `implemented` without repeating the manual check. If the issue carries
-  `needs: [manual-testing]`, this tag is the developer's explicit clearance to
-  remove that gate as part of closing the issue.
-- `next-action: verify-without-me` applies to `needs: [manual-testing]` items.
-  It says the human gate is not going to close — they cannot reproduce the failure on demand, or the test is not
-  worth their time — so stop waiting on it and settle the issue on whatever
-  evidence is reachable without them.
-
-  The agent's job is then: verify everything code, tests, and a simulator *can*
-  establish, and then dispose of the issue. Close it when the evidence carries
-  it, naming what remains unverified and why that is acceptable. Otherwise
-  remove `manual-testing` and record precisely what ships unchecked — an
-  honest "unverified, here is the residual risk" beats an item parked forever
-  on a test nobody will run.
-
-  **It is not an instruction to close.** An audit under this tag can find work
-  that was never built, and that is a live issue needing implementation, not a
-  missing test. Say so and leave it open for the work. It is also worth
-  separating "genuinely impossible without a device" from "nobody has run it" —
-  the second is often fixable here.
-
-  Removing the field is not enough on its own: an item that leaves
-  `bin/issues list --needs manual-testing` must leave it because it was settled, so
-  that list stays a queue the developer can work rather than a graveyard.
-  Agents may set `discuss` when work reaches a genuine human judgment call, but
-  must summarize the tension in the issue rather than using the tag as a vague
-  escalation.
-- `resolution:` is set when moving to `closed/`. Add a short closing note at the
-  top of the body naming the resolving commit, plan doc, or reason.
-
-## Body
-
-State the tension: what was noticed, why the resolution isn't obvious, enough
-context (including `file:line` pointers) to pick it up cold months later.
-
-**Write in Simplified Technical English** (ASD-STE100, in spirit): short
-sentences, active voice, one idea per sentence, consistent terminology, no
-ambiguity. An issue is read cold — write for fast, unambiguous parsing over
-style.
-
-**For user-facing functionality, frame the goal as a Job To Be Done** before the
-means. Use a job story: *"When [situation], I want to [motivation], so I can
-[outcome]."* The point is not the syntax — it is to **situate the job in the real,
-concrete situations the user is in**: their intention in that moment, where their
-attention is, what capacity they have, and how the job fits into the interaction.
-This often needs several situations, not one. Prefer concrete but mundane examples;
-avoid stale clichés like booking a flight or a restaurant reservation. Skip it for
-bugs, refactors, and "work robustly" tensions where JTBD is the wrong lens; don't
-force it.
-
-**Research** always goes in the body. If research is the next step, file the item
-with a stub section:
-
-```markdown
-## Research (incomplete)
-```
-
-Whoever researches the item fills the section in and retitles it
-`## Research (YYYY-MM-DD)`. So `bin/issues list --research awaiting` lists
-everything awaiting research, and researching an item is a first-class way to
-advance it without implementing anything.
-
-## Private issues (`private-issues/` — a SEPARATE repo)
-
-This repo is source-available, so everything in `issues/` is world-readable.
-Issues that can't be public live in a **separate, per-developer private repo**,
-mounted (always as a gitignored symlink) at `<checkout>/private-issues/` with
-the same category layout and file conventions as `issues/`.
-
-**What goes where.** Private: anything about a person's own boxes or their
-content, personal/operational tasks, server/infrastructure specifics, names or
-identifiers of non-public people/domains, credentials-adjacent details — and
-any issue whose *examples* need such details to be useful. Public: everything
-about the code itself, reproducible with public context. **When unsure, ask
-the developer before filing publicly** — "does this contain non-public
-information?" is a human call. If a sanitized public version loses the
-substance, split it: a sanitized public item plus a private item holding the
-specifics (the private one links to the public one, never the reverse).
-
-### Working directly on a real box: nothing lands public unvetted
-
-When your task is **maintenance on, or debugging of, a developer's live box**
-— their real content, not a `test1` clone — the default inverts. **Nothing you
-learned there enters this repo until the developer has scrubbed and approved
-it**: not an issue, not a commit message, not a code comment, not a test
-fixture. Route the follow-up to `private-issues/` instead, or hold it and ask.
-
-This is stricter than the general rule above because the failure is
-asymmetric. Public-safe *code* findings are cheap to re-derive if you defer
-them; a fragment of someone's personal content committed to a
-source-available repo cannot be recalled — git history keeps it after the
-file is fixed. So "I think this part is generic" is not the standard. The
-developer's review is.
-
-Structural facts are the exception that keeps this workable: command shapes,
-file names and sizes, card *types*, counts, durations, timestamps, error
-strings from our own code. That is nearly always enough to describe a
-mechanism. If your write-up needs more than that to make sense, it belongs in
-`private-issues/`.
-
-**It is a different git repo.** Stage and commit private issues from INSIDE
-`private-issues/`. An agent that edits a private issue and runs `git add -A`
-at the monorepo root sees nothing staged — that is the leak guard working
-(the mount is gitignored), not a bug.
-
-**Links are one-way.** Private issues may link to public files
-(`../beebox/...` style paths resolve through the mount). Public files
-must NEVER link into `private-issues/` — the link would dangle for anyone
-without the private repo; `doc-check` hard-errors it. Name the private item
-in prose (not a link) if a public file must gesture at it.
-
-**Mechanics** (opt-in; nothing happens without it): `bin/private-issues init
-<checkout>` creates the repo as a peer of the main checkout and symlinks it
-into main; worktree creation auto-mounts a private worktree (branch
-`worktree-<name>`, stored outside the public worktree so no cleanup can
-destroy it); `/finish` lands the private branch on private `main` alongside
-the public merge; unmerged private work survives any worktree removal as an
-orphan that `bin/workstreams sweep` reports until resolved. Details:
-`bin/CLAUDE.md` and `bin/private-issues help`. Private issues appear in the
-dev issues browser (`/workstreams/issues/`) marked `private` — that page is
-owner-session-gated.
+Close with `git mv` into `closed/<category>/`, preserving the category. Add
+`resolution: implemented`, `wontfix`, or `superseded`, plus a short opening note
+naming the resolving commit, plan, or reason. Open issues must not carry
+`resolution:`. Git history is the archive; periodic maintenance may delete
+long-closed files.
 
 ## Re-encountering an issue
 
-Meeting an already-filed problem again — the same bug in a new session, a user
-report matching an open item, a symptom found while fixing something else — is
-evidence, and the issue should record it. Add a dated line to the body (where
-it was seen, in what conditions), then apply whichever of these holds:
+A repeated symptom or report is new evidence. Add a dated body note stating
+where and under what conditions it appeared, then apply the matching transition:
 
-- **`needs: [manual-testing]` + re-encountered → it is not fixed.** The label
-  means "code landed, only a human check remains"; a fresh sighting *is* that
-  check, failed. Remove `manual-testing`, keep the `## Manual testing` section
-  as history, note the re-encounter as the headline, and treat the item as an
-  open bug again (this is the one case where an agent removes the label —
-  the developer's gate is for confirming a fix, not for a fix that visibly
-  didn't hold).
-- **`priority: backlog` or `normal` + re-encountered → the priority may be
-  stale.** Do not change it (agents never set `priority:`); note the sighting
-  in the body with a one-line "re-encountered on <date>, priority may be
-  stale". If the issue carries no `next-action:`, set `next-action: discuss`
-  so the developer sees it; if it already carries one, leave that tag alone —
-  it is the developer's requested disposition, and the body note is enough.
-  `important` needs no note.
-- **Closed + re-encountered → reopen**, unless what you saw is genuinely a
-  different defect: `git mv` back out of `closed/`, drop `resolution:`, and
-  record what the original fix missed. A duplicate of a closed issue is only
-  closed if the closed one's fix is still in place.
+- An issue awaiting manual testing is not fixed if the reported behavior recurs.
+  Remove `manual-testing`, keep its section as history, make the re-encounter the
+  opening status, and treat it as an open bug. This is the explicit agent-removal
+  exception to the human-owned gate.
+- For `priority: normal` or `backlog`, do not change priority. Note that the
+  priority may be stale and, if no `next-action:` exists, set `discuss` so the
+  developer sees it. Preserve any existing next action. `important` needs no
+  priority note.
+- Reopen a closed issue with `git mv`, remove `resolution:`, and record what the
+  previous fix missed. Keep a new report separate only when it is a different
+  defect. A duplicate of a closed issue is only closed if the closed one's fix
+  is still in place.
 
 ## Taking on an issue (agents)
 
@@ -403,27 +261,27 @@ issue's links and `workstream:`, then run `bin/issues similar <path> --all`.
 Do not turn one chosen issue into a queue-wide survey by default. Expand into
 the full cluster workflow in `bbx-pick-issues` only when the issue links
 siblings, the initial results show a plausible shared mechanism, or the
-developer asked for a cluster. Then inspect the relevant code and grep by the
-issue's slug, symbols, paths, and symptom; use `--docs` when plans or design
-documents are relevant prior art. Decide which issues the work should address
-together without expanding the human's approved scope.
+developer asked for a cluster. Then inspect relevant code and search by slug,
+symbols, paths, and symptom; add `--docs` when plans or design docs are useful
+prior art. Choose related work without expanding the developer's approved
+scope.
 
-For a single issue or a cluster, record every issue this work addresses in the
-plan's "Issues addressed" header when there is a plan; otherwise retain their
-paths in the workstream briefing or handoff so `/finish` can reconcile them.
+Record every issue actually addressed in the plan's “Issues addressed” header
+when a plan exists; otherwise retain the paths in the workstream briefing or
+handoff so `/finish` can reconcile them.
 
 ## Filing (agents)
 
-Filing is at your discretion — no thresholds or quotas. When you notice something
-worth keeping that's outside your current task: check for an existing item
-(`bin/issues search --all "<what you saw>"`; a hit that already describes it —
-open or closed — is amended or reopened per "Re-encountering an issue" above,
-not duplicated), pick a category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
-`discovered-by:` (the actual source), and `discovered-in:` (your worktree and
-what you were doing), and move on. Leave `priority:` off — see above; it is
-the developer's call, not yours. Set
-`workstream:` to the current workstream only when it has explicitly taken
-responsibility for resolving the issue. Don't fix out-of-scope things in place,
-and don't file trivia you'd be embarrassed to see triaged. Set `next-action:
-discuss` only when the issue describes a concrete judgment the developer must make next;
-the tag is not a substitute for explaining the decision in the body.
+Before filing, make the public/private decision above, then run
+`bin/issues search --all "<what you saw>"` and search relevant symbols or paths.
+A matching open or closed issue is a re-encounter: amend or reopen it rather
+than creating a duplicate.
+
+For a new item, choose the dominant category and write
+`YYYY-MM-DD-<descriptive-slug>.md` with `title:`, `workstream: unattached`,
+`filed-by: agent`, accurate `discovered-by:`, and
+`discovered-in: worktree-<name> — <context>`. Omit `priority:` unless the
+developer supplied it. Assign the current workstream only when it explicitly
+accepted responsibility. Use `next-action: discuss` only for a concrete human
+decision explained in the body. Do not fix the out-of-scope work while filing,
+and do not file trivia.

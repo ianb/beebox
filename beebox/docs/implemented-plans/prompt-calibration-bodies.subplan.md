@@ -1,14 +1,14 @@
 ---
 title: "Skill bodies and operational guidance: assessment and restructuring proposal"
-status: partial
+status: implemented
 workstream: prompt-calibration
 issues: []
 ---
 # Skill bodies and operational guidance
 
-Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring are applied; launch, issues, and security-report remain proposals. The follow-on sections record additional coding-guidance changes.
+Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring, the launch rewrite, targeted issue-workflow changes, and security-report compression have landed through `64930f05e`. The follow-on sections record those changes. The final issue-contract grouping and [bounded four-model pilot](../prompt-calibration-pilot.md) complete the approved editorial scope.
 
-**Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with one optional briefing example reference; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.
+**Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with an inline briefing template; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.
 
 **Done for this assessment:** each current section has a disposition, destinations distinguish current reference from history, operational contradictions are checked against source, and the assembled proposals undergo cross-model review. Actual skill activation and live launch behavior are not measured here.
 
@@ -26,7 +26,7 @@ These sources support four concrete choices here: runner-specific references for
 
 ## Smallest fix and budget
 
-The smallest authorized deliverable is this assessment and its concrete document shapes. Only this subplan and a link from the parent change now. Future implementation is five independent editorial chunks, reviewed in order below; the bin split requires approval of its destinations before file moves. No new launch flags, scheduler behavior, issue fields, audit categories, model defaults, or evaluation subsystem are proposed. No source or test changes are necessary for the assessment.
+The original assessment proposed five independent editorial chunks, reviewed in the order below; the human subsequently authorized the recorded implementations, including the bin destinations before file moves. The current pass is limited to issue-contract grouping, progress-note corrections, and a small decision pilot. No new launch flags, scheduler behavior, issue fields, audit categories, model defaults, or evaluation subsystem are proposed. No source or test changes are necessary for the assessment.
 
 Source line references below describe commit `c8c728285`. Line counts describe exposure, not quality: cross-model 494; launch 326; bin 910; issues 425; security-report 352.
 
@@ -292,8 +292,8 @@ size-gate breach still does, and the debugging three-failed-fix limit remains.
 
 No new reviewer model policy or runtime mechanism is introduced. References
 stay under their canonical skill/bin directories; generated mirrors and skill
-links expose the same sources to Codex. The launch, issue-contract, and security
-report rewrites remain separate proposals.
+links expose the same sources to Codex. At that checkpoint, launch, issue-contract, and security-report changes were
+still proposals; the subsequent sections record their implementation.
 
 Skill review corrections preserve the upstream false-success click hazard and
 the router auth enforcement pointer. Reassessment now has a concrete trigger
@@ -356,3 +356,29 @@ briefing, and name the scratchpad/batch/schema layout. Skill metadata and mirror
 checks passed using the repository YAML library; the bundled Python checker
 could not run because PyYAML is absent. These are source and recipe checks,
 not empirical activation measurements across models.
+
+
+## Final issue contract and decision pilot (2026-09-12)
+
+The issue contract now puts privacy before file creation and groups identity,
+authorship, schema, human signals, lifecycle, and pickup. All original H2 anchors
+and machine-consumed Manual testing/Research sentinels remain. Cross-model
+review restored facts lost in the first compression: research as useful work,
+private staging's no-op effect at the public root, suggested area names, the
+test1 exception, duplicate-of-closed checks, and relevant queue/clone pointers.
+No issue field, transition, or permission policy changed.
+
+The [pilot report](../prompt-calibration-pilot.md) records 12 routing cases and
+five authority cases per model, followed by one B1 recheck per model. It exposed
+fictional constraints/symptoms copied from a worked launch example. Replacing
+that example with explicit fields retained briefing scaffolding, and the four
+rechecks did not copy those details. Repeated native activation tests remain
+outside this completed editorial scope, in the existing trigger-eval issue.
+
+Final validation: doc-check, retained headings/sentinels, source-to-mirror checks,
+and pilot input hashes/output completeness pass. Round-two cross-model review
+verified the restored rules and pilot claims; the durable artifact now includes
+prompt preambles and uncommitted inputs, and the report explicitly marks the
+B1 execution-reporting check as ambiguous. The issue prose retains its named
+writing-style cue. No runtime application tests were needed for this docs-only
+pass.

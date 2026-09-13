@@ -1,6 +1,6 @@
 ---
 title: "Calibrate skill discovery and the root agent instructions"
-status: partial
+status: implemented
 workstream: prompt-calibration
 issues:
   - ../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md
@@ -13,11 +13,25 @@ The skill descriptions and root assembly have been approved. The descriptions we
 
 **Done for this pass:** descriptions retain meaningful triggers and exclusions; every root topic has a purpose, necessity decision, compact form, and destination; a complete proposed root demonstrates the grouping; links and generation paths are checked; an independent cross-model review is adjudicated. This does not claim measured improvement in skill activation.
 
-**Issues addressed:** the description-rewrite portion of [Run trigger evals on our skills](../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md). The issue stays open: empirical activation testing and its broader questions remain unfinished. [Documentation reorganization](docs-reorg.md) is prior in-repo work, not a mandate to execute that older plan.
+**Issues addressed:** the description-rewrite portion of [Run trigger evals on our skills](../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md). The issue stays open: empirical activation testing and its broader questions remain unfinished. [Documentation reorganization](../plans/docs-reorg.md) is prior in-repo work, not a mandate to execute that older plan.
 
 ## Smallest fix and budget
 
 Two tracks: edit the 23 skill descriptions; assess and apply the root rewrite. This pass changes skill frontmatter, root `CLAUDE.md`, and this planning document. No runtime application behavior, hooks, generator source, or skill bodies change. Applying valid root links exposed a doc-check resolver defect: external targets outside its scanned directories were reported missing even when they exist. The implementation therefore also includes a narrow external-link resolution fix and a focused doctest, with no scan expansion or exemptions. Budget: 23 description replacements plus the canvas skill's canonical plugin source and roughly 300 lines of planning prose, the root replacement, and up to 100 lines for the resolver prerequisite and its test. The approved root implementation replaces the original 2,242-word root with roughly 800–1,100 words; clarity and preserved decisions take precedence over that estimate.
+
+## Completed outcome
+
+The root and description work landed at `8af2a5aff`; subsequent instruction
+checkpoints landed through `64930f05e`. The final issue-contract grouping and
+[pilot](../prompt-calibration-pilot.md) complete the authorized calibration scope.
+The pilot corrected example contamination in launch briefings. It measured
+stated routing and permission decisions, not native skill activation. Full
+activation evaluation stays in the existing issue, which remains open.
+
+The original design, scope exclusions, source snapshots, and checkpoint
+validation below are historical. Later authorizations and outcomes are recorded
+in the follow-on section and subplan; earlier “no empirical result” statements
+describe those earlier checkpoints.
 
 ## Stated preferences this plan trades against
 
@@ -194,7 +208,7 @@ Only shortening descriptions would leave the requested root analysis undone. A r
 
 ## Subplans
 
-None. A later bin/CLAUDE.md split needs its own concrete relocation proposal, not implementation as a side effect of this pass.
+The separately approved [skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) covers the later bin split and skill/manual revisions.
 
 ## Failure modes
 
@@ -257,8 +271,8 @@ Applied the reviewed root assembly exactly, rebasing its links and promoting sec
 
 The required resolver prerequisite is in `beebox/src/dev/doc-graph-data.ts`, covered by `beebox/test/dev/doc-graph-data.doctest.md`. The change-selected test run passed all three assertions, and focused lint/doc-check passed. No full suite was run; no runtime application behavior changed.
 
-The second cross-model pass found no material root implementation defects and confirmed the first review's corrections remain intact. Its doc-check caveat was based on an earlier planning snapshot; the applied root now passes doc-check with the resolver fix. Both tracks are locally complete; landing and empirical trigger evaluation remain separate.
+The second cross-model pass found no material root implementation defects and confirmed the first review's corrections remain intact. Its doc-check caveat was based on an earlier planning snapshot; the applied root now passes doc-check with the resolver fix. Both tracks landed in main at `8af2a5aff`; empirical trigger evaluation remains separate.
 
 ## Follow-on assessment
 
-[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Cross-model and bin splits are applied, along with the follow-on coding-guidance changes recorded there. Launch, issues, and security-report remain pending.
+[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Cross-model and bin splits, the launch rewrite, targeted issue-workflow changes, and security-report compression are applied, along with the follow-on coding guidance recorded there. Those checkpoints landed through `64930f05e`. The final pass grouped the issue contract, reconciled progress notes, and completed a [bounded four-model behavioral pilot](../prompt-calibration-pilot.md). The approved editorial scope is implemented. Broader native skill-activation measurements remain tracked by the linked issue; they are not a pending rewrite under this plan.

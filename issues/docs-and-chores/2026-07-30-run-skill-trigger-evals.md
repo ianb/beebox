@@ -7,16 +7,23 @@ discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 priority: backlog
 ---
 
-We have 16 skills in `.claude/skills/` and **zero evidence any of them fire when
-intended**. Nothing measures it.
+## Current state (2026-09-12)
 
-We also already own the tooling. `.agents/skills/skill-creator/` (vendored from
-Anthropic) ships `scripts/run_eval.py`, `scripts/improve_description.py`,
-`scripts/aggregate_benchmark.py`, a grader subagent, an analyst pass that flags
-non-discriminating and high-variance assertions, and a trigger-eval query
-generator. None of it has been run here.
+The checkout has 24 repository skills. Prompt-calibration shortened the original
+23 descriptions and revised the shared guidance; the later browser-task skill
+also received a focused workflow correction. These edits and static reviews do
+not establish native skill activation rates.
 
-So this is a **routine to adopt, not code to write**.
+The historically vendored `.agents/skills/skill-creator/scripts/run_eval.py`
+path is absent from this checkout. The installed skill-creator is outside the
+repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/prompt-calibration-pilot.md)
+is complete: 12 routing cases and five authority cases per model, plus a targeted
+briefing-template recheck. It found and corrected example contamination; it did
+not exercise native skill loading. Native loading, repeats, and full-catalog
+coverage remain open. No evaluation subsystem was added.
+
+The sections below preserve the earlier proposal and research context; their
+skill counts, tool paths, and quota dates are historical.
 
 ## Consolidated (2026-08-27)
 
