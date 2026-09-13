@@ -6,6 +6,7 @@ import {
   htmlDocumentShell,
   renderCorpusPageHtml,
   renderDirectoryIndexHtml,
+  renderedHref,
   renderRootPageHtml,
   rewriteCorpusLinksToHtml,
 } from "./docs-html.js";
@@ -154,3 +155,13 @@ test("complete-index renderer: every published path appears once, spine first, g
   // Directory order follows the caller's array (uses before concepts).
   assert.ok(html.indexOf(">uses/<") < html.indexOf(">concepts/<"));
 });
+
+test("renderedHref: the canonical build links clean URLs; the router keeps .html", () => {
+  assert.equal(renderedHref("uses/foo", "/"), "https://beebox.run/docs/uses/foo");
+  assert.equal(renderedHref("uses/index", "/"), "https://beebox.run/docs/uses/");
+  assert.equal(renderedHref("index", "/"), "https://beebox.run/docs/");
+  assert.equal(renderedHref("uses/foo", "/x/site/"), "http://localhost:3210/x/site/docs/uses/foo.html");
+  const md = "[a](https://beebox.run/docs/uses/foo.md#top) [i](https://beebox.run/docs/uses/index.md)";
+  assert.equal(rewriteCorpusLinksToHtml(md, { base: "/" }), "[a](https://beebox.run/docs/uses/foo#top) [i](https://beebox.run/docs/uses/)");
+});
+

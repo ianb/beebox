@@ -41,6 +41,22 @@ export function escapeMarkdocBraces(markdown: string): string {
 const TARGET_BOUNDARY_RE = /[\s"#')]/;
 const ANCHOR_BOUNDARY_RE = /[\s"')]/;
 
+/**
+ * The URL of a corpus page's rendered form, given its published path without
+ * the `.md`. Cloudflare Pages serves clean URLs and answers a `.html` request
+ * with a 308 to the extensionless form (`index.html` to the directory), so
+ * the canonical build links the clean form directly and no fetcher has to
+ * follow a redirect. The dev router serves the files as written, so it keeps
+ * the `.html` form.
+ */
+export function renderedHref(stem: string, base: string): string {
+  const prefix = `${docsOrigin(base)}${base}docs/`;
+  if (base !== "/") return `${prefix}${stem}.html`;
+  if (stem === "index") return prefix;
+  if (stem.endsWith("/index")) return `${prefix}${stem.slice(0, -"index".length)}`;
+  return `${prefix}${stem}`;
+}
+
 export function rewriteCorpusLinksToHtml(markdown: string, params: { base: string }): string {
   const prefix = `${docsOrigin(params.base)}${params.base}docs/`;
   let out = "";
@@ -63,7 +79,7 @@ export function rewriteCorpusLinksToHtml(markdown: string, params: { base: strin
       while (rest < markdown.length && !ANCHOR_BOUNDARY_RE.test(markdown[rest] ?? "")) rest++;
       anchor = markdown.slice(anchorStart, rest);
     }
-    out += target.endsWith(".md") ? `${prefix}${target.slice(0, -3)}.html${anchor}` : markdown.slice(start, rest);
+    out += target.endsWith(".md") ? `${renderedHref(target.slice(0, -3), params.base)}${anchor}` : markdown.slice(start, rest);
     idx = rest;
   }
   return out;
@@ -126,7 +142,7 @@ export function corpusNavHtml(params: { publishPath: string; base: string }): st
   const origin = docsOrigin(base);
   const dir = directoryOf(publishPath);
   const directoryUrl = dir === "" ? `${origin}${base}docs/` : `${origin}${base}docs/${dir}/`;
-  const indexUrl = dir === "" ? `${origin}${base}llms.txt` : `${origin}${base}docs/${dir}/index.html`;
+  const indexUrl = dir === "" ? `${origin}${base}llms.txt` : renderedHref(`${dir}/index`, base);
   const rootUrl = `${origin}${base}llms.txt`;
   return `<nav><a href="${directoryUrl}">directory</a> · <a href="${indexUrl}">index</a> · <a href="${rootUrl}">Bee Box docs</a></nav>`;
 }
