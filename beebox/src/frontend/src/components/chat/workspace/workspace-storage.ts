@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/is-record";
 import { parseViewUrl, serializeViewUrl } from "../../../lib/view-url";
+import { storageScopeFor } from "../../../lib/storage-scope";
 import { parseSidecarState } from "../sidecar-tabs-storage";
 import { type SidecarState, type SidecarTab } from "../sidecar-tabs";
 import {
@@ -32,11 +33,6 @@ export interface WorkspaceRestoreResult {
   notices: WorkspaceStorageNotice[];
 }
 
-/** Same-origin development worktrees must not share conversation state. */
-export function conversationStorageScope(apiBase: string): string {
-  return apiBase.replace(/^\//, "").replace(/\/api\/?$/, "");
-}
-
 export function workspaceStorageKey({
   apiBase,
   logicalConversationId,
@@ -44,7 +40,7 @@ export function workspaceStorageKey({
   apiBase: string;
   logicalConversationId: string;
 }): string {
-  return `${KEY_PREFIX}:${conversationStorageScope(apiBase)}:${logicalConversationId}`;
+  return `${KEY_PREFIX}:${storageScopeFor(apiBase)}:${logicalConversationId}`;
 }
 
 function storedTab(tab: SidecarTab): object {

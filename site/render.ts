@@ -208,6 +208,28 @@ export function renderNode(node: RenderableTreeNode): string {
   return renderers.html(node);
 }
 
+/**
+ * Render a corpus (agent-docs) page's markdown to HTML. Unlike `renderBody`,
+ * this never runs Markdoc's `validate()` pass: corpus pages carry no custom
+ * tags (a literal `{% … %}` in prose is escaped to text before this ever
+ * runs — see `docs-html.ts`), so there is nothing to validate against a tag
+ * schema. `parse()` itself still reports malformed markup (e.g. a broken
+ * fence) as `errors` on the affected nodes; any error/critical one still
+ * fails the build, just without a schema to check tags against.
+ */
+export function renderCorpusMarkdown(body: string, file: string): string {
+  const ast = markdocParse(body);
+  for (const node of ast.walk()) {
+    const err = node.errors.find((e) => e.level === "error" || e.level === "critical");
+    if (err) {
+      const line = (node.lines[0] ?? 0) + 1;
+      throw new MarkupError(`${file}:${line} malformed markup: ${err.message}`);
+    }
+  }
+  const content = markdocTransform(ast, {});
+  return renderers.html(content);
+}
+
 /** The block children of a transformed body, with its `<article>` wrapper dropped. */
 export function bodyChildren(content: RenderableTreeNode): RenderableTreeNode[] {
   return Tag.isTag(content) ? content.children : [content];

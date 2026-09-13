@@ -19,6 +19,7 @@ const coverageSchema = z.object({
   scanned: z.number(),
   stoppedAt: z.string(),
   reason: z.enum(COVERAGE_REASONS),
+  notes: z.string().optional(),
 });
 
 const recordsFileSchema = z.object({
@@ -36,6 +37,8 @@ export interface BatchSummary {
   dir: string;
   /** Null when `records.json` is missing or unreadable. */
   records: number | null;
+  /** The records themselves, for the review table; empty when unreadable. */
+  rows: unknown[];
   coverage: z.infer<typeof coverageSchema> | null;
   /** Indices the drain has filed so far; empty when no drain has started. */
   filed: number[];
@@ -77,6 +80,7 @@ export async function loadBatch(dir: string, id: string): Promise<BatchSummary> 
     id,
     dir,
     records: records.success ? records.data.records.length : null,
+    rows: records.success ? records.data.records : [],
     coverage: records.success ? records.data.coverage : null,
     filed: filed.success ? filed.data : [],
   };

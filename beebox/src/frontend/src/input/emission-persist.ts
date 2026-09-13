@@ -57,8 +57,20 @@ const KEY_PREFIX = "bbx-input-emission";
 // the new singleton key above is always written with the bbx prefix.
 const LEGACY_COMPOSER_PREFIX = "bbx-composer-draft";
 
-export function emissionKey(boxSlug: string | undefined): string {
-  return `${KEY_PREFIX}:${boxSlug ?? "default"}`;
+/**
+ * The draft slot for one box instance.
+ *
+ * `scope` is `storageScopeFor(apiBase)` — empty in production, `main/test1` or
+ * `worktree-foo/test1` behind the dev router. Production therefore keeps the
+ * exact key it has always written, so a real unsent draft is never orphaned by
+ * a dev-only fix; a dev checkout gets a key of its own, because the router
+ * serves every checkout from one origin and two worktrees can each have a
+ * `test1`. Sharing that slot handed one clone the other's text AND its
+ * `tmp/…` attachment paths, which the receiving clone then reported as expired
+ * (issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
+ */
+export function emissionKey(input: { boxSlug: string | undefined; scope: string }): string {
+  return `${KEY_PREFIX}:${input.scope === "" ? input.boxSlug ?? "default" : input.scope}`;
 }
 
 function warn(what: string, e: unknown): void {
@@ -124,10 +136,10 @@ export function parsePersistedEmission(raw: string | null): PersistedEmission | 
 
 export function loadPersistedEmission(
   storage: KeyValueStorage,
-  boxSlug: string | undefined,
+  instance: { boxSlug: string | undefined; scope: string },
 ): PersistedEmission | null {
   try {
-    return parsePersistedEmission(storage.getItem(emissionKey(boxSlug)));
+    return parsePersistedEmission(storage.getItem(emissionKey(instance)));
   } catch (e) {
     warn("could not read persisted emission", e);
     return null;
@@ -138,6 +150,7 @@ export function savePersistedEmission(
   storage: KeyValueStorage,
   input: {
     boxSlug: string | undefined;
+    scope: string;
     draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
     updatedAt: number;
   },
@@ -149,7 +162,7 @@ export function savePersistedEmission(
     console.warn("[input-persist] images exceed the persistence budget — kept in memory only");
   }
   try {
-    storage.setItem(emissionKey(input.boxSlug), payload);
+    storage.setItem(emissionKey({ boxSlug: input.boxSlug, scope: input.scope }), payload);
   } catch (e) {
     warn("could not persist emission", e);
   }
@@ -179,20 +192,24 @@ export function commitPersistedEmission(
   storage: KeyValueStorage,
   input: {
     boxSlug: string | undefined;
+    scope: string;
     draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
     updatedAt: number;
   },
 ): void {
   if (isEmptyEmissionDraft(input.draft)) {
-    removePersistedEmission(storage, input.boxSlug);
+    removePersistedEmission(storage, { boxSlug: input.boxSlug, scope: input.scope });
     return;
   }
   savePersistedEmission(storage, input);
 }
 
-function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | undefined): void {
+function removePersistedEmission(
+  storage: KeyValueStorage,
+  instance: { boxSlug: string | undefined; scope: string },
+): void {
   try {
-    storage.removeItem(emissionKey(boxSlug));
+    storage.removeItem(emissionKey(instance));
   } catch (e) {
     warn("could not remove persisted emission", e);
   }
@@ -205,12 +222,20 @@ function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | und
  * text; ALL of the box's legacy keys are removed. Returns the adopted
  * text (or null) plus how many drafts were discarded — the caller logs
  * the named behavior change.
+ *
+ * Legacy keys were written with the box slug alone, so behind the dev router
+ * they cannot be attributed to a checkout: two worktrees can each have a
+ * `test1`. Adoption therefore only runs in production (`scope === ""`). In a
+ * dev checkout the keys are left exactly as they are — not adopted into a clone
+ * that may not own them, and not deleted either, since deleting is the one
+ * outcome that cannot be undone.
  */
 export function adoptLegacyComposerDrafts(
   storage: KeyValueStorage,
-  boxSlug: string | undefined,
+  instance: { boxSlug: string | undefined; scope: string },
 ): { adoptedText: string | null; discarded: number } {
-  const prefix = `${LEGACY_COMPOSER_PREFIX}:${boxSlug ?? "default"}:`;
+  if (instance.scope !== "") return { adoptedText: null, discarded: 0 };
+  const prefix = `${LEGACY_COMPOSER_PREFIX}:${instance.boxSlug ?? "default"}:`;
   const keys: string[] = [];
   try {
     for (let i = 0; i < storage.length; i++) {

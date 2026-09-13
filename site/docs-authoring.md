@@ -3,8 +3,13 @@
 This is the content-author's guide to `site/docs/` and `site/docs-manifest.yaml`
 — the corpus published at `/docs/` and indexed by `llms.txt`, read by a general
 chatbot on behalf of someone deciding whether to use Bee Box. Full design and
-rationale: `../beebox/docs/plans/agent-docs.md`. Mechanism: `docs.ts` and its
-`site/CLAUDE.md` section.
+rationale: `../beebox/docs/plans/agent-docs.md`. Mechanism: `docs.ts`,
+`docs-html.ts`, and `site/CLAUDE.md`'s Agent docs section.
+
+There is nothing to do here for the HTML side: every page you write gets a
+same-named spartan `.html` rendering beside its `.md` automatically, and
+`llms.txt` is built as the deep index of every page (grouped by directory)
+automatically. Write markdown as described below; the build handles the rest.
 
 ## Where a page lives
 
@@ -47,10 +52,12 @@ line; there's nothing to do about that except write a fresh one.
 
 ## Body
 
-Plain markdown. The first `# Heading` is the page's title (used in `llms.txt`'s
-spine listing — only the spine's title comes from the body; every other
-index uses the filename). No Markdoc tags — this is raw markdown served
-as-is, not rendered through the site's card pipeline.
+Plain markdown. The first `# Heading` is the page's title — used in `llms.txt`
+(the spine and every deep directory section list a page by its title, not its
+filename) and as the page's HTML `<title>`. No Markdoc tags: the `.md` file is
+served as-is, and its `.html` twin renders through Markdoc without a tag
+schema, so a literal `{% … %}` shown as an example of the syntax (fine in
+prose) renders as text rather than failing the build as a malformed tag.
 
 ## Links
 
@@ -86,11 +93,19 @@ A `README.md` inside any directory (not just the corpus root) is that
 directory's preamble — never a published page, never listed in its
 `index.md`. Frontmatter is `description:` (one line) and an optional
 `start-here:` list of filenames in that directory. `site/docs/dev/README.md`
-is the one place this is consumed today: it becomes `dist/llms-dev.txt`'s
-summary and body, and `start-here:` orders that entry file's `## Start here`
-section (everything else published under `dev/` falls into `## Files`,
-sorted). No `dev/README.md` means no `llms-dev.txt` — that's legal mid-work,
-not a build failure.
+and `site/docs/install/README.md` are the two places this is consumed today:
+each becomes its own entry page's (`dist/llms-dev.txt`, `dist/llms-install.txt`)
+summary and body, and `start-here:` orders that page's `## Start here` section
+(everything else published under the directory falls into `## Files`, sorted).
+No `dev/README.md` means no `llms-dev.txt` — legal mid-work, not a build
+failure; a missing `install/README.md` instead gets a generated one-line
+summary ("How to get a box running.") — `install/` always gets an entry page
+once it has any published file.
+
+`dev/` and `install/` are the two directories `llms.txt`'s deep index
+deliberately does *not* expand — a chat agent already gets those pages via
+their own entry point (`llms-dev.txt`, `llms-install.txt`), which `llms.txt`
+links to instead of listing every file inline.
 
 ## Promoting a repo doc instead of writing new prose
 

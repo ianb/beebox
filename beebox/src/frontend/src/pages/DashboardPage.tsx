@@ -6,6 +6,7 @@ import { useBusSubscription } from "../hooks/useBusSubscription";
 import { useState } from "react";
 import { errorMessage } from "@shared/error-guards";
 import { trpc, trpcClient } from "../lib/trpc";
+import { describeBrowserTaskState } from "@shared/browser-task-state";
 import { HeaderStrip } from "../components/dashboard/HeaderStrip";
 import { AttentionCards } from "../components/dashboard/AttentionCards";
 import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
@@ -29,6 +30,7 @@ export function DashboardPage() {
   const ticksQuery = trpc.scheduler.log.useQuery({ limit: 20, event: "tick" });
   const commitsQuery = trpc.status.activity.useQuery({ count: 15 });
   const questionsQuery = trpc.status.questions.useQuery();
+  const browserTasksQuery = trpc.browserTask.list.useQuery();
 
   const invalidateAll = () => {
     void utils.status.invalidate();
@@ -53,6 +55,9 @@ export function DashboardPage() {
   const ticks = ticksQuery.data?.entries ?? [];
   const commits = commitsQuery.data?.entries ?? [];
   const questions = questionsQuery.data?.items ?? [];
+  const dueBrowserTasks = (browserTasksQuery.data?.items ?? [])
+    .filter((t) => t.state.kind === "due" || t.state.kind === "never-scanned")
+    .map((t) => ({ path: t.path, title: t.title, stateLabel: describeBrowserTaskState(t.state) }));
 
   const schedulesLoading = schedulesQuery.isLoading || ticksQuery.isLoading;
   const schedulesError = schedulesQuery.error || ticksQuery.error;
@@ -113,6 +118,7 @@ export function DashboardPage() {
           <AttentionCards
             questions={questions}
             inboxCount={status?.counts.inbox ?? 0}
+            dueBrowserTasks={dueBrowserTasks}
           />
 
           <ScheduleOverview

@@ -53,6 +53,17 @@ parseCardText("---\ntype: browser-task\nsource: https://x.test\nlimit:\n  since:
 => throws CardIOError
 ```
 
+Cadence, subject, and scan history are fields too:
+
+```ts
+const standing = parseCardText("---\ntype: browser-task\nsource: https://x.test\nrescan-after: P2W\nsubject:\n  ref: _content/people/Potter.person.card\nruns:\n  - batch: 20260912-213306-649a\n    at: 2026-09-12T21:40:00Z\n    scanned: 14\n    kept: 1\n    filed: 1\n    skipped: 0\n    reason: reached-watermark\n    stoppedAt: https://example.test/p/100\n---\nx\n", { source: "S.browser-task.card", schemas });
+JSON.stringify([standing.fields["rescan-after"], standing.fields["subject"], (standing.fields["runs"] as unknown[]).length])
+=> ["P2W",{"ref":"_content/people/Potter.person.card"},1]
+
+parseCardText("---\ntype: browser-task\nsource: https://x.test\nrescan-after: fortnightly\n---\nx\n", { source: "S.browser-task.card", schemas })
+=> throws CardIOError
+```
+
 The template emits an open task with the prompt as the body:
 
 ```ts

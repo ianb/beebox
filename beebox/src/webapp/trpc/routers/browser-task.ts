@@ -10,7 +10,9 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { Document, isMap, parseDocument } from "yaml";
-import { router, ownerProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { listBrowserTasks } from "../../../core/browser-task/list.js";
+import { getBoxTime } from "../../../lib/time.js";
 import { splitCardContent } from "../../../cards/index.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
@@ -21,6 +23,11 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { BrowserTaskStatus } from "../../../schemas/browser-task.js";
 
 export const browserTaskRouter = router({
+  /** Every browser-task card with its derived state; the dashboard's "due" list reads this. */
+  list: publicProcedure.query(async ({ ctx }) => {
+    return { items: await listBrowserTasks(ctx.boxRoot, getBoxTime().getTime()) };
+  }),
+
   setStatus: ownerProcedure
     .input(z.object({ path: z.string().min(1), status: BrowserTaskStatus }))
     .mutation(async ({ input, ctx }) => {

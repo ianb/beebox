@@ -147,26 +147,63 @@ Full design: `../beebox/docs/plans/agent-docs.md`; content conventions for
 authors: `docs-authoring.md`. Built by `docs.ts` (`buildDocsCorpus`, split
 across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-origin.ts`,
 `docs-manifest.ts`, `docs-generated.ts`, `docs-authored.ts`, `docs-compared.ts`,
-`docs-index.ts`), called once from `build.ts` and skipped for box-export
-dry-runs (`buildAgentDocs: false`).
+`docs-index.ts`, `docs-html.ts`), called once from `build.ts` and skipped for
+box-export dry-runs (`buildAgentDocs: false`).
 
-**A second entry point, `dist/llms-dev.txt`, for contributors.** Rendered by
-`renderDevLlmsTxt` (`docs-index.ts`, beside `renderAgentLlmsTxt`) from
-`site/docs/dev/README.md`: its `description:` and body become the summary and
-preamble, its optional `start-here: [filenames]` orders a `## Start here`
-section, everything else published under `dev/` falls into `## Files`
-(sorted), and a fixed `## Also` points at `contracts/`, `design/`,
-`reference/`, `reference/cards/`, `security/`, `concepts/`, and `llms.txt`
-itself. No `dev/README.md` means no `llms-dev.txt` — not a build failure.
-When it *is* written, `llms.txt` gains a `## Contributing` section (after
-`## Directories`) pointing at `llms-dev.txt` and `dev/`.
+**Every corpus page is spartan HTML, beside its plain-markdown twin.** A
+chat-agent fetcher handling raw markdown "did dumb stuff" — invented URLs,
+ignored links — so every `.md` file under `dist/docs/` (each published doc,
+plus each generated per-directory `index.md`) gets a same-named `.html`
+rendering: a complete document (doctype, `<title>` from the page's first H1,
+one small inline `<style>`, a one-line `<nav>` of directory/index/root links,
+the rendered body, a footer linking the `.md` twin), rendered through
+`render.ts`'s Markdoc pipeline via `renderCorpusMarkdown` — never `renderBody`
+— so there is no tag schema to validate a corpus page's tag-free markdown
+against. A literal `{% … %}` shown as prose (the generated engine docs quote
+the syntax) is escaped to `&#123;%` outside fenced/inline code before parsing
+(`docs-html.ts`'s `escapeMarkdocBraces`), so it renders as text instead of a
+malformed-tag build failure. Every already-absolute corpus link
+(`<origin><base>docs/<path>.md[#anchor]`) is rewritten to its `.html` form in
+the HTML rendering (`rewriteCorpusLinksToHtml`) — the `.md` twin keeps linking
+`.md` to `.md`, so a fetcher that lands on the plain-text side never needs to
+resolve anything itself, and one already on the HTML side always finds
+another `.html` page. `docs-html.ts` does all of this; `docs.ts` calls it once
+per doc and once per directory index.
+
+**The front page (`llms.txt`) is a complete, deep index.** Built the same way
+as any corpus page — markdown first, rendered through the same pipeline — but
+its markdown (`renderAgentLlmsTxt`, `docs-index.ts`) lists every page under
+the spine plus `uses/`, `capabilities/`, `concepts/`, `security/`,
+`architecture/`, `design/`, `compared/`, `contracts/`, `reference/`, and
+`reference/cards/` (`DEEP_DIRS`, in that display order) — one `<li>` per page,
+`title-or-filename`: description. `dev/` and `install/` are deliberately
+NOT expanded here (too much for a front page); each gets one pointer line
+instead, to its own entry page. The rendered HTML is written to `dist/llms.txt`
+*and* `dist/docs/index.html` (identical bytes), and the plain-markdown
+source additionally to `dist/llms.md` (the front page's own plain-text twin —
+`llms.txt` itself now serves `text/html`, "and that's fine": chat fetchers
+already treat any 200 as fetchable regardless of extension). `## Site pages`
+links each human page by its own rendered URL (`page.href`, already absolute),
+not its `.md` twin — the front page is HTML, so it should link HTML.
+
+**Two entry pages carry what the front page omits: `llms-dev.txt` and
+`llms-install.txt`.** Both are one shape (`renderEntryLlmsTxt`, `docs-index.ts`):
+`# <title>`, a directory's own `README.md` `description:` + body as preamble,
+an optional `## Start here` (`start-here: [filenames]`), `## Files` (every
+other page under that directory, sorted), `## Also` (fixed pointers back into
+the corpus, plus `llms.txt`). `dev/`'s README is required — no
+`site/docs/dev/README.md` means no `llms-dev.txt`, not a build failure.
+`install/`'s README is optional — missing one synthesizes "How to get a box
+running." as the summary with an empty preamble, since every box needs an
+install path. Each writes its own plain-text twin (`llms-dev.md`,
+`llms-install.md`) alongside its HTML `.txt`.
 
 **A directory's own `README.md`** works like the corpus-root one (never
 published, `description:` + optional `start-here:` frontmatter) but scoped to
 that directory — `docs-authored.ts` keys them by directory
-(`AuthoredCorpus.dirReadmes`). Only `dev/`'s is consumed today (by
-`renderDevLlmsTxt`); any other directory's README parses and scrub-gates like
-every authored file but currently goes unused.
+(`AuthoredCorpus.dirReadmes`). `dev/` and `install/` consume theirs (above);
+any other directory's README parses and scrub-gates like every authored file
+but currently goes unused.
 
 **Three source kinds, one published set.** Authored (`docs/**/*.md`, mirroring
 the published tree, frontmatter `description:` and — under `compared/` only —
@@ -226,11 +263,14 @@ next explicit `pnpm --dir site build` or a `generateDocs` run refreshes
 `beebox/box-docs/.hash` (which `sources.ts` folds into the manifest, tolerating
 its absence). Accepted as dev-only staleness.
 
-**Static control files** (`docs-static.ts`): the build writes `_headers`
-(every `.md` under `/docs/`, both entry files, and each page twin served as
-`text/plain; charset=utf-8`, because chat-app fetchers reject
-`text/markdown`), a `404.html` (without it Pages answers unknown paths with
-the home page and a 200, which rewards a fetcher's guessed URL), and a
-permissive `robots.txt`. Cloudflare reads them from `dist/`; the router
-ignores them.
+**Static control files** (`docs-static.ts`): the build writes `_headers` —
+every `.md` under `/docs/`, each page twin, and each entry point's `.md` twin
+served as `text/plain; charset=utf-8` (because chat-app fetchers reject
+`text/markdown`); each entry point's `.txt` (`llms.txt`, `llms-dev.txt`,
+`llms-install.txt`, whichever were built) served as `text/html; charset=utf-8`
+— a `.html` sibling next to a corpus `.md` needs no rule, Cloudflare already
+serves it as HTML by default. Also a `404.html` (without it Pages answers
+unknown paths with the home page and a 200, which rewards a fetcher's guessed
+URL), and a permissive `robots.txt`. Cloudflare reads them from `dist/`; the
+router ignores them.
 

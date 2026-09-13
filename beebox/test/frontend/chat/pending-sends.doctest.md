@@ -6,7 +6,7 @@ resends a saved message automatically.
 
 ```ts setup
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../src/frontend/src/components/chat/conversation/pending-sends.js";
-import { conversationStorageScope } from "../../../src/frontend/src/components/chat/conversation/storage-scope.js";
+import { storageScopeFor } from "../../../src/frontend/src/lib/storage-scope.js";
 import type { Emission } from "../../../src/frontend/src/input/emission.js";
 import type { SendBinding } from "../../../src/shared/chat-composer-binding.js";
 ```
@@ -190,14 +190,14 @@ const storage = {
   removeItem: (key: string) => { data.delete(key); },
 };
 const binding: SendBinding = { boxSlug: "test1", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
-const paperScope = conversationStorageScope("/paper-cards/test1/api");
-const chatScope = conversationStorageScope("/chat-everywhere/test1/api");
+const paperScope = storageScopeFor("/paper-cards/test1/api");
+const chatScope = storageScopeFor("/chat-everywhere/test1/api");
 createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).stage(
   { id: "paper", origin: "typed", text: "Paper message", images: [], files: [], selections: [], diarized: false }, binding);
 createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).stage(
   { id: "chat", origin: "typed", text: "Chat message", images: [], files: [], selections: [], diarized: false }, binding);
 JSON.stringify({
-  scopes: [paperScope, chatScope, conversationStorageScope("/test1/api")],
+  scopes: [paperScope, chatScope, storageScopeFor("/test1/api")],
   paper: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).getSnapshot().map((row) => row.emission.text),
   chat: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).getSnapshot().map((row) => row.emission.text),
 })

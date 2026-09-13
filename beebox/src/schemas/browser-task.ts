@@ -1,10 +1,25 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type CardSubmissionInput, type CardSubmissionResult, type LintIssue } from "../cards/index.js";
-import { validateBatch } from "../shared/browser-task-batch.js";
+import { validateBatch, COVERAGE_REASONS } from "../shared/browser-task-batch.js";
+import { IsoDuration } from "../shared/iso-duration.js";
 
 export const BrowserTaskStatus = z.enum(["open", "closed"]);
 export type BrowserTaskStatusType = z.infer<typeof BrowserTaskStatus>;
+
+/** One drained batch, as the drain records it on the card. The card's scan history. */
+export const BrowserTaskRun = z.object({
+  batch: z.string(),
+  at: z.string().datetime({ offset: true }),
+  scanned: z.number().int().nonnegative(),
+  kept: z.number().int().nonnegative(),
+  filed: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  reason: z.enum(COVERAGE_REASONS),
+  stoppedAt: z.string(),
+  note: z.string().optional(),
+});
+export type BrowserTaskRunEntry = z.infer<typeof BrowserTaskRun>;
 
 /** Where a task keeps the JSON Schema for one record. Fixed: one place, nothing to configure. */
 export const BROWSER_TASK_SCHEMA_FILE = "schema.json";
@@ -83,6 +98,13 @@ export const BrowserTaskSchema = cardSchema("browser-task", {
       .optional(),
     // Set by the server when a batch is accepted; never edit by hand.
     "last-upload": z.string().datetime({ offset: true }).optional(),
+    // How often the source should be rescanned. With it set, the card can be due.
+    "rescan-after": IsoDuration.optional(),
+    // What this task is about: the person or organization card, so several
+    // tasks (a Facebook page, an Instagram, a website) say they are one subject.
+    subject: z.object({ ref: z.string() }).optional(),
+    // Scan history, appended by the drain, newest last.
+    runs: z.array(BrowserTaskRun).optional(),
     // The prompt, addressed to a reader who has a browser and no box context.
     body: body(z.string()),
   },
@@ -118,6 +140,17 @@ runs it. You never scan the source yourself; the box has no browser session.
   or both. Always set one. The copy block shows it to the executor and the
   drain checks \`coverage\` against it.
 - \`last-upload:\` — set by the server when a batch is accepted. Do not edit.
+- \`rescan-after:\` — an ISO-8601 duration (\`P14D\`, \`P2W\`, \`P1M\`). A feed
+  task is a standing subscription; set this so the card can read as **due**
+  (\`last-upload\` plus the cadence is past) instead of only open or closed.
+  Due tasks appear on the dashboard. Leave it unset for a one-off pull.
+- \`subject:\` — \`{ ref: <person or organization card> }\`. Several tasks
+  about one subject (their Facebook page, their Instagram, their website)
+  should all point here, so the drain can dedupe across them.
+- \`runs:\` — the scan history, one entry per drained batch, appended by the
+  drain: \`{ batch, at, scanned, kept, filed, skipped, reason, stoppedAt, note? }\`.
+  Read it to answer "what did the last three scans cover?"; the view shows
+  it as a table. Do not edit by hand.
 
 ## The body is the prompt
 

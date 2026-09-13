@@ -96,11 +96,15 @@ steps:
                  remove the empty batch dir, and commit.
 
 
-            4. Append one line to the task card body under a `## Runs`
-            heading (create it at the end if absent):
-            `- <date>: batch <id>, scanned N, kept K, filed F, skipped S
-            (<reason>), stopped at <stoppedAt>`. This is the scan history the
-            card otherwise loses.
+            4. Append an entry to the task card's `runs:` frontmatter list
+            (create the list if absent; newest last):
+            `{ batch, at, scanned, kept, filed, skipped, reason, stoppedAt, note? }`
+            where `scanned`, `reason`, and `stoppedAt` come from the batch's
+            `coverage`, `kept` is the record count, `filed` and `skipped` are
+            what you did, and `note` holds anything worth a sentence (out of
+            scope records, a bound not honored, `coverage.notes`). This is
+            the scan history the card otherwise loses; the view shows it as
+            a table.
 
 
             A batch whose `coverage.reason` is `login-wall` or `rate-limited`

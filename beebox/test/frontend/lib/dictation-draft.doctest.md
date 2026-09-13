@@ -35,11 +35,23 @@ per session, mirroring the composer's `emissionKey`. A missing box slug falls
 back to `default`:
 
 ```ts
-draftKey({ boxSlug: "test1" })
+draftKey({ boxSlug: "test1", scope: "" })
 => bbx-chat-draft:test1:singleton
 
-draftKey({ boxSlug: undefined })
+draftKey({ boxSlug: undefined, scope: "" })
 => bbx-chat-draft:default:singleton
+```
+
+The slot is per box INSTANCE, mirroring the composer: two dev worktrees serving
+their own `test1` from one origin must not share a dictation draft. Production's
+scope is empty and its key is unchanged.
+
+```ts
+JSON.stringify([
+  draftKey({ boxSlug: "test1", scope: "main/test1" }),
+  draftKey({ boxSlug: "test1", scope: "" }),
+])
+=> ["bbx-chat-draft:main/test1:singleton","bbx-chat-draft:test1:singleton"]
 ```
 
 ## adoptLegacyDictationDrafts: most-recent wins, all legacy keys removed
@@ -52,7 +64,7 @@ const s = fakeStorage();
 s.setItem("bbx-chat-draft:test1:sess-a", JSON.stringify({ text: "older", narration: false, updatedAt: 100 }));
 s.setItem("bbx-chat-draft:test1:sess-b", JSON.stringify({ text: "newest", narration: true, updatedAt: 300 }));
 s.setItem("bbx-chat-draft:otherbox:sess-z", JSON.stringify({ text: "not ours", narration: false, updatedAt: 999 }));
-const result = adoptLegacyDictationDrafts(s, "test1");
+const result = adoptLegacyDictationDrafts(s, { boxSlug: "test1", scope: "" });
 JSON.stringify(result.adopted)
 => {"text":"newest","narration":true,"updatedAt":300}
 
@@ -68,7 +80,7 @@ An empty box (no legacy keys, or none that parse) adopts nothing:
 
 ```ts
 const empty = fakeStorage();
-const result2 = adoptLegacyDictationDrafts(empty, "test1");
+const result2 = adoptLegacyDictationDrafts(empty, { boxSlug: "test1", scope: "" });
 JSON.stringify(result2)
 => {"adopted":null,"discarded":0}
 ```
@@ -81,7 +93,7 @@ re-adopt the slot it writes to:
 const s2 = fakeStorage();
 s2.setItem("bbx-chat-draft:test1:singleton", "not json {{{");
 s2.setItem("bbx-chat-draft:test1:sess-a", JSON.stringify({ text: "legacy", narration: false, updatedAt: 100 }));
-const result3 = adoptLegacyDictationDrafts(s2, "test1");
+const result3 = adoptLegacyDictationDrafts(s2, { boxSlug: "test1", scope: "" });
 JSON.stringify(result3.adopted)
 => {"text":"legacy","narration":false,"updatedAt":100}
 
