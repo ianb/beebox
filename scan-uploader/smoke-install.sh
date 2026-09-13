@@ -12,7 +12,7 @@
 # checkout stays current with no rebuild step — see the wrapper's own header
 # comment and README "Setup" step 1.
 #
-# Measured 2026-08-01: the workspace's `node-linker=hoisted` (.npmrc,
+# Measured 2026-08-01: the workspace's `nodeLinker: hoisted` (pnpm-workspace.yaml,
 # necessarily workspace-wide) means the filtered install still materializes
 # the full hoisted tree (~1.3 GB incl. better-sqlite3/sharp) — filtering does
 # NOT make the install lighter here, it only scopes which projects' scripts

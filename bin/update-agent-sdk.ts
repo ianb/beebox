@@ -53,7 +53,10 @@ interface Family {
    * not made yet or made minutes ago.
    */
   npmNames: [string, ...string[]];
-  /** The root `.npmrc` exclusion that hands this family's gating to this script. */
+  /**
+   * The `pnpm-workspace.yaml` `minimumReleaseAgeExclude` entry that hands this
+   * family's gating to this script.
+   */
   exclusion: RegExp;
   /** Version of the family's agent binary as installed, or null if not found. */
   binaryVersion: () => string | null;
@@ -63,13 +66,13 @@ const FAMILIES: Family[] = [
   {
     label: "Agent SDK",
     npmNames: ["@anthropic-ai/claude-agent-sdk"],
-    exclusion: /^minimum-release-age-exclude\[]=@anthropic-ai\/claude-agent-sdk\*\s*$/m,
+    exclusion: /^\s*-\s*"?@anthropic-ai\/claude-agent-sdk\*"?\s*$/m,
     binaryVersion: bundledClaudeVersion,
   },
   {
     label: "Codex",
     npmNames: ["@openai/codex", "@openai/codex-sdk"],
-    exclusion: /^minimum-release-age-exclude\[]=@openai\/codex\*\s*$/m,
+    exclusion: /^\s*-\s*"?@openai\/codex\*"?\s*$/m,
     binaryVersion: codexVersion,
   },
 ];
@@ -91,9 +94,8 @@ const PublishTimes = z.record(z.string(), z.string());
 
 /** Publish timestamps per stable version, from the npm registry. */
 function publishTimes(npmName: string): Map<string, Date> {
-  // cwd is the OS tmpdir, NOT the repo: the repo's .npmrc holds pnpm-only
-  // keys (node-linker, minimum-release-age) that npm warns about on every
-  // read. npm view needs no project context anyway.
+  // cwd is the OS tmpdir, NOT the repo. npm view needs no project context, and
+  // staying out of the workspace keeps npm from reading anything of pnpm's.
   const raw = PublishTimes.parse(JSON.parse(run("npm", { args: ["view", npmName, "time", "--json"], cwd: os.tmpdir() })));
   const times = new Map<string, Date>();
   for (const [version, iso] of Object.entries(raw)) {
@@ -108,17 +110,18 @@ function publishTimes(npmName: string): Map<string, Date> {
  * Both families track a FASTER lane than the repo's global 7-day
  * minimum-release-age: Claude Code and Codex ship near-daily and we want their
  * fixes and agent-behavior changes within days, not a week behind. Two days is
- * enough for a bad release to be yanked. The root .npmrc excludes each family
- * from the global gate specifically so this script's gate governs instead —
+ * enough for a bad release to be yanked. `pnpm-workspace.yaml`'s
+ * `minimumReleaseAgeExclude` excludes each family from the global gate
+ * specifically so this script's gate governs instead —
  * verified below; without the exclusion, `pnpm install` would refuse anything
  * younger than the global gate anyway.
  */
 const MINIMUM_RELEASE_AGE_MINUTES = 2 * 24 * 60;
 
 function requireExclusion(family: Family): void {
-  const npmrc = fs.readFileSync(path.join(REPO_ROOT, ".npmrc"), "utf-8");
-  if (!family.exclusion.test(npmrc)) {
-    console.error(`update-agent-sdk: root .npmrc is missing the minimum-release-age-exclude entry for ${family.npmNames.join(" + ")} — the global gate would block the fast lane. Restore it.`);
+  const workspace = fs.readFileSync(path.join(REPO_ROOT, "pnpm-workspace.yaml"), "utf-8");
+  if (!family.exclusion.test(workspace)) {
+    console.error(`update-agent-sdk: pnpm-workspace.yaml is missing the minimumReleaseAgeExclude entry for ${family.npmNames.join(" + ")} — the global gate would block the fast lane. Restore it.`);
     process.exit(2);
   }
 }
