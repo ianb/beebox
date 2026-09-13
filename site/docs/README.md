@@ -2,17 +2,12 @@
 description: "Documentation for Bee Box: a personal assistant built from a coding agent and a folder of files you own, its design choices, and the ways you use it."
 ---
 A few ideas run through Bee Box. An assistant should accumulate, and you
-should be able to see not just what it knows but how that came to be: the
-history of a card, of a decision, of the box itself, is kept and readable,
-so you can look back at how things developed. For the same reason the whole
-thing is open source: you should be able to see how it works. Things are
-represented in sensible shapes, a recipe as a recipe, a person as a person,
-and there is always an overflow, so the fullness of what you know is kept
-even when it does not fit the shape yet. Where a fact came from, and whose
-words these are, can be marked, so the record stays honest. You put things
-in explicitly, but there are many convenient ways to do it, from a spoken
-remark to a photographed page, and separately there are connectors that
-bring email, calendar, and documents in on their own.
+should be able to see not just what it knows but how that came to be, in a
+history you can read. For the same reason it is open source. Things are
+kept in sensible shapes, with an overflow so nothing is lost for not
+fitting yet, and a fact can carry where it came from and whose words it is.
+You put things in yourself, in many convenient ways; connectors bring email,
+calendar, and documents in on their own.
 
 The mechanics follow from that. The assistant is a coding agent (Claude
 Code or Codex). The engine gives it a box: a folder of cards, each a file
