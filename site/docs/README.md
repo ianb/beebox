@@ -1,36 +1,41 @@
 ---
-description: "Documentation for Bee Box, a personal assistant you keep on your own computer; what you give it accumulates in files you own, and a coding agent works over them."
+description: "Documentation for Bee Box: a personal assistant built from a coding agent and a folder of files you own, its design choices, and the ways you use it."
 ---
-Bee Box is a personal assistant you keep on your own computer and use for a
-long time. You talk to it, hand it email, photograph the paper on your desk,
-walk through a room saying what you see, clip pages you are reading, or
-think out loud into your phone. What you give it accumulates as a
-collection it can work over: the threads you care about, the people and
-places in your life, your recipes, your projects, the things you own, the
-rules you have taught it. It does some of its work between conversations,
-on a schedule and on what your email and calendar bring in, and when it is
-unsure it asks you a question rather than guessing. What it learns from
-your corrections is written down in your words, where you can read and
-change it. The point is the accumulation: a place that knows more about
-your life each month, kept in files you own.
+Bee Box starts from a few convictions. An assistant should accumulate:
+what you tell it and what it learns should still be there in a year, and it
+should know more about your life each month. Its memory should be ordinary
+files you can open, read, and correct, and the record of every change
+should be yours. The agent should have real tools and be allowed to act,
+and when it is unsure it should ask rather than guess. And the shape of the
+data should match the shape of the idea: a recipe stored as a recipe, a
+person as a person, so the assistant can reason over structure rather than
+over a transcript.
 
-You use it through a web app on desktop and phone: a dashboard of what needs
-you, a chat you can type or speak into, a browser over everything it holds,
-the questions it is waiting on, a map of the notable places in it, and a
-display built for each kind of thing (a recipe laid out as a recipe, a
-course with your progress, a document, a photo). There is an iPhone app for
-capture, a browser extension for clipping, and a Telegram presence so a
-household can share one assistant in a chat. When you want a page, a
-dashboard, a routine, or a new kind of record it does not have yet, you
-describe it and the agent builds it inside your box, where it persists.
+The mechanics follow from that. The assistant is a coding agent (Claude
+Code or Codex). The engine gives it a box: a folder of cards, each a file
+with a checked header and markdown text, kept under git. Every kind of card
+has a shape, and what does not fit a shape yet stays as text until it does.
+Links between cards are parsed and checked, and follow the files when they
+move. A small set of marks in the text carries whose words these are and
+where a fact came from, and lets a task be noted in place. New input is
+triaged into the box; the agent's questions are cards; corrections become
+rules it reads next time; recurring work runs on a schedule and on what
+email and calendar bring in. The agent builds inside the box too: a display
+for a kind of card, a dashboard, a routine, a new kind of record. What it
+builds is a file, versioned like everything else.
 
-Underneath, the assistant is a coding agent (Claude Code or Codex) working
-over a folder of plain files you own, with a full history of every change.
-That is why the memory is inspectable, why nothing is hosted, and why it can
-build for you. It is also why it asks something of you: a computer that
-stays on, your own coding-agent login, and comfort with a system that is
-early, self-hosted, built by one maintainer, and changing fast. The pages
-under "Start here" say who it fits and what it requires.
+You use it through a web app on desktop and phone: a dashboard of what
+needs you, a chat you type or speak into, a browser over everything the box
+holds, the questions waiting on you, a map of its notable places, a history
+of changes, and a display for each kind of thing. An iPhone app and a capture
+page take voice memos, long spoken dumps, photos with spoken remarks, and
+scanned paper. A browser extension clips the page you are reading. A
+Telegram presence lets a household talk to one box in a chat. Connectors
+sync Gmail, Google Calendar, and Google Drive.
+
+It runs on a computer you keep on, with your own coding-agent login, and it
+is early: self-hosted, one maintainer, changing fast. The pages under
+"Start here" say who it fits and what it requires.
 
 These pages are written for a model reading on someone's behalf. Say things
 in the person's terms; keep file formats and code for when they ask or are
