@@ -1,16 +1,18 @@
 ---
-description: "Documentation for Bee Box, a personal assistant you run yourself that grows into a memory of your life and acts on it, operated by a coding agent over files you own."
+description: "Documentation for Bee Box, a personal assistant you keep on your own computer; what you give it accumulates in files you own, and a coding agent works over them."
 ---
-Bee Box is a personal assistant that lives with you for years and gets
-better at being yours. You talk to it, hand it email, photograph the paper
-on your desk, walk through a room saying what you see, clip pages you are
-reading, or just think out loud into your phone. It turns what you give it
-into a growing collection it can reason over: the threads you care about,
-the people and places in your life, your recipes, your projects, the things
-you own, the rules you have taught it. It works between conversations, on a
-schedule and on what your email and calendar bring in, and it asks you a
-question rather than guessing. What it learns from your corrections stays
-written down, in your words, where you can read and change it.
+Bee Box is a personal assistant you keep on your own computer and use for a
+long time. You talk to it, hand it email, photograph the paper on your desk,
+walk through a room saying what you see, clip pages you are reading, or
+think out loud into your phone. What you give it accumulates as a
+collection it can work over: the threads you care about, the people and
+places in your life, your recipes, your projects, the things you own, the
+rules you have taught it. It does some of its work between conversations,
+on a schedule and on what your email and calendar bring in, and when it is
+unsure it asks you a question rather than guessing. What it learns from
+your corrections is written down in your words, where you can read and
+change it. The point is the accumulation: a place that knows more about
+your life each month, kept in files you own.
 
 You use it through a web app on desktop and phone: a dashboard of what needs
 you, a chat you can type or speak into, a browser over everything it holds,
