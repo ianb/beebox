@@ -1,8 +1,8 @@
 ---
-title: "Agent SDK 0.3.268 drops TodoWrite and the Task tools from the defaults on the models beebox runs"
+title: "TodoWrite and the Task tools are already absent on the models beebox runs — opt in, or accept"
 workstream: sdk-update
 area: beebox
-priority: normal
+priority: backlog
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Agent SDK 0.3.268
@@ -41,3 +41,28 @@ default that upstream changed on purpose.
 `0.3.268` was ~19h old at the 2026-09-11 turn, so the settled path reaches it
 no earlier than 2026-09-12; deciding before then avoids the change arriving
 unnoticed.
+
+## Corrected 2026-09-13 — already absent at the previous pin; no deadline
+
+Read the session's `system/init` tool list rather than inferring from the
+changelog. On **both** `0.3.267` (the pin at the time) and `0.3.268`, for
+`claude-sonnet-5`, `claude-opus-5` and the default model, the list is identical
+(69 tools) and contains:
+
+    Task, TaskOutput, TaskStop
+
+and **not** `TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskList` or `TaskGet`.
+(`Task`/`TaskOutput`/`TaskStop` are the subagent tools, a different family from
+the task-tracking ones this issue is about.)
+
+So the task-tracking tools were already gone for beebox's models before
+`0.3.268`, and taking that release changed nothing here — the framing "0.3.268
+drops them" was wrong. beebox's "Updated task list" rendering
+(`activity-rendering.tsx`) is fed by the synthetic `TodoWrite` that
+`codex-tool-activity.ts` constructs from Codex plan items, which is why nothing
+looked broken.
+
+The underlying question survives without a deadline: **should beebox opt these
+tools back in** for Claude agents and chats by listing them in `allowedTools`,
+or accept that current models plan without them? Lowered to `backlog` — no
+release forces the answer, and the remedy is a beebox-side list either way.
