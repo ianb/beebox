@@ -313,3 +313,46 @@ for bin, 1,100 for beebox, and 540 for browse; their conditional references hold
 the moved facts. Two independent review subsets covered the manuals and skills.
 No runtime source, model policy, or test harness changed; no application test
 suite or empirical all-model activation run was needed or claimed.
+
+## Follow-up workflow calibration (2026-09-12)
+
+The next approved pass addresses five concrete costs without another manual
+split:
+
+- Launch briefings preserve the actual authorization state: exploration,
+  diagnosis-only, or approved implementation. An explicit launch request is
+  not followed by a redundant yes gate. Custom-base instructions now use
+  `bin/workstreams create --base-ref` before launcher reattachment; agent
+  defaults and normal Codex teardown match their respective owners.
+- Issue pickup starts with issue links, ownership, and one similarity query;
+  broader cluster investigation follows evidence. Included issues remain
+  explicit for finish reconciliation.
+- Provisional issue actions retain permission for contained inline fixes.
+  Larger implementation follows existing human scope; tags alone do not
+  authorize a separate session launch. Discussion and manual-testing gates stay.
+- Browser-task local validation is optional because the page and server use
+  the same validator. Its local recipe explicitly stores the schema outside
+  the upload directory, keeping only the manifest and attachments inside.
+- Security-report trims historical persuasion and repeated overview advice,
+  retains the inventory rubric, ancestry-based provenance, disclosure rules,
+  and human review, and drops the obsolete no-scheduling claim.
+
+The knip-sweep full-suite requirement remains. Source inspection found that
+`bin/test-graph.ts` marks dangling-import entrypoints unresolved and
+`bin/test-select-lib.ts` selects unresolved tests and known spawn edges. Thus
+ordinary deleted imports are covered, but these mechanisms are not a complete
+runtime-consumer inventory. This pass does not establish that full-suite
+checks can safely be removed from unattended deletion work.
+
+Validation: doc-check and whitespace pass; generated mirrors refreshed;
+the documented browser validator command accepts a synthetic valid batch with
+an external schema file. No runtime code changed and no full suite was run.
+
+Cross-model review verified the custom-base and browser validation paths and
+found no material loss in the security rubric. Follow-up edits make landing
+permission explicit in the implementation briefing close, keep single-issue
+recording unconditional without requiring a new plan, restore a short example
+briefing, and name the scratchpad/batch/schema layout. Skill metadata and mirror
+checks passed using the repository YAML library; the bundled Python checker
+could not run because PyYAML is absent. These are source and recipe checks,
+not empirical activation measurements across models.
