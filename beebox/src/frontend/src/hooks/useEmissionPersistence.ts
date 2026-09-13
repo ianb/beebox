@@ -54,6 +54,7 @@ import {
   type PersistedEmission,
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
+import { storageScopeFor } from "../lib/storage-scope";
 import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
 import { normalizeComposerTokens } from "@shared/composer-tokens";
 
@@ -93,14 +94,18 @@ export function useEmissionPersistence(opts: {
   emissionStore: EmissionStore;
 }): EmissionPersistenceApi {
   const { boxSlug, emissionStore } = opts;
+  // The draft slot is per box INSTANCE: behind the dev router two worktrees can
+  // each serve a `test1`, and one slot for both handed a clone the other's text
+  // and attachment paths. Empty in production, where the old key is kept.
+  const scope = storageScopeFor(getApiBase());
   const { editor } = emissionStore;
   const restoringRef = useRef(false);
   const [expiredAttachments, setExpiredAttachments] = useState<string[]>([]);
 
   const persistNow = useCallback(() => {
     if (restoringRef.current) return;
-    commitPersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
-  }, [boxSlug, emissionStore]);
+    commitPersistedEmission(window.localStorage, { boxSlug, scope, draft: emissionStore.get(), updatedAt: Date.now() });
+  }, [boxSlug, scope, emissionStore]);
 
   // Flush synchronously when the tab hides (the sleep / app-switch moment),
   // closing the debounce gap — same pattern as the retired useComposerDraft.
@@ -129,9 +134,9 @@ export function useEmissionPersistence(opts: {
     restoreAttempted.add(emissionStore);
     if (!isEmptyEmissionDraft(emissionStore.get())) return;
 
-    const persisted = loadPersistedEmission(window.localStorage, boxSlug);
+    const persisted = loadPersistedEmission(window.localStorage, { boxSlug, scope });
     if (persisted === null) {
-      const { adoptedText, discarded } = adoptLegacyComposerDrafts(window.localStorage, boxSlug);
+      const { adoptedText, discarded } = adoptLegacyComposerDrafts(window.localStorage, { boxSlug, scope });
       if (adoptedText !== null) {
         editor.setText(adoptedText);
         console.info(

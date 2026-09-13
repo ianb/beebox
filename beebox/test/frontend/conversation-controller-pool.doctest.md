@@ -8,7 +8,7 @@ import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../src/frontend/src/machines/chatMachine.js";
 import { ConversationControllerPool } from "../../src/frontend/src/components/chat/conversation/controller-pool.js";
 import { StartRecords } from "../../src/frontend/src/components/chat/conversation/start-records.js";
-import { conversationStorageScope } from "../../src/frontend/src/components/chat/conversation/storage-scope.js";
+import { storageScopeFor } from "../../src/frontend/src/lib/storage-scope.js";
 import { settleReceipt, expectReceipt } from "../../src/frontend/src/input/targets/receipts.js";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function fixture() {
@@ -61,7 +61,7 @@ await chatSend.finished();
 const paperRecords = new StartRecords(f.storage, paper.storageScope);
 const chatRecords = new StartRecords(f.storage, chat.storageScope);
 const isolated = {
-  scopes: [paper.storageScope, chat.storageScope, conversationStorageScope("/test1/api")],
+  scopes: [paper.storageScope, chat.storageScope, storageScopeFor("/test1/api")],
   paper: [paperRecords.get("paper-start")?.firstEmissionId, paperRecords.get("chat-start")],
   chat: [chatRecords.get("chat-start")?.firstEmissionId, chatRecords.get("paper-start")],
 };

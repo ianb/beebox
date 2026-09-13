@@ -8,7 +8,8 @@ import { href, toSearch } from "../../../lib/routing";
 import { parseViewUrl, serializeViewUrl, type ViewTarget, type NavigateHint } from "../../../lib/view-url";
 import { useMobileChatViewport } from "../everywhere/use-mobile-card-navigation";
 import { projectWorkspace, reduceWorkspace, workspaceTabPaths, type WorkspaceAction, type PaneId } from "./workspace-state";
-import { serializeWorkspaceState, conversationStorageScope } from "./workspace-storage";
+import { serializeWorkspaceState } from "./workspace-storage";
+import { storageScopeFor } from "../../../lib/storage-scope";
 import { createWorkspaceBrowserStore } from "./workspace-browser-store";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
@@ -78,7 +79,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   const pendingAdoption = useSyncExternalStore(store.subscribe, store.getAdoption, store.getAdoption);
   const notice = useSyncExternalStore(store.subscribe, store.getNotice, store.getNotice);
   const identity = conversationTarget?.kind === "session" ? conversationTarget.sessionId : conversationTarget?.clientConversationId ?? "";
-  const scope = conversationStorageScope(apiBase);
+  const scope = storageScopeFor(apiBase);
   const projection = projectWorkspace(state, viewport);
   const routeBound = workspaceRouteBound(location.state.bbxConversation, identity);
   const ready = routeBound && storedIdentity === identity;

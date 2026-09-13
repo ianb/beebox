@@ -38,13 +38,16 @@ export interface DictationDraft {
 }
 
 /**
- * localStorage key for a box's dictation draft — one singleton slot per box,
- * not per session (mirrors the composer's `emissionKey`). The box slug scopes
- * drafts so two boxes open in different tabs don't collide.
+ * localStorage key for a box instance's dictation draft — one singleton slot,
+ * not per session (mirrors the composer's `emissionKey`, including its scoping
+ * rule). `scope` is `storageScopeFor(apiBase)`: empty in production, so the key
+ * written there is unchanged, and `main/test1` or `worktree-foo/test1` behind
+ * the dev router, which serves every checkout from one origin where the box slug
+ * alone cannot tell two `test1`s apart.
  */
-export function draftKey(opts: { boxSlug: string | undefined }): string {
-  const box = opts.boxSlug ?? "default";
-  return `${KEY_PREFIX}:${box}:singleton`;
+export function draftKey(opts: { boxSlug: string | undefined; scope: string }): string {
+  const instance = opts.scope === "" ? opts.boxSlug ?? "default" : opts.scope;
+  return `${KEY_PREFIX}:${instance}:singleton`;
 }
 
 /**
@@ -57,11 +60,15 @@ export function draftKey(opts: { boxSlug: string | undefined }): string {
  */
 export function adoptLegacyDictationDrafts(
   storage: KeyValueStorage,
-  boxSlug: string | undefined,
+  instance: { boxSlug: string | undefined; scope: string },
 ): { adopted: DictationDraft | null; discarded: number } {
-  const box = boxSlug ?? "default";
-  const prefix = `${LEGACY_KEY_PREFIX}:${box}:`;
-  const singleton = draftKey({ boxSlug });
+  // Legacy keys carry the box slug alone, so behind the dev router they cannot
+  // be attributed to a checkout. Adoption runs in production only; a dev
+  // checkout leaves them untouched rather than importing a draft it may not own
+  // or deleting one it cannot restore.
+  if (instance.scope !== "") return { adopted: null, discarded: 0 };
+  const prefix = `${LEGACY_KEY_PREFIX}:${instance.boxSlug ?? "default"}:`;
+  const singleton = draftKey(instance);
   const keys: string[] = [];
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);

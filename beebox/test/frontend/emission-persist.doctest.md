@@ -43,19 +43,65 @@ const draft = {
 
 ```ts
 const s = fakeStorage();
-savePersistedEmission(s, { boxSlug: "test1", draft, updatedAt: 1000 });
-const loaded = loadPersistedEmission(s, "test1");
+savePersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 1000 });
+const loaded = loadPersistedEmission(s, { boxSlug: "test1", scope: "" });
 loaded?.text
 => half a thought [file1]
 
 JSON.stringify(loaded?.files[0]?.state)
 => {"status":"uploaded","path":"_tmp/2026-07-04_report.pdf"}
 
-emissionKey("test1")
+emissionKey({ boxSlug: "test1", scope: "" })
 => bbx-input-emission:test1
 
-emissionKey(undefined)
+emissionKey({ boxSlug: undefined, scope: "" })
 => bbx-input-emission:default
+```
+
+## One slot per box INSTANCE, not per box slug
+
+The dev router serves every checkout from one origin at
+`/<main|worktree>/<box>/…`, so two worktrees can each have a `test1` and the
+slug alone does not tell them apart. They shared a draft — including its `tmp/…`
+attachment paths, which the receiving clone then reported as expired
+(`issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md`).
+
+Production's scope is empty, and there the key is exactly what it always was, so
+a real unsent draft is not orphaned by a dev-only fix.
+
+```ts
+JSON.stringify([
+  emissionKey({ boxSlug: "test1", scope: "main/test1" }),
+  emissionKey({ boxSlug: "test1", scope: "worktree-drafts/test1" }),
+  emissionKey({ boxSlug: "test1", scope: "" }),
+])
+=> ["bbx-input-emission:main/test1","bbx-input-emission:worktree-drafts/test1","bbx-input-emission:test1"]
+```
+
+Two checkouts writing at once keep their own text:
+
+```ts continue
+const shared = fakeStorage();
+savePersistedEmission(shared, { boxSlug: "test1", scope: "main/test1", draft: { ...draft, text: "from main" }, updatedAt: 1000 });
+savePersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1", draft: { ...draft, text: "from the worktree" }, updatedAt: 1001 });
+JSON.stringify([
+  loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" })?.text,
+  loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" })?.text,
+])
+=> ["from main","from the worktree"]
+```
+
+A legacy per-session draft carries the slug alone, so in a dev checkout it
+cannot be attributed to one. Adoption there takes nothing — and, just as
+importantly, deletes nothing, since deleting is the outcome that cannot be
+undone.
+
+```ts continue
+const legacy = fakeStorage();
+legacy.setItem("bbx-composer-draft:test1:sess-a", JSON.stringify({ text: "whose is this?", updatedAt: 5 }));
+const skipped = adoptLegacyComposerDrafts(legacy, { boxSlug: "test1", scope: "worktree-drafts/test1" });
+JSON.stringify([skipped, Object.keys(legacy.dump())])
+=> [{"adoptedText":null,"discarded":0},["bbx-composer-draft:test1:sess-a"]]
 ```
 
 ## A send empties the composer, and the key goes with it
@@ -74,13 +120,13 @@ const s = fakeStorage();
 const empty = { text: "", images: [], files: [], selections: [] };
 
 // Dictating persists a draft…
-commitPersistedEmission(s, { boxSlug: "test1", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
 Object.keys(s.dump()).join(",")
 => bbx-input-emission:test1
 
 // …and the send that empties the store takes the key with it. No window.
-commitPersistedEmission(s, { boxSlug: "test1", draft: empty, updatedAt: 2000 });
-Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, "test1"))
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: empty, updatedAt: 2000 });
+Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, { boxSlug: "test1", scope: "" }))
 => 0 keys | recovery offers: null
 
 // Emptiness is all four slices, not just the text.
@@ -88,8 +134,8 @@ isEmptyEmissionDraft(empty) + "," + isEmptyEmissionDraft({ ...empty, text: "x" }
 => true,false,false
 
 // A non-empty draft still saves normally (that's the debounced typing path).
-commitPersistedEmission(s, { boxSlug: "test1", draft, updatedAt: 3000 });
-loadPersistedEmission(s, "test1")?.text
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 3000 });
+loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text
 => half a thought [file1]
 ```
 
@@ -130,7 +176,7 @@ s.setItem("bbx-composer-draft:test1:sess-a", JSON.stringify({ text: "older draft
 s.setItem("bbx-composer-draft:test1:sess-b", JSON.stringify({ text: "newest draft", updatedAt: 300 }));
 s.setItem("bbx-composer-draft:test1:sess-c", JSON.stringify({ text: "   ", updatedAt: 900 }));
 s.setItem("bbx-composer-draft:otherbox:sess-z", JSON.stringify({ text: "not ours", updatedAt: 999 }));
-const result = adoptLegacyComposerDrafts(s, "test1");
+const result = adoptLegacyComposerDrafts(s, { boxSlug: "test1", scope: "" });
 result.adoptedText
 => newest draft
 
@@ -156,14 +202,14 @@ what strips the token on the way back in.
 const uploading = { id: 2, originalName: "big.pdf", size: 9, mimetype: "application/pdf", state: { status: "uploading", progress: 0.4 } } as const;
 const midUpload = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
 const s2 = fakeStorage();
-savePersistedEmission(s2, { boxSlug: "test1", draft: midUpload, updatedAt: 2000 });
-JSON.stringify(loadPersistedEmission(s2, "test1")?.files.map((f) => [f.id, f.state.status]))
+savePersistedEmission(s2, { boxSlug: "test1", scope: "", draft: midUpload, updatedAt: 2000 });
+JSON.stringify(loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files.map((f) => [f.id, f.state.status]))
 => [[1,"uploaded"],[2,"uploading"]]
 ```
 
 ```ts continue
 const { live, dead } = partitionFiles(
-  loadPersistedEmission(s2, "test1")?.files ?? [],
+  loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files ?? [],
   new Set(["_tmp/2026-07-04_report.pdf"]),
 );
 JSON.stringify({ live: live.map((f) => f.id), dead: dead.map((f) => f.id) })
