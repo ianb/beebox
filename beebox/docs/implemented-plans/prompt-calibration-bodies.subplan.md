@@ -6,7 +6,7 @@ issues: []
 ---
 # Skill bodies and operational guidance
 
-Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring, the launch rewrite, targeted issue-workflow changes, and security-report compression have landed through `64930f05e`. The follow-on sections record those changes. The final issue-contract grouping and [bounded four-model pilot](../prompt-calibration-pilot.md) complete the approved editorial scope.
+Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring, the launch rewrite, targeted issue-workflow changes, and security-report compression have landed through `64930f05e`. The follow-on sections record those changes. The final issue-contract grouping and [bounded four-model pilot](../reports/prompt-calibration-pilot-2026-09-12.md) complete the approved editorial scope.
 
 **Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with an inline briefing template; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.
 
@@ -368,7 +368,7 @@ private staging's no-op effect at the public root, suggested area names, the
 test1 exception, duplicate-of-closed checks, and relevant queue/clone pointers.
 No issue field, transition, or permission policy changed.
 
-The [pilot report](../prompt-calibration-pilot.md) records 12 routing cases and
+The [pilot report](../reports/prompt-calibration-pilot-2026-09-12.md) records 12 routing cases and
 five authority cases per model, followed by one B1 recheck per model. It exposed
 fictional constraints/symptoms copied from a worked launch example. Replacing
 that example with explicit fields retained briefing scaffolding, and the four

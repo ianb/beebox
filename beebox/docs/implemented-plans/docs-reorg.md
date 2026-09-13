@@ -39,7 +39,7 @@ findability), each spot-checking claims against the code tree.
 
 `docs/plans/` claims to hold active proposals; in reality **only ~5 of 52
 files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
-`pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
+`pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 
 - **35 of 52 files aren't plans at all** — the `openclaw-hermes/` (30) and

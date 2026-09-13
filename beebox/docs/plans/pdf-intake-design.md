@@ -6,6 +6,17 @@ issues: []
 ---
 # PDF Intake
 
+**Lifecycle:** partial historical plan. Current behavior is owned by
+`src/schemas/pdf.ts`, `src/core/commands/scan-import-pdf.ts`,
+`src/core/commands/pdf-extract.ts`, and
+`src/core/commands/pdf-reanalyze.ts`. `bbx scan-import` accepts one PDF per
+session; a PDF with a usable text layer becomes a `pdf` card, and
+`bbx pdf reanalyze <card>` refreshes extraction. Read those sources and the
+generated `pdf` card instructions for current operation; the
+[scan-upload contract](../scan-upload-contract.md) covers scanner clients. The sections below
+retain the original design rationale and must be read with the supersession
+notes that follow.
+
 Three things here are **superseded**; they are marked SUPERSEDED inline below:
 
 1. The card type is **`document`**, not `.pdf.card` — with a `format:` field

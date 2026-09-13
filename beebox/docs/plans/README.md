@@ -75,19 +75,23 @@ an actual plan in this directory.
   docs-reorg cleared the backlog that accumulated before this was
   wired.
 
-## Migration (done)
+## Historical migration account (done)
 
-The first backlog batch was migrated and all `docs/…` references rewritten:
+This dated account records the first backlog migration; it is not the current
+plan index. The first backlog batch was migrated and its then-known `docs/…`
+references rewritten:
 
 - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
   (+ `.review.md`, `.review-adapted-trial.md`), `markdoc-format-investigation.md`,
   `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
   (feature shipped, despite the doc's stale "proposal" header — later
   found to be inaccurate; see 2026-07-04 below).
-- → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
-  `source-editor.md`. (`triage.md` later turned out to be fully built
-  and was promoted to `docs/triage.md` as a reference doc — see the
-  2026-07 doc reorg.)
+- → `plans/` (still open): `pdf-intake-design.md` (partially implemented; its
+  remaining historical and superseded material is labeled in the plan),
+  `source-editor.md` (unimplemented proposal). The intake → triage → handle
+  core was built, while several mechanisms in its design were not; current
+  operation is in `docs/triage.md` and the mixed design record is in
+  `docs/reports/triage-design-2026-09-13.md`.
 
 **2026-07-04:** `implemented-plans/narration-mode-design.md` was moved back
 to `plans/narration-mode.md` — the doc opens "Status: proposal, for

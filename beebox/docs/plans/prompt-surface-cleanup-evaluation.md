@@ -1,10 +1,10 @@
 ---
-title: "Prompt Surface Cleanup — IA Review"
+title: "Prompt Surface Cleanup — Evaluation"
 status: active
 workstream: unknown
 issues: []
 ---
-# Prompt Surface Cleanup — IA Review
+# Prompt Surface Cleanup — Evaluation
 
 This plan acts on the boxholder's commentary on the beebox chat/agent
 **prompt and output-vocabulary surface** (the `ia-review` box review). It now

@@ -6,6 +6,12 @@ issues: []
 ---
 # Source Editor Plan
 
+**Lifecycle:** active proposal; no editable source renderer is implemented.
+The current frontend has read-only `Source` and `Plaintext` renderers
+(`src/frontend/src/renderers/builtins.tsx` and `plaintext.tsx`). The Stage,
+Save, crash-cache, conflict, and editor endpoint behavior below is proposed,
+not an operating contract.
+
 ## Overview
 
 A web-frontend editor that edits a file's raw text source. Surfaces alongside the existing "Plaintext" view as another renderer in the FileView toggle. Works for any text file in the box, including `.card` XML.

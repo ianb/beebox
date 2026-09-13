@@ -657,43 +657,12 @@ rule, and when NOT to use them: [tours.md](tours.md).
 
 ## Field Tests (agent-operator, expensive, not a gate)
 
-**Location:** `src/field-test/`, scenarios in `field-tests/<scenario>/`
-**Run:** `bbx field-test run <scenario>` (e.g. `bbx field-test run onboarding-first-days`)
-
-A persistent Opus "operator" with a persona works through a scenario's
-checklist against a fresh, disposable box through the real web UI and real box
-agents — not scripted steps, but goals ("save this recipe photo"), so a
-feature that's possible but hidden reads as a finding rather than a pass. Real
-Opus, a real headless browser (`bin/browse`), and real agent processing make
-this the most expensive tier by design: it runs weekly or on demand, **never
-as a CI gate**. Design rationale, the run lifecycle, and the scenario format
-live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
-
-```bash
-bbx field-test list                        # scenarios in the corpus
-bbx field-test run onboarding-first-days    # a full run (expensive — real Opus)
-bbx field-test report <run-dir>             # regenerate report.md from results.json
-```
-
-**Where results land:** `~/src/boxes/field-runs/<scenario>-<timestamp>/` —
-`results.json` (raw, machine-readable, written after every checklist item so a
-run that dies partway still leaves evidence), `report.md` (the rollup: a
-per-item table, findings from failed checks and harness events, and a harness
-event log), `questionnaires/<item-id>.md` (each debrief's answers, verbatim),
-`activities/<item-id>.md` (the operator's closing note per item), and
-`screenshots/<item-id>/`.
-
-**The "Visual flags (unvetted)" section of `report.md` is not vetted.** It is
-the operator's own free-text answer to "did anything look visually off,"
-shown as-is with screenshot links — the operator's visual judgment is
-explicitly not trusted, so every flag there needs a human to actually look at
-the screenshot before it means anything. Findings elsewhere in the report come
-only from structured signals — failed checks, harness events, and the
-questionnaire's own bookkeeping (unanswered questions, unresolved screenshot
-refs) — never from paraphrasing the operator's free-text prose.
-
-Findings are triaged by a human (or a triage agent) into `issues/` — a field
-run never auto-files.
+Field tests use a persona operator, a disposable real box, its agents, and the
+real web UI to test realistic discoverability and end-to-end use. They run
+weekly or on demand and never gate CI or a merge. See the current
+[field-testing runbook](field-testing.md) for commands, artifacts, visual-review
+rules, and issue-triage boundaries. The
+[implemented plan](implemented-plans/agent-field-tests.md) is design history.
 
 ## Choosing the Right Approach
 

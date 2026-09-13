@@ -13,7 +13,7 @@ the old instructions. No broad evaluation subsystem was added.
 
 ## Method and reproducibility
 
-[Fixtures, catalog, source hashes, and normalized responses](prompt-calibration-pilot.results.json)
+[Fixtures, catalog, source hashes, and normalized responses](prompt-calibration-pilot-2026-09-12.results.json)
 retain the inputs and all 12 model-call outputs. Committed authority documents
 resolve at the recorded starting revision; the uncommitted issue snapshot and
 rechecked launch skill and exact prompt preambles are embedded. Required/forbidden routing
@@ -118,7 +118,7 @@ stated decisions, not operational truthfulness after tool execution.
 
 ## What remains open
 
-The [trigger-evaluation issue](../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md)
+The [trigger-evaluation issue](../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md)
 retains native skill-loading traces, fuller positive/negative coverage, repeated
 runs, and any before/after comparison. The historical vendored eval-tool path is
 absent; the issue now says so. No periodic evaluation or new harness is implied

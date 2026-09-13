@@ -20,6 +20,7 @@ import path from "node:path";
 import { execa } from "execa";
 
 import type { BrowsedDocument, DirectoryEntry, DocumentKind } from "../shared/documents.js";
+import { documentLifecycle, planStatusFromSource } from "../../../beebox/src/dev/document-lifecycle.js";
 import { emptyChanges, workstreamsForPath, type WorkstreamChanges } from "./workstream-changes.js";
 
 export class InvalidDocumentPathError extends Error {
@@ -177,6 +178,7 @@ async function readDirectory(
       name: dirent.name,
       relPath: relPath === "" ? dirent.name : `${relPath}/${dirent.name}`,
       kind: dirent.isDirectory() ? ("directory" as const) : kindForPath(dirent.name),
+      lifecycle: documentLifecycle(relPath === "" ? dirent.name : `${relPath}/${dirent.name}`, null),
     }))
     .toSorted((a, b) => {
       if ((a.kind === "directory") !== (b.kind === "directory")) return a.kind === "directory" ? -1 : 1;
@@ -208,6 +210,7 @@ export async function readDocument(
       relPath,
       workstream,
       kind: "directory",
+      lifecycle: documentLifecycle(relPath, null),
       tracked: false,
       text: null,
       entries: await readDirectory(absolute, { relPath }),
@@ -219,7 +222,7 @@ export async function readDocument(
 
   const kind = kindForPath(relPath);
   const tracked = await isTracked(root, relPath);
-  const base = { relPath, workstream, kind, tracked, entries: [], bytes: stats.size, ...lens };
+  const base = { relPath, workstream, kind, lifecycle: documentLifecycle(relPath, null), tracked, entries: [], bytes: stats.size, ...lens };
 
   if (stats.size > MAX_TEXT_BYTES) {
     const mb = (stats.size / (1024 * 1024)).toFixed(1);
@@ -230,5 +233,6 @@ export async function readDocument(
   if (looksBinary(buffer)) {
     return { ...base, text: null, problem: "not text — download it rather than reading it here" };
   }
-  return { ...base, text: buffer.toString("utf8"), problem: null };
+  const text = buffer.toString("utf8");
+  return { ...base, lifecycle: documentLifecycle(relPath, planStatusFromSource(text)), text, problem: null };
 }

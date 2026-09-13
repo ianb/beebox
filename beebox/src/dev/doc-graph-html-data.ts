@@ -34,7 +34,7 @@ export const PILLARS: Pillar[] = [
     vibe: "Cards are the atoms. Everything else is just a way of moving them, reading them, or judging them. The simplicity is load-bearing.",
     color: "#c2410c",
     entry: "docs/cards-as-markdown.md",
-    entryNote: "The deep design RFC. 2,553 lines. The first ~200 are the spine; skim the rest unless you're migrating.",
+    entryNote: "The current card-format reference. Read the focused section you need; migration history lives in implemented-plans.",
     supporting: [
       { path: "docs/adding-schemas.md", note: "Read this before writing a new card type. Saves an embarrassing amount of time." },
       { path: "docs/migrations.md", note: "What to run when the card format changes under a live box." },
@@ -111,7 +111,7 @@ export const PILLARS: Pillar[] = [
       { path: "docs/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
       { path: "docs/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
     ],
-    code: ["test/", "src/test-lib/"],
+    code: ["test/", "test/helpers/"],
   },
   {
     id: "boxes",
@@ -129,7 +129,7 @@ export const PILLARS: Pillar[] = [
   {
     id: "deploy",
     name: "Deploy & Ops",
-    blurb: "Auto-deploy on commit to main; rsync to a small VPS; server runs tsx directly.",
+    blurb: "Auto-deploy on commit to main; rsync to a small VPS; production runs the bundled CLI.",
     vibe: "Two scripts and a post-commit hook. If it ever needed Docker, something would have gone wrong.",
     color: "#475569",
     entry: "deploy/README.md",
