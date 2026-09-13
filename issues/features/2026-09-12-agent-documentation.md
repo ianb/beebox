@@ -66,3 +66,4 @@ Landed the web-interface page and the use-to-feature mapping.
 Landed shape-it-later, provenance, and the specific voice page.
 
 Landed concepts/enriched-markdown.md (quote, source, todo as the baseline marks).
+ChatGPT retry against beebox.run: the absolute links work (boxholder, 2026-09-12 evening).
