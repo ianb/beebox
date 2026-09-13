@@ -15,6 +15,7 @@ import {
   updateFeaturesForSession,
 } from "../../src/core/chat/session/history.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { FeatureStore } from "../../src/core/chat/session/features.js";
 import { resolveRecordedChatEngine } from "../../src/core/chat/session/engine.js";
 import { reserveChatSession, ChatReservationStore } from "../../src/core/chat/session/reserve.js";
 import { clearBoxConfigCache, loadAgentEngine } from "../../src/core/box/config.js";
@@ -152,6 +153,56 @@ print(`features kept:   ${JSON.stringify(await getFeaturesForSession(box.root, c
 =>
 recorded after:  claude
 features kept:   {"narration":"on"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An unrecorded session's flags are not written under a guess
+
+`FeatureStore.persist` is the other way a row gets created, and it is not a
+client control — an agent `<chat-app>` delta in its own turn reaches it. So the
+`NOT_FOUND` that `chat.setFeature` answers for an unrecorded id does not cover
+it, and resolving "recorded engine, else the box default" here would reintroduce
+the restamping above one layer up.
+
+It declines instead. A session nothing recorded keeps its flags in memory for
+the session rather than writing a row whose invented engine would then outrank
+the real answer if the records came back.
+
+```ts
+const box = await makeTmpBox();
+const store = new FeatureStore({
+  boxRoot: box.root,
+  getSessionId: () => "77777777-7777-4777-8777-777777777777",
+  onChange: () => {},
+});
+
+await store.set("narration", "on");
+print(`in memory: ${store.get().narration}`);
+print(`written:   ${JSON.stringify(await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777"))}`);
+=>
+in memory: on
+written:   null
+```
+
+A recorded session persists as it always did:
+
+```ts continue
+const recorded = "66666666-6666-4666-8666-666666666666";
+await appendHistory(box.root, { sessionId: recorded, engine: "codex" });
+const recordedStore = new FeatureStore({
+  boxRoot: box.root,
+  getSessionId: () => recorded,
+  onChange: () => {},
+});
+await recordedStore.set("narration", "on");
+print(`written:   ${JSON.stringify(await getFeaturesForSession(box.root, recorded))}`);
+print(`engine kept: ${(await loadHistoryEntries(box.root)).find((e) => e.id === recorded).engine}`);
+=>
+written:   {"narration":"on"}
+engine kept: codex
 ```
 
 ```ts cleanup
