@@ -6,7 +6,7 @@ import { expectReceipt, settleReceipt } from "../../../input/targets/receipts";
 import { getApiBase } from "../../../api-core";
 import { StartRecords, ConversationRoutingError, type RoutingStorage } from "./start-records";
 import { startAwakeTimeout } from "../../../../../shared/awake-timeout.js";
-import { conversationStorageScope } from "./storage-scope";
+import { storageScopeFor } from "../../../lib/storage-scope";
 
 export interface SessionAssignment { clientConversationId: string; contextDir: string }
 export type ChatController = ActorRefFrom<typeof chatMachine>;
@@ -50,7 +50,7 @@ export class ConversationControllerPool {
   }) {
     this.readApiBase = options.getApiBase ?? getApiBase;
     this.apiBase = this.readApiBase();
-    this.storageScope = conversationStorageScope(this.apiBase);
+    this.storageScope = storageScopeFor(this.apiBase);
     try { this.starts = new StartRecords(options.storage, this.storageScope); }
     catch (error) {
       this.starts = null;

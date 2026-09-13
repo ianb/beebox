@@ -8,7 +8,6 @@ usable in-memory state plus notices that the UI adapter can report.
 import { createEmptyWorkspaceState, type WorkspaceState } from "../../src/frontend/src/components/chat/workspace/workspace-state.js";
 import { createWorkspaceBrowserStoreWithStorage, type WorkspaceStorage } from "../../src/frontend/src/components/chat/workspace/workspace-browser-store.js";
 import {
-  conversationStorageScope,
   importTrustedLegacyWorkspace,
   parseWorkspaceState,
   restoreWorkspaceState,
@@ -16,6 +15,7 @@ import {
   storageUnavailableNotice,
   workspaceStorageKey,
 } from "../../src/frontend/src/components/chat/workspace/workspace-storage.js";
+import { storageScopeFor } from "../../src/frontend/src/lib/storage-scope.js";
 
 function target(path: string) {
   return { path, viewer: null, params: {}, viewState: null };
@@ -48,7 +48,7 @@ const legacyRaw = JSON.stringify({
 ## The API base isolates same-origin development worktrees
 
 ```ts
-conversationStorageScope("/paper-cards/test1/api")
+storageScopeFor("/paper-cards/test1/api")
 => paper-cards/test1
 
 workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" })
@@ -61,7 +61,7 @@ workspaceStorageKey({ apiBase: "/other-worktree/test1/api", logicalConversationI
 Production URLs retain their box identity too.
 
 ```ts continue
-conversationStorageScope("/my-box/api/")
+storageScopeFor("/my-box/api/")
 => my-box
 ```
 
