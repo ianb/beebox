@@ -1,11 +1,11 @@
 ---
 title: "browser-task follow-ups: cadence, history and subject, review table"
-status: active
+status: implemented
 workstream: browser-tasks
 issues:
-  - ../../../issues/features/2026-09-13-browser-task-cadence-and-staleness.md
-  - ../../../issues/features/2026-09-13-browser-task-history-and-subject.md
-  - ../../../issues/features/2026-09-13-browser-task-inbox-table-view.md
+  - ../../../issues/closed/features/2026-09-13-browser-task-cadence-and-staleness.md
+  - ../../../issues/closed/features/2026-09-13-browser-task-history-and-subject.md
+  - ../../../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md
 ---
 # browser-task follow-ups: cadence, history and subject, review table
 
