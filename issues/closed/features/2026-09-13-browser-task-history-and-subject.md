@@ -7,7 +7,10 @@ labels: [browser-task]
 filed-by: agent
 discovered-by: the mn-pottery box agent, in its report on the first real run
 discovered-in: worktree-browser-tasks — first Facebook page scan (2026-09-12)
+resolution: implemented
 ---
+
+> Closed 2026-09-12 as `implemented` by commit 6f258d97a: delivers a `runs:` list appended by the drain and a `subject: { ref }` field, both rendered on the view.
 
 Two gaps the first real run showed on the card itself.
 
