@@ -54,9 +54,19 @@ steps:
             FOR EACH BATCH, in `inbox/`, oldest first:
 
 
-            1. Read `records.json`. Read `filed.json` if it exists: it is a
-            JSON array of record indices already filed by an earlier,
-            interrupted run. Skip those indices.
+            1. Read `records.json`. Compare `coverage` with the task card's
+            `limit`: a scan that stopped short of the bound, or overshot it,
+            is worth a line in the run summary (step 4). Read `coverage.notes`
+            for what the executor could not do. Read `filed.json` if it
+            exists: it is a JSON array of record indices already filed by an
+            earlier, interrupted run. Skip those indices.
+
+
+            1b. Scope pass. The executor cannot know what this box cares
+            about; you can. Before filing, mark which records are out of
+            scope for this box (a fair in another state, a post about the
+            subject's other business) and skip them, noting why in the run
+            summary. Use any `group` labels to file one event once.
 
 
             2. For each remaining record, in index order:
@@ -84,6 +94,13 @@ steps:
                  `<Name>.attach/processed/<batch>/`, delete the remaining
                  files in the batch dir (their copies now live on the cards),
                  remove the empty batch dir, and commit.
+
+
+            4. Append one line to the task card body under a `## Runs`
+            heading (create it at the end if absent):
+            `- <date>: batch <id>, scanned N, kept K, filed F, skipped S
+            (<reason>), stopped at <stoppedAt>`. This is the scan history the
+            card otherwise loses.
 
 
             A batch whose `coverage.reason` is `login-wall` or `rate-limited`

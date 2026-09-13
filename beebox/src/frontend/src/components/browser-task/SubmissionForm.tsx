@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import { getApiBase } from "../../api";
 import { withMobileAuth } from "../../lib/mobile-auth";
 import { isRecord } from "@shared/is-record";
+import { MANIFEST_SHAPE_HINT } from "@shared/browser-task-batch";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -127,6 +128,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
         {disabledReason !== null ? <Text as="p" tone="danger">{disabledReason}</Text> : null}
         <label className="block">
           <Text as="span" size="sm">Add files (a {MANIFEST_FILE} plus the files it names; add in several rounds if needed)</Text>
+          <Text as="span" size="xs" tone="subtle" className="block">{MANIFEST_SHAPE_HINT}</Text>
           <input
             ref={inputRef}
             type="file"

@@ -38,6 +38,21 @@ JSON.stringify(getTemplate("browser-task")?.defaultForTypes)
 => ["browser-task"]
 ```
 
+Without a prompt the template emits the four-heading scaffold, and `limit` is data:
+
+```ts
+const scaffolded = parseCardText(createBrowserTaskTemplate({ title: "Scan", source: "https://example.test/feed" }), { source: "Scan.browser-task.card", schemas });
+JSON.stringify([...String(scaffolded.fields["body"]).matchAll(/^## (.+)$/gm)].map((m) => m[1]))
+=> ["What to look for","What does not count","How far to go","What each record must contain"]
+
+const bounded = parseCardText("---\ntype: browser-task\nsource: https://x.test\nlimit:\n  posts: 40\n  since: 2025-01-01\n---\nx\n", { source: "B.browser-task.card", schemas });
+JSON.stringify(bounded.fields["limit"])
+=> {"posts":40,"since":"2025-01-01"}
+
+parseCardText("---\ntype: browser-task\nsource: https://x.test\nlimit:\n  since: soon\n---\nx\n", { source: "B.browser-task.card", schemas })
+=> throws CardIOError
+```
+
 The template emits an open task with the prompt as the body:
 
 ```ts
