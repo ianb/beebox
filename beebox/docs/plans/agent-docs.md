@@ -545,12 +545,16 @@ served as `text/markdown`, which ChatGPT and Gemini fetchers report as empty
 (a `_headers` file serves the docs tree, both entry files, and the page
 twins as `text/plain`); and unknown paths returned the home page with a 200
 (a `404.html` now makes a guessed URL a real miss; a `robots.txt` allows
-all). Confirmed by the boxholder after the deploy: with absolute links and
-plain-text content types, a chat agent follows the corpus. The fallback,
-linking spartan HTML renderings of the same files, is not needed. (Two more
-causes surfaced along the way: main had not been pushed for two hours, and
-the Cloudflare build of main failed on a scrub-gate hit nobody saw locally.
-Finish now runs the canonical site build before a merge and the post-merge
-hook says when main is ahead of origin.) Also added: `capabilities/integrity.md` (links parsed and
+all). After the deploy the boxholder tried a chat agent again: absolute links
+helped but the agent still "did dumb stuff" with the markdown corpus. The
+corpus therefore renders to spartan HTML (each page beside its markdown
+twin), and the front page is itself a rendered markdown file carrying a
+deep index of every page except the children of `dev/` and `install/`,
+whose own entry pages (`llms-dev.txt`, `llms-install.txt`) carry full
+indexes of their children. `llms.txt` returns HTML; the `.md` twins stay
+plain text. (Two more causes surfaced along the way: main had not been
+pushed for two hours, and the Cloudflare build of main failed on a
+scrub-gate hit nobody saw locally. Finish now runs the canonical site build
+before a merge and the post-merge hook says when main is ahead of origin.) Also added: `capabilities/integrity.md` (links parsed and
 checked, references rewritten on a move, validation at several layers).
 

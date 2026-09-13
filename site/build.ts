@@ -15,7 +15,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
-import { buildDocsCorpus, renderAgentLlmsTxt, renderDevLlmsTxt, type SitePageSummary } from "./docs.js";
+import { buildDocsCorpus, type SitePageSummary } from "./docs.js";
+import { writeEntryPages } from "./docs-html.js";
+import { docsOrigin } from "./docs-origin.js";
 import { baseFromBranch, normalizeBase, resolveInternalHref } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
@@ -87,6 +89,8 @@ function resolveBase(args: CliArgs): string {
 interface BuiltPage {
   stem: string;
   frontmatter: PageFrontmatter;
+  /** Base-prefixed href of the rendered page itself, for llms.txt's "Site pages" section. */
+  href: string;
   /** Site-root-relative internal link targets found on the page. */
   linkTargets: { target: string; href: string }[];
 }
@@ -126,10 +130,11 @@ export function twinMarkdown(
   return `${flat.trimStart().trimEnd()}\n`;
 }
 
-function sitePageSummaries(pages: BuiltPage[]): SitePageSummary[] {
+function sitePageSummaries(pages: BuiltPage[], base: string): SitePageSummary[] {
+  const origin = docsOrigin(base);
   return pages.map((p) => ({
     title: p.frontmatter.title,
-    stem: p.stem,
+    href: `${origin}${p.href}`,
     summary: p.frontmatter.summary,
     unlisted: p.frontmatter.unlisted === true,
   }));
@@ -204,6 +209,7 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
     built.push({
       stem: card.slug,
       frontmatter,
+      href: route.href,
       linkTargets: linkTargets.map((target) => ({ target, href: target })),
     });
   }
@@ -233,43 +239,21 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
 
-  // Agent-docs corpus (site/docs.ts): dist/docs/ plus the inputs for llms.txt's
-  // spine and directory sections. Off for box-export dry-runs, which validate
-  // a temporary workbench card export and have no bearing on the docs corpus.
+  // Agent-docs corpus (site/docs.ts): dist/docs/ plus the three entry points
+  // (llms.txt, llms-dev.txt, llms-install.txt). Off for box-export dry-runs,
+  // which validate a temporary workbench card export and have no bearing on
+  // the docs corpus.
   const docsSummary: string[] = [];
+  let entryStems: string[] = [];
   if (options.buildAgentDocs !== false) {
     const docsResult = await buildDocsCorpus({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, beeboxDir: BEEBOX_DIR, distDir, base });
     docsSummary.push(docsResult.summaryLine);
-    await fs.writeFile(
-      path.join(distDir, "llms.txt"),
-      renderAgentLlmsTxt({
-        base,
-        readme: docsResult.readme,
-        spine: docsResult.spine,
-        directories: docsResult.directories,
-        sitePages: sitePageSummaries(built),
-        hasDevEntry: docsResult.dev !== undefined,
-      }),
-      "utf8",
-    );
-    if (docsResult.dev !== undefined) {
-      await fs.writeFile(
-        path.join(distDir, "llms-dev.txt"),
-        renderDevLlmsTxt({
-          base,
-          readme: docsResult.dev.readme,
-          startHere: docsResult.dev.startHere,
-          files: docsResult.dev.files,
-          also: docsResult.dev.also,
-        }),
-        "utf8",
-      );
-    }
+    entryStems = await writeEntryPages({ docsResult, distDir, base, sitePages: sitePageSummaries(built, base) });
   }
 
   // Cloudflare Pages control files: plain-text content type for every
   // machine-facing file, a real 404, a permissive robots.txt (docs-static.ts).
-  await writeStaticFiles({ distDir, base, twinStems: built.map((page) => page.stem) });
+  await writeStaticFiles({ distDir, base, twinStems: built.map((page) => page.stem), entryStems });
 
   // Input manifest LAST, once all output exists: the dev router compares it
   // against the current sources to decide whether to auto-rebuild. A partial

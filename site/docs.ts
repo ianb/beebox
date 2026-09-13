@@ -7,14 +7,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { loadAuthoredDocs, DocsAuthoredError } from "./docs-authored.js";
 import { renderComparedCaveat } from "./docs-compared.js";
+import { renderCorpusPageHtml, renderDirectoryIndexHtml } from "./docs-html.js";
 import { loadGeneratedDocs } from "./docs-generated.js";
-import { renderDirectoryIndex, type DirectoryPurpose } from "./docs-index.js";
+import { DEEP_DIRS, renderDirectoryIndex, type DirectoryPurpose, type DirectorySection } from "./docs-index.js";
 import { rewriteAuthoredLinks } from "./docs-links.js";
 import { loadManifestEntries, loadPromotedDocs } from "./docs-manifest.js";
 import { docsOrigin } from "./docs-origin.js";
 import type { PublishedDoc } from "./docs-types.js";
 
-export { renderAgentLlmsTxt, renderDevLlmsTxt, type DevLlmsTxtParams, type SitePageSummary } from "./docs-index.js";
+export type { SitePageSummary } from "./docs-index.js";
 
 export class DocsBuildError extends Error {
   constructor(message: string) {
@@ -34,7 +35,9 @@ export interface DocsBuildOptions {
 /** The `## Also` directories in llms-dev.txt, in fixed display order. */
 const DEV_ALSO_DIRS = ["contracts", "design", "reference", "reference/cards", "security", "concepts"] as const;
 
-export interface DevLlmsTxtInput {
+const DEFAULT_INSTALL_README = { summary: "How to get a box running.", preamble: "" };
+
+export interface EntryInput {
   readme: { summary: string; preamble: string };
   startHere: readonly string[] | undefined;
   files: readonly PublishedDoc[];
@@ -45,9 +48,14 @@ export interface DocsBuildResult {
   docCount: number;
   readme: { summary: string; preamble: string };
   spine: readonly PublishedDoc[];
-  directories: readonly DirectoryPurpose[];
+  /** DEEP_DIRS, filtered to directories that currently have any published doc. */
+  deepDirectories: readonly DirectorySection[];
+  installDir: DirectoryPurpose | undefined;
+  devDir: DirectoryPurpose | undefined;
+  /** The input for dist/llms-install.txt — undefined only when install/ has no published docs yet. */
+  install: EntryInput | undefined;
   /** Present only when site/docs/dev/README.md exists — the input for dist/llms-dev.txt. */
-  dev: DevLlmsTxtInput | undefined;
+  dev: EntryInput | undefined;
   summaryLine: string;
 }
 
@@ -65,6 +73,7 @@ function headerLine(publishPath: string, base: string): string {
   return `Bee Box documentation · directory: ${directoryPath} · index: ${indexPath} · root: ${origin}${base}llms.txt`;
 }
 
+/** Write a published doc's `.md` twin and its spartan `.html` rendering, side by side. */
 async function writeDoc(params: { distDir: string; doc: PublishedDoc; base: string }): Promise<void> {
   const { distDir, doc, base } = params;
   const parts = [headerLine(doc.publishPath, base), ""];
@@ -73,6 +82,17 @@ async function writeDoc(params: { distDir: string; doc: PublishedDoc; base: stri
   const out = path.join(distDir, "docs", doc.publishPath);
   await fs.mkdir(path.dirname(out), { recursive: true });
   await fs.writeFile(out, `${parts.join("\n")}\n`, "utf8");
+  await fs.writeFile(out.replace(/\.md$/, ".html"), renderCorpusPageHtml({ doc, base }), "utf8");
+}
+
+/** Write one directory's `index.md` and its spartan `index.html` rendering. */
+async function writeDirectoryIndex(params: { distDir: string; dir: string; purpose: string; docs: PublishedDoc[]; base: string }): Promise<void> {
+  const { distDir, dir, purpose, docs, base } = params;
+  const markdown = renderDirectoryIndex({ dir, purpose, docs, base });
+  const out = path.join(distDir, "docs", dir, "index.md");
+  await fs.mkdir(path.dirname(out), { recursive: true });
+  await fs.writeFile(out, markdown, "utf8");
+  await fs.writeFile(path.join(distDir, "docs", dir, "index.html"), renderDirectoryIndexHtml({ dir, markdown, base }), "utf8");
 }
 
 /** Build the whole /docs/ tree into distDir/docs/, and return the llms.txt inputs. */
@@ -151,17 +171,33 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
   for (const [dir, docs] of byDir) {
     const purpose = authored.indexPurposes.get(dir);
     if (purpose === undefined) continue; // unreachable: already thrown above
-    const out = path.join(distDir, "docs", dir, "index.md");
-    await fs.mkdir(path.dirname(out), { recursive: true });
-    await fs.writeFile(out, renderDirectoryIndex({ dir, purpose, docs, base }), "utf8");
+    await writeDirectoryIndex({ distDir, dir, purpose, docs, base });
   }
 
   const spine = allDocs
     .filter((d) => d.kind === "authored" && directoryOf(d.publishPath) === "")
     .toSorted((a, b) => a.publishPath.localeCompare(b.publishPath));
 
+  const deepDirectories: DirectorySection[] = DEEP_DIRS.flatMap((dir) => {
+    const purpose = directories.find((d) => d.dir === dir)?.purpose;
+    return purpose === undefined ? [] : [{ dir, purpose, docs: byDir.get(dir) ?? [] }];
+  });
+  const installDir = directories.find((d) => d.dir === "install");
+  const devDir = directories.find((d) => d.dir === "dev");
+
+  const installReadme = authored.dirReadmes.get("install") ?? { ...DEFAULT_INSTALL_README, startHere: undefined };
+  const install: EntryInput | undefined =
+    installDir === undefined
+      ? undefined
+      : {
+          readme: { summary: installReadme.summary, preamble: installReadme.preamble },
+          startHere: installReadme.startHere,
+          files: byDir.get("install") ?? [],
+          also: [],
+        };
+
   const devReadme = authored.dirReadmes.get("dev");
-  let dev: DevLlmsTxtInput | undefined;
+  let dev: EntryInput | undefined;
   if (devReadme !== undefined) {
     const also = DEV_ALSO_DIRS.map((dir) => {
       const purpose = directories.find((d) => d.dir === dir)?.purpose;
@@ -173,7 +209,7 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
     dev = {
       readme: { summary: devReadme.summary, preamble: devReadme.preamble },
       startHere: devReadme.startHere,
-      files: allDocs.filter((d) => directoryOf(d.publishPath) === "dev"),
+      files: byDir.get("dev") ?? [],
       also,
     };
   }
@@ -189,8 +225,12 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
     docCount: allDocs.length,
     readme: authored.readme,
     spine,
-    directories,
+    deepDirectories,
+    installDir,
+    devDir,
+    install,
     dev,
     summaryLine,
   };
 }
+
