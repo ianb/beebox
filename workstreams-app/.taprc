@@ -5,8 +5,11 @@ node-arg:
   - --import=agent-doctest/tap
   - --import=agent-doctest/loader
 include:
+  # Doctests only. The router's `node:test` files are NOT listed here: tap does
+  # not run that runner's files, and listing them made it report "no tests
+  # found" per file and pass — 15 files and 129 assertions that looked covered
+  # and were never executed. `test:router` runs them; `test` runs both.
   - test/**/*.doctest.md
-  - test/router/**/*.test.ts
 reporter: tap
 color: false
 disable-coverage: true
