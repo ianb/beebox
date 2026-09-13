@@ -1,5 +1,5 @@
 ---
-description: "Twelve uses the project has built for and exercised, one page each: what the person does, what the box does, what it needs, and what is still rough."
+description: "Twelve uses the project has built for, one page each: what the person does, what the box does, what it needs, and what is still rough."
 ---
 # What you can use it for
 
