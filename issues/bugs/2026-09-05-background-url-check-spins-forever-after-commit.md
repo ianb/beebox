@@ -2,7 +2,7 @@
 title: "The post-commit background URL check can spin at 90% CPU for hours; 82 orphans were pinning a 16 GB machine"
 workstream: unattached
 area: beebox
-priority: important
+priority: normal
 labels: [hooks, performance]
 filed-by: agent
 discovered-by: Ian

@@ -7,6 +7,7 @@ labels: [ui, chat, scroll]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "The scroll is still quite bad"
+next-action: discuss
 ---
 
 ## 2026-09-04 follow-up — still open

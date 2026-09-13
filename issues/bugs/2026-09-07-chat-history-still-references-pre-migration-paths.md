@@ -7,6 +7,7 @@ labels: [chat, migration, box-shape]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "The images in this chat aren't displaying, but it seems like they should?"
+next-action: discuss
 ---
 
 In a chat on a box migrated to the one-root layout, images in older messages
