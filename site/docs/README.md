@@ -1,5 +1,5 @@
 ---
-description: "Documentation for Bee Box, a self-hosted personal assistant that a coding agent operates over a directory of markdown cards."
+description: "Documentation for Bee Box, a personal assistant you run yourself that grows into a memory of your life and acts on it, operated by a coding agent over files you own."
 ---
 Bee Box is a personal assistant that lives with you for years and gets
 better at being yours. You talk to it, hand it email, photograph the paper
