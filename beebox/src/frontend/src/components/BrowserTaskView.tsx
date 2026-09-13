@@ -31,7 +31,7 @@ import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscript
 import { busEventData } from "../lib/bus-events";
 import { attachDirFor } from "@shared/attach-path";
 import { boxRelativePath } from "@shared/box-path";
-import { validateBatch } from "@shared/browser-task-batch";
+import { validateBatch, MANIFEST_SHAPE_HINT } from "@shared/browser-task-batch";
 import { SubmissionForm, type SubmissionValidation } from "./browser-task/SubmissionForm";
 import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/browser-task-data";
 
@@ -94,7 +94,8 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
     [attach?.schemaJson],
   );
 
-  const copyBlock = buildCopyBlock({ body, source, watermark, schemaText: attach?.schemaText ?? null, cardPath: data.path });
+  const limit = describeLimit(frontmatter["limit"]);
+  const copyBlock = buildCopyBlock({ body, source, watermark, limit, schemaText: attach?.schemaText ?? null, cardPath: data.path });
 
   const disabledReason =
     status === "closed" ? "This task is closed and does not accept submissions."
@@ -122,6 +123,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
         <Accordion title={<Text as="h2" size="lg" weight="bold">Prompt</Text>} defaultOpen={false}>
           <Stack gap="sm">
             {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
+            {limit !== null ? <Text as="p" size="sm">Bound: {limit}</Text> : null}
             {watermark !== null ? <Text as="p" size="sm">Watermark: <Text as="span" mono>{watermark}</Text></Text> : null}
             <Markdown onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
           </Stack>
@@ -202,13 +204,25 @@ function StatusToggle({ status, cardPath }: { status: "open" | "closed"; cardPat
 }
 
 /** Everything the executor needs, as one block to paste into its own session. */
-function buildCopyBlock(opts: { body: string; source: string | null; watermark: string | null; schemaText: string | null; cardPath: string }): string {
+function buildCopyBlock(opts: { body: string; source: string | null; watermark: string | null; limit: string | null; schemaText: string | null; cardPath: string }): string {
   const parts = [opts.body.trim()];
   if (opts.source !== null) parts.push(`Start at: ${opts.source}`);
+  if (opts.limit !== null) parts.push(`Bound: ${opts.limit}`);
   if (opts.watermark !== null) parts.push(`Stop at the watermark: ${opts.watermark}`);
   if (opts.schemaText !== null) parts.push("Each record must match this JSON Schema:\n```json\n" + opts.schemaText.trim() + "\n```");
+  parts.push(`Submit at this card's page as a batch: ${MANIFEST_SHAPE_HINT} Upload records.json plus every file a record names.`);
   parts.push(`Submit at this card's page: ${opts.cardPath}`);
   return parts.join("\n\n");
+}
+
+/** The `limit` field as one readable line, or null when unset or malformed. */
+function describeLimit(value: unknown): string | null {
+  if (typeof value !== "object" || value === null) return null;
+  const rec: Record<string, unknown> = { ...value };
+  const parts: string[] = [];
+  if (typeof rec["posts"] === "number") parts.push(`at most ${String(rec["posts"])} posts`);
+  if (typeof rec["since"] === "string") parts.push(`nothing older than ${rec["since"]}`);
+  return parts.length === 0 ? null : parts.join(", ");
 }
 
 /** Convert the schema once so the form can be disabled when it cannot be used. */

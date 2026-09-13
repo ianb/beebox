@@ -243,7 +243,11 @@ registerTemplate({
   argsSchema: z.object({
     title: z.string().describe("Display title"),
     source: z.string().url().describe("The URL the executor starts at"),
-    prompt: z.string().describe("The prompt body, addressed to the person with the browser"),
+    prompt: z.string().optional().describe("The prompt body; omit to get the four-heading scaffold to fill in"),
   }),
-  generate: (args) => createBrowserTaskTemplate({ title: args.title, source: args.source, prompt: args.prompt }),
+  generate: (args) => {
+    const opts: Parameters<typeof createBrowserTaskTemplate>[0] = { title: args.title, source: args.source };
+    if (args.prompt !== undefined) opts.prompt = args.prompt;
+    return createBrowserTaskTemplate(opts);
+  },
 });

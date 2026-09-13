@@ -61,6 +61,36 @@ test("failing files come from TAP lines, and only when the name is a real file",
   ]);
 });
 
+test("failing files also come from the spec reporter's `test at` headers", () => {
+  // What `node --test bin/*.test.ts schedules/*/*.test.ts` actually prints when
+  // piped — spec, not TAP (Node 24). The stack frames carry the same path in
+  // `at … (file:///…)` form and must not be read as a second candidate, and the
+  // `✖ <name>` line under each header is a test name, not a file.
+  const output = [
+    "\u2716 failing tests:",
+    "",
+    "test at bin/schedules-hardening.test.ts:3:1824",
+    "\u2716 a timeout kills the whole process group, not just the run script (1824.5ms)",
+    "  AssertionError [ERR_ASSERTION]: 1 == 2",
+    "      at TestContext.<anonymous> (file:///repo/bin/schedules-hardening.test.ts:3:36)",
+    "",
+    "test at schedules/full-suite/ledger.test.ts:12:1",
+    "\u2716 a tracked flake is not reported twice (2.1ms)",
+  ].join("\n");
+  const real = new Set(["bin/schedules-hardening.test.ts", "schedules/full-suite/ledger.test.ts"]);
+  assert.deepEqual(parseFailingFiles(output, (p) => real.has(p)), [
+    "bin/schedules-hardening.test.ts",
+    "schedules/full-suite/ledger.test.ts",
+  ]);
+});
+
+test("a spec run whose only failing test is unidentifiable stays unattributed", () => {
+  // The existence check is what keeps a test NAME out of the list, in spec
+  // output as much as in TAP. Nothing on disk, nothing claimed.
+  const output = ["\u2716 failing tests:", "", "test at gone/removed.test.ts:1:1", "\u2716 whatever"].join("\n");
+  assert.deepEqual(parseFailingFiles(output, () => false), []);
+});
+
 test("a green run prints one line and no verdict noise", () => {
   const green = result({ ok: true, seconds: 12.34 });
   assert.deepEqual(formatResult(green), ["ok   pnpm --dir beebox test:changed (12.3s)"]);

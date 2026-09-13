@@ -82,21 +82,29 @@ Missing or malformed coverage refuses the batch before records are looked at:
 ```ts
 const noCoverage = validateBatch({ schemaJson: schema, manifest: { records: [good] }, fileNames: ["p9.jpg", "p9-a.jpg"] });
 JSON.stringify(noCoverage.ok ? [] : noCoverage.issues.map((i) => `${i.kind} ${i.path}`))
-=> ["coverage manifest.coverage"]
+=> ["coverage manifest.coverage","coverage manifest"]
 
 const badReason = validateBatch({ schemaJson: schema, manifest: { coverage: { ...coverage, reason: "bored" }, records: [] }, fileNames: [] });
 JSON.stringify(badReason.ok ? [] : badReason.issues.map((i) => i.path))
-=> ["manifest.coverage.reason"]
+=> ["manifest.coverage.reason","manifest"]
 
 JSON.stringify(COVERAGE_REASONS)
-=> ["reached-watermark","reached-limit","end-of-feed","login-wall","rate-limited","error"]
+=> ["reached-watermark","reached-limit","reached-date","end-of-feed","login-wall","rate-limited","error"]
+```
+
+The last issue on any envelope failure states the whole expected shape, so
+the executor never has to reverse-engineer it:
+
+```ts continue
+(badReason.ok ? "" : badReason.issues.at(-1)?.message ?? "").startsWith('records.json is { "coverage": { "scanned"')
+=> true
 ```
 
 A bare array is not a manifest:
 
 ```ts
 JSON.stringify(kinds(validateBatch({ schemaJson: schema, manifest: [good], fileNames: [] })))
-=> ["coverage"]
+=> ["coverage","coverage"]
 ```
 
 A schema that uses a keyword the attachment walk cannot follow is refused by

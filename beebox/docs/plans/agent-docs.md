@@ -545,9 +545,12 @@ served as `text/markdown`, which ChatGPT and Gemini fetchers report as empty
 (a `_headers` file serves the docs tree, both entry files, and the page
 twins as `text/plain`); and unknown paths returned the home page with a 200
 (a `404.html` now makes a guessed URL a real miss; a `robots.txt` allows
-all). If a chat agent still cannot follow the corpus after this deploys, the
-next step is linking spartan HTML renderings of the same files, which
-fetchers read natively; the llms.txt proposal prefers markdown but does not
-require it. Also added: `capabilities/integrity.md` (links parsed and
+all). Confirmed by the boxholder after the deploy: with absolute links and
+plain-text content types, a chat agent follows the corpus. The fallback,
+linking spartan HTML renderings of the same files, is not needed. (Two more
+causes surfaced along the way: main had not been pushed for two hours, and
+the Cloudflare build of main failed on a scrub-gate hit nobody saw locally.
+Finish now runs the canonical site build before a merge and the post-merge
+hook says when main is ahead of origin.) Also added: `capabilities/integrity.md` (links parsed and
 checked, references rewritten on a move, validation at several layers).
 
