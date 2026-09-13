@@ -13,6 +13,8 @@ import {
   getFeaturesForSession,
   updateFeaturesForSession,
 } from "./history.js";
+import { resolveRecordedChatEngine } from "./engine.js";
+import { loadAgentEngine } from "../../box/config.js";
 import {
   isKnownFeature,
   isValidValue,
@@ -102,7 +104,16 @@ export class FeatureStore {
     const sessionId = this.deps.getSessionId();
     if (sessionId !== null) {
       if (this.deps.persistPending?.(updates) === true) return;
-      await updateFeaturesForSession(this.deps.boxRoot, { sessionId, updates });
+      // Persisting features can CREATE the session's history entry, which
+      // writes its engine. Resolve it the way every reader does — the husk
+      // stamp, then the history row, then the reservation — and fall back to
+      // the box default only for an id nothing recorded at all. Passing the
+      // box default unconditionally is what overwrote a reserved chat's own
+      // engine on the first toggle.
+      const engine =
+        (await resolveRecordedChatEngine(this.deps.boxRoot, { sessionId })) ??
+        (await loadAgentEngine(this.deps.boxRoot));
+      await updateFeaturesForSession(this.deps.boxRoot, { sessionId, updates, engine });
     }
   }
 

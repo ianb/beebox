@@ -19,6 +19,7 @@ import { ChatThreadSession } from "../../src/core/chat/session/thread.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { waitForRuns } from "../helpers/chat-session-spawner-helpers.js";
+import { recordSessionStart } from "../../src/core/chat/session/session-start-record.js";
 ```
 
 ## A turn interleaving user, stream_event, and task messages
@@ -169,6 +170,94 @@ JSON.stringify([turnTextSeen, turnText, responses.length])
 ```
 
 ```ts cleanup
+session.stop();
+await box.cleanup();
+```
+
+## A stored session id the box has no record of starts fresh
+
+A thread carries its session id across restarts, and the id can outlive the
+records that say what it is — the box's chat registry is machine-local state, and
+a content revert can take the husk card with it. Resuming such an id asks
+whichever engine the box currently defaults to to continue a conversation it
+never had.
+
+The thread drops the unrecorded id and starts a new session instead of failing.
+It is automation: stranding the thread is worse than losing its earlier context,
+and the SDK's first message supplies a new id, which the thread adopts and
+emits on `session`.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const session = new ChatThreadSession({
+  boxRoot: box.root,
+  threadRef: "chats/Jane_Doe.chat.card",
+  chatDescription: "Jane Doe",
+  sessionId: "99999999-9999-4999-8999-999999999999",
+  backend,
+});
+
+const adopted = [];
+session.on("session", (id) => adopted.push(id));
+
+const turn = session.send("still there?");
+await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
+const run = backend.lastRun();
+print(`resumed: ${String(run.startOptions.resumeSessionId)}`);
+print(`system prompt built: ${String(run.startOptions.systemPrompt.length > 0)}`);
+=>
+resumed: undefined
+system prompt built: true
+```
+
+The id the SDK hands back is adopted, so the thread's owner relearns it:
+
+```ts continue
+run.emitSessionInit("sess-thread-fresh");
+run.emitAssistantText("<chat-response>here</chat-response>");
+run.emitResult();
+await turn;
+JSON.stringify(adopted)
+=> ["sess-thread-fresh"]
+```
+
+```ts cleanup
+session.stop();
+await box.cleanup();
+```
+
+## A RECORDED session id is still resumed
+
+The drop above is conditional on there being no record — the ordinary resume must
+keep working, or every thread would lose its history on restart.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const known = "88888888-8888-4888-8888-888888888888";
+await recordSessionStart(box.root, { sessionId: known, engine: "claude" });
+
+const session = new ChatThreadSession({
+  boxRoot: box.root,
+  threadRef: "chats/Jane_Doe.chat.card",
+  chatDescription: "Jane Doe",
+  sessionId: known,
+  backend,
+});
+
+const turn = session.send("still there?");
+await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
+const run = backend.lastRun();
+print(`resumed: ${String(run.startOptions.resumeSessionId)}`);
+=>
+resumed: 88888888-8888-4888-8888-888888888888
+```
+
+```ts continue cleanup
+run.emitAssistantText("<chat-response>here</chat-response>");
+run.emitResult();
+await turn;
 session.stop();
 await box.cleanup();
 ```

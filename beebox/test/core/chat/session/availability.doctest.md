@@ -13,6 +13,10 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry.js";
+import { createFakeChatBackend } from "../../../../src/services/claude-chat.js";
+import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
+import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/session-start-record.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
@@ -127,4 +131,72 @@ delete process.env["BBX_ORIGIN_ID_FILE"];
 delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
 delete process.env["BBX_CODEX_BINARY"];
 await noRecordBox.cleanup();
+```
+
+## Registry presence is not evidence of a conversation
+
+`resolveSessionAvailability` answers `resumable` early for a chat that is
+mid-turn, before its transcript exists on disk. That gate used to accept mere
+registry presence — and `getOrCreate` builds a session object for ANY id, so a
+control mutation on an id the box had no record of registered it, and the gate
+then vouched for it ahead of every check that would have caught the ghost. A
+session object that has never run is not a conversation.
+
+A merely-materialized id is a ghost, and says so:
+
+```ts
+const ghostBox = await makeTmpBox();
+process.env["BBX_ORIGIN_ID_FILE"] = ghostBox.path("origin-id");
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = ghostBox.path("claude-projects");
+const backend = createFakeChatBackend();
+const ghostRegistry = new ChatSessionRegistry(ghostBox.root, {
+  backend,
+  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+});
+
+const ghost = randomUUID();
+ghostRegistry.getOrCreate(ghost);
+const asGhost = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: ghost, registry: ghostRegistry });
+print(`materialized only: ${asGhost.kind}`);
+=>
+materialized only: unavailable
+```
+
+A session that is actually running is resumable, transcript or not — which is
+the case the gate exists for:
+
+```ts continue
+const live = randomUUID();
+const liveSession = ghostRegistry.getOrCreate(live);
+await liveSession.send("hi");
+const asLive = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: live, registry: ghostRegistry });
+print(`running: ${asLive.kind} (isRunning=${String(liveSession.isRunning())})`);
+=>
+running: resumable (isRunning=true)
+```
+
+And the case tightening this gate could have broken: a real session that has
+been EVICTED — its subprocess stopped to free a slot, its entry kept because it
+resumes on the next send. It is neither running nor busy, so it no longer
+passes this gate; it stays resumable because it has a transcript, which is what
+the checks below the gate read. Nothing durable was riding on the gate alone.
+
+```ts continue
+const evicted = randomUUID();
+await recordSessionStart(ghostBox.root, { sessionId: evicted, engine: "claude" });
+const logPath = getSessionLogPath(ghostBox.root, evicted);
+await fs.mkdir(path.dirname(logPath), { recursive: true });
+await fs.writeFile(logPath, "");
+const evictedSession = ghostRegistry.getOrCreate(evicted);
+const asEvicted = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: evicted, registry: ghostRegistry });
+print(`evicted with transcript: ${asEvicted.kind} (isRunning=${String(evictedSession.isRunning())})`);
+=>
+evicted with transcript: resumable (isRunning=false)
+```
+
+```ts continue cleanup
+delete process.env["BBX_ORIGIN_ID_FILE"];
+delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+await ghostRegistry.shutdown();
+await ghostBox.cleanup();
 ```
