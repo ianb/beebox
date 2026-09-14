@@ -44,3 +44,14 @@ Not reproduced — read from the code while researching the scan-import issue.
 Reproducing it wants a browser-task or card submission carrying an image on a
 `makeTmpBox({ git: true })` box, asserting the bytes are neither committed nor
 manifest-listed.
+
+## Owner assigned 2026-09-14 — annex-always
+
+Same resolution as the sibling scan-import issue: the boxholder decided every
+box uses git-annex, now and forever, so an annex-shaped box un-ignores assets
+and the directory pathspec at `:195-199` stages the bytes normally. Tracked
+under `issues/features/2026-09-14-every-box-uses-git-annex.md`.
+
+This one still needs its own test after that lands, and the assertion has to be
+on the filesystem — bytes committed — rather than on the return value, because
+the defect is that the return value already says success.

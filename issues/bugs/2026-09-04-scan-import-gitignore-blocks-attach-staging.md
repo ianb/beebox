@@ -77,3 +77,32 @@ Field removed. Still open on its original terms: the issue lists three candidate
 resolutions and says it needs a product decision, which is the boxholder's call,
 not something to pick while reconfirming. The next pass can skip the reproduction
 and start from that decision.
+
+## Resolution chosen 2026-09-14 — annex-always, in its own workstream
+
+The boxholder settled the product decision this issue was waiting on: *"I want
+every box currently and forever in the future to use annex. So we should just be
+making it right, always, and not worry about cases where it isn't right."*
+
+That is a fourth resolution this issue did not list, and it dissolves the bug
+rather than handling it: `bbx init` produces an annex box, where the un-ignore
+block makes staging work, so there is no manifest-scheme box for scan-import to
+fail on. The three resolutions listed above are all superseded — in particular
+the `force` option is now known to be actively wrong, since
+`findStagedUnlistedBinaries` (`src/core/annex/staged-unlisted.ts:65-88`, wired
+at `src/cli/commands/validate-pre-commit.ts:99-103`) blocks any staged
+attach-scope blob over 1 MB and scan pages are 2000px q88 JPEGs
+(`src/core/commands/scan-import-helpers.ts:113-125`), routinely over — so force
+would turn a loud early failure into a loud late one carrying a misleading "run
+`bbx doctor annex`" message, and under 1 MB would silently commit raw asset
+bytes into history.
+
+Under annex-always, scan-import's own change is an `invariant()` rather than a
+graceful refusal: a manifest box becomes a broken invariant, not a supported
+state.
+
+**Owner:** `issues/features/2026-09-14-every-box-uses-git-annex.md`, with the
+design drafted at `beebox/docs/plans/annex-at-init.md`. Not being fixed in
+`scan-ingest`, which was told to behave as though annex-always already ships.
+Kept open until that work lands, since the reproduction in this body is the
+regression test that work owes.
