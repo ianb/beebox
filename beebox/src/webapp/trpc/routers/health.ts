@@ -264,18 +264,20 @@ export async function runHealthChecks(
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
   checks.push(await packageDocsCheck(boxRoot));
-  // Needs the box's own deploy time to judge an uploader's build against, which
-  // is the same `deploy-info.json` the version panel reads.
+  checks.push(await unfiledCapturesCheck(boxRoot));
+  checks.push(await stalledJobsCheck(boxRoot));
+  const now = getBoxTime(boxRoot);
+  // Needs the box's own deploy time to judge an uploader's build against (the
+  // same `deploy-info.json` the version panel reads), and box time to catch a
+  // build stamp claiming the future.
   const version = await readVersionInfo();
   checks.push(
     scanUploaderFreshnessCheck(boxRoot, {
       deployedAt: version.deployedAt,
       contractVersion: SCAN_CONTRACT_VERSION,
+      now,
     }),
   );
-  checks.push(await unfiledCapturesCheck(boxRoot));
-  checks.push(await stalledJobsCheck(boxRoot));
-  const now = getBoxTime(boxRoot);
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
 

@@ -228,6 +228,19 @@ JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
 => {"contract":"1","build":"source","builtAt":null}
 ```
 
+A later request that reports nothing CLEARS what was recorded, rather than
+leaving the previous uploader's identity in place. One token can be used by
+more than one uploader — a second laptop, or the same laptop after an older
+bundle is copied over the newer one — and keeping the newer identity would
+answer the stale-uploader question backwards, reporting a current build for a
+request an older uploader made.
+
+```ts continue
+await resolveScanRequestAuth(idBox.root, { authorization: `Bearer ${idToken.token}` });
+JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+=> null
+```
+
 An uploader too old to send the headers leaves `lastClient` null rather than
 recording a blank. "Not reported" and "reported as nothing" have to stay
 distinct, because the freshness health check treats the first as no opinion and

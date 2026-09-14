@@ -30,18 +30,27 @@
 import { listScanTokens, type ScanTokenSummary } from "../../../core/scan/tokens.js";
 import type { HealthCheck } from "./health.js";
 
-/** How the uploader spells a checkout. A checkout runs current source through
- * tsx on every sweep and therefore cannot drift, so it is never stale however
- * long ago someone cloned it. */
+/**
+ * How the uploader spells a checkout.
+ *
+ * It exempts a checkout from the BUILD-DATE comparison only: there is no build,
+ * so there is no date, and a clone date would say nothing about the code being
+ * run. It does NOT exempt it from the contract comparison — `source` means "not
+ * a copied bundle", not "current". A checkout sitting on an old branch runs old
+ * code on every sweep and reports the old contract version itself, which is
+ * exactly the signal to believe.
+ */
 const SOURCE_BUILD = "source";
 
 export interface ScanUploaderFreshnessOptions {
   /** The box's own deploy time (`readVersionInfo().deployedAt`). `null` in
    * local dev and in every worktree, where there is no deploy to be older
-   * than — the check then reports what it knows and judges nothing. */
+   * than — the check then judges only the contract version. */
   readonly deployedAt: string | null;
   /** The contract version this box speaks. An uploader below it is behind. */
   readonly contractVersion: number;
+  /** Box time, to catch a build stamp claiming the future. */
+  readonly now: Date;
 }
 
 export function scanUploaderFreshnessCheck(
@@ -87,8 +96,10 @@ export function scanUploaderFreshnessCheck(
 function isBehind(token: ScanTokenSummary, options: ScanUploaderFreshnessOptions): boolean {
   const client = token.lastClient;
   if (client === null) return false;
+  if (contractIsBehind(client.contract, options.contractVersion)) return true;
+  // A checkout has no build to date, so only the contract test applies to it.
   if (client.build === SOURCE_BUILD) return false;
-  return contractIsBehind(client.contract, options.contractVersion) || builtBeforeDeploy(client.builtAt, options.deployedAt);
+  return buildTimeIsSuspect({ builtAt: client.builtAt, deployedAt: options.deployedAt, now: options.now });
 }
 
 /** A contract version below the box's. An unparseable or absent value is no
@@ -101,18 +112,28 @@ function contractIsBehind(reported: string | null, boxVersion: number): boolean 
 }
 
 /**
- * A build that predates the box's current deploy.
+ * A build older than the box's current deploy — or a build time that cannot be
+ * believed at all.
  *
- * Both values are timestamps from the same monorepo, so the comparison is
- * ordered and honest in a way comparing git hashes could never be. With no
- * deploy time (local dev, a worktree) there is nothing to be older than, so
- * this answers no.
+ * The staleness comparison is two timestamps from the same monorepo, so it is
+ * ordered and honest in a way comparing git revisions could never be. With no
+ * deploy time (local dev, a worktree) there is nothing to be older than.
+ *
+ * The future case is not decoration. The stamp is written from the build
+ * machine's clock, so a skewed clock produces a build time that no deploy can
+ * ever be later than — which would report a genuinely old bundle as fine
+ * forever. A stamp claiming the future is reported rather than trusted: being
+ * told the stamp is wrong is useful, and being silently told "fine" is not.
  */
-function builtBeforeDeploy(builtAt: string | null, deployedAt: string | null): boolean {
-  if (builtAt === null || deployedAt === null) return false;
+function buildTimeIsSuspect(params: { builtAt: string | null; deployedAt: string | null; now: Date }): boolean {
+  const { builtAt, deployedAt, now } = params;
+  if (builtAt === null) return false;
   const built = Date.parse(builtAt);
+  if (Number.isNaN(built)) return false;
+  if (built > now.getTime()) return true;
+  if (deployedAt === null) return false;
   const deployed = Date.parse(deployedAt);
-  if (Number.isNaN(built) || Number.isNaN(deployed)) return false;
+  if (Number.isNaN(deployed)) return false;
   return built < deployed;
 }
 

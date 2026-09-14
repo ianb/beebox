@@ -132,6 +132,28 @@ JSON.stringify(countedResult.boxes.map((b) => [b.box, b.summary.uploaded, b.summ
 => [["b",3,1]]
 ```
 
+Two targets can carry the same box slug against *different* servers —
+`configure` appends rather than replaces when the same box is given a new
+`serverUrl` — so grouping is by server AND box. Merging them would have made
+the contract-version verdict depend on target order, one endpoint's answer
+silently overwriting the other's:
+
+```
+const twoServers: UploaderConfig = {
+  targets: [
+    { ...target("/receipts"), serverUrl: "https://old.test", box: "b" },
+    { ...target("/family"), serverUrl: "https://new.test", box: "b" },
+  ],
+};
+const versions = scripted({
+  "/receipts": [summary({ contractVersion: 1 })],
+  "/family": [summary({ contractVersion: 2 })],
+});
+const twoResult = await runAllTargets(twoServers, { retryRejected: false, deps: versions.deps });
+JSON.stringify(twoResult.boxes.map((b) => [b.box, b.summary.contractVersion]))
+=> [["b",1],["b",2]]
+```
+
 A target that threw contributes no entry at all — there is no summary to
 count, and the failure is already on stderr and in the exit code:
 

@@ -41,6 +41,11 @@ export interface RunSummary {
    * hash, so `rejected` stays at 1 on every sweep from then on. This counter
    * is the one run that actually learns the file was refused, which is what
    * `notify.ts` needs to report a rejection once instead of every 15 minutes.
+   *
+   * "Newly" is judged against the pre-PUT check state, not against the PUT
+   * outcome alone: `--retry-rejected` re-PUTs a rejection the server already
+   * remembers, and a settle retry re-walks the whole folder in the same sweep,
+   * so a PUT-time refusal is not by itself evidence that anything was learned.
    */
   readonly rejectedOnUpload: number;
   readonly skippedUnsettled: number;
@@ -225,7 +230,11 @@ async function resolveConfirmation(
     case "rejected":
       console.log(`rejected ${candidate.filePath}: ${result.reason}`);
       ctx.counters.rejected += 1;
-      ctx.counters.rejectedOnUpload += 1;
+      // Newly learned only if the server did not already know. Under
+      // `--retry-rejected` a remembered rejection is re-PUT and refused again,
+      // which is the same fact a second time — and a settle retry re-walks the
+      // folder, so counting it here would report one file as two.
+      if (state !== "rejected") ctx.counters.rejectedOnUpload += 1;
       return undefined;
     case "hash-mismatch":
       console.error(`error ${candidate.filePath}: hash mismatch on upload, will retry next run`);

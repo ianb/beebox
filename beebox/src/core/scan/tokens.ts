@@ -186,14 +186,25 @@ export async function verifyScanToken(boxRoot: string, token: string | undefined
   return scanTokenStore.verify(boxRoot, { token });
 }
 
-/** Stamps the uploader's self-reported identity onto the record, on the write
- * `lastUsedAt` already performs. Values are capped rather than validated: they
- * are untrusted client strings whose only use is being shown to a person, so a
- * nonsense value must be harmless, not fatal. */
-function stampIdentity(record: ScanToken, identity: ScanClientIdentity): void {
-  record.lastClientContract = capIdentity(identity.contract);
-  record.lastClientBuild = capIdentity(identity.build);
-  record.lastClientBuiltAt = capIdentity(identity.builtAt);
+/**
+ * Stamps what the uploader said it was onto the record, on the write
+ * `lastUsedAt` already performs.
+ *
+ * Runs on EVERY scan request, including one that reported nothing, and in that
+ * case clears the fields. A token can be used by more than one uploader — a
+ * second laptop, or the same laptop after an older bundle is copied over the
+ * newer one — and leaving the previous identity in place would report the
+ * newer uploader's build for a request made by an older one, which is the
+ * stale-uploader question answered backwards.
+ *
+ * Values are capped rather than validated: they are untrusted client strings
+ * whose only use is being shown to a person, so a nonsense value must be
+ * harmless, not fatal.
+ */
+function stampIdentity(record: ScanToken, identity: ScanClientIdentity | undefined): void {
+  record.lastClientContract = capIdentity(identity?.contract ?? null);
+  record.lastClientBuild = capIdentity(identity?.build ?? null);
+  record.lastClientBuiltAt = capIdentity(identity?.builtAt ?? null);
 }
 
 /** Untrusted header text, kept short enough that a hostile or broken client
@@ -256,6 +267,6 @@ export async function resolveScanRequestAuth(boxRoot: string, headers: ScanAuthH
   const identity = readScanClientIdentity(headers);
   return scanTokenStore.verify(boxRoot, {
     token: authorization.slice(prefix.length),
-    onUse: identity === undefined ? undefined : (record) => stampIdentity(record, identity),
+    onUse: (record) => stampIdentity(record, identity),
   });
 }

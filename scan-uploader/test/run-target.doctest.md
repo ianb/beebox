@@ -211,8 +211,24 @@ place" outcome as a remembered one:
 => first-sight.pdf
 ```
 
+`--retry-rejected` re-PUTs a rejection the server already remembers, and that
+refusal is the same fact a second time — so it counts in `rejected` but NOT in
+`rejectedOnUpload`. Without this, a settle retry (which re-walks the whole
+folder in the same sweep) would report one refused file as two:
+
+```continue
+const serverR2: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "rejected", reason: "the server already knows" }),
+  putOutcome: () => ({ status: 422, body: { status: "rejected", reason: "still not a pdf" } }),
+});
+const summaryR2 = await runTarget(targetFor({ folder: newRejectFolder, serverUrl: serverR2.url, disposition: "archive" }), { retryRejected: true });
+JSON.stringify(summaryR2)
+=> {"uploaded":0,"duplicate":0,"rejected":1,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+```
+
 ```cleanup
 await serverR.close();
+await serverR2.close();
 ```
 
 ## A file that changes between hash and disposition is left alone

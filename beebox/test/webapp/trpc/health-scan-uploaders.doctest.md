@@ -19,6 +19,7 @@ import { scanUploaderFreshnessCheck } from "../../../src/webapp/trpc/routers/hea
 
 const BOX_DEPLOYED_AT = "2026-09-10T00:00:00.000Z";
 const BOX_CONTRACT = 2;
+const NOW = new Date("2026-09-14T00:00:00.000Z");
 
 /** Mints a token and makes one request as an uploader with the given identity,
  * which is how a real box learns what is talking to it. */
@@ -41,6 +42,7 @@ function check(boxRoot: string): string {
   const result = scanUploaderFreshnessCheck(boxRoot, {
     deployedAt: BOX_DEPLOYED_AT,
     contractVersion: BOX_CONTRACT,
+    now: NOW,
   });
   return `${result.name} ok=${String(result.ok)} severity=${result.severity}`;
 }
@@ -49,6 +51,7 @@ function message(boxRoot: string): string {
   return scanUploaderFreshnessCheck(boxRoot, {
     deployedAt: BOX_DEPLOYED_AT,
     contractVersion: BOX_CONTRACT,
+    now: NOW,
   }).message;
 }
 ```
@@ -152,23 +155,31 @@ check(silentBox.root)
 => scan-uploaders ok=true severity=warning
 ```
 
-## A checkout is never stale
+## A checkout is exempt from the build date, not from the contract
 
-`source` means the uploader runs current source through tsx on every sweep, so
-it tracks the box by construction however long ago it was cloned. Reporting it
-as stale would be wrong, and would train the reader to ignore this check.
+`source` means "not a copied bundle", which is not the same as "current". There
+is no build, so there is no date to compare and a clone date would say nothing
+about the code being run — but a checkout sitting on an old branch runs old code
+on every sweep and reports the old contract version itself. That report is the
+signal to believe, so `source` exempts the date test only.
+
+A checkout at the box's contract passes:
 
 ```ts continue
 const sourceBox = await makeTmpBox();
-await uploaderCalled(sourceBox.root, { name: "dev-checkout", contract: "1", build: "source" });
+await uploaderCalled(sourceBox.root, { name: "dev-checkout", contract: "2", build: "source" });
 check(sourceBox.root)
 => scan-uploaders ok=true severity=warning
 ```
 
-Note that this one reported contract v1 against a box at v2 and still passes:
-`source` short-circuits both tests, because a checkout's *next* sweep already
-runs current code. The stale-contract signal is for a bundle, which cannot fix
-itself.
+A checkout below it does not:
+
+```ts continue
+const staleCheckoutBox = await makeTmpBox();
+await uploaderCalled(staleCheckoutBox.root, { name: "old-branch-checkout", contract: "1", build: "source" });
+check(staleCheckoutBox.root)
+=> scan-uploaders ok=false severity=warning
+```
 
 ## A revoked uploader is not reported
 
@@ -207,13 +218,13 @@ await uploaderCalled(localBox.root, {
   build: "dddd4444",
   builtAt: "2026-01-01T00:00:00.000Z",
 });
-const local = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: BOX_CONTRACT });
+const local = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: BOX_CONTRACT, now: NOW });
 `ok=${String(local.ok)}`
 => ok=true
 ```
 
 ```ts continue
-const localBehind = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: 9 });
+const localBehind = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: 9, now: NOW });
 `ok=${String(localBehind.ok)}`
 => ok=false
 ```
@@ -233,6 +244,25 @@ await uploaderCalled(junkBox.root, {
 });
 check(junkBox.root)
 => scan-uploaders ok=true severity=warning
+```
+
+## A build stamp claiming the future is reported, not trusted
+
+The stamp comes from the build machine's clock. A skewed clock produces a build
+time no deploy can ever be later than, which would report a genuinely old
+bundle as fine forever — the one failure worse than having no check, because it
+answers the question wrongly rather than not at all.
+
+```ts continue
+const skewedBox = await makeTmpBox();
+await uploaderCalled(skewedBox.root, {
+  name: "clock-skewed-laptop",
+  contract: "2",
+  build: "9999abcd",
+  builtAt: "2099-01-01T00:00:00.000Z",
+});
+check(skewedBox.root)
+=> scan-uploaders ok=false severity=warning
 ```
 
 ## Several uploaders are named individually
@@ -255,6 +285,8 @@ await oldBuildBox.cleanup();
 await oldContractBox.cleanup();
 await silentBox.cleanup();
 await sourceBox.cleanup();
+await staleCheckoutBox.cleanup();
+await skewedBox.cleanup();
 await revokedBox.cleanup();
 await localBox.cleanup();
 await junkBox.cleanup();

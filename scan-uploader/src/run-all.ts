@@ -46,7 +46,14 @@ export interface RunAllOptions extends RunOptions {
 }
 
 /** One box's totals for the whole sweep: summed across its targets and across
- * the settle-retry rounds, so a file uploaded in round 2 still counts once. */
+ * the settle-retry rounds, so a file uploaded in round 2 still counts once.
+ *
+ * Grouped by server AND box, not by box alone. `configure` appends rather than
+ * replaces when the same box is given a different `serverUrl`
+ * (see the README's Config section), so two targets can carry the same slug
+ * against different deploys. Merging those made the contract-version verdict
+ * depend on target order — one endpoint's answer silently overwriting the
+ * other's. Two endpoints stay two rows, both labelled with the slug. */
 export interface BoxSummary {
   readonly box: string;
   readonly summary: RunSummary;
@@ -82,7 +89,8 @@ function hasFailure(summary: RunSummary): boolean {
 export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<RunAllResult> {
   const deps = options.deps ?? DEFAULT_RUN_ALL_DEPS;
   const runOptions: RunOptions = { retryRejected: options.retryRejected };
-  const totals = new Map<string, RunSummary>();
+  // Keyed by server + box; `BoxSummary.box` carries the display label.
+  const totals = new Map<string, { box: string; summary: RunSummary }>();
   let exitCode = 0;
   let pending: readonly TargetConfig[] = config.targets;
   for (let round = 0; ; round++) {
@@ -97,13 +105,13 @@ export async function runAllTargets(config: UploaderConfig, options: RunAllOptio
         continue;
       }
       printSummary(target, summary);
-      totals.set(target.box, addSummaries(totals.get(target.box), summary));
+      const key = `${target.serverUrl}\u0000${target.box}`;
+      totals.set(key, { box: target.box, summary: addSummaries(totals.get(key)?.summary, summary) });
       if (hasFailure(summary)) exitCode = 1;
       if (summary.skippedUnsettled > 0) unsettled.push(target);
     }
     if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) {
-      const boxes = Array.from(totals, ([box, summary]) => ({ box, summary }));
-      return { exitCode, boxes };
+      return { exitCode, boxes: Array.from(totals.values()) };
     }
     await deps.wait(SETTLE_RETRY_WAIT_MS);
     pending = unsettled;
