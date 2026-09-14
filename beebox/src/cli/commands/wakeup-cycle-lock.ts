@@ -52,6 +52,7 @@ export async function runUnderWakeupCycleLock(
     // as an answer about work that never started.
     reportWakeupOutcome({
       connectorErrors: 0,
+      connectors: [],
       reactorOk: true,
       reactorSkipped: false,
       jobsProcessed: 0,

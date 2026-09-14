@@ -75,7 +75,7 @@ started. `skipped` is what distinguishes the two.
 ```ts continue
 const outcome = parseWakeupOutcome(printed.join("\n"));
 JSON.stringify(outcome)
-=> {"connectorErrors":0,"reactorOk":true,"reactorSkipped":false,"jobsProcessed":0,"jobsRemaining":0,"skipped":"wakeup-running"}
+=> {"connectorErrors":0,"connectors":[],"reactorOk":true,"reactorSkipped":false,"jobsProcessed":0,"jobsRemaining":0,"skipped":"wakeup-running"}
 ```
 
 An unrecognized skip value is "no information", not a skip — the parser refuses

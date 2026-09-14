@@ -155,7 +155,12 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
 
   // Step 4: Connectors
   console.log("[Running connectors]");
-  const { activeConnector, activeConnectorName, errorCount: connectorErrorCount } = await runConnectors(boxRoot, {
+  const {
+    activeConnector,
+    activeConnectorName,
+    errorCount: connectorErrorCount,
+    connectors: connectorOutcomes,
+  } = await runConnectors(boxRoot, {
     connector: options.connector,
   });
   console.log("");
@@ -234,6 +239,7 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
   // WHICH step failed. See `wakeup-outcome.ts`.
   reportWakeupOutcome({
     connectorErrors: connectorErrorCount,
+    connectors: connectorOutcomes,
     reactorOk: jobs.reactorOk,
     reactorSkipped: jobs.reactorSkipped,
     jobsProcessed: jobs.jobsProcessed,

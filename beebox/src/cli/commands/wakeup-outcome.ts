@@ -14,11 +14,20 @@
  * meaning "something went wrong here". This adds a channel beside it for
  * callers that need to know *which* step.
  *
+ * `connectors` is the same channel one level down, and it is what a forced
+ * wakeup (`bbx force-wakeup`) hands back to an agent: per connector, what it
+ * created, and — when it did nothing — whether that was a failure or a
+ * deliberate skip with a reason. Without it a forced run reports "0 errors"
+ * for a service it never contacted, which is the invisible-nothing-happened
+ * failure the 2026-09-14 incident was made of
+ * (`docs/plans/agent-capability-delegation.md`).
+ *
  * Emission is opt-in via `BBX_WAKEUP_OUTCOME=1` so an interactive `bbx wakeup`
  * prints nothing extra — routine success should be quiet.
  */
 
-import { isRecord } from "../../lib/is-record.js";
+import { z } from "zod";
+import type { SyncSkipped } from "../../connectors/index.js";
 
 /** Set by a supervising caller that intends to parse the outcome line. */
 export const WAKEUP_OUTCOME_ENV = "BBX_WAKEUP_OUTCOME";
@@ -26,10 +35,32 @@ export const WAKEUP_OUTCOME_ENV = "BBX_WAKEUP_OUTCOME";
 /** Line prefix, chosen to be greppable and not to collide with prose. */
 export const WAKEUP_OUTCOME_PREFIX = "[wakeup-outcome] ";
 
+/**
+ * What one connector did in this cycle.
+ *
+ * `success: true` with a `skipped` is the case callers get wrong: the
+ * connector ran and deliberately did nothing, so counting it as "up to date"
+ * claims work that never happened.
+ */
+export interface WakeupConnectorOutcome {
+  readonly name: string;
+  readonly success: boolean;
+  readonly created: number;
+  readonly updated: number;
+  readonly pushed: number;
+  readonly jobs: number;
+  readonly skipped?: SyncSkipped | undefined;
+  readonly error?: string | undefined;
+}
+
 export interface WakeupOutcomeReport {
   /** Connectors that errored. Not the reactor's fault, and not a reason to
    * retry a job-drain that already succeeded. */
   readonly connectorErrors: number;
+  /** One entry per connector the cycle actually attempted, plus one for a
+   * `--connector` name that matched nothing. Empty when the cycle was
+   * skipped, or when the box configures no connectors. */
+  readonly connectors: readonly WakeupConnectorOutcome[];
   /** Whether the reactor cycle itself completed. This is the step a caller
    * waiting on an intake job actually depends on. */
   readonly reactorOk: boolean;
@@ -45,8 +76,39 @@ export interface WakeupOutcomeReport {
    * (`wakeup-cycle-lock.ts`), so this process did nothing at all — not even
    * the connector step. Every count above is zero because nothing ran, which
    * is why a caller must check this before reading them as an answer. */
-  readonly skipped?: "wakeup-running";
+  readonly skipped?: "wakeup-running" | undefined;
 }
+
+/**
+ * The wire shape, validated rather than trusted: the line crossed a process
+ * boundary, and a half-written or older-binary one must read as "no
+ * information" rather than as a shape the caller then indexes into.
+ *
+ * A skip reason `SyncSkipped` gains later would be rejected here until this
+ * list grows — which costs the report, not correctness: an unparsed line is
+ * already defined as no information, and the caller falls back to the exit
+ * code.
+ */
+const connectorSchema = z.object({
+  name: z.string(),
+  success: z.boolean(),
+  created: z.number(),
+  updated: z.number(),
+  pushed: z.number(),
+  jobs: z.number(),
+  skipped: z.object({ reason: z.enum(["not-configured", "not-allowed"]), detail: z.string() }).optional(),
+  error: z.string().optional(),
+});
+
+const reportSchema = z.object({
+  connectorErrors: z.number(),
+  connectors: z.array(connectorSchema),
+  reactorOk: z.boolean(),
+  reactorSkipped: z.boolean(),
+  jobsProcessed: z.number(),
+  jobsRemaining: z.number(),
+  skipped: z.literal("wakeup-running").optional(),
+});
 
 /** Print the outcome, if the caller asked for it. */
 export function reportWakeupOutcome(report: WakeupOutcomeReport): void {
@@ -75,24 +137,7 @@ export function parseWakeupOutcome(output: string): WakeupOutcomeReport | null {
        failure claim — the caller falls back to the exit code. */
     return null;
   }
-  if (!isRecord(parsed)) return null;
-  const { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining, skipped } = parsed;
-  if (
-    typeof connectorErrors !== "number" ||
-    typeof reactorOk !== "boolean" ||
-    typeof reactorSkipped !== "boolean" ||
-    typeof jobsProcessed !== "number" ||
-    typeof jobsRemaining !== "number" ||
-    (skipped !== undefined && skipped !== "wakeup-running")
-  ) {
-    return null;
-  }
-  return {
-    connectorErrors,
-    reactorOk,
-    reactorSkipped,
-    jobsProcessed,
-    jobsRemaining,
-    ...(skipped === undefined ? {} : { skipped }),
-  };
+  const result = reportSchema.safeParse(parsed);
+  if (!result.success) return null;
+  return result.data;
 }
