@@ -1,13 +1,54 @@
 ---
 title: "Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme"
 status: draft
-workstream: scan-ingest
+workstream: unattached
 issues:
   - ../../../issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
   - ../../../issues/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md
   - ../../../issues/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md
 ---
 # Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme
+
+> **Boxholder decision, 2026-09-14 — read this before the body.** *"I want every
+> box currently and forever in the future to use annex. So we should just be
+> making it right, always, and not worry about cases where it isn't right."* And:
+> *"We might need to spin up a full-embrace-annex workstream, but you could file
+> issues and just behave as though it's implemented already in this
+> workstream."*
+>
+> This changes the plan's shape and its owner. **Owner:** a full-embrace-annex
+> workstream, not `scan-ingest` — hence `workstream: unattached` above; the
+> session that picks this up attaches it. Tracking issue:
+> `issues/features/2026-09-14-every-box-uses-git-annex.md`.
+>
+> **What the decision deletes from the body below:**
+> - Track 2's *graceful* refusals. Under annex-always a manifest-scheme box is a
+>   broken invariant, not a supported state, so the asset writers get
+>   `invariant()` (per `code-style.md`: *"A seemingly-impossible state (a broken
+>   invariant) gets a hard failure, not a fallback"*), not a polite message
+>   naming `bbx attachments to-annex`. Cheaper than four hand-written refusals
+>   and more honest.
+> - The dual-scheme branch in `writeBoxGitignore` (`src/core/box/index.ts:245-283`)
+>   and the `annexed` probe that feeds it (`:136`). One block, unconditional.
+> - *NOT in scope*'s first two entries. Deleting the manifest scheme and
+>   converting existing boxes are now **in** scope — this plan absorbs
+>   `issues/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md`
+>   rather than being its prerequisite.
+> - The fixture-default flip's dual-spelling transition (*Agent-flow* GAP).
+>   `makeTmpBox` becomes annex-always with no `annex` option, and the
+>   fabricate-vs-real-binary question in *Failure modes* gets decided rather
+>   than hedged: if git-annex is mandatory everywhere, the fixture can require
+>   the binary and the fidelity gap closes.
+>
+> **What the decision adds:** a conversion for existing manifest-scheme boxes,
+> and an ordering constraint — `to-annex` reads manifests to verify a
+> conversion, so the scheme cannot be deleted until every box is converted.
+> That makes this two changes, not one.
+>
+> The budget below is therefore stale and must be re-set by the owning
+> workstream before implementation. The body is kept because its citations,
+> failure modes, and the reasoning behind each seam are all still accurate —
+> only the accommodation half is dropped.
 
 `bbx init` always produces a manifest-scheme box, and four asset writers cannot
 write to one. So a brand-new box cannot take a scan, a photo import, a Gmail

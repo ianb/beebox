@@ -37,6 +37,8 @@ import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
 import { staleIndexLockCheck } from "./health-git-lock.js";
+import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
+import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
 import { templateUpdatesCheck } from "./health-templates.js";
 import { packageDocsCheck } from "./health-package-docs.js";
 
@@ -262,6 +264,15 @@ export async function runHealthChecks(
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
   checks.push(await packageDocsCheck(boxRoot));
+  // Needs the box's own deploy time to judge an uploader's build against, which
+  // is the same `deploy-info.json` the version panel reads.
+  const version = await readVersionInfo();
+  checks.push(
+    scanUploaderFreshnessCheck(boxRoot, {
+      deployedAt: version.deployedAt,
+      contractVersion: SCAN_CONTRACT_VERSION,
+    }),
+  );
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);

@@ -1,6 +1,6 @@
 ---
 title: "The scan uploader learns when it has drifted from the box"
-status: draft
+status: active
 workstream: scan-ingest
 issues: []
 ---
@@ -30,8 +30,9 @@ boxholder can then ask a bundle what it is. That is not drift detection — it
 tells you what you have, never that it is wrong, and it requires suspecting a
 problem first.
 
-**This plan's budget.** One track, two subprojects (`beebox/`,
-`scan-uploader/`).
+**This plan's budget** *(as first written, before the boxholder added the
+build-stamp requirement — superseded by the re-set below).* One track, two
+subprojects (`beebox/`, `scan-uploader/`).
 
 | | source | tests |
 |---|---|---|
@@ -43,10 +44,56 @@ definition and its bump rule) and `scan-uploader/README.md`.
 
 This is ~5× the smallest fix and it **adds a field to a wire contract** — a
 protocol addition, which the circuit breaker says goes to the boxholder as a
-choice before the rest is written. The choice is stated in *Could this be
-simpler?* and needs their answer before chunk 1. The optional second mechanism
-(a build stamp recorded per token, so a mismatch names *which* copy is stale) is
-deliberately left out of this budget and listed in *NOT in scope*.
+choice before the rest is written.
+
+### Budget re-set 2026-09-14, and the breaker report that forced it
+
+**What was asked.** The boxholder approved the contract version and then added a
+second requirement the budget above does not cover: *"I'd also like some
+indication just of the date/revision of the uploader too. It might work, but not
+well. If the box is simply aware of it, then it can notify someone that there's
+an old version. (Eg it might obey the protocol, but be missing features)."*
+
+That reverses this plan's own first *NOT in scope* entry — a build stamp
+recorded per token — and adds a box-side surface, which is a subsystem this
+plan did not name. Both are breaker conditions, so this section exists rather
+than the budget being quietly raised.
+
+**What is built.** Two tracks, two subprojects.
+
+| | source | tests |
+|---|---|---|
+| Track 1 — contract version, client side (`e8f1fbdd3`) | ~180 | ~475 |
+| Track 2 — build stamp + box-side freshness check | ~130 | ~65 |
+| **Total** | **~310** | **~540** |
+
+**Size against budget: ~5× on source, ~6× on tests.** Past the 1.5× gate, so
+the number above is re-set to what was built rather than treated as met.
+
+**What drove the growth**, honestly separated:
+
+1. *The second requirement* (~60% of Track 2, and all of the box side). The
+   build stamp, its build-time git plumbing, the token-record fields, and the
+   `scan-uploaders` health check exist because the boxholder asked for them
+   after the budget was written. Not creep — but not budgeted either.
+2. *Doctest prose.* The test line counts are mostly commented Markdown, not
+   assertions: 6 doctest files, ~80 assertions. The repo's doctests are
+   documentation that runs, so this is the house style rather than
+   over-testing, but it makes the test column a poor proxy for effort and it is
+   why the two columns are reported separately.
+3. *`max-params` and `exactOptionalPropertyTypes`.* Threading the identity
+   through `TokenStore.verify` needed a params-object refactor and an explicit
+   `| undefined`. Real work the plan did not anticipate, but small.
+
+**What was NOT built, deliberately**, and remains deferred: the latched
+`notifyBoxholder` push (the research found that channel reaches nobody unless
+the boxholder has wired Telegram or a web-push device, and there is no
+notification history — so the health check has to stand alone regardless, and
+the push is a second surface for the same fact); a question card (a question
+borrows the boxholder's authority for a real choice among outcomes, and a stale
+uploader has one remedy and no decision); and surfacing `lastClient` in the
+Settings → Scan uploaders row (cheap, but the health check already answers the
+question the boxholder asked).
 
 ## Stated preferences this plan trades against
 
@@ -82,9 +129,11 @@ intends** (`:151`). Relevant to where the report goes: a version the box merely
 *acts on* would be a gate this plan does not build.
 
 **The strongest countervailing preference is `beebox/CLAUDE.md`'s "Work only on
-the requested problem."** The boxholder asked for detection, so detection is in
-scope; the build-stamp-per-token half, which answers "which laptop", is not what
-they asked and is deferred.
+the requested problem."** Both halves were asked for: the contract version on
+2026-09-14, and the build stamp plus box-side awareness in the same
+conversation (quoted in the budget re-set). What stays out is everything the
+boxholder did not ask for — the push notification, the question card, the
+Settings-row display.
 
 ## What already exists
 
@@ -177,6 +226,12 @@ staleness" — no design decision here turns on it.
 
 ### Track 1 — a contract version, compared every sweep
 
+*Built in `e8f1fbdd3`.* One deviation from the Direction below: the
+"last reported verdict" state file was **not** built, so the drift report is a
+stdout line every sweep rather than a desktop notification on change. That
+settles the first *Open design question* by removing it — see the note there.
+
+
 **What.** The wire contract gains `SCAN_CONTRACT_VERSION`, a monotonic integer
 declared in `docs/scan-upload-contract.md` and spelled once on each side. The
 client sends its own on both routes; the box returns its own on the check
@@ -245,6 +300,54 @@ a version nobody knows when to bump decays into a constant.
 **First implementation chunk.** `compareContractVersion` plus its doctest, in
 `scan-uploader/`. Pure, no wire change, no open questions: the four verdicts and
 the `unknown` rule are settled above.
+
+### Track 2 — the build stamp, and the box reports a stale uploader
+
+**What.** The uploader sends the revision it was built from and when
+(`x-scan-client-build`, `x-scan-client-built-at`); the box records both on the
+scan token's record and a health check reports an uploader whose build predates
+the box's own deploy.
+
+**Why this needs to change.** The contract version answers "does this client
+still speak the protocol". It does not answer "how old is it", and an uploader
+can be current on the protocol and still be missing features. Nothing on either
+side carried any build identity at all: `scan-uploader/build.ts` passed esbuild
+no `define`, so a copied bundle could not report what it was even in principle.
+
+**Direction, as built.**
+
+- `scan-uploader/src/build-stamp.ts` — a discriminated union over the two run
+  modes. `bundle` carries a revision and build time, baked in by esbuild
+  `define`; `source` is a checkout, which runs current source every sweep and
+  therefore cannot drift, so it reports the mode rather than a fictional date.
+  The `typeof __UPLOADER_BUILD__` guard is what lets one module serve both:
+  esbuild replaces the identifier in the bundle and leaves it undeclared in
+  source, and `typeof` is the only way to ask without a `ReferenceError`.
+- `scan-uploader/src/build-revision.ts` — the `git describe --always --dirty`
+  call, in its own module precisely so it cannot reach the runtime graph (it
+  shells out to git, which the target machines do not have). Verified absent
+  from the built bundle.
+- `TokenStore.verify` gains an `onUse` hook so `resolveScanRequestAuth` can
+  stamp the identity on the locked write `lastUsedAt` already performs — no
+  second lock. Values are capped, not validated: untrusted client strings whose
+  only use is being shown to a person must be harmless, not fatal.
+- `src/webapp/trpc/routers/health-scan-uploaders.ts` — the `scan-uploaders`
+  check. Compares the uploader's build time against `readVersionInfo()`'s
+  `deployedAt`: two timestamps from the same monorepo, which is ordered in a way
+  comparing git revisions could not be. `warning`, never `error` — an old
+  uploader still uploads and this must not fail a deploy.
+
+**Why a health check and not a notification.** It is the load-bearing surface
+because it needs no channel: `bbx health` and the dashboard banner show it
+whether or not push or Telegram is configured, and a stale uploader is a
+*sticky* condition — true on every request until someone re-copies the bundle —
+which a pull surface reports without nagging. Same reasoning as
+`template-updates`, which is the shipped precedent for "something is out of
+date, tell the boxholder".
+
+**Vocabulary lock-ins.** `x-scan-client-build` / `x-scan-client-built-at`; the
+literal `source` for checkout mode; `lastClientBuild`/`lastClientBuiltAt`/
+`lastClientContract` on the token record; the `scan-uploaders` check name.
 
 ## Could this be simpler?
 
@@ -375,15 +478,21 @@ design step, and it sits outside the first chunk.
 
 ## Open design questions
 
-**Where does the "last reported verdict" live, and what happens when it cannot
-be written?** It must persist between sweeps to avoid nagging, and the uploader
-already writes beside its config (`scan-uploader/src/config-path.ts`, with
-`atomic-write.ts` available). My lean: a single file next to the resolved config
-holding the last verdict, and on a write failure **notify anyway** — a duplicate
-notification is a worse annoyance than a missed drift warning is a risk, and
-principle 4 prefers noisy to silent. Raising it because it is the one place this
-plan adds persistent client state, and the opposite choice (fail silent) is
-defensible if the boxholder would rather never be nagged.
+**~~Where does the "last reported verdict" live?~~ Settled by not building it
+(2026-09-14).** The drift report is a stdout line, so there is no persistent
+client state and nothing to nag: the sweep's stdout goes to the launchd log,
+which is the right place for a standing condition that repeats every sweep. The
+*box* now carries the sticky-condition report instead, in a surface built for
+exactly that (Track 2's health check). That is a better home than a state file
+beside the client's config, because the box already knows how to report a
+standing condition and the client would have had to learn.
+
+Residual risk, accepted: a drift warning on stdout is read by nobody under
+launchd. It is not the only signal — the health check covers the same drift from
+the box side — but a boxholder who never opens `bbx health` and never reads the
+log learns nothing from the *client* half. Escalating it to a desktop
+notification is a one-line change if that turns out to matter, and it would then
+need the verdict-change state this question originally described.
 
 **Should `configure` refuse on drift, or only warn?** It is the loudest moment —
 `configure.ts:76-98` already round-trips a check with an empty `hashes` array,

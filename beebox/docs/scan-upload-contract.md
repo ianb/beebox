@@ -43,8 +43,13 @@ Request body (JSON): `{ "hashes": ["<sha256>", …] }` — batch, ≤500 entries
 Response `200` (JSON):
 
 ```json
-{ "states": { "<sha256>": { "state": "unknown" }, "<sha256>": { "state": "rejected", "reason": "…" } } }
+{ "contractVersion": 1,
+  "states": { "<sha256>": { "state": "unknown" }, "<sha256>": { "state": "rejected", "reason": "…" } } }
 ```
+
+`contractVersion` is the box's own contract version (see "Client identity").
+It is a sibling of `states`, and a client that does not know about it ignores
+it.
 
 Per-hash `state`:
 
@@ -82,6 +87,9 @@ Headers:
 |---|---|---|
 | `X-Upload-Filename` | yes | original filename (basename only; server sanitizes) |
 | `X-Scan-Profile` | no | free-text scanner profile name (≤200 chars), recorded as provenance |
+| `X-Scan-Contract` | no | the client's contract version (integer) — see "Client identity" |
+| `X-Scan-Client-Build` | no | the client's build revision, or `source` for a checkout |
+| `X-Scan-Client-Built-At` | no | ISO 8601 time the client bundle was built |
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
@@ -138,8 +146,58 @@ if identity changed. Disposition only after `accepted`/`duplicate` on PUT or
 `pending`/`imported` from check. `rejected` files are never moved or
 deleted.
 
+## Client identity
+
+The uploader is a stand-alone package that never updates itself: a copied
+`dist/scan-uploader.mjs` sits at whatever revision it was built from until
+somebody copies a new one over it. So it volunteers who it is, and the box
+reports an uploader that has fallen behind.
+
+**`SCAN_CONTRACT_VERSION`** is one monotonic integer, spelled once on each side
+(`beebox/src/core/scan/contract-version.ts`,
+`scan-uploader/src/contract-version.ts`). The client sends it as
+`X-Scan-Contract`; the box returns its own as `contractVersion` on the check
+response; the client compares them every sweep and reports which side is
+behind.
+
+**Bump it when a change alters what a correct client must *do*** — the client
+obligations below, the check-state vocabulary, or a route's shape. Do not bump
+it for server-internal changes a client cannot observe, or for an additive
+field an older client correctly ignores. Nothing can test that a human bumped
+it, and a missed bump is worse than having no version at all, because it
+reports a stale client as current. That is why the bump belongs to the
+discipline below rather than being a separate obligation.
+
+**The build stamp** (`X-Scan-Client-Build`, `X-Scan-Client-Built-At`) answers a
+different question: not "does this client still speak the protocol" but "how
+old is it". A client can be current on the contract and still be missing
+features. A checkout sends `source`, because it runs current source on every
+sweep and cannot drift; only a copied bundle can. The box records both on the
+scan token's record and compares the build time against its own deploy time —
+two timestamps from the same monorepo, which is ordered in a way comparing git
+revisions could not be.
+
+All three request headers ride **both** routes (the table above lists them
+under PUT, but the check request sends them too), so a box that only ever sees
+uploads still learns what is talking to it.
+
+**Neither is a credential and neither gates anything.** The box never refuses
+an old client: a contract change that genuinely breaks a client already fails
+loudly at parse (an unknown `state` or an unexpected status is a protocol
+error), and refusing a client that still works would strand scans on the
+laptop with nothing to show for it. A box reporting no `contractVersion`, and a
+client sending no identity headers, both mean "no opinion" — never "drifted".
+Every one of these fields is additive over a parser that ignores unknown keys
+and unknown headers, in both directions, so no flag day is needed.
+
+Note the prefix: these must **not** be named `x-bbx-*`. The hub deletes every
+client-supplied header in that namespace before it reaches a box (its spoof
+wall), so such a header would silently never arrive.
+
 ## Change discipline
 
 Any change to routes, headers, states, statuses, limits, or hashing updates
 this doc, both breadcrumbed implementations, and the route doctests in the
-same change.
+same change. A change that alters the client obligations, the state vocabulary,
+or a route's shape also bumps `SCAN_CONTRACT_VERSION` on both sides (see
+"Client identity") — that bump is part of this same change, not a follow-up.
