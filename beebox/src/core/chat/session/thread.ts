@@ -20,7 +20,7 @@ import {
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
-import { resolveChatEngine } from "./engine.js";
+import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
@@ -134,6 +134,19 @@ export class ChatThreadSession extends EventEmitter {
   private async startRun(): Promise<void> {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
+
+    // A stored id the box has no record of is not resumable: nothing says which
+    // engine wrote it, and no transcript exists in either store, so resuming it
+    // would ask a guessed engine to continue a conversation it never had. Start
+    // fresh instead of failing — a thread is automation, and stranding it is
+    // worse than losing the thread's earlier context. The new id is adopted from
+    // the SDK's first message below and emitted on `session`, so the thread's
+    // owner relearns it.
+    if (this.sessionId !== null
+        && (await resolveRecordedChatEngine(this.boxRoot, { sessionId: this.sessionId })) === null) {
+      log("start", `No record of session ${this.sessionId}; starting a fresh session instead of resuming it`);
+      this.sessionId = null;
+    }
 
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.

@@ -75,7 +75,8 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
     const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
     return { kind: "unavailable", reason: "deletion-in-progress", huskPath: husk?.path ?? null };
   }
-  if (args.registry.deletion.hasAssignedSession(args.sessionId)) return { kind: "resumable" };
+  // A live run, not merely a registry entry — see `hasLiveRun`.
+  if (args.registry.deletion.hasLiveRun(args.sessionId)) return { kind: "resumable" };
   // A reserved chat (`reserve.ts`) is addressable before it has written
   // anything, so the transcript checks below would call it a ghost and the
   // first send into a coined chat would 410. Checked after the deletion gates,

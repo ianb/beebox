@@ -49,9 +49,37 @@ session, or probe for the transcript first. A thread session is not a browser ta
 and cannot be told to reload, which is why the answer is not obviously the same
 as the web chat's.
 
-## Why this is filed rather than fixed
+## Why this was filed rather than fixed at the time
 
 The authorized fix was the history read on a live chat, which is what the
-`git reset --hard` incident produced. These are adjacent reachable failures
-through different entry points, and both remedies are invariant changes rather
+`git reset --hard` incident produced. These were adjacent reachable failures
+through different entry points, and both remedies were invariant changes rather
 than local corrections.
+
+> **Both doors closed 2026-09-13** in `3c220e44f` and its follow-up, along with a
+> durable variant found while tracing them: `updateFeaturesForSession` filled a
+> new row's `engine` with the box default, so a chat reserved as `claude` on a
+> codex-default box was recorded as `codex` permanently on its first feature
+> toggle. `engine` is now a required argument, `FeatureStore` declines to write a
+> row for a session nothing recorded rather than inventing one, the availability
+> gate requires a live run (`hasLiveRun`, split from `hasAssignedSession` because
+> `archiveChatSession` needs the loose meaning), the controls answer `NOT_FOUND`,
+> and `ChatThreadSession` starts fresh instead of resuming a phantom.
+
+## Still open: a third door, in background bulk-upload
+
+Cross-model review found one more materializer, left unfixed because its remedy
+needs a product decision. `injectUnfiledSelfNote` and `injectStrandedSelfNote`
+take persisted session ids from stale upload cards and staging records
+(`src/core/bulk-upload/sweep.ts:122`, `:302`) and call
+`runtime.registry.getOrCreate(targetId)` directly
+(`src/webapp/routes/bulk-upload-lifecycle.ts:43`, `:90`), with no availability
+check. If a box's chat records were rewound, this recreates the ghost entry, and
+the next send resolves the unrecorded session through `resolveStartEngine`'s
+default fallback (`src/core/chat/session/start.ts:123`).
+
+The gate tightening means such an entry no longer makes availability lie about
+it, so the reachable harm is narrower than it was. What is undecided is what
+these background notices SHOULD do when their recorded target is gone: skip the
+notice, redirect it to the most-active chat, or start a fresh one. Each loses
+something different, and the notice exists to tell the boxholder something.
