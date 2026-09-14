@@ -325,6 +325,14 @@ driveCommand
       process.exit(1);
     }
 
+    if (result.skipped) {
+      // A skip is a success for the cycle, but this verb is a person asking for
+      // a sync NOW; saying "up to date" about a service we never contacted is
+      // the failure this whole seam exists to remove.
+      console.error(`Sync skipped (${result.skipped.reason}): ${result.skipped.detail}`);
+      process.exit(1);
+    }
+
     if (result.created.length === 0 && result.updated.length === 0 && (!result.pushed || result.pushed.length === 0)) {
       console.log("Everything up to date.");
     } else {

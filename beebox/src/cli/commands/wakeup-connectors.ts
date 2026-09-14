@@ -180,6 +180,11 @@ function reportSyncResult(
   if (result.error) {
     console.error(`  Error: ${result.error}`);
     errors = 1;
+  } else if (result.skipped) {
+    // Neither an error nor a sync: the connector ran and deliberately did
+    // nothing. It must still be visible, or the cycle reads as "nothing new"
+    // for a service it never contacted.
+    console.log(`  skipped (${result.skipped.reason}): ${result.skipped.detail}`);
   } else if (
     result.created.length === 0 &&
     result.updated.length === 0 &&
