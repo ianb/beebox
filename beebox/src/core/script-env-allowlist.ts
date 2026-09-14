@@ -50,6 +50,10 @@
  * - `BBX_SERVER_URL` / `BBX_BOX_NAME` — not inherited because they are always
  *   *derived* below from this box's own `publicUrl`; inheriting a parent's copy
  *   could point a subprocess at the wrong box.
+ * - `BBX_SPAWN_PROFILE` — always *set* by `buildEnv` to the profile it is
+ *   building (`agent` or `tooling`), never inherited. Inheriting it would let a
+ *   tooling parent hand its `tooling` marker to an agent child, which is
+ *   exactly the local-credential-use case the marker exists to prevent.
  */
 const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   // --- OS/runtime basics ---
