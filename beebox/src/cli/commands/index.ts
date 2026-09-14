@@ -5,6 +5,7 @@
  */
 
 export { initCommand } from "./init.js";
+export { maintenanceCommand } from "./maintenance.js";
 export { migrateCommand } from "./migrate.js";
 export { docsCommand } from "./docs.js";
 export { upgradeCommand } from "./upgrade.js";

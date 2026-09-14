@@ -19,20 +19,13 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Smallest fix and budget
 
-<!-- The circuit breaker's baseline (bbx-plan skill, "Circuit breaker").
-     1. The smallest change that fixes the problem as reported — often cruder
-        and incident-sized — with its rough size in lines.
-     2. This plan's budget: tracks, subprojects touched, estimated lines of
-        source and of tests.
-     Some budgets exceed ~3× the smallest fix; others add a subproject,
-     protocol, or vocabulary the request did not ask for. Either kind: stop,
-     and let the boxholder choose between the two before you write further.
-     Implementation stops and re-plans when the diff passes 1.5× this budget,
-     measured over the same source/test categories. Report docs/generated output
-     separately unless budgeted. Revision/review counts alone are not stop gates;
-     unplanned scope, an invalidated approach, or a size-gate breach still is.
-     *Could this be simpler?* below justifies whatever the budget adds over
-     the smallest fix. -->
+<!-- Name the smallest fix and the chosen design's tracks/subprojects and
+     estimated changed source/test lines (additions plus deletions). Estimates
+     are goals, not automatic cutoffs or human-imposed limits. Explain what the
+     fuller design buys. Report authored docs/generated output separately.
+     Over 2,000 total changed lines is a BIG CHANGE: label it, explain the size,
+     and obtain approval unless that size and scope are already approved.
+     Substantial growth prompts visible reassessment, not an automatic halt. -->
 
 ## Stated preferences this plan trades against
 

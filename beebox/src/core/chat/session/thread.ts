@@ -8,6 +8,8 @@
  */
 
 import { EventEmitter } from "node:events";
+import { withBoxWork } from "../../../lib/box-maintenance.js";
+import { withChatRunAdmission } from "./run-lock.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
@@ -98,13 +100,25 @@ COMMIT DISCIPLINE:
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
 }
 
+const liveThreads = new Set<ChatThreadSession>();
+
+export function chatThreadsAreIdle(boxRoot: string): boolean {
+  return [...liveThreads].every((session) => session.boxRoot !== boxRoot || !session.isBusy());
+}
+
+export function quiesceChatThreads(boxRoot: string): void {
+  for (const session of liveThreads) {
+    if (session.boxRoot === boxRoot && !session.isBusy()) session.park();
+  }
+}
+
 export class ChatThreadSession extends EventEmitter {
   /** Run lifecycle — replaces the old run/busy pair. Never enters `stopping`:
    *  a thread session has no queue to protect, so stop/park close straight
    *  through to `idle`. */
   private state: ChatLifecycle = IDLE;
   private sessionId: string | null;
-  private boxRoot: string;
+  readonly boxRoot: string;
   private threadRef: string;
   private chatDescription: string;
   private sessionViewBaseUrl: string | undefined;
@@ -135,6 +149,7 @@ export class ChatThreadSession extends EventEmitter {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
 
+    await withChatRunAdmission(this.boxRoot, async (work) => {
     // A stored id the box has no record of is not resumable: nothing says which
     // engine wrote it, and no transcript exists in either store, so resuming it
     // would ask a guessed engine to continue a conversation it never had. Start
@@ -151,7 +166,7 @@ export class ChatThreadSession extends EventEmitter {
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
     const engine = await resolveChatEngine(this.boxRoot, { sessionId: this.sessionId });
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return;
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return false;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
@@ -186,7 +201,16 @@ export class ChatThreadSession extends EventEmitter {
     });
     this.state = nextLifecycle(this.state, { phase: "ready", run });
 
-    void this.consumeMessages(run);
+    liveThreads.add(this);
+    void this.consumeMessages(run).finally(async () => {
+      liveThreads.delete(this);
+      await work.release();
+    });
+    return true;
+    }).catch((error: unknown) => {
+      if (this.liveRun() === null) this.state = IDLE;
+      throw error;
+    });
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -323,6 +347,10 @@ export class ChatThreadSession extends EventEmitter {
    * Returns a promise that resolves when the agent finishes its turn.
    */
   async send(message: string): Promise<void> {
+    return withBoxWork(this.boxRoot, () => this.sendAdmitted(message));
+  }
+
+  private async sendAdmitted(message: string): Promise<void> {
     if (this.isBusy()) {
       throw new SessionBusyError();
     }
@@ -392,10 +420,6 @@ export class ChatThreadSession extends EventEmitter {
 
   getThreadRef(): string {
     return this.threadRef;
-  }
-
-  isRunning(): boolean {
-    return this.liveRun() !== null;
   }
 
   isBusy(): boolean {

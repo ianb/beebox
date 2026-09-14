@@ -22,6 +22,7 @@ import type { AgentResult, AgentResultBase } from "./types.js";
 import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
+  signal?: AbortSignal | undefined;
   boxRoot: string;
   systemPrompt: string;
   prompt: string;
@@ -221,6 +222,7 @@ async function setupRunEnv(
  * Run a single agent turn (or session-resume turn) via the SDK.
  */
 export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
+  options.signal?.throwIfAborted();
   const { boxRoot, systemPrompt, prompt, dryRun = false, maxTurns = 20 } = options;
 
   const isResume = options.resumeSessionId !== undefined;
@@ -270,13 +272,19 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     binaryPath,
     appendedSystem,
   });
-  const outcome = await consumeAgentStream({
-    prompt: options.prompt,
-    queryOptions,
-    onOutput: options.onOutput,
-    onSessionId: options.onSessionId,
-    logger,
-  });
+  const controller = new AbortController();
+  const onAbort = (): void => controller.abort(options.signal?.reason);
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  if (options.signal?.aborted) onAbort();
+  let outcome: RunStreamOutcome;
+  try {
+    outcome = await consumeAgentStream({
+      prompt: options.prompt, queryOptions: { ...queryOptions, abortController: controller },
+      onOutput: options.onOutput, onSessionId: options.onSessionId, logger,
+    });
+  } finally {
+    options.signal?.removeEventListener("abort", onAbort);
+  }
 
   return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
     provider: "claude",

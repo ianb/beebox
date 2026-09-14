@@ -18,7 +18,16 @@ import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
+import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance.js";
 import { getStatus, getHead, getLog } from "../../../src/lib/git.js";
+
+async function waitForClosed(boxRoot) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await boxMaintenanceStatus(boxRoot)) return;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw new Error("upgrade did not close admission");
+}
 
 const OLD_VERSION = "0.1.0";
 const NEW_VERSION = "0.2.0";
@@ -271,4 +280,58 @@ thrown instanceof BoxShapeError
 
 ```ts cleanup
 await fs.rm(legacyRoot, { recursive: true, force: true });
+```
+
+## Upgrade closes admission before preflight and drains accepted work
+
+The fake installer checks the real gate while the dependency has changed.
+The child migration joins its owner's maintenance window, and completion opens
+admission only after the final commit. No installer or live box is contacted.
+
+```ts
+const boxRoot = await makeV3Fixture();
+const active = await acquireBoxWork(boxRoot);
+const calls = [];
+let denied = false;
+let childJoins = false;
+let maintenancePermit = false;
+const fake = makeFakeRunner({ boxRoot, calls });
+const runCommand = async (request) => {
+  if (request.label === "pnpm-install") {
+    denied = await withoutBoxWork(() => acquireBoxWork(boxRoot)).then(async work => { await work.release(); return false; }, () => true);
+    maintenancePermit = JSON.parse(boxWorkEnvironment().BBX_BOX_WORK).maintenance;
+  }
+  if (request.label === "bbx-migrate") childJoins = request.args.includes("--within-maintenance");
+  return fake(request);
+};
+const upgrading = tryUpgrade(boxRoot, runCommand);
+await waitForClosed(boxRoot);
+calls.length
+=> 0
+
+await active.release();
+const result = await upgrading;
+JSON.stringify({ version: result.installedVersion, denied, childJoins, maintenancePermit, phase: await boxMaintenanceStatus(boxRoot) })
+=> {"version":"0.2.0","denied":true,"childJoins":true,"maintenancePermit":true,"phase":null}
+```
+
+```ts cleanup
+await active.release();
+await fs.rm(boxRoot, { recursive: true, force: true });
+```
+
+## Reverted mutation remains closed until recovery validates the box
+
+The existing rollback restores tracked code and data and reinstalls the old
+engine. It does not validate that restored engine, so it cannot reopen work.
+
+```ts
+const boxRoot = await makeV3Fixture();
+const result = await tryUpgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
+JSON.stringify({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot)).phase, version: await readPinnedSpec(boxRoot) })
+=> {"failed":true,"phase":"exclusive","version":"0.1.0"}
+```
+
+```ts cleanup
+await fs.rm(boxRoot, { recursive: true, force: true });
 ```

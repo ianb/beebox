@@ -9,6 +9,7 @@ import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyWebsocket from "@fastify/websocket";
 import fastifyCookie from "@fastify/cookie";
+import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
@@ -38,18 +39,16 @@ import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
 import {
   DEV_BUNDLE_RELOAD_EXIT_CODE,
   abandonDevBundleDrain,
-  beginDevBundleDrain,
   devBundleWasReplaced,
-  hasActiveMutations,
-  isDevBundleDraining,
-  trackMutationStart,
+  DEV_BUNDLE_RELOAD_REQUEST,
+  DEV_BUNDLE_RELOAD_NOW,
+  DEV_BUNDLE_RELOAD_ABORTED,
 } from "../lib/dev-bundle-reload.js";
-import { chatRuntimesAreIdle } from "./chat-runtime.js";
-import {
-  allChatScheduleDeliveriesAreIdle,
-  pauseChatSchedulesForDevReload,
-  resumeChatSchedulesAfterAbortedDevReload,
-} from "../core/chat/schedules.js";
+import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../core/chat/schedules.js";
+import { quiesceChatThreads, chatThreadsAreIdle } from "../core/chat/session/thread.js";
+import { getChatRuntime } from "./chat-runtime.js";
+import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";
+
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
 
@@ -88,7 +87,7 @@ export function assertOpenAccessNotListening(options: InternalServerOptions): vo
 /**
  * Create and configure the Fastify server.
  */
-export async function createServer(options?: InternalServerOptions): Promise<FastifyInstance> {
+export async function createServer(options?: InternalServerOptions, startup?: ReadonlyMap<string, BoxWork>): Promise<FastifyInstance> {
   options = options ?? {};
   const boxes = await resolveBoxes(options);
 
@@ -136,23 +135,7 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
 
   registerChromeExtensionCors(server);
 
-  // A hub-supervised dev reload keeps reads available while current work
-  // drains, but admits no new mutation that could race the final idle check.
-  // Track the complete request because a chat send performs async preparation
-  // before its registry session becomes visibly busy.
-  server.addHook("onRequest", async (request, reply) => {
-    const oauthCallback = request.method === "GET" && request.url.startsWith("/auth/google-services/callback");
-    if (!oauthCallback && (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS")) {
-      return;
-    }
-    if (isDevBundleDraining()) {
-      await reply.status(503).send({ error: "Server is reloading updated development code; retry this request." });
-      return;
-    }
-    const finish = trackMutationStart();
-    request.raw.once("close", finish);
-    reply.raw.once("finish", finish);
-  });
+  registerBoxAdmission(server, boxes);
 
   // Attach the Content-Security-Policy (Report-Only) + Reporting-Endpoints
   // headers to HTML document responses. Registered early so its onSend runs on
@@ -259,7 +242,9 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
     const eventBus = box.eventBus ?? createEventBus(box.boxRoot, { pollInterval: 1000 });
     eventBus.prune(new Date(Date.now() - 24 * 60 * 60 * 1000));
 
-    await registerBox(server, { box, eventBus, options, frontendPath, frontendExists });
+    const register = () => registerBox(server, { box, eventBus, options, frontendPath, frontendExists });
+    const lease = startup?.get(box.boxRoot);
+    if (lease) await lease.run(register); else await register();
   }
 
   if (frontendExists) {
@@ -295,6 +280,14 @@ export async function startServer(options?: InternalServerOptions): Promise<void
 
   const boxes = await resolveBoxes(options);
 
+  const startup = new Map<string, BoxWork>();
+  try {
+    for (const box of boxes) startup.set(box.boxRoot, await acquireBoxStartup(box.boxRoot));
+  } catch (error) {
+    for (const lease of startup.values()) await lease.release();
+    throw error;
+  }
+
   // Kill previous server for each box
   for (const box of boxes) {
     const pidFile = path.join(box.boxRoot, ".bbx-serve.pid");
@@ -310,7 +303,15 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     await sweepStaleIndexLock(box.boxRoot);
   }
 
-  const server = await createServer({ ...options, boxes });
+  let server: FastifyInstance;
+  try {
+    server = await createServer({ ...options, boxes }, startup);
+    await server.ready();
+    for (const box of boxes) await getChatRuntime(box.boxRoot)?.maintenance;
+  } catch (error) {
+    for (const lease of startup.values()) await lease.release();
+    throw error;
+  }
 
   // Write PID file to each box
   const pidFiles: string[] = [];
@@ -320,10 +321,13 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     pidFiles.push(pidFile);
   }
 
+  let maintenanceCheck: ReturnType<typeof setInterval> | undefined;
+
   // Shutdown handler — force-close all connections immediately so
   // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
+    clearInterval(maintenanceCheck);
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
     }
@@ -365,7 +369,9 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   process.on("SIGHUP", () => fireShutdown("SIGHUP"));
 
   try {
-    await server.listen({ port, host });
+    // Publish HTTP readiness only after startup has relinquished its work.
+    for (const lease of startup.values()) await lease.release();
+    await withoutBoxWork(() => server.listen({ port, host }));
     // Register live public URLs for each served box so subprocess spawns
     // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
     // requiring publicUrl to be set in _config/box.json.
@@ -377,49 +383,57 @@ export async function startServer(options?: InternalServerOptions): Promise<void
       console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
     }
 
-    // Only a hub child has a supervisor that can safely replace it. Standalone
-    // `bbx serve` deliberately does not self-spawn: its pidfile and orphan
-    // detector make overlapping parent/successor lifetimes destructive.
-    // TODO(env-migration): The launcher stamps this internal supervision marker before exec.
-    if (isHubMode() && process.env.BBX_DEV_BUNDLE_ID) {
-      let drainStartedAt: number | undefined;
-      const reloadCheck = setInterval(() => {
-        void (async () => {
-          if (!isDevBundleDraining()) {
-            if (!(await devBundleWasReplaced())) return;
-            console.log("Development bundle changed; draining before reload...");
-            beginDevBundleDrain();
-            pauseChatSchedulesForDevReload();
-            drainStartedAt = Date.now();
-          }
-          if (hasActiveMutations() || !chatRuntimesAreIdle() || !allChatScheduleDeliveriesAreIdle()) {
-            if (drainStartedAt !== undefined && Date.now() - drainStartedAt >= 10 * 60 * 1000) {
-              await abandonDevBundleDrain();
-              resumeChatSchedulesAfterAbortedDevReload();
-              drainStartedAt = undefined;
-              console.warn("Development bundle reload could not reach a safe boundary within 10 minutes; continuing on the loaded bundle.");
+    // The same poll quiesces chat for CLI maintenance and supervised reload.
+    // The supervisor owns reload admission across both child generations.
+    const paused = new Set<string>();
+    let checking = false;
+    let reloadRequested = false;
+    let warned = false;
+    process.on("message", (message: unknown) => {
+      if (typeof message !== "object" || message === null || !("type" in message)) return;
+      if (message.type === DEV_BUNDLE_RELOAD_NOW && reloadRequested && !shuttingDown) {
+        shuttingDown = true;
+        void shutdown("development bundle reload", DEV_BUNDLE_RELOAD_EXIT_CODE).catch((error: unknown) => {
+          console.error("Development bundle reload shutdown failed:", error);
+          process.exit(1);
+        });
+      } else if (message.type === DEV_BUNDLE_RELOAD_ABORTED) {
+        void abandonDevBundleDrain().then(() => { reloadRequested = false; });
+      }
+    });
+    maintenanceCheck = setInterval(() => {
+      if (checking || shuttingDown) return;
+      checking = true;
+      void withoutBoxWork(async () => {
+        for (const box of boxes) {
+          const runtime = getChatRuntime(box.boxRoot);
+          if (!runtime) continue;
+          if (await boxMaintenanceStatus(box.boxRoot)) {
+            pauseBoxChatSchedules(box.boxRoot);
+            paused.add(box.boxRoot);
+            if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && chatThreadsAreIdle(box.boxRoot) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
+              runtime.registry.quiesceForMaintenance();
+              quiesceChatThreads(box.boxRoot);
             }
-            return;
+          } else if (paused.delete(box.boxRoot)) {
+            runtime.registry.resumeAfterMaintenance();
+            resumeBoxChatSchedules(box.boxRoot);
           }
-          clearInterval(reloadCheck);
-          shuttingDown = true;
-          await shutdown("development bundle reload", DEV_BUNDLE_RELOAD_EXIT_CODE);
-        })().catch((err: unknown) => {
-          console.error("Development bundle reload check failed:", err);
-        });
-      }, 1000);
-      reloadCheck.unref();
-    } else if (process.env.BBX_DEV_BUNDLE_ID) {
-      const staleWarning = setInterval(() => {
-        void devBundleWasReplaced().then((replaced) => {
-          if (!replaced) return;
-          clearInterval(staleWarning);
+        }
+        if (reloadRequested || warned || !(await devBundleWasReplaced())) return;
+        if (isHubMode() && process.send) {
+          reloadRequested = true;
+          process.send({ type: DEV_BUNDLE_RELOAD_REQUEST });
+        } else {
+          warned = true;
           console.warn("Development bundle changed. Restart this standalone `bbx serve` process to load it safely.");
-        });
-      }, 1000);
-      staleWarning.unref();
-    }
+        }
+      }).catch((error: unknown) => console.error("Box maintenance check failed:", error)).finally(() => { checking = false; });
+    }, 1000);
+    maintenanceCheck.unref();
+
   } catch (err) {
+    for (const lease of startup.values()) await lease.release();
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
     }

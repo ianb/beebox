@@ -10,10 +10,13 @@
 import "./bootstrap.js";
 
 import { Command } from "commander";
+import { installBoxAdmission } from "./lib/box-admission.js";
+import { BoxMaintenanceError } from "../lib/box-maintenance.js";
 import { loadEnv, cliEnvSchema } from "../lib/env.js";
 import { migrateUserState } from "../lib/state-migration.js";
 import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } from "../lib/state-dir.js";
 import {
+  maintenanceCommand,
   initCommand,
   migrateCommand,
   docsCommand,
@@ -81,8 +84,10 @@ import {
 // malformed value (e.g. a non-numeric PORT), never absence, so scenario/test
 // invocations that set only harness vars pass through untouched.
 loadEnv(cliEnvSchema);
-await migrateUserState(LEGACY_STATE_DIR, BBX_STATE_DIR);
-await migrateUserState(LEGACY_CONFIG_DIR, BBX_CONFIG_DIR);
+if (!(process.argv.includes("--status") && process.argv.includes("--json"))) {
+  await migrateUserState(LEGACY_STATE_DIR, BBX_STATE_DIR);
+  await migrateUserState(LEGACY_CONFIG_DIR, BBX_CONFIG_DIR);
+}
 
 const program = new Command();
 
@@ -95,6 +100,7 @@ program
 // Implemented commands
 // ============================================
 
+program.addCommand(maintenanceCommand);
 program.addCommand(initCommand);
 program.addCommand(migrateCommand);
 program.addCommand(docsCommand);
@@ -214,4 +220,13 @@ program
     console.log("Not yet implemented");
   });
 
-program.parse();
+const releaseAdmission = installBoxAdmission(program);
+try {
+  await program.parseAsync();
+} catch (error) {
+  if (!(error instanceof BoxMaintenanceError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
+} finally {
+  await releaseAdmission();
+}

@@ -6,6 +6,7 @@
  * message; this module owns what happens to the turn once it has.
  */
 
+import type { BoxWork } from "../../lib/box-maintenance.js";
 import { startAwakeTimeout } from "../../lib/awake-timeout.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import type { ChatMessage, ChatSendInput, ChatSession } from "../../core/chat/session/index.js";
@@ -124,7 +125,8 @@ export function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { 
  */
 export function startAckedRun(
   chatSession: Pick<ChatSession, "send">,
-  { input, capture, watchdog }: {
+  { input, capture, watchdog, work }: {
+    work?: BoxWork;
     input: ChatSendInput;
     capture: TurnCapture;
     /** Tests shrink the bound; production omits it. */
@@ -144,8 +146,7 @@ export function startAckedRun(
       capture.fail(`The run did not start within ${describeBound(bound.timeoutMs)}`);
     },
   });
-  void chatSession
-    .send(input)
+  void (work ? work.run(() => chatSession.send(input)) : chatSession.send(input))
     .then((sent) => {
       if (!sent) capture.fail("Failed to send message");
     })
@@ -153,7 +154,8 @@ export function startAckedRun(
       console.error("[chat] send failed to start a run:", e);
       capture.fail(errorMessage(e));
     })
-    .finally(() => {
+    .finally(async () => {
       timer.stop();
+      await work?.release();
     });
 }

@@ -1,7 +1,7 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-09
+date: 2026-09-14
 model: gpt-6-astra
 reviewed-by: DRAFT — unreviewed
 ---
@@ -13,6 +13,13 @@ is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root).
+
+**Scoped amendment (2026-09-14):** This draft adds migration-maintenance
+accounting against `23e37c44c6438f9f5832baa1fd2437144b5b89a8` plus the
+migration-reliability worktree changes. It does not refresh unrelated inventory
+or the private security tier; the full-inventory revision remains unchanged.
+The overview is unchanged: existing authentication and agent permissions remain
+the boundaries, and maintenance does not provide additional process containment.
 
 **Scoped amendment (2026-09-09):** Added only the `files.kind` accounting below,
 against `35a480fd64e738fe4457608d5745362a89d1f381` plus its uncommitted
@@ -151,7 +158,9 @@ pub-worker routes are in §6a.
 
 **Positive control — the hub child-env allowlist**
 (`src/hub/child-env.ts:42-119`): per-box children receive an exact-name
-allowlist of env vars, never a spread. `BBX_SESSION_SECRET` never reaches a
+allowlist of env vars, never a spread. `src/hub/child-spawn.ts` explicitly sets
+`extendEnv: false`, so the subprocess library cannot merge ambient parent
+variables back into that allowlist. `BBX_SESSION_SECRET` never reaches a
 child (a box that could verify a cookie could forge one for a sibling);
 `ANTHROPIC_API_KEY` is excluded; widening requires a named entry with a
 reasoned comment. `src/core/script-env.ts` applies the same posture one
@@ -202,6 +211,8 @@ wakeup cycle or routine use without a per-action confirmation.
 
 | Practice | Where | State | Notes |
 |---|---|---|---|
+| Maintenance admission | `src/lib/box-maintenance.ts`, `src/webapp/box-admission.ts`, `src/webapp/trpc/trpc.ts` | mitigated | Low severity; authenticated/local reachability. `BBX_BOX_WORK` and its loopback header must match a live, box-scoped lease or maintenance owner. They preserve accepted work through draining and do not replace route authentication. Global login/setup remains available while box writes are closed. `actions.answer` delegates admission to the shared answer command; only a pending migration question with its real Git recovery ref can be answered under a recovery owner while closed. That path keeps maintenance closed and does not run a generic follow-up job. |
+| Migration recovery | `src/core/migration-recovery.ts`, `src/core/migration-repair.ts` | mitigated | Medium severity; local/operator reachability. Git recovery refs preserve tracked and unignored input without changing HEAD/index; ignored runtime data and missing annex objects are outside that snapshot. Bounded repair uses the configured agent's existing permissions, with human questions for unresolved data choices; the bound is not a sandbox. |
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
 | Client error sanitization | `webapp/trpc/trpc.ts`, `webapp/server.ts:114-128` | ok | tRPC unconditionally removes response stacks and replaces internal-error messages; raw 5xx responses stay generic; full errors remain in server-side logs |
 | Development-surface opt-in | `server-types.ts`, `lib/env.ts`, `routes/api.ts`, `routes/chat-audio-routes.ts` | mitigated | `BBX_DEV_SURFACES=1` is a strict positive opt-in set only by development launchers; omission disables the external-file route and rejects mock TTS before provider lookup |

@@ -1,3 +1,4 @@
+import { acquireBoxWork, type BoxWork } from "../../../lib/box-maintenance.js";
 /**
  * Run-lock helpers for ChatSession — acquire/release the chat-active lock
  * held for the duration of an SDK run.
@@ -60,4 +61,15 @@ export function createRunLockHolder(
       held = await releaseSessionRunLock(held);
     },
   };
+}
+
+/** Keep the parent admission alive across a persistent SDK run, including prep. */
+export async function withChatRunAdmission(
+  boxRoot: string,
+  start: (work: BoxWork) => Promise<boolean>,
+): Promise<void> {
+  const work = await acquireBoxWork(boxRoot);
+  let transferred = false;
+  try { transferred = await work.run(() => start(work)); }
+  finally { if (!transferred) await work.release(); }
 }

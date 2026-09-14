@@ -25,6 +25,7 @@
  * (adds connector credentials, for spawning the box's own `bbx` tooling).
  */
 
+import { boxWorkEnvironment } from "../lib/box-maintenance.js";
 import * as path from "node:path";
 import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
@@ -119,6 +120,7 @@ async function buildEnv(
   }
 ): Promise<NodeJS.ProcessEnv> {
   const env = pickBoxSubprocessEnv(process.env, { connectorCreds });
+  Object.assign(env, boxWorkEnvironment());
 
   // Prepend Bee Box's bin/ so scripts can find `bbx` regardless of
   // how the parent process's PATH was set up.

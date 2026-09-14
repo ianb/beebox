@@ -4679,3 +4679,33 @@ cards-audit:
       peak: 63565
       added: 16948
       turns: 13
+audit-test1:
+  migration-recovery-boundaries:
+    - date: 2026-09-14T22:31:41.480Z
+      boxCommit: 9b736f019ed3cdf7ade114b018771b0a45ecbf87
+      repoCommit: 23e37c44c6438f9f5832baa1fd2437144b5b89a8
+      initial: 21651
+      peak: 21651
+      added: 0
+      turns: 2
+    - date: 2026-09-14T22:32:57.126Z
+      boxCommit: 9b736f019ed3cdf7ade114b018771b0a45ecbf87
+      repoCommit: 23e37c44c6438f9f5832baa1fd2437144b5b89a8
+      initial: 21313
+      peak: 21313
+      added: 0
+      turns: 2
+    - date: 2026-09-14T22:35:15.539Z
+      boxCommit: 9b736f019ed3cdf7ade114b018771b0a45ecbf87
+      repoCommit: 23e37c44c6438f9f5832baa1fd2437144b5b89a8
+      initial: 21644
+      peak: 21644
+      added: 0
+      turns: 1
+    - date: 2026-09-14T22:36:27.402Z
+      boxCommit: 9b736f019ed3cdf7ade114b018771b0a45ecbf87
+      repoCommit: 23e37c44c6438f9f5832baa1fd2437144b5b89a8
+      initial: 21717
+      peak: 21717
+      added: 0
+      turns: 1

@@ -31,7 +31,7 @@ complete `<chat-response>` blocks are delivered, and the accumulated turn text
 holds assistant output only.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatThreadSession({
   boxRoot: box.root,
@@ -126,7 +126,7 @@ A turn that produces background-task activity and partial deltas but no
 on assistant text): `send()` returns and `turn-text` fires with empty text.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatThreadSession({
   boxRoot: box.root,
@@ -188,7 +188,7 @@ and the SDK's first message supplies a new id, which the thread adopts and
 emits on `session`.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatThreadSession({
   boxRoot: box.root,
@@ -233,7 +233,7 @@ The drop above is conditional on there being no record — the ordinary resume m
 keep working, or every thread would lose its history on restart.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const known = "88888888-8888-4888-8888-888888888888";
 await recordSessionStart(box.root, { sessionId: known, engine: "claude" });

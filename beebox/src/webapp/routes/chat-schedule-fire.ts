@@ -19,6 +19,7 @@
  * that instead closes/errors without a result counts as a failed delivery too.
  */
 
+import { BoxMaintenanceError } from "../../lib/box-maintenance.js";
 import type { ChatSession } from "../../core/chat/session/index.js";
 import type { ChatMessageResult } from "../../core/chat/session/messages.js";
 import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";
@@ -58,7 +59,7 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  */
 function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<boolean> {
   const { session, eventBus, firedMessage } = deps;
-  return new Promise<boolean>((resolve) => {
+  return new Promise<boolean>((resolve, reject) => {
     let settled = false;
     const finish = (ok: boolean): void => {
       if (settled) return;
@@ -86,8 +87,7 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
           // Degraded but recovered: the turn itself already settled; only the
           // tab-refresh broadcast is lost.
           console.warn("[schedule] Post-fire history broadcast failed:", e);
-        });
-      finish(msg.is_error !== true);
+        }).finally(() => finish(msg.is_error !== true));
     };
     // A run that closes or errors without a `done` (crash, or a refused resume
     // that never reaches a result) counts as a failed delivery, not a hang.
@@ -97,6 +97,10 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
     session.once("error", onFail);
     void session.send(firedMessage).then((sent) => {
       if (!sent) finish(false);
+    }).catch((error: unknown) => {
+      if (error instanceof BoxMaintenanceError) reject(error);
+      else console.error("[schedule] Send failed:", error);
+      finish(false);
     });
   });
 }
