@@ -1,17 +1,7 @@
 /**
- * `bbx hub`'s HTTP/WS router (Track D: chunk D1 shaped the routing seam,
- * chunk D2 adds the auth split, chunk D3 the box picker). Adapted from the
- * monorepo dev router's proxy layer (`../../../workstreams-app/src/router/router.ts`'s
- * `proxy`/`upgrade` handling), but simplified relative to that router: no
- * Vite/worktree concepts. Lazy-start/idle-shutdown IS supported, opt-in per
- * hub via `hub.json`'s `lazy` flag (`Supervisor`, in `./supervisor.ts`,
- * mirrors the dev router's `ensureRunning`/idle-timer semantics) -- see
- * `resolveEndpoint()` below, which prefers `EndpointProvider.ensureRunning`
- * when the provider offers it and falls back to a plain `endpoints.get(slug)`
- * lookup otherwise (a non-lazy hub's boxes are resident: either up or not,
- * never spawned on request). The routing/proxy layer knows
- * NOTHING about child processes -- it only consumes `EndpointProvider`
- * (`./endpoints.js`), per the plan's "routing consumes endpoints" seam.
+ * `bbx hub`'s HTTP/WS router. It adapts the dev router's proxy shape without
+ * Vite/worktree concepts; lazy hubs use `EndpointProvider.ensureRunning`, and
+ * the routing layer knows nothing about child processes.
  *
  * D2's auth split, and why it lives HERE and not in each box: session
  * cookies are signed with a symmetric HMAC secret, so any process that can
@@ -147,28 +137,13 @@ function slugForPath(reqPath: string): string | null {
  * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
  * path is pure HMAC with no filesystem access.
  */
-async function hasMobileAuth(opts: {
-  boxRoot: string | undefined;
-  headers: http.IncomingHttpHeaders;
-}): Promise<boolean> {
+async function hasMobileAuth(opts: { boxRoot: string | undefined; headers: http.IncomingHttpHeaders }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
-  // The local-dev browser key rides alongside the device credentials: same
-  // "this request carries per-box auth, let it through to the box" question,
-  // and the box's own wall verifies it again. Absent BBX_BROWSE_API_KEY this
-  // is a constant false, so nothing changes where it isn't configured — that
-  // opt-in is the whole reason this gate may accept it at all. See
-  // core/browse-key.ts.
-  if (verifyBrowseKey(opts.headers)) return true;
   return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
-async function listMobileAuthorizedBoxes(opts: {
-  boxes: BoxSpec[];
-  headers: http.IncomingHttpHeaders;
-}): Promise<BoxListing[]> {
-  const checked = await Promise.all(
-    opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
-  );
+async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
+  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })));
   return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 
@@ -247,11 +222,13 @@ interface HubAuthDecision {
  */
 function decideHubAuth({
   cookieHeader,
+  browseAuthed,
   isWebhook,
   hubSecret,
   openAccess,
 }: {
   cookieHeader: string | undefined;
+  browseAuthed: boolean;
   isWebhook: boolean;
   hubSecret: string;
   openAccess: boolean;
@@ -268,6 +245,12 @@ function decideHubAuth({
   // was constructed with `openAccess: true` — i.e. hub-wide open mode. No CLI
   // path sets it (test seam only); Google configuration never decided this.
   if (openAccess) {
+    return {
+      authorized: true,
+      headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_AUTH_OFF_HEADER]: "off" },
+    };
+  }
+  if (browseAuthed) {
     return {
       authorized: true,
       headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_AUTH_OFF_HEADER]: "off" },
@@ -304,15 +287,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 
-  // Whether the hub serves the fleet without an auth wall. Decorated onto the
-  // instance so the hub's own routes (box picker, /api/boxes) consult a
-  // per-instance flag instead of the environment. No CLI path sets it.
+  // Hub-owned routes consult this per-instance flag; no CLI path sets it.
   app.decorate("openAccess", openAccess);
 
   registerHubErrorHandler(app);
 
-  // The hub's login routes (routes/auth.ts) read the session cookie via
-  // @fastify/cookie's request decoration, same as a standalone box server.
+  // Login routes read the session cookie via @fastify/cookie.
   await app.register(fastifyCookie);
 
   // The hub proxies request bodies through unread -- the catch-all
@@ -442,7 +422,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), isWebhook: false, hubSecret, openAccess });
     if (!decision.authorized) {
       return loginRedirect(request, reply);
     }
@@ -504,7 +484,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const perBoxAuthed = mobileAuthed || scanAuthed;
 
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), isWebhook, hubSecret, openAccess });
     if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
@@ -561,7 +541,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
-    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), isWebhook, hubSecret, openAccess });
     if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
