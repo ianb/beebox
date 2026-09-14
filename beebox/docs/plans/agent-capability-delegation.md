@@ -1,0 +1,299 @@
+---
+title: "Agent self-configuration of credentialed connectors (Drive first)"
+status: draft
+workstream: agent-capability-delegation
+issues:
+  - ../../../issues/features/2026-07-20-agent-containment-allowed-directories.md
+  - ../../../issues/features/2026-07-20-schedules-off-by-default.md
+---
+# Agent self-configuration of credentialed connectors (Drive first)
+
+A design view, written before building, for one question: how does a box agent
+set up something like a Drive mount, confirm it works, and keep it working,
+when the agent's own process is deliberately not allowed to hold the Google
+credential?
+
+When the boxholder says "mirror this Drive folder into the box," the agent
+should be able to write the mount, check that the folder id resolves, pull it
+once, and tell them exactly what happened. When something is missing, it should
+say which thing, and who can fix it, in one sentence the boxholder can act on.
+
+## The incident, restated as a structure
+
+On 2026-09-14 the production box's agent wrote a correct
+`<name>.gfolder.card`, then could not verify or activate it. It ran the same
+`bbx drive` verbs the boxholder would, and every one exited with "Google auth
+not configured. Run: bbx google-auth." The boxholder reauthorized twice against
+a healthy grant. The message is fixed (`connectors/google-auth-gap.ts`); this
+document is about why the agent was in that position at all.
+
+Verified against the code:
+
+- Two spawn profiles (`core/script-env.ts`). Agent-safe (`buildScriptEnv`)
+  drops `BBX_GOOGLE_TOKENS_FILE` and `BBX_SECRETS_FILE`. Tooling
+  (`buildToolingScriptEnv`) keeps them. `pickBoxSubprocessEnv` filters an
+  inherited env and never fetches, so nothing an agent spawns can recover them.
+- The client credentials are not the gap. `getBoxGoogleClientCreds` resolves
+  them through the secret store, which finds its file through `HOME`
+  (`core/secrets/store.ts:90`). The gap is the OAuth token record: in the agent
+  process `centralTokenPath()` is null, and the legacy per-box file no longer
+  exists on migrated boxes.
+- The server already has the credentialed verbs. `webapp/trpc/routers/drive.ts`
+  exposes `mounts`, `mount`, `link`, `unmount`, `syncFolder` as box-auth'd
+  procedures, running in the server process, which holds the tokens. The
+  settings page uses them. The agent bearer passes box auth
+  (`webapp/server-box-scope.ts:96`), so the agent can already call them. It has
+  no CLI that does.
+- `bbx drive add|inspect|list|sync` (`cli/commands/drive.ts`) and `bbx drive
+  mount|link|unmount` (`cli/commands/drive-mount-cli.ts`) build a Drive
+  service in-process via `requireDriveService`. In an agent shell that is the
+  dead end. Nothing routes them to the server, even though the mount verbs
+  call the same operations the server's procedures do.
+- The dev-router 401 bug
+  (`issues/bugs/2026-08-23-agent-bearer-401-through-dev-router.md`) is not on
+  the real agent path. A box child registers its own loopback port as the
+  ambient URL (`webapp/server.ts:372`), and that is what `BBX_SERVER_URL`
+  carries into agents. The screenshot timeouts the same agent hit are
+  unexplained by that bug.
+- `scheduler.trigger` runs the script with `stdio: "ignore"`
+  (`webapp/trpc/routers/scheduler-run.ts:98`) and returns a duration. It is not
+  a result an agent can reason about, and a script card that runs a
+  credentialed command is the "agent-reachable tooling profile" hole the
+  custody plan already names (`core/script-env.ts:180-190`).
+- There is no seeded Drive schedule. `DEFAULT_SCHEDULES` has `check-email`
+  (requires `gmail`) and `check-calendar` (requires `google`), both
+  `enabled: false`; nothing for `drive`. `installSchedules` runs from `bbx
+  init` and from docs regeneration, so a new seed reaches existing boxes.
+- The wakeup connector is named `google-drive` (`connectors/google-drive.ts:53`)
+  and `bbx wakeup --connector` matches the name exactly
+  (`cli/commands/wakeup-connectors.ts:72`). A seed that says `--connector
+  drive` would report "Connector not found" every hour.
+
+## The frame: custody, not authority
+
+The sudo analogy assumes the agent lacks *authority* and needs a way to
+borrow more. That is not the situation. The server-box-scope comment states
+the trust model: the agent bearer is "box-scoped auth, same trust as the box
+user they run as." The agent is already allowed to mount a Drive folder. What
+it must not do is *hold the credential* while doing it. The wall is a custody
+wall (secret-custody plan, Track 1), and it is doing exactly its job: the
+agent could not widen its own grant even when it considered it.
+
+So the design question is not "how does the agent get permission" but "how
+does the agent get the credentialed *work done* without the credential." The
+answer already exists in three places: `bbx chat self-note` (agent asks the
+server to write a note), `/api/secrets/resolve` (agent asks the server for a
+value it is granted), and `bbx chat screenshot` (agent asks the server to drive
+a browser). Each is the same shape. The agent calls its own box's server with
+the bearer it already has; the server does the credentialed part; the agent
+reads back a typed result. Drive is missing from this pattern, not from a
+permission model.
+
+A capability or sudo layer would add a second concept on top of box auth: a
+token per operation, a registry of what each token unlocks, and a grant
+lifecycle. Every one of those would be a tier on top of a primitive the code
+already has. It buys *narrowing* (an agent that may mount but not unmount), and
+nothing in the incident or the boxholder's framing asks for that. When it is
+asked for, it is the policy-proxy issue's Tier 2
+(`issues/features/2026-07-28-google-auth-policy-proxy.md`), which puts the
+policy on the far side of a real trust boundary, where the agent cannot edit
+it. Inside the box, "policy" the agent can rewrite (`_config/box.json`'s
+`googleServices`) is a preference, not a control, and this plan does not
+pretend otherwise.
+
+The headless constraint from the containment issue is satisfied for free: no
+step below asks a human anything at the moment of the call. A refusal is
+terminal, typed, and relayed; the boxholder acts on a page or a command in
+their own time; the agent retries later.
+
+## What the agent does alone, delegates to the server, or leaves to a person
+
+**On its own (no credential involved):**
+
+- Author configuration: cards, landmarks, explainer docs, a `.gfolder.card`
+  by hand if it wants to. This already works and stays.
+- Read status that needs no credential: `bbx secrets status`, whether Drive is
+  enabled in box policy, the list of mount cards on disk.
+
+**Delegated to the server (credential stays server-side):**
+
+- Resolve a Drive URL or id to a name and type. This is the verification step
+  the incident lacked. It needs a new `drive.inspect` procedure; the settings
+  page would benefit from it too (it currently learns the name only after a
+  mount succeeds).
+- Mount a folder or link an item: validate against Drive, write the card,
+  sync once, commit. Exists as `drive.mount` and `drive.link`.
+- Sync one mount now. Exists as `drive.syncFolder`.
+- List mounts with their connection state. Exists as `drive.mounts`.
+
+**Left to a person (the agent relays the ask and stops):**
+
+- Authorizing Google (`bbx google-auth` is a browser flow).
+- Granting or rotating any secret (`bbx secrets` mutations refuse agent
+  sessions without `--agent-confirmed`; that stays).
+- Turning a service on in box policy. The agent *can* write `box.json`, but it
+  should not flip `googleServices.drive` on the boxholder's behalf. This is a
+  guidance rule, not an enforcement point, for the reason above.
+- Enabling a seeded schedule, unless the boxholder asked for it in chat (the
+  2026-07-20 decision).
+
+## How the agent asks
+
+One rule, no new verb: under the agent profile, every `bbx drive <verb>`
+calls the same operation on the box's server with `BBX_SERVER_URL` and
+`BBX_AGENT_TOKEN`; under the tooling profile it runs in-process as today. The
+profile is stated, not inferred: `buildEnv` sets `BBX_SPAWN_PROFILE` to
+`agent` or `tooling` alongside the token, and the CLI branches on that. The
+first draft of this rule was "in-process when a token record loads, else
+server," and the cross-model review rejected it: a predicate keyed on
+credential visibility silently turns any process that can see the token into
+one that uses it. Delegation should be chosen by who is calling, not by what
+it happens to be able to read. The CLI surface the agent reads about in its
+guide does not change; the dead end goes away.
+
+This is the `bbx chat` pattern lifted into `drive`. The client half is a small
+tRPC caller in the CLI; the CLI already has `fetch`-based helpers for the chat
+routes and none for tRPC, so the first real piece of work is a shared
+"call my box's procedure with the agent bearer" helper, which `chat` can then
+move onto as well.
+
+Why not always go through the server? A scheduled `bbx wakeup --connector
+google-drive` under the tooling profile would loop back into the process that
+spawned it for no reason, and the wakeup sync path (`connectors/google-drive.ts`)
+is not one procedure call but a full connector run. Both profiles stay on the
+same operations in `connectors/drive-mounts.ts` and `drive-mount-sync.ts`.
+What this plan does not change: a scheduled-script card is agent-authorable
+and runs under the tooling profile, so an agent can still reach the credential
+by writing a script and waiting. That is the hole the custody plan assigns to
+Track 3, and it is neither opened nor closed here.
+
+Why not `scheduler.trigger`? It discards output, returns a duration, and the
+only way to make it run a specific command is to author a script card, which
+is the reachable-tooling-profile hole in reverse. It is the wrong seam, and
+joining it up would make the hole an intended path.
+
+## What the agent gets back
+
+The incident's cost was an agent that could not learn *why*. Every delegated
+call returns one of two typed shapes, the same ones the settings page gets:
+
+- A result the agent can report: for `mount`, the card path, the Drive name,
+  the files written, and the first-sync counts. For `inspect`, name, MIME
+  type, and whether a mount card already claims that id.
+- A refusal with a `kind` and a message written for relay. The three that
+  exist today already carry the right text: `FORBIDDEN` ("Drive is not
+  enabled for this box. Enable it in box settings."), `PRECONDITION_FAILED`
+  (the `explainGoogleAuthGap` sentence, which now names the failed
+  precondition and says whether reauthorizing helps), and `BAD_REQUEST` (a
+  `DriveMountError`: bad URL, occupied directory, path outside the box).
+
+The CLI prints these as text for a person and as JSON under `--json` for the
+agent, following the existing `bbx` convention. A refusal names which of
+three parties can fix it: the agent (fix the input), the boxholder (enable,
+authorize, grant), or the machine (a store the server cannot read). That
+three-way attribution is the one thing the incident's message lacked, and it
+is the property to test in a doctest, not the wording.
+
+## How the boxholder sees and controls it
+
+- **Seeing.** The settings page Drive section already lists every mount and
+  whether Drive is connected. A mount made by the agent is a card in the box,
+  visible there and in the tree, with the same stamps as one made by hand.
+  Attribution is not free today: the tRPC context has no record of how a
+  request authenticated (`webapp/trpc/context.ts:16`), `server-box-scope.ts`
+  computes the bearer check and drops it, and mount commits carry no trailer
+  (`connectors/drive-mounts.ts:161`). The plan adds an `actor` field to the
+  context ("agent" when the bearer authenticated the request, else the user)
+  and stamps it into the mount commit message, so the git log answers "who
+  mounted this." No new page.
+- **Controlling.** The levers are the ones that exist: the `googleServices`
+  toggles and Google authorization on the admin page, the secret grants on the
+  secrets page, and the schedule's enabled flag. The design adds no new
+  control because the agent gains no new authority; it only stops failing.
+- **Refusing.** There is no prompt to approve. If the boxholder wants Drive
+  off, they turn it off, and every delegated call refuses with the
+  `FORBIDDEN` message. If they want it on but the agent should not mount
+  things, that is a guidance line in the box's own instructions today and a
+  policy-proxy rule tomorrow.
+
+## The seeded `check-drive` schedule
+
+Land this as its own small change. It is a `DEFAULT_SCHEDULES` entry shaped
+like `check-calendar`: hourly, `onWakeup`, `runs: bbx wakeup --connector
+google-drive` (the connector's registered name; `drive` would not match),
+`requires: ["drive"]`, `enabled: false`. `connectors/requirements.ts`
+evaluates `drive` as a boolean (token file present, client creds granted,
+service allowed), so on a box with no Drive the scheduler skips it with
+"missing connectors: drive" rather than running a failing job. That is a
+clean skip gate, not a diagnosis: it says nothing about which of the three is
+missing, and a token file that exists but cannot refresh counts as present.
+Diagnosis is the delegated verbs' job, not the schedule's.
+
+"Mostly automatic" and "disabled until activated" reconcile as: seeded and
+inert, with an easy yes at the moment it becomes relevant. Concretely, when a
+mount is created and `check-drive` is disabled, the mount result (and the
+settings page) says so, and the agent's guidance tells it to ask "want me to
+turn on hourly Drive sync?" rather than to enable it. That is activation by
+asking the agent in chat, which the 2026-07-20 decision allows. A box with a
+mount and no schedule still works on demand through `syncFolder`.
+
+Two caveats. First, `installSchedules` merges templates through
+`installTemplateFile`, so the new card reaches existing boxes on the next
+docs regeneration; a brand-new file should install cleanly, but the
+template-version tracker has parked changed templates on production before
+and the rollout should be checked there, not assumed. Second, the `requires`
+name is `drive`, not `google`; the calendar seed's `google` alias is legacy
+and should not be copied.
+
+## Smallest fix and budget
+
+Smallest fix for the incident as reported: agent-profile `bbx drive` verbs
+delegate to the existing server procedures. The server side already has
+`mount`, `link`, `unmount`, `syncFolder`, and `mounts`; the work is the CLI
+client and the profile marker. Roughly 150 lines of source, 100 of tests.
+The `check-drive` seed is a second, independent small change (about ten
+lines plus a doctest line); it keeps a mount in sync but does nothing for the
+agent's ability to verify one.
+
+This plan's budget beyond those two, in order:
+
+1. A `drive.inspect` procedure, so `bbx drive inspect` and `add` (the file
+   verbs, which also need the service) have a server counterpart. Roughly 80
+   lines of source, 60 of tests.
+2. `--json` output on those verbs and the three-party attribution on
+   refusals, with a doctest that runs each verb from an agent-profile shell
+   against a box with no token file and asserts the refusal names the
+   boxholder. Roughly 100 lines.
+3. The settings page and mount result mentioning `check-drive` state, and the
+   agent guide's Drive row saying "these verbs work in your shell; the server
+   holds the credential." Roughly 60 lines.
+4. The `actor` context field and commit trailer for attribution. Roughly 30
+   lines. Drop this item rather than ship the attribution claim without it.
+
+Not in budget, and deliberately: any capability token, per-operation grant, or
+approval prompt.
+
+## Could this be simpler?
+
+The simplest version is the seed alone. It fixes "the mount cannot stay in
+sync" and nothing else; the agent still cannot verify what it wrote.
+
+The next simplest is to hand the agent profile `BBX_GOOGLE_TOKENS_FILE`. It
+would have made the incident's every command succeed. It also reverts Track 1
+for the one credential with the widest reach (the whole Google grant), and
+puts a refresh token in every chat subprocess's environment. Rejected.
+
+The version here adds one helper and a profile marker. It is the same shape
+three other agent-facing paths already use.
+
+## Open decisions for the boxholder
+
+- Whether `BBX_SPAWN_PROFILE` is the right marker, or whether the agent
+  profile should simply never carry `BBX_SERVER_URL`-less shells and the CLI
+  should delegate whenever it has a bearer and no `BBX_SPAWN_PROFILE=tooling`.
+  Same behavior; the question is which default fails closed. The plan picks
+  "delegate unless told tooling."
+- Whether the agent may flip `googleServices.drive` on when the boxholder
+  asked in chat, by analogy with schedules, or whether that is always a
+  settings-page act. The plan assumes settings-page only.
+- Whether to land `check-drive` now, ahead of the rest. The plan says yes.
