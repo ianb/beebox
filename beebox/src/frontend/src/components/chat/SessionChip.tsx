@@ -38,7 +38,7 @@ import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
 import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
-import { modelDrift } from "./model-drift";
+import { modelDrift, engineDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
@@ -58,6 +58,46 @@ function ChatBubbleIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+/**
+ * Where this chat sits against the box default, as one dial rather than three
+ * unrelated symbols.
+ *
+ * A needle left/centre/right reads as one scale with a moving part, which is
+ * the point: the previous mark appeared only for stronger-or-weaker, so its
+ * absence meant "at the default", "still loading" and "unknown model" all at
+ * once, and read as an indicator that came and went. One object that is always
+ * present and always says something cannot do that. Shape borrowed from the
+ * speedometer ChatGPT uses for the same job (boxholder, 2026-09-14).
+ *
+ * `aria-hidden`: the meaning is in the button's accessible name, so a screen
+ * reader hears "above the box default", never a description of a dial.
+ */
+function ModelGaugeIcon({ drift }: { drift: "above" | "below" | "same" }) {
+  // Arc from 8 o'clock to 4 o'clock; the needle leaves the same hub for each
+  // state, so only its angle changes.
+  const needle = drift === "below" ? "M12 17 7.5 12.5" : drift === "above" ? "M12 17 16.5 12.5" : "M12 17V11";
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeWidth={2} d="M4.5 17a7.5 7.5 0 1 1 15 0" />
+      <path strokeLinecap="round" strokeWidth={2} d={needle} />
+    </svg>
+  );
+}
+
+/**
+ * This chat is not on the box's own harness — a Codex chat on a Claude box, or
+ * the reverse. Deliberately NOT a gauge position: a different engine is not
+ * stronger or weaker, it is somewhere else, and the tier comparison flattens it
+ * (Sol and Opus are both `strong`).
+ */
+function OffEngineIcon() {
+  return (
+    <svg className="w-3 h-3 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3 9 9M15 15l2.7 2.7M17.7 6.3 15 9M9 15l-2.7 2.7" />
     </svg>
   );
 }
@@ -250,16 +290,24 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
     : chatModelOptions(agentEngine).find((o) => o.model === modelInForce)?.label ?? "Unavailable";
-  const drift = modelDrift({ model: modelInForce, boxDefault });
+  // `modelInForce` is null for a chat that FOLLOWS the box default — that is
+  // what makes the label read "Default (Opus)" rather than naming the model —
+  // so the drift comparison resolves it first. Without this the gauge was blank
+  // for the most common case there is, which is most of why the old mark looked
+  // unreliable. While status is still loading both are null and the comparison
+  // correctly declines to answer.
+  const drift = modelDrift({ model: modelInForce ?? boxDefault, boxDefault });
+  const offEngine = engineDrift({ engine: agentEngine, boxEngine });
   // Editorial title or nothing: `label` is the husk's `title` (null until
   // the nightly chat review or a hand edit names the session). With no real
   // title the face is the sliders icon at every width — never a fabricated
   // name (boxholder call, 2026-08-03).
   const titled = label !== null && label !== "";
-  // The mark is decoration; the meaning is in the name, so a screen reader
-  // hears "below the box default" rather than a triangle.
-  const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : "below"} the box default`;
-  const accessibleName = `${titled ? `Chat: ${label}` : "Chat menu"} · ${currentModelLabel}${driftPhrase}`;
+  // The marks are decoration; the meaning is in the name, so a screen reader
+  // hears "below the box default" rather than a description of a dial.
+  const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : drift === "below" ? "below" : "at"} the box default`;
+  const enginePhrase = offEngine ? `, on ${agentEngine ?? "another harness"} rather than the box's ${boxEngine ?? "own"}` : "";
+  const accessibleName = `${titled ? `Chat: ${label}` : "Chat menu"} · ${currentModelLabel}${driftPhrase}${enginePhrase}`;
 
   return (
     <>
@@ -284,9 +332,8 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             {...ariaProps}
           >
             <ChatBubbleIcon />
-            {drift === null ? null : (
-              <span aria-hidden="true" className="text-[0.65rem] leading-none opacity-90">{drift === "above" ? "▲" : "▼"}</span>
-            )}
+            {drift === null ? null : <ModelGaugeIcon drift={drift} />}
+            {offEngine ? <OffEngineIcon /> : null}
             {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
             <CaretIcon />
           </button>
