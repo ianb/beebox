@@ -41,7 +41,7 @@ session_registry_epoch_iso() {
 # explicit clock keeps expiry deterministic in callers and doctests.
 session_registry_launch_status_from_record() {
   local record="$1" now_epoch="$2" token started_at started_epoch expires_epoch expires_at
-  local failed_at failure_reason failed_epoch
+  local failed_at failure_reason
   case "$now_epoch" in ''|*[!0-9]*)
     jq -cn '{state:"unknown",startedAt:null,expiresAt:null,failedAt:null,reason:"invalid-current-epoch"}'
     return 0 ;;
@@ -75,7 +75,9 @@ session_registry_launch_status_from_record() {
   failed_at=$(jq -r '.launch.failedAt // empty' <<<"$record")
   failure_reason=$(jq -r '.launch.failureReason // empty' <<<"$record")
   if [ -n "$failed_at" ]; then
-    if ! failed_epoch=$(session_registry_iso_epoch "$failed_at"); then
+    # Parsed only to validate the stamp — the epoch itself is never needed here,
+    # unlike the expiry comparison below.
+    if ! session_registry_iso_epoch "$failed_at" >/dev/null; then
       jq -cn --arg startedAt "$started_at" --arg expiresAt "$expires_at" \
         '{state:"unknown",startedAt:$startedAt,expiresAt:$expiresAt,failedAt:null,reason:"invalid-launch-failure"}'
       return 0
@@ -120,7 +122,7 @@ session_registry_summary() {
   launch=$(session_registry_launch_status "$name")
   if [ -z "$record" ]; then
     jq -cn --argjson launch "$launch" \
-      '{agent:null,hasSession:false,tty:null,emoji:null,baseSha:null,removed:null,archived:null,description:null,launch:$launch}'
+      '{agent:null,hasSession:false,tty:null,baseSha:null,removed:null,archived:null,description:null,launch:$launch}'
     return 0
   fi
   printf '%s' "$record" | jq -c --argjson launch "$launch" '
@@ -128,7 +130,6 @@ session_registry_summary() {
       agent: (.agent // null),
       hasSession: (((.sessionId // null) != null) or ((.agent // null) == "codex")),
       tty: (.tty // null),
-      emoji: (.emoji // null),
       baseSha: (.baseSha // null),
       removed: (.removed // null),
       archived: (.archived // null),

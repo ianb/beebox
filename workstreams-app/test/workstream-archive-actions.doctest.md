@@ -28,7 +28,7 @@ function row(over: {
     runtime: { state: "absent" },
     agent: { state: over.live === true ? "live" : "none", reason: "" },
     session: {
-      agent: "claude", hasSession: false, tty: null, emoji: null, baseSha: null,
+      agent: "claude", hasSession: false, tty: null, baseSha: null,
       removed: over.removed ? { at: "2026-09-01T00:00:00.000Z", merged: over.removed.merged, finalSha: null } : null,
       archived: over.archived === true ? { at: "2026-09-01T00:00:00.000Z" } : null,
       description: null,
