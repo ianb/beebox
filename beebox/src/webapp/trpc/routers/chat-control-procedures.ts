@@ -14,7 +14,7 @@ import { chatModelFileForSession, loadCurrentModel } from "../../../core/chat/se
 import { loadBoxModel } from "../../../core/box/config.js";
 import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
 import { updateBoxConfigFields } from "../../box-config-write.js";
-import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import { resolveChatEngine, resolveRecordedChatEngine } from "../../../core/chat/session/engine.js";
 import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import type { AgentEngine } from "../../../core/box/config.js";
@@ -38,6 +38,31 @@ function requireRuntime(boxRoot: string): ChatRuntime {
     });
   }
   return runtime;
+}
+
+/**
+ * The engine a control mutation may act on, or a 404.
+ *
+ * A control changes a setting on a conversation that exists. `getOrCreate`
+ * below builds a session object for ANY id, so without this an id the box has
+ * no record of gets registered by the toggle itself — and a registered id used
+ * to read as resumable, so the next send resumed a conversation that never
+ * existed on whichever engine the box happened to default to. The guessed
+ * engine also decided which model list the request was validated against.
+ *
+ * A reservation IS a record, so a coined chat toggling settings before its
+ * first message still works — which is the case the feature-persistence path
+ * documents as its reason for existing, and the case this must not break.
+ */
+async function requireRecordedEngine(boxRoot: string, sessionId: string): Promise<AgentEngine> {
+  const engine = await resolveRecordedChatEngine(boxRoot, { sessionId });
+  if (engine === null) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `This box has no record of chat session ${sessionId}.`,
+    });
+  }
+  return engine;
 }
 
 export interface ChatSessionStatus {
@@ -206,7 +231,7 @@ export const chatControlProcedures = {
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
   setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
-    const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: input.session });
+    const engine = await requireRecordedEngine(ctx.boxRoot, input.session);
     if (!isChatModelAllowed(engine, input.model)) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -273,6 +298,7 @@ export const chatControlProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await requireRecordedEngine(ctx.boxRoot, input.session);
       const { registry, wireSession } = requireRuntime(ctx.boxRoot);
       const target = registry.getOrCreate(input.session);
       wireSession(target);

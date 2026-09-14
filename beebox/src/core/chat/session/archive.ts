@@ -65,18 +65,27 @@ export async function archiveChatSession(options: { boxRoot: string; sessionId: 
     // one definition of "there is nothing left to resume", shared with what the
     // lists display.
     const target = (await loadDeadHusks(options.boxRoot)).find((husk) => husk.sessionId === sessionId);
-    // The server half. A chat is resumable from the moment its id is reserved
-    // or assigned, which is before the engine has written a byte — so a chat
-    // the boxholder is in the middle of sits in the dead list exactly like an
+    // The server half. A chat is open from the moment its id is reserved or
+    // assigned, which is before the engine has written a byte — so a chat the
+    // boxholder is in the middle of sits in the dead list exactly like an
     // expired one, and archiving it would file away an open conversation.
-    // `resolveSessionAvailability` is the one definition of "still open", the
-    // same one the chat page gates its resume on.
+    //
+    // That question is asked HERE rather than borrowed from
+    // `resolveSessionAvailability`, which answers the stricter "is this a real
+    // conversation I can resume" — it deliberately does not vouch for an id that
+    // has only been materialized in the registry, because doing so vouched for
+    // ghosts. Archiving wants the opposite bias: a false positive costs a
+    // refused archive, a false negative files away a live chat. So presence in
+    // the registry, or a reservation, is enough to refuse.
+    const openNow =
+      options.registry.deletion.hasAssignedSession(sessionId) ||
+      options.registry.getReservation(sessionId) !== null;
     const availability = await resolveSessionAvailability({
       boxRoot: options.boxRoot,
       sessionId,
       registry: options.registry,
     });
-    if (availability.kind === "resumable") {
+    if (openNow || availability.kind === "resumable") {
       // Both refusals mean "still openable"; which one it is comes from the
       // dead list, since that is what says whether a transcript exists on disk.
       const huskPath = target?.huskPath ?? (await findChatHuskEntry(options.boxRoot, sessionId))?.path ?? null;

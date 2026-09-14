@@ -89,7 +89,7 @@ separate ad hoc React/Tailwind static builder with cards as source; publish
 as its own path). See the "Direction shift" section of
 [the site plan](public-site.md), the
 [box-CMS exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md),
-and the [Bee Box rename decision](../../../issues/decisions/2026-08-19-bee-box-rename.md)
+and the [Bee Box rename decision](../../../issues/closed/decisions/2026-08-19-bee-box-rename.md)
 (character/mascot direction: Brown Paper School register, wordless bee = the
 agent, the boxholder as a voice strictly in his own words). Next experiment:
 a `page` schema in a test box, the walkthrough authored as a card, a crude

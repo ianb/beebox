@@ -1,10 +1,11 @@
 # Restoring a coined Claude chat after a server restart
 
-A coined Claude chat has no transcript or history row before its first message.
-On a Codex-default box, losing the in-memory reservation makes history choose
-the box default and ask Codex for a UUID that belongs to no Codex thread. The
-client's exact receipt must restore the reservation before either bootstrap or
-history runs.
+A coined Claude chat has no transcript or history row before its first message —
+its reservation is the only record of it, and that record is in memory. A
+development reload drops it, and on a Codex-default box the id is then one the
+box has no record of at all. The client's exact receipt is what restores it, and
+until it does, every read of the chat must degrade to "nothing here" rather than
+to an engine's failure.
 
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
@@ -25,9 +26,13 @@ function caller(server) {
 
 The first reservation carries Claude, its model, and its landmark. Replacing
 the registry simulates the process-local state lost by a development reload.
-Before recovery, bootstrap reports the chat unavailable, while raw history
-follows the Codex box default and throws an internal error. Re-reserving the receipt's exact values makes both bootstrap and history
-safe again without creating a different conversation.
+Before recovery both reads report emptiness rather than failure: bootstrap says
+unavailable, and history — which used to take the Codex box default and throw
+`Codex history request failed` for a UUID belonging to no Codex thread
+(`issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md`) —
+answers an empty transcript, because an id with no record is not routed to an
+engine at all. Re-reserving the receipt's exact values makes both reads resolve
+the real chat again without creating a different conversation.
 
 ```ts
 const server = await makeTestServer({ chatBackend: createFakeChatBackend() });
@@ -56,10 +61,10 @@ missing.kind
 => unavailable
 
 await api.chat.history({ session: ID, slice: TAIL }).then(
-  () => "unexpected history success",
-  (error: Error) => error.message,
+  (result) => `empty: ${String(result.entries.length === 0 && result.total === 0)}`,
+  (error: Error) => `threw: ${error.message}`,
 )
-=> Codex history request failed
+=> empty: true
 
 const reserved = await api.chat.reserveSession(receipt);
 const bootstrap = await api.chat.bootstrap({ session: ID, slice: TAIL });

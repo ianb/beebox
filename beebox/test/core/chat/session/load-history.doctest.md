@@ -14,8 +14,11 @@ Concurrent callers asking for the *same* read now share one parse.
 import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
+import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/session-start-record.js";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 const SESSION = "11111111-2222-3333-4444-555555555555";
 const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
@@ -42,6 +45,12 @@ async function seed(boxRoot, count) {
 // Reads performed since a marker — the seam coalescing is visible through.
 function readsSince(before) {
   return sessionHistoryReadStats().reads - before;
+}
+
+async function configure(boxRoot, config) {
+  await mkdir(join(boxRoot, "_config"), { recursive: true });
+  await writeFile(join(boxRoot, "_config/box.json"), JSON.stringify(config));
+  clearBoxConfigCache(boxRoot);
 }
 ```
 
@@ -125,6 +134,80 @@ readsSince(widened)
 ```ts cleanup
 delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
 await box.cleanup();
+```
+
+## An id the box has no record of never reaches an engine
+
+Which store holds a transcript is a question about a specific session, and for an
+id with no husk stamp, no history row and no reservation there is no answer —
+nothing recorded the session. The loader used to fill that gap with the box
+default, and the two branches punish a wrong guess very differently: a missing
+transcript FILE is an empty conversation (the section above), while a Codex read
+for a thread that never existed is an RPC error. So on a codex-default box the
+gap became `Codex history request failed` in a chat error banner — which is what
+a `git reset --hard` produced on 2026-09-03 by rewinding a box's chat registry
+and husk card out from under an open session.
+
+Only a RECORDED `codex` reaches the RPC now. `BBX_CODEX_BINARY` points at a stub
+that exits immediately, so this asserts that no engine is consulted rather than
+only checking the answer — and it asserts it in milliseconds. Letting the real
+Codex answer would not do: it holds an unknown-thread read open until the
+client's own 3-minute timeout, so the guess this replaces did not merely produce
+the wrong error, it could hang a history request.
+
+```ts
+const codexBox = await makeTmpBox();
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = codexBox.path("claude-projects");
+const stub = codexBox.path("codex-stub");
+await writeFile(stub, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+process.env["BBX_CODEX_BINARY"] = stub;
+await configure(codexBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
+
+const unrecorded = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
+print(`entries: ${unrecorded.entries.length}, total: ${unrecorded.total}`);
+=>
+entries: 0, total: 0
+```
+
+A RECORDED codex id, on the same box in the same state, does go to the stub and
+fails there. That is the other half of the assertion above: the RPC path is live,
+so the unrecorded read answering empty means it did not take that path, not that
+the path happens to be broken for everyone.
+
+```ts continue
+const recordedCodex = randomUUID();
+await recordSessionStart(codexBox.root, { sessionId: recordedCodex, engine: "codex" });
+const reached = await loadSessionHistory(codexBox.root, { sessionId: recordedCodex, slice: TAIL })
+  .then(() => "resolved", () => "went to the engine");
+reached
+=> went to the engine
+```
+
+The fallback is not "assume Claude" — it is "read what is on this disk". A
+transcript FILE under an unrecorded id is still served:
+
+```ts continue
+await seed(codexBox.root, 4);
+const stillServed = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
+stillServed.entries.length
+=> 4
+```
+
+A native Codex thread is the case this does NOT cover, and that is a deliberate
+trade rather than an oversight. Codex threads live outside the box, so records
+can be rewound while the thread survives — and for such an id the box default
+used to be right, so a codex-default box would have loaded it. It now reads
+empty. The trade: probing Codex for every unrecorded id would restore that
+recovery, but Codex holds an unknown-thread read open until the client's own
+3-minute timeout, so the incident case would become a hung history request
+instead of a fast wrong one. Fast and empty beats slow and eventually-empty for
+the common case; recovering an orphaned Codex thread is a deliberate action, not
+something a history poll should discover.
+
+```ts cleanup
+delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+delete process.env["BBX_CODEX_BINARY"];
+await codexBox.cleanup();
 ```
 
 ## `fresh: true` never joins an in-flight scan

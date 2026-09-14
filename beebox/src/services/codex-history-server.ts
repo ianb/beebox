@@ -13,15 +13,39 @@ const rpcResponseSchema = z.looseObject({
 });
 const rpcMessageSchema = z.looseObject({ id: z.number().optional(), method: z.string().optional() });
 
+/**
+ * Codex reports "no such thread" as an ordinary JSON-RPC error, distinguished
+ * only by its wording — the app-server has no dedicated code for it, and the
+ * `code` we do receive is the same generic value it uses for other failures.
+ * So the wording is the test, and this is the ONE place it is spelled: a
+ * missing thread is a routine answer for two callers (`codexSessionExists`,
+ * `loadSessionHistory`) and a copy of the pattern in each is a copy that can
+ * drift out of agreement about what "missing" means.
+ */
+const NOT_FOUND_RPC_MESSAGE = /not found|not loaded|unknown thread/i;
+
 export class CodexHistoryRpcError extends Error {
   readonly operation: string;
   readonly rpcMessage: string;
+  /** The JSON-RPC error code, or `null` for a client-side failure (timeout). */
+  readonly rpcCode: number | null;
 
-  constructor(options: { operation: string; rpcMessage: string }) {
-    super("Codex history request failed");
+  constructor(options: { operation: string; rpcMessage: string; rpcCode?: number | null }) {
+    // The RPC message is IN the user-visible message, not only on the field
+    // beside it. A bare "Codex history request failed" is what reached a chat
+    // error banner when a rewound session registry sent a history read at a
+    // thread that never existed (2026-09-03): the one string that said what
+    // actually went wrong was the one the surface could not see.
+    super(`Codex history request failed (${options.operation}): ${options.rpcMessage}`);
     this.name = "CodexHistoryRpcError";
     this.operation = options.operation;
     this.rpcMessage = options.rpcMessage;
+    this.rpcCode = options.rpcCode ?? null;
+  }
+
+  /** Whether this is Codex saying the thread does not exist, rather than a real failure. */
+  get isNotFound(): boolean {
+    return NOT_FOUND_RPC_MESSAGE.test(this.rpcMessage);
   }
 }
 
@@ -116,7 +140,7 @@ export class CodexHistoryServer {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new CodexHistoryRpcError({ operation, rpcMessage: "Operation timed out" }));
+        reject(new CodexHistoryRpcError({ operation, rpcMessage: "Operation timed out", rpcCode: null }));
       }, 180_000);
       this.pending.set(id, { operation, resolve, reject, timer });
       this.child.stdin.write(`${JSON.stringify({ id, method: operation, params })}\n`);
@@ -160,6 +184,7 @@ export class CodexHistoryServer {
       pending.reject(new CodexHistoryRpcError({
         operation: pending.operation,
         rpcMessage: parsed.data.error.message,
+        rpcCode: parsed.data.error.code,
       }));
     } else {
       pending.resolve(parsed.data.result);

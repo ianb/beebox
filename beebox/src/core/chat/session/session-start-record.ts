@@ -18,7 +18,7 @@
 import { makeLog } from "./log.js";
 import { appendHistory, setMostActive, updateFeaturesForSession } from "./history.js";
 import { ensureChatHusk } from "../husk.js";
-import type { AgentEngine } from "../../box/config.js";
+import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
@@ -63,7 +63,14 @@ export async function recordSessionStart(
     // seed as the session's starting state. User toggles afterward overwrite
     // specific keys via updateFeaturesForSession.
     if (seedFeatures && Object.keys(seedFeatures).length > 0) {
-      await updateFeaturesForSession(boxRoot, { sessionId, updates: seedFeatures });
+      // `appendHistory` above already created the row (with this same
+      // resolution), so the create branch cannot fire here — but the engine is
+      // required rather than guessed, and the two must not disagree.
+      await updateFeaturesForSession(boxRoot, {
+        sessionId,
+        updates: seedFeatures,
+        engine: engine ?? await loadAgentEngine(boxRoot),
+      });
     }
     await setMostActive(boxRoot, sessionId);
   } catch (e) {

@@ -13,7 +13,7 @@ Two carriers, decided by whether the harness will accept an id we chose:
   every Codex chat is created already.
 
 ```ts setup
-import { resolveChatEngine, resolveStartEngine } from "../../src/core/chat/session/engine.js";
+import { resolveChatEngine, resolveStartEngine, resolveRecordedChatEngine } from "../../src/core/chat/session/engine.js";
 import { reserveChatSession, ChatReservationStore } from "../../src/core/chat/session/reserve.js";
 import { clearBoxConfigCache } from "../../src/core/box/config.js";
 import { recordSessionStart } from "../../src/core/chat/session/session-start-record.js";
@@ -149,6 +149,38 @@ codexStore.release(codexCoined);
 const after = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
 JSON.stringify([during, after])
 => ["claude","codex"]
+```
+
+## A guessed engine is distinguishable from a recorded one
+
+`resolveChatEngine` answers every id, because most callers need an engine to
+proceed with. For an id nothing recorded, that answer is the box default — a
+guess, and the section above shows it: once the reservation is released, the
+same id reads as `codex` purely because this box's default is `codex`.
+
+A caller that will hand the answer to an ENGINE — "does this thread exist",
+"give me its history" — cannot use a guess, because an id with no record has no
+transcript in EITHER store, so the guess can only produce that store's failure.
+`resolveRecordedChatEngine` is the same lookup without the fallback, so those
+callers can tell the two cases apart:
+
+```ts continue
+const unrecorded = randomUUID();
+JSON.stringify([
+  await resolveRecordedChatEngine(codexBox.root, { sessionId: unrecorded }),
+  await resolveChatEngine(codexBox.root, { sessionId: unrecorded }),
+  await resolveRecordedChatEngine(codexBox.root, { sessionId: codexCoined }),
+])
+=> [null,"codex",null]
+```
+
+A record — of any of the three kinds — makes it answer:
+
+```ts continue
+const recordedId = randomUUID();
+await recordSessionStart(codexBox.root, { sessionId: recordedId, engine: "claude" });
+await resolveRecordedChatEngine(codexBox.root, { sessionId: recordedId })
+=> claude
 ```
 
 ```ts cleanup
