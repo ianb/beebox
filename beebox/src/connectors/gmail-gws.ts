@@ -61,6 +61,31 @@ export interface GwsRunResult {
 export type GwsRunner = (opts: { args: string[]; auth: GoogleAuthService }) => Promise<GwsRunResult>;
 
 /**
+ * As much of a stream as is worth holding in memory. The server runs this child
+ * on behalf of a delegating caller, so an upstream command that prints a
+ * mailbox's worth of output must not become the box server's memory problem;
+ * past this point the bytes are counted and dropped rather than retained.
+ */
+const MAX_CAPTURE_CHARS = 1_000_000;
+
+/** A bounded string accumulator that says how much it threw away. */
+function boundedCapture() {
+  let kept = "";
+  let dropped = 0;
+  return {
+    add(chunk: string): void {
+      const room = MAX_CAPTURE_CHARS - kept.length;
+      if (room > 0) kept += chunk.slice(0, room);
+      dropped += chunk.length - Math.max(room, 0);
+    },
+    text(): string {
+      if (dropped === 0) return kept;
+      return `${kept}\n…(${String(dropped)} further characters dropped)`;
+    },
+  };
+}
+
+/**
  * Run gws with a short-lived token only in the child env, and capture what it
  * said.
  *
@@ -83,19 +108,21 @@ export async function runReadOnlyGws(opts: {
       env: { ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token },
       stdio: ["ignore", "pipe", "pipe"],
     });
-    let stdout = "";
-    let stderr = "";
+    const stdout = boundedCapture();
+    const stderr = boundedCapture();
     child.stdout.setEncoding("utf-8");
     child.stderr.setEncoding("utf-8");
-    child.stdout.on("data", (chunk: string) => { stdout += chunk; });
-    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+    child.stdout.on("data", (chunk: string) => { stdout.add(chunk); });
+    child.stderr.on("data", (chunk: string) => { stderr.add(chunk); });
     child.once("error", reject);
+    // `close`, not `exit`: the streams must be drained before the capture is
+    // read, or a fast-exiting child's last output is lost.
     child.once("close", (code, signal) => {
       if (signal !== null) {
         reject(new GwsSignalExitError(signal));
         return;
       }
-      resolve({ exitCode: code ?? 1, stdout, stderr });
+      resolve({ exitCode: code ?? 1, stdout: stdout.text(), stderr: stderr.text() });
     });
   });
 }

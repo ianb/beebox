@@ -122,10 +122,11 @@ gmailCommand
       print: (result) => {
         if (result.stdout !== "") process.stdout.write(result.stdout);
         if (result.stderr !== "") process.stderr.write(result.stderr);
+        // The child's own exit code, not a collapsed 1: a caller scripting
+        // around gws distinguishes them, and this command has always passed
+        // them through (`docs/gmail-setup.md`).
+        process.exitCode = result.exitCode;
       },
-      // The child's own exit code collapses to 1: what a caller acts on is
-      // "gws refused or failed", and its stderr is right above.
-      failed: (result) => result.exitCode !== 0,
     });
   });
 

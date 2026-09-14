@@ -100,7 +100,7 @@ export const driveUnmountCommand = new Command("unmount")
       // with the same attribution as every other mount write.
       run: () =>
         dispatchDrive<UnmountResult>({
-          local: () => unmountDriveFolder({ boxRoot, target }),
+          local: () => unmountDriveFolder({ boxRoot, target, actor: "tooling" }),
           remote: (client) => client.drive.unmount.mutate({ cardPath: target }),
         }),
       print: (result) => {

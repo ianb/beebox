@@ -243,6 +243,8 @@ export interface UnmountResult {
 export async function unmountDriveFolder(options: {
   boxRoot: string;
   target: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<UnmountResult> {
   const { boxRoot, target } = options;
   const resolved = resolveMountTarget(boxRoot, { raw: target, label: "The mount card" });
@@ -254,7 +256,11 @@ export async function unmountDriveFolder(options: {
     : await onlyMountIn({ boxRoot, dir: resolved });
 
   const receipt = await moveCardsToTrash(createCliContext(boxRoot), [cardPath]);
-  await commitTrashReceipt(boxRoot, { receipt, reason: "unmounted Drive folder" });
+  await commitTrashReceipt(boxRoot, {
+    receipt,
+    reason: "unmounted Drive folder",
+    actor: options.actor,
+  });
 
   const move = receipt.moves.at(0);
   invariant(move !== undefined, "moveCardsToTrash returns one move per path or throws");

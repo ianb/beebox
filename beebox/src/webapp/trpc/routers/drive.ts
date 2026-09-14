@@ -141,7 +141,9 @@ export const driveRouter = router({
   unmount: publicProcedure
     .input(z.object({ cardPath: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      return mountWrite(unmountDriveFolder({ boxRoot: ctx.boxRoot, target: input.cardPath }));
+      return mountWrite(
+        unmountDriveFolder({ boxRoot: ctx.boxRoot, target: input.cardPath, actor: ctx.actor }),
+      );
     }),
 
   /**

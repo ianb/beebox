@@ -162,11 +162,12 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
  */
 function actorFor(options: {
   bearerOk: boolean;
+  browseOk: boolean;
   mobileOk: boolean;
   user: { email: string } | null;
   open: boolean;
 }): TrpcActor {
-  if (options.bearerOk) return "agent";
+  if (options.bearerOk || options.browseOk) return "agent";
   if (options.mobileOk) return "device";
   if (options.user !== null) return "user";
   if (options.open) return "open";
@@ -281,11 +282,16 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
-        // Which credential answered, in the order they were checked above. The
-        // browse key is an agent driving a browser, so it lands in the same arm
-        // as the loopback bearer even on a box where the resolver also turned
-        // it into an owner identity.
-        actor: actorFor({ bearerOk: bearerOk || browseOk, mobileOk, user, open: identityIsOpen }),
+        actor: actorFor({
+          bearerOk,
+          // The browse key is an agent driving a browser — but only when it is
+          // what got the request in. A signed-in person whose request also
+          // carries it is still a person, so a resolved session identity wins.
+          browseOk: identity.source === "browse" || (browseOk && user === null),
+          mobileOk,
+          user,
+          open: identityIsOpen,
+        }),
         eventBus,
         services: options.services ?? {},
         user,

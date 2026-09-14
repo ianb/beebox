@@ -221,6 +221,16 @@ await lastTrigger(box.root)
 => user
 ```
 
+Unmounting is a trash commit, which carries its own `Trashed-By` trailer — the
+actor joins it rather than replacing it, so one commit answers both "what
+happened" and "who asked".
+
+```ts continue
+await agent.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
+await lastTrigger(box.root)
+=> agent
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
