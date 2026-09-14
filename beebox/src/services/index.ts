@@ -17,6 +17,7 @@ import type { TtsService } from "./tts.js";
 import type { EmbeddingsService } from "./openai-embeddings.js";
 import type { GoogleDriveService } from "./google-drive.js";
 import type { WakeupRunner } from "../core/commands/wakeup-runner.js";
+import type { GwsRunner } from "../connectors/gmail-gws.js";
 
 // ─── Services container ──────────────────────────────────────────────────────
 
@@ -37,4 +38,10 @@ export interface Services {
    * real CLI.
    */
   wakeupRunner?: WakeupRunner | undefined;
+  /**
+   * How `gmail.gws` runs the Google Workspace CLI. Production leaves it unset
+   * and the procedure spawns the pinned upstream runner; a test substitutes one
+   * rather than spawning a real child.
+   */
+  gwsRunner?: GwsRunner | undefined;
 }

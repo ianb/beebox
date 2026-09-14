@@ -16,7 +16,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { driveServiceAvailable, resolveDriveService } from "../../../connectors/drive-access.js";
+import { driveServiceAvailable, resolveDriveService } from "../../../connectors/google-access.js";
+import { googleService } from "../google-service.js";
 import type { GoogleDriveService } from "../../../services/google-drive.js";
 import { addDriveFile } from "../../../connectors/drive-add-file.js";
 import { inspectDriveItem } from "../../../connectors/drive-inspect.js";
@@ -40,18 +41,13 @@ interface DriveCtx {
 /**
  * The Drive service, or the reason there isn't one. A box that has not
  * connected Google, or has Drive switched off, gets a message it can act on
- * rather than a stack trace from the first API call.
+ * rather than a stack trace from the first API call — in the same two codes
+ * every Google family refuses with (`trpc/google-service.ts`).
  */
 async function driveService(ctx: DriveCtx): Promise<GoogleDriveService> {
-  if (ctx.services.drive) return ctx.services.drive;
-  const resolved = await resolveDriveService(ctx.boxRoot);
-  if (resolved.ok) return resolved.value;
-  // Both gaps are the boxholder's, in two different places, so they get two
-  // codes: a policy switch the caller may be told how to flip, and an
-  // authorization only a browser flow can grant.
-  throw new TRPCError({
-    code: resolved.error.kind === "not-enabled" ? "FORBIDDEN" : "PRECONDITION_FAILED",
-    message: resolved.error.message,
+  return googleService({
+    injected: ctx.services.drive,
+    resolve: () => resolveDriveService(ctx.boxRoot),
   });
 }
 

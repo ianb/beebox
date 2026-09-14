@@ -16,7 +16,7 @@ import {
 } from "../lib/credentialed-verb.js";
 import type { Result } from "../../lib/result.js";
 import { DriveMountError } from "../../connectors/drive-mount-errors.js";
-import { resolveDriveService } from "../../connectors/drive-access.js";
+import { resolveDriveService } from "../../connectors/google-access.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
 import type { AppRouter } from "../../webapp/trpc/router.js";
 
