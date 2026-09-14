@@ -2,18 +2,25 @@
  * The app bar's session chip — chat fiddling, named by its object
  * (docs/plans/top-nav-ia.md Track C2). Reshaped from the chat header's `⋯`
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
- * panel-swap idiom), but the face is the session's own name, because an
- * unlabeled `⋯` stops working once every other menu face names its object.
+ * panel-swap idiom).
+ *
+ * The face is a chat glyph plus the session's name. The glyph is what the
+ * control is ABOUT — the place pill's folder icon says "files and cards", this
+ * says "chats" — and it carries that alone when the title is absent or the
+ * viewport is narrow. The name alone could not do that job: a title is
+ * generated prose that says where you are, not that a menu lives here, and the
+ * menu is not purely settings either (it holds New chat and Recent chats
+ * alongside Model and Advanced), so no settings-shaped glyph would be honest.
  *
  * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
  * switch menu moves between landmarks and resumes each one's newest chat, so
  * it can't reach a sibling session in the landmark you're already in. Finding
  * *a session* is a chat concern; finding *a place* is the pill's.
  *
- * Face, following the bar's one-flexible-member rule: the session label
- * (truncated) from `sm:` up, a sliders icon below it — the chip is the third
- * thing to give way as the viewport narrows, after the box prefix and the
- * folder half's label.
+ * Face, following the bar's one-flexible-member rule: glyph and caret always,
+ * the session label (truncated) from `sm:` up — the chip is the third thing to
+ * give way as the viewport narrows, after the box prefix and the folder half's
+ * label. Same composition as the pill's here-half, which is the point.
  *
  * `React.memo` is load-bearing, not decoration: this chip is portaled into
  * the bar from the chat's tree, which re-renders on every streaming token
@@ -39,10 +46,18 @@ import { modelDrift } from "./model-drift";
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
 /** Three sliders — "settings for this thing", the phone-width face. */
-function SlidersIcon() {
+/**
+ * Chat glyph — what this menu is ABOUT, the way the place pill's folder says
+ * "files and cards". It shows at every width, beside the title rather than
+ * instead of it: a generated conversation title ("Reminder Wrens check up
+ * Thursday") names where you are, and nothing about it promises a menu.
+ * Matches `PlacePill`'s `FolderIcon` in size and stroke so the bar reads as one
+ * set of controls.
+ */
+function ChatBubbleIcon() {
   return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M16 5v4M10 10v4M18 15v4" />
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -268,20 +283,12 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             aria-label={accessibleName}
             {...ariaProps}
           >
-            <span className={titled ? "sm:hidden" : ""}>
-              <SlidersIcon />
-            </span>
+            <ChatBubbleIcon />
             {drift === null ? null : (
               <span aria-hidden="true" className="text-[0.65rem] leading-none opacity-90">{drift === "above" ? "▲" : "▼"}</span>
             )}
-            {titled ? (
-              <>
-                <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
-                <span className="hidden sm:flex">
-                  <CaretIcon />
-                </span>
-              </>
-            ) : null}
+            {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
+            <CaretIcon />
           </button>
         )}
       >
