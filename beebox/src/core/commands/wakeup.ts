@@ -14,11 +14,8 @@ import {
 } from "../command-runner.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
-import {
-  parseWakeupOutcome,
-  WAKEUP_OUTCOME_ENV,
-  type WakeupOutcomeReport,
-} from "../../cli/commands/wakeup-outcome.js";
+import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";
+import type { WakeupRunResult } from "./wakeup-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Resolve the `bbx` binary path, matching the pattern in scheduler.ts */
@@ -51,7 +48,7 @@ export async function runBbxWakeup(opts: {
   triggeredBy: string;
   connector?: string | undefined;
   onChunk?: ((text: string) => void) | undefined;
-}): Promise<{ ok: boolean; detail: string; output: string; outcome: WakeupOutcomeReport | null }> {
+}): Promise<WakeupRunResult> {
   const bbxPath = resolveBbxPath();
   // Tooling profile: `bbx wakeup` runs the connectors themselves.
   const env = await buildToolingScriptEnv(opts.boxRoot, {
