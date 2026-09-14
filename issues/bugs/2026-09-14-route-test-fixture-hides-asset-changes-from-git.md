@@ -75,6 +75,18 @@ annexed and does not behave annexed — one layer further in.
 Concretely: a route test that writes an asset, rewrites it, and asserts that
 git noticed will pass whether or not the code under test is correct.
 
+## How much this actually matters
+
+Small. It bites only a test that writes an asset, rewrites it, and asserts that
+git noticed — there is exactly one of those today
+(`test/webapp/routes/routes-api.doctest.md`), and it is already worked around
+by using different-length content. Nothing in production is affected.
+
+The reason to keep it open rather than close it: the workaround is invisible
+unless you read the comment, so the next person to write a route test around
+asset dirtiness will hit the same wall and spend the same time on it. This
+issue is mostly a signpost for that person. It does not warrant scheduled work.
+
 ## First step
 
 Establish the mechanism before changing anything. A bisect between the two

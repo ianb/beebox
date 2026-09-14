@@ -26,7 +26,7 @@ that makes an operator retry or hand-repair a box that is already converted.
 
 Observed on `~/src/boxes/about` on 2026-09-14 with git-annex 10.20260717.
 
-This matters to `beebox/docs/plans/annex-at-init.md` beyond the box it was
+This matters to `beebox/docs/implemented-plans/annex-at-init.md` beyond the box it was
 found on. The plan already decides not to call `convertBoxToAnnex` from
 `bbx init`, reasoning that a fresh box has no assets and no commit so the
 migration's verification steps are all trivial. This is the concrete failure

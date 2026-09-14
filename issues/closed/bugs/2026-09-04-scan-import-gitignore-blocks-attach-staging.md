@@ -104,7 +104,7 @@ graceful refusal: a manifest box becomes a broken invariant, not a supported
 state.
 
 **Owner:** `issues/features/2026-09-14-every-box-uses-git-annex.md`, with the
-design drafted at `beebox/docs/plans/annex-at-init.md`. Not being fixed in
+design drafted at `beebox/docs/implemented-plans/annex-at-init.md`. Not being fixed in
 `scan-ingest`, which was told to behave as though annex-always already ships.
 Kept open until that work lands, since the reproduction in this body is the
 regression test that work owes.

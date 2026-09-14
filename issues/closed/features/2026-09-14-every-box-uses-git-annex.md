@@ -61,7 +61,7 @@ The work, as scoped by the decision:
   which matters, because "the old `makeTmpBox` never ran the real init" is what
   the scan-import issue names as the reason its bug went unnoticed.
 
-The design work is drafted at `beebox/docs/plans/annex-at-init.md`, whose
+The design work is drafted at `beebox/docs/implemented-plans/annex-at-init.md`, whose
 leading note records this decision and marks exactly which of its sections the
 decision deletes. That plan's budget predates the decision and must be re-set
 before implementation.

@@ -1,6 +1,6 @@
 ---
 title: "Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme"
-status: partial
+status: implemented
 workstream: full-embrace-annex
 issues:
   - ../../../issues/closed/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
