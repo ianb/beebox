@@ -43,6 +43,7 @@ export const driveMountCommand = new Command("mount")
           console.log(`  Mirrored ${String(result.created.length)} child card(s)`);
         }
         for (const note of result.notes) console.log(`  Note: ${note}`);
+        if (result.scheduleHint !== null) console.log(`  ${result.scheduleHint}`);
         // The mount exists either way — a child that could not be mirrored is
         // reported, not rolled back, and the next sync tries it again.
         for (const failure of result.failures) console.error(`  ${failure}`);

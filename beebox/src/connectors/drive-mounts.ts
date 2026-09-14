@@ -22,6 +22,7 @@ import { writeGfolderCard, writeGlinkCard } from "./drive-card-stamp.js";
 import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
 import { mirrorFolderOnce } from "./drive-mount-sync.js";
+import { checkDriveScheduleHint } from "./drive-schedule-hint.js";
 import { withDriveMirrorLock } from "./drive-lock.js";
 import { resolveMountTarget, assertMountTargetWritable } from "./drive-mount-path.js";
 import { safeFilename } from "./chat-utils.js";
@@ -89,6 +90,12 @@ export interface MountFolderResult {
   failures: string[];
   /** Things worth knowing that are not failures (a child that left, a cap). */
   notes: string[];
+  /**
+   * What to say about the box's hourly Drive sync being off, or null when it is
+   * on (or was never seeded). A mount that nothing keeps in step is the one
+   * thing a caller cannot see from the card it just wrote.
+   */
+  scheduleHint: string | null;
 }
 
 /**
@@ -159,6 +166,7 @@ async function mountUnderLock(options: {
     pushed: mirror.pushed,
     failures: mirror.failures,
     notes: mirror.notes,
+    scheduleHint: await checkDriveScheduleHint(boxRoot),
   };
 }
 
