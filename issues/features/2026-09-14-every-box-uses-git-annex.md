@@ -1,6 +1,6 @@
 ---
 title: "Every box uses git-annex, now and forever: delete the manifest scheme"
-workstream: unattached
+workstream: full-embrace-annex
 area: beebox
 labels: [annex, git, scan]
 filed-by: agent

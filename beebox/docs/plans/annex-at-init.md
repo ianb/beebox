@@ -1,7 +1,7 @@
 ---
 title: "Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme"
 status: draft
-workstream: unattached
+workstream: full-embrace-annex
 issues:
   - ../../../issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
   - ../../../issues/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md
