@@ -175,20 +175,56 @@ their own time; the agent retries later.
 - Force a wakeup, full or scoped to one connector: a new agent-facing verb,
   `bbx force-wakeup [--connector <name>]`, that asks the server to run the
   same supervised `bbx wakeup` child the Sync button and the scan-promote
-  worker already run (`core/commands/wakeup.ts:runBbxWakeup`), and returns
-  its `WakeupOutcomeReport` (connector errors, reactor ok or skipped-locked,
-  jobs processed and remaining) plus the connector `SyncResult`s. It never
-  runs in-process, under any profile: with no reachable server it refuses
-  and says so. Because the server runs the identical child the schedule
-  runs, forcing and letting it happen are the same code by construction. The
+  worker already run (`core/commands/wakeup.ts:runBbxWakeup`). It never runs
+  in-process, under any profile: with no reachable server it refuses and
+  says so. Because the server runs the identical child the schedule runs,
+  forcing and letting it happen are the same code by construction. The
   scoped form is the one agents will mostly use; it is sync plus a reactor
   pass over the jobs that sync produced, which is what "let it happen" does,
   so a bare connector sync would not satisfy the fidelity rule.
+
+  The seam is not ready as it stands, and the plan owns the gaps rather than
+  claiming them away (cross-model review, round 3):
+
+  - `runBbxWakeup` always spawns an unscoped `bbx wakeup`
+    (`core/commands/wakeup.ts:55`); it gains a `connector` option.
+  - The child's outcome line carries aggregate counts only
+    (`cli/commands/wakeup-outcome.ts:29`), and `runConnectors` prints each
+    `SyncResult` and discards it (`cli/commands/wakeup-connectors.ts:99`).
+    The outcome report gains a per-connector entry: name, created, updated,
+    pushed, jobs, and either `error` or `skipped` with a reason. That is
+    the typed channel the agent reads; no output parsing.
+  - A connector whose service is unavailable currently reports success with
+    nothing synced (Gmail and Calendar) or a failure (Drive), and one whose
+    service is switched off in policy reports success with nothing synced
+    (`connectors/google-drive.ts:89`). Both become `skipped` with a reason
+    (`not-configured`, `not-allowed`) in the `SyncResult`, so a forced run
+    can never say "done" about work it did not do. This is the same
+    invisible-nothing-happened failure the incident exposed, one layer down.
+  - Nothing serializes whole wakeup cycles. Only the reactor step has a lock
+    (`core/reactor/engine.ts:115`); the comment in `lib/file-lock.ts:5`
+    naming a wakeup mutex in `cli/lib/lock.ts` refers to a file that does
+    not exist. Today the Sync button and `bbx tick` can already interleave
+    preprocessing, connectors, and push. `bbx wakeup` takes a per-box cycle
+    lock through `lib/file-lock.ts`; a second cycle reports
+    `skipped: wakeup-running` in its outcome rather than interleaving, and
+    the stale comment is corrected. This goes in the cycle itself, not the
+    server procedure, so tick and forced runs share it.
 - `bbx wakeup` itself stays exactly what it is: the tooling-profile cycle
   that tick, the reactor, and the server spawn. It is listed in the surface
   audit issue as engine surface, and the agent guide stops describing it as
   something the agent runs. Making it half-work under the agent profile is
   the "both server-only and agent-designed" case the boxholder ruled out.
+- A full forced wakeup runs the box's on-wakeup scheduled scripts under the
+  tooling profile (`cli/commands/wakeup.ts:206`, `cli/commands/tick-utils.ts:140`),
+  and scheduled-script cards default to enabled. So an agent that authors a
+  script card can force it to run now rather than waiting for the next
+  cycle. This plan does not open that path; it removes the delay on a path
+  the custody plan already names as Track 3's. The delay was never the
+  protection (the custody plan claims "hygiene, not a wall"), and skipping
+  on-wakeup scripts in a forced run would break the fidelity rule. The plan
+  keeps fidelity and names the residual; the boxholder can overrule (see
+  open decisions).
 - Resolve a Drive URL or id to a name and type. This is the verification step
   the incident lacked. It needs a new `drive.inspect` procedure; the settings
   page would benefit from it too (it currently learns the name only after a
@@ -212,16 +248,20 @@ their own time; the agent retries later.
 
 ## How the agent asks
 
-One rule: under the agent profile, every `bbx` verb that needs a connector
-credential (the `drive`, `calendar`, and `connector` families) calls the same
-operation on the box's server with `BBX_SERVER_URL` and `BBX_AGENT_TOKEN`;
-under the tooling profile it runs in-process as today. Drive is the first
-family wired, because it is the one the incident hit; the others follow the
-same helper. The one new verb is `bbx force-wakeup`, which is agent-designed
-and server-backed in every profile, and replaces the agent-facing use of
-`bbx drive sync` (which stays as the tooling-profile in-process form). The
+One rule, stated so that a missing marker fails closed: a credentialed `bbx`
+verb (the `drive`, `calendar`, and `connector` families) runs in-process only
+when `BBX_SPAWN_PROFILE=tooling`. Any other value, or no value, delegates to
+the box's server with `BBX_SERVER_URL` and `BBX_AGENT_TOKEN`; if either of
+those is also missing it refuses, naming the missing piece. A spawn site
+that forgets the marker therefore gets delegation or a refusal, never local
+credential use and never the old auth-gap dead end. Drive is the first family
+wired, because it is the one the incident hit; the others follow the same
+helper. The one new verb is `bbx force-wakeup`, which is agent-designed and
+server-backed in every profile, and replaces the agent-facing use of `bbx
+drive sync` (which stays as the tooling-profile in-process form). The
 profile is stated, not inferred: `buildEnv` sets `BBX_SPAWN_PROFILE` to
-`agent` or `tooling` alongside the token, and the CLI branches on that. The
+`agent` or `tooling` alongside the token, and the CLI branches only on
+`tooling`. The
 first draft of this rule was "in-process when a token record loads, else
 server," and the cross-model review rejected it: a predicate keyed on
 credential visibility silently turns any process that can see the token into
@@ -336,10 +376,13 @@ agent's ability to verify one.
 This plan's budget beyond those two, in order:
 
 1. `bbx force-wakeup [--connector <name>]` and its `wakeup.force` procedure,
-   which runs `runBbxWakeup` and returns the outcome report and connector
-   results. Plus the agent guide change: `bbx wakeup` moves to the
-   "system-run, you do not invoke" list and `force-wakeup` joins the
-   commands-to-reach-for list. Roughly 100 lines of source, 60 of tests.
+   with the four seam changes above: `connector` on `runBbxWakeup`,
+   per-connector entries in the outcome report, `skipped` reasons in
+   `SyncResult` for the three Google connectors, and the per-box cycle lock.
+   Plus the agent guide change: `bbx wakeup` moves to the "system-run, you do
+   not invoke" list and `force-wakeup` joins the commands-to-reach-for list.
+   Roughly 250 lines of source, 150 of tests. The cycle lock and the
+   `skipped` reasons fix defects that exist today without this plan.
 2. A `drive.inspect` procedure, so `bbx drive inspect` and `add` (the file
    verbs, which also need the service) have a server counterpart. Roughly 80
    lines of source, 60 of tests.
@@ -374,11 +417,10 @@ three other agent-facing paths already use.
 
 ## Open decisions for the boxholder
 
-- Whether `BBX_SPAWN_PROFILE` is the right marker, or whether the agent
-  profile should simply never carry `BBX_SERVER_URL`-less shells and the CLI
-  should delegate whenever it has a bearer and no `BBX_SPAWN_PROFILE=tooling`.
-  Same behavior; the question is which default fails closed. The plan picks
-  "delegate unless told tooling."
+- Whether a full `bbx force-wakeup` from an agent should run on-wakeup
+  scheduled scripts (fidelity, the plan's choice) or skip them (custody). If
+  skipped, the outcome report must say so, and "force equals let happen"
+  acquires its first exception.
 - Whether the agent may flip `googleServices.drive` on when the boxholder
   asked in chat, by analogy with schedules, or whether that is always a
   settings-page act. The plan assumes settings-page only.
