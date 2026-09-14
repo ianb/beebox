@@ -27,7 +27,18 @@ export interface ResolvedModel {
 }
 
 /**
- * The box's pinned model as this engine can run it.
+ * The tier a box runs when it has pinned nothing — Opus on Claude, Sol on Codex.
+ *
+ * Expressed as a tier rather than two ids because that is the mapping the rest
+ * of the policy already uses, so the pair stays correct through a model-id bump
+ * and cannot drift apart. Boxholder decision, 2026-09-14: *"I feel like we
+ * should pick a default, using the harness default is hard to understand. I
+ * generally think Sol and Opus should be the defaults."*
+ */
+const UNPINNED_DEFAULT_TIER = "strong";
+
+/**
+ * The box's default model as this engine can run it.
  *
  * An engine that offers the pinned model runs it exactly. An engine that does
  * not — because the box switched harness after the pin — gets the model at the
@@ -35,6 +46,12 @@ export interface ResolvedModel {
  * vanishing. Ids are normalized first: a retired id is carried forward by
  * `normalizeModelId`, and without that step it would fail the registry check
  * and read as "no policy".
+ *
+ * `null` means the box pinned nothing — this function translates a pin, it does
+ * not invent one. What an unpinned box actually runs is {@link boxDefaultModel},
+ * one level up; the small-pass slot answers the same question differently
+ * (see {@link resolveSmallModelForEngine}), which is why the default does not
+ * live in here.
  */
 export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | null): string | null {
   if (pinned === null) return null;
@@ -43,6 +60,26 @@ export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | n
   const tier = modelTier(model);
   if (tier === null) return null;
   return resolveProcedureModel(engine, tier);
+}
+
+/**
+ * The model a chat that follows this box runs — the box's own answer, never the
+ * harness's.
+ *
+ * An unpinned box used to resolve to `null`, meaning "whatever the SDK picks".
+ * That left the box with no default it could name: the chat UI could not say
+ * what a follower would run, and the model dial had nothing to compare against,
+ * so it stayed blank on every unpinned box — which is most of them. Boxholder
+ * decision, 2026-09-14: *"I feel like we should pick a default, using the
+ * harness default is hard to understand."*
+ *
+ * A pin that exists but names no known model still yields `null`: a box saying
+ * something the policy cannot read is not the same as a box saying nothing, and
+ * quietly substituting a default there would hide a misconfiguration.
+ */
+export function boxDefaultModel(engine: AgentEngine, pinned: string | null): string | null {
+  if (pinned === null) return resolveProcedureModel(engine, UNPINNED_DEFAULT_TIER);
+  return resolveBoxModelForEngine(engine, pinned);
 }
 
 /**
@@ -60,7 +97,7 @@ export function resolveEffectiveModel(
     const explicit = normalizeModelId(choice.model);
     if (isChatModelAllowed(engine, explicit)) return { model: explicit, source: "explicit" };
   }
-  const fromPolicy = resolveBoxModelForEngine(engine, pinned);
+  const fromPolicy = boxDefaultModel(engine, pinned);
   if (fromPolicy !== null) return { model: fromPolicy, source: "default" };
   return { model: null, source: "none" };
 }
