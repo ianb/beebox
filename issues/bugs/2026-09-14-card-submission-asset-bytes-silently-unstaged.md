@@ -1,12 +1,11 @@
 ---
 title: "Card submission asset bytes reach neither git nor a manifest, with no error"
-workstream: scan-ingest
+workstream: unattached
 area: beebox
 labels: [scan, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-scan-ingest — research for 2026-09-04-scan-import-gitignore-blocks-attach-staging, 2026-09-14
-priority: normal
 ---
 
 `acceptSubmission` (`src/core/cards/accept-submission.ts:152-200`) writes a

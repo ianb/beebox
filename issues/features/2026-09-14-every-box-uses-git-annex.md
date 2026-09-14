@@ -4,9 +4,8 @@ workstream: unattached
 area: beebox
 labels: [annex, git, scan]
 filed-by: agent
-discovered-by: boxholder
+discovered-by: Ian
 discovered-in: worktree-scan-ingest — 2026-09-14
-priority: normal
 ---
 
 Boxholder decision, 2026-09-14: *"I want every box currently and forever in the
