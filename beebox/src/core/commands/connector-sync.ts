@@ -79,6 +79,8 @@ async function executeSync(
       if (result.error) {
         ctx.writeLine(`  Error: ${result.error}`);
         totalErrors++;
+      } else if (result.skipped) {
+        ctx.writeLine(`  skipped (${result.skipped.reason}): ${result.skipped.detail}`);
       } else if (result.created.length === 0 && result.updated.length === 0) {
         ctx.writeLine("  No new items.");
       }

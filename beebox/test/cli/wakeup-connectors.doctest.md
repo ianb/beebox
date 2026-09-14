@@ -164,6 +164,54 @@ JSON.stringify({
 => {"activeConnector":null,"activeConnectorName":null,"errorCount":0}
 ```
 
+## Each connector's result is returned, not just printed
+
+The aggregate `errorCount` cannot say which connector did what, and a forced
+wakeup (`bbx force-wakeup`) hands these entries to an agent that has no other
+channel — the per-connector prose is for a person reading a terminal. A skip is
+a success with a reason, which is the distinction a caller has to see: a
+connector that reported no error and synced nothing may never have been
+contacted.
+
+```ts
+const mixed = [
+  connector("google-drive", async () => ({
+    success: true,
+    created: ["a.card", "b.card"],
+    updated: ["c.card"],
+    pushed: ["d.card"],
+    jobs: ["j.card"],
+  })),
+  connector("gmail", async () => ({
+    success: true,
+    created: [],
+    updated: [],
+    skipped: { reason: "not-configured", detail: "Google is not authorized for this box" },
+  })),
+  connector("telegram", async () => { throw new Error("socket hang up"); }),
+];
+const result = await captureOutput(() => runConnectors("/unused", {
+  connectors: mixed,
+  runProcedureTriggers: async () => 0,
+}));
+JSON.stringify(result.connectors)
+=> [{"name":"google-drive","success":true,"created":2,"updated":1,"pushed":1,"jobs":1},{"name":"gmail","success":true,"created":0,"updated":0,"pushed":0,"jobs":0,"skipped":{"reason":"not-configured","detail":"Google is not authorized for this box"}},{"name":"telegram","success":false,"created":0,"updated":0,"pushed":0,"jobs":0,"error":"socket hang up"}]
+```
+
+An unknown `--connector` name gets an entry too. It is the one "connector" that
+never ran, and a caller that saw only an error count would have to guess which
+name the cycle failed to find.
+
+```ts continue
+const missed = await captureOutput(() => runConnectors("/unused", {
+  connector: "drive",
+  connectors: mixed,
+  runProcedureTriggers: async () => 0,
+}));
+JSON.stringify(missed.connectors)
+=> [{"name":"drive","success":false,"created":0,"updated":0,"pushed":0,"jobs":0,"error":"Connector not found: drive"}]
+```
+
 ## Only a nonzero connector error count requests a failing process status
 
 The command applies this value after stale-job cleanup, intake, indexing,

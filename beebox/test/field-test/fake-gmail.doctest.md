@@ -281,14 +281,15 @@ await box.cleanup();
 ## An unset env var leaves the real path alone
 
 Without `BBX_FAKE_GMAIL` the connector behaves exactly as before: a box with no
-Google access syncs to a no-op rather than reaching for a fake.
+Google access and no `googleServices.gmail` opt-in reports a skip rather than
+reaching for a fake.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("initialize box");
 JSON.stringify(await createGmailConnector(box.root).sync())
-=> {"success":true,"created":[],"updated":[]}
+=> {"success":true,"created":[],"updated":[],"skipped":{"reason":"not-allowed","detail":"Enable it in box settings (`googleServices.gmail` in `_config/box.json`)"}}
 ```
 
 ```ts cleanup

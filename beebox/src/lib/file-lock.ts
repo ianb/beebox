@@ -2,7 +2,8 @@
  * Machine-local cross-process file lock primitive.
  *
  * This is the canonical lock for the project. All cross-process locks
- * (wakeup mutex in cli/lib/lock.ts, scheduled-script + lock-group locks
+ * (the wakeup cycle lock in cli/commands/wakeup-cycle-lock.ts,
+ * scheduled-script + lock-group locks
  * in core/schedule/state.ts, reactor mutex in core/reactor/engine.ts, the
  * mobile device-store revoke in core/mobile/pairing.ts, the box git-index
  * lock in git-lock.ts, ...) sit on top of it. Don't add a new lock surface

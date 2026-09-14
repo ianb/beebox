@@ -138,6 +138,9 @@ importers:
       '@parcel/markdown-ansi':
         specifier: ^2.16.3
         version: 2.16.4
+      '@trpc/client':
+        specifier: ^11.11.0
+        version: 11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/server':
         specifier: ^11.11.0
         version: 11.17.0(typescript@5.9.3)

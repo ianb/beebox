@@ -32,6 +32,8 @@ import { inventoryRouter } from "./routers/inventory.js";
 import { secretsRouter } from "./routers/secrets.js";
 import { presentationRouter } from "./routers/presentation.js";
 import { voiceRecordingRouter } from "./routers/voice-recording.js";
+import { wakeupRouter } from "./routers/wakeup.js";
+import { gmailRouter } from "./routers/gmail.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -67,6 +69,8 @@ export const appRouter = router({
   secrets: secretsRouter,
   presentation: presentationRouter,
   voiceRecording: voiceRecordingRouter,
+  wakeup: wakeupRouter,
+  gmail: gmailRouter,
 });
 
 export type AppRouter = typeof appRouter;

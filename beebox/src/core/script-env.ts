@@ -32,6 +32,7 @@ import { loadBoxConfig } from "./box/config.js";
 import { getOrCreateAgentToken } from "./agent/token.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { pickBoxSubprocessEnv } from "./script-env-allowlist.js";
+import type { SpawnProfile } from "../lib/spawn-profile.js";
 
 // Path to Bee Box's own bin/ so subprocesses can find `bbx`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
@@ -113,12 +114,22 @@ export function parsePublicUrl(publicUrl: string | undefined | null): BoxEnvPiec
 
 async function buildEnv(
   boxRoot: string,
-  { additions, connectorCreds }: {
+  { additions, connectorCreds, profile }: {
     additions: Record<string, string | undefined> | undefined;
     connectorCreds: boolean;
+    profile: Exclude<SpawnProfile, "unset">;
   }
 ): Promise<NodeJS.ProcessEnv> {
   const env = pickBoxSubprocessEnv(process.env, { connectorCreds });
+
+  // Which profile this child runs under, stated rather than inferred. It is
+  // SET here, never inherited, so it is deliberately absent from the
+  // allowlist: a child cannot be handed a parent's `tooling` marker by
+  // accident. Credentialed `bbx` verbs run in-process only when this says
+  // `tooling`; anything else delegates to the box's server or refuses
+  // (`lib/spawn-profile.ts`). `additions` can still override it, which is how
+  // a caller spawns a differently-profiled grandchild on purpose.
+  env.BBX_SPAWN_PROFILE = profile;
 
   // Prepend Bee Box's bin/ so scripts can find `bbx` regardless of
   // how the parent process's PATH was set up.
@@ -166,6 +177,8 @@ async function buildEnv(
  *   `_config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
  * - Adds `BBX_AGENT_TOKEN` so the subprocess's `bbx chat …` calls get through
  *   its own box's auth wall.
+ * - Sets `BBX_SPAWN_PROFILE=agent`, so credentialed `bbx` verbs delegate to the
+ *   server rather than looking for a credential this profile withholds.
  * - Applies any caller-provided `additions` last (callers can override
  *   or explicitly unset — pass `undefined` to delete a key).
  */
@@ -173,7 +186,7 @@ export async function buildScriptEnv(
   boxRoot: string,
   additions?: Record<string, string | undefined>
 ): Promise<NodeJS.ProcessEnv> {
-  return buildEnv(boxRoot, { additions, connectorCreds: false });
+  return buildEnv(boxRoot, { additions, connectorCreds: false, profile: "agent" });
 }
 
 /**
@@ -188,10 +201,13 @@ export async function buildScriptEnv(
  * card and waiting for it to fire. What Track 1 closes is the trivial path —
  * the agent's own process env — not every path; Track 3 closes this one by
  * retiring env-var credentials for the store.
+ *
+ * Sets `BBX_SPAWN_PROFILE=tooling`, the one value that lets a credentialed
+ * `bbx` verb do its work in-process.
  */
 export async function buildToolingScriptEnv(
   boxRoot: string,
   additions?: Record<string, string | undefined>
 ): Promise<NodeJS.ProcessEnv> {
-  return buildEnv(boxRoot, { additions, connectorCreds: true });
+  return buildEnv(boxRoot, { additions, connectorCreds: true, profile: "tooling" });
 }

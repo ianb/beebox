@@ -6,8 +6,9 @@
  * `bbx wakeup`. Two facts make a fire-and-forget spawn unacceptable here:
  * connector-scoped scheduled wakeups filter jobs by `source`, so a `source:
  * scan` job never drains on the prod default schedules — a lost run is
- * indefinite, not late — and wakeup as a whole is not locked, so nothing else
- * would notice the gap. Hence a marker file written BEFORE the run and cleared
+ * indefinite, not late — and a cycle that loses the per-box wakeup lock
+ * (`cli/commands/wakeup-cycle-lock.ts`) does no work at all. Hence a marker
+ * file written BEFORE the run and cleared
  * only after a zero-exit run, with every promote pass retrying a marker it
  * finds. The marker lives beside the sidecars, so it survives restarts exactly
  * as the quarantine state machine does.
@@ -118,7 +119,11 @@ export function wakeupSatisfiedScanPromote(opts: {
   // guessing "fine" would resurrect the lost-wakeup bug the marker exists for.
   if (opts.outcome === null) return opts.exitOk;
   // A lock-skip did no work at all, so it proves nothing about the intake job
-  // this worker is waiting on — retry rather than clear the marker.
+  // this worker is waiting on — retry rather than clear the marker. Either
+  // lock counts: the reactor's (another reactor was mid-drain) or the whole
+  // cycle's (another wakeup was running, so this process did not even reach
+  // the reactor).
+  if (opts.outcome.skipped === "wakeup-running") return false;
   if (opts.outcome.reactorSkipped) return false;
   // `jobsRemaining` is deliberately not consulted: the reactor skips
   // low-priority work every run, so a queued backfill job is normal and is not

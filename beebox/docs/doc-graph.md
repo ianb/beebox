@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-14T23:41:41Z
-Total documents: 371
+Generated: 2026-09-14T23:59:36Z
+Total documents: 372
 
 ## Issues
 
@@ -185,7 +185,7 @@ Referenced by:
 - docs/knowledge-taxonomy.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
 - docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/migrations.md:414 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
-- docs/model-policy.md:99 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
+- docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
 - docs/plans/agent-docs.md:87 (mention) — add over my own CLAUDE.md and scripts, is it a framework or a product, how
 - docs/plans/asset-offbox-storage.md:363 (mention) — remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:381 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
@@ -265,7 +265,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-23-choose-the-engine-for-a-new-chat.md:104 (mention) — Related: [AGENTS.md missing from the CLAUDE.md special-cases](../bugs/2026-08-22-agents-md-missing-from-claude-md-specia
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:22 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box CLAUDE.md context and checks
-- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:63 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
+- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:85 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/CLAUDE.md`.
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in CLAUDE.md/docs here. Not needed.
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
@@ -473,6 +473,8 @@ Referenced by:
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:35 (at-include) — - Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:46 (mention) — these take `invariant()` per `code-style.md`, not a graceful refusal.
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
+- ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:28 (mention) — mechanical rules — its own words, *"`code-style.md` says how to write a line,
+- ../issues/code-quality/2026-09-14-what-can-we-remove-sweep.md:38 (mention) — - **`code-style.md`'s defensiveness rules** and principle 6 already say what
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -543,7 +545,7 @@ Referenced by:
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
 - ../issues/closed/decisions/2026-08-19-bee-box-rename.md:27 (mention) — moved to Discord, and `README.md` links the Bee Box server there.
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
-- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:87 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
+- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:109 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
 - ../research/backend-alternatives/2026-07-18-synthesis.md:3 (link) — *2026-07-18. Supersedes the first-pass [README](README.md) analysis (kept as a record
@@ -1343,6 +1345,7 @@ Referenced by:
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:110 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
+- ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:26 (link) — [`docs/engineering-principles.md`](../../beebox/docs/engineering-principles.md)
 - ../issues/decisions/2026-07-22-config-untrusted-principle-drift.md:7 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
 - ../research/gstack/notes/design-consultation.md:34 (mention) — ★ Probably the single most portable idea in gstack. Worth a CLAUDE.md note or its own principle in `engineering-principl
 - ../research/gstack/notes/plan-eng-review.md:183 (mention) — - ★ **Stated preferences as the review spine: yes, and a real artifact to develop.** Would want to write out callback's
@@ -1434,7 +1437,7 @@ References:
 
 #### docs/gmail-setup.md
 
-Title: "Gmail Connector Setup" | 176 lines | current reference
+Title: "Gmail Connector Setup" | 181 lines | current reference
 
 Referenced by:
 - docs/connectors.md:34 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
@@ -1447,6 +1450,7 @@ Referenced by:
 
 References:
 - → docs/google-setup.md (link)
+- → docs/implemented-plans/agent-capability-delegation.md (mention)
 
 #### docs/google-drive.md
 
@@ -1623,7 +1627,8 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:56 (mention) — for someone to remember (`beebox/docs/knowledge-audits.md`).
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:53 (link) — ([docs](../../../beebox/docs/knowledge-audits.md)) and the doc-generation
-- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:66 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
+- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:88 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
+- ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:66 (link) — ([`docs/knowledge-audits.md`](../../beebox/docs/knowledge-audits.md)) when the
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:11 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
 
 References:
@@ -1888,7 +1893,7 @@ References:
 
 #### docs/model-policy.md
 
-Title: "Which model a box thinks with" | 125 lines | current reference
+Title: "Which model a box thinks with" | 131 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:202 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
@@ -2739,6 +2744,18 @@ References:
 - → user-stories/README.md (mention)
 - → docs/security-report.md (mention)
 - → CLAUDE.md (mention)
+
+#### docs/implemented-plans/agent-capability-delegation.md
+
+Title: "Agent self-configuration of credentialed connectors (Drive first)" | 441 lines | shipped history | implemented
+
+Referenced by:
+- docs/gmail-setup.md:144 (mention) — further (`docs/plans/agent-capability-delegation.md`).
+- ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:46 (mention) — `beebox/docs/plans/agent-capability-delegation.md`. `wakeup` stays here as
+
+References:
+- → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (frontmatter)
+- → ../issues/features/2026-07-20-schedules-off-by-default.md (frontmatter)
 
 #### docs/implemented-plans/agent-field-tests.md
 
@@ -4109,7 +4126,7 @@ References:
 Title: "Box model/engine policy" | 744 lines | shipped history | implemented
 
 Referenced by:
-- docs/model-policy.md:41 (mention) — `docs/implemented-plans/model-engine-policy.md`.)
+- docs/model-policy.md:44 (mention) — `docs/implemented-plans/model-engine-policy.md`.)
 - ../issues/closed/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md:12 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (commit `d61bb7ec0`, found in cross-model rev
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:10 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track H, commit `d0dbbd1c0`): triage, chat r
 - ../issues/closed/features/2026-07-17-chat-model-pin-default.md:11 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track D, commit `ba5f53255`): the chat model
