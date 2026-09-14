@@ -23,6 +23,12 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
   without interrupting your task — so reach for it reflexively the moment
   something is off. Good feedback is specific about *what* was confusing and
   *why*.
+- \`bbx force-wakeup [--connector <name>]\` — runs a real wakeup on the server
+  right now, either the whole cycle or just one connector, and reports what each
+  connector created, updated, or skipped and why. Reach for it after mounting a
+  Drive folder or changing connector configuration, and whenever the boxholder
+  asks "did it sync?" — it is the only way to get that answer now rather than at
+  the next scheduled cycle.
 - \`bbx search "<query>"\` — full-text search over the box's cards; prefer it over
   \`grep\` for finding cards by content (details in the box-search section).
 - \`bbx calendar [timespan]\` — upcoming calendar events (default 7d; also
@@ -60,6 +66,10 @@ procedure run):
 **System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
 appear here so you recognize them in \`git log\` and health output):
 
+- \`bbx wakeup\` — the cycle itself (connectors, jobs, scripts, push). It only
+  works with the server's credentials, so running it yourself syncs nothing and
+  says so in a way that looks like "nothing new"; \`bbx force-wakeup\` above is
+  your way to trigger it.
 - \`bbx reactor\` — process pending jobs in \`_bookkeeping/jobs/\`.
 - \`bbx finalize\` — flush outbound cards in \`_bookkeeping/output/\`.
 - \`bbx health\` — scheduled-task health (failing / overdue / blocked /
