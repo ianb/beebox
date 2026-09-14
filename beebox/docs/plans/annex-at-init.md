@@ -130,7 +130,7 @@ added a conversion and a deletion, and removed the accommodation half.
 | Creation annexes + binary preflight | ~110 | ~90 |
 | Gitignore collapse + `--skip-git` removal | ~40 | ~50 |
 | Asset writers take `invariant()` | ~50 | ~120 |
-| Delete the manifest scheme | ~80 churn, **~−900 deleted** | **~−300** |
+| Delete the manifest scheme + `to-annex` | ~80 churn, **~−1400 deleted** | **~−450** |
 | Fixture flip + declaration sweep | ~60 | measured by the spike |
 | **Total added** | **~340** | **~260 + fallout** |
 
@@ -569,7 +569,31 @@ would be asserting something untrue.
 5. **Remove `--skip-git`.** It has no caller, and it is the only thing that
    could still produce a box the annex step skips.
 6. **Asset writers take `invariant()`.**
-7. **Delete the manifest scheme.**
+7. **Delete the manifest scheme, `bbx attachments to-annex` included**
+   (boxholder, 2026-09-14: *"yes, to-annex should go too!"*). The issue's
+   ordering constraint — `to-annex` reads manifests to verify a conversion, so
+   the scheme cannot be deleted until every box is converted — is already
+   satisfied: the fleet was converted and verified first.
+
+   **`to-annex` is not a standalone deletion.** Three shipped surfaces name it
+   as the remedy for a manifest-scheme box, and each stops being true the
+   moment the command is gone:
+
+   - `src/core/annex/doctor.ts:300` — *"Migrate with `bbx attachments
+     to-annex`."*
+   - `src/core/scan/promote.ts:241` — the quarantine-skip message.
+   - `src/webapp/routes/scan-upload.ts:258` — a retryable `503` whose meaning
+     is written into `docs/scan-upload-contract.md:69-76`, a **wire contract
+     shared with the standalone scan-uploader** and versioned by
+     `SCAN_CONTRACT_VERSION` (currently 1).
+
+   So the deletion must land together with step 6's `invariant()`s, which
+   replace "convert it with X" with a hard failure that names no remedy
+   because none is needed. The scan-upload 503 is the one that reaches outside
+   this repo: its documented condition (*"a box that has not been converted to
+   git-annex"*) becomes unreachable, and whether removing a documented 503
+   condition needs a `SCAN_CONTRACT_VERSION` bump is a question for the
+   scan-uploader's bump rules rather than an assumption to make here.
 8. **Doctor check 2 prose + the retired-LFS correction.**
 
 **The riskiest step is 4, not the init change.** `writeBoxGitignore` runs on
