@@ -69,6 +69,55 @@ Verified against the code:
   (`cli/commands/wakeup-connectors.ts:72`). A seed that says `--connector
   drive` would report "Connector not found" every hour.
 
+## Two principles from the boxholder (2026-09-14)
+
+1. **Anything `bbx` does, the agent should be able to do.** Some acts are
+   not for the agent, and those should not be `bbx` verbs at all. The
+   boxholder's own assessment: "this has been weakly handled."
+2. **`bbx` should be able to do the work, confirm it is done, and force it to
+   happen instead of waiting for a sync. Forcing and letting it happen must be
+   equivalent.** If a person or agent forces a sync, the result must be the
+   same as the scheduled one.
+
+Audit of the first principle against the CLI as it stands:
+
+| Verb | Under the agent profile today | Verdict |
+|---|---|---|
+| `bbx drive add\|inspect\|list\|mount\|link\|unmount\|sync` | exits with the auth-gap message | violates 1; delegate |
+| `bbx calendar calendars\|add\|remove` | exits with the auth-gap message | violates 1; delegate |
+| `bbx calendar [timespan]` (advertised to agents in `agent-guide/commands.ts:28`), `bbx connector gmail pending` | read local state only; work | fine |
+| `bbx connector gmail track\|gws` | exits "not configured" | violates 1; delegate |
+| `bbx wakeup --connector <name>` | each Google connector's `getService` returns null; Gmail and Calendar sync nothing and report success, Drive reports a failure | violates 1 and 2; see below |
+| `bbx google-auth` | a browser OAuth flow | correctly not for agents; keep, it is the boxholder's verb and the agent relays it |
+| `bbx secrets set\|grant\|revoke\|migrate`, `bbx auth …` | refuse without `--agent-confirmed` | correctly not for agents; the flag is a person's signature, so these stay `bbx` verbs a person runs |
+| `bbx secrets status\|declare\|describe --add-use` | work, scoped to the agent's own box | fine |
+| `bbx secrets describe --remove-use\|--clear-uses` | refuse without `--agent-confirmed` | fine; removal is the boxholder's |
+
+So the class of verbs that fails the first principle is exactly "needs a
+connector credential in-process." That is one mechanism to fix, not a
+per-verb list.
+
+Audit of the second principle. The scheduled Drive sync is
+`connector.sync()` under the mirror lock (`connectors/google-drive.ts:79`),
+covering every file and folder mount, the push-back, and job creation, with
+`triggeredBy` set by the caller. The forced paths:
+
+- `bbx drive sync` calls the same `connector.sync()` in-process. Equivalent
+  in code, but only under the tooling profile; under the agent profile it is
+  the auth-gap exit.
+- The settings page's `drive.syncFolder` runs one folder mount through
+  `mirrorFolderOnce`, the same per-folder function the connector uses. A
+  subset by design, not a divergence.
+- `bbx wakeup --connector google-drive` from an agent shell is the fidelity
+  failure: it runs, the connector finds no service, and the cycle continues
+  as if the box had nothing new. Forcing produced a different answer from
+  letting it happen, and the difference was invisible to the caller.
+
+The requirement this sets for the design: there is one sync function per
+connector, the scheduled path and every forced path call it, and a forced
+call returns that function's `SyncResult` to the caller. A forced path that
+runs different code, or discards the result, is a defect.
+
 ## The frame: custody, not authority
 
 The sudo analogy assumes the agent lacks *authority* and needs a way to
@@ -117,13 +166,22 @@ their own time; the agent retries later.
 
 **Delegated to the server (credential stays server-side):**
 
+- Force a connector sync: a `connectors.sync({ connector })` procedure that
+  runs that connector's `sync()` in the server process, under the same lock
+  and with `triggeredBy` naming the caller, and returns its `SyncResult`.
+  This is what `bbx drive sync` and `bbx wakeup --connector <name>` call under
+  the agent profile. Because it is the connector's own `sync()`, forcing and
+  letting it happen are the same code by construction, which is the fidelity
+  rule. It also gives the schedule's manual "run now" button a result to show
+  instead of a duration.
 - Resolve a Drive URL or id to a name and type. This is the verification step
   the incident lacked. It needs a new `drive.inspect` procedure; the settings
   page would benefit from it too (it currently learns the name only after a
   mount succeeds).
 - Mount a folder or link an item: validate against Drive, write the card,
   sync once, commit. Exists as `drive.mount` and `drive.link`.
-- Sync one mount now. Exists as `drive.syncFolder`.
+- Sync one mount now. Exists as `drive.syncFolder`; a subset of the
+  connector sync, sharing its per-folder function.
 - List mounts with their connection state. Exists as `drive.mounts`.
 
 **Left to a person (the agent relays the ask and stops):**
@@ -139,9 +197,12 @@ their own time; the agent retries later.
 
 ## How the agent asks
 
-One rule, no new verb: under the agent profile, every `bbx drive <verb>`
-calls the same operation on the box's server with `BBX_SERVER_URL` and
-`BBX_AGENT_TOKEN`; under the tooling profile it runs in-process as today. The
+One rule, no new verb: under the agent profile, every `bbx` verb that needs a
+connector credential (the `drive`, `calendar`, and `connector` families, and
+`wakeup --connector`) calls the same operation on the box's server with
+`BBX_SERVER_URL` and `BBX_AGENT_TOKEN`; under the tooling profile it runs
+in-process as today. Drive is the first family wired, because it is the one
+the incident hit; the others follow the same helper. The
 profile is stated, not inferred: `buildEnv` sets `BBX_SPAWN_PROFILE` to
 `agent` or `tooling` alongside the token, and the CLI branches on that. The
 first draft of this rule was "in-process when a token record loads, else
@@ -257,17 +318,25 @@ agent's ability to verify one.
 
 This plan's budget beyond those two, in order:
 
-1. A `drive.inspect` procedure, so `bbx drive inspect` and `add` (the file
+1. A `connectors.sync({ connector })` procedure returning `SyncResult`, and
+   `bbx drive sync` plus `bbx wakeup --connector` delegating to it under the
+   agent profile. `bbx wakeup` with no connector filter stays a tooling-only
+   verb: it is the whole cycle, and an agent forcing the cycle it is running
+   inside is a different question. Roughly 80 lines of source, 60 of tests.
+2. A `drive.inspect` procedure, so `bbx drive inspect` and `add` (the file
    verbs, which also need the service) have a server counterpart. Roughly 80
    lines of source, 60 of tests.
-2. `--json` output on those verbs and the three-party attribution on
+3. The `calendar` and `connector` families onto the same helper. Their
+   server-side procedures mostly do not exist yet; this is where the "one
+   mechanism" claim gets tested. Roughly 150 lines of source, 100 of tests.
+4. `--json` output on those verbs and the three-party attribution on
    refusals, with a doctest that runs each verb from an agent-profile shell
    against a box with no token file and asserts the refusal names the
    boxholder. Roughly 100 lines.
-3. The settings page and mount result mentioning `check-drive` state, and the
+5. The settings page and mount result mentioning `check-drive` state, and the
    agent guide's Drive row saying "these verbs work in your shell; the server
    holds the credential." Roughly 60 lines.
-4. The `actor` context field and commit trailer for attribution. Roughly 30
+6. The `actor` context field and commit trailer for attribution. Roughly 30
    lines. Drop this item rather than ship the attribution claim without it.
 
 Not in budget, and deliberately: any capability token, per-operation grant, or
@@ -297,3 +366,7 @@ three other agent-facing paths already use.
   asked in chat, by analogy with schedules, or whether that is always a
   settings-page act. The plan assumes settings-page only.
 - Whether to land `check-drive` now, ahead of the rest. The plan says yes.
+- Whether a full `bbx wakeup` (no connector filter) should be agent-runnable
+  through the server, or is one of the acts that "should not be a `bbx` verb"
+  for agents. The plan leaves it tooling-only and names it as the one
+  deliberate exception to the first principle.
