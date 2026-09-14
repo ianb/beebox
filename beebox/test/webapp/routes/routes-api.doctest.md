@@ -228,12 +228,13 @@ await ctx.cleanup();
 
 Dirty files get preserved in their own commit before the delete commit.
 
-The two versions differ in LENGTH deliberately. `pathsHaveChanges` asks
-`git status`, and git skips re-running the annex clean filter for a tracked file
-whose size is unchanged — so a same-size overwrite reads as clean and the
-preservation commit does not happen. Assets are tracked now rather than
-gitignored, which is what puts them under that check at all. See
-`issues/bugs/2026-09-14-same-size-asset-overwrite-reads-as-clean.md`.
+The two versions differ in LENGTH deliberately, and only because of a FIXTURE
+defect: in a `makeTestServer` box a same-size overwrite of a committed asset is
+invisible to `git status`, so `pathsHaveChanges` reads clean and the
+preservation commit never happens. A real box does not behave that way — the
+same sequence on `bbx init` and on `makeTmpBox` reports the change — so this
+line is working around the fixture, not around the route. See
+`issues/bugs/2026-09-14-route-test-fixture-hides-asset-changes-from-git.md`.
 
 ```ts
 const ctx = await makeTestServer();

@@ -504,15 +504,13 @@ real plumbing for callers that initialize git themselves immediately after.
 
 ## Knowledge audits
 
-One new agent-facing fact: an agent on a manifest-scheme box now gets a refusal
-naming `bbx attachments to-annex` where it previously got a `git add` error.
-That is a message, not a concept — no new tag, card shape, or convention — so
-the `knows_directly` entry to add is whether a box agent, told a scan import
-refused, knows the box needs converting rather than retrying. Filter id
-`annex-refusal-actionable`, to be added to
-`beebox/src/dev/knowledge-audits.yaml` and **run** against a scratch box (not
-`test1`, and with an absolute `--box` path) before this plan ships; a never-run
-audit is unverified in both directions.
+**None. Dropped** (boxholder, 2026-09-14: *"A knowledge audit doesn't seem
+necessary AFAICT"*). The audit this plan proposed — `annex-refusal-actionable`
+— asked whether a box agent told a scan import refused would know the box needs
+converting. The decision removed both halves of that question: there is no
+refusal naming a command, and no conversion for an agent to run. An asset write
+on a box that fails the invariant throws, and a thrown error needs no
+box-agent knowledge to act on.
 
 ## What will hold this after it ships
 
@@ -623,7 +621,12 @@ whole point of deleting the scheme rather than accommodating it.
    which is now a hard dependency. Production had it only from a hand-run
    `apt install` during the 2026-08 conversion, so a server rebuild would have
    produced a machine unable to commit to any box. Both fixed.
-10. **Knowledge audit** `annex-refusal-actionable`, authored and run.
+10. ~~**Knowledge audit** `annex-refusal-actionable`.~~ **Dropped** (boxholder,
+    2026-09-14: *"A knowledge audit doesn't seem necessary AFAICT"*). Its
+    premise was that an agent meeting a refusal needs to know the box wants
+    converting. There is no refusal to understand any more and no conversion to
+    run: an asset write on a broken box throws, which needs no box-agent
+    knowledge to act on.
 
 ## Rollout shape
 
