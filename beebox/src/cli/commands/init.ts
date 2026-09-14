@@ -35,26 +35,24 @@ async function announceAndInitGit(
   { boxRoot, annex, options }: {
     boxRoot: string;
     annex: GitAnnexService;
-    options: { skipGit?: boolean; branch: string };
+    options: { branch: string };
   }
 ): Promise<void> {
   console.log(`Initialized Bee Box at ${boxRoot}`);
 
-  if (!options.skipGit) {
-    const alreadyRepo = await isRepo(boxRoot);
-    if (!alreadyRepo) {
-      await initRepo(boxRoot, options.branch);
-    }
-    console.log("Git repository initialized with initial commit.");
-
-    // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore`
-    // from an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot`
-    // calls it with `skipGit: true` — there is no `.git` at that point, so on
-    // a fresh init the probe can only ever read false and the box would be
-    // written manifest-scheme no matter what. The repository has to exist
-    // first, so this step re-writes the `.gitignore` the probe got wrong.
-    await annexNewBox(annex, boxRoot);
+  const alreadyRepo = await isRepo(boxRoot);
+  if (!alreadyRepo) {
+    await initRepo(boxRoot, options.branch);
   }
+  console.log("Git repository initialized with initial commit.");
+
+  // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore` from
+  // an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot` calls it
+  // before there is a `.git` — so on a fresh init the probe can only ever read
+  // false and the box would be written manifest-scheme no matter what. The
+  // repository has to exist first, so this step re-writes the `.gitignore` the
+  // probe got wrong.
+  await annexNewBox(annex, boxRoot);
 
   console.log("\nDirectory structure created:");
   console.log("  package.json, tsconfig.json, src/   - Box code (schemas, views, tricks)");
@@ -69,7 +67,6 @@ async function announceAndInitGit(
 }
 
 export interface InitOptions {
-  skipGit?: boolean;
   branch: string;
   docidDebug?: boolean;
 }
@@ -272,7 +269,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // rules, docs, etc.) on fresh init, at the box root — that's the git
   // root. Re-inits never hit this; the boxholder commits their own review
   // of what `bbx init` changed.
-  if (isFresh && !options.skipGit) {
+  if (isFresh) {
     await stageAll(boxRoot);
     await commit(boxRoot, {
       message: "Initialize Bee Box",
@@ -293,7 +290,6 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
 export const initCommand = new Command("init")
   .description("Initialize or update a Bee Box")
   .argument("[path]", "Path to initialize", ".")
-  .option("--skip-git", "Skip git initialization")
   .option("-b, --branch <name>", "Initial branch name", "main")
   .option("--docid-debug", "Add DOCID markers to generated docs (persists until --no-docid-debug)")
   // Declared explicitly: commander does not derive `--no-x` from `--x`, so the

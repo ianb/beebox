@@ -494,13 +494,13 @@ wrong on other platforms, since it is already the message two shipped surfaces
 print. Raising it because Track 1 makes it the first thing a new user sees,
 which is a different weight than a doctor note.
 
-**Should `bbx init --skip-git` skip the annex step too?** `scaffoldBoxRoot`
-already takes `skipGit` (`src/core/box/index.ts:216`). A box with no repo cannot
-be annexed, so mechanically it must skip — but then that box is manifest-scheme
-and every asset writer refuses it, which may be a state nothing should produce.
-My lean: skip the annex step, and have Track 2's refusal cover it, since
-`--skip-git` is already a deliberately degraded box. Flagging it because it is
-the one path Track 1 leaves on the old scheme by design.
+**Should `bbx init --skip-git` skip the annex step too?** RESOLVED by
+deleting the flag (boxholder, 2026-09-14: *"should we remove --skip-git? Seems
+icky, not something we should support"*). The question assumed a box with no
+repo is a state worth supporting; it is not one anything produces. The flag had
+no caller in `bin/`, `deploy/`, or the codebase, and `deploy/add-box.sh:311`
+deliberately avoided it. `initBox`'s internal `skipGit` parameter stays — it is
+real plumbing for callers that initialize git themselves immediately after.
 
 ## Knowledge audits
 
