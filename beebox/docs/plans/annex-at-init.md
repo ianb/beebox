@@ -49,6 +49,30 @@ issues:
 > workstream before implementation. The body is kept because its citations,
 > failure modes, and the reasoning behind each seam are all still accurate —
 > only the accommodation half is dropped.
+>
+> **Re-set by `full-embrace-annex`, 2026-09-14 — three corrections from
+> reading the code and converting the fleet.** See *Budget, re-set* below.
+>
+> 1. **The init reordering in Track 1 step 2 does not work as written.** It
+>    proposes moving `initRepo` above `writeBoxGitignore` inside `initBox`
+>    (`src/core/box/index.ts:216-221`). That branch never runs for `bbx init`:
+>    `scaffoldBoxRoot` calls `initBox` with `skipGit: true`
+>    (`src/core/box/package.ts:284`) and git init happens afterwards in
+>    `announceAndInitGit` (`src/cli/commands/init.ts:32-47`). The reorder would
+>    have changed nothing and the probe would still have read false. The annex
+>    step belongs in `announceAndInitGit`, and re-writes the `.gitignore` that
+>    the probe got wrong. **Implemented.**
+> 2. **`to-annex` cannot convert a zero-asset box at all.** Its conversion
+>    commit has nothing to commit, so `git commit` exits 1. The plan declined
+>    to call `convertBoxToAnnex` from init because its verification steps are
+>    trivial on an empty box; the real reason is stronger. Filed as
+>    `issues/bugs/2026-09-14-to-annex-fails-on-zero-asset-box.md`.
+> 3. **The fleet is already converted, so the conversion track is spent.**
+>    Every production box and every local box is annex-shaped, verified with
+>    `git check-ignore` against real assets rather than the `.git/annex/`
+>    probe. The last manifest-scheme box (`about`) was converted this session.
+>    What remains of that track is the guard against a box arriving unconverted
+>    from elsewhere, not a fleet migration.
 
 `bbx init` always produces a manifest-scheme box, and four asset writers cannot
 write to one. So a brand-new box cannot take a scan, a photo import, a Gmail
@@ -80,13 +104,34 @@ anything, mirroring `src/core/scan/promote.ts:238-247` verbatim. That converts a
 refusal is what every fresh box would hit — so it fixes the *shape* of the
 failure, not the failure.
 
-**This plan's budget.** Two tracks, one subproject (`beebox/`).
+**This plan's budget, re-set 2026-09-14.** One subproject (`beebox/`). The
+pre-decision budget was two tracks at ~180 source / ~200 test; the decision
+added a conversion and a deletion, and removed the accommodation half.
 
 | | source | tests |
 |---|---|---|
-| Track 1 — annex at init | ~120 | ~90 |
-| Track 2 — writers refuse the manifest scheme | ~60 | ~110 |
-| **Total** | **~180** | **~200** |
+| Creation annexes + binary preflight | ~110 | ~90 |
+| Conversion guard for an unconverted box | ~40 | ~50 |
+| Gitignore branch collapses; init refuses a manifest box | ~40 | ~50 |
+| Asset writers take `invariant()` | ~50 | ~120 |
+| Delete the manifest scheme | ~80 churn, **~−700 deleted** | **~−300** |
+| Fixture flip + declaration sweep | ~60 | measured by the spike |
+| **Total added** | **~380** | **~310 + fallout** |
+
+Roughly 2× the pre-decision number, and net *negative* source once the scheme
+deletion lands. The honest figure carries one unknown, deliberately: the
+fixture flip's fallout is measured rather than estimated (see below), because
+the population is far larger than the plan's "~50 mechanical deletions"
+assumed.
+
+**The fixture population, counted.** 1290 `makeTmpBox(` call sites; 438 pass
+`git: true`; only 44 declare `annex: true`. A box with no `.git` cannot be
+annexed at all, so `makeTmpBox` cannot become "annex-always with no `annex`
+option" as the decision note assumed — `git` becomes the switch that decides
+the shape, and ~850 fixtures stay manifest-shaped by construction. Every one
+of those that writes asset bytes meets the new `invariant()`. Real
+`git annex init` measures at ~0.33s, so annexing all 438 git boxes adds ~145s
+of serial suite time.
 
 Docs and the fixture-declaration sweep are reported separately, not counted
 against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
@@ -484,26 +529,45 @@ plain git box" while `:65` declares `annex: true`.
 
 ## Implementation order
 
+Re-ordered 2026-09-14 against the code. The one substantive change from the
+original sequence: the writer `invariant()`s move to AFTER the gitignore
+collapse. An invariant is a claim that a state is unreachable, and while two
+schemes still exist the state is reachable by design — so asserting it first
+would be asserting something untrue.
+
 1. **`requireGitAnnex` + `bbx init` refuses without the binary** — the
-   dependency has to be enforced before anything starts relying on it.
-2. **`scaffoldBoxRoot` annexes on a fresh init** — reorder `initRepo` above
-   `writeBoxGitignore`, add `git annex init` between, verify the `annexed` probe
-   reads true. Plus the real-binary init doctest.
-3. **Doctor check 2 prose + the retired-LFS correction.**
-4. **Track 2 gates: scan-import and pdf-extract**, with the manifest-path
-   doctests. This is the filed bug closed.
-5. **Track 2 gates: Gmail attachments and card submissions**, with the
-   filesystem assertion for the silent case. This is the second issue closed.
-6. **Fixture default flip** in `test/helpers/doctest-helpers.ts:37` and
-   `test/helpers/test-server.ts:72-80`, then remove the ~50 redundant
-   `annex: true` declarations across the nine doctest files the research
-   enumerated. Last, because every earlier chunk's tests should be written
-   against the fixture spelling they were designed with.
-7. **Docs:** `docs/assets.md` (its claim that *"Anything that writes asset bytes
-   now gates on that shape via `isAnnexBox()`"* becomes true with chunk 5),
-   `docs/box-layout.md`, the install-docs git-annex addition, and the stale
+   dependency has to be enforced before anything starts relying on it. **Done**
+   (`21b137dd2`).
+2. **Box creation annexes** — `git annex init` in `announceAndInitGit` (NOT a
+   reorder inside `initBox`; see the correction at the top), plus the
+   real-binary init doctest. **Done** (`21b137dd2`).
+3. **Spike: flip the fixture default, run the suite, count the fallout.** This
+   gates the budget for steps 5-7 and is cheap; the estimate it replaces was
+   off by an order of magnitude on population.
+4. **Guard against an unconverted box arriving from elsewhere.** The fleet is
+   already converted, so this is no longer a migration — coordinate with
+   `migration-reliability`, which owns how box migrations get applied.
+5. **Gitignore branch collapses; `bbx init` refuses a manifest-scheme box.**
+   This is the step that carries the real risk — see below.
+6. **Asset writers take `invariant()`.**
+7. **Delete the manifest scheme.**
+8. **Doctor check 2 prose + the retired-LFS correction.**
+
+**The riskiest step is 5, not the init change.** `writeBoxGitignore` runs on
+EVERY init, including a re-init of an existing box (`deploy/add-box.sh` runs
+it twice to provision one box). An unconditional `UNIGNORE_BLOCK` on a box
+that is still manifest-scheme un-ignores its asset bytes without moving them
+into the annex, and the next autocommit puts raw bytes into git history —
+silently, exit 0. That is the `c47fd2be1` failure class pointed the other way.
+So the collapse cannot precede conversion, and re-init on an unconverted box
+must fail closed. Lean: refuse, rather than convert in place — a refusal has
+no data risk, and every box that exists today is already converted, so nothing
+real reaches the refusal.
+9. **Docs:** `docs/assets.md` (its claim that *"Anything that writes asset
+   bytes now gates on that shape via `isAnnexBox()`"* becomes true with step
+   6), `docs/box-layout.md`, the install-docs git-annex addition, and the stale
    `prepare.doctest.md` prose.
-8. **Knowledge audit** `annex-refusal-actionable`, authored and run.
+10. **Knowledge audit** `annex-refusal-actionable`, authored and run.
 
 ## Rollout shape
 
