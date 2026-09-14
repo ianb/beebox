@@ -118,8 +118,14 @@ export function syncWrongProfileRefusal(): DriveRefusal {
   };
 }
 
-/** Classify any failure — local throw or delegated tRPC error — for relay. */
-function refusalFor(error: unknown): DriveRefusal {
+/**
+ * Classify any failure — local throw or delegated tRPC error — for relay.
+ *
+ * Also used by `force-wakeup`, which is delegated in every profile and so has
+ * only the tRPC half of this to classify; sharing it keeps one mapping from a
+ * server code to the party who can act on it.
+ */
+export function refusalFor(error: unknown): DriveRefusal {
   if (error instanceof DriveAccessError) {
     return {
       kind: error.problem.kind === "not-enabled" ? "FORBIDDEN" : "PRECONDITION_FAILED",
