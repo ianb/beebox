@@ -7,8 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — Track A2 (one-root box layout), 2026-09-04
 priority: normal
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Fresh boxes are annex-shaped from their first commit, so the default `.gitignore` no longer hides a box's own attach binaries. The scheme that did is deleted.
 `bbx scan-import` (photo flow and PDF extraction) writes originals and derived
 images straight into `_content/inbox/<session>.attach/…` and stages them with
 `stageAndCommitPaths` (`src/core/commands/scan-import.ts`,

@@ -6,8 +6,10 @@ labels: [annex]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-embrace-annex — converting the last manifest-scheme box
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Moot: `AssetsStillIgnoredError` and the `to-annex` path that raised it are deleted. `bbx attachments unignore` keeps the correct wording (`N unmanaged asset ignore rule(s)`).
 `bbx attachments to-annex` on a box with **no assets at all** printed:
 
 ```

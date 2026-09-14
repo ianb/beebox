@@ -6,8 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-annex-bypass-check — investigating the photo-batch annex-bypass report
 priority: important
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** The writers and the scheme are both deleted: `asset-manifest.ts`, `asset-manifest-scan.ts`, and the manifest halves of `write-cards.ts`, `bulk-upload/prepare.ts`, and the `attachments` command.
 `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,
 not reused. git-annex's key (`SHA256E-s<size>--<hash>`) carries the same
 information git-annex itself maintains, so keeping both is exactly the

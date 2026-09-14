@@ -6,8 +6,10 @@ labels: [annex, git, scan]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-scan-ingest — 2026-09-14
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Every box is annex-shaped at creation and the manifest scheme is deleted, along with `bbx attachments to-annex` and `--skip-git`. The fleet was converted and verified with `git check-ignore` first.
 Boxholder decision, 2026-09-14: *"I want every box currently and forever in the
 future to use annex. So we should just be making it right, always, and not worry
 about cases where it isn't right."*

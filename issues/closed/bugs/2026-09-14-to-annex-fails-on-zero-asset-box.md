@@ -6,8 +6,10 @@ labels: [annex]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-embrace-annex — converting the last manifest-scheme box
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Moot: `bbx attachments to-annex` is deleted. The zero-asset case it could not complete is exactly what `annexNewBox` handles at box creation, and the finding is recorded in that module's comment as the reason it is not the migration.
 `bbx attachments to-annex` on a box with zero assets runs `git annex init`,
 then fails:
 

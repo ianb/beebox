@@ -3,9 +3,9 @@ title: "Fresh boxes are annex-shaped, and asset writers refuse the manifest sche
 status: partial
 workstream: full-embrace-annex
 issues:
-  - ../../../issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
-  - ../../../issues/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md
-  - ../../../issues/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md
+  - ../../../issues/closed/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
+  - ../../../issues/closed/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md
+  - ../../../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md
 ---
 # Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme
 

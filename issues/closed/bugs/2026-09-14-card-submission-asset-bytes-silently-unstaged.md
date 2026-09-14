@@ -6,8 +6,10 @@ labels: [scan, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-scan-ingest — research for 2026-09-04-scan-import-gitignore-blocks-attach-staging, 2026-09-14
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** `acceptSubmission` now asserts the box is annex-shaped before writing any bytes (`assertAnnexBox`), and assets are no longer gitignored, so the directory pathspec stages them.
 `acceptSubmission` (`src/core/cards/accept-submission.ts:152-200`) writes a
 submission's image bytes into an attach scope and stages at `:195-199` by
 naming the *directory*. `git add <dir>` silently skips ignored contents, so on
