@@ -1,6 +1,6 @@
 ---
 title: "The scan uploader learns when it has drifted from the box"
-status: active
+status: implemented
 workstream: scan-ingest
 issues: []
 ---
