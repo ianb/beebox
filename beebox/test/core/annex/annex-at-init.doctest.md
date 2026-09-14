@@ -24,6 +24,7 @@ import { annexNewBox } from "../../../src/core/annex/annex-new-box.js";
 import { isAnnexBox } from "../../../src/core/annex/is-annex-box.js";
 import { createGitAnnexService, createFakeGitAnnex } from "../../../src/services/git-annex.js";
 import { scaffoldBoxRoot } from "../../../src/core/box/package.js";
+import { runInit } from "../../../src/cli/commands/init.js";
 
 function hasAnnex(): boolean {
   try {
@@ -91,6 +92,26 @@ async function shapeFlips(): Promise<string> {
   return `before=${String(before)} after=${String(after)}`;
 }
 
+/**
+ * A box that has the un-ignore block but NO annex — the half-state a re-init
+ * would leave behind if it only rewrote `.gitignore`. Then re-init it.
+ */
+async function reinitAnnexesAnUnannexedBox(): Promise<string> {
+  const root = await freshBox("annex-reinit");
+  // Drive the REAL re-init entry point, not a reconstruction of it: the claim
+  // is about what `bbx init` does on an existing box, so a test that called
+  // `annexNewBox` itself would still pass if that call were dropped from
+  // `runInit`.
+  await runInit(root, { branch: "main" });
+  await fs.mkdir(path.join(root, "_content/b.attach"), { recursive: true });
+  await fs.writeFile(path.join(root, "_content/b.attach/y.jpg"), Buffer.alloc(32, 2));
+  execFileSync("git", ["add", "_content/b.attach/y.jpg"], { cwd: root });
+  const blob = execFileSync("git", ["cat-file", "-p", ":_content/b.attach/y.jpg"], {
+    cwd: root, encoding: "utf8",
+  });
+  return `annexed=${String(blob.startsWith("/annex/objects/"))} ignored=${String(isIgnored(root, "_content/b.attach/y.jpg"))}`;
+}
+
 async function assetStaysVisible(): Promise<string> {
   const root = await freshBox("annex-ignore");
   await annexNewBox(createGitAnnexService(), root);
@@ -154,4 +175,23 @@ matches, which hides bytes from git AND the annex with nothing reporting it
 ```ts
 ANNEX ? await assetStaysVisible() : "visible to git"
 => visible to git
+```
+
+## A re-init on an un-annexed box establishes the annex, not just the .gitignore
+
+`initBox` writes the un-ignore block unconditionally — there is only one block
+now — and it runs on every init, including a re-init of an existing box
+(`deploy/add-box.sh` runs one to update box structure). On a box whose annex was
+never initialized, un-ignoring alone would leave assets VISIBLE to `git add`
+with no annex filter to claim them, and the next commit would put raw asset
+bytes into history. The pre-commit guard would not catch most of them: it only
+reports blobs over 1 MB.
+
+So the re-init path annexes too. Built here the only way the state is now
+reachable — a box whose `.gitignore` was hand-edited back to hiding assets and
+whose annex was never set up.
+
+```ts
+ANNEX ? await reinitAnnexesAnUnannexedBox() : "annexed=true ignored=false"
+=> annexed=true ignored=false
 ```

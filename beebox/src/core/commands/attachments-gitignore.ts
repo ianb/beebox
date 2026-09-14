@@ -1,17 +1,18 @@
 /**
- * bbx attachments — gitignore management subcommands.
+ * bbx attachments — gitignore management.
  *
- * The `init-gitignore` subcommand appends a managed block to the box's
- * `.gitignore` so asset binaries inside `.attach/` scopes are ignored
- * (they're tracked via per-dir manifest.json instead). The `untrack-assets`
- * subcommand drops already-tracked assets from the git index after verifying
- * the manifests cover them.
+ * One block: every box un-ignores its assets, so git-annex can see them. The
+ * `unignore` subcommand writes it, and is the repair for a box whose
+ * `.gitignore` was hand-edited back to hiding assets.
+ *
+ * The manifest-scheme half of this file (`init-gitignore`, `untrack-assets`,
+ * and the block they wrote) is gone with the scheme. What survives of it is
+ * the pair of MARKERS below, because `unignore` still has to RECOGNIZE a
+ * retired block in order to replace one.
  *
  * Split out of attachments.ts to keep each file under the line cap. The
  * public command surface still lives in attachments.ts; these helpers are
  * imported back there.
- *
- * See docs/implemented-plans/asset-manifests.md.
  */
 
 import * as fs from "node:fs/promises";

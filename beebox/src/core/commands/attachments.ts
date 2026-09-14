@@ -1,29 +1,19 @@
 /**
- * bbx attachments — manifest-aware operations on assets (the binary
- * subset of attachments). The command operates on the whole `.attach/`
- * scope (hence the name), but its job is the asset subset.
+ * bbx attachments — git-annex operations on a box's assets. The command
+ * operates on the whole `.attach/` scope (hence the name), but its job is the
+ * asset subset.
  *
  * Subcommands:
- *   - verify   : scan all .attach/ scopes, report errors, no writes
- *   - migrate  : claim every asset into its manifest (idempotent first run)
- *   - overwrite: replace contents of a tracked asset from stdin
- *   - add      : explicitly claim an untracked asset (rare; the hook
- *                normally auto-claims)
- *   - unignore : drop the asset ignore block so git-annex can see assets
- *                (git-annex migration; see docs/plans/asset-annex.md)
+ *   - unignore        : restore the un-ignore block so git-annex can see assets
  *   - largefiles-expr : print the annex.largefiles expression
  *   - annex-attributes: print the scoped .git/info/attributes contents
  *   - check-unlisted  : block on large attach-scope files git-annex won't annex
- *   - to-annex        : one-way migration onto git-annex (verifies before and
- *                       after; see core/annex/to-annex.ts)
  *
- * Destructive ops (overwrite, rm, mv) re-implement the chmod 444 →
- * +w → atomic-rename → 444 dance so the manifest stays in sync.
+ * The manifest-scheme subcommands (verify, migrate, add, overwrite,
+ * init-gitignore, untrack-assets, to-annex) are gone with the scheme itself.
  *
- * The gitignore subcommands (init-gitignore, untrack-assets) live in the
- * sibling attachments-gitignore.ts.
- *
- * See docs/implemented-plans/asset-manifests.md.
+ * The gitignore subcommand (unignore) lives in the sibling
+ * attachments-gitignore.ts.
  */
 
 import { z } from "zod";

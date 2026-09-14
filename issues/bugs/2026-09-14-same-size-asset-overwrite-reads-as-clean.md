@@ -20,6 +20,11 @@ on disk holds `version 2`. Writing `"version 2 MUCH LONGER CONTENT HERE"`
 instead reports ` M` as expected. `annex.thin` is `false` and the working-tree
 file is a regular file, not a symlink.
 
+A cross-model review found a second call site with the same gate:
+`src/webapp/routes/api-files-write.ts:155` uses `pathsHaveChanges` before
+`/api/files-commit`, so a same-size edit can also be silently skipped on commit,
+not only lost on delete.
+
 The consequence is on the file-delete route
 (`src/webapp/routes/api-files.ts:297-303`), which preserves a dirty file in its
 own commit before deleting it:

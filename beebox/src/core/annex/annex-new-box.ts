@@ -1,13 +1,17 @@
 /**
- * Make a newly-created box annex-shaped.
+ * Make a box annex-shaped: the one place that establishes the invariant.
  *
- * This is the tail of what `bbx attachments to-annex` does (`./to-annex.ts`,
- * steps 4b-4c), and only the tail. The full migration is the wrong tool for a
- * fresh box in two ways, one of them fatal:
+ * Called on a fresh init and on a re-init, and idempotent, so a box that is
+ * already annexed re-applies the same configuration and changes nothing.
  *
- *  - It requires a clean tree and runs a disk preflight, against a directory
+ * This is the sequence the retired `bbx attachments to-annex` migration ran as
+ * its second half. That migration converted boxes that held manifests; it is
+ * deleted along with the scheme, and it could not have served this purpose
+ * anyway:
+ *
+ *  - It required a clean tree and ran a disk preflight, against a directory
  *    that has neither assets nor a commit yet.
- *  - It CANNOT COMPLETE on a box with no assets. Its conversion commit has
+ *  - It COULD NOT COMPLETE on a box with no assets. Its conversion commit had
  *    nothing to commit, so `git commit` exits 1 and the conversion reports
  *    failure over a box it actually converted correctly. A fresh box is the
  *    zero-asset case by definition. See

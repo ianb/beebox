@@ -101,6 +101,17 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     await announceAndInitGit({ boxRoot, annex, options });
   } else {
     await initBox(boxRoot, { skipGit: true, branch: options.branch });
+    // A re-init annexes too, and this is not optional. `initBox` rewrote the
+    // box `.gitignore` with the un-ignore block unconditionally — there is only
+    // one block now — so on a box whose annex was never initialized, skipping
+    // this would leave assets VISIBLE to `git add` with no annex filter to
+    // claim them, and the next commit would put raw asset bytes into history.
+    // The pre-commit guard would not catch most of them: it only reports blobs
+    // over 1 MB (`core/annex/unlisted-binaries.ts`).
+    //
+    // Idempotent, so the ordinary case — a box that is already annexed —
+    // re-applies the same config and changes nothing.
+    await annexNewBox(annex, boxRoot);
   }
 
   // What CHANGED, gathered rather than printed as it happens. A fresh init

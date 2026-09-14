@@ -255,7 +255,8 @@ export async function registerScanUploadRoutes(options: {
   if (!annexShaped) {
     console.error(
       `[scan] Box ${boxRoot} is not annex-converted; scan upload is disabled (every request answers 503). ` +
-        "Convert it with `bbx attachments to-annex`.",
+        "Every box is annex-shaped from creation, so this box's `.gitignore` hides assets or its annex " +
+        "was never initialized. Re-run `bbx init` on the box to restore both.",
     );
   }
 
