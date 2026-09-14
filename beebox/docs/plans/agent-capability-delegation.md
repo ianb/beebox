@@ -1,6 +1,6 @@
 ---
 title: "Agent self-configuration of credentialed connectors (Drive first)"
-status: draft
+status: active
 workstream: agent-capability-delegation
 issues:
   - ../../../issues/features/2026-07-20-agent-containment-allowed-directories.md
@@ -415,7 +415,17 @@ puts a refresh token in every chat subprocess's environment. Rejected.
 The version here adds one helper and a profile marker. It is the same shape
 three other agent-facing paths already use.
 
-## Open decisions for the boxholder
+## Decisions (boxholder, 2026-09-14)
+
+- A forced wakeup runs everything, on-wakeup scripts included, unless doing
+  so turns out to need a big new structure. It does not: the forced run is
+  the same child.
+- The agent may turn `googleServices.drive` on. The agent guide says how, and
+  the Drive refusal for a switched-off service says how.
+- `check-drive` lands now.
+
+## Open decisions for the boxholder (settled above; kept for the record)
+
 
 - Whether a full `bbx force-wakeup` from an agent should run on-wakeup
   scheduled scripts (fidelity, the plan's choice) or skip them (custody). If
