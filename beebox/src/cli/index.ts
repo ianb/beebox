@@ -30,6 +30,7 @@ import {
   answerCommand,
   dismissCommand,
   wakeupCommand,
+  forceWakeupCommand,
   trashCommand,
   moveCommand,
   relinkCommand,
@@ -115,6 +116,7 @@ program.addCommand(hubCommand);
 program.addCommand(answerCommand);
 program.addCommand(dismissCommand);
 program.addCommand(wakeupCommand);
+program.addCommand(forceWakeupCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
 program.addCommand(relinkCommand);

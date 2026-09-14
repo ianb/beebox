@@ -13,6 +13,16 @@ export interface TrpcUser {
   picture?: string;
 }
 
+/**
+ * How the request proved it may act on this box — not who the person is, but
+ * which credential answered. `agent` is the box's own agent bearer (or an agent
+ * driving a browser with the browse key), `device` a paired mobile device,
+ * `user` a signed-in session, `open` a box whose boxholder turned the auth wall
+ * off, `none` a request that proved nothing (the auth wall rejects those before
+ * a procedure runs; it exists so this never has to guess).
+ */
+export type TrpcActor = "agent" | "device" | "user" | "open" | "none";
+
 export interface TrpcContext {
   boxRoot: string;
   boxSlug: string;
@@ -44,4 +54,10 @@ export interface TrpcContext {
    * neighbours' credentials (`docs/implemented-plans/secret-custody.md`, bias toward strict).
    */
   isAuthenticatedOwner: boolean;
+  /**
+   * Which credential answered for this request. Written into the commits a
+   * procedure makes, so a mount the agent made is distinguishable from one the
+   * settings page made without a second record of it.
+   */
+  actor: TrpcActor;
 }

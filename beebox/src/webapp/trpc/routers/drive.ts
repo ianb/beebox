@@ -16,12 +16,11 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { getGoogleAuth } from "../../../connectors/google-auth.js";
-import { explainGoogleAuthGap } from "../../../connectors/google-auth-gap.js";
-import { isGoogleServiceAllowed } from "../../../core/box/config.js";
-import { createGoogleAuthService } from "../../../services/google-auth.js";
-import { createGoogleDriveService } from "../../../services/google-drive.js";
+import { driveServiceAvailable, resolveDriveService } from "../../../connectors/google-access.js";
+import { googleService } from "../google-service.js";
 import type { GoogleDriveService } from "../../../services/google-drive.js";
+import { addDriveFile } from "../../../connectors/drive-add-file.js";
+import { inspectDriveItem } from "../../../connectors/drive-inspect.js";
 import { loadDriveConfig } from "../../../connectors/drive-config.js";
 import { listFolderMounts } from "../../../connectors/drive-mount-list.js";
 import { DriveMountError } from "../../../connectors/drive-mount-errors.js";
@@ -29,6 +28,7 @@ import { syncFolderMount } from "../../../connectors/drive-mount-sync.js";
 import {
   linkDriveItem,
   mountDriveFolder,
+  requireDriveId,
   unmountDriveFolder,
 } from "../../../connectors/drive-mounts.js";
 
@@ -41,31 +41,20 @@ interface DriveCtx {
 /**
  * The Drive service, or the reason there isn't one. A box that has not
  * connected Google, or has Drive switched off, gets a message it can act on
- * rather than a stack trace from the first API call.
+ * rather than a stack trace from the first API call — in the same two codes
+ * every Google family refuses with (`trpc/google-service.ts`).
  */
 async function driveService(ctx: DriveCtx): Promise<GoogleDriveService> {
-  if (ctx.services.drive) return ctx.services.drive;
-  if (!(await isGoogleServiceAllowed(ctx.boxRoot, "drive"))) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Drive is not enabled for this box. Enable it in box settings.",
-    });
-  }
-  const auth = await getGoogleAuth(ctx.boxRoot);
-  if (!auth) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: await explainGoogleAuthGap(ctx.boxRoot),
-    });
-  }
-  return createGoogleDriveService(createGoogleAuthService(auth, { boxRoot: ctx.boxRoot }));
+  return googleService({
+    injected: ctx.services.drive,
+    resolve: () => resolveDriveService(ctx.boxRoot),
+  });
 }
 
 /** Whether a mount write would find a usable Drive service, without making one. */
 async function driveConnected(ctx: DriveCtx): Promise<boolean> {
   if (ctx.services.drive) return true;
-  if (!(await isGoogleServiceAllowed(ctx.boxRoot, "drive"))) return false;
-  return (await getGoogleAuth(ctx.boxRoot)) !== null;
+  return driveServiceAvailable(ctx.boxRoot);
 }
 
 /**
@@ -119,7 +108,13 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const service = await driveService(ctx);
       return mountWrite(
-        mountDriveFolder({ boxRoot: ctx.boxRoot, service, input: input.url, dir: input.dir }),
+        mountDriveFolder({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          dir: input.dir,
+          actor: ctx.actor,
+        }),
       );
     }),
 
@@ -129,7 +124,13 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const service = await driveService(ctx);
       return mountWrite(
-        linkDriveItem({ boxRoot: ctx.boxRoot, service, input: input.url, target: input.path }),
+        linkDriveItem({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          target: input.path,
+          actor: ctx.actor,
+        }),
       );
     }),
 
@@ -140,7 +141,60 @@ export const driveRouter = router({
   unmount: publicProcedure
     .input(z.object({ cardPath: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      return mountWrite(unmountDriveFolder({ boxRoot: ctx.boxRoot, target: input.cardPath }));
+      return mountWrite(
+        unmountDriveFolder({ boxRoot: ctx.boxRoot, target: input.cardPath, actor: ctx.actor }),
+      );
+    }),
+
+  /**
+   * What a Drive URL or id actually is, without writing anything — the
+   * verification step an agent needs before and after it writes a mount, and
+   * the name the settings page currently learns only once a mount succeeds.
+   */
+  inspect: publicProcedure
+    .input(z.object({ url: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const service = await driveService(ctx);
+      return mountWrite(inspectDriveItem({ boxRoot: ctx.boxRoot, service, input: input.url }));
+    }),
+
+  /** Sync a Doc or Sheet two-way at `path`. The file verb behind `bbx drive add`. */
+  add: publicProcedure
+    .input(z.object({ url: z.string().min(1), path: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const service = await driveService(ctx);
+      return mountWrite(
+        addDriveFile({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          target: input.path,
+          actor: ctx.actor,
+        }),
+      );
+    }),
+
+  /** Browse Drive: one folder's contents, or every spreadsheet the grant sees. */
+  list: publicProcedure
+    .input(z.object({ folder: z.string().min(1).optional() }))
+    .query(async ({ input, ctx }) => {
+      const service = await driveService(ctx);
+      // `requireDriveId` throws SYNCHRONOUSLY, so it has to run inside the
+      // promise `mountWrite` wraps — otherwise an unreadable folder id escapes
+      // as a 500 instead of the BAD_REQUEST every other bad input gets.
+      const folder = input.folder;
+      const files = await mountWrite(
+        Promise.resolve().then(() =>
+          folder === undefined ? service.listSpreadsheets() : service.listFiles(requireDriveId(folder)),
+        ),
+      );
+      return files.map((file) => ({
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        modifiedTime: file.modifiedTime,
+        owner: file.owners?.[0]?.emailAddress ?? null,
+      }));
     }),
 
   /** Mirror one mount now, rather than waiting for the next wakeup sync. */

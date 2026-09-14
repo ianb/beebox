@@ -17,8 +17,8 @@ import { errorMessage } from "../lib/error-guards.js";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
-import { explainGoogleAuthGap } from "./google-auth-gap.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
+import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "./sync-skipped.js";
 import { loadDriveConfig } from "./drive-config.js";
 import { convertConfigFolders } from "./drive-folder-convert.js";
 import {
@@ -90,18 +90,17 @@ class GoogleDriveConnector implements Connector {
     if (!this.injectedService) {
       const allowed = await isGoogleServiceAllowed(this.boxRoot, "drive");
       if (!allowed) {
-        return { success: true, created: [], updated: [] };
+        return skippedSync(serviceNotAllowed("drive"));
       }
     }
 
     const service = await this.getService();
     if (!service) {
-      return {
-        success: false,
-        created: [],
-        updated: [],
-        error: await explainGoogleAuthGap(this.boxRoot),
-      };
+      // Was a `success: false` with the same explanation. It is a skip, not a
+      // sync that failed: nothing was attempted, and reporting it as an error
+      // made Drive the odd one out among the Google connectors. Callers that
+      // must not say "up to date" read `skipped`.
+      return skippedSync(await serviceNotConfigured(this.boxRoot));
     }
 
     const state = await loadDriveState(this.boxRoot);

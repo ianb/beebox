@@ -55,6 +55,18 @@ export const TRIGGER_TRAILER_KEYS = [
   "Run-By",
 ] as const;
 
+/**
+ * The `Triggered-By` trailer for one actor, or no trailer at all.
+ *
+ * Attribution is optional at the operation level because a test (or a future
+ * caller that genuinely has no actor) should not have to invent one — but a
+ * surface a person or an agent reaches through always has one, so the git log
+ * can answer "who mounted this" (`docs/plans/agent-capability-delegation.md`).
+ */
+export function triggeredByTrailer(actor: string | undefined): Record<string, string> {
+  return actor === undefined ? {} : { "Triggered-By": actor };
+}
+
 /** Trailer key naming the step within a procedure run. */
 export const TRIGGER_STEP_TRAILER_KEY = "Step";
 

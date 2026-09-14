@@ -96,6 +96,8 @@ export const finalizeCommand = new Command("finalize")
         if (result.error) {
           console.error(`  Error: ${result.error}`);
           totalErrors++;
+        } else if (result.skipped) {
+          console.log(`  skipped (${result.skipped.reason}): ${result.skipped.detail}`);
         } else if (!result.pushed || result.pushed.length === 0) {
           console.log("  No outbound items.");
         }

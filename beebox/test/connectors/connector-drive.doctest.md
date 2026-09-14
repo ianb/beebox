@@ -15,7 +15,7 @@ import { createCliContext } from "../../src/core/commands/index.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
 import { createGdocTemplate } from "../../src/schemas/gdoc.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
-import { runDriveStatus } from "../../src/cli/commands/drive.js";
+import { runDriveStatus } from "../../src/cli/commands/drive-status-cli.js";
 import { findDriveCardTracking } from "../../src/connectors/google-drive-tracking.js";
 import type { FakeSpreadsheet } from "../../src/services/google-drive.js";
 
