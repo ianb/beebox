@@ -90,6 +90,16 @@ JSON.stringify({ status: first.statusCode, states: first.body.states })
 => {"status":200,"states":{"«*»":{"state":"unknown"}}}
 ```
 
+The same response carries the box's contract version, which is how a copied
+uploader bundle notices it has fallen behind this box. It is a sibling of
+`states`, so an uploader that predates it reads the response exactly as
+before — see the contract doc's "Client identity".
+
+```ts continue
+typeof first.body.contractVersion
+=> number
+```
+
 The PUT streams the bytes into quarantine, re-hashes them, sniffs the magic
 bytes against the claimed extension, and decodes the image — all before the 200:
 

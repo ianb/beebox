@@ -54,4 +54,14 @@ grep -q "configure" help.out || { echo "FAIL: --help does not mention configure"
 node scan-uploader.mjs configure --help > configure-help.out 2>&1 \
   || { echo "FAIL: configure --help errored"; exit 1; }
 
+# The build stamp exists ONLY in a built bundle — esbuild's `define` is what
+# puts it there — so this is the only place bundle mode can be asserted for
+# real. A bundle that reports "source" would be a bundle the box cannot age.
+node scan-uploader.mjs --version > version.out 2>&1 \
+  || { echo "FAIL: --version errored"; exit 1; }
+grep -q "^bundle " version.out \
+  || { cat version.out; echo "FAIL: --version does not report bundle mode"; exit 1; }
+grep -q "wire contract v" version.out \
+  || { cat version.out; echo "FAIL: --version does not report the wire contract version"; exit 1; }
+
 echo "PASS: clean clone -> filtered install -> build -> self-contained bundle run"

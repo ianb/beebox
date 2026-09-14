@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 
 import type { Disposition } from "./config.js";
 import { writeUploaderTarget } from "./config-writer.js";
+import { compareContractVersion, describeDrift, SCAN_CONTRACT_VERSION } from "./contract-version.js";
 import { errorMessage } from "./error-guards.js";
 import { ConfigureError } from "./errors.js";
 import { parseServerUrlWithBox } from "./target-url.js";
@@ -33,6 +34,10 @@ export interface ConfigureResult {
   readonly box: string;
   readonly folder: string;
   readonly name: string;
+  /** Non-fatal notes for the CLI to print — today, a contract-version drift
+   * the verification call revealed. Returned rather than logged because this
+   * module deliberately avoids process globals to stay doctestable. */
+  readonly warnings: readonly string[];
 }
 
 export async function configure(params: ConfigureParams): Promise<ConfigureResult> {
@@ -62,9 +67,9 @@ export async function configure(params: ConfigureParams): Promise<ConfigureResul
 
   await writeTokenFile(tokenPath, params.token);
 
-  await verify({ serverUrl, box, token: params.token, configPath: params.configPath, tokenPath });
+  const warnings = await verify({ serverUrl, box, token: params.token, configPath: params.configPath, tokenPath });
 
-  return { configPath: params.configPath, tokenPath, box, folder: folderPath, name: params.name };
+  return { configPath: params.configPath, tokenPath, box, folder: folderPath, name: params.name, warnings };
 }
 
 interface VerifyParams {
@@ -85,9 +90,21 @@ interface VerifyParams {
  * server URL for the same box does not clean up this failed target — it
  * appends a new one instead — so a mistyped host in `<server-url-with-box>`
  * needs the stale target removed by hand. */
-async function verify(params: VerifyParams): Promise<void> {
+async function verify(params: VerifyParams): Promise<readonly string[]> {
   try {
-    await checkHashes({ serverUrl: params.serverUrl, box: params.box, token: params.token }, []);
+    const response = await checkHashes(
+      { serverUrl: params.serverUrl, box: params.box, token: params.token },
+      [],
+    );
+    // Setup is the loudest moment to catch drift, and the check response
+    // already carries the box's version, so this costs no extra request. A
+    // warning, not a refusal: drift does not stop uploads, and this function
+    // has already written the config and the token file with no rollback, so
+    // refusing here would strand half-written state over a non-fatal mismatch.
+    const drift = describeDrift(
+      compareContractVersion({ client: SCAN_CONTRACT_VERSION, server: response.contractVersion }),
+    );
+    return drift === undefined ? [] : [drift];
   } catch (e) {
     const message =
       `server verification failed for box "${params.box}": ${errorMessage(e)} — the config ` +
