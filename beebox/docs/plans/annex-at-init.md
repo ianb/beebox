@@ -71,8 +71,25 @@ issues:
 >    Every production box and every local box is annex-shaped, verified with
 >    `git check-ignore` against real assets rather than the `.git/annex/`
 >    probe. The last manifest-scheme box (`about`) was converted this session.
->    What remains of that track is the guard against a box arriving unconverted
->    from elsewhere, not a fleet migration.
+>
+> **Boxholder, 2026-09-14, on re-init and the endpoint:** *"re-init on any
+> manifest-box scheme, the manifest stuff should die completely by the end of
+> this project."* That settles the plan's open refuse-vs-convert question by
+> dissolving it. There is no manifest scheme left to re-init onto, so no
+> branch is built to preserve one: `writeBoxGitignore` becomes unconditional,
+> the `annexed` probe goes, `GITIGNORE_BLOCK` goes, and the manifest modules
+> go. A box that somehow arrives manifest-shaped meets an `invariant()`, which
+> is what a broken invariant is for.
+>
+> **A fourth correction, from the boxholder:** an earlier version of this note
+> claimed ~850 fixtures must stay manifest-shaped because a box with no `.git`
+> cannot be annexed. A box with no `.git` is not a thing. `--skip-git` has no
+> caller in `bin/`, `deploy/`, or anywhere else, and `deploy/add-box.sh:311`
+> deliberately does not pass it (*"no --skip-git here, that commit is what..."*).
+> A no-git `makeTmpBox` is a fixture speed optimization, not a modelled box
+> state, and only six no-git fixtures touch the asset seam at all. So
+> `makeTmpBox` CAN be annex-always exactly as the decision assumed; the cost is
+> suite time, not feasibility.
 
 `bbx init` always produces a manifest-scheme box, and four asset writers cannot
 write to one. So a brand-new box cannot take a scan, a photo import, a Gmail
@@ -111,12 +128,11 @@ added a conversion and a deletion, and removed the accommodation half.
 | | source | tests |
 |---|---|---|
 | Creation annexes + binary preflight | ~110 | ~90 |
-| Conversion guard for an unconverted box | ~40 | ~50 |
-| Gitignore branch collapses; init refuses a manifest box | ~40 | ~50 |
+| Gitignore collapse + `--skip-git` removal | ~40 | ~50 |
 | Asset writers take `invariant()` | ~50 | ~120 |
-| Delete the manifest scheme | ~80 churn, **~−700 deleted** | **~−300** |
+| Delete the manifest scheme | ~80 churn, **~−900 deleted** | **~−300** |
 | Fixture flip + declaration sweep | ~60 | measured by the spike |
-| **Total added** | **~380** | **~310 + fallout** |
+| **Total added** | **~340** | **~260 + fallout** |
 
 Roughly 2× the pre-decision number, and net *negative* source once the scheme
 deletion lands. The honest figure carries one unknown, deliberately: the
@@ -125,13 +141,16 @@ the population is far larger than the plan's "~50 mechanical deletions"
 assumed.
 
 **The fixture population, counted.** 1290 `makeTmpBox(` call sites; 438 pass
-`git: true`; only 44 declare `annex: true`. A box with no `.git` cannot be
-annexed at all, so `makeTmpBox` cannot become "annex-always with no `annex`
-option" as the decision note assumed — `git` becomes the switch that decides
-the shape, and ~850 fixtures stay manifest-shaped by construction. Every one
-of those that writes asset bytes meets the new `invariant()`. Real
-`git annex init` measures at ~0.33s, so annexing all 438 git boxes adds ~145s
-of serial suite time.
+`git: true`; only 44 declare `annex: true`. Real `git annex init` measures at
+~0.33s, so annexing every git box adds ~145s of serial suite time and
+annexing all 1290 would add ~7 minutes.
+
+That cost is the only real question, because feasibility is not one: a no-git
+tmp box is a fixture speed optimization rather than a modelled box state, and
+only six of the no-git fixtures touch the asset seam. The deletion surface it
+buys is large — `asset-manifest.ts` (141), `asset-manifest-scan.ts` (290), and
+the manifest halves of `attachments-gitignore.ts`, `attachments.ts`,
+`to-annex.ts`, `write-cards.ts`, and `prepare.ts`.
 
 Docs and the fixture-declaration sweep are reported separately, not counted
 against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
@@ -544,25 +563,27 @@ would be asserting something untrue.
 3. **Spike: flip the fixture default, run the suite, count the fallout.** This
    gates the budget for steps 5-7 and is cheap; the estimate it replaces was
    off by an order of magnitude on population.
-4. **Guard against an unconverted box arriving from elsewhere.** The fleet is
-   already converted, so this is no longer a migration — coordinate with
-   `migration-reliability`, which owns how box migrations get applied.
-5. **Gitignore branch collapses; `bbx init` refuses a manifest-scheme box.**
-   This is the step that carries the real risk — see below.
+4. **Gitignore branch collapses.** `writeBoxGitignore` writes
+   `UNIGNORE_BLOCK` unconditionally; the `annexed` probe and `GITIGNORE_BLOCK`
+   are deleted. This is the step that carries the real risk — see below.
+5. **Remove `--skip-git`.** It has no caller, and it is the only thing that
+   could still produce a box the annex step skips.
 6. **Asset writers take `invariant()`.**
 7. **Delete the manifest scheme.**
 8. **Doctor check 2 prose + the retired-LFS correction.**
 
-**The riskiest step is 5, not the init change.** `writeBoxGitignore` runs on
+**The riskiest step is 4, not the init change.** `writeBoxGitignore` runs on
 EVERY init, including a re-init of an existing box (`deploy/add-box.sh` runs
 it twice to provision one box). An unconditional `UNIGNORE_BLOCK` on a box
 that is still manifest-scheme un-ignores its asset bytes without moving them
 into the annex, and the next autocommit puts raw bytes into git history —
 silently, exit 0. That is the `c47fd2be1` failure class pointed the other way.
-So the collapse cannot precede conversion, and re-init on an unconverted box
-must fail closed. Lean: refuse, rather than convert in place — a refusal has
-no data risk, and every box that exists today is already converted, so nothing
-real reaches the refusal.
+
+The fleet being converted is what makes this safe to do rather than something
+to guard against, and it is why the conversion came first this session. The
+residual case is a box arriving from outside the fleet. That meets the
+`invariant()` from step 6 — a hard failure, not a fallback — which is the
+whole point of deleting the scheme rather than accommodating it.
 9. **Docs:** `docs/assets.md` (its claim that *"Anything that writes asset
    bytes now gates on that shape via `isAnnexBox()`"* becomes true with step
    6), `docs/box-layout.md`, the install-docs git-annex addition, and the stale

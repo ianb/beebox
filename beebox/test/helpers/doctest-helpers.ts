@@ -56,8 +56,16 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
   // visible to git and the annex holds their bytes. Anything that writes asset
   // bytes into a box gates on this shape (see core/annex/is-annex-box.ts), so a
   // fixture exercising that path has to declare which side it is testing.
-  if (opts?.annex) {
-    await makeBoxAnnexShaped(root);
+  if (opts?.annex || opts?.git) {
+    // SPIKE (not for commit): annex-always for any git box, using the REAL
+    // binary, to measure the fallout of the fixture-default flip.
+    if (opts?.git) {
+      const { annexNewBox } = await import("../../src/core/annex/annex-new-box.js");
+      const { createGitAnnexService } = await import("../../src/services/git-annex.js");
+      await annexNewBox(createGitAnnexService(), root);
+    } else {
+      await makeBoxAnnexShaped(root);
+    }
   }
 
   const box: TmpBox = {
