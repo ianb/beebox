@@ -26,7 +26,7 @@ Boundaries with the siblings, so three issues don't fight over one control:
   (`voice-barge-in`, fix awaiting manual test) is about *pressing record
   during speech* — barge-in. This issue is the *already-open* turn's face
   during the pause.
-- [narration icon ambiguity](2026-08-06-narration-mode-icon-ambiguous-with-mic.md)
+- [narration icon ambiguity](../closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md)
   is the same control's iconography from another angle; whoever designs the
   paused state should check all three states read distinctly.
 
