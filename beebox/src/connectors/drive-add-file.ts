@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { triggeredByTrailer } from "../shared/commit-trailers.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import type { DriveFile, GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, type DriveTypeHandler } from "./drive-types.js";
@@ -46,8 +47,10 @@ export async function addDriveFile(options: {
   service: GoogleDriveService;
   input: string;
   target: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<AddDriveFileResult> {
-  const { boxRoot, service, input, target } = options;
+  const { boxRoot, service, input, target, actor } = options;
   const driveId = requireDriveId(input);
 
   const file = await service.getFile(driveId);
@@ -67,7 +70,7 @@ export async function addDriveFile(options: {
   // taken OUTSIDE the git commit below — see drive-lock.ts for why that is the
   // only safe order.
   const written = await withDriveMirrorLock(boxRoot, () =>
-    addUnderLock({ boxRoot, service, card: { file, handler, cardPath } }),
+    addUnderLock({ boxRoot, service, card: { file, handler, cardPath }, actor }),
   );
 
   return {
@@ -94,6 +97,7 @@ async function addUnderLock(opts: {
   boxRoot: string;
   service: GoogleDriveService;
   card: { file: DriveFile; handler: DriveTypeHandler; cardPath: string };
+  actor: string | undefined;
 }): Promise<string[]> {
   const { boxRoot, service } = opts;
   const { file, handler, cardPath } = opts.card;
@@ -138,6 +142,7 @@ async function addUnderLock(opts: {
   await stageAndCommitPaths(boxRoot, {
     paths: result.written,
     message: `Add Drive ${handler.cardType}: ${file.name}`,
+    trailers: triggeredByTrailer(opts.actor),
   });
 
   return result.written;

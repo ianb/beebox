@@ -18,6 +18,7 @@ import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../
 // Importing the connector registers the docs/sheets handlers — that is what
 // makes a Doc or Sheet child syncable rather than pointer-only.
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js";
+import { getLog } from "../../src/lib/git.js";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const SHEET_MIME = "application/vnd.google-apps.spreadsheet";
@@ -60,8 +61,9 @@ function recipesDrive() {
   });
 }
 
-function caller(boxRoot, drive) {
+function caller(boxRoot, drive, actor) {
   const ctx = {
+    actor: actor ?? "user",
     boxRoot,
     boxSlug: "test",
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
@@ -71,6 +73,12 @@ function caller(boxRoot, drive) {
     isOwner: true,
   };
   return appRouter.createCaller(ctx);
+}
+
+/** The `Triggered-By` trailer on the box's most recent commit, or "none". */
+async function lastTrigger(boxRoot) {
+  const entry = (await getLog(boxRoot, 1))[0];
+  return entry?.trailers?.["Triggered-By"] ?? "none";
 }
 
 /** The tRPC error code a call fails with, or "none" when it succeeds. */
@@ -178,6 +186,39 @@ one Drive ID, one card.
 ```ts continue
 await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", path: "_content/notes/Scan" }))
 => BAD_REQUEST: Drive item pdf-1 is already claimed by: _content/drive/recipes/Scanpdf.glink.card — trash or move that card to put it somewhere else
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A mount records which credential asked for it
+
+The context knows how the request authenticated, so the commit says so. Without
+this, a mount an agent made in chat and one the boxholder made on the settings
+page are the same anonymous commit, and "who mounted this" has no answer
+(`docs/plans/agent-capability-delegation.md`).
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const agent = caller(box.root, recipesDrive(), "agent");
+
+await agent.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
+await lastTrigger(box.root)
+=> agent
+```
+
+A pointer written from the settings page is the same commit shape with the other
+actor — one mechanism, not a second record.
+
+```ts continue
+await caller(box.root, recipesDrive(), "user").drive.link({
+  url: "https://drive.google.com/file/d/deck-9/view",
+  path: "_content/notes/Kickoff",
+});
+await lastTrigger(box.root)
+=> user
 ```
 
 ```ts cleanup

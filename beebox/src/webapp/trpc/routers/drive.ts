@@ -108,7 +108,13 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const service = await driveService(ctx);
       return mountWrite(
-        mountDriveFolder({ boxRoot: ctx.boxRoot, service, input: input.url, dir: input.dir }),
+        mountDriveFolder({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          dir: input.dir,
+          actor: ctx.actor,
+        }),
       );
     }),
 
@@ -118,7 +124,13 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const service = await driveService(ctx);
       return mountWrite(
-        linkDriveItem({ boxRoot: ctx.boxRoot, service, input: input.url, target: input.path }),
+        linkDriveItem({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          target: input.path,
+          actor: ctx.actor,
+        }),
       );
     }),
 
@@ -150,7 +162,13 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const service = await driveService(ctx);
       return mountWrite(
-        addDriveFile({ boxRoot: ctx.boxRoot, service, input: input.url, target: input.path }),
+        addDriveFile({
+          boxRoot: ctx.boxRoot,
+          service,
+          input: input.url,
+          target: input.path,
+          actor: ctx.actor,
+        }),
       );
     }),
 

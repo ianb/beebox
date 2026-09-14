@@ -92,7 +92,13 @@ export const driveAddCommand = new Command("add")
       run: () =>
         dispatchDrive<AddDriveFileResult>({
           local: async () =>
-            addDriveFile({ boxRoot, service: await localDriveService(boxRoot), input, target }),
+            addDriveFile({
+              boxRoot,
+              service: await localDriveService(boxRoot),
+              input,
+              target,
+              actor: "tooling",
+            }),
           remote: (client) => client.drive.add.mutate({ url: input, path: target }),
         }),
       print: (result) => {

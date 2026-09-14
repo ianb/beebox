@@ -16,6 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
+import { getLog } from "../../../src/lib/git.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../src/services/google-drive.js";
 import { mountDriveFolder, type MountFolderResult } from "../../../src/connectors/drive-mounts.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../../src/connectors/drive-inspect.js";
@@ -157,6 +158,15 @@ from one the settings page made.
 ```ts continue
 (await ctx.read("_content/drive/recipes/Recipes.gfolder.card")).includes("drive-id: folder-1")
 => true
+```
+
+The commit says who asked. The bearer is what the auth wall accepted, so the
+context resolved this request as the agent, and the git log answers "who mounted
+this" without a second record of it.
+
+```ts continue
+(await getLog(ctx.boxRoot, 1))[0]?.trailers?.["Triggered-By"]
+=> agent
 ```
 
 `inspect` is the verification step the incident lacked — the agent can now

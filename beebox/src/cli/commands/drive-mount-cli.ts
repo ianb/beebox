@@ -34,7 +34,13 @@ export const driveMountCommand = new Command("mount")
       run: () =>
         dispatchDrive<MountFolderResult>({
           local: async () =>
-            mountDriveFolder({ boxRoot, service: await localDriveService(boxRoot), input, dir }),
+            mountDriveFolder({
+              boxRoot,
+              service: await localDriveService(boxRoot),
+              input,
+              dir,
+              actor: "tooling",
+            }),
           remote: (client) => client.drive.mount.mutate({ url: input, dir }),
         }),
       print: (result) => {
@@ -64,7 +70,13 @@ export const driveLinkCommand = new Command("link")
       run: () =>
         dispatchDrive<LinkResult>({
           local: async () =>
-            linkDriveItem({ boxRoot, service: await localDriveService(boxRoot), input, target }),
+            linkDriveItem({
+              boxRoot,
+              service: await localDriveService(boxRoot),
+              input,
+              target,
+              actor: "tooling",
+            }),
           remote: (client) => client.drive.link.mutate({ url: input, path: target }),
         }),
       print: (result) => {

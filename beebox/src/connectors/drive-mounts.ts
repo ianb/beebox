@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { triggeredByTrailer } from "../shared/commit-trailers.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../core/commands/trash.js";
 import { createCliContext } from "../core/command-runner.js";
 import type { DriveFile, GoogleDriveService } from "../services/google-drive.js";
@@ -107,8 +108,10 @@ export async function mountDriveFolder(options: {
   service: GoogleDriveService;
   input: string;
   dir: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<MountFolderResult> {
-  const { boxRoot, service, input, dir } = options;
+  const { boxRoot, service, input, dir, actor } = options;
   const driveId = requireDriveId(input);
 
   const file = await service.getFile(driveId);
@@ -126,7 +129,7 @@ export async function mountDriveFolder(options: {
   // so `mirrorFolderOnce` inside just passes through. The git commit nests
   // INSIDE this lock, which is the safe order (see drive-lock.ts).
   return withDriveMirrorLock(boxRoot, () =>
-    mountUnderLock({ boxRoot, service, folder: { file, driveId, mountDir } }),
+    mountUnderLock({ boxRoot, service, folder: { file, driveId, mountDir }, actor }),
   );
 }
 
@@ -134,6 +137,7 @@ async function mountUnderLock(options: {
   boxRoot: string;
   service: GoogleDriveService;
   folder: { file: DriveFile; driveId: string; mountDir: string };
+  actor: string | undefined;
 }): Promise<MountFolderResult> {
   const { boxRoot, service } = options;
   const { file, driveId, mountDir } = options.folder;
@@ -156,7 +160,11 @@ async function mountUnderLock(options: {
   const mirror = await mirrorFolderOnce({ boxRoot, service, driveId, cardPath });
 
   const paths = [...new Set([relCard, ...mirror.created, ...mirror.updated, ...mirror.pushed])];
-  await stageAndCommitPaths(boxRoot, { paths, message: `Mount Drive folder: ${file.name}` });
+  await stageAndCommitPaths(boxRoot, {
+    paths,
+    message: `Mount Drive folder: ${file.name}`,
+    trailers: triggeredByTrailer(options.actor),
+  });
 
   return {
     cardPath: relCard,
@@ -186,6 +194,8 @@ export async function linkDriveItem(options: {
   service: GoogleDriveService;
   input: string;
   target: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<LinkResult> {
   const { boxRoot, service, input, target } = options;
   const driveId = requireDriveId(input);
@@ -209,6 +219,7 @@ export async function linkDriveItem(options: {
   await stageAndCommitPaths(boxRoot, {
     paths: [relCard],
     message: `Link Drive item: ${file.name}`,
+    trailers: triggeredByTrailer(options.actor),
   });
 
   return { cardPath: relCard, name: file.name, mimeType: file.mimeType };

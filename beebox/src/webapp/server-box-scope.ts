@@ -26,7 +26,7 @@ import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
 import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
-import type { TrpcContext } from "./trpc/context.js";
+import type { TrpcActor, TrpcContext } from "./trpc/context.js";
 import {
   isHubMode,
   getOwnerEmail,
@@ -155,6 +155,24 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   });
 }
 
+/**
+ * The actor for a request, from the credentials the context already resolved.
+ * One order, stated once: the most specific mechanism wins, and a request that
+ * proved nothing says so rather than borrowing a friendlier label.
+ */
+function actorFor(options: {
+  bearerOk: boolean;
+  mobileOk: boolean;
+  user: { email: string } | null;
+  open: boolean;
+}): TrpcActor {
+  if (options.bearerOk) return "agent";
+  if (options.mobileOk) return "device";
+  if (options.user !== null) return "user";
+  if (options.open) return "open";
+  return "none";
+}
+
 interface BoxScopeDeps {
   box: BoxSpec;
   eventBus: EventBus;
@@ -263,6 +281,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
+        // Which credential answered, in the order they were checked above. The
+        // browse key is an agent driving a browser, so it lands in the same arm
+        // as the loopback bearer even on a box where the resolver also turned
+        // it into an owner identity.
+        actor: actorFor({ bearerOk: bearerOk || browseOk, mobileOk, user, open: identityIsOpen }),
         eventBus,
         services: options.services ?? {},
         user,
