@@ -76,7 +76,7 @@ export function forceWakeupLines(result: ForceResult): string[] {
  * refusal from the server, a dead socket — comes back as one relayable
  * refusal naming the party who can act on it.
  */
-async function forceWakeup(options: ForceWakeupOptions): Promise<
+export async function forceWakeup(options: ForceWakeupOptions): Promise<
   { ok: true; value: ForceResult } | { ok: false; error: DriveRefusal }
 > {
   const client = boxClient();
