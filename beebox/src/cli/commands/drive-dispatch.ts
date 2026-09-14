@@ -51,7 +51,7 @@ export interface DriveRefusal {
 }
 
 const FIX_HINT: Record<FixParty, string> = {
-  caller: "the caller — fix the input and run it again",
+  caller: "the caller — adjust the command and run it again",
   boxholder: "the boxholder — enable Drive, or authorize Google, then it will work unchanged",
   machine: "the machine — the box's server could not do the work; the message above says what it hit",
 };

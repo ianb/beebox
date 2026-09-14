@@ -205,7 +205,7 @@ For a person the same refusal says who can fix it in words.
 ```ts continue
 const forHumans = await captureLogs(async () => { if (!refused.ok) reportRefusal(refused.error, false); });
 forHumans.split("\n")[1]
-=> Who can fix it: the caller — fix the input and run it again.
+=> Who can fix it: the caller — adjust the command and run it again.
 ```
 
 ## A missing env var refuses by name, and never falls back to a local credential
