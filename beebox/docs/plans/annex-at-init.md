@@ -612,10 +612,17 @@ to guard against, and it is why the conversion came first this session. The
 residual case is a box arriving from outside the fleet. That meets the
 `invariant()` from step 6 — a hard failure, not a fallback — which is the
 whole point of deleting the scheme rather than accommodating it.
-9. **Docs:** `docs/assets.md` (its claim that *"Anything that writes asset
-   bytes now gates on that shape via `isAnnexBox()`"* becomes true with step
-   6), `docs/box-layout.md`, the install-docs git-annex addition, and the stale
-   `prepare.doctest.md` prose.
+9. **Docs: DONE.** `docs/assets.md` rewritten; historical docs that describe
+   the manifest scheme carry a per-document warning naming what is misleading
+   in each; `developer-install.md` lists git-annex as a prerequisite.
+   `docs/box-layout.md` needed nothing — its "manifest" mentions are the
+   session, publish, and search manifests, not the asset scheme.
+
+   The install sweep turned up a real gap: neither
+   `deploy/hetzner/setup-server.sh` nor the Docker image installed git-annex,
+   which is now a hard dependency. Production had it only from a hand-run
+   `apt install` during the 2026-08 conversion, so a server rebuild would have
+   produced a machine unable to commit to any box. Both fixed.
 10. **Knowledge audit** `annex-refusal-actionable`, authored and run.
 
 ## Rollout shape
