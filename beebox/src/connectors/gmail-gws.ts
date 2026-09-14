@@ -69,14 +69,14 @@ export type GwsRunner = (opts: { args: string[]; auth: GoogleAuthService }) => P
 const MAX_CAPTURE_CHARS = 1_000_000;
 
 /** A bounded string accumulator that says how much it threw away. */
-function boundedCapture() {
+export function boundedCapture(limit: number) {
   let kept = "";
   let dropped = 0;
   return {
     add(chunk: string): void {
-      const room = MAX_CAPTURE_CHARS - kept.length;
-      if (room > 0) kept += chunk.slice(0, room);
-      dropped += chunk.length - Math.max(room, 0);
+      const taken = Math.min(chunk.length, Math.max(limit - kept.length, 0));
+      kept += chunk.slice(0, taken);
+      dropped += chunk.length - taken;
     },
     text(): string {
       if (dropped === 0) return kept;
@@ -108,8 +108,8 @@ export async function runReadOnlyGws(opts: {
       env: { ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token },
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const stdout = boundedCapture();
-    const stderr = boundedCapture();
+    const stdout = boundedCapture(MAX_CAPTURE_CHARS);
+    const stderr = boundedCapture(MAX_CAPTURE_CHARS);
     child.stdout.setEncoding("utf-8");
     child.stderr.setEncoding("utf-8");
     child.stdout.on("data", (chunk: string) => { stdout.add(chunk); });
