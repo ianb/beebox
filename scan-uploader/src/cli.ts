@@ -11,6 +11,7 @@ import { loadConfig, type UploaderConfig } from "./config.js";
 import { MISSING_CONFIG_MESSAGE, pathExists, resolveConfigPath } from "./config-path.js";
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
+import { notifySweep } from "./notify.js";
 import { runAllTargets } from "./run-all.js";
 import { runScheduleCommand } from "./schedule-cli.js";
 
@@ -67,7 +68,12 @@ async function main(): Promise<number> {
   }
 
   try {
-    return await runAllTargets(config, { retryRejected });
+    // The desktop banner is posted here rather than inside the sweep so the
+    // sweep stays a pure function of its seams — and so nothing notifies when
+    // a test or a future caller drives `runAllTargets` directly.
+    const result = await runAllTargets(config, { retryRejected });
+    await notifySweep(result.boxes);
+    return result.exitCode;
   } catch (e) {
     console.error(`scan-uploader: ${errorMessage(e)}`);
     return 1;

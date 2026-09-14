@@ -29,6 +29,9 @@ Each run, for every configured folder:
    the `trash` CLI or, failing that, an AppleScript Finder fallback — macOS
    only). It never deletes a file outright.
 
+Then, if the sweep actually uploaded or was refused something, it posts a
+desktop notification — see "Desktop notification" under Usage.
+
 If a run skipped anything as unsettled, it waits out the settle window and
 re-walks those folders — up to three rounds, then it leaves the rest to the
 next sweep. A folder-change trigger fires the instant a file appears, which is
@@ -217,6 +220,54 @@ error (hash mismatch, over the size limit, or exhausted rate-limit
 retries); zero otherwise. One line per file action is printed to stdout
 (`uploaded`, `duplicate`, `rejected`, `skipped-unsettled`,
 `skipped-identity-changed`); a one-line summary per target follows.
+
+### Desktop notification
+
+Under the launchd agent all of that output goes to
+`~/Library/Logs/scan-uploader.log`, which nobody reads — so a sweep that
+did something also posts a macOS notification (`src/notify.ts`):
+
+- **Scan uploaded** — files this sweep uploaded, and the boxes they went to.
+- **Scan refused** — files the server rejected on *this* sweep's upload,
+  left in place. Its own notification group, so a later "Scan uploaded"
+  can't replace an unread refusal.
+
+Two things it deliberately does *not* do. It says nothing on a quiet
+sweep: the interval fires whether or not a scan landed, and a banner every
+15 minutes would train you to ignore banners. And it reports a rejection
+only on the sweep that *learned* of it — a rejected file stays in place and
+the server keeps remembering its hash, so the run's `rejected` count stays
+non-zero from then on, and notifying on that would nag forever about a file
+you already know about. Per-file transport errors and an unreadable target
+folder are left to stdout and the exit code for the same reason: the
+transient ones fix themselves next sweep, and the sticky ones would nag
+with nothing new to say.
+
+macOS only (same posture as the `trash` disposition; elsewhere it's a
+no-op). A notifier that fails prints one line to stderr and is otherwise
+ignored: it must never be able to fail the sweep it's reporting on.
+
+#### Making them stay until dismissed
+
+A notification that flashes for five seconds is no use for a scan that
+landed while you were away from the desk. macOS calls the persistent style
+**Alerts**, and it is a *per-sender* setting in System Settings that a
+sender cannot set for itself — no flag or AppleScript keyword changes it.
+So this is a one-time toggle on your machine:
+
+```bash
+brew install terminal-notifier   # once
+```
+
+Then **System Settings → Notifications → terminal-notifier → Alerts**.
+(The entry appears only after it has posted once, so run a sweep first.)
+
+With `terminal-notifier` installed, these notifications post under its own
+identity, so that toggle affects these and nothing else. Without it the
+uploader falls back to `osascript`, which needs nothing installed — the
+copy-one-file machine still gets notified — but posts as "Script Editor",
+whose Alerts setting is shared with every other AppleScript notification on
+the machine.
 
 ## ScanSnap profile setup
 

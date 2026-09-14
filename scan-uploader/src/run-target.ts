@@ -33,6 +33,16 @@ export interface RunSummary {
   readonly uploaded: number;
   readonly duplicate: number;
   readonly rejected: number;
+  /**
+   * The subset of `rejected` the server refused in *this* run's PUT, as
+   * opposed to the ones the `check` endpoint reported from a previous run.
+   *
+   * A rejected file is left in place on purpose and the server remembers its
+   * hash, so `rejected` stays at 1 on every sweep from then on. This counter
+   * is the one run that actually learns the file was refused, which is what
+   * `notify.ts` needs to report a rejection once instead of every 15 minutes.
+   */
+  readonly rejectedOnUpload: number;
   readonly skippedUnsettled: number;
   readonly skippedIdentityChanged: number;
   readonly errors: number;
@@ -42,6 +52,7 @@ interface Counters {
   uploaded: number;
   duplicate: number;
   rejected: number;
+  rejectedOnUpload: number;
   skippedUnsettled: number;
   skippedIdentityChanged: number;
   errors: number;
@@ -61,6 +72,7 @@ export async function runTarget(target: TargetConfig, options: RunOptions): Prom
     uploaded: 0,
     duplicate: 0,
     rejected: 0,
+    rejectedOnUpload: 0,
     skippedUnsettled: 0,
     skippedIdentityChanged: 0,
     errors: 0,
@@ -194,6 +206,7 @@ async function resolveConfirmation(
     case "rejected":
       console.log(`rejected ${candidate.filePath}: ${result.reason}`);
       ctx.counters.rejected += 1;
+      ctx.counters.rejectedOnUpload += 1;
       return undefined;
     case "hash-mismatch":
       console.error(`error ${candidate.filePath}: hash mismatch on upload, will retry next run`);

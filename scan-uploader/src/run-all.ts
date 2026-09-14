@@ -45,6 +45,20 @@ export interface RunAllOptions extends RunOptions {
   readonly deps?: RunAllDeps;
 }
 
+/** One box's totals for the whole sweep: summed across its targets and across
+ * the settle-retry rounds, so a file uploaded in round 2 still counts once. */
+export interface BoxSummary {
+  readonly box: string;
+  readonly summary: RunSummary;
+}
+
+export interface RunAllResult {
+  readonly exitCode: number;
+  /** Only boxes that produced a summary — a target that threw before its sweep
+   * contributes nothing here, and is reported on stderr and in `exitCode`. */
+  readonly boxes: readonly BoxSummary[];
+}
+
 export function printSummary(target: TargetConfig, summary: RunSummary): void {
   console.log(
     `${target.folder}: uploaded=${String(summary.uploaded)} duplicate=${String(summary.duplicate)} ` +
@@ -65,9 +79,10 @@ function hasFailure(summary: RunSummary): boolean {
  * abandon the whole run — so a stale first target meant the second never swept
  * at all. The run reports the failure, exits non-zero, and keeps going.
  */
-export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<number> {
+export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<RunAllResult> {
   const deps = options.deps ?? DEFAULT_RUN_ALL_DEPS;
   const runOptions: RunOptions = { retryRejected: options.retryRejected };
+  const totals = new Map<string, RunSummary>();
   let exitCode = 0;
   let pending: readonly TargetConfig[] = config.targets;
   for (let round = 0; ; round++) {
@@ -82,11 +97,28 @@ export async function runAllTargets(config: UploaderConfig, options: RunAllOptio
         continue;
       }
       printSummary(target, summary);
+      totals.set(target.box, addSummaries(totals.get(target.box), summary));
       if (hasFailure(summary)) exitCode = 1;
       if (summary.skippedUnsettled > 0) unsettled.push(target);
     }
-    if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) return exitCode;
+    if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) {
+      const boxes = Array.from(totals, ([box, summary]) => ({ box, summary }));
+      return { exitCode, boxes };
+    }
     await deps.wait(SETTLE_RETRY_WAIT_MS);
     pending = unsettled;
   }
+}
+
+function addSummaries(left: RunSummary | undefined, right: RunSummary): RunSummary {
+  if (left === undefined) return right;
+  return {
+    uploaded: left.uploaded + right.uploaded,
+    duplicate: left.duplicate + right.duplicate,
+    rejected: left.rejected + right.rejected,
+    rejectedOnUpload: left.rejectedOnUpload + right.rejectedOnUpload,
+    skippedUnsettled: left.skippedUnsettled + right.skippedUnsettled,
+    skippedIdentityChanged: left.skippedIdentityChanged + right.skippedIdentityChanged,
+    errors: left.errors + right.errors,
+  };
 }
