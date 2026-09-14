@@ -27,6 +27,7 @@ import {
 import { findEntry, loadLedger } from "../../../src/core/commands/upload-helpers.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { runCommand, createCollectorContext } from "../../../src/core/commands/index.js";
+import { hideAssetsAgain } from "../../helpers/legacy-ignore-block.js";
 
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
@@ -81,8 +82,7 @@ function fakeWakeup(opts) {
  *  did to an annex-converted box, silently de-annexing it. Driven through the
  *  real `bbx attachments` subcommands so the fixture cannot drift from them. */
 async function deAnnex(boxRoot) {
-  const { ctx } = createCollectorContext(boxRoot);
-  await runCommand({ name: "attachments", args: { subcommand: "init-gitignore" }, ctx });
+  await hideAssetsAgain(boxRoot);
 }
 
 /** Convert it back, the way `bbx attachments to-annex` does. */

@@ -11,7 +11,25 @@ in place produces a box where no asset is annexed and nothing reports it.
 ```ts setup
 import { spawnSync } from "node:child_process";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { runInitGitignore, runUnignore } from "../../../src/core/commands/attachments-gitignore.js";
+import { runUnignore } from "../../../src/core/commands/attachments-gitignore.js";
+import { assetGitignorePatterns } from "../../../src/lib/asset-extensions.js";
+import { appendFile } from "node:fs/promises";
+import { join } from "node:path";
+
+/**
+ * Put a RETIRED manifest-scheme asset block into a box `.gitignore`.
+ *
+ * Nothing writes this block any more — every box is annex-shaped from
+ * creation. It is spelled out here rather than produced by a writer because
+ * the condition under test is a box whose `.gitignore` was hand-edited back to
+ * hiding assets, which is exactly what `unignore` repairs.
+ */
+async function installLegacyAssetBlock(boxRoot: string): Promise<void> {
+  await appendFile(
+    join(boxRoot, ".gitignore"),
+    `\n# bbx-assets (managed by bbx attachments init-gitignore)\n${assetGitignorePatterns()}\n`,
+  );
+}
 
 /** Minimal CommandContext: the two fields these subcommands touch. */
 function ctxFor(root: string): { boxRoot: string; writeLine: (s: string) => void; lines: string[] } {
@@ -38,7 +56,7 @@ extension patterns and leaves the capture-staging rule behind:
 ```ts
 const box = await makeTmpBox({ git: true });
 const c1 = ctxFor(box.root);
-await runInitGitignore(c1);
+await installLegacyAssetBlock(box.root);
 (await box.read(".gitignore")).includes("**/*.attach/**/*.jpg")
 => true
 ```
@@ -194,7 +212,7 @@ probe reporting the box as converted. One production box was in that state.
 
 ```ts continue
 const anchored = await makeTmpBox({ git: true });
-await runInitGitignore(ctxFor(anchored.root));
+await installLegacyAssetBlock(anchored.root);
 await anchored.write(
   ".gitignore",
   `${await anchored.read(".gitignore")}\n# Migrated local rules\n/_content/**/*.attach/**/*.jpg\n`,

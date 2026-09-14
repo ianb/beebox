@@ -1,6 +1,6 @@
 ---
 title: "Fresh boxes are annex-shaped, and asset writers refuse the manifest scheme"
-status: draft
+status: partial
 workstream: full-embrace-annex
 issues:
   - ../../../issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md
@@ -560,9 +560,13 @@ would be asserting something untrue.
 2. **Box creation annexes** — `git annex init` in `announceAndInitGit` (NOT a
    reorder inside `initBox`; see the correction at the top), plus the
    real-binary init doctest. **Done** (`21b137dd2`).
-3. **Spike: flip the fixture default, run the suite, count the fallout.** This
-   gates the budget for steps 5-7 and is cheap; the estimate it replaces was
-   off by an order of magnitude on population.
+3. **Spike: flip the fixture default, run the suite, count the fallout.**
+   **Done.** Baseline 10487/10487 green. Annex-always produced 3 genuine
+   assertion failures and 20 teardown errors, the latter all one cause: annex
+   marks objects read-only, so `rm` fails with `EACCES`. Suite time 259s ->
+   439s. The fallout was far smaller than either the plan's "~50 mechanical
+   deletions" or this session's own "~850 fixtures" estimate — the cost is
+   wall-clock time, not code.
 4. **Gitignore branch collapses.** `writeBoxGitignore` writes
    `UNIGNORE_BLOCK` unconditionally; the `annexed` probe and `GITIGNORE_BLOCK`
    are deleted. This is the step that carries the real risk — see below.

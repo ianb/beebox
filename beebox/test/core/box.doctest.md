@@ -162,16 +162,13 @@ await isValidBox(boxRoot)
 
 ## Asset tracking: manifest scheme vs git-annex
 
-`initBox` rewrites `.gitignore` and `.gitattributes` on every run, so it has to
-know which asset-tracking scheme the box is on. A fresh box is on the manifest
-scheme: asset bytes inside `.attach/` scopes are gitignored and tracked by
-per-dir `manifest.json`.
+`initBox` rewrites `.gitignore` and `.gitattributes` on every run. There is one
+form of each: every box is annex-shaped, so asset bytes inside `.attach/` scopes
+are always *visible* to `git add` — that is how they reach the annex — and the
+manifest scheme's ignore block is never written.
 
-`.gitattributes` does *not* vary with the scheme. Git LFS is retired, so no box
-gets `filter=lfs` rules — a manifest-scheme box gitignores its asset bytes, so
-an LFS filter could never fire on it anyway, and carrying the rules only risked
-re-LFS-ifying a converted box's new media if the annex probe below ever read
-false.
+`.gitattributes` carries no `filter=lfs` rules either. Git LFS is retired, and
+the rules were dead config that only risked re-LFS-ifying a box's new media.
 
 ```ts
 const tmp = await makeTmpDir();
@@ -180,45 +177,24 @@ const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
 const gitattributes = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
 [
   gitignore.includes("**/*.attach/**/*.pdf"),
-  gitignore.includes("managed by bbx attachments init-gitignore"),
+  gitignore.includes("managed by bbx attachments unignore"),
+  gitignore.includes("**/tmp-capture/**/*.attach/**"),
   gitattributes.includes("filter=lfs"),
-].join(" ")
-=> true true false
-```
-
-Once `bbx attachments to-annex` has converted the box, the `.gitignore` form is
-wrong: assets must be *visible* to `git add` (that is how they reach the annex).
-`initBox` detects the conversion from `.git/annex/` — the directory `git annex
-init` creates, which nothing this function writes can affect — and emits the
-annex form instead. Before the fix this path silently de-annexed every converted
-box on its next `bbx init`. `.gitattributes` is LFS-free either way.
-
-```ts continue
-await fs.mkdir(path.join(boxRoot, ".git", "annex"), { recursive: true });
-await initBox(boxRoot, { skipGit: true });
-const annexIgnore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
-const annexAttrs = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
-[
-  annexIgnore.includes("**/*.attach/**/*.pdf"),
-  annexIgnore.includes("managed by bbx attachments unignore"),
-  annexIgnore.includes("**/tmp-capture/**/*.attach/**"),
-  annexAttrs.includes("filter=lfs"),
 ].join(" ")
 => false true true false
 ```
 
-Capture staging stays ignored either way — a capture is pre-triage and gets
-rewritten before it is filed.
+Capture staging stays ignored — a capture is pre-triage and gets rewritten
+before it is filed.
 
-And it is idempotent: a second `initBox` on the converted box leaves both files
-byte-identical, so `bbx init` no longer dirties the working tree of an annexed
-box.
+It is idempotent: a second `initBox` leaves both files byte-identical, so
+`bbx init` never dirties an existing box's working tree.
 
 ```ts continue
 await initBox(boxRoot, { skipGit: true });
 [
-  (await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8")) === annexIgnore,
-  (await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8")) === annexAttrs,
+  (await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8")) === gitignore,
+  (await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8")) === gitattributes,
 ].join(" ")
 => true true
 ```

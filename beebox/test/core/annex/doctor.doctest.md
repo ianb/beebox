@@ -18,7 +18,18 @@ import {
 } from "../../../src/core/annex/doctor.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
-import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
+import { UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
+import { assetGitignorePatterns } from "../../../src/lib/asset-extensions.js";
+
+/**
+ * The RETIRED manifest-scheme asset block. Nothing writes it any more — a box
+ * is annex-shaped from creation — but the doctor still has to REPORT a box
+ * whose `.gitignore` was hand-edited back to hiding assets, so the tests below
+ * put one there deliberately.
+ */
+const GITIGNORE_BLOCK = `# bbx-assets (managed by bbx attachments init-gitignore)
+${assetGitignorePatterns()}
+`;
 
 /** A fake in the fully-correct state, which individual tests then break. */
 function healthyFake() {
@@ -129,14 +140,17 @@ readOnly.checks.find((c) => c.id === "thin")?.message.includes("git config annex
 await box.cleanup();
 ```
 
-## An un-migrated box is left completely alone
+## A box that is not annex-initialized is a defect, and is still not repaired here
 
-A box still on the manifest model is in a correct state, not a broken one — and
-the doctor must not "fix" it. `git annex init` writes `* filter=annex` into
-`.git/info/attributes`, the highest-precedence attributes file, which instantly
-stops Git LFS from smudging anything in that repository. Every unmigrated box
-uses LFS, so auto-initializing would half-break each one: annexing nothing while
-making its LFS content unreachable until `git annex uninit`.
+Every box is annex-shaped from its first commit, so an uninitialized one
+predates that or was created outside `bbx init`. It used to be a second
+supported state; it is a failure now.
+
+The doctor still does not initialize it. `git annex init` is not the whole job
+— config, the scoped attributes file, and the un-ignored `.gitignore` have to
+land in an order that never leaves a window where `git add` can see an asset
+the annex does not yet claim. Doing half of that would be worse than
+reporting.
 
 ```ts
 const box = await makeTmpBox();
@@ -146,15 +160,15 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=ok
+=> binary=ok initialized=failed
 
 annex.calls.length
 => 0
 
 result.healthy
-=> true
+=> false
 
-result.checks[1]?.message.includes("bbx attachments to-annex")
+result.checks[1]?.message.includes("Re-run `bbx init`")
 => true
 ```
 
@@ -238,7 +252,7 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired smudge-hooks=ok hook=ok
+=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=ok content-present=ok journal=repaired smudge-hooks=ok hook=ok
 ```
 
 A *stale* largefiles is repaired, not just an absent one. That matters: the
