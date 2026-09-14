@@ -14,9 +14,11 @@ import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { requireGitAnnex } from "../../core/annex/require-git-annex.js";
+import { annexNewBox } from "../../core/annex/annex-new-box.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
-import { createGitAnnexService } from "../../services/git-annex.js";
+import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -30,8 +32,9 @@ import { errorMessage } from "../../lib/error-guards.js";
  * changed instead.
  */
 async function announceAndInitGit(
-  { boxRoot, options }: {
+  { boxRoot, annex, options }: {
     boxRoot: string;
+    annex: GitAnnexService;
     options: { skipGit?: boolean; branch: string };
   }
 ): Promise<void> {
@@ -43,6 +46,14 @@ async function announceAndInitGit(
       await initRepo(boxRoot, options.branch);
     }
     console.log("Git repository initialized with initial commit.");
+
+    // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore`
+    // from an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot`
+    // calls it with `skipGit: true` — there is no `.git` at that point, so on
+    // a fresh init the probe can only ever read false and the box would be
+    // written manifest-scheme no matter what. The repository has to exist
+    // first, so this step re-writes the `.gitignore` the probe got wrong.
+    await annexNewBox(annex, boxRoot);
   }
 
   console.log("\nDirectory structure created:");
@@ -69,6 +80,13 @@ export interface InitOptions {
  * process.exit(1)-on-error wrapper below.
  */
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+  // Refuse before anything reaches disk. A box is annex-shaped from its first
+  // commit, so without the binary the box this call would create is one that
+  // cannot be committed to at all. This is the last moment at which nothing
+  // has to be undone.
+  const annex = createGitAnnexService();
+  await requireGitAnnex(annex);
+
   // Detects what's already at `targetPath`: an existing box (marker at the
   // target itself) or nothing yet. A fresh init always scaffolds the
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
@@ -83,7 +101,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // below). An existing box just re-runs `initBox` in place.
   if (isFresh) {
     await scaffoldBoxRoot(boxRoot, { deps: true });
-    await announceAndInitGit({ boxRoot, options });
+    await announceAndInitGit({ boxRoot, annex, options });
   } else {
     await initBox(boxRoot, { skipGit: true, branch: options.branch });
   }
@@ -199,7 +217,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // reported but do not abort init, since the rest of the setup is still worth
   // doing and `bbx health` gates on them.
   const boxShape = await getBoxShape(boxRoot);
-  const annexResult = await runAnnexDoctor(createGitAnnexService(), {
+  const annexResult = await runAnnexDoctor(annex, {
     repoRoot: boxShape.boxRoot,
     boxRoot,
   });
