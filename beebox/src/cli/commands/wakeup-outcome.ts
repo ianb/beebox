@@ -41,6 +41,11 @@ export interface WakeupOutcomeReport {
   /** Jobs left queued. Routinely non-zero for benign reasons — the reactor
    * skips low-priority work — so it is NOT a failure signal. */
   readonly jobsRemaining: number;
+  /** Present when another cycle held the per-box wakeup lock
+   * (`wakeup-cycle-lock.ts`), so this process did nothing at all — not even
+   * the connector step. Every count above is zero because nothing ran, which
+   * is why a caller must check this before reading them as an answer. */
+  readonly skipped?: "wakeup-running";
 }
 
 /** Print the outcome, if the caller asked for it. */
@@ -71,15 +76,23 @@ export function parseWakeupOutcome(output: string): WakeupOutcomeReport | null {
     return null;
   }
   if (!isRecord(parsed)) return null;
-  const { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining } = parsed;
+  const { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining, skipped } = parsed;
   if (
     typeof connectorErrors !== "number" ||
     typeof reactorOk !== "boolean" ||
     typeof reactorSkipped !== "boolean" ||
     typeof jobsProcessed !== "number" ||
-    typeof jobsRemaining !== "number"
+    typeof jobsRemaining !== "number" ||
+    (skipped !== undefined && skipped !== "wakeup-running")
   ) {
     return null;
   }
-  return { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining };
+  return {
+    connectorErrors,
+    reactorOk,
+    reactorSkipped,
+    jobsProcessed,
+    jobsRemaining,
+    ...(skipped === undefined ? {} : { skipped }),
+  };
 }

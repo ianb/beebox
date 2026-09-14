@@ -120,3 +120,15 @@ wakeupSatisfiedScanPromote({
 })
 => false
 ```
+
+A cycle that never started — another `bbx wakeup` held the per-box cycle lock
+(`wakeup-cycle-lock.ts`) — is the same answer one step earlier. Every count is
+zero because nothing ran, so the zeros must not read as a clean run.
+
+```ts
+wakeupSatisfiedScanPromote({
+  exitOk: true,
+  outcome: { ...healthy, jobsProcessed: 0, skipped: "wakeup-running" },
+})
+=> false
+```
