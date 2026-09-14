@@ -15,6 +15,7 @@
 import { Command } from "commander";
 import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getGoogleAuth } from "../../connectors/google-auth.js";
+import { explainGoogleAuthGap } from "../../connectors/google-auth-gap.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -101,7 +102,7 @@ calendarCommand
     const boxRoot = await requireBoxRoot();
     const auth = await getGoogleAuth(boxRoot);
     if (!auth) {
-      console.error("Google auth not configured. Run: bbx google-auth");
+      console.error(await explainGoogleAuthGap(boxRoot));
       process.exit(1);
     }
 

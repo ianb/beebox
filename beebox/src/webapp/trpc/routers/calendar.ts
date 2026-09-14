@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
+import { explainGoogleAuthGap } from "../../../connectors/google-auth-gap.js";
 import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
 import {
@@ -34,7 +35,7 @@ export const calendarRouter = router({
       if (!auth) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Google auth not configured. Run: bbx google-auth",
+          message: await explainGoogleAuthGap(ctx.boxRoot),
         });
       }
       svc = createGoogleCalendarService(createGoogleAuthService(auth, { boxRoot: ctx.boxRoot }));
