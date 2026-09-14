@@ -120,5 +120,9 @@ function addSummaries(left: RunSummary | undefined, right: RunSummary): RunSumma
     skippedUnsettled: left.skippedUnsettled + right.skippedUnsettled,
     skippedIdentityChanged: left.skippedIdentityChanged + right.skippedIdentityChanged,
     errors: left.errors + right.errors,
+    // Not summed — an observation, and the later round saw the box more
+    // recently. A round that made no request reports `undefined` and must not
+    // erase what an earlier round learned.
+    contractVersion: right.contractVersion ?? left.contractVersion,
   };
 }

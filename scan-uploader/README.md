@@ -199,6 +199,7 @@ message naming exactly what's wrong.
 
 ```bash
 bin/scan-uploader [config.json] [--retry-rejected]      # from the repo root
+bin/scan-uploader --version
 bin/scan-uploader configure <server-url-with-box> --folder <path> [options]
 bin/scan-uploader schedule <install|uninstall|status> [options]
 bin/scan-uploader --help
@@ -208,6 +209,40 @@ bin/scan-uploader --help
 on a machine holding only the copied bundle, run
 `node scan-uploader.mjs <same args>`. The package also declares the bundle
 as its `bin`, so it is npx-able if it's ever published.
+
+### Knowing whether this uploader is current
+
+A copied bundle never updates itself and the box it uploads to does, so the
+uploader reports what it is on every request and says something when the two
+have drifted apart:
+
+```bash
+bin/scan-uploader --version
+# running from source (a checkout — tracks current source), wire contract v1
+# bundle 16e177c0, built 2026-09-14T18:46:01Z, wire contract v1
+```
+
+Two separate facts, answering two questions.
+
+**The wire-contract version** (`src/contract-version.ts`) is compared every
+sweep: the uploader sends it, the box returns its own, and a mismatch prints
+which side is behind. A contract change that breaks *parsing* already fails
+loudly on its own — what this catches is the quieter case, a bundle whose
+parsing is fine but whose rules for when a scanned file is safe to move or
+delete are older than the box's. Those rules live only in the client. A box
+that reports no version at all (one running code older than the field) is not
+treated as drift.
+
+**The build stamp** (`src/build-stamp.ts`) is the revision and time the bundle
+was built, baked in by `build.ts`. It answers "how old is this copy" rather
+than "does it still speak the protocol", since an uploader can be current on
+the contract and still be missing features. The box records it, so a stale copy
+is visible from the box side too. `-dirty` on the revision means the bundle was
+built from uncommitted work and is not the revision it names.
+
+A checkout reports `source` rather than a build date, because that is the
+honest answer: `bin/scan-uploader` runs current source through tsx every sweep,
+so a checkout cannot drift. Only the copied bundle can.
 
 `configure` (see Setup above) takes the token on stdin — piped, or prompted
 without echo on a TTY — and supports `--disposition`, `--name`, and

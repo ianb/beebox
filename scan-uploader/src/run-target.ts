@@ -46,6 +46,16 @@ export interface RunSummary {
   readonly skippedUnsettled: number;
   readonly skippedIdentityChanged: number;
   readonly errors: number;
+  /**
+   * The contract version this box reported, or `undefined` if it reported none
+   * (a box predating the field) or if the sweep never reached the server —
+   * a folder with nothing settled in it makes no request at all.
+   *
+   * An observation rather than a count, which is why it rides the summary: the
+   * sweep is the only thing that talks to the box, and `cli.ts` is where the
+   * comparison belongs.
+   */
+  readonly contractVersion: number | undefined;
 }
 
 interface Counters {
@@ -56,6 +66,7 @@ interface Counters {
   skippedUnsettled: number;
   skippedIdentityChanged: number;
   errors: number;
+  contractVersion: number | undefined;
 }
 
 interface Candidate {
@@ -76,6 +87,7 @@ export async function runTarget(target: TargetConfig, options: RunOptions): Prom
     skippedUnsettled: 0,
     skippedIdentityChanged: 0,
     errors: 0,
+    contractVersion: undefined,
   };
 
   const candidates = await collectCandidates(target.folder, counters);
@@ -83,7 +95,9 @@ export async function runTarget(target: TargetConfig, options: RunOptions): Prom
     return { ...counters };
   }
 
-  const checkStates = await checkAllHashes(connection, candidates.map((c) => c.hash));
+  const checked = await checkAllHashes(connection, candidates.map((c) => c.hash));
+  const checkStates = checked.states;
+  counters.contractVersion = checked.contractVersion;
 
   const ctx: ProcessContext = {
     connection,
@@ -126,16 +140,21 @@ async function collectCandidates(folder: string, counters: Counters): Promise<Ca
 async function checkAllHashes(
   connection: ServerConnection,
   hashes: readonly string[],
-): Promise<Map<string, CheckResult>> {
+): Promise<{ states: Map<string, CheckResult>; contractVersion: number | undefined }> {
   const unique = Array.from(new Set(hashes));
   const states = new Map<string, CheckResult>();
+  // Every batch goes to the same box, so the version is whatever the last
+  // response said — they cannot disagree unless the box was redeployed
+  // mid-sweep, in which case the newest answer is the right one.
+  let contractVersion: number | undefined;
   for (const batch of chunk(unique, CHECK_BATCH_LIMIT)) {
-    const batchStates = await checkHashes(connection, batch);
-    for (const [hash, result] of batchStates) {
+    const response = await checkHashes(connection, batch);
+    for (const [hash, result] of response.states) {
       states.set(hash, result);
     }
+    contractVersion = response.contractVersion ?? contractVersion;
   }
-  return states;
+  return { states, contractVersion };
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
