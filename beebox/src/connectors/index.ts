@@ -33,10 +33,37 @@ export interface Connector {
   sync(): Promise<SyncResult>;
 }
 
+/**
+ * Why a sync ran but deliberately did nothing.
+ *
+ * A connector whose service is unavailable used to report a bare empty success
+ * (Gmail, Calendar) or a failure (Drive), so a caller could not tell "nothing
+ * changed" from "nothing was even attempted" — the invisible
+ * nothing-happened failure the 2026-09-14 Drive incident exposed. A skipped
+ * result says which of the two it is, and `detail` is written for RELAY: the
+ * box agent reads it out to the boxholder.
+ *
+ * - `not-allowed` — the box's own policy has the service switched off. The
+ *   boxholder flips it; no credential is involved.
+ * - `not-configured` — the credential this process needs is not reachable.
+ *   `detail` carries `explainGoogleAuthGap`'s account of which piece is
+ *   missing and where this process looked.
+ */
+export interface SyncSkipped {
+  reason: "not-configured" | "not-allowed";
+  detail: string;
+}
+
 export interface SyncResult {
   success: boolean;
   created: string[];
   updated: string[];
+  /**
+   * Set when the sync did no work on purpose. A skipped result is a success
+   * (nothing failed), so callers must check this before reporting "up to
+   * date" — see {@link SyncSkipped}.
+   */
+  skipped?: SyncSkipped;
   /** Cards that were pushed to the remote service (two-way sync) */
   pushed?: string[];
   /** Job cards created during sync */

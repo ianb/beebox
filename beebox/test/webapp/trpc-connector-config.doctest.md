@@ -117,10 +117,13 @@ await code(c.drive.config())
 
 The router writes mounts — as cards, through the same operations `bbx drive
 mount` / `link` / `unmount` use — but it never writes connector config.
+`drive.add`, `drive.inspect`, and `drive.list` are the same delegation for
+`bbx drive add` / `inspect` / `list`, letting an agent bearer reach those verbs
+without shell access to the box.
 
 ```ts continue
 JSON.stringify(Object.keys(appRouter._def.procedures).filter((name) => name.startsWith("drive.")).sort())
-=> ["drive.config","drive.link","drive.mount","drive.mounts","drive.syncFolder","drive.unmount"]
+=> ["drive.add","drive.config","drive.inspect","drive.link","drive.list","drive.mount","drive.mounts","drive.syncFolder","drive.unmount"]
 ```
 
 ```ts cleanup

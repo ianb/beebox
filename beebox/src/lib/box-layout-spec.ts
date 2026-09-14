@@ -101,7 +101,7 @@ export const BOX_LAYOUT = [
     path: "_content/drive",
     area: "content",
     description: "Google Drive sync (spreadsheets as JSON, docs as markdown).",
-    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync",
+    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync. The `bbx drive` verbs work from your shell; the connectors doc says how",
   },
   {
     boxDirsKey: "calendar",

@@ -17,6 +17,7 @@ export { hubCommand } from "./hub.js";
 export { answerCommand } from "./answer.js";
 export { dismissCommand } from "./dismiss.js";
 export { wakeupCommand } from "./wakeup.js";
+export { forceWakeupCommand } from "./force-wakeup.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";
 export { relinkCommand } from "./relink.js";

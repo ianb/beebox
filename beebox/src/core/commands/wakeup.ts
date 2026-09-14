@@ -14,11 +14,8 @@ import {
 } from "../command-runner.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
-import {
-  parseWakeupOutcome,
-  WAKEUP_OUTCOME_ENV,
-  type WakeupOutcomeReport,
-} from "../../cli/commands/wakeup-outcome.js";
+import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";
+import type { WakeupRunResult } from "./wakeup-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Resolve the `bbx` binary path, matching the pattern in scheduler.ts */
@@ -32,17 +29,26 @@ function resolveBbxPath(): string {
 }
 
 /**
- * Run a FULL (unscoped) `bbx wakeup` for a box as a supervised child: awaited,
- * with its combined output captured. Shared with the scan promote worker, which
- * needs the same supervised spawn — a connector-scoped wakeup would never drain
- * a `source: scan` job (`cli/commands/wakeup.ts` filters jobs by source), and a
- * fire-and-forget spawn would make a lost run indefinite rather than late.
+ * Run a `bbx wakeup` for a box as a supervised child: awaited, with its
+ * combined output captured. Shared with the scan promote worker, which needs
+ * the same supervised spawn — a fire-and-forget spawn would make a lost run
+ * indefinite rather than late.
+ *
+ * `connector` scopes the child to one connector (`--connector <name>`), which
+ * is what `bbx force-wakeup --connector X` asks for. Leave it unset for the
+ * full cycle: the scan promote worker MUST, because a connector-scoped wakeup
+ * never drains a `source: scan` job (`cli/commands/wakeup.ts` filters jobs by
+ * source), and so must the UI Sync button, which means "run the cycle".
+ *
+ * Forcing and letting it happen are therefore the same code: this is the same
+ * child the schedule runs, with the same flag the schedule would pass.
  */
 export async function runBbxWakeup(opts: {
   boxRoot: string;
   triggeredBy: string;
+  connector?: string | undefined;
   onChunk?: ((text: string) => void) | undefined;
-}): Promise<{ ok: boolean; detail: string; output: string; outcome: WakeupOutcomeReport | null }> {
+}): Promise<WakeupRunResult> {
   const bbxPath = resolveBbxPath();
   // Tooling profile: `bbx wakeup` runs the connectors themselves.
   const env = await buildToolingScriptEnv(opts.boxRoot, {
@@ -54,7 +60,7 @@ export async function runBbxWakeup(opts: {
   try {
     const { code, output } = await runCollectedChild({
       command: bbxPath,
-      args: ["wakeup"],
+      args: opts.connector === undefined ? ["wakeup"] : ["wakeup", "--connector", opts.connector],
       cwd: opts.boxRoot,
       env,
       ...(opts.onChunk === undefined ? {} : { onChunk: opts.onChunk }),
