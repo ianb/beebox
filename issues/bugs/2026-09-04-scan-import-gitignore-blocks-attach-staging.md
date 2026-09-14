@@ -1,6 +1,6 @@
 ---
 title: "Scan-import/PDF-extract staging fails on a fresh v3 box: the default .gitignore blocks its own attach binaries"
-workstream: unattached
+workstream: scan-ingest
 area: beebox
 labels: [scan, git]
 filed-by: agent
