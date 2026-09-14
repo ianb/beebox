@@ -73,7 +73,13 @@ Verified against the code:
 
 1. **Anything `bbx` does, the agent should be able to do.** Some acts are
    not for the agent, and those should not be `bbx` verbs at all. The
-   boxholder's own assessment: "this has been weakly handled."
+   boxholder's own assessment: "this has been weakly handled." Refined later
+   the same day: engine and operator verbs may stay in `bbx` for now so long
+   as every one is listed in the surface audit issue
+   (`issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md`). What is
+   not acceptable is a verb that is **both** server-only and designed for the
+   agent. A verb that works for the agent only with some options is that
+   case, and it also gets in the way of the later separation.
 2. **`bbx` should be able to do the work, confirm it is done, and force it to
    happen instead of waiting for a sync. Forcing and letting it happen must be
    equivalent.** If a person or agent forces a sync, the result must be the
@@ -87,7 +93,7 @@ Audit of the first principle against the CLI as it stands:
 | `bbx calendar calendars\|add\|remove` | exits with the auth-gap message | violates 1; delegate |
 | `bbx calendar [timespan]` (advertised to agents in `agent-guide/commands.ts:28`), `bbx connector gmail pending` | read local state only; work | fine |
 | `bbx connector gmail track\|gws` | exits "not configured" | violates 1; delegate |
-| `bbx wakeup --connector <name>` | each Google connector's `getService` returns null; Gmail and Calendar sync nothing and report success, Drive reports a failure | violates 1 and 2; see below |
+| `bbx wakeup [--connector <name>]` | runs, but each Google connector's `getService` returns null; Gmail and Calendar sync nothing and report success, Drive reports a failure | server-only by design, yet the agent guide describes it to agents; the "both" case; see below |
 | `bbx google-auth` | a browser OAuth flow | correctly not for agents; keep, it is the boxholder's verb and the agent relays it |
 | `bbx secrets set\|grant\|revoke\|migrate`, `bbx auth …` | refuse without `--agent-confirmed` | correctly not for agents; the flag is a person's signature, so these stay `bbx` verbs a person runs |
 | `bbx secrets status\|declare\|describe --add-use` | work, scoped to the agent's own box | fine |
@@ -166,14 +172,23 @@ their own time; the agent retries later.
 
 **Delegated to the server (credential stays server-side):**
 
-- Force a connector sync: a `connectors.sync({ connector })` procedure that
-  runs that connector's `sync()` in the server process, under the same lock
-  and with `triggeredBy` naming the caller, and returns its `SyncResult`.
-  This is what `bbx drive sync` and `bbx wakeup --connector <name>` call under
-  the agent profile. Because it is the connector's own `sync()`, forcing and
-  letting it happen are the same code by construction, which is the fidelity
-  rule. It also gives the schedule's manual "run now" button a result to show
-  instead of a duration.
+- Force a wakeup, full or scoped to one connector: a new agent-facing verb,
+  `bbx force-wakeup [--connector <name>]`, that asks the server to run the
+  same supervised `bbx wakeup` child the Sync button and the scan-promote
+  worker already run (`core/commands/wakeup.ts:runBbxWakeup`), and returns
+  its `WakeupOutcomeReport` (connector errors, reactor ok or skipped-locked,
+  jobs processed and remaining) plus the connector `SyncResult`s. It never
+  runs in-process, under any profile: with no reachable server it refuses
+  and says so. Because the server runs the identical child the schedule
+  runs, forcing and letting it happen are the same code by construction. The
+  scoped form is the one agents will mostly use; it is sync plus a reactor
+  pass over the jobs that sync produced, which is what "let it happen" does,
+  so a bare connector sync would not satisfy the fidelity rule.
+- `bbx wakeup` itself stays exactly what it is: the tooling-profile cycle
+  that tick, the reactor, and the server spawn. It is listed in the surface
+  audit issue as engine surface, and the agent guide stops describing it as
+  something the agent runs. Making it half-work under the agent profile is
+  the "both server-only and agent-designed" case the boxholder ruled out.
 - Resolve a Drive URL or id to a name and type. This is the verification step
   the incident lacked. It needs a new `drive.inspect` procedure; the settings
   page would benefit from it too (it currently learns the name only after a
@@ -197,12 +212,14 @@ their own time; the agent retries later.
 
 ## How the agent asks
 
-One rule, no new verb: under the agent profile, every `bbx` verb that needs a
-connector credential (the `drive`, `calendar`, and `connector` families, and
-`wakeup --connector`) calls the same operation on the box's server with
-`BBX_SERVER_URL` and `BBX_AGENT_TOKEN`; under the tooling profile it runs
-in-process as today. Drive is the first family wired, because it is the one
-the incident hit; the others follow the same helper. The
+One rule: under the agent profile, every `bbx` verb that needs a connector
+credential (the `drive`, `calendar`, and `connector` families) calls the same
+operation on the box's server with `BBX_SERVER_URL` and `BBX_AGENT_TOKEN`;
+under the tooling profile it runs in-process as today. Drive is the first
+family wired, because it is the one the incident hit; the others follow the
+same helper. The one new verb is `bbx force-wakeup`, which is agent-designed
+and server-backed in every profile, and replaces the agent-facing use of
+`bbx drive sync` (which stays as the tooling-profile in-process form). The
 profile is stated, not inferred: `buildEnv` sets `BBX_SPAWN_PROFILE` to
 `agent` or `tooling` alongside the token, and the CLI branches on that. The
 first draft of this rule was "in-process when a token record loads, else
@@ -318,11 +335,11 @@ agent's ability to verify one.
 
 This plan's budget beyond those two, in order:
 
-1. A `connectors.sync({ connector })` procedure returning `SyncResult`, and
-   `bbx drive sync` plus `bbx wakeup --connector` delegating to it under the
-   agent profile. `bbx wakeup` with no connector filter stays a tooling-only
-   verb: it is the whole cycle, and an agent forcing the cycle it is running
-   inside is a different question. Roughly 80 lines of source, 60 of tests.
+1. `bbx force-wakeup [--connector <name>]` and its `wakeup.force` procedure,
+   which runs `runBbxWakeup` and returns the outcome report and connector
+   results. Plus the agent guide change: `bbx wakeup` moves to the
+   "system-run, you do not invoke" list and `force-wakeup` joins the
+   commands-to-reach-for list. Roughly 100 lines of source, 60 of tests.
 2. A `drive.inspect` procedure, so `bbx drive inspect` and `add` (the file
    verbs, which also need the service) have a server counterpart. Roughly 80
    lines of source, 60 of tests.
@@ -366,7 +383,6 @@ three other agent-facing paths already use.
   asked in chat, by analogy with schedules, or whether that is always a
   settings-page act. The plan assumes settings-page only.
 - Whether to land `check-drive` now, ahead of the rest. The plan says yes.
-- Whether a full `bbx wakeup` (no connector filter) should be agent-runnable
-  through the server, or is one of the acts that "should not be a `bbx` verb"
-  for agents. The plan leaves it tooling-only and names it as the one
-  deliberate exception to the first principle.
+- The name `force-wakeup` is the boxholder's suggestion and the plan uses
+  it. If a full forced wakeup from inside a reactor-spawned agent should be
+  refused rather than reported as skipped-locked, say so; the plan reports.

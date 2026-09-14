@@ -32,8 +32,24 @@ survives advertising a format that no longer exists.
 
 **Clearly agent-facing** — what an agent does inside a box during a wakeup or
 chat: `answer`, `create`, `dismiss`, `handle`, `intake`, `ls`, `mv`, `rm`,
-`search`, `show`, `todos`, `triage`, `validate`, `wakeup`, `finalize`,
-`reactor`, `procedure`.
+`search`, `show`, `todos`, `triage`, `validate`, `finalize`, `reactor`,
+`procedure`.
+
+**Engine surface that agents are told about anyway (2026-09-14):** `wakeup`.
+It runs only under the tooling spawn profile (connector credentials in env);
+from an agent shell it runs, finds no credentials, and reports Gmail and
+Calendar as synced-nothing-successfully. The agent guide's box-shape section
+describes it to agents. Decision (boxholder, 2026-09-14): a verb that is both
+server-only and agent-designed is the bad case, and making `wakeup` work "with
+some options" for agents would entrench it. The agent-facing counterpart is a
+new `bbx force-wakeup`, server-backed in every profile; see
+`beebox/docs/plans/agent-capability-delegation.md`. `wakeup` stays here as
+engine surface until the separation.
+
+**Credentialed box verbs that fail under the agent profile (2026-09-14):**
+`drive` (all verbs), `calendar calendars|add|remove`, `connector gmail
+track|gws`. These are agent-facing by intent and exit with the auth-gap
+message from an agent shell. The same plan routes them through the server.
 
 **Genuinely unclear, and where the decision actually lives:** `auth`,
 `connector`, `drive`, `calendar`, `scenario`, `view`, `feedback`, `retro`,
@@ -43,7 +59,13 @@ different axis from "does it operate on box data."
 
 ## What to decide first
 
-**The criterion**, before any moving. Candidates, and they don't agree:
+**Criterion settled in part (boxholder, 2026-09-14):** engine and operator
+verbs may remain in `bbx` for now provided every one is listed here. A verb
+that is *both* server-only and agent-designed is not acceptable; it gets an
+agent-facing counterpart (as `wakeup` → `force-wakeup`) rather than partial
+agent support.
+
+**The remaining criterion**, before any moving. Candidates, and they don't agree:
 
 - "Would an agent run this during a wakeup or chat?" — narrowest, probably right
 - "Does it operate on box content?" — admits `migrate`, `relink`
