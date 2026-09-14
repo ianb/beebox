@@ -35,14 +35,13 @@ import {
   UnreadableDriveInputError,
 } from "./drive-mount-errors.js";
 import {
-  findDriveCardTracking,
+  driveIdClaimants,
   GFOLDER_CARD_TYPE,
   GLINK_CARD_TYPE,
-  type DriveCardTracking,
 } from "./google-drive-tracking.js";
 
 /** A Drive URL or bare id, or a refusal naming what was unusable. */
-function requireDriveId(input: string): string {
+export function requireDriveId(input: string): string {
   const driveId = extractDriveFileId(input);
   if (driveId === null) throw new UnreadableDriveInputError(input);
   return driveId;
@@ -54,16 +53,8 @@ function requireDriveId(input: string): string {
  * copies that overwrite each other upstream — the connector skips both rather
  * than pick one, which would leave the new mount silently dead.
  */
-async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
-  const tracking: DriveCardTracking = await findDriveCardTracking(opts.boxRoot);
-  const claimedBy = [
-    ...tracking.liveCards
-      .filter((card) => card.driveId === opts.driveId)
-      .map((card) => card.relPath),
-    ...tracking.duplicates
-      .filter((duplicate) => duplicate.driveId === opts.driveId)
-      .flatMap((duplicate) => duplicate.relPaths),
-  ];
+export async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
+  const claimedBy = await driveIdClaimants(opts);
   if (claimedBy.length > 0) {
     throw new DriveIdClaimedError({ driveId: opts.driveId, claimedBy });
   }
