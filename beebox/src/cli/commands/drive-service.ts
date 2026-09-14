@@ -5,6 +5,7 @@
  */
 
 import { getGoogleAuth } from "../../connectors/google-auth.js";
+import { explainGoogleAuthGap } from "../../connectors/google-auth-gap.js";
 import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
@@ -12,7 +13,7 @@ import type { GoogleDriveService } from "../../services/google-drive.js";
 export async function requireDriveService(boxRoot: string): Promise<GoogleDriveService> {
   const auth = await getGoogleAuth(boxRoot);
   if (!auth) {
-    console.error("Google auth not configured. Run: bbx google-auth");
+    console.error(await explainGoogleAuthGap(boxRoot));
     process.exit(1);
   }
   const authService = createGoogleAuthService(auth, { boxRoot });

@@ -37,6 +37,7 @@ import {
 } from "../../core/scan/quarantine.js";
 import { qpdfAvailable, validateScanFile } from "../../core/scan/validate.js";
 import { isAnnexBox } from "../../core/annex/is-annex-box.js";
+import { SCAN_CONTRACT_VERSION } from "../../core/scan/contract-version.js";
 import { makeScanAuthPreHandler, scanAuthOf, type ScanAuth } from "../scan-auth.js";
 import { invariant } from "../../lib/invariant.js";
 import { consumeScanRateLimit } from "./scan-rate-limit.js";
@@ -123,7 +124,11 @@ async function handleCheck(opts: {
     const state = checkStateOf(entry);
     states[hash] = state === "rejected" && entry.reason !== undefined ? { state, reason: entry.reason } : { state };
   }
-  return { states };
+  // A sibling of `states`, not a replacement: the uploader's parser requires
+  // only `states` and ignores unknown keys, so adding this needs no flag day
+  // and an uploader that predates it is unaffected. It is what lets a copied
+  // bundle notice it has fallen behind this box.
+  return { states, contractVersion: SCAN_CONTRACT_VERSION };
 }
 
 /** Whether an existing quarantine entry means "already have it, don't re-store". */

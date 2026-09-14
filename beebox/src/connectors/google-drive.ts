@@ -17,6 +17,7 @@ import { errorMessage } from "../lib/error-guards.js";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { explainGoogleAuthGap } from "./google-auth-gap.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { loadDriveConfig } from "./drive-config.js";
 import { convertConfigFolders } from "./drive-folder-convert.js";
@@ -99,7 +100,7 @@ class GoogleDriveConnector implements Connector {
         success: false,
         created: [],
         updated: [],
-        error: "Google auth not configured. Run: bbx google-auth",
+        error: await explainGoogleAuthGap(this.boxRoot),
       };
     }
 

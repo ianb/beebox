@@ -18,9 +18,12 @@ effect.
 
 **The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.
 It holds a concrete model id (`claude-sonnet-5`, `gpt-5.6-terra`, …). Missing
-means *no policy*: every run takes its harness's own default. It is owner-only
-to change, and the change is committed to the box's git history like any other
-config edit.
+means the **`strong` tier for the box's engine** — Opus on Claude, Sol on Codex
+— not "whatever the harness picks". A box always has a default it can name, so
+the chat UI can say what a follower will run and the model dial has something to
+compare against; deferring to the harness left both blank on every unpinned box
+(boxholder, 2026-09-14). It is owner-only to change, and the change is committed
+to the box's git history like any other config edit.
 
 **A chat's own model** is `.beebox/chat-models/<sessionId>.json`, written
 only when that chat picks one. **Absence is a state, not a gap**: a chat with no
@@ -53,8 +56,11 @@ running engine does not know.
 2. The box default — exactly, if this engine offers it; otherwise the model at
    the same tier (`efficient`/`balanced`/`strong`/`strongest`, from
    `src/shared/agent-models.ts`), so a box that switches harness keeps a policy
-   rather than silently losing one.
-3. Nothing — the harness's own default.
+   rather than silently losing one. A box that pinned nothing takes the `strong`
+   tier here (`boxDefaultModel`).
+3. Nothing — reached only when a pin exists but names no model any engine
+   offers. A box saying something unreadable is not a box saying nothing, so
+   that case is not quietly given the default.
 
 Retired model ids are carried forward (`normalizeModelId`) before any of this,
 and a value no engine offers is rejected at `loadBoxModel` with one warning per

@@ -7,6 +7,7 @@ Use the guidance for the area you are changing:
 - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
 - **Chrome extension:** [beebox-clerk/CLAUDE.md](beebox-clerk/CLAUDE.md).
 - **Native iOS companion:** [ios-app/CLAUDE.md](ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
+- **Stand-alone scan uploader (laptop client):** [scan-uploader/CLAUDE.md](scan-uploader/CLAUDE.md). Zero runtime dependencies and copied as one file; it shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/CLAUDE.md](personal-vibe-check/CLAUDE.md). Edit it here; the old standalone checkout is stale.
 - **Doctest framework:** [agent-doctest/README.md](agent-doctest/README.md); application tests live in their packages.
 - **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); use [canvas-loop-sketch](.claude/skills/canvas-loop-sketch/SKILL.md) for sketches and gallery work.

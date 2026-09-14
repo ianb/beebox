@@ -106,6 +106,15 @@ function delay(ms: number): Promise<void> {
  * instance per credential kind; two instances never share a file, a lock, or a
  * record type.
  */
+export interface TokenVerifyParams<TRecord extends TokenRecord> {
+  readonly token: string | undefined;
+  /** Runs inside the lock on the record about to be saved, so a caller can
+   * stamp its own per-credential fields on the write `lastUsedAt` already
+   * performs rather than taking the lock a second time. The scan routes use it
+   * to record which uploader build called; see `core/scan/tokens.ts`. */
+  readonly onUse?: ((record: TRecord) => void) | undefined;
+}
+
 export class TokenStore<TRecord extends TokenRecord> {
   constructor(private readonly options: TokenStoreOptions<TRecord>) {}
 
@@ -206,7 +215,8 @@ export class TokenStore<TRecord extends TokenRecord> {
    * lock even though most calls are "just checking" — the read happens inside
    * the lock so a credential revoked by another process is always seen here.
    */
-  async verify(boxRoot: string, token: string | undefined): Promise<TRecord | null> {
+  async verify(boxRoot: string, params: TokenVerifyParams<TRecord>): Promise<TRecord | null> {
+    const { token, onUse } = params;
     if (typeof token !== "string" || token.length === 0) return null;
     const suppliedHash = hashToken(token);
     return this.withLock(boxRoot, ({ records, save }) => {
@@ -214,6 +224,7 @@ export class TokenStore<TRecord extends TokenRecord> {
         if (record.revokedAt) continue;
         if (timingSafeStringEqual(suppliedHash, record.tokenHash)) {
           record.lastUsedAt = nowIso();
+          onUse?.(record);
           save();
           return record;
         }

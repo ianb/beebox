@@ -12,7 +12,7 @@ import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { chatModelFileForSession, loadCurrentModel } from "../../../core/chat/session/state.js";
 import { loadBoxModel } from "../../../core/box/config.js";
-import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
+import { boxDefaultModel, liveModelState, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
 import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "../../../core/chat/session/engine.js";
 import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
@@ -102,7 +102,7 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
   const { registry } = requireRuntime(boxRoot);
   const engine = await resolveChatEngine(boxRoot, { sessionId });
   const pinned = await loadBoxModel(boxRoot);
-  const boxDefault = resolveBoxModelForEngine(engine, pinned);
+  const boxDefault = boxDefaultModel(engine, pinned);
   const target = sessionId === null ? undefined : registry.get(sessionId);
   // An evicted session is not in the registry, so its choice comes off disk —
   // the same value it would load back with.

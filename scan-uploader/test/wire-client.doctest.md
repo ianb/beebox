@@ -7,7 +7,7 @@ flow doesn't isolate on its own: the batch check response shapes, and a PUT
 retrying through a 429 before succeeding.
 
 ```ts setup
-import { checkHashes, putFile } from "../src/wire-client.js";
+import { checkHashes, parseContractVersion, putFile } from "../src/wire-client.js";
 import { startFakeScanServer, type FakeScanServer } from "./fake-scan-server.js";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -41,8 +41,8 @@ const server1: FakeScanServer = await startFakeScanServer({
   putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
 });
 const connection1 = { serverUrl: server1.url, box: "family", token: "test-token" };
-const states = await checkHashes(connection1, ["aaa", "bbb", "ccc", "ddd"]);
-JSON.stringify(Object.fromEntries(states), null, 2)
+const checked1 = await checkHashes(connection1, ["aaa", "bbb", "ccc", "ddd"]);
+JSON.stringify(Object.fromEntries(checked1.states), null, 2)
 =>
 {
   "aaa": {
@@ -189,4 +189,85 @@ putFailureMessage.endsWith("unexpected HTTP status 500 — server says: database
 ```cleanup
 await server6.close();
 await removeTmpDir(dir);
+```
+
+## Client identity rides both routes
+
+The uploader volunteers which contract it speaks and which build it is, on
+every request, so the box can tell that an uploader is old. One-way and
+optional: the box records these and never refuses on them.
+
+`x-scan-contract` is the version that gets compared; `x-scan-client-build`
+reads `source` here because the doctest runs from a checkout through tsx,
+which is the honest answer — a checkout tracks current source and cannot
+drift, so there is no build date to report. A copied bundle sends its revision
+and `x-scan-client-built-at` instead (`build.ts` bakes both in).
+
+The header prefix is load-bearing and easy to get wrong: the hub deletes every
+client-supplied `x-bbx-*` header before it reaches a box (its spoof wall), so a
+header named that way would silently never arrive and the box would read
+`unknown` forever.
+
+```
+const server7: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
+});
+const connection7 = { serverUrl: server7.url, box: "family", token: "t" };
+const identityDir = await makeTmpDir("wire-client-identity");
+const identityFile = join(identityDir, "page1.pdf");
+await writeFile(identityFile, "scan bytes");
+await checkHashes(connection7, ["aaa"]);
+JSON.stringify(server7.checkRequests[0]?.identity)
+=> {"contract":"1","build":"source"}
+```
+
+The PUT carries the same identity — a box that only ever sees uploads still
+learns what is talking to it:
+
+```continue
+await putFile(connection7, { hash: "abc123", filePath: identityFile });
+JSON.stringify(server7.putRequests[0]?.identity)
+=> {"contract":"1","build":"source"}
+```
+
+A box that reports no contract version reads as `undefined` — which is what
+every real box looks like until it deploys the field, and is why that case
+means "no opinion" rather than "drifted":
+
+```continue
+(await checkHashes(connection7, [])).contractVersion
+=> undefined
+```
+
+A box that does report one is read back as a number:
+
+```continue
+const server8: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
+  contractVersion: () => 7,
+});
+const checked8 = await checkHashes({ serverUrl: server8.url, box: "family", token: "t" }, []);
+checked8.contractVersion
+=> 7
+```
+
+An unknown *state* still throws — the state vocabulary is closed — but an
+unreadable *version* is treated as absent rather than fatal. A diagnostic
+field must never be able to stop a sweep, so every shape a misbehaving box
+could send reads as "no opinion", while a readable integer passes through
+(zero included — a box legitimately at contract 0 is not a box with no
+opinion):
+
+```continue
+const unreadable = [undefined, "seven", 1.5, -1, null, {}];
+`${unreadable.map((v) => String(parseContractVersion(v))).join(",")} | ${String(parseContractVersion(0))} ${String(parseContractVersion(12))}`
+=> undefined,undefined,undefined,undefined,undefined,undefined | 0 12
+```
+
+```cleanup
+await server7.close();
+await server8.close();
+await removeTmpDir(identityDir);
 ```

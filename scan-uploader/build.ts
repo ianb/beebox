@@ -3,6 +3,7 @@
 
 import { chmod } from "node:fs/promises";
 import { build } from "esbuild";
+import { buildStampJson } from "./src/build-revision.js";
 
 await build({
   entryPoints: ["src/cli.ts"],
@@ -13,6 +14,10 @@ await build({
   target: "node22",
   banner: { js: "#!/usr/bin/env node" },
   legalComments: "none",
+  // Baked in rather than read at runtime: a copied bundle has no git tree and
+  // no package.json to ask, and it is the one artifact here that can silently
+  // fall behind, so the build is the only moment its identity can be captured.
+  define: { __UPLOADER_BUILD__: JSON.stringify(await buildStampJson()) },
 });
 
 // The bundle doubles as the package's `bin` entry — make it executable so

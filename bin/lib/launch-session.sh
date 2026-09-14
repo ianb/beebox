@@ -64,14 +64,13 @@ if [ -n "${LS_ISSUE:-}" ]; then
 fi
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
-  --arg emoji "$LS_EMOJI" \
   --arg agent "claude" \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" merge-base main HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
-    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+    '{branch:\$branch, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
 cd "\$wt_path"
@@ -129,14 +128,13 @@ if [ -n "${LS_ISSUE:-}" ]; then
 fi
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
-  --arg emoji "$LS_EMOJI" \
   --arg agent "codex" \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
-    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+    '{branch:\$branch, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
@@ -202,13 +200,6 @@ EOF
   chmod +x "$LS_LAUNCHER"
 }
 
-launch_session_default_emoji() {
-  local name="$1" emoji_idx
-  local palette=(🐛 🔍 🧪 📋 🚀 🧹 🔧 📦 🌱 🎯 🧭 🔒 📊 🎨 🪄 🧩 🔭 🧵 📮 🌊 🔥 🎁 🍀 🦉)
-  emoji_idx=$(( $(printf '%s' "$name" | cksum | cut -d' ' -f1) % ${#palette[@]} ))
-  printf '%s\n' "${palette[$emoji_idx]}"
-}
-
 launch_session_open() {
   local launch_intent
   # Record intent before asking Terminal to start a shell. The generated script
@@ -221,12 +212,10 @@ launch_session_open() {
   esac
   launch_intent=$(jq -cn \
     --arg branch "worktree-$LS_WORKSTREAM" \
-    --arg emoji "${LS_EMOJI:-}" \
     --arg agent "$LS_AGENT" \
     --arg model "${LS_MODEL:-}" \
     --arg description "$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
     '{branch:$branch,agent:$agent}
-     + if $emoji == "" then {} else {emoji:$emoji} end
      + if $model == "" then {} else {model:$model} end
      + if $description == "" then {} else {description:$description} end')
   if ! session_registry_begin_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "$launch_intent"; then

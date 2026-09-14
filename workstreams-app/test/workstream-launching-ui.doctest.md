@@ -21,7 +21,6 @@ function row(state: "active" | "expired", routingState: "launching" | "uncertain
       agent: "claude",
       hasSession: false,
       tty: null,
-      emoji: null,
       baseSha: null,
       removed: null,
       archived: null,

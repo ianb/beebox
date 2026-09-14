@@ -7,11 +7,14 @@
 
 import { homedir } from "node:os";
 
+import { buildStamp, describeBuild } from "./build-stamp.js";
+import { compareContractVersion, describeDrift, SCAN_CONTRACT_VERSION } from "./contract-version.js";
 import { loadConfig, type UploaderConfig } from "./config.js";
 import { MISSING_CONFIG_MESSAGE, pathExists, resolveConfigPath } from "./config-path.js";
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
-import { runAllTargets } from "./run-all.js";
+import { notifySweep } from "./notify.js";
+import { runAllTargets, type BoxSummary } from "./run-all.js";
 import { runScheduleCommand } from "./schedule-cli.js";
 
 function printHelp(): void {
@@ -26,6 +29,7 @@ function printHelp(): void {
       "~/.config/scan-uploader.json.",
       "",
       "  --retry-rejected  re-PUT previously rejected files (after a fix upstream)",
+      "  --version         show this uploader's build and wire-contract version",
       "  -h, --help        show this help",
       "",
       "Run `scan-uploader configure --help` or `scan-uploader schedule --help`",
@@ -44,6 +48,12 @@ async function main(): Promise<number> {
   }
   if (args.includes("--help") || args.includes("-h")) {
     printHelp();
+    return 0;
+  }
+  if (args.includes("--version")) {
+    // What this copy IS, for a machine where the answer is not obvious: a
+    // bundle never updates itself, so "which one is this" is a real question.
+    console.log(`${describeBuild(buildStamp())}, wire contract v${String(SCAN_CONTRACT_VERSION)}`);
     return 0;
   }
   const retryRejected = args.includes("--retry-rejected");
@@ -67,10 +77,35 @@ async function main(): Promise<number> {
   }
 
   try {
-    return await runAllTargets(config, { retryRejected });
+    // The desktop banner is posted here rather than inside the sweep so the
+    // sweep stays a pure function of its seams — and so nothing notifies when
+    // a test or a future caller drives `runAllTargets` directly.
+    const result = await runAllTargets(config, { retryRejected });
+    reportDrift(result.boxes);
+    await notifySweep(result.boxes);
+    return result.exitCode;
   } catch (e) {
     console.error(`scan-uploader: ${errorMessage(e)}`);
     return 1;
+  }
+}
+
+/**
+ * Says so when this uploader and a box disagree about the contract version.
+ *
+ * Per box, because two configured boxes can be on different deploys and a
+ * single verdict would be a lie about one of them. Stdout only: the desktop
+ * notification for drift is a separate decision, since drift is a *sticky*
+ * state — true on every sweep from the moment a box deploys until someone
+ * re-copies the bundle — and `notify.ts` only ever reports newly-observed
+ * events.
+ */
+function reportDrift(boxes: readonly BoxSummary[]): void {
+  for (const entry of boxes) {
+    const drift = describeDrift(
+      compareContractVersion({ client: SCAN_CONTRACT_VERSION, server: entry.summary.contractVersion }),
+    );
+    if (drift !== undefined) console.error(`${entry.box}: ${drift}`);
   }
 }
 

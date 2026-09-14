@@ -28,12 +28,13 @@ function caller(server, opts) {
 ```
 
 A pin is visible to the next status read: an unopinionated chat reports the box
-default as the model it will use, and says where that came from.
+default as the model it will use, and says where that came from. A box that has
+pinned nothing reports the `strong` tier for its engine rather than `null`.
 
 ```ts
 const server = await makeTestServer();
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":null,"source":"none","boxDefault":null,"pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
@@ -41,13 +42,17 @@ JSON.stringify(await caller(server).chat.status({}))
 => {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
 ```
 
-Clearing the pin returns the box to its harness default.
+Clearing the pin returns the box to the `strong` tier, not to "whatever the
+harness picks". An unpinned box still has a default it can name — that is what
+lets the chat UI say what a follower will run, and what the model dial compares
+against (boxholder, 2026-09-14: *"using the harness default is hard to
+understand"*).
 
 ```ts continue
 await caller(server).chat.setDefaultModel({ model: null });
 clearBoxConfigCache(server.boxRoot);
 (await caller(server).chat.status({})).boxDefault
-=> null
+=> claude-opus-5
 ```
 
 A model the box's engine cannot run is refused at the boundary rather than
