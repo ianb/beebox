@@ -10,6 +10,7 @@ import { BOX_PACKAGE_DOCS } from "./shared.js";
 import { z } from "zod";
 import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
+import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
 
 /**
  * Lead-in prose + `bbx create` section for the bbx command reference.
@@ -199,6 +200,7 @@ export function generateBbxCommands(): string {
     ...bbxCommandsTemplates(),
     ...bbxCommandsCore(),
     ...bbxCommandsScheduling(),
+    ...bbxCommandsConnectors(),
   ];
   return lines.join("\n");
 }
