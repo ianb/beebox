@@ -28,7 +28,7 @@ import {
 import { useVoiceCapabilities } from "./VoiceChip-capabilities";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
-import { SpeakerIcon, MicIcon, HqIcon } from "./VoiceChip-icons";
+import { SpeakerIcon, FloorIcon, HqIcon } from "./VoiceChip-icons";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -44,9 +44,13 @@ export interface VoiceChipFaceState {
 }
 
 /**
- * Presentational chip face: a split pill with two segments — a mic icon for
- * narration (input, dimmed when off) and a speaker icon for mute (output,
- * slashed when muted) — divided by a thin vertical rule, plus a transient
+ * Presentational chip face: a split pill with two segments, each carrying one
+ * irreducible thing — who holds the floor (`FloorIcon`: turn-taking, or you
+ * narrating while the box listens) and how the box answers (`SpeakerIcon`:
+ * aloud, or in writing). They are orthogonal, which is why both are shown: in
+ * narration the box is silent by default but may still speak by exception, and
+ * answering in text removes that exception. Divided by a thin vertical rule,
+ * plus a transient
  * "transcribing…" label while HQ transcription is in flight (the readable
  * text `NarrationStatusBadge` used to show, preserved here). Renderable
  * standalone (no Dropdown/router context), so the doctest exercises it
@@ -60,9 +64,7 @@ export function VoiceChipFace({ muted, narrationEnabled, hqInFlight, alert }: Vo
       data-voice-muted={muted}
       data-voice-narration={narrationEnabled}
     >
-      <span className={narrationEnabled ? "opacity-100" : "opacity-40"}>
-        <MicIcon />
-      </span>
+      <FloorIcon floor={narrationEnabled ? "person" : "shared"} />
       <span aria-hidden="true" className="w-px h-4 bg-white/20" />
       <SpeakerIcon muted={muted} />
       {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
@@ -116,11 +118,10 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           <MenuItem
             id="bbx-voice-narration"
             onClick={onToggleNarration}
-            icon={
-              <span className={narrationEnabled ? undefined : "opacity-40"}>
-                <MicIcon />
-              </span>
-            }
+            // The row's icon is the mode it SWITCHES TO, so the menu previews
+            // the glyph the chip will wear — not the mode you are in, which the
+            // chip already shows.
+            icon={<FloorIcon floor={narrationEnabled ? "shared" : "person"} />}
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
