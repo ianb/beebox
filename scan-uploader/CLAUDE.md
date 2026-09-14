@@ -42,12 +42,23 @@ check-state vocabulary, a status the client branches on, a limit the client must
 respect, and the hash or path shape. It does *not* cover an additive field, a
 `reason` string, or anything server-internal.
 
-The contract doc's ["When to bump"](../beebox/docs/scan-upload-contract.md)
-section has the full table and the worked reasoning — read it before deciding,
-because the judgment call is the whole mechanism. **When it is unclear, bump:**
-a needless bump costs one spurious "out of date" line, and a missed bump reports
-a stale client as current, which is worse than having no version at all. Nothing
-can test that you bumped it.
+The real question is never "does this touch something the contract mentions", it
+is **"can a client built before this change still do the right thing"** — so go
+and read the client's handling before deciding. Relaxing a requirement usually
+needs no bump (`parseRetryAfter` already defaults when the header is absent, so
+a `429` that omits it is a non-event). The contract doc's
+["When to bump"](../beebox/docs/scan-upload-contract.md) section has both
+tables and the worked reasoning. **When it is unclear, bump:** a needless bump
+costs one spurious "out of date" line, and a missed bump reports a stale client
+as current, which is worse than having no version at all. Nothing can test that
+you bumped it.
+
+One shape needs more than a bump. Making the server **require** something new
+refuses old clients on its own, and every copied bundle fails until someone
+re-copies it by hand — so ship it accept-but-not-require first, confirm the
+fleet has updated (the box's `scan-uploaders` health check reports each
+uploader's build), and only then make it mandatory. The contract doc's "Adding
+something the client must now send" has the sequence.
 
 Two things that are *not* this number: the build stamp (`src/build-stamp.ts`) is
 baked in by the build and never hand-edited, and `package.json`'s `version` is

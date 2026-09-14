@@ -175,7 +175,7 @@ Bump for:
 | A client obligation changes — the settle window, the identity snapshot, restat-before-disposition, or which responses permit a disposition | These live only in the client. An old client applies the old rule to a real scan, and the rule decides whether the only copy of a file is moved to the Trash. |
 | A check `state` is added, removed, or changes what it means for the client | An unknown state throws, so *adding* one is loud — but redefining an existing one is silent. Treat the whole vocabulary as versioned. |
 | A response status stops meaning what the client branches on (e.g. `422 hash-mismatch` becoming non-retryable) | The client's switch still compiles and now does the wrong thing. |
-| A limit the client must respect gets stricter — the 500-hash batch cap, the 50 MB file cap, `Retry-After` handling | The client chunks to the old cap and every request fails, or it retries wrongly. |
+| A limit or requirement gets stricter than a client built before the change **can comply with** — lowering the 500-hash batch cap below what it chunks to, or the 50 MB file cap below what it will send | The old client keeps sending what used to be legal and every such request now fails. |
 | Hash algorithm, hash encoding, or a route's path shape | Silent mismatch, not a parse error. |
 
 Do **not** bump for:
@@ -187,6 +187,12 @@ Do **not** bump for:
 | Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
 | Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
 | A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
+| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
+
+The row above is the one to read carefully, because it is where a plausible
+reading goes wrong: the question is never "does this touch a limit or a header
+the contract mentions", it is **"can a client built before this change still do
+the right thing"**. Go and read the client's handling before deciding.
 
 **When it is genuinely unclear, bump.** The cost of a needless bump is one
 spurious "out of date" line telling someone to re-copy a file they could have
@@ -200,6 +206,26 @@ are two spellings of one number, never per-side versions), this document, and
 the route doctests. Bumping does not refuse anything — an old client keeps
 uploading and starts being reported. And never bump the build stamp: it is a
 build artifact, not a hand-maintained number.
+
+### Adding something the client must now send
+
+A bump reports; it never refuses. But a change that makes the server **require**
+something new — a new mandatory header, a stricter body shape — refuses on its
+own, and every copied bundle in the field fails until somebody walks to that
+machine and copies a new file over. Nothing here auto-updates. So a bump is not
+sufficient for this shape of change, and the ordering is part of the change:
+
+1. Ship the server side **accepting but not requiring** it, and the client side
+   sending it. Verify-if-present; a missing value stays legal.
+2. Wait until every uploader has actually been re-copied. The box can tell you:
+   the `scan-uploaders` health check reports each uploader's build, so "have
+   they all been updated" is a question with an answer rather than a guess.
+3. Only then make it mandatory — and bump again, because *that* is the change
+   that alters what a correct client must do.
+
+Collapsing this into one step is the mistake, and it fails in the field rather
+than in a test: the doctests exercise a current client against a current box,
+which is the one pairing that cannot show the breakage.
 
 **The build stamp** (`X-Scan-Client-Build`, `X-Scan-Client-Built-At`) answers a
 different question: not "does this client still speak the protocol" but "how
