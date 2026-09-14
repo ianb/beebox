@@ -97,7 +97,7 @@ JSON.stringify({
   usedRecently: typeof listed[0].lastUsedAt === "string",
   fields: Object.keys(listed[0]).sort().join(","),
 })
-=> {"count":1,"name":"laptop-scansnap","revoked":false,"usedRecently":true,"fields":"createdAt,createdBy,lastUsedAt,name,revoked"}
+=> {"count":1,"name":"laptop-scansnap","revoked":false,"usedRecently":true,"fields":"createdAt,createdBy,lastClient,lastUsedAt,name,revoked"}
 ```
 
 ## Revocation is immediate and one-way
@@ -194,6 +194,81 @@ await verifyScanToken(box.root, racy.token)
 
 fs.readdirSync(path.join(box.root, ".beebox")).filter((f) => f.startsWith("scan-tokens.secret.json.tmp")).length
 => 0
+```
+
+## The request path records what the uploader said it was
+
+An uploader volunteers its contract version and build on every request. The box
+records them and never acts on them at the gate — an old uploader is reported,
+not refused — so this is provenance, not a credential check.
+
+```ts continue
+const idBox = await makeTmpBox();
+const idToken = await createScanToken(idBox.root, { name: "scansnap-laptop", createdBy: null });
+await resolveScanRequestAuth(idBox.root, {
+  authorization: `Bearer ${idToken.token}`,
+  "x-scan-contract": "1",
+  "x-scan-client-build": "16e177c0",
+  "x-scan-client-built-at": "2026-09-14T18:46:01.243Z",
+});
+JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+=> {"contract":"1","build":"16e177c0","builtAt":"2026-09-14T18:46:01.243Z"}
+```
+
+A checkout reports `source` instead of a build, which is the honest answer: it
+runs current source every sweep and cannot drift.
+
+```ts continue
+await resolveScanRequestAuth(idBox.root, {
+  authorization: `Bearer ${idToken.token}`,
+  "x-scan-contract": "1",
+  "x-scan-client-build": "source",
+});
+JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+=> {"contract":"1","build":"source","builtAt":null}
+```
+
+A later request that reports nothing CLEARS what was recorded, rather than
+leaving the previous uploader's identity in place. One token can be used by
+more than one uploader — a second laptop, or the same laptop after an older
+bundle is copied over the newer one — and keeping the newer identity would
+answer the stale-uploader question backwards, reporting a current build for a
+request an older uploader made.
+
+```ts continue
+await resolveScanRequestAuth(idBox.root, { authorization: `Bearer ${idToken.token}` });
+JSON.stringify(listScanTokens(idBox.root)[0].lastClient)
+=> null
+```
+
+An uploader too old to send the headers leaves `lastClient` null rather than
+recording a blank. "Not reported" and "reported as nothing" have to stay
+distinct, because the freshness health check treats the first as no opinion and
+would otherwise call every pre-existing uploader stale.
+
+```ts continue
+const oldBox = await makeTmpBox();
+const oldToken = await createScanToken(oldBox.root, { name: "older-uploader", createdBy: null });
+await resolveScanRequestAuth(oldBox.root, { authorization: `Bearer ${oldToken.token}` });
+JSON.stringify(listScanTokens(oldBox.root)[0].lastClient)
+=> null
+```
+
+Untrusted header text is capped, so a hostile or broken client cannot bloat the
+credential store:
+
+```ts continue
+await resolveScanRequestAuth(oldBox.root, {
+  authorization: `Bearer ${oldToken.token}`,
+  "x-scan-client-build": "x".repeat(5000),
+});
+listScanTokens(oldBox.root)[0].lastClient?.build?.length
+=> 100
+```
+
+```ts cleanup
+await idBox.cleanup();
+await oldBox.cleanup();
 ```
 
 ```ts cleanup

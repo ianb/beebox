@@ -154,6 +154,12 @@ async function runConfigure(args: readonly string[]): Promise<ConfigureResult> {
 function printResult(result: ConfigureResult): void {
   console.log(`configured: ${result.name} -> ${result.box} (server verified)`);
   console.log(`  config: ${result.configPath}`);
+  // Printed straight after the success line, not at the end: setup is the one
+  // moment someone is watching this output, and a drift warning buried under
+  // the ScanSnap instructions would be read by nobody.
+  for (const warning of result.warnings) {
+    console.error(`  warning: ${warning}`);
+  }
   console.log("");
   console.log("Next steps — set up one ScanSnap profile for this box:");
   console.log("  - Format: searchable PDF (ScanSnap's own OCR text layer)");

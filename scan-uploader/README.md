@@ -29,6 +29,9 @@ Each run, for every configured folder:
    the `trash` CLI or, failing that, an AppleScript Finder fallback — macOS
    only). It never deletes a file outright.
 
+Then, if the sweep actually uploaded or was refused something, it posts a
+desktop notification — see "Desktop notification" under Usage.
+
 If a run skipped anything as unsettled, it waits out the settle window and
 re-walks those folders — up to three rounds, then it leaves the rest to the
 next sweep. A folder-change trigger fires the instant a file appears, which is
@@ -196,6 +199,7 @@ message naming exactly what's wrong.
 
 ```bash
 bin/scan-uploader [config.json] [--retry-rejected]      # from the repo root
+bin/scan-uploader --version
 bin/scan-uploader configure <server-url-with-box> --folder <path> [options]
 bin/scan-uploader schedule <install|uninstall|status> [options]
 bin/scan-uploader --help
@@ -205,6 +209,40 @@ bin/scan-uploader --help
 on a machine holding only the copied bundle, run
 `node scan-uploader.mjs <same args>`. The package also declares the bundle
 as its `bin`, so it is npx-able if it's ever published.
+
+### Knowing whether this uploader is current
+
+A copied bundle never updates itself and the box it uploads to does, so the
+uploader reports what it is on every request and says something when the two
+have drifted apart:
+
+```bash
+bin/scan-uploader --version
+# running from source (a checkout — tracks current source), wire contract v1
+# bundle 16e177c0, built 2026-09-14T18:46:01Z, wire contract v1
+```
+
+Two separate facts, answering two questions.
+
+**The wire-contract version** (`src/contract-version.ts`) is compared every
+sweep: the uploader sends it, the box returns its own, and a mismatch prints
+which side is behind. A contract change that breaks *parsing* already fails
+loudly on its own — what this catches is the quieter case, a bundle whose
+parsing is fine but whose rules for when a scanned file is safe to move or
+delete are older than the box's. Those rules live only in the client. A box
+that reports no version at all (one running code older than the field) is not
+treated as drift.
+
+**The build stamp** (`src/build-stamp.ts`) is the revision and time the bundle
+was built, baked in by `build.ts`. It answers "how old is this copy" rather
+than "does it still speak the protocol", since an uploader can be current on
+the contract and still be missing features. The box records it, so a stale copy
+is visible from the box side too. `-dirty` on the revision means the bundle was
+built from uncommitted work and is not the revision it names.
+
+A checkout reports `source` rather than a build date, because that is the
+honest answer: `bin/scan-uploader` runs current source through tsx every sweep,
+so a checkout cannot drift. Only the copied bundle can.
 
 `configure` (see Setup above) takes the token on stdin — piped, or prompted
 without echo on a TTY — and supports `--disposition`, `--name`, and
@@ -217,6 +255,54 @@ error (hash mismatch, over the size limit, or exhausted rate-limit
 retries); zero otherwise. One line per file action is printed to stdout
 (`uploaded`, `duplicate`, `rejected`, `skipped-unsettled`,
 `skipped-identity-changed`); a one-line summary per target follows.
+
+### Desktop notification
+
+Under the launchd agent all of that output goes to
+`~/Library/Logs/scan-uploader.log`, which nobody reads — so a sweep that
+did something also posts a macOS notification (`src/notify.ts`):
+
+- **Scan uploaded** — files this sweep uploaded, and the boxes they went to.
+- **Scan refused** — files the server rejected on *this* sweep's upload,
+  left in place. Its own notification group, so a later "Scan uploaded"
+  can't replace an unread refusal.
+
+Two things it deliberately does *not* do. It says nothing on a quiet
+sweep: the interval fires whether or not a scan landed, and a banner every
+15 minutes would train you to ignore banners. And it reports a rejection
+only on the sweep that *learned* of it — a rejected file stays in place and
+the server keeps remembering its hash, so the run's `rejected` count stays
+non-zero from then on, and notifying on that would nag forever about a file
+you already know about. Per-file transport errors and an unreadable target
+folder are left to stdout and the exit code for the same reason: the
+transient ones fix themselves next sweep, and the sticky ones would nag
+with nothing new to say.
+
+macOS only (same posture as the `trash` disposition; elsewhere it's a
+no-op). A notifier that fails prints one line to stderr and is otherwise
+ignored: it must never be able to fail the sweep it's reporting on.
+
+#### Making them stay until dismissed
+
+A notification that flashes for five seconds is no use for a scan that
+landed while you were away from the desk. macOS calls the persistent style
+**Alerts**, and it is a *per-sender* setting in System Settings that a
+sender cannot set for itself — no flag or AppleScript keyword changes it.
+So this is a one-time toggle on your machine:
+
+```bash
+brew install terminal-notifier   # once
+```
+
+Then **System Settings → Notifications → terminal-notifier → Alerts**.
+(The entry appears only after it has posted once, so run a sweep first.)
+
+With `terminal-notifier` installed, these notifications post under its own
+identity, so that toggle affects these and nothing else. Without it the
+uploader falls back to `osascript`, which needs nothing installed — the
+copy-one-file machine still gets notified — but posts as "Script Editor",
+whose Alerts setting is shared with every other AppleScript notification on
+the machine.
 
 ## ScanSnap profile setup
 

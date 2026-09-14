@@ -45,6 +45,27 @@ export interface RunAllOptions extends RunOptions {
   readonly deps?: RunAllDeps;
 }
 
+/** One box's totals for the whole sweep: summed across its targets and across
+ * the settle-retry rounds, so a file uploaded in round 2 still counts once.
+ *
+ * Grouped by server AND box, not by box alone. `configure` appends rather than
+ * replaces when the same box is given a different `serverUrl`
+ * (see the README's Config section), so two targets can carry the same slug
+ * against different deploys. Merging those made the contract-version verdict
+ * depend on target order — one endpoint's answer silently overwriting the
+ * other's. Two endpoints stay two rows, both labelled with the slug. */
+export interface BoxSummary {
+  readonly box: string;
+  readonly summary: RunSummary;
+}
+
+export interface RunAllResult {
+  readonly exitCode: number;
+  /** Only boxes that produced a summary — a target that threw before its sweep
+   * contributes nothing here, and is reported on stderr and in `exitCode`. */
+  readonly boxes: readonly BoxSummary[];
+}
+
 export function printSummary(target: TargetConfig, summary: RunSummary): void {
   console.log(
     `${target.folder}: uploaded=${String(summary.uploaded)} duplicate=${String(summary.duplicate)} ` +
@@ -65,9 +86,11 @@ function hasFailure(summary: RunSummary): boolean {
  * abandon the whole run — so a stale first target meant the second never swept
  * at all. The run reports the failure, exits non-zero, and keeps going.
  */
-export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<number> {
+export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<RunAllResult> {
   const deps = options.deps ?? DEFAULT_RUN_ALL_DEPS;
   const runOptions: RunOptions = { retryRejected: options.retryRejected };
+  // Keyed by server + box; `BoxSummary.box` carries the display label.
+  const totals = new Map<string, { box: string; summary: RunSummary }>();
   let exitCode = 0;
   let pending: readonly TargetConfig[] = config.targets;
   for (let round = 0; ; round++) {
@@ -82,11 +105,32 @@ export async function runAllTargets(config: UploaderConfig, options: RunAllOptio
         continue;
       }
       printSummary(target, summary);
+      const key = `${target.serverUrl}\u0000${target.box}`;
+      totals.set(key, { box: target.box, summary: addSummaries(totals.get(key)?.summary, summary) });
       if (hasFailure(summary)) exitCode = 1;
       if (summary.skippedUnsettled > 0) unsettled.push(target);
     }
-    if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) return exitCode;
+    if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) {
+      return { exitCode, boxes: Array.from(totals.values()) };
+    }
     await deps.wait(SETTLE_RETRY_WAIT_MS);
     pending = unsettled;
   }
+}
+
+function addSummaries(left: RunSummary | undefined, right: RunSummary): RunSummary {
+  if (left === undefined) return right;
+  return {
+    uploaded: left.uploaded + right.uploaded,
+    duplicate: left.duplicate + right.duplicate,
+    rejected: left.rejected + right.rejected,
+    rejectedOnUpload: left.rejectedOnUpload + right.rejectedOnUpload,
+    skippedUnsettled: left.skippedUnsettled + right.skippedUnsettled,
+    skippedIdentityChanged: left.skippedIdentityChanged + right.skippedIdentityChanged,
+    errors: left.errors + right.errors,
+    // Not summed — an observation, and the later round saw the box more
+    // recently. A round that made no request reports `undefined` and must not
+    // erase what an earlier round learned.
+    contractVersion: right.contractVersion ?? left.contractVersion,
+  };
 }
