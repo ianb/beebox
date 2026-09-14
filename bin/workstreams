@@ -505,8 +505,6 @@ case "$cmd" in
       printf '\n' >> "$prompt_file"
       workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" >> "$prompt_file"
     fi
-    emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
-    [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
     # The recorded model belongs to the recorded agent's namespace. When
     # --agent overrides to a different agent, drop it — otherwise a workstream
     # launched on Claude and resumed with --agent codex runs
@@ -520,12 +518,11 @@ case "$cmd" in
     fi
     LS_MONO="$WT_MONO"
     LS_WORKSTREAM="$name"
-    LS_SESSION_NAME="$emoji $name"
+    LS_SESSION_NAME="$name"
     LS_AGENT="$resolved_agent"
     LS_MODEL="$model"
     LS_REMOTE_CONTROL=1
     LS_PROMPT_FILE="$prompt_file"
-    LS_EMOJI="$emoji"
     LS_LAUNCH_DIR="$launch_dir"
     LS_WORKTREE_PATH="$target"
     LS_CODEX_RESUME=0
@@ -535,7 +532,7 @@ case "$cmd" in
       LS_CODEX_RESUME=1
     fi
     export LS_MONO LS_WORKSTREAM LS_SESSION_NAME LS_AGENT LS_MODEL LS_REMOTE_CONTROL
-    export LS_PROMPT_FILE LS_EMOJI LS_LAUNCH_DIR LS_WORKTREE_PATH LS_CODEX_RESUME
+    export LS_PROMPT_FILE LS_LAUNCH_DIR LS_WORKTREE_PATH LS_CODEX_RESUME
     export LS_CLAUDE_RESUME_SESSION LS_DESCRIPTION_FILE
     launch_session_build || exit 1
     workstream_resume_status opening-terminal

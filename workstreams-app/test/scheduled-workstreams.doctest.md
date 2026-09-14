@@ -64,7 +64,6 @@ function row(name: string, schedule: Workstream["schedule"], routingState: Works
       agent: "claude",
       hasSession: false,
       tty: null,
-      emoji: null,
       baseSha: null,
       removed: null,
       archived: null,
