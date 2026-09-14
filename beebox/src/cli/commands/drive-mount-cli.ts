@@ -19,7 +19,8 @@ import {
   type MountFolderResult,
   type UnmountResult,
 } from "../../connectors/drive-mounts.js";
-import { dispatchDrive, jsonFlag, localDriveService, runDriveVerb } from "./drive-dispatch.js";
+import { jsonFlag, runCredentialedVerb } from "../lib/credentialed-verb.js";
+import { dispatchDrive, localDriveService } from "./drive-dispatch.js";
 
 export const driveMountCommand = new Command("mount")
   .description("Mirror a Drive folder into a directory (the directory is the mount)")
@@ -28,7 +29,7 @@ export const driveMountCommand = new Command("mount")
   .option("--json", "Print the result as one JSON object")
   .action(async (input: string, dir: string) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: jsonFlag(driveMountCommand),
       run: () =>
         dispatchDrive<MountFolderResult>({
@@ -57,7 +58,7 @@ export const driveLinkCommand = new Command("link")
   .option("--json", "Print the result as one JSON object")
   .action(async (input: string, target: string) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: jsonFlag(driveLinkCommand),
       run: () =>
         dispatchDrive<LinkResult>({
@@ -79,7 +80,7 @@ export const driveUnmountCommand = new Command("unmount")
   .option("--json", "Print the result as one JSON object")
   .action(async (target: string, options: { json?: boolean }) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: options.json,
       // Unmounting needs no Drive service — but it still delegates outside the
       // tooling profile, so one rule covers the family and the commit lands

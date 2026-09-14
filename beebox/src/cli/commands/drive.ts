@@ -32,12 +32,14 @@ import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import type { SyncResult } from "../../connectors/index.js";
 import { requireDriveId } from "../../connectors/drive-mounts.js";
 import {
+  reportRefusal,
+  runCredentialedVerb,
+  type VerbRefusal,
+} from "../lib/credentialed-verb.js";
+import {
   dispatchDrive,
   localDriveService,
-  reportRefusal,
-  runDriveVerb,
   syncWrongProfileRefusal,
-  type DriveRefusal,
 } from "./drive-dispatch.js";
 import { driveAddCommand, driveInspectCommand } from "./drive-file-cli.js";
 import { driveStatusCommand } from "./drive-status-cli.js";
@@ -110,7 +112,7 @@ const driveSyncCommand = new Command("sync")
  * date" about a service we never contacted is the invisible
  * nothing-happened failure this whole seam exists to remove.
  */
-function syncRefusal(result: SyncResult): DriveRefusal | null {
+function syncRefusal(result: SyncResult): VerbRefusal | null {
   if (result.skipped) {
     return {
       kind: result.skipped.reason === "not-allowed" ? "FORBIDDEN" : "PRECONDITION_FAILED",
@@ -130,7 +132,7 @@ const driveListCommand = new Command("list")
   .option("--json", "Print the listing as one JSON array")
   .action(async (folderInput: string | undefined, options: { json?: boolean }) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: options.json,
       run: () =>
         dispatchDrive<DriveListRow[]>({

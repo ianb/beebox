@@ -19,13 +19,12 @@ import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../src/services/google-drive.js";
 import { mountDriveFolder, type MountFolderResult } from "../../../src/connectors/drive-mounts.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../../src/connectors/drive-inspect.js";
+import { dispatchDrive, localDriveService } from "../../../src/cli/commands/drive-dispatch.js";
 import {
-  dispatchDrive,
-  localDriveService,
   reportRefusal,
-  runDriveVerb,
-  type DriveRefusal,
-} from "../../../src/cli/commands/drive-dispatch.js";
+  runCredentialedVerb,
+  type VerbRefusal,
+} from "../../../src/cli/lib/credentialed-verb.js";
 // Registers the sheets/docs handlers, the same way the CLI entry point does.
 import "../../../src/connectors/drive-handler-sheets.js";
 import "../../../src/connectors/drive-handler-docs.js";
@@ -107,7 +106,7 @@ function inspectVerb(boxRoot: string, url: string) {
 }
 
 /** "KIND | fix | message" — the three things a relayed refusal has to carry. */
-function refusalLine(result: { ok: boolean; error?: DriveRefusal }): string {
+function refusalLine(result: { ok: boolean; error?: VerbRefusal }): string {
   if (result.ok || result.error === undefined) return "no refusal";
   return `${result.error.kind} | ${result.error.fix} | ${result.error.message}`;
 }
@@ -173,7 +172,7 @@ JSON.stringify(seen.ok ? { name: seen.value.name, cardType: seen.value.cardType,
 agent never parses prose.
 
 ```ts continue
-const json = await captureLogs(() => runDriveVerb({
+const json = await captureLogs(() => runCredentialedVerb({
   json: true,
   run: () => inspectVerb(ctx.boxRoot, "https://drive.google.com/drive/folders/folder-1"),
   print: () => { throw new Error("--json must not print the human form"); },

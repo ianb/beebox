@@ -13,7 +13,8 @@ import { isRecord } from "../../lib/is-record.js";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { addDriveFile, type AddDriveFileResult } from "../../connectors/drive-add-file.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../connectors/drive-inspect.js";
-import { dispatchDrive, jsonFlag, localDriveService, runDriveVerb } from "./drive-dispatch.js";
+import { jsonFlag, runCredentialedVerb } from "../lib/credentialed-verb.js";
+import { dispatchDrive, localDriveService } from "./drive-dispatch.js";
 
 /** The handler-specific half of an inspect: sheet tabs, lossy counts, comments. */
 function printInspectDetails(details: Record<string, unknown>): void {
@@ -67,7 +68,7 @@ export const driveInspectCommand = new Command("inspect")
   .option("--json", "Print the result as one JSON object")
   .action(async (input: string, options: { json?: boolean }) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: options.json,
       run: () =>
         dispatchDrive<DriveInspectResult>({
@@ -86,7 +87,7 @@ export const driveAddCommand = new Command("add")
   .option("--json", "Print the result as one JSON object")
   .action(async (input: string, target: string) => {
     const boxRoot = await requireBoxRoot();
-    await runDriveVerb({
+    await runCredentialedVerb({
       json: jsonFlag(driveAddCommand),
       run: () =>
         dispatchDrive<AddDriveFileResult>({

@@ -19,7 +19,7 @@
 import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 import { boxClient } from "../lib/box-client.js";
-import { reportRefusal, refusalFor, type DriveRefusal } from "./drive-dispatch.js";
+import { reportRefusal, refusalFor, type VerbRefusal } from "../lib/credentialed-verb.js";
 import type { AppRouter } from "../../webapp/trpc/router.js";
 import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
 
@@ -77,7 +77,7 @@ export function forceWakeupLines(result: ForceResult): string[] {
  * refusal naming the party who can act on it.
  */
 export async function forceWakeup(options: ForceWakeupOptions): Promise<
-  { ok: true; value: ForceResult } | { ok: false; error: DriveRefusal }
+  { ok: true; value: ForceResult } | { ok: false; error: VerbRefusal }
 > {
   const client = boxClient();
   if (!client.ok) {
