@@ -1,11 +1,25 @@
 ---
 title: "History shows no trigger for procedure and trick commits, and its Workflow filter only matches pre-rename runs"
-workstream: unattached
+workstream: history-trigger-trailers
 area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 priority: normal
+resolution: implemented
 ---
+
+**Closed by `55eb699f4` (feat(history): one triggered-by axis over every trigger trailer),
+with a follow-up fix in `7ba8be1b1`.** New `beebox/src/shared/commit-trailers.ts` owns the
+trailer vocabulary end to end: readers in `CommitTimeline.tsx`/`CommitDetail-commit.tsx`
+now badge `Procedure`/`Step`/`Run-By` via `commitTriggers`/`commitStep`, `stripTrailers`
+no longer leaks them into the body, and the facet/grep axis (`lib/git-log.ts`
+`collectTrailerFacets`, `webapp/trpc/routers/history.ts` `buildGreps`) is keyed on the new
+kind-prefixed trigger ids rather than the retired `Workflow:` key — `Workflow:` folds into
+the `procedure` kind so pre-rename history still answers the filter. The user-story catalog
+recheck this issue asked for ran and cleared. One divergence from what the issue implies:
+writers (`Procedure:`/`Step:`/`Run-By:` trailer emission) were already correct and untouched;
+only the readers/facets/grep were behind. `Run-By` remains untested against real data — zero
+commits carry it in any local box, so that path is covered by fixture only.
 
 **What is wrong.** The history UI reads only two trigger conventions, and one of them is the retired name.
 
@@ -45,8 +59,8 @@ closed issues from the same 2026-08-21 audit, whose fixes do not touch trailers.
 
 ## Updating the user-story catalog
 
-This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -67,4 +81,4 @@ pnpm exec tsx beebox/user-stories/pipeline/render.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../beebox/user-stories/README.md).
+[the pipeline README](../../../beebox/user-stories/README.md).

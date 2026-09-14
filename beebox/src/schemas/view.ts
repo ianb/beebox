@@ -77,7 +77,7 @@ params:
 Available views:
 ${NAMED_VIEWS.map((v) => `- \`${v.name}\` — ${v.description}`).join("\n")}
 
-\`params\` configures the view (only \`history\` takes params today: \`connectors\`/\`workflows\` string lists, \`touchpoint\`/\`feedback\` booleans, \`session\` string). A history card with params IS a saved filter — a stable, linkable slice of the timeline.
+\`params\` configures the view (only \`history\` takes params today: \`connectors\`/\`triggers\` string lists (a trigger is \`procedure/<name>\`, \`trick/<name>\`, or \`command/<name>\`), \`touchpoint\`/\`feedback\` booleans, \`session\` string). A history card with params IS a saved filter — a stable, linkable slice of the timeline.
 
 The markdown body is a notes margin (rationale, observations, ideas about this surface) — it shows in source view, not in the rendered surface.`,
 });

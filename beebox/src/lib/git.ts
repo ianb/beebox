@@ -4,7 +4,7 @@
  * Git is the state engine - a change hasn't "happened" until it's committed.
  *
  * The log-history/facet sub-feature lives in `git-log.ts`, trailer parsing +
- * the trailer-key vocabulary in `git-trailers.ts`, and shared error/retry
+ * the trailer-key vocabulary in `shared/commit-trailers.ts`, and shared error/retry
  * internals in `git-internal.ts`. This file re-exports the public surface of
  * those siblings so callers keep importing everything from "lib/git".
  *
@@ -41,13 +41,8 @@ import { inspectIndexLock, recoverStaleIndexLock } from "./git-stale-lock.js";
 import { sleep } from "./sleep.js";
 import { errorMessage } from "./error-guards.js";
 import type { GitLogFormat } from "./git-internal.js";
-import { parseTrailers } from "./git-trailers.js";
+import { parseTrailers } from "../shared/commit-trailers.js";
 
-export {
-  CONNECTOR_TRAILER_KEYS,
-  TOUCHPOINT_TRAILER_KEYS,
-  FEEDBACK_TRAILER_KEYS,
-} from "./git-trailers.js";
 export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";

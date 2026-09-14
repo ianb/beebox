@@ -4,12 +4,14 @@ import { EMPTY_FILTER } from "./history-filter";
 import type { HistoryFilterState } from "./HistoryFilterBar";
 import { paramsToFilter } from "./history-filter";
 import { HISTORY_VIEW_PARAMS } from "@shared/named-views";
+import { triggerId } from "@shared/commit-trailers";
+import { isRecord } from "@shared/is-record";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { withoutShellParams } from "../../lib/system-card-navigation";
 import { viewStateSearchValue } from "../../lib/view-url";
 
 const HISTORY_FILTER_STATE = z.object({
-  connectors: z.array(z.string()), workflows: z.array(z.string()),
+  connectors: z.array(z.string()), triggers: z.array(z.string()),
   touchpoint: z.boolean(), feedback: z.boolean(),
   session: z.string().nullable(), path: z.string().nullable(),
 }).strict();
@@ -21,12 +23,35 @@ const HISTORY_CARD_STATE = z.object({
 }).strict();
 export type HistoryCardState = z.infer<typeof HISTORY_CARD_STATE>;
 
-export function parseHistoryCardState(value: ViewState | null) { return HISTORY_CARD_STATE.safeParse(value ?? {}); }
+/**
+ * Pre-rename state spelled the triggered-by axis `workflows`, holding bare run
+ * names. History state is serialized into the URL, so a link saved or shared
+ * before the rename still carries it — migrate it here rather than render the
+ * whole card as invalid state.
+ */
+function migrateLegacyFilter(value: ViewState): ViewState {
+  const filter = value.filter;
+  if (!isRecord(filter) || !("workflows" in filter)) return value;
+  const { workflows, ...rest } = filter;
+  return {
+    ...value,
+    filter: "triggers" in rest ? rest : { ...rest, triggers: triggerIds(workflows) },
+  };
+}
+
+export function parseHistoryCardState(value: ViewState | null) { return HISTORY_CARD_STATE.safeParse(migrateLegacyFilter(value ?? {})); }
 
 function strings(value: unknown): ViewStateValue {
   if (typeof value === "string") return value === "" ? [] : value.split(",").filter(Boolean);
   if (Array.isArray(value) && value.every(item => typeof item === "string")) return value;
   return typeof value === "number" || typeof value === "boolean" || value === null ? value : String(value);
+}
+/** Pre-rename `workflow=` names, as procedure trigger ids. */
+function triggerIds(value: unknown): ViewStateValue {
+  const names = strings(value);
+  if (!Array.isArray(names)) return names;
+  // Invalid values survive verbatim for localized rendering, as in `strings`.
+  return names.map((name) => (typeof name === "string" ? triggerId("procedure", name) : name));
 }
 function bool(value: unknown): ViewStateValue {
   if (value === true || value === "true" || value === "1") return true;
@@ -41,7 +66,10 @@ function scalar(value: unknown): ViewStateValue {
 export function legacyHistoryState(search: Record<string, unknown>, options?: { commit?: string; defaults?: HistoryFilterState }): ViewState {
   const filter: Record<string, ViewStateValue> = { ...EMPTY_FILTER, ...options?.defaults };
   if (search.connector !== undefined) filter.connectors = strings(search.connector);
-  if (search.workflow !== undefined) filter.workflows = strings(search.workflow);
+  // `workflow` is the pre-rename spelling; its bare run names are procedure
+  // trigger ids now, so an old link still selects the same runs.
+  if (search.trigger !== undefined) filter.triggers = strings(search.trigger);
+  else if (search.workflow !== undefined) filter.triggers = triggerIds(search.workflow);
   if (search.touchpoint !== undefined) filter.touchpoint = bool(search.touchpoint);
   if (search.feedback !== undefined) filter.feedback = bool(search.feedback);
   if (search.session !== undefined) filter.session = scalar(search.session);
@@ -49,7 +77,7 @@ export function legacyHistoryState(search: Record<string, unknown>, options?: { 
   return { filter, ...(options?.commit === undefined ? {} : { commit: options.commit }) };
 }
 
-const HISTORY_LEGACY_QUERY_KEYS = ["connector", "workflow", "touchpoint", "feedback", "session", "path"] as const;
+const HISTORY_LEGACY_QUERY_KEYS = ["connector", "trigger", "workflow", "touchpoint", "feedback", "session", "path"] as const;
 function hasLegacyHistoryQuery(params: Record<string, string>): boolean {
   return HISTORY_LEGACY_QUERY_KEYS.some(key => params[key] !== undefined);
 }

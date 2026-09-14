@@ -11,6 +11,8 @@
 
 import { z } from "zod";
 
+import { TRIGGER_ID_PATTERN, triggerId } from "./commit-trailers.js";
+
 /**
  * Where a resolved param value came from. Open-ended by design — an
  * embed-site origin joins when transclusion passes params. Consumers:
@@ -90,7 +92,7 @@ export function resolveViewParams(input: {
 export const HISTORY_VIEW_PARAMS = z
   .object({
     connectors: z.array(z.string()).optional(),
-    workflows: z.array(z.string()).optional(),
+    triggers: z.array(z.string().regex(TRIGGER_ID_PATTERN)).optional(),
     touchpoint: z.boolean().optional(),
     feedback: z.boolean().optional(),
     session: z.string().optional(),
@@ -106,8 +108,13 @@ function parseQueryBool(raw: string): boolean | undefined {
 
 /**
  * History's query spelling matches the History page's own search params
- * (`connector`/`workflow` singular, comma-separated) so the card-override
+ * (`connector`/`trigger` singular, comma-separated) so the card-override
  * URL and the page URL speak one vocabulary.
+ *
+ * `workflow=` is the pre-rename spelling of `trigger=`, still read so links
+ * and cards written before the rename keep selecting the same runs — their
+ * bare names become `procedure/<name>` trigger ids, which is the kind those
+ * runs are now.
  */
 export const HISTORY_QUERY_CODEC: ViewQueryCodec = {
   fromQuery(query) {
@@ -116,9 +123,15 @@ export const HISTORY_QUERY_CODEC: ViewQueryCodec = {
     if (connector !== undefined && connector !== "") {
       out["connectors"] = connector.split(",").filter((s) => s !== "");
     }
+    const trigger = query["trigger"];
     const workflow = query["workflow"];
-    if (workflow !== undefined && workflow !== "") {
-      out["workflows"] = workflow.split(",").filter((s) => s !== "");
+    if (trigger !== undefined && trigger !== "") {
+      out["triggers"] = trigger.split(",").filter((s) => s !== "");
+    } else if (workflow !== undefined && workflow !== "") {
+      out["triggers"] = workflow
+        .split(",")
+        .filter((s) => s !== "")
+        .map((name) => triggerId("procedure", name));
     }
     for (const key of ["touchpoint", "feedback"] as const) {
       const raw = query[key];
@@ -137,7 +150,7 @@ export const HISTORY_QUERY_CODEC: ViewQueryCodec = {
     const p = parsed.data;
     const out: Record<string, string> = {};
     if (p.connectors !== undefined && p.connectors.length > 0) out["connector"] = p.connectors.join(",");
-    if (p.workflows !== undefined && p.workflows.length > 0) out["workflow"] = p.workflows.join(",");
+    if (p.triggers !== undefined && p.triggers.length > 0) out["trigger"] = p.triggers.join(",");
     if (p.touchpoint !== undefined) out["touchpoint"] = String(p.touchpoint);
     if (p.feedback !== undefined) out["feedback"] = String(p.feedback);
     if (p.session !== undefined && p.session !== "") out["session"] = p.session;
@@ -161,7 +174,7 @@ export const NAMED_VIEWS: readonly NamedView[] = [
   {
     name: "history",
     description:
-      "The commit timeline, filtered by the card's params (connectors, workflows, touchpoint, feedback, session) — a saved filter over history",
+      "The commit timeline, filtered by the card's params (connectors, triggers, touchpoint, feedback, session) — a saved filter over history",
     params: HISTORY_VIEW_PARAMS,
     query: HISTORY_QUERY_CODEC,
   },
