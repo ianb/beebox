@@ -13,6 +13,7 @@ import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./gmail-mim
 import { preserveAgentFields } from "./preserve-agent-fields.js";
 import { findTrackedGmailThreads, type TrackedGmailThread } from "./gmail-tracking.js";
 import type { ThreadNote } from "./gmail-commit.js";
+import { assertAnnexBox } from "../core/annex/assert-annex-box.js";
 
 const MESSAGE_CARD_RE = /^msg-\d+\.email-message\.card$/;
 
@@ -259,6 +260,10 @@ export async function writeThreadCards(opts: {
   /** When supplied, unknown thread IDs are created only if explicitly allowed. */
   createThreadIds?: ReadonlySet<string>;
 }): Promise<WriteThreadsResult> {
+  // Gmail attachments are asset bytes written into an attach scope and staged
+  // by name, so an ignored asset makes `git add` fail with the message already
+  // on disk.
+  await assertAnnexBox(opts.boxRoot, "Gmail thread sync");
   const result: WriteThreadsResult = { created: [], updated: [], notes: [], seenMessageIds: [] };
   const tracked = await findTrackedGmailThreads(opts.boxRoot);
   for (const [threadId, messages] of groupByThread(opts.messages)) {

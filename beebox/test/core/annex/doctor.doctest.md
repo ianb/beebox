@@ -62,7 +62,7 @@ A correctly configured repository reports every check clean and changes
 nothing:
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 await installHooks(box);
 await writeAnnexInfoAttributes(box.root);
 const annex = healthyFake();
@@ -90,7 +90,7 @@ annex objects, so an in-place edit still corrupts the object and `fsck` does
 not notice.
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "true" },
@@ -170,7 +170,7 @@ the manifest scheme's asset-ignore block. The doctor must expose that broken
 half-state and name the existing repair:
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 await installHooks(box);
 await writeAnnexInfoAttributes(box.root);
 await box.write(".gitignore", GITIGNORE_BLOCK);
@@ -227,7 +227,7 @@ await box.cleanup();
 On a box that IS annexed:
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "false" },
@@ -439,7 +439,7 @@ unhealthy. Read-only mode reports both a foreign `post-checkout` and a missing
 `post-merge` without touching either one:
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 await installHooks(box);
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
@@ -532,7 +532,7 @@ cannot be inferred from either having run. A hook that does not invoke annex is
 reported:
 
 ```ts
-const box = await makeTmpBox({ annex: true });
+const box = await makeTmpBox({ git: true });
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
 await fs.mkdir(path.join(box.root, ".git", "hooks"), { recursive: true });

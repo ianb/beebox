@@ -46,7 +46,7 @@ import {
   type WakeupOutcome,
   type WakeupRunner,
 } from "./promote-wakeup.js";
-import { isAnnexBox } from "../annex/is-annex-box.js";
+import { assertAnnexBox } from "../annex/assert-annex-box.js";
 
 // A batch that promoted nothing still owes no wakeup of its own, but a marker
 // left by an earlier pass is always retried — see `runPendingWakeup`.
@@ -69,9 +69,10 @@ export interface ScanPromoteDeps {
 export interface ScanPromoteResult {
   /**
    * Why the pass did nothing: `locked` (another process held the promotion
-   * lock) or `not-annex` (the box cannot import asset bytes at all).
+   * lock). A box that cannot hold asset bytes is a broken invariant, not a
+   * skip — see `assertAnnexBox`.
    */
-  skipped: "locked" | "not-annex" | null;
+  skipped: "locked" | null;
   /** Entries that reached `imported` this pass. */
   imported: number;
   /** Entries left in `promoting` because their upload failed. */
@@ -227,24 +228,13 @@ export async function runScanPromotePass(opts: {
   const runWakeup = opts.deps?.runWakeup ?? spawnBbxWakeup;
   const lockPath = promotionLockPath(boxRoot);
 
-  // Re-probed every pass rather than once at registration: a box can be
-  // de-annexed while the server runs (an older `bbx init`, a hand-edited
-  // `.gitignore`), and a pass on such a box would drive every pending entry
-  // through an upload that cannot succeed — burning the retry budget and
-  // leaving entries stuck in `promoting`. Two small file reads, against work
-  // that spawns a subprocess per group. The routes refuse in the same
-  // condition (see webapp/routes/scan-upload.ts), so on a box that was never
-  // converted there is nothing here to skip.
-  if (!(await isAnnexBox(boxRoot))) {
-    console.error(
-      `[scan] Box ${boxRoot} is not annex-converted; skipping the promote pass. ` +
-        "Quarantined files stay put until it is converted (`bbx attachments to-annex`).",
-    );
-    return {
-      skipped: "not-annex", imported: 0, failed: 0, questions: 0, wakeup: { kind: "not-needed" },
-      importedRemoved: 0, tombstoned: 0, tombstonesRemoved: 0,
-    };
-  }
+  // Re-probed every pass rather than once at registration: the box
+  // `.gitignore` can be hand-edited while the server runs, and a pass on such
+  // a box would drive every pending entry through an upload that cannot
+  // succeed — burning the retry budget and leaving entries stuck in
+  // `promoting`. Two small file reads, against work that spawns a subprocess
+  // per group.
+  await assertAnnexBox(boxRoot, "scan promote");
 
   try {
     await acquireLock(lockPath, { purpose: "scan-promote" });

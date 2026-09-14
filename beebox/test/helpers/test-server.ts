@@ -26,7 +26,8 @@ import { createServer } from "../../src/webapp/server.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
-import { makeBoxAnnexShaped } from "./annex-box.js";
+import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
+import { createGitAnnexService } from "../../src/services/git-annex.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { signSession, type SessionUser } from "../../src/webapp/auth.js";
 
@@ -69,16 +70,6 @@ export interface TestServerOptions {
    */
   openAccess?: boolean | undefined;
   /**
-   * Serve a box that has been converted to git-annex (assets visible to git,
-   * annex holds the bytes). Defaults to `false` — the template box is on the
-   * manifest scheme, like a box that has not run `bbx attachments to-annex`.
-   *
-   * Routes that write asset bytes gate on this shape: the scan-upload routes
-   * refuse with a 503 on a manifest-scheme box, so their doctests declare which
-   * side they are testing rather than inheriting it.
-   */
-  annexBox?: boolean | undefined;
-  /**
    * Chat backend for every session this server creates. Pass
    * `createFakeChatBackend()` to exercise the chat-send path (including a run
    * start that fails) without spawning a real Claude subprocess. Omit and the
@@ -96,18 +87,6 @@ console.log = (...args: unknown[]) => {
   const first = args[0];
   if (typeof first === "string" && first.startsWith("[chat-history:")) return;
   _origLog(...args);
-};
-
-// Same treatment for the scan-upload routes' registration refusal. Every
-// makeTestServer() boots a manifest-scheme box unless it asks for
-// `annexBox: true`, and the scan routes correctly log one line per boot saying
-// they are disabled. Useful on a real box, pure noise across hundreds of route
-// tests that never touch scan. Narrow on purpose — only this exact message.
-const _origError = console.error;
-console.error = (...args: unknown[]) => {
-  const first = args[0];
-  if (typeof first === "string" && first.startsWith("[scan] Box ") && first.includes("not annex-converted")) return;
-  _origError(...args);
 };
 
 // A fully-initialized box (directories + git repo + initial commit) is
@@ -141,10 +120,12 @@ function getTemplateBox(): Promise<string> {
       for (const mod of ["react", "react-dom"]) {
         await symlink(join(reactNodeModules, mod), join(dir, "node_modules", mod), "dir");
       }
-      execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
-        cwd: dir,
-        stdio: "pipe",
-      });
+      // Annex between `git init` and the initial commit, as real `bbx init`
+      // does. Every clone of this template inherits the shape, because there is
+      // no other box shape.
+      execSync("git init -q -b main", { cwd: dir, stdio: "pipe" });
+      await annexNewBox(createGitAnnexService(), dir);
+      execSync("git add -A && git commit --allow-empty -m init -q", { cwd: dir, stdio: "pipe" });
       templateDir = dir;
       return dir;
     })();
@@ -172,7 +153,7 @@ process.on("exit", () => {
  * (two independent boxes on one server) get their box(es) from, so the clone
  * + annex-conversion steps live in exactly one place.
  */
-async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir: string; boxRoot: string }> {
+async function cloneTemplateBox(): Promise<{ tmpDir: string; boxRoot: string }> {
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "bbx-route-test-"));
 
@@ -182,17 +163,11 @@ async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir
   await cp(template, tmpDir, { recursive: true });
   const boxRoot = tmpDir;
 
-  // Before the server boots: registration-time probes read this shape, so
-  // converting after `createServer` would be too late.
-  if (opts?.annexBox === true) {
-    await makeBoxAnnexShaped(boxRoot);
-  }
-
   return { tmpDir, boxRoot };
 }
 
 export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
-  const { tmpDir, boxRoot } = await cloneTemplateBox({ annexBox: opts?.annexBox === true });
+  const { tmpDir, boxRoot } = await cloneTemplateBox();
 
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).

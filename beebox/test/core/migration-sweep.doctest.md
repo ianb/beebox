@@ -6,7 +6,7 @@ needing a human alone. See `src/core/migration-sweep.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { chmod, rm, writeFile } from "node:fs/promises";
+import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
@@ -142,7 +142,12 @@ await box.commitAll("seed migration manifest");
 // The repo root is not necessarily box.root (a v2 box roots at the package
 // dir, one level up), so ask git where its hooks actually live.
 const hookPath = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks", "pre-commit");
-await writeFile(hookPath, "#!/bin/sh\nexit 1\n");
+// APPEND the rejection rather than replacing the hook. The box is annexed, so
+// its stock hook invokes `git annex pre-commit`; overwriting that would break
+// the box's annex configuration and the sweep would fail for that reason
+// instead of the one under test.
+const stockHook = await readFile(hookPath, "utf8").catch(() => "#!/bin/sh\n");
+await writeFile(hookPath, `${stockHook}\nexit 1\n`);
 await chmod(hookPath, 0o755);
 
 const result = await sweepMigrations({ boxRoot: box.root });

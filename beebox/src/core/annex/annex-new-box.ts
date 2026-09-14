@@ -13,17 +13,19 @@
  *    zero-asset case by definition. See
  *    `issues/bugs/2026-09-14-to-annex-fails-on-zero-asset-box.md`.
  *
- * Ordering is the same as the migration's and matters for the same reason:
- * annex must be configured BEFORE the assets are un-ignored, so that the first
- * `git add` to see an asset routes it into the annex rather than into a git
- * blob.
+ * The box `.gitignore` is NOT written here. `initBox` writes it — once, and
+ * unconditionally, since there is only one block a box can have. What still
+ * matters is the ordering the migration also observes: the annex must be
+ * configured before anything stages an asset, so that the first `git add` to
+ * see one routes it into the annex rather than into a git blob. Every caller
+ * annexes between `git init` and the initial commit, so nothing stages in
+ * between.
  */
 
 import * as path from "node:path";
 import type { GitAnnexService } from "../../services/git-annex.js";
 import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "./info-attributes.js";
-import { writeBoxGitignore } from "../box/index.js";
 
 /**
  * Initialize git-annex in a freshly-created box and un-ignore its assets.
@@ -54,8 +56,4 @@ export async function annexNewBox(annex: GitAnnexService, boxRoot: string): Prom
   // filter-process — a fixed per-git-invocation cost paid by every text-only
   // commit this box will ever make.
   await writeAnnexInfoAttributes(boxRoot);
-
-  // Last: the assets become visible to `git add`, now that the annex is
-  // configured to claim them.
-  await writeBoxGitignore(boxRoot, { annexed: true });
 }

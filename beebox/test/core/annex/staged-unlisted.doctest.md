@@ -111,8 +111,15 @@ were staged, meaning git-annex is not filtering it. (In a correctly configured
 box the staged blob is a small pointer, so a real annexed asset passes here at
 any working-file size.)
 
+The misconfiguration has to be built deliberately, because a box is annexed and
+correctly configured from creation — `annex.largefiles` is cleared so the
+filter claims nothing, which is precisely the state the detector exists to
+catch. It used to arise for free from a manifest-scheme fixture; that is no
+longer a state a box can be in.
+
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
+execSync("git config annex.largefiles nothing", { cwd: box.root });
 await put(box.root, "trip.attach/beach.jpg", BIG);
 execSync("git add -A", { cwd: box.root });
 const found = await findStagedUnlistedBinaries(box.root);

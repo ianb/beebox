@@ -109,7 +109,7 @@ naming and records the basename as provenance, so hash-named inputs would wreck
 both. The provenance string is the credential that sent them.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Scan_001.pdf" });
 await quarantine(box, HASH_B, { originalFilename: "Scan_002.pdf" });
 const upload = fakeUpload();
@@ -157,7 +157,7 @@ The scanner can emit the same basename from two profiles. A collision within one
 batch gets a numbered suffix rather than one file silently overwriting the other.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Invoice.pdf" });
 await quarantine(box, HASH_B, { originalFilename: "Invoice.pdf" });
 const upload = fakeUpload();
@@ -180,7 +180,7 @@ await box.cleanup();
 card records — so files from two credentials cannot share one upload.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Study.pdf", tokenName: "laptop-scansnap" });
 await quarantine(box, HASH_B, { originalFilename: "Desk.pdf", tokenName: "office-scanner" });
 await quarantine(box, HASH_C, { originalFilename: "Manual.pdf", tokenName: null });
@@ -205,7 +205,7 @@ re-driven by the next pass. Re-running the upload is safe — the ledger dedups 
 content hash — which is exactly why the recovery can be this blunt.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { state: "promoting", originalFilename: "Halfway.pdf" });
 // The dead process's staging dir is still lying around.
 await fs.mkdir(box.path("_tmp/scan-staging/dead-run"), { recursive: true });
@@ -234,7 +234,7 @@ between marking an entry `imported` and writing the marker can't lose the wakeup
 for good. A wakeup after a failed batch is the cheap side of that trade.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A);
 const result = await runScanPromotePass({
   boxRoot: box.root,
@@ -260,7 +260,7 @@ times, and the outcome carries how long the caller should wait before the next
 attempt (`core/scan/wakeup-retry.doctest.md` pins the budget itself).
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A);
 const failing = fakeWakeup({ fail: true });
 
@@ -295,7 +295,7 @@ just for an HTTP body the uploader printed once. `questionRef` on the sidecar is
 what makes a repeated pass adopt the card instead of emitting a second one.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, {
   state: "rejected",
   originalFilename: "Contract.pdf",
@@ -339,7 +339,7 @@ another 30 days — collapsing that to `unknown` early would invite the uploader
 re-send a file the boxholder already ruled on.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { state: "rejected", reason: "qpdf --check reported a damaged PDF" });
 const deps = { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner };
 
@@ -406,7 +406,7 @@ anything, so a hash whose state moved on since the listing is left for the next
 pass rather than having its freshly uploaded bytes deleted under it.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const stale = await quarantine(box, HASH_A, { state: "rejected", reason: "unsupported type: image/gif" });
 // The listing says "rejected, resolved"; the sidecar on disk says the uploader
 // has since re-sent it and it validated.
@@ -436,7 +436,7 @@ the ledger after its quarantine entry is gone, and a rejected one stays
 answerable from its tombstone.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Filed.pdf" });
 // A real upload writes the ledger; the fake stands in for that half.
 const upload = async ({ files }) => {
@@ -466,7 +466,7 @@ The `bbx serve` child and a hand-run CLI are different processes and both may
 promote; whoever holds the lock is already doing this work.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A);
 await acquireLock(promotionLockPath(box.root), { purpose: "test" });
 const upload = fakeUpload();
@@ -488,7 +488,7 @@ await box.cleanup();
 ## Quarantined bytes that vanished become a rejection, not an eternal retry
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A, { originalFilename: "Vanished.pdf" });
 await fs.rm(quarantineFilePath(box.root, `${HASH_A}.pdf`));
 const upload = fakeUpload();
@@ -512,28 +512,30 @@ Promotion runs `bbx upload --as scan`, which stages raw asset bytes. On a box
 still using the manifest scheme those bytes are gitignored, so the upload fails
 at commit — and the entries it touched are left in `promoting` for the next pass
 to fail on again. The shape is re-probed at the top of every pass rather than
-once at startup, because a box can be de-annexed while the server runs: an older
-`bbx init` rewriting `.gitignore` is exactly how the first box lost the shape.
+once at startup, because the box `.gitignore` can be hand-edited while the
+server runs.
 
-Here a box that WAS converted has its asset ignore block put back — a de-annexed
-box with quarantine already full — and the pass declines to touch it.
+A box that cannot hold asset bytes is a broken invariant now, not a state to
+skip: every box is annex-shaped from creation, so the only way to reach this is
+to hand-edit the ignore block back in. The pass throws rather than returning a
+skip, because a silent skip over a full quarantine is how entries sat in
+`pending` with nothing saying why.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await quarantine(box, HASH_A);
 await deAnnex(box.root);
 const upload = fakeUpload();
 
-const result = await runScanPromotePass({
+await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
-});
-JSON.stringify({ skipped: result.skipped, calls: upload.calls.length, state: (await readQuarantineEntry(box.root, HASH_A)).state })
-=> {"skipped":"not-annex","calls":0,"state":"pending"}
+}).then(() => "no error", (e) => `${e.message.split(":")[0]} / uploads=${String(upload.calls.length)}`)
+=> scan promote / uploads=0
 ```
 
 Nothing is lost: the quarantined bytes and their `pending` sidecar stay exactly
-where they are, so converting the box makes the very next pass import them.
+where they are, so restoring the box makes the very next pass import them.
 
 ```ts continue
 await reAnnex(box.root);

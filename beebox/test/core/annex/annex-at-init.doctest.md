@@ -7,8 +7,8 @@ Two claims are tested separately, because they fail in different ways:
 2. With it, a created box annexes real bytes — not a fabricated `.git/annex/`.
 
 The second runs the REAL binary and skips without it. That matters: every
-other annex fixture builds its shape with `makeBoxAnnexShaped`, which creates
-`.git/annex/objects/` by hand and never runs `git annex`. Those fixtures prove
+other annex fixture used to build its shape with a helper that created
+`.git/annex/objects/` by hand and never ran `git annex`. Those fixtures proved
 the ignore block does not block. Only this one proves bytes actually annex —
 and "the fixture never ran the real init" is what
 `issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md` names
