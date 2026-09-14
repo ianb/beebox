@@ -160,13 +160,46 @@ reports an uploader that has fallen behind.
 response; the client compares them every sweep and reports which side is
 behind.
 
-**Bump it when a change alters what a correct client must *do*** — the client
-obligations below, the check-state vocabulary, or a route's shape. Do not bump
-it for server-internal changes a client cannot observe, or for an additive
-field an older client correctly ignores. Nothing can test that a human bumped
-it, and a missed bump is worse than having no version at all, because it
-reports a stale client as current. That is why the bump belongs to the
-discipline below rather than being a separate obligation.
+### When to bump `SCAN_CONTRACT_VERSION`
+
+**The test: would a client built before this change now do the wrong thing, or
+fail to do a right thing, even though it still parses every response?** If yes,
+bump. The version exists for exactly the changes that do *not* announce
+themselves — a client that can no longer parse the wire already throws a
+protocol error and needs no version to make that visible.
+
+Bump for:
+
+| Change | Why it is a bump |
+|---|---|
+| A client obligation changes — the settle window, the identity snapshot, restat-before-disposition, or which responses permit a disposition | These live only in the client. An old client applies the old rule to a real scan, and the rule decides whether the only copy of a file is moved to the Trash. |
+| A check `state` is added, removed, or changes what it means for the client | An unknown state throws, so *adding* one is loud — but redefining an existing one is silent. Treat the whole vocabulary as versioned. |
+| A response status stops meaning what the client branches on (e.g. `422 hash-mismatch` becoming non-retryable) | The client's switch still compiles and now does the wrong thing. |
+| A limit the client must respect gets stricter — the 500-hash batch cap, the 50 MB file cap, `Retry-After` handling | The client chunks to the old cap and every request fails, or it retries wrongly. |
+| Hash algorithm, hash encoding, or a route's path shape | Silent mismatch, not a parse error. |
+
+Do **not** bump for:
+
+| Change | Why it is not |
+|---|---|
+| A new optional request header, or a new response field an older client ignores | Additive in both directions; `contractVersion` itself shipped this way. |
+| Anything server-internal the client cannot observe — quarantine layout, promote debounce or GC timing, question-card wording, the upload ledger's shape | The client's behaviour is unchanged, and a bump here trains people to ignore bumps. |
+| Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
+| Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
+| A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
+
+**When it is genuinely unclear, bump.** The cost of a needless bump is one
+spurious "out of date" line telling someone to re-copy a file they could have
+kept. The cost of a missed bump is a stale client reported as current, which is
+worse than having no version at all, because it answers the question wrongly
+rather than not at all. Nothing can test that a human bumped this, so the bump
+is part of the change discipline below rather than a separate obligation.
+
+Mechanically, a bump is: `+1` to **both** constants in the same change (they
+are two spellings of one number, never per-side versions), this document, and
+the route doctests. Bumping does not refuse anything — an old client keeps
+uploading and starts being reported. And never bump the build stamp: it is a
+build artifact, not a hand-maintained number.
 
 **The build stamp** (`X-Scan-Client-Build`, `X-Scan-Client-Built-At`) answers a
 different question: not "does this client still speak the protocol" but "how
