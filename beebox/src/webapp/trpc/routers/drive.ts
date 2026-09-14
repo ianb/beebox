@@ -17,6 +17,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
+import { explainGoogleAuthGap } from "../../../connectors/google-auth-gap.js";
 import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
 import { createGoogleDriveService } from "../../../services/google-drive.js";
@@ -54,7 +55,7 @@ async function driveService(ctx: DriveCtx): Promise<GoogleDriveService> {
   if (!auth) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "Google auth not configured. Run: bbx google-auth",
+      message: await explainGoogleAuthGap(ctx.boxRoot),
     });
   }
   return createGoogleDriveService(createGoogleAuthService(auth, { boxRoot: ctx.boxRoot }));
