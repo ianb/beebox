@@ -8,6 +8,10 @@ discovered-by: agent
 discovered-in: worktree-migration-reliability — the hourly full-suite run on main
 ---
 
+> **Resolved in `PLACEHOLDER`.** The hub's fixture box had no Git repository,
+> and the new admission gate lives in the Git directory. Left open only if the
+> design question below gets an answer that changes the code.
+
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `90b84947`. Bisecting the landings since the last tested
 commit (`0174ab03`) over first-parent `main` blames one landing:
@@ -62,9 +66,30 @@ not ok 5 - test/hub/hub-e2e.doctest.md # time=153221.829ms
     ok 2 - bulk-upload-routes.doctest.md:136 — const ctx = await makeTestServer(); # time=112.802ms
 ```
 
-Reproduce at the blamed landing:
+## Cause
 
-```bash
-git log -1 ba7121b7
-pnpm --dir beebox exec tap test/hub/hub-e2e.doctest.md
+`makeFixtureBox` built the box with `initBox(boxRoot, { skipGit: true })`, on
+the stated premise that Git is "irrelevant to HTTP serving". `ba7121b7` made
+that premise false: `src/hub/child-spawn.ts` now admits every box through
+`acquireBoxStartup`, and `directoryFor` (`src/lib/box-maintenance.ts:33`) puts
+the gate inside the Git directory and asserts one exists.
+
 ```
+acquireBoxStartup("/tmp/gitless-box-KOHHLb")
+  → Box maintenance requires a Git repository: /tmp/gitless-box-KOHHLb
+```
+
+So every start of the fixture box threw, and the failure surfaced only as the
+readiness wait timing out after 120 s — which is why the captured diagnostic
+named the CLI build rather than anything about Git.
+
+The fixture now lets `initBox` create the repository it would create for any
+real box. The test runs 9 assertions in about 3 s, against 2 assertions and
+122 s before.
+
+## Still open for the owning workstream
+
+Should a box without Git be servable at all? Every real box is a repository, so
+requiring one is defensible — but `health-migrations.ts:29` already guards its
+own call with `hasGit ? … : null`, so the two paths disagree about whether a
+Git-less box is a shape the engine supports. Pick one.

@@ -102,16 +102,21 @@ async function pickFreePort() {
   });
 }
 
-/** Trimmed to what a served box actually needs (skips validation hooks and
- *  git -- irrelevant to HTTP serving), plus the `node_modules/.bin/bbx`
- *  symlink the supervisor looks for (a real `pnpm install` would populate
+/** Trimmed to what a served box actually needs (skips validation hooks), plus
+ *  the `node_modules/.bin/bbx` symlink the supervisor looks for (a real `pnpm install` would populate
  *  this; scaffoldPackageRoot only symlinks `node_modules/beebox`
- *  itself, matching the plan's F1 "no real install yet" note). */
+ *  itself, matching the plan's F1 "no real install yet" note).
+ *
+ *  The box IS a Git repository, and that is not incidental: the hub's child
+ *  spawn admits the box through `acquireBoxStartup`, whose gate lives in the
+ *  Git directory. A `skipGit` fixture makes every start throw "Box maintenance
+ *  requires a Git repository", which surfaces only as the readiness wait below
+ *  timing out. */
 async function makeFixtureBox() {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-hub-e2e-"));
   const { boxRoot } = await detectBoxTarget(target);
   await scaffoldPackageRoot(boxRoot);
-  await initBox(boxRoot, { skipGit: true, branch: "main" });
+  await initBox(boxRoot, { branch: "main" });
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installSchedules(boxRoot);
