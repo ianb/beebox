@@ -1,9 +1,9 @@
 ---
 title: "Box-side GLM: Z.ai models on the claude engine"
-status: draft
+status: partial
 workstream: glm-v2-layout
 issues:
-  - ../../../issues/exploration/2026-07-18-model-backend-pluggability.md
+  - ../../../issues/closed/exploration/2026-07-18-model-backend-pluggability.md
 ---
 # Box-side GLM: Z.ai models on the claude engine
 
@@ -18,7 +18,7 @@ boxholder accepts mixed-provider sessions (all enabled agents in a box are
 equally trusted).
 
 **Issues addressed:** executes the spike gated by
-[2026-07-18-model-backend-pluggability](../../../issues/exploration/2026-07-18-model-backend-pluggability.md)
+[2026-07-18-model-backend-pluggability](../../../issues/closed/exploration/2026-07-18-model-backend-pluggability.md)
 (its `## Research (incomplete)` section is this plan's Track 1). Partially
 resolves
 [2026-07-18-provider-endpoint-config](../../../issues/features/2026-07-18-provider-endpoint-config.md) —
@@ -468,3 +468,16 @@ change-selected lint clean; the pluggability issue's `## Research (incomplete)`
 section is filled with spike findings; and one manual real-box run on a GLM
 model completes a reactor job (boxholder-run, recorded in the issue). No data
 migration exists or is needed.
+
+**Status (2026-09-15, at landing):** every code and doc track above is shipped
+on `main` — model vocabulary, tier resolution, key custody and injection
+across all spawn lifecycles, preflight, secrets registries, and
+`docs/model-policy.md`'s GLM section. The one open item is the boxholder-run
+manual real-box reactor job on a GLM model: it has not run yet. Until a box
+pins a GLM model and the owner grants the `glm` key, the feature ships
+dormant; that activation and its verification run are per-box owner actions,
+not branch work. Post-landing divergences from the direction text above:
+provider resolution landed as `createModelCarrier` on the agent factory
+(`core/agent/model-carry.ts`) rather than recording on the factory itself, and
+`resolveProcedureModel` takes a params object instead of a defaulted third
+argument.

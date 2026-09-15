@@ -1,15 +1,26 @@
 ---
 title: "Model-backend pluggability: can the Agent SDK run on an Anthropic-compatible endpoint?"
-workstream: unknown
-needs: [design]
+workstream: glm-v2-layout
+resolution: implemented
 filed-by: agent
 discovered-in: main session — backend-alternatives research (research/backend-alternatives/README.md)
 area: beebox
 priority: backlog
 ---
 
+**Closed 2026-09-15.** The spike this issue gated ran 2026-09-15 from
+`worktree-glm-v2-layout` and its findings are recorded in `## Research` below;
+the GLM slice it unblocked shipped with the same workstream (commits 5fb1a4e49,
+fe3142614, 5ee730681, 2d3304d79 — see `beebox/docs/plans/box-glm-provider.md`).
+The verdict: the SDK's full agentic loop survives a real Anthropic-compatible
+endpoint, so the question this issue asked is answered. Nothing diverged from
+what the issue proposed — the open follow-ons (generic provider config, quota
+error strings) already live in
+[provider-endpoint-config](../../features/2026-07-18-provider-endpoint-config.md),
+which stays open.
+
 Research on alternate agent backends
-([research/backend-alternatives/README.md](../../research/backend-alternatives/README.md))
+([research/backend-alternatives/README.md](../../../research/backend-alternatives/README.md))
 landed on one concrete, low-effort lever worth verifying, plus a clear "don't" list.
 
 **The lever:** beebox runs on `@anthropic-ai/claude-agent-sdk`, which is
@@ -61,14 +72,14 @@ dev-side GLM launches that read `.env` are running on a dead credential.
 
 Verdict: the full headless loop survives a real non-Anthropic endpoint. The
 ADOPT recommendation in
-[provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md)
+[provider-endpoint-config](../../features/2026-07-18-provider-endpoint-config.md)
 is unblocked; the GLM slice ships via
 `beebox/docs/plans/box-glm-provider.md`.
 
 ## Decision context (updated 2026-07-18 by the deep pass)
 
 The deep pass
-([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)) corrected
+([synthesis](../../../research/backend-alternatives/2026-07-18-synthesis.md)) corrected
 several bullets that originally stood here:
 
 - **Coding plans are dead for us, and task content IS inspected** (the original
@@ -80,7 +91,7 @@ several bullets that originally stood here:
   only" bullet was half wrong): Anthropic blocks third-party clients and sanctions
   our own single-tenant SDK-on-own-login pattern; OpenAI informally tolerates
   third-party ChatGPT-subscription riding — see
-  [codex-sdk-second-backend](../closed/exploration/2026-07-18-codex-sdk-second-backend.md) for why we
+  [codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md) for why we
   still don't build on it now.
 - **Vision gates the provider list hard**: MiniMax and DeepSeek are disqualified
   (text-only API surfaces); Kimi API is the best China-based fit but trains on
@@ -94,7 +105,7 @@ several bullets that originally stood here:
   front — no routing/fallback logic.
 
 Concrete follow-ons filed:
-[provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md)
+[provider-endpoint-config](../../features/2026-07-18-provider-endpoint-config.md)
 (the ADOPT item, blocked on the spike above),
-[chat-backend-port-hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md),
-[codex-sdk-second-backend](../closed/exploration/2026-07-18-codex-sdk-second-backend.md).
+[chat-backend-port-hygiene](../../code-quality/2026-07-18-chat-backend-port-hygiene.md),
+[codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md).
