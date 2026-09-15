@@ -1,12 +1,23 @@
 ---
 title: "V2_LAYOUT_SNAPSHOT is exported only so knip stops flagging V2_LAYOUT"
-workstream: knip-sweep
+workstream: glm-v2-layout
 area: beebox
 priority: normal
 labels: [dead-code, migrations]
+resolution: implemented
 filed-by: agent
 discovered-in: knip-sweep schedule, run 20260908-191814
 ---
+
+**Closed 2026-09-15** — resolved by deletion (commit `9d46946d6`). The recovery
+pointer in the module header turned out to be alive: `d7d3a19d3~1` resolves and
+is reachable from `main`, and its `box-layout-spec.ts` matches the snapshot's 35
+path/area pairs exactly, so the copy was redundant. Took the first option; the
+header now points at the git record and drops the incorrect "exhaustive OVER"
+claim. Verified: knip reports no finding for the file, beebox typecheck clean,
+full beebox suite shows only the two pre-existing unrelated failures it shows
+without the change.
+
 
 `beebox/src/core/migrations/one-root-mapping.ts:100` exports
 `V2_LAYOUT_SNAPSHOT`, and its own comment says why:
