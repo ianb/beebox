@@ -46,6 +46,16 @@ The failed-startup page says which of these applies in words, including how long
 until the next automatic attempt, so a reader does not have to know the phase
 vocabulary to tell "the machine was busy" from "this is broken".
 
+A request for a parked worktree answers **503** with
+`{"error":"worktree-unavailable","worktree","phase","retry"}`, or the rich page
+when the caller asked for HTML. A down worktree is unavailable, not
+unauthorized: it used to be reported through whichever authorization reason the
+gate happened to produce — `target-box-unresolved`, or `owner-session-required`
+once a client fell back to a non-box path — which points a reader at
+credentials, sessions, and recent deploys, all plausible and all wrong. The bare
+root `/` names no worktree, so it has no liveness fact to report and keeps its
+401.
+
 ## Logs
 
 Two kinds, both under `$BBX_STATE_DIR/logs/` (`~/.cache/beebox/logs/` by

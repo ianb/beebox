@@ -8,7 +8,8 @@
 
 import path from "node:path";
 import { LOG_DIR } from "./router-config.js";
-import type { FailedLifecycle } from "./router-lifecycle.js";
+import { failedLifecycle, type FailedLifecycle, type WorktreeHandle } from "./router-lifecycle.js";
+import type { RouterRoute } from "./router-auth.js";
 import { escapeHtml } from "./router-markdown.js";
 
 /**
@@ -101,4 +102,114 @@ ${fastifySection}
 </body>
 </html>
 `;
+}
+
+// --- "unavailable", said to whoever asked -----------------------------------
+
+/**
+ * A down worktree is unavailable, not unauthorized.
+ *
+ * Before this, a client whose worktree had died was told `owner-session-required`
+ * or `target-box-unresolved` — claims about the CALLER — for what is a claim
+ * about the server. The boxholder's ruling, 2026-09-15: *"a down worktree is
+ * unavailable, not unauthorized."* It cost about half an hour on 2026-08-18
+ * (issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md) and
+ * it is the likeliest explanation of the unexplained iOS error the day this
+ * landed, because the message is convincingly about the wrong thing: it points
+ * the reader at auth, sessions, and recent deploys, all plausible and all wrong.
+ */
+export const WORKTREE_UNAVAILABLE = "worktree-unavailable";
+
+/**
+ * What a non-browser client is told. Deliberately small: `worktree` was in the
+ * URL the caller sent, `phase` is a closed vocabulary (`waitForHttp`,
+ * `childExit`, `spawn`, `pidStore.write`, `dashboard-start`) and `retry` is a
+ * path, not a secret. No captured child output, no ports, no filesystem paths —
+ * the 2026-08-18 filing asked for exactly this line to be drawn: *"Don't leak
+ * more than the caller may know."*
+ */
+export function worktreeUnavailableBody(name: string, failed: FailedLifecycle): string {
+  return `${JSON.stringify({
+    error: WORKTREE_UNAVAILABLE,
+    worktree: name,
+    phase: failed.lastError.phase,
+    retry: `/__router/retry/${name}`,
+  })}\n`;
+}
+
+/** A browser navigation, as opposed to an API fetch or a native request. */
+export function wantsHtmlPage(accept: string | string[] | undefined): boolean {
+  const value = Array.isArray(accept) ? accept.join(",") : (accept ?? "");
+  return value.includes("text/html");
+}
+
+/** The response methods this module writes through. Structural so a unit test
+ *  passes a plain object rather than casting a real ServerResponse. */
+export interface UnavailableResponse {
+  writeHead(status: number, headers?: Record<string, string>): void;
+  end(chunk?: string): void;
+}
+
+/**
+ * Report a parked worktree at 503, in the form the caller can read: the rich
+ * page (captured output, retry button, what happens next) for a browser, the
+ * small JSON body above for anything else. It used to be the HTML page for
+ * everyone, at 502 — so a native client received a web page describing a
+ * problem it could not act on.
+ */
+export function writeWorktreeUnavailable(
+  res: UnavailableResponse,
+  { name, failed, html }: { name: string; failed: FailedLifecycle; html: boolean },
+): void {
+  if (html) {
+    res.writeHead(503, { "content-type": "text/html; charset=utf-8" });
+    res.end(renderFailedPage(name, failed));
+    return;
+  }
+  res.writeHead(503, { "content-type": "application/json; charset=utf-8" });
+  res.end(worktreeUnavailableBody(name, failed));
+}
+
+/** Just enough of the core to answer "is this name parked?", so this module
+ *  does not depend on RouterCore's whole surface (or create an import cycle). */
+export interface ParkedLookup {
+  getHandle(name: string): WorktreeHandle | undefined;
+}
+
+/**
+ * The parked worktree a route is addressed to, or null.
+ *
+ * Only worktree-scoped routes qualify. `control` / `control-read` name no worktree
+ * — the bare root is the router itself — so they have no liveness fact to
+ * report and keep their own denial.
+ */
+export function parkedWorktreeFor(
+  core: ParkedLookup,
+  route: RouterRoute,
+): { name: string; failed: FailedLifecycle } | null {
+  const name = worktreeOfRoute(route);
+  if (name === null) return null;
+  const handle = core.getHandle(name);
+  if (!handle) return null;
+  const failed = failedLifecycle(handle);
+  return failed ? { name, failed } : null;
+}
+
+/** The worktree a route names, or null when it names none. */
+function worktreeOfRoute(route: RouterRoute): string | null {
+  switch (route.kind) {
+    case "box":
+    case "worktree-box-list":
+    case "worktree-asset":
+      return route.targetWorktree;
+    // `unauth-allowlist` names no worktree in its own shape even when the path
+    // has one; `dev-read` is served from disk and never cold-starts, so a parked
+    // worktree does not stop it. Both keep their own answer.
+    case "unauth-allowlist":
+    case "control":
+    case "control-read":
+    case "dev-read":
+    case "unknown":
+      return null;
+  }
 }

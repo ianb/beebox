@@ -63,6 +63,12 @@ import { handleRouterUpgrade, type UpgradeState } from "./router-upgrade.js";
 import { routerLogPath, startRouterLogFile, stopRouterLogFile } from "./router-log-file.js";
 import { formatDenial, writeDeny, UpgradeDenialThrottle } from "./router-deny-log.js";
 import {
+  WORKTREE_UNAVAILABLE,
+  wantsHtmlPage,
+  writeWorktreeUnavailable,
+  parkedWorktreeFor,
+} from "./router-failed-page.js";
+import {
   AGENT_BROWSER_BIN,
   BROWSE_DIR,
   DEV_NO_HUB,
@@ -148,6 +154,18 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
       return;
     }
     if (!decision.allow) {
+      // Liveness is reported BEFORE authorization, for a route that names a
+      // worktree the router has parked as failed. Otherwise a crashed dependency
+      // is announced in the vocabulary of authorization — `target-box-unresolved`
+      // or `owner-session-required` — which points the reader at credentials and
+      // deploys, all plausible and all wrong. The bare root names no worktree, so
+      // it has no liveness fact to report and keeps its 401.
+      const parked = parkedWorktreeFor(core, decision.route);
+      if (parked) {
+        log(`${formatDenial({ method: req.method || "GET", url, decision })} → ${WORKTREE_UNAVAILABLE}`);
+        writeWorktreeUnavailable(res, { ...parked, html: wantsHtmlPage(req.headers.accept) });
+        return;
+      }
       // Unthrottled: HTTP denials are request-driven, so a line per denial is
       // a faithful record rather than a torrent (the upgrade path, which a
       // client retries on a timer, is throttled instead).
