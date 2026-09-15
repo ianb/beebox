@@ -103,6 +103,7 @@ export function createClaudeAgent(options: {
     invocationCount++;
     return {
       boxRoot: opts.boxRoot,
+      signal: opts.signal,
       systemPrompt: opts.systemPrompt ?? "",
       prompt: opts.prompt,
       onOutput: options.onOutput,

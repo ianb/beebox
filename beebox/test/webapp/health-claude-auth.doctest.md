@@ -18,7 +18,7 @@ const claudeCheck = (checks) => checks.find((c) => c.name === "claude-credential
 ## Logged in → the check passes
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const claudeCli = createFakeClaudeCli({ loggedIn: true });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(claudeCheck(checks))
@@ -32,7 +32,7 @@ await box.cleanup();
 ## Logged out → the check fails with an actionable message (on every platform)
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const claudeCli = createFakeClaudeCli({ loggedIn: false });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(claudeCheck(checks))
@@ -51,7 +51,7 @@ re-authenticate for a problem they don't have, so an unusable probe gets its
 own message and drops to `warning`.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const claudeCli = {
   authStatus: async () => ({ [AUTH_PROBE_INCONCLUSIVE]: true, raw: "" }),
   authLogin: async () => ({ authUrl: null }),

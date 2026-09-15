@@ -1,3 +1,4 @@
+import { BoxMaintenanceError } from "../../../lib/box-maintenance.js";
 /**
  * Filesystem persistence and queue-combining helpers for ChatSession.
  *
@@ -252,4 +253,22 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
     ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
   };
+}
+
+/** A queued turn is a new root operation; preserve its input when admission closes. */
+export function drainSessionQueue(opts: {
+  queue: ChatSendInput[];
+  paused: boolean;
+  send: (input: ChatSendInput) => Promise<boolean>;
+  onError: (error: Error) => void;
+}): void {
+  if (opts.paused || opts.queue.length === 0) return;
+  const queued = opts.queue.splice(0);
+  void opts.send(combineQueuedInputs(queued)).then((sent) => {
+    if (!sent) opts.queue.unshift(...queued);
+  }).catch((error: unknown) => {
+    if (error instanceof BoxMaintenanceError) { opts.queue.unshift(...queued); return; }
+    log("drain", `Draining queued messages failed: ${errorMessage(error)}`);
+    opts.onError(error instanceof Error ? error : new Error(String(error)));
+  });
 }

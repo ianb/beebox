@@ -53,23 +53,32 @@ CLOUDFLARE_API_TOKEN=your-token-here
 ### `deploy.sh` — Deploy a commit to the server
 
 The everyday deploy (also fired automatically by the root husky
-`post-commit`/`post-merge` hooks on `main`). It deploys a git COMMIT, never a
-working tree: the requested ref is checked out into a persistent build
-checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree shared
-by all worktrees of the repo), gitignored build artifacts there are cleaned,
-the frontend and CLI bundle are built, and the result is rsynced to
-`/opt/beebox` followed by a frozen workspace install, a per-box convergence
-pass (migration sweep + generated-docs refresh), service restart, and
-healthcheck. `deploy-info.json` on the server
-therefore records exactly what shipped.
+`post-commit`/`post-merge` hooks on `main`) deploys a Git commit. It builds in the
+persistent detached checkout `<main-repo-root>/.deploy-checkout` and transfers
+the result to a separate server staging directory. `--skip-restart` stops there:
+the running installation has not been activated.
 
-Per-box convergence runs in the at-rest window before the restart, two steps
-each: `bbx migrate --sweep` converges card shape and box configuration, then
-`bbx docs refresh` regenerates the box's agent docs, card rules, and managed
-skills when the shipped engine has moved past what wrote them (otherwise a box
-nobody chats with keeps the old ones indefinitely). Both print only boxes that
-did something or need attention, skip a dirty box for the next deploy to retry,
-and never fail the deploy; see [`../docs/migrations.md`](../docs/migrations.md).
+The staged CLI's maintenance controller then closes admission for affected
+boxes, waits for accepted work, and records Git recovery snapshots. It stays
+alive outside the services while the activation script stops them, copies the
+staged release into `/opt/beebox`, installs dependencies, converges boxes,
+restarts services, and checks readiness. Ordinary requests do not acquire the
+controller's maintenance permissions. `deploy-info.json` records the shipped
+commit; final deployment success is written only after the checks finish.
+
+Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
+under the existing controller. That single operation handles deterministic
+migrations and generated guidance with snapshots and changed-path commits.
+Dirty input is accepted; deployment does not start a repair agent. Its separate
+ten-minute command limit remains. A box needing repair is reported and stays
+closed; restarting its process does not clear failed convergence. The hourly
+`box-convergence` schedule retries with bounded repair authority. See
+[migrations](../docs/migrations.md) for recovery, questions, and timeout limits.
+
+The shared drain accounts for gate-aware writers. The first rollout from older
+code needs an explicitly quiesced fleet; a new controller alone cannot register
+work already running in an older server or CLI. External editors and raw Git
+commands also remain outside admission enforcement.
 
 The healthcheck has two depths, both diag-key-gated and run on the server's
 localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
@@ -84,7 +93,7 @@ key, so an unauthenticated external monitor gets 401.
 ```bash
 ./deploy/deploy.sh                 # deploy HEAD of this checkout
 ./deploy/deploy.sh --ref <sha>     # deploy (or roll back to) any commit
-./deploy/deploy.sh --skip-restart  # sync + build without restarting services
+./deploy/deploy.sh --skip-restart  # stage only; leave the live installation unchanged
 ```
 
 Concurrent deploys collapse latest-wins: a run that finds another deploy in

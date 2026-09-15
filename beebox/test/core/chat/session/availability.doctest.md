@@ -37,7 +37,7 @@ function husk(fields) {
 ## A readable transcript is `present`, whoever's it is
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
 const here = (await localOrigin()).id;
 
@@ -106,7 +106,7 @@ unknown id on a developer machine, so the guess produced the same answer and hid
 the difference.
 
 ```ts
-const noRecordBox = await makeTmpBox();
+const noRecordBox = await makeTmpBox({ git: true });
 await configure(noRecordBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
 process.env["BBX_ORIGIN_ID_FILE"] = noRecordBox.path("origin-id");
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = noRecordBox.path("claude-projects");
@@ -145,7 +145,7 @@ session object that has never run is not a conversation.
 A merely-materialized id is a ghost, and says so:
 
 ```ts
-const ghostBox = await makeTmpBox();
+const ghostBox = await makeTmpBox({ git: true });
 process.env["BBX_ORIGIN_ID_FILE"] = ghostBox.path("origin-id");
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = ghostBox.path("claude-projects");
 const backend = createFakeChatBackend();

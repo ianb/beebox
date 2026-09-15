@@ -64,7 +64,7 @@ Session `B` is most-active, but the schedule was created in session `A`. The
 fire resumes `A`, not `B`.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box.root, backend);
 const eventBus = createEventBus(box.root);
@@ -101,7 +101,7 @@ An entry persisted before `sessionId` existed keeps the old behavior: it
 resolves the target from the most-active pointer.
 
 ```ts
-const box2 = await makeTmpBox();
+const box2 = await makeTmpBox({ git: true });
 const backend2 = createFakeChatBackend();
 const registry2 = makeRegistry(box2.root, backend2);
 const eventBus2 = createEventBus(box2.root);
@@ -132,7 +132,7 @@ the reminder is re-sent once into a brand-new session — a second run with no
 resume id.
 
 ```ts
-const box3 = await makeTmpBox();
+const box3 = await makeTmpBox({ git: true });
 const backend3 = createFakeChatBackend();
 const registry3 = makeRegistry(box3.root, backend3);
 const eventBus3 = createEventBus(box3.root);

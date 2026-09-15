@@ -39,7 +39,7 @@ the artifact, and exploratory spikes (spike first; plan if it survives).
 The plan completes, then it ships as one piece — and **only when the boxholder
 says so**. Committing chunks is normal; merging a partial plan because "the
 first part feels done" is the violation. Long multi-track plans are fine when
-their budget says so (see *Circuit breaker*); execute them serially in
+their scope warrants it (see *Size and scope review*); execute them serially in
 dependency order, don't compress them.
 
 ## The discipline
@@ -68,53 +68,34 @@ writing and when reviewing.
 - **Open questions live outside the first chunk.** A question inside the first
   implementation chunk is a missing decision — settle it in Direction.
 
-## Circuit breaker
+## Size and scope review
 
-A plan is sized against the problem that prompted it, and work stops when it
-outgrows that size. Stopping, stepping back to a smaller fix, or reverting are
-normal outcomes, not failures.
+Estimates create pressure to keep the design small. They are goals, not automatic
+cutoffs, and an agent's estimate is not a limit imposed by the boxholder.
 
-**Set the budget while writing.** The template's *Smallest fix and budget*
-section names the smallest change that fixes the problem as reported, and
-this plan's budget: tracks, subprojects, and estimated lines of source and of
-tests. Some plans exceed ~3× the smallest fix. Others add a subproject,
-protocol, or vocabulary that the request did not ask for. Either kind goes to
-the boxholder as a choice between the two before you write the rest.
+**Estimate while planning.** In *Smallest fix and budget*, name the smallest
+change that fixes the reported problem, the chosen tracks/subprojects, and
+estimated source and test lines. Explain what the fuller approach buys.
+Compare like-for-like during implementation: additions plus deletions, not net
+growth. Report documentation and generated output separately so the size is clear.
 
-**During implementation, compare like-for-like with the budget.** Count the
-source/test categories it estimates; report documentation or generated output
-separately unless the budget explicitly includes them. Do not silently raise a
-budget to absorb growth.
+**Over 2,000 changed lines is a BIG CHANGE.** Label it **BIG CHANGE**, explain
+what drives the size, and obtain the boxholder's approval before proceeding at
+that scale. Count the full proposed change, including source, tests, and authored
+documentation; identify generated output separately rather than concealing it.
+If that size and scope are already approved, continue without asking again.
 
-**It trips when any of these holds:**
-- the diff passes 1.5× the budgeted lines, or reaches a subproject or track
-  the budget did not list;
-- a state, protocol, or subsystem appears that the plan did not name;
-- the boxholder asks why it is so big.
+When work grows substantially, show the revised estimate and check whether the
+design still earns its size. Use cross-model scope review when it would help
+identify unnecessary machinery. An estimate overrun, a ratio such as 1.5×, or
+being asked why work is large does not itself require stopping or reverting.
+Keep progressing within approved scope while making the cost visible. Ask for
+a decision when the work becomes a BIG CHANGE without approval, introduces
+materially different scope, or a finding invalidates the chosen approach.
 
-Before correcting the same mechanism again in response to implementation
-findings, reassess whether the design still holds. Revision/review counts alone
-are not stop conditions, and routine plan-text corrections need no reassessment.
-Continue within the approved scope; stop if the findings invalidate the approach
-or trip a gate above. Record changed decisions, not a ritual no-change report. The separate
-`bbx-debug` three-failed-fix limit still applies during debugging.
-
-**When it trips:**
-1. Stop launching work and stop committing.
-2. Write a short breaker report in the plan: what was asked, what is built,
-   size against budget, what drove the growth.
-3. Run a scope review with the other model family (`cross-model`, challenge
-   mode). It classifies each built piece against the boxholder's own words as
-   required, justified-but-optional, or scope creep, and names the smallest
-   version that still meets the request. Use an existing review if it already
-   answers this scope question at the current state. Respect `cross-model`'s
-   two-round limit; after it, bring the scope decision to the human without
-   inviting another fresh-findings pass.
-4. Give the boxholder the options: stop and revert, step back to the smallest
-   fix, salvage the required core, or continue under a new budget. Say what
-   each option keeps and what it loses.
-
-Resume only on their choice, and record the new budget in the plan.
+Record the resulting decision in the plan. Honor an explicit human size limit;
+do not reinterpret it as aspirational. The separate `bbx-debug` three-failed-fix
+limit still applies during debugging.
 
 ## Reviewing an existing plan
 
