@@ -1,12 +1,9 @@
 /** Local recovery objects preserve invalid input without publishing it as a box commit. */
-import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { promisify } from "node:util";
+import { gitAsBoxOwner } from "../lib/box-owner-exec.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
-
-const execFileAsync = promisify(execFile);
 
 export interface MigrationSnapshot {
   ref: string;
@@ -16,7 +13,7 @@ export interface MigrationSnapshot {
 
 function git(boxRoot: string, index?: string) {
   return async (args: string[]): Promise<string> => {
-    const { stdout } = await execFileAsync("git", args, {
+    return gitAsBoxOwner(args, {
       cwd: boxRoot,
       env: {
         ...process.env,
@@ -25,7 +22,6 @@ function git(boxRoot: string, index?: string) {
       },
       maxBuffer: 32 * 1024 * 1024,
     });
-    return stdout;
   };
 }
 
