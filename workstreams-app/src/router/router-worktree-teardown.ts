@@ -28,6 +28,17 @@ export interface CoreState {
   effects: RouterEffects;
   config: RouterCoreConfig;
   worktrees: Map<string, WorktreeHandle>;
+  /**
+   * Automatic restarts spent per worktree NAME, which is what makes the bound
+   * real: handles are per-generation and every retry builds a new one, so a
+   * counter on the handle would reset each time round.
+   *
+   * Evicted when a generation reaches `ready` (a worktree that came up has no
+   * retry history worth keeping) and when the boxholder asks for a retry
+   * explicitly (a human asking is a fresh start, not the fourth of three).
+   * Bounded by the number of worktree names, one integer each.
+   */
+  retryAttempts: Map<string, number>;
   log: (msg: string) => void;
 }
 
@@ -296,6 +307,10 @@ export function clearFailed(state: CoreState, name: string): boolean {
   const handle = worktrees.get(name);
   if (handle && failedLifecycle(handle)) {
     worktrees.delete(name);
+    // The boxholder asking for a retry is a fresh start, not the fourth of
+    // three: the automatic-retry budget resets. `ensureRunning`'s own retry
+    // deliberately does NOT come through here, so it cannot reset its own bound.
+    state.retryAttempts.delete(name);
     return true;
   }
   return false;

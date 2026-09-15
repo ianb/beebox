@@ -18,6 +18,34 @@ One router on port 3210 fronts every checkout. Each worktree gets Vite plus
 `bbx hub`; the hub starts one `bbx serve` child per active box.
 `BBX_DEV_NO_HUB=1` selects the legacy single-server path.
 
+## Startup failures and automatic retry
+
+A worktree whose start fails is parked as `failed` and serves 502 to every box
+under it; `POST /__router/retry/<name>` clears the record and starts a fresh
+generation, and it works over the UDS without an owner session:
+
+```
+curl -X POST --unix-socket ~/.cache/beebox/router.sock http://localhost/__router/retry/main
+```
+
+Parking is not always permanent. A failure in the `waitForHttp` phase — the
+router asked for a page and nothing answered within 180s — is the host saying
+"too busy" rather than the worktree saying "broken", so the router restarts it
+by itself up to three times, on a 2s / 8s / 30s backoff, and then parks for
+good. Every other phase parks on the first failure, because a child that died
+(`childExit`), a spawn that never happened, or a pidfile that could not be
+written says something about the worktree that restarting will not change.
+Requests arriving before a scheduled retry is due get the 502 immediately rather
+than queueing behind it.
+
+An explicit retry resets that budget: the boxholder asking is a fresh start, not
+the fourth of three. A worktree that reaches `ready` forgets its history, so an
+unrelated failure weeks later gets the full budget again.
+
+The failed-startup page says which of these applies in words, including how long
+until the next automatic attempt, so a reader does not have to know the phase
+vocabulary to tell "the machine was busy" from "this is broken".
+
 ## Logs
 
 Two kinds, both under `$BBX_STATE_DIR/logs/` (`~/.cache/beebox/logs/` by

@@ -13,7 +13,12 @@
 import { createWriteStream, type WriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { type WorktreeHandle, type CapturedError, transitionLifecycle } from "./router-lifecycle.js";
+import {
+  type WorktreeHandle,
+  type CapturedError,
+  transitionLifecycle,
+  retryDecision,
+} from "./router-lifecycle.js";
 import type { PidExpectation } from "./router-pidfile.js";
 import {
   errMessage,
@@ -197,7 +202,7 @@ async function failStart(
   state: CoreState,
   args: { handle: WorktreeHandle; plan: StartPlan; generation: Generation; progress: StartProgress; err: unknown },
 ): Promise<never> {
-  const { effects, worktrees, log } = state;
+  const { effects, worktrees, retryAttempts, log } = state;
   const { handle, plan, generation, progress, err } = args;
   const { browseEnv, dashboardPort } = plan;
   const name = handle.name;
@@ -237,7 +242,15 @@ async function failStart(
     });
     throw statusError(captured.message, 502);
   }
-  transitionLifecycle(handle, { phase: "failed", lastError: captured });
+  // The count is keyed by NAME and lives on CoreState, so it survives the
+  // clear-and-restart that an automatic retry performs — a counter on the
+  // handle would reset on exactly the event it is meant to bound.
+  const attempts = retryAttempts.get(name) ?? 0;
+  const { retryAfter } = retryDecision({ phase: captured.phase, attempts, now: effects.now() });
+  if (retryAfter === null && attempts > 0) {
+    log(`[${name}] parked after ${String(attempts)} automatic retr${attempts === 1 ? "y" : "ies"}`);
+  }
+  transitionLifecycle(handle, { phase: "failed", lastError: captured, attempts, retryAfter });
   // The failed generation is parked for the error page + retry; its
   // escalation timer stays fire-and-forget (the `failed` variant carries no
   // children to cancel), but it still fires through the timer effect.
@@ -300,6 +313,8 @@ async function publishGeneration(
     lastStaleCheck: effects.now(),
   });
   touch(state, handle);
+  // Came up: there is no retry history worth keeping for this name.
+  state.retryAttempts.delete(name);
   log(`[${name}] ready`);
 
   // Exit listeners are NOT attached here: `spawnGeneration` attached them, and

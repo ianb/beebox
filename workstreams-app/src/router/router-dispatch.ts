@@ -20,11 +20,11 @@ import type { RouterCore } from "./router-core.js";
 import { errMessage, httpStatusOf } from "./router-effects.js";
 import { proxyWithRetry, proxyWorkstreamsAppOnce } from "./router-proxy.js";
 import {
-  renderFailedPage,
   renderIndex,
   renderStatusJson,
   renderWorkstreamsAppFallback,
 } from "./router-pages.js";
+import { renderFailedPage } from "./router-failed-page.js";
 import {
   REPO_ROOT,
   parseWorktreeName,
@@ -290,7 +290,7 @@ async function handleWorktreeRoutes(
     const failed = failedHandle ? failedLifecycle(failedHandle) : null;
     if (failed) {
       res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-      res.end(renderFailedPage(name, failed.lastError));
+      res.end(renderFailedPage(name, failed));
       return;
     }
     res.writeHead(status, { "content-type": "text/plain" });
