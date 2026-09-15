@@ -55,6 +55,12 @@ Read this before redesigning any of it.
 
 ## Directions worth designing
 
+A candidate answer to the whole trigger-currency question is sketched in
+[the generic `{% trigger %}` issue](../exploration/2026-09-15-generic-trigger-tag-programmatic-scope-plus-natural-language.md):
+a programmatic condition that scopes candidates, a natural-language condition
+that confirms them in one batched call, and a natural-language action. If that
+lands, a blocked to-do is a trigger on that to-do rather than its own feature.
+
 **Bind the trigger to box state instead of prose.** The box is cards and
 paths, so a condition like "a card appears under this path" or "this card's
 field reaches this value" is evaluable on every wakeup with no judgment. This
