@@ -18,13 +18,35 @@ import {
   writeRouterLogLine,
 } from "../../src/router/router-log-file.js";
 
+/** The poll below gave up. Named so a failure reads as "the sink never wrote"
+ *  rather than as an assertion about content. */
+class LogNeverSettledError extends Error {
+  constructor(readonly file: string, readonly lines: number) {
+    super("the durable log never reached the expected line count");
+    this.name = "LogNeverSettledError";
+  }
+}
+
 async function tmpLogDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "router-log-"));
 }
 
-/** The stream writes asynchronously; give libuv a turn before reading back. */
-function flushed(): Promise<void> {
-  return new Promise((resolve) => setImmediate(resolve));
+/**
+ * Read the log back once it holds `lines` worth of content.
+ *
+ * The sink writes through a stream, so a fixed number of ticks is a timing
+ * assumption that holds on an idle machine and fails inside a full suite run —
+ * which is the machine state this whole workstream is about. Poll for the
+ * expected line count instead, bounded so a genuine failure still fails.
+ */
+async function readWhenSettled(file: string, lines: number): Promise<string[]> {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const text = await fs.readFile(file, "utf8").catch(() => "");
+    const settled = text === "" ? [] : text.trimEnd().split("\n");
+    if (settled.length >= lines) return settled;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new LogNeverSettledError(file, lines);
 }
 
 test("the rotation boundary rolls over only when the cap would be exceeded", () => {
@@ -60,11 +82,10 @@ test("log() tees the console line into the durable file", async (t) => {
   assert.equal(routerLogPath(), path.join(dir, "router.log"));
 
   log("[main] startup failed in waitForHttp: vite/main did not respond");
-  await flushed();
 
-  const written = await fs.readFile(path.join(dir, "router.log"), "utf8");
+  const [written] = await readWhenSettled(path.join(dir, "router.log"), 1);
   // The exact grep the originating issue reports as returning 0 today.
-  assert.match(written, /^\[router \d{4}-\d{2}-\d{2}T[\d:.]+Z\] \[main\] startup failed in waitForHttp/mu);
+  assert.match(written ?? "", /^\[router \d{4}-\d{2}-\d{2}T[\d:.]+Z\] \[main\] startup failed in waitForHttp/u);
 });
 
 test("an existing log is appended to, not truncated, across restarts", async (t) => {
@@ -73,17 +94,16 @@ test("an existing log is appended to, not truncated, across restarts", async (t)
     stopRouterLogFile();
     await fs.rm(dir, { recursive: true, force: true });
   });
+  const file = path.join(dir, "router.log");
   await startRouterLogFile(dir);
   writeRouterLogLine("first boot");
-  await flushed();
+  await readWhenSettled(file, 1);
   stopRouterLogFile();
 
   await startRouterLogFile(dir);
   writeRouterLogLine("second boot");
-  await flushed();
 
-  const written = await fs.readFile(path.join(dir, "router.log"), "utf8");
-  assert.deepEqual(written.trimEnd().split("\n"), ["first boot", "second boot"]);
+  assert.deepEqual(await readWhenSettled(file, 2), ["first boot", "second boot"]);
 });
 
 test("crossing the cap rolls the log over exactly once", async (t) => {
@@ -100,17 +120,15 @@ test("crossing the cap rolls the log over exactly once", async (t) => {
   await startRouterLogFile(dir);
 
   writeRouterLogLine("the line that rolled it");
-  await flushed();
 
-  assert.equal(await fs.readFile(file, "utf8"), "the line that rolled it\n");
+  assert.deepEqual(await readWhenSettled(file, 1), ["the line that rolled it"]);
   const rolled = await fs.readFile(`${file}.1`, "utf8");
   assert.equal(rolled.length, ROUTER_LOG_MAX_BYTES, "the previous contents moved aside intact");
 
   // The fresh file starts its byte count at zero, so the next ordinary line
   // appends rather than rolling again.
   writeRouterLogLine("and the next one");
-  await flushed();
-  assert.equal(await fs.readFile(file, "utf8"), "the line that rolled it\nand the next one\n");
+  assert.deepEqual(await readWhenSettled(file, 2), ["the line that rolled it", "and the next one"]);
 });
 
 test("an unusable log directory warns once and leaves the console working", async (t) => {

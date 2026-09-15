@@ -305,7 +305,7 @@ async function failStart(
     fastifyOutput: generation.fastifyOutput.read(),
     at: effects.now(),
   };
-  log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
+  log(`[${name}] startup failed in ${captured.phase}: ${captured.message} (load1 ${effects.load1().toFixed(1)})`);
   // Invariant #5: guarded publication at the failure terminal too. If a stop
   // (or a newer generation) superseded us while we were failing, DON'T park a
   // `failed` record — this handle is off the map, so terminate it as
