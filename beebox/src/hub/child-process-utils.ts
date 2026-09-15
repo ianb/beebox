@@ -55,46 +55,29 @@ export async function waitForExit(pids: number[], timeoutMs: number): Promise<nu
 /** Poll interval while waiting for children to exit. */
 const EXIT_POLL_MS = 100;
 
-export function restartAfterDevBundleReload(options: {
-  code: number | null;
-  expectedCode: number;
-  box: { child: unknown; port: number | undefined; status: string; restarts: number; restartTimer: NodeJS.Timeout | undefined },
-  launch: () => void;
-}): boolean {
-  const { code, expectedCode, box, launch } = options;
-  if (code !== expectedCode) return false;
-  box.child = undefined;
-  box.port = undefined;
-  box.status = "starting";
-  box.restarts += 1;
-  box.restartTimer = setTimeout(launch, 0);
-  box.restartTimer.unref();
-  return true;
-}
-
 /**
  * HTTP-level readiness probe: TCP-accepting isn't enough, a process can
- * accept connections before its request handlers are wired up. Any HTTP
- * response (even a 401/503) counts as "ready" — the hub doesn't assume
- * `BBX_DIAG_API_KEY` is configured, so a box's `/healthz` may legitimately
- * answer "unconfigured" or "unauthorized" while still being a live server.
+ * accept connections before its request handlers are wired up. Only a
+ * successful response counts as ready. A maintenance 503 or authorization
+ * failure cannot establish that the replacement is ready for admission.
  */
 export interface WaitForHttpOptions {
   port: number;
   reqPath: string;
   timeoutMs: number;
   label: string;
+  headers?: Record<string, string>;
 }
 
-export async function waitForHttp({ port, reqPath, timeoutMs, label }: WaitForHttpOptions): Promise<void> {
+export async function waitForHttp({ port, reqPath, timeoutMs, label, headers }: WaitForHttpOptions): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const ok = await new Promise<boolean>((resolve) => {
       const req = http.request(
-        { host: "127.0.0.1", port, path: reqPath, method: "GET", timeout: 1000 },
+        { host: "127.0.0.1", port, path: reqPath, method: "GET", timeout: 1000, headers },
         (res) => {
           res.resume();
-          resolve(true);
+          resolve(res.statusCode === 200);
         }
       );
       req.on("error", () => resolve(false));

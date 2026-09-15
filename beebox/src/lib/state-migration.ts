@@ -15,6 +15,7 @@ import { withFileLock } from "./file-lock.js";
  * retired-vocabulary literals. These values are read-only migration inputs. */
 export const LEGACY_PACKAGE_NAME = "callback-box";
 export const LEGACY_BOX_MARKER = ".cb-box";
+export const LEGACY_BOX_STATE_DIR = ".callback-box";
 export const LEGACY_STATE_DIR = path.join(os.homedir(), ".local/share/cb");
 export const LEGACY_CONFIG_DIR = path.join(os.homedir(), ".config/cb");
 
@@ -100,7 +101,7 @@ export async function migrateBoxState(boxRoot: string): Promise<"migrated" | "un
 }
 
 async function migrateBoxStateLocked(boxRoot: string): Promise<"migrated" | "unchanged"> {
-  const oldState = path.join(boxRoot, ".callback-box");
+  const oldState = path.join(boxRoot, LEGACY_BOX_STATE_DIR);
   const newState = path.join(boxRoot, ".beebox");
   const oldMarker = path.join(boxRoot, LEGACY_BOX_MARKER);
   const newMarker = path.join(newState, "box.json");

@@ -93,9 +93,10 @@ granted per-box: []
 ## Google needs the client-credential grant too, not just tokens
 
 Tokens plus an enabled policy used to be enough. They are not: without a grant
-for the OAuth app's client credentials, `getGoogleAuth` returns null, so
-Calendar and Gmail no-op and Drive reports a sync failure. A script that runs
-and does nothing is worse than one the scheduler skips with a named reason.
+for the OAuth app's client credentials, `getGoogleAuth` returns null, so every
+Google connector reports `skipped: not-configured` and syncs nothing. A script
+that runs and does nothing is worse than one the scheduler skips before it
+spends a run.
 
 ```ts continue
 const tokensFile = join(dir, "google-tokens.json");

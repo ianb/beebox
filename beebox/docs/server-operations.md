@@ -18,6 +18,33 @@ The server is named in gitignored `deploy/target.env` (see
 finds the main checkout's copy when invoked from a worktree. SSH as the service
 user (`beebox`) for manual data work.
 
+## Maintenance and replacement
+
+Migration, deployment, and supervised development reload use the same per-box
+admission boundary: close admission, drain accepted work, perform the change,
+verify readiness, then reopen. New mutating requests receive a retryable 503;
+new independent CLI actions are refused. Accepted agents keep permission for
+their descendant tool calls, so draining does not cut off the tools they need
+to finish. Queued turns and due timers remain pending. Read-only health and
+`bbx migrate --status --json` remain available for diagnosis.
+
+The gate lives under the Git directory at `bbx-maintenance/`, outside box data.
+Its phase and held owner/work locks are shared across processes. The normal
+drain limit is ten minutes. A drain timeout does not force active work to stop.
+After changes begin, an owner crash or failed conversion keeps admission closed
+until recovery verifies completion; deleting a lock or phase file does not
+repair the box. Recovery snapshots and unanswered migration questions are
+explained in [migrations](migrations.md).
+
+The deployment controller outlives the hub and scheduler it replaces. For a
+supervised development bundle reload, the child asks the hub supervisor to own
+the drain and replacement; reopening waits for the replacement's successful
+readiness response. A 503 does not count as ready. A standalone `bbx serve`
+process reports that its bundle changed and requires an explicit restart; it
+cannot promise a supervised handoff by exiting itself. Older processes that
+predate this protocol and external editors need explicit quiescence during the
+first rollout.
+
 ## Connecting for debugging / inspection
 
 For ad-hoc inspection of the running server (reading logs, checking box state, running `bbx` commands, etc.) — **not** initial setup, which is covered in [`deploy/README.md`](../deploy/README.md).
@@ -71,7 +98,12 @@ su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
 
-**Restart services after deploying or after manual config changes:**
+**Administrative restart after manual config changes:**
+
+Normal code deployment uses the controller in `deploy/deploy.sh`; it already
+restarts and verifies the services. A direct systemd restart does not establish
+the shared admission/drain boundary. Use the following only after work is
+explicitly quiesced:
 
 ```bash
 deploy/prod-ssh "systemctl restart beebox-hub beebox-scheduler"

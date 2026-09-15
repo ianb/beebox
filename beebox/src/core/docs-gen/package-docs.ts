@@ -33,6 +33,7 @@ import { generateViewsDoc } from "../views/doc.js";
 import { generateChatVoiceDoc } from "../chat/voice-doc.js";
 import { generateNarrationModeDoc } from "../narration-mode-doc.js";
 import { generateReducingClaudeMdDoc } from "../reducing-claude-md-doc.js";
+import { generateMigrationRepairDoc } from "../migration-repair-policy.js";
 import { generatePythonToolsDoc } from "../python-tools-doc.js";
 import { CONTAINS_DOC_APPENDIX } from "../agent-guide/search.js";
 import { generateBbxCommands } from "./bbx-commands.js";
@@ -54,6 +55,7 @@ interface StaticDoc {
 }
 
 const STATIC_DOCS: readonly StaticDoc[] = [
+  { filename: "migration-repair.md", readWhen: "Repairing a failed migration or answering its recovery question.", generate: generateMigrationRepairDoc },
   { filename: "bbx-commands.md", readWhen: "Running a `bbx` command beyond the everyday ones, or creating a card from a template.", generate: generateBbxCommands },
   { filename: "connectors.md", readWhen: "Anything about Gmail, Google Drive, Telegram, or calendar sync, or a credential a connector needs.", generate: generateConnectorsDocs },
   { filename: "views.md", readWhen: "Writing or changing a view (a React component that renders a card type).", generate: generateViewsDoc },

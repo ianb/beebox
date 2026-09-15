@@ -23,6 +23,8 @@ import { discoverGmailChanges } from "./gmail-discovery.js";
 import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { resolveFakeGmailService } from "../field-test/fake-gmail-gate.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "./sync-skipped.js";
+import { ok, err, type Result } from "../lib/result.js";
 import { evaluateGmailRules } from "./gmail-rules.js";
 import { parseGmailTransientState, type GmailTransientState } from "./gmail-state.js";
 import {
@@ -32,7 +34,7 @@ import {
 } from "./gmail-track.js";
 import { findTrackedGmailThreads } from "./gmail-tracking.js";
 import { writeThreadCards, type WriteThreadsResult } from "./gmail-threads.js";
-import { registerConnector, type Connector, type SyncResult } from "./index.js";
+import { registerConnector, type Connector, type SyncResult, type SyncSkipped } from "./index.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
 
 interface SyncWork {
@@ -151,18 +153,18 @@ class GmailConnector implements Connector {
    * the env var unset the sequence is exactly what it was: allowlist, then
    * stored OAuth, then the real service.
    */
-  private async resolveService(): Promise<GoogleGmailService | null> {
+  private async resolveService(): Promise<Result<GoogleGmailService, SyncSkipped>> {
     // An explicitly injected service wins over the ambient env var, and is not
     // gated: the caller already chose which mailbox this connector talks to,
     // in-process, so `BBX_FAKE_GMAIL` cannot divert it anywhere. The gate exists
     // for the case injection cannot reach — a spawned subprocess.
-    if (this.injectedService !== undefined) return this.injectedService;
+    if (this.injectedService !== undefined) return ok(this.injectedService);
     const fake = await resolveFakeGmailService(this.boxRoot);
-    if (fake !== null) return fake;
-    if (!await isGoogleServiceAllowed(this.boxRoot, "gmail")) return null;
+    if (fake !== null) return ok(fake);
+    if (!await isGoogleServiceAllowed(this.boxRoot, "gmail")) return err(serviceNotAllowed("gmail"));
     const auth = await getGoogleAuth(this.boxRoot);
-    if (!auth) return null;
-    return createGoogleGmailService(createGoogleAuthService(auth, { boxRoot: this.boxRoot }));
+    if (!auth) return err(await serviceNotConfigured(this.boxRoot));
+    return ok(createGoogleGmailService(createGoogleAuthService(auth, { boxRoot: this.boxRoot })));
   }
 
   private async cleanupLegacySecret(): Promise<void> {
@@ -272,8 +274,9 @@ class GmailConnector implements Connector {
   // Deliberately outside the try: a `BBX_FAKE_GMAIL` misconfiguration is a
     // harness error, not a sync failure, and must not be flattened into a
     // `{ success: false }` a wakeup would print and move past.
-    const service = await this.resolveService();
-    if (service === null) return { success: true, created: [], updated: [] };
+    const resolved = await this.resolveService();
+    if (!resolved.ok) return skippedSync(resolved.error);
+    const service = resolved.value;
     try {
       await this.cleanupLegacySecret();
       return await withGmailTrackingLock({

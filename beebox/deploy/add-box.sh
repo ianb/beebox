@@ -361,8 +361,12 @@ fi
 # manifest registrations, the restart) would otherwise register a box whose
 # structure is not known-good, and the restart would put it in front of users.
 chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
+# No --skip-git flag: it is gone (a box is always a git repo), and this is an
+# EXISTING box, so bbx init re-inits in place and makes no initial commit of
+# its own. It does bring the box git-annex configuration up to spec, which is
+# the point of running it here.
 echo "Running bbx init to update box structure..."
-if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx init . --skip-git" 2>&1; then
+if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx init ." 2>&1; then
   echo "bbx init FAILED for $BOX_PATH — stopping before the box is registered."
   echo "The repo is cloned; fix the box and re-run this script."
   exit 1

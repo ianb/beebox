@@ -6,6 +6,15 @@ issues: []
 ---
 # Assets on git-annex
 
+> **⚠ Implemented, then superseded — read as history** (full-embrace-annex,
+> 2026-09-14). This plan moved assets *from* the manifest scheme *to* git-annex,
+> so it describes a two-scheme world with a migration between them. Neither half
+> is current: the manifest scheme is deleted, `bbx attachments to-annex` is
+> deleted, and every box is annex-shaped from its first commit rather than
+> converted later. Its command surface, its `isAnnexBox`-as-a-choice framing,
+> and every "boxes that have not migrated" clause are all stale. What survives
+> is the storage design itself. Current model: [`../assets.md`](../assets.md).
+
 Move box assets (photos, scans, audio, video — the binary subset of
 attachments) from the hand-rolled manifest system onto git-annex, with
 content stored locally and verified. This iteration adds **no remote**:

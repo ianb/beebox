@@ -109,7 +109,6 @@ ANNEX ? classify(repo, batch.attachRelDir) : "skipped: git-annex not installed"
 .gitattributes in-git
 Mixed.Jpg ANNEXED
 archive.zip ANNEXED
-manifest.json in-git
 noext ANNEXED
 plain.jpg ANNEXED
 ```

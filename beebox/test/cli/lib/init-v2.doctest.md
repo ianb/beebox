@@ -146,7 +146,19 @@ for (const name of seededScheduleNames) {
 
 ```ts continue
 `count=${seededScheduleNames.length}; enabled=${enabledScheduleNames.join(",")}; disabled=${disabledScheduleNames.join(",")}`
-=> count=6; enabled=gc-procedure-runs,process-retrospective,refresh-maps; disabled=chat-review,check-calendar,check-email
+=> count=7; enabled=gc-procedure-runs,process-retrospective,refresh-maps; disabled=chat-review,check-calendar,check-drive,check-email
+```
+
+The Drive seed names the connector by its registered name (`google-drive`; the
+`--connector` match is exact) and requires `drive` — the `google` requirement
+is the legacy alias for calendar, so a Drive card must not use it:
+
+```ts continue
+const driveFields = parseFrontmatterObject(
+  await fs.readFile(path.join(boxRoot, "_config/schedules/check-drive.scheduled-script.card"), "utf8"),
+);
+`runs=${driveFields?.runs}; enabled=${String(driveFields?.enabled)}; requires=${JSON.stringify(driveFields?.requires)}`
+=> runs=bbx wakeup --connector google-drive; enabled=false; requires={"connectors":["drive"]}
 ```
 
 Reinstalling the templates does not undo a boxholder's explicit choice. `enabled`

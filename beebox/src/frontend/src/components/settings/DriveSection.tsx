@@ -18,6 +18,7 @@ import { Text } from "../ui/Text";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
+import { DriveScheduleLine } from "./DriveScheduleLine";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
@@ -89,6 +90,9 @@ export function DriveSection() {
             {data.mounts.map((mount) => (
               <DriveMountRow key={mount.cardPath} mount={mount} />
             ))}
+            {/* Only with something mirrored: on a box with no mounts, what the
+                hourly sync would do is nothing, and saying so is noise. */}
+            <DriveScheduleLine />
           </Stack>
         )}
 

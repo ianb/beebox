@@ -164,49 +164,52 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 |---|---|
 | `bbx doctor annex` | Check and repair the box's annex configuration. Most checks self-heal. `--check` for read-only. |
 | `bbx doctor annex-fsck` | Verify content against keys, incrementally. Read-only; run from a schedule. |
-| `bbx attachments to-annex` | One-way migration from the manifest model. Verifies before and after. |
 | `bbx attachments check-unlisted` | Block unlisted large binaries, box-wide. (The pre-commit hook runs the staged-blob equivalent inside `bbx validate --pre-commit`.) |
 | `bbx attachments largefiles-expr` | Print the `annex.largefiles` expression. |
 | `bbx attachments annex-attributes` | Print the scoped `.git/info/attributes` contents. |
+| `bbx attachments unignore` | Restore the un-ignore block on a box whose `.gitignore` was hand-edited back to hiding assets. |
 
 `bbx init` runs the doctor's repair pass, so an ordinary init brings a box up to
 spec rather than leaving it to a command someone must remember.
 
 `bbx init` also rewrites the box's `.gitignore` and `.gitattributes` on every
-run. It **detects the annex conversion** (from `.git/annex/`) so `.gitignore`
-gets the annex form — assets un-ignored — instead of the manifest-scheme one.
-Until 2026-08 it did not: a single `bbx init` silently de-annexed a converted
-box, re-ignoring every asset while `.git/annex/` sat there looking healthy, and
-nothing reported it until a later commit or asset write failed.
+run. There is one form of each. A box is annex-shaped from its first commit, so
+assets are always un-ignored — visible to `git add`, which is how they reach the
+annex.
 
-`.gitattributes` no longer varies by scheme: as of 2026-08-04 the template
-carries no `filter=lfs` rules at all, so every box gets the same LFS-free file.
-A pre-annex box gitignores its asset bytes, so an LFS filter could never fire on
-it either — the rules were dead config whose only live effect was the risk of
-re-LFS-ifying a converted box's new media. Anything that writes asset bytes now gates on that shape via
-`isAnnexBox()` (`src/core/annex/is-annex-box.ts`) — the scan-upload routes
-refuse with a 503 rather than accept a file they cannot import.
+There used to be two forms, selected by a probe for `.git/annex/`, and that
+probe is the reason this paragraph exists: until 2026-08 a single `bbx init`
+silently de-annexed a converted box, re-ignoring every asset while `.git/annex/`
+sat there looking healthy, with nothing reporting it until a later commit or
+asset write failed. The branch is gone because the alternative it selected is
+gone.
 
-## Migrating a box
+`.gitattributes` carries no `filter=lfs` rules: as of 2026-08-04 the template
+dropped them, since Git LFS is retired and the rules' only live effect was the
+risk of re-LFS-ifying a box's new media.
 
-```bash
-bbx attachments to-annex --dry-run   # report what would happen; changes nothing
-bbx attachments to-annex
-```
+Anything that writes asset bytes asserts the shape first, via `assertAnnexBox()`
+(`src/core/annex/assert-annex-box.ts`). It is an assertion rather than a
+graceful refusal because a box that fails it is a broken invariant: the only way
+to reach the state is to hand-edit the `.gitignore` back to hiding assets. The
+scan-upload routes still answer a retryable 503 instead, because a client that
+deletes its only copy on `accepted` needs an answer it can act on.
 
-The migration requires a clean working tree, verifies every manifest against
-disk *before* converting, checks that nothing is still gitignored, confirms
-each asset was actually annexed, compares every manifest SHA-256 against its
-annex key, and only then removes the manifests — all in one commit.
+## There is no migration
 
-That sequence is not ceremony. `git annex fsck` can only prove an object matches
-the key derived from it *at migration time*; the manifests hold the earlier,
-independent claim about what those bytes should be, and the migration deletes
-them. Checking the new record against the old one before discarding the old one
-is the only step here that cannot be redone later.
+Every box is annex-shaped at creation, and every box that existed before that
+was converted and verified in 2026-09. `bbx attachments to-annex` and the
+manifest scheme it migrated from are both deleted.
 
-Rollback is `git annex uninit` plus reverting the migration commit. There is no
-maintained reverse migration.
+The verification that migration did is worth recording, because it is the bar
+for any future change to this seam. A box was not called converted because
+`.git/annex/` existed — three checks over that one seam once reported success
+at the same time while a production box held 536 assets in neither git nor the
+annex (`c47fd2be1`). What settled it was running `git check-ignore` against
+every real asset file in every box.
+
+Rollback is `git annex uninit`. There is no reverse migration and no scheme to
+roll back to.
 
 ## Failure modes
 

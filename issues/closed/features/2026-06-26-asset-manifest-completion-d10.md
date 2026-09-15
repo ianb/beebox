@@ -5,6 +5,11 @@ area: beebox
 resolution: implemented
 ---
 
+> **⚠ The feature this completed is now deleted** (full-embrace-annex,
+> 2026-09-14). The asset-manifest scheme, its `manifest.json` files, and
+> `bbx attachments verify/migrate/add/overwrite` are gone; git-annex is the only
+> asset scheme. Read as history.
+
 **Closed:** Done (descoped): the pre-commit verify hook had already landed. Content dedup and an attach-a-file UI were deliberately not built (no real need); `docs/asset-manifests.md` was corrected to match the shipped CLI.
 
 The pre-commit verify hook had already landed (bucket C). The remaining

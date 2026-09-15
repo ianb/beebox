@@ -19,6 +19,7 @@ import {
   type ConnectorProcedureTrigger,
 } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
 import { createCliContext } from "../../core/commands/index.js";
 import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
 
@@ -53,6 +54,10 @@ export async function runConnectors(
   activeConnector: Connector | undefined;
   activeConnectorName: string | undefined;
   errorCount: number;
+  /** What each connector did, for the cycle's outcome report. Printing it was
+   * never enough: a forced wakeup hands this to an agent, which cannot read
+   * the prose above. */
+  connectors: WakeupConnectorOutcome[];
 }> {
   let connectors = options.connectors;
   if (connectors === undefined) {
@@ -66,7 +71,12 @@ export async function runConnectors(
 
   if (connectors.length === 0) {
     console.log("  No connectors configured.");
-    return { activeConnector: undefined, activeConnectorName: options.connector, errorCount: 0 };
+    return {
+      activeConnector: undefined,
+      activeConnectorName: options.connector,
+      errorCount: 0,
+      connectors: [],
+    };
   }
 
   // Filter by name if specified
@@ -78,6 +88,7 @@ export async function runConnectors(
   let totalPushed = 0;
   let totalJobs = 0;
   let totalErrors = 0;
+  const outcomes: WakeupConnectorOutcome[] = [];
 
   if (options.connector && toRun.length === 0) {
     // An unknown `--connector` name is an orchestration error, but it must
@@ -85,7 +96,17 @@ export async function runConnectors(
     // already run, and later ones (stale-job cleanup, intake, reactor, push)
     // still need to. Fold it into the same errorCount the caller turns into
     // a nonzero exit code once the whole cycle finishes.
-    console.error(`Connector not found: ${options.connector}`);
+    const message = `Connector not found: ${options.connector}`;
+    console.error(message);
+    outcomes.push({
+      name: options.connector,
+      success: false,
+      created: 0,
+      updated: 0,
+      pushed: 0,
+      jobs: 0,
+      error: message,
+    });
     totalErrors++;
   }
 
@@ -103,13 +124,33 @@ export async function runConnectors(
       totalCreated += counts.created;
       totalJobs += counts.jobs;
       totalErrors += counts.errors;
+      outcomes.push({
+        name: connector.name,
+        success: result.success && result.error === undefined,
+        created: counts.created,
+        updated: counts.updated,
+        pushed: counts.pushed,
+        jobs: counts.jobs,
+        ...(result.skipped === undefined ? {} : { skipped: result.skipped }),
+        ...(result.error === undefined ? {} : { error: result.error }),
+      });
       procedures.push(...(result.procedures ?? []));
     } catch (err) {
       // A misconfiguration is not a sync failure: counting it would let the
       // wakeup continue into intake, the reactor and push having quietly
       // decided the box has no new mail. Abort the cycle instead.
       if (err instanceof ConnectorFatalError) throw err;
-      console.error(`  Failed: ${errorMessage(err)}`);
+      const message = errorMessage(err);
+      console.error(`  Failed: ${message}`);
+      outcomes.push({
+        name: connector.name,
+        success: false,
+        created: 0,
+        updated: 0,
+        pushed: 0,
+        jobs: 0,
+        error: message,
+      });
       totalErrors++;
     }
   }
@@ -127,7 +168,12 @@ export async function runConnectors(
   parts.push(`${totalErrors} errors`);
   console.log(`\nTotal: ${parts.join(", ")}.`);
 
-  return { activeConnector, activeConnectorName: options.connector, errorCount: totalErrors };
+  return {
+    activeConnector,
+    activeConnectorName: options.connector,
+    errorCount: totalErrors,
+    connectors: outcomes,
+  };
 }
 
 /** The exit status applied after the rest of the wakeup cycle finishes. */
@@ -143,7 +189,7 @@ type SyncResult = Awaited<ReturnType<Connector["sync"]>>;
  */
 function reportSyncResult(
   result: SyncResult
-): { pushed: number; created: number; jobs: number; errors: number } {
+): { pushed: number; created: number; updated: number; jobs: number; errors: number } {
   let pushed = 0;
   let created = 0;
   let jobs = 0;
@@ -180,6 +226,11 @@ function reportSyncResult(
   if (result.error) {
     console.error(`  Error: ${result.error}`);
     errors = 1;
+  } else if (result.skipped) {
+    // Neither an error nor a sync: the connector ran and deliberately did
+    // nothing. It must still be visible, or the cycle reads as "nothing new"
+    // for a service it never contacted.
+    console.log(`  skipped (${result.skipped.reason}): ${result.skipped.detail}`);
   } else if (
     result.created.length === 0 &&
     result.updated.length === 0 &&
@@ -188,5 +239,5 @@ function reportSyncResult(
     console.log("  No new items.");
   }
 
-  return { pushed, created, jobs, errors };
+  return { pushed, created, updated: result.updated.length, jobs, errors };
 }

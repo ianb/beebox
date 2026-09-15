@@ -14,20 +14,20 @@
  * (`./endpoints.js`) so `./hub-server.ts` never needs to know that.
  */
 
+import { BoxMaintenanceError } from "../lib/box-maintenance.js";
+import { installReloadHandler } from "./supervised-reload.js";
 import * as path from "node:path";
-import getPorts from "get-port";
-import { getBoxShape, requireBoxRoot } from "../lib/box-shape.js";
 import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { killGroup, killAfterGrace, describeError, DEV_BUNDLE_RELOAD_EXIT_CODE, BOX_KILL_GRACE_MS, waitForExit, restartAfterDevBundleReload } from "./child-process-utils.js";
+import { killGroup, killAfterGrace, describeError, BOX_KILL_GRACE_MS, waitForExit } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
 import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
 // prettier-ignore
-import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBbxBinary } from "./child-spawn.js";
+import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, spawnBoxChild } from "./child-spawn.js";
 
 // `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
 // sibling files to keep this one under the 300-line cap; `buildChildEnv` is
@@ -57,7 +57,7 @@ export interface BoxRuntimeStatus {
   lastError: string | undefined;
 }
 
-interface ManagedBox {
+export interface ManagedBox {
   slug: string;
   entry: BoxEntry;
   status: BoxRunStatus;
@@ -90,6 +90,7 @@ interface ManagedBox {
    *  upgrades never count -- see `hub-server.ts`). Drives the idle timer. */
   lastActivity: number | undefined;
   idleTimer: NodeJS.Timeout | undefined;
+  reloadPromise?: Promise<void>;
 }
 
 export interface SupervisorOptions {
@@ -247,7 +248,6 @@ export class Supervisor implements EndpointProvider {
   async ensureRunning(slug: string): Promise<Endpoint | undefined> {
     const box = this.boxes.get(slug);
     if (!box) return undefined;
-    if (!this.config.lazy) return this.get(slug);
     if (box.status === "running") {
       this.touch(box);
       return this.get(slug);
@@ -430,18 +430,8 @@ export class Supervisor implements EndpointProvider {
     box.status = "starting";
     const generation = ++box.generation;
     try {
-      const boxRoot = await requireBoxRoot(box.entry.path);
-      const shape = await getBoxShape(boxRoot);
-      const bbxBinary = await resolveBbxBinary(shape);
-      const port = await getPorts();
-
-      const hubExtras = { BBX_BIN: bbxBinary, BBX_HUB_SECRET: this.hubSecret };
-      const env = buildChildEnv({ sourceEnv: process.env, hubExtras });
-      const child = this.spawnChild({
-        bbxBinary,
-        args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
-        cwd: shape.boxRoot,
-        env,
+      const { child, port, boxRoot } = await spawnBoxChild({
+        root: box.entry.path, slug: box.slug, hubSecret: this.hubSecret, spawn: this.spawnChild,
       });
       // Swallow the execa promise rejection here (not just via .on("exit")) --
       // otherwise a killed child's eventual rejection surfaces minutes later
@@ -452,6 +442,8 @@ export class Supervisor implements EndpointProvider {
 
       box.child = child;
       box.port = port;
+
+      installReloadHandler({ box, generation, launch: () => this.launch(box), isStopped: () => this.boxes.get(box.slug)?.status === "stopped", isReady: () => this.get(box.slug) !== undefined });
 
       child.on("exit", (code, signal) => {
         this.onChildExit({ box, generation, code, signal });
@@ -472,6 +464,12 @@ export class Supervisor implements EndpointProvider {
       if (box.generation !== generation) return; // superseded mid-startup
       const message = describeError(e);
       box.lastError = message;
+      if (e instanceof BoxMaintenanceError) {
+        box.status = "stopped";
+        box.child = undefined;
+        box.port = undefined;
+        return; // Admission closure is not a crashing generation.
+      }
       box.consecutiveFailures += 1;
       if (box.child) {
         // We're about to kill this generation's child ourselves (e.g. a
@@ -497,6 +495,7 @@ export class Supervisor implements EndpointProvider {
     signal: NodeJS.Signals | null;
   }): void {
     const { box, generation, code, signal } = params;
+    if (box.reloadPromise) return; // The surviving reload controller owns this exit.
     if (box.generation !== generation) return; // stale exit from a superseded generation
     if (box.status === "stopped") return; // expected -- stopAll() is tearing down
     if (box.expectedExitGeneration === generation) {
@@ -507,7 +506,7 @@ export class Supervisor implements EndpointProvider {
       box.expectedExitGeneration = undefined;
       return;
     }
-    if (restartAfterDevBundleReload({ code, expectedCode: DEV_BUNDLE_RELOAD_EXIT_CODE, box, launch: () => void this.launch(box) })) return;
+
     box.lastError = `child exited unexpectedly (code=${String(code)}, signal=${String(signal)})`;
     box.consecutiveFailures += 1;
     box.child = undefined;

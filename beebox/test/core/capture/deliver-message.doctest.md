@@ -32,7 +32,7 @@ function sentText(run) {
 ## No live/most-active session → a fresh session is created and sent to
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 const eventBus = createEventBus(box.root);
@@ -58,7 +58,7 @@ await box.cleanup();
 ## Target chat is busy → the message is enqueued, not sent
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 const eventBus = createEventBus(box.root);
@@ -95,7 +95,7 @@ await box.cleanup();
 ## Explicit targetSessionId (known to the box) → delivered to it
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 const eventBus = createEventBus(box.root);
@@ -123,7 +123,7 @@ await box.cleanup();
 ## A failed (non-busy) send throws CaptureDeliveryError
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const eventBus = createEventBus(box.root);
 
 const session = { isBusy: () => false, enqueue: () => {}, send: async () => false, getSessionId: () => "s-x" };

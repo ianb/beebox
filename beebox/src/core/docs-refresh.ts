@@ -1,116 +1,101 @@
-/**
- * The unattended generated-docs refresh — `bbx docs refresh`, run per box by
- * `deploy/deploy.sh` in the at-rest window right after `bbx migrate --sweep`.
- *
- * ## Why a deploy step at all
- *
- * `generateDocs` (which, via `syncTemplatesFromSource`, also writes card rules
- * and the managed box skills) is cache-gated on the running engine's version,
- * so it regenerates the first time it runs after a deploy — but only when
- * *something runs it*. Its triggers are all activity: `bbx init`, a reactor
- * cycle, a chat session start. A box nobody talks to keeps the previous
- * engine's generated docs indefinitely. That is how three of six production
- * boxes sat on card rules naming a card type that had been renamed weeks
- * earlier: the rename shipped, the sweep converged their data, and nothing
- * regenerated their guidance until someone ran `bbx init` by hand.
- *
- * ## Shape (deliberately the migration sweep's)
- *
- * - **Normal cache.** Not `force`: on a box that already regenerated (someone
- *   chatted with it between the deploy and this step) the run is a no-op, and
- *   the report says so. The cache keys on the deploy stamp, so it cannot hide
- *   a genuinely stale box.
- * - **A dirty box is skipped, not refreshed.** `commitTemplateSyncChanges`
- *   commits only template-managed paths, but a box that is already dirty is a
- *   box with someone's in-flight work in it, and regeneration would interleave
- *   with it. Skipping is reported and the next deploy retries — the same
- *   bargain `sweepMigrations` makes.
- * - **Committed, not left in the tree.** Nobody is watching, and a box parked
- *   dirty is a box the next sweep and the next refresh both skip. `generateDocs`
- *   commits the template-managed paths itself (`Triggered-By: generateDocs`);
- *   this then sweeps up the rest of what the run wrote (`Created-By:
- *   docs-refresh`), which is safe precisely because the tree was verified clean
- *   first.
- */
-
-import { readFile } from "node:fs/promises";
+/** Refresh under the same admission boundary as migrations, preserving dirty input in Git. */
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { commit, getStatus, stageAll } from "../lib/git.js";
-import { withBoxGitLock } from "../lib/git-lock.js";
+import { simpleGit } from "simple-git";
+import { stageAndCommitPaths } from "../lib/git.js";
+import { acquireBoxMaintenance } from "../lib/box-maintenance.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { errnoCode } from "../lib/error-guards.js";
-import { generateDocs, GENERATE_MARKER } from "./docs-gen/index.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import {
+  generateDocs,
+  generatedDocsAreCurrent,
+  GENERATE_MARKER,
+} from "./docs-gen/index.js";
 import { ensureEngineDocs } from "./docs-gen/box-docs.js";
+import {
+  captureMigrationSnapshot,
+  changedMigrationPaths,
+  restoreMigrationIndex,
+  migrationOutputBaseline,
+  finishMigrationOutput,
+} from "./migration-recovery.js";
 
-export type DocsRefreshResult =
-  /** The cache said everything was current. The common case, and the quiet one. */
-  | { readonly status: "current" }
-  /** Uncommitted changes; regenerating would entangle them. Retried next deploy. */
-  | { readonly status: "skipped-dirty" }
-  /** Docs were regenerated (and any template-managed changes committed). */
-  | { readonly status: "refreshed" };
-
-/** The generation marker's content, or null when it has never been written. */
-async function readMarker(boxRoot: string): Promise<string | null> {
-  try {
-    return await readFile(join(boxRoot, GENERATE_MARKER), "utf-8");
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw e;
+export interface DocsRefreshResult { readonly status: "current" | "refreshed" }
+class DocsRefreshError extends Error {
+  constructor(ref: string, cause: unknown) {
+    super(`Docs refresh failed: ${errorMessage(cause)}. Recovery: ${ref}; restore selected input with git restore --source=${ref} -- path/to/file`, { cause });
+    this.name = "DocsRefreshError";
   }
 }
 
-/** Commit anything the refresh left in the tree, if it left anything. */
-async function commitRefreshResidue(boxRoot: string): Promise<void> {
-  const status = await getStatus(boxRoot);
-  if (status.clean) return;
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: "Refresh generated docs",
-    trailers: { "Created-By": "docs-refresh" },
-  });
+const PENDING_REF = "refs/bbx/migrations/docs-refresh/pending";
+
+async function readMarker(boxRoot: string): Promise<string | null> {
+  try {
+    return await readFile(join(boxRoot, GENERATE_MARKER), "utf8");
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return null;
+    throw error;
+  }
 }
 
-/**
- * Regenerate one box's generated docs, rules, and skills if the cache says
- * they are stale, and commit what that dirtied.
- */
-export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<DocsRefreshResult> {
-  const { boxRoot } = opts;
-  // The lock is taken on `boxRoot` — the same path (and so the same lock)
-  // `commitTemplateSyncChanges` takes deeper in, which is what makes that
-  // nested acquisition a pass-through rather than a 60s stall. It covers the
-  // clean check through the commit as one unit, exactly as the sweep does.
-  const shape = await getBoxShape(boxRoot);
-  // The package's own reference docs depend on the engine alone, so they are
-  // ensured before (and regardless of) the dirty-box gate below: a deploy that
-  // finds every box dirty must still leave the package docs current.
-  await ensureEngineDocs();
-  return withBoxGitLock(shape.boxRoot, async () => {
-    const status = await getStatus(shape.boxRoot);
-    if (!status.clean) return { status: "skipped-dirty" };
+/** Retain the original baseline across a rejected commit: its output is still ours on retry. */
+async function refreshSnapshot(boxRoot: string) {
+  const pending = (await simpleGit(boxRoot).raw(["for-each-ref", "--format=%(objectname)", PENDING_REF])).trim();
+  if (!pending && await generatedDocsAreCurrent(boxRoot)) return null;
+  const snapshot = await captureMigrationSnapshot(boxRoot, "docs-refresh");
+  return { snapshot, baseline: await migrationOutputBaseline(boxRoot, snapshot) };
+}
 
-    const before = await readMarker(boxRoot);
-    await generateDocs(boxRoot);
-    // Sweep up whatever the run left in the tree. generateDocs commits partway
-    // through (`syncTemplatesFromSource` → `commitTemplateSyncChanges`,
-    // `Triggered-By: generateDocs`) and THEN writes the agent guide,
-    // `AGENTS.md`, the CLAUDE.md @-includes, and the rest — residue a `bbx tick`
-    // housekeeping commit or the boxholder normally sweeps. Unattended that
-    // residue IS the failure: a box left dirty is a box this step and the
-    // migration sweep both skip next deploy, so it would converge exactly once
-    // and then park.
-    //
-    // Whole-tree (`stageAll`), not the template-managed filter, and that is
-    // sound *because of the clean check above*: the tree was clean when we took
-    // the lock, so everything dirty now was written by this run. The same
-    // cooperative caveat as the migration sweep applies — a box agent shelling
-    // out to raw git is outside the lock — which is why the deploy runs this in
-    // the at-rest window.
-    await commitRefreshResidue(shape.boxRoot);
-    const after = await readMarker(boxRoot);
-    // generateDocs rewrites the marker (timestamp + engine version) on every
-    // run it does not skip, so an unchanged marker means the cache hit.
-    return after === before ? { status: "current" } : { status: "refreshed" };
+export async function refreshGeneratedDocs(opts: {
+  boxRoot: string;
+  withinMaintenance?: boolean;
+  recover?: boolean;
+}): Promise<DocsRefreshResult> {
+  const shape = await getBoxShape(opts.boxRoot);
+  await ensureEngineDocs();
+  const maintenance = await acquireBoxMaintenance(shape.boxRoot, {
+    reason: "docs refresh",
+    join: opts.withinMaintenance === true,
+    recover: opts.recover === true,
   });
+  try {
+    const result = await maintenance.run(
+      async (): Promise<DocsRefreshResult> => {
+        const before = await readMarker(opts.boxRoot);
+        const input = await refreshSnapshot(shape.boxRoot);
+        if (!input) return { status: "current" };
+        const { snapshot, baseline } = input;
+        let paths: string[] = [];
+        await maintenance.beginChanges();
+        try {
+          await generateDocs(opts.boxRoot, { commit: false });
+          paths = await changedMigrationPaths(shape.boxRoot, baseline);
+          await stageAndCommitPaths(shape.boxRoot, {
+            paths,
+            message: "Refresh generated docs",
+            trailers: {
+              "Created-By": "docs-refresh",
+              "Migration-Recovery": snapshot.ref,
+            },
+          });
+          await finishMigrationOutput(shape.boxRoot, snapshot);
+        } catch (error) {
+          await rm(join(opts.boxRoot, GENERATE_MARKER), { force: true });
+          await restoreMigrationIndex(shape.boxRoot, { snapshot, paths });
+          throw new DocsRefreshError(snapshot.ref, error);
+        }
+        return {
+          status:
+            (await readMarker(opts.boxRoot)) === before
+              ? "current"
+              : "refreshed",
+        };
+      },
+    );
+    await maintenance.complete();
+    return result;
+  } finally {
+    await maintenance.release();
+  }
 }

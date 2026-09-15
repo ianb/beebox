@@ -2,12 +2,21 @@
 
 `prepareBulkBatch` turns a bulk staging session into a committed
 `upload-batch` document under a chat's `tmp-upload/`: it copies the staged
-files into the batch's attach scope, writes that scope's asset `manifest.json`,
-writes the summary card, and commits the card, the manifest, and the blobs.
+files into the batch's attach scope, writes the summary card, and commits the
+card and the blobs.
 Staging is not deleted. Everything runs at the `makeTmpBox()` filesystem
 tier — no chat runtime, no delivery (that is a later chunk).
 
 ```ts setup
+/** Blob basenames in a batch attach scope — the control files are not blobs. */
+function blobNames(listing: string): string[] {
+  return listing
+    .split("\n")
+    .map((l) => l.split("/").pop() ?? "")
+    .filter((n) => n !== "" && n !== ".gitattributes" && !n.endsWith(".card"))
+    .sort();
+}
+
 import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -53,16 +62,16 @@ async function stageBulk(boxRoot, opts) {
 }
 ```
 
-## Happy path: card + attach manifest + commit, blobs staged
+## Happy path: card + commit, blobs staged
 
 Two registered items, both uploaded. The batch lands as a card + attach scope;
-the manifest records each blob's server-computed size + sha256; the card, the
-manifest, and the blobs all commit. Whether the blobs land as annex pointers
+the card records each blob's server-computed size; the card and the blobs both
+commit. Whether the blobs land as annex pointers
 rather than bytes is what `prepare-annex.doctest.md` covers — this tier runs on
 a plain git box and cannot tell the two apart.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const id = await stageBulk(box.root, {
   expectedItems: [
     { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
@@ -93,19 +102,20 @@ JSON.stringify({
 => {"status":true,"batchId":true,"totalBytes":11,"body":"2 files uploaded (11 B)."}
 ```
 
-The attach manifest inventories both blobs with a size + sha256 each:
+The card's `received` list inventories both blobs with a size each, and no
+`manifest.json` is written: git-annex records the content hash itself, so a
+hand-maintained inventory beside it was a second record of the same fact.
 
 ```ts continue
-const manifest = JSON.parse(await box.read(`${batch.attachRelDir}/manifest.json`));
 JSON.stringify({
-  names: Object.keys(manifest.files).sort(),
-  reportSize: manifest.files["report.pdf"].size,
-  hasHash: typeof manifest.files["photo.png"].sha256 === "string" && manifest.files["photo.png"].sha256.length === 64,
+  names: ["photo.png", "report.pdf"].filter((n) => card.includes(n)).sort(),
+  reportSize: card.includes("size: 6"),
+  noManifest: !(await box.list(batch.attachRelDir)).includes("manifest.json"),
 })
-=> {"names":["photo.png","report.pdf"],"reportSize":6,"hasHash":true}
+=> {"names":["photo.png","report.pdf"],"reportSize":true,"noManifest":true}
 ```
 
-The card, manifest, **and the blobs** are committed, with the
+The card **and the blobs** are committed, with the
 `Created-By: bulk-upload` trailer.
 
 This previously staged an explicit `[card, manifest, .gitignore]` list and
@@ -124,11 +134,10 @@ JSON.stringify({
   committed: subjects.includes(`Upload batch: ${batch.batchSlug}`),
   trailer: execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("bulk-upload"),
   cardTracked: tracked.includes(batch.cardRelPath),
-  manifestTracked: tracked.includes(`${batch.attachRelDir}/manifest.json`),
   blobTracked: tracked.some((f) => f.endsWith("report.pdf")),
   blobOnDisk: await pathExists(box.path(`${batch.attachRelDir}/report.pdf`)),
 })
-=> {"committed":true,"trailer":true,"cardTracked":true,"manifestTracked":true,"blobTracked":true,"blobOnDisk":true}
+=> {"committed":true,"trailer":true,"cardTracked":true,"blobTracked":true,"blobOnDisk":true}
 ```
 
 Staging is retained (not deleted at prepare time):
@@ -148,7 +157,7 @@ A registered item whose bytes never arrived is `missing`; an item the caller
 reports failing is `failed` (with its reason); the rest are `received`.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 // Register the first item up front, then append the rest (as the picker would
 // stream them in) via registerBulkItems.
 const id = await stageBulk(box.root, {
@@ -187,11 +196,11 @@ await box.cleanup();
 
 ## Filename collisions dedupe with a numeric suffix (extension preserved)
 
-Two uploads with the same original name land as distinct files; the manifest
+Two uploads with the same original name land as distinct files; the card
 records both, and the card's received list carries both stored names.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "IMG_1234.jpg" }, { id: "b", name: "IMG_1234.jpg" }],
   files: [
@@ -201,8 +210,7 @@ const id = await stageBulk(box.root, {
 });
 
 const batch = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
-const manifest = JSON.parse(await box.read(`${batch.attachRelDir}/manifest.json`));
-JSON.stringify(Object.keys(manifest.files).sort())
+JSON.stringify(blobNames(await box.list(batch.attachRelDir)))
 => ["IMG_1234-2.jpg","IMG_1234.jpg"]
 ```
 
@@ -224,13 +232,13 @@ An unsafe original name is sanitized (path parts stripped, spaces/odd chars
 collapsed), keeping the extension:
 
 ```ts continue
-const box2 = await makeTmpBox({ git: true, annex: true });
+const box2 = await makeTmpBox({ git: true });
 const id2 = await stageBulk(box2.root, {
   expectedItems: [{ id: "a", name: "../../etc/My Report (final).pdf" }],
   files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "../../etc/My Report (final).pdf", mimeType: "application/pdf", itemId: "a", content: "X" }],
 });
 const b2 = await prepareBulkBatch({ boxRoot: box2.root, id: id2, contextDir: "" });
-JSON.stringify(Object.keys(JSON.parse(await box2.read(`${b2.attachRelDir}/manifest.json`)).files))
+JSON.stringify(blobNames(await box2.list(b2.attachRelDir)))
 => ["My-Report-final.pdf"]
 ```
 
@@ -245,7 +253,7 @@ the same slug (derived from the stable session `createdAt` + id), skips the
 copy/rewrite, and commits nothing new.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "doc.pdf" }],
   files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "doc.pdf", mimeType: "application/pdf", itemId: "a", content: "DOC" }],
@@ -282,7 +290,7 @@ enumerators skip bulk sessions. A fresh capture session defaults `kind` to
 `"capture"`; a legacy manifest with no `kind` reads back the same way.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const capture = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 const bulk = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk", expectedItems: [] });
 
@@ -346,7 +354,7 @@ batch is introduced, so it files against the note instead of asking what the
 files are.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "IMG_0001.jpg", size: 4, mimetype: "image/jpeg" }],
   files: [
@@ -414,7 +422,7 @@ Two picks are both called `image.png`. Item `a` is reported failed; item `b`
 never arrives. `b` must still show up as missing.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const id = await stageBulk(box.root, {
   expectedItems: [
     { id: "a", name: "image.png", size: 4, mimetype: "image/png" },

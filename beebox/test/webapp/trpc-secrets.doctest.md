@@ -66,7 +66,7 @@ which is why the plan can accept that names are owner-visible across boxes.
 ```ts
 const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
 process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const member = caller(box.root, { isOwner: false });
 
 print(`boxStatus: ${await attempt(member.secrets.boxStatus())}`);
@@ -254,7 +254,7 @@ the enumerations above stay exact.
 ```ts
 const dir2 = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
 process.env.BBX_SECRETS_FILE = join(dir2, "secrets.json");
-const box2 = await makeTmpBox();
+const box2 = await makeTmpBox({ git: true });
 const owner2 = caller(box2.root);
 const slug2 = await boxSlug(box2.root);
 
@@ -304,7 +304,7 @@ grant surface for its neighbours' credentials.
 ```ts
 const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-open-"));
 process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
 
 print(`boxStatus: ${await attempt(open.secrets.boxStatus())}`);

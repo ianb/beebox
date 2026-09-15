@@ -24,6 +24,7 @@ import { normalizeCodexSdkToolItem } from "../../services/codex-tool-activity.js
 export type { CodexObservedActivity } from "./codex-run-activity.js";
 
 export interface CodexRunOptions {
+  signal?: AbortSignal | undefined;
   boxRoot: string;
   task?: string | undefined;
   systemPrompt: string;
@@ -41,11 +42,18 @@ export interface CodexRunOptions {
   additionalDirectories?: string[] | undefined;
 }
 
+function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): AbortSignal {
+  signal?.throwIfAborted();
+  return signal ? AbortSignal.any([signal, limit]) : limit;
+}
+
 /** Run one fresh or resumed Codex turn and map it to the existing Agent result. */
 export async function runCodexAgent(
   options: CodexRunOptions,
   createSession?: CodexSdkSessionFactory,
 ): Promise<AgentResult> {
+  const controller = new AbortController();
+  const signal = invocationSignal(options.signal, controller.signal);
   if (options.dryRun === true) {
     return {
       success: true,
@@ -76,13 +84,12 @@ export async function runCodexAgent(
       resumeSessionId: options.resumeSessionId,
       additionalDirectories: options.additionalDirectories,
     });
-    const controller = new AbortController();
     const changedPaths = new Set<string>();
     let toolCount = 0;
     const completed = await session.run({
       input: options.prompt,
       outputSchema: options.outputSchema,
-      signal: controller.signal,
+      signal,
       onSessionId(sessionId) {
         observedSessionId = sessionId;
         options.onSessionId?.(sessionId);
