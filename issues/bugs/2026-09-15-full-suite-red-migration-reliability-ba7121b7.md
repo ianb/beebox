@@ -8,7 +8,7 @@ discovered-by: agent
 discovered-in: worktree-migration-reliability — the hourly full-suite run on main
 ---
 
-> **Resolved in `PLACEHOLDER`.** The hub's fixture box had no Git repository,
+> **Resolved in `0e37ecba0`.** The hub's fixture box had no Git repository,
 > and the new admission gate lives in the Git directory. Left open only if the
 > design question below gets an answer that changes the code.
 
