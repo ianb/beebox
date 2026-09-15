@@ -16,7 +16,6 @@ import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
 import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
-import { MIGRATED_SECTION_HEADER } from "../migrations/one-root-ignore-merge.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -25,6 +24,18 @@ import {
 import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
 import { migrateBoxState } from "../../lib/state-migration.js";
+
+/**
+ * Header of the "Migrated local rules" section a v2→v3 conversion could leave
+ * in a box `.gitignore`/`.gitattributes`.
+ *
+ * The migration that wrote it is deleted — every box is shapeVersion 3 and the
+ * v2 population is empty — but boxes converted while it existed still carry the
+ * section, and `bbx init` regenerates those files on every run. This marker is
+ * what makes the regeneration preserve it instead of dropping a boxholder's
+ * hand-kept rules.
+ */
+const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
 
 const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
 

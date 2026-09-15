@@ -32,7 +32,6 @@ import {
 import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
 import { assertNever } from "../../lib/invariant.js";
-import { findV2Box, runBootstrap } from "./migrate-bootstrap.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");
@@ -217,35 +216,17 @@ async function handleMarkApplied(boxRoot: string, name: string): Promise<void> {
 }
 
 /**
- * Resolve the box's top-level directory, or run (and fully handle) the v2
- * bootstrap conversion and return `null` when this turns out to be a v2 box.
- * Split out of the action purely to keep its complexity down.
+ * Resolve the box's top-level directory.
+ *
+ * This used to branch: a v2 box kept its marker nested at `content/`, where
+ * `findBoxRoot` does not look, so a miss here meant "maybe v2" and ran the
+ * bootstrap conversion. The v2 population is empty and that conversion is
+ * deleted, so a miss is now simply a miss.
  */
-async function resolveTopPathOrBootstrap(options: MigrateOptions): Promise<string | null> {
-  let topPath: string;
-  try {
-    const found = await findBoxRoot(process.cwd());
-    if (!found) throw new NotInBoxError();
-    topPath = found;
-  } catch (e) {
-    // No marker found walking up from cwd at all — the common case for a v2
-    // box invoked from its package root (the marker is nested at content/,
-    // which findBoxRoot doesn't look inside). Try the v2 probe before giving up.
-    const v2Box = await findV2Box(null);
-    if (v2Box === null) throw e;
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-
-  // requireBoxRoot found A marker, but it may be the nested v2 one (e.g.
-  // invoked from inside content/ itself) — the normal manifest-driven flow
-  // below can't read a v2 box's manifest, so check for that case here.
-  const v2Box = await findV2Box(topPath);
-  if (v2Box !== null) {
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-  return topPath;
+async function resolveTopPath(): Promise<string> {
+  const found = await findBoxRoot(process.cwd());
+  if (!found) throw new NotInBoxError();
+  return found;
 }
 
 export const migrateCommand = new Command("migrate")
@@ -276,10 +257,7 @@ export const migrateCommand = new Command("migrate")
         questions: await migrationQuestions(root) }));
       return;
     }
-    const topPath = await resolveTopPathOrBootstrap(options);
-    if (topPath === null) return;
-
-    const boxRoot = topPath;
+    const boxRoot = await resolveTopPath();
 
     if (options.sweep === true || (options.apply === true && options.status !== true)) {
       process.exitCode = await runSweep(boxRoot, options);
