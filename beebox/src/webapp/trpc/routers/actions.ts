@@ -1,3 +1,5 @@
+import { BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import { answerWithAdmission } from "../../../core/commands/answer.js";
 import * as path from "node:path";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -34,27 +36,17 @@ export const actionsRouter = router({
         writeLine: () => {},
       };
 
-      const result = await runCommand({
-        name: "answer",
-        args: {
-          question: input.questionPath,
-          answer: input.answer,
-          selectedId: input.selectedId,
-          via: "web",
-        },
-        ctx: cmdCtx,
+      const result = await answerWithAdmission({ ctx: cmdCtx, args: {
+        question: input.questionPath, answer: input.answer, selectedId: input.selectedId, via: "web",
+      }, onAnswered: () => { ctx.eventBus.emit("question-answered", {
+        path: input.questionPath, answer: input.answer, selectedId: input.selectedId, timestamp: new Date().toISOString(),
+      }); } }).catch((error: unknown) => {
+        if (error instanceof BoxMaintenanceError) throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: error.message });
+        throw error;
       });
-
       if (!result.success) {
         throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Failed to answer" });
       }
-
-      ctx.eventBus.emit("question-answered", {
-        path: input.questionPath,
-        answer: input.answer,
-        selectedId: input.selectedId,
-        timestamp: new Date().toISOString(),
-      });
 
       return { success: true, message: "Question answered", path: input.questionPath };
     }),

@@ -22,7 +22,7 @@ import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../connectors/chat-utils.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
-import { trackMutationStart } from "../../lib/dev-bundle-reload.js";
+import { acquireBoxWork } from "../../lib/box-maintenance.js";
 
 interface RegisterTelegramRoutesOptions {
   server: FastifyInstance;
@@ -73,8 +73,8 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
 
         // Fire-and-forget: send to pool, deliver responses, archive
-        const finishBackgroundWork = trackMutationStart();
-        void handleChatMessage({
+        const work = await acquireBoxWork(boxRoot);
+        void work.run(() => handleChatMessage({
           pool,
           boxRoot,
           threadRef: result.threadRef,
@@ -85,11 +85,11 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
           chatId,
           botToken: config.botToken,
           eventBus,
-        })
+        }))
           .catch((err) => {
             console.error(`[telegram-webhook] Pool handling failed: ${err}`);
           })
-          .finally(finishBackgroundWork);
+          .finally(() => work.release()).catch((error: unknown) => request.log.error(error, "Releasing detached Telegram work failed"));
       }
 
       return reply.status(200).send({ ok: true });

@@ -10,87 +10,130 @@ A migration is a one-shot transformation of card data on disk — schema renames
 
 `hooks-2026-09` reinstalls the managed git hooks and the package-root Claude settings through `installValidationHooks`, the same call `bbx init` makes: the hooks bake in the CLI path and name, and boxes that predate the rename were still looking for the former CLI at a checkout that no longer exists.
 
-## `bbx migrate` is the entry point
+## Applying and inspecting migrations
 
-Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `bbx migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
+The box's `_config/migrations.jsonl` is append-only JSONL, one `{name,
+applied-at}` per entry. The ordered registry in `src/core/migrations.ts` decides
+what remains pending. New boxes receive a seeded manifest from `bbx init`;
+a missing manifest in an existing box requires an explicit enrollment decision.
 
 ```bash
-bbx migrate                      # status — show applied + pending
-bbx migrate --apply              # run all pending in order
-bbx migrate --mark-all-applied   # seed the manifest as if every known migration ran
-                                # (legacy box that was already fully migrated before this command existed)
-bbx migrate --mark-applied bill  # record ONE migration as applied without running it
+bbx migrate                         # human-readable applied and pending lists
+bbx migrate --status --json          # read-only manifest, pending names, questions
+bbx migrate --apply                  # apply, commit, and allow bounded agent repair
+bbx migrate --sweep                  # same runner, scripts only; no repair agent
+bbx migrate --sweep --repair --json   # unattended application and bounded repair
+bbx migrate --mark-all-applied       # explicitly enroll an already-migrated box
+bbx migrate --mark-applied bill      # record one already-completed migration
 ```
 
-`bbx init` writes a seeded manifest (all-applied) for new boxes automatically — new boxes don't need to run historical migrations. A missing manifest in an existing box is a hard error; the user must explicitly `--mark-all-applied` to declare "this box is already up to date."
+`--status --json` returns `{status: "status", manifest: boolean, pending:
+string[], questions: string[]}`. It does not acquire maintenance, generate docs,
+create snapshots, or run agents. Use that exact option pair for read-only
+inspection; `--json` alone does not select this status representation. Do not
+combine status and write options. A missing manifest is reported rather than
+inferred to mean current. Human-readable status retains the legacy missing-
+manifest error.
 
-`--mark-applied <name>` is the single-entry escape hatch: it records one migration as applied **without running it**, for a box already in that migration's post-state that never got the manifest line. The motivating case is a **retired migrator** — e.g. `bill` (the cardworks XML→frontmatter conversion) always exits non-zero now that the `cardworks` parser is gone, so a box already in frontmatter shape but missing the `bill` entry would halt `bbx migrate --apply` on it forever. Marking it applied unblocks the sweep. It refuses an unknown name or a manifest-less box (use `--mark-all-applied` for the latter), and is an idempotent no-op if the migration is already recorded. Like the other write paths it leaves the manifest edit uncommitted for review.
+`--apply` and `--sweep` both preserve dirty input and commit each successful
+migration with its manifest entry. Their distinction is agent authority:
+`--apply` permits repair and registered procedure migrations; `--sweep` permits
+only deterministic scripts unless `--repair` is explicit. A procedure migration
+still requires `--apply` and its machine validation gate. The mark-applied
+commands only edit the manifest, leave that edit uncommitted for review, and
+never establish that the conversion actually happened.
 
-If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
+## Admission, snapshots, and failures
 
-## The deploy sweep runs them automatically
+Migration, generated-docs refresh, supervised reload, and deployment share the
+box admission gate in `src/lib/box-maintenance.ts`. Maintenance closes admission
+before waiting up to ten minutes for already accepted work to finish. New
+requests, independent CLI actions, queued chat turns, and scheduled deliveries
+cannot extend that drain. Accepted agents and scripts retain a validated,
+box-scoped permission for their descendant tool calls. Their tools can finish
+while new independent work is refused. Due chat timers stay pending.
 
-`deploy/deploy.sh` converges every box on the server after shipping new engine
-code, in the at-rest window between `bbx-wait-quiet` and the service restart. Two
-steps per box, in order: `bbx migrate --sweep` (the card data) then
-`bbx docs refresh` (the generated guidance — see below). A box with nothing pending prints nothing; anything else prints
-one line into the deploy log. **The sweep never fails the deploy** — a box that
-needs a human is a box to look at, not a reason to abandon a shipped release.
+A dirty tree is normal input. Before a mutation phase, the runner retains
+`refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.
+The snapshot stores working-tree versions, tracked deletions, and nonignored
+untracked files; its second parent preserves the original staged versions.
+Snapshot construction does not change HEAD or the real index. Ignored runtime
+state and secrets are not force-added, and an annex pointer still needs its
+annex object. No annex content is dropped.
 
-`--sweep` is deliberately narrower than `--apply`, because nobody is watching:
+The runner measures paths changed since the snapshot, then commits those paths
+and the manifest through the ordinary hooks. Earlier unrelated staging is kept.
+A changed path can contain earlier human edits; the recovery snapshot preserves
+the before-state. If the commit fails, the manifest and original index entries
+for attempted paths are restored, while conversion output remains available for
+repair. The original output baseline is retained across retries, so an
+idempotent converter that writes identical bytes on retry still commits the
+previous attempt's output. Each attempt separately snapshots current input and
+staging. The gate prevents Bee Box writers from racing this operation; raw Git
+commands and external editors remain outside its enforcement.
 
-| | `bbx migrate --apply` | `bbx migrate --sweep` |
-|---|---|---|
-| dirty tree | refuses | skips the box, reports, retries next deploy |
-| procedure-kind (agent) migrations | runs them | stops there and reports |
-| provisioning | runs `bbx init` first | does not |
-| result | left uncommitted for review | one commit per migration, `Created-By: migration-sweep` |
+A hard script or commit failure stops later migrations. With repair enabled,
+the configured in-box agent gets at most twelve turns followed by one
+deterministic retry. A question records a decision it cannot safely make;
+substantive deletion or choosing between divergent content requires the
+boxholder's answer. The agent cannot change the migrator, forge the manifest,
+weaken validation, rewrite history, or drop annex objects. Small incidental loss
+of failed/pending chat inputs is reported, rather than treated as a reason for a
+new backup subsystem.
 
-The commit is the notable difference. Leaving changes uncommitted is right for a
-human at a terminal and wrong unattended: a dirty box is exactly what the next
-sweep skips, so one un-reviewed migration would silently stop every later one.
-The manifest entry and the changes it describes land in the **same** commit, so
-a box can never claim a migration whose effects are not in its history. When the
-commit fails — the box's own pre-commit hook rejecting a card a migrator
-produced, say — the manifest entry is rolled back and the migrator's changes are
-left in the tree for review.
+Exit 2 means per-card partial conversion. A repair-enabled pass can commit the
+successful output together with an unresolved question and continue later
+migrations. Without repair, that migration remains pending and later entries
+wait. Outstanding questions remain attention items even when the registry has
+no pending names. This `attention` result exits zero because the box is ready
+to serve; JSON status and the text warning still identify the questions. Do not
+replay a recorded old migration after later migrations;
+repair the remaining cards against their current schema. A durable
+`refs/bbx/migrations/<name>/repair-started` receipt prevents a crashed repair from
+silently starting another agent on every hourly pass.
 
-The whole sweep runs under the box git lock (`withBoxGitLock`), because
-`stageAll` is `git add -A`: without it, a connector or wakeup committing between
-the clean check and the commit would have its files swept into a
-`migration-sweep` commit. That guarantee is **cooperative** — a box agent
-shelling out to raw `git` is outside it, which is why the deploy runs the sweep
-in the at-rest window rather than at an arbitrary moment.
+After draining, the runner starts a fifteen-minute awake-time execution budget.
+Scripts, procedure subprocesses, and repair harnesses receive cancellation;
+script/procedure process groups get TERM, then bounded KILL, and are awaited
+before ownership releases. Git and docs-generation operations are checked
+between calls and cannot all be interrupted inside a call. The schedule's outer
+25-minute process limit bounds those remaining cases; remote SSH allows 26
+minutes. A timeout is not success. An interrupted mutation leaves the gate
+closed for recovery; lock expiry alone does not reopen it. A pre-change drain
+timeout releases the unchanged box without forcing active work to stop.
 
-A box left behind — dirty tree, pending procedure migration — is reported by
-`bbx health` as `box-migrations` (warning), so the drift is visible after the
-deploy log scrolls away.
+A standalone pass that finds a missing manifest or a procedure prerequisite
+before changing anything releases its gate. Under deployment those same unmet
+prerequisites leave the box closed, including when a previous nested operation
+had already declared it ready. They do not authorize activating newer code.
 
-### `bbx docs refresh` — the generated-docs half
+## Automatic convergence and generated guidance
 
-Migrating a box's cards is only half of converging it. Its `.claude/rules/card-*.md`,
-`.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are
-regenerated from the schema registry by `generateDocs`, which is cache-gated on
-the running engine's version — so it regenerates the first time it runs after a
-deploy, but only when *something runs it*, and its triggers are all activity (a
-chat session start, a `bbx wakeup` reactor cycle, `bbx init`). A box nobody talks
-to kept the previous engine's guidance indefinitely: the 2026-08-24 `document`→`pdf`
-rename left 3 of 6 prod boxes teaching a card type that no longer existed until a
-manual `bbx init` pass. (The engine reference docs at `node_modules/beebox/box-docs/`
-aren't part of this gap — `generateDocs` rewrites them unconditionally on every run
-from the currently installed engine, so they can't lag behind the version already
-on disk.)
+The deployment controller holds affected boxes across activation, migration,
+service replacement, and readiness checks. It runs the shared script-only sweep
+with a separate ten-minute command limit. A failing box remains closed for
+recovery and is reported; a successful process restart alone does not make its
+data current. See [deployment operations](../deploy/README.md).
 
-`bbx docs refresh` closes that gap and takes the sweep's shape deliberately — the
-normal cache (silent no-op on a box that already regenerated), a dirty box
-skipped and retried next deploy, and the result committed rather than left in
-the tree — two commits: `commitTemplateSyncChanges` takes the template-managed
-paths (`Triggered-By: generateDocs`), then the refresh commits the residue
-`generateDocs` writes afterwards (`AGENTS.md`, includes, briefing;
-`Created-By: docs-refresh`), sound because the tree was verified clean under
-the box git lock first. Policy lives in `src/core/docs-refresh.ts`.
-It is script plumbing — reach for `bbx init` when you want a box converged by
-hand.
+`schedules/box-convergence/` retries hourly and may invoke bounded agent repair.
+It runs only from the main checkout on `main`. Local targets come from that
+checkout's `beebox/.env` `BOXES=` line. Canonical path checks exclude managed
+worktree clones and roots claimed by worktree configuration. Production targets
+come from its hub registry and use each box's installed engine, so local code
+never decides production's pending migration list. Unknown coverage, failed
+conversions, and questions produce an important alert; identical detail is
+suppressed until the daily reminder. The four-hour run budget reports unvisited
+boxes as unchecked. Schedule dry-run only inspects status and writes no box,
+question, notification, or comparison baseline.
+
+The normal migration CLI also refreshes generated guidance after successful or
+partial-with-question convergence. `bbx docs refresh` runs that same refresh
+independently: cache hits are quiet; changed card rules, managed skills, and
+compiled docs get a recovery snapshot and a changed-path commit. It accepts
+dirty input. A failed refresh invalidates its generation marker and retains the
+original pending snapshot, so retry cannot mistake leftover output for a fresh
+baseline. Template customizations still use the existing parked-update policy;
+convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
@@ -155,7 +198,11 @@ hand.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `bbx validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
-   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `bbx init`, a chat-session start, or a `bbx wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `bbx init` pass). `deploy.sh` now runs `bbx docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (`.claude/rules/`, `.claude/skills/`, and `_content/docs/generated/`) rather than assuming either half finished the job. The engine reference docs at `node_modules/beebox/box-docs/` need no such check — every `generateDocs` run rewrites them from whatever engine version is currently installed, so they update themselves on the next `bbx` activity with no per-box step.
+   **Verify generated guidance too.** The shared migration CLI refreshes card
+   rules, managed skills, and compiled docs after conversion. Check that the old
+   type or field no longer appears in the relevant generated guidance, and check
+   outstanding migration questions. A completed deploy or an empty pending list
+   alone does not prove every individual card was converted.
 
 7. **Defer removal of the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should survive a short, explicit settling period, not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the cleanup issue when the migration ships, while you can list those paths, but keep it out of the active queue until its removal date.
 
@@ -163,10 +210,10 @@ hand.
 
    - **The exact code that exists only for the old shape** — `file:line` for each fallback, not "legacy handling in the loader."
    - **The migration's manifest name**, since that is how the trigger gets checked.
-   - **What makes it safe to remove** — normally "every box that matters has this migration in its `config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `bbx migrate` on yet lag behind, so a green local sweep is not the signal.
+   - **What makes it safe to remove** — normally "every box that matters has this migration in its `_config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `bbx migrate` on yet lag behind, so a green local sweep is not the signal.
    - **What breaks if it's removed too early** — usually an un-migrated box failing to load rather than anything loud, which is why the trigger has to be checked rather than assumed.
 
-   Don't set `priority:` (that is the developer's call). Choose the activation date deliberately: long enough for the deploy sweep and any skipped dirty boxes to converge, but no longer than the compatibility window actually needs. The issue exists so the debt is *recorded* at the moment it is created without competing in the active queue before it is actionable.
+   Don't set `priority:` (that is the developer's call). Choose the activation date deliberately: long enough for the deploy sweep, hourly retries, and outstanding questions to settle, but no longer than the compatibility window actually needs. The issue exists so the debt is *recorded* at the moment it is created without competing in the active queue before it is actionable.
 
 Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 
@@ -292,7 +339,7 @@ or fails loud otherwise), and the 537-line converter logic, its smoke script, an
 its doctests were deleted with the v1 shape (see
 `docs/implemented-plans/remove-box-shape-v1.md`).
 
-The name is kept deliberately. `config/migrations.jsonl` is **append-only** and
+The name is kept deliberately. `_config/migrations.jsonl` is **append-only** and
 `src/core/migrations.ts` is the ordered canonical list `bbx migrate` compares it
 against — dropping a name that boxes have already recorded as applied would make
 their manifests reference a migration the engine no longer knows, breaking the
@@ -440,12 +487,42 @@ removal once the fleet has converged — see
 - `scripts/migrate/_warnings.ts` — the noisy-mode helper every migrator uses
 - `scripts/migrate/_harness.ts` — shared scaffold for new migrators
 
-## Rollback
+## Recovery and reversal
 
-Each pending migration is committed by the user (`bbx migrate` doesn't auto-commit). If a migration produced unwanted changes:
+Keep an interrupted box closed while inspecting its recorded input and current
+partial output. Find the retained snapshots without changing data:
 
 ```bash
-git -C $BOX reset --hard <pre-migration-sha>
-# also: remove the manifest entry for the migration you reverted
-sed -i '/"name":"<migration-name>"/d' $BOX/config/migrations.jsonl
+git for-each-ref --format='%(refname)' refs/bbx/migrations/
+git show <recovery-ref>:path/to/file
+git show <recovery-ref>^2:path/to/file  # original staged version
 ```
+
+Restore selected paths deliberately, for example `git restore
+--source=<recovery-ref> -- path/to/file`; restoring original staging is a separate
+`git restore --staged --source=<recovery-ref>^2 -- path/to/file` decision. Do not
+blindly reset the whole tree: the original input may be dirty and later
+successful migrations may have changed the schema. Reverting a completed
+migration also requires reconciling its manifest entry and any later dependent
+changes. A recovery ref is retained locally; it is not a claim that ignored
+state or annex content was independently backed up.
+
+`bbx migrate --sweep --repair` can take over an interrupted maintenance attempt,
+inspect retained repair receipts, and retry pending deterministic work. Answer
+an outstanding question when a human decision is required. Successful verified
+completion reopens admission; deleting the gate file is not a repair.
+
+A pending migration's recovery question remains answerable while admission is
+closed, using its question card in the UI or:
+
+```bash
+bbx answer _bookkeeping/questions/Migration_<name>-0.question.card "Keep both versions"
+bbx migrate --sweep --repair
+```
+
+The closed-box answer path acquires maintenance ownership, verifies the question's
+retained recovery ref and pending manifest entry, and saves only the answer with
+a Git snapshot. It starts no follow-up agent and leaves the box closed. The next
+repair attempt consumes that answer. Questions about migrations already recorded
+as applied wait until the box reopens, when the ordinary answer flow creates the
+follow-up job to repair the remaining data without replaying the old migration.

@@ -48,7 +48,7 @@ const READY_RESULT = { text: "hello world", diarized: false, service: "whisper",
 ## claim before ready is `pending`; after ready it is `claimed` and idempotent
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, session, { emissionId: "em-1" });
 const c = caller(box);
@@ -79,7 +79,7 @@ await box.cleanup();
 ## fallBack before ready is `fellBack`; after ready HQ wins with `claimed`
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const fellBack = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, fellBack, { emissionId: "em-live" });
 const c = caller(box);
@@ -115,7 +115,7 @@ await box.cleanup();
 ## fallBack after a terminal HQ failure reports `failed`
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, session, { emissionId: "em-1" });
 await applyVoiceEvent({
@@ -139,7 +139,7 @@ await box.cleanup();
 ## A mismatched emission id is a CONFLICT, never a silent no-op
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, session, { emissionId: "em-1" });
 const c = caller(box);
@@ -160,7 +160,7 @@ email must match the session's `createdBy`. A mismatch answers NOT_FOUND
 someone else's account.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", createdBy: "someone-else@example.com" });
 await requestHq(box, session, { emissionId: "em-1" });
 const stranger = caller(box);

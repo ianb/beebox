@@ -152,6 +152,7 @@ export function warmCompatible(
   next: ChatBackendStartOptions,
 ): boolean {
   if (next.resumeSessionId !== undefined) return false;
+  if (warm.env.BBX_BOX_WORK !== next.env.BBX_BOX_WORK) return false;
   // A warm slot's session id is baked into its subprocess at spawn, so a slot
   // may only serve the chat it was warmed for — and a slot warmed with no id
   // may only serve a chat that brings none.
