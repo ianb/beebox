@@ -84,6 +84,11 @@ export function createClaudeAgent(options: {
   let sessionId: string | null = options.sessionId ?? null;
   let invocationCount = options.resume ? 1 : 0;
   let manifestWritten = false;
+  // The model this instance last ran under. Re-invocations that omit a model
+  // — the commit-nudge retry is the shipped case — resume the SAME session,
+  // and a session's provider must not change mid-life: a GLM transcript
+  // resumed without its model would silently run against first-party.
+  let lastModel: string | undefined;
 
   const onSessionId = (boxRoot: string): ((id: string) => void) =>
     makeSessionIdHandler({
@@ -101,13 +106,14 @@ export function createClaudeAgent(options: {
   const baseRunOptions = (opts: AgentInvokeOptions): RunAgentOptions => {
     const isResume = invocationCount > 0;
     invocationCount++;
+    if (opts.model !== undefined) lastModel = opts.model;
     return {
       boxRoot: opts.boxRoot,
       signal: opts.signal,
       systemPrompt: opts.systemPrompt ?? "",
       prompt: opts.prompt,
       onOutput: options.onOutput,
-      model: opts.model,
+      model: opts.model ?? lastModel,
       loadBoxContext: opts.loadBoxContext,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: opts.maxBudgetUsd,
