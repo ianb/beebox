@@ -3,10 +3,29 @@ title: "Full-suite red: test/core/chat/session/reserve.doctest.md, test/core/com
 workstream: glm-v2-layout
 area: beebox
 priority: important
+resolution: wontfix
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-glm-v2-layout — the hourly full-suite run on main
 ---
+
+**Closed 2026-09-15 — diagnosed as load-contention timeouts, not a defect.**
+Evidence gathered the same day:
+
+- All three files failed with `signal: SIGALRM` at ~1,000,000ms — the batch
+  runner's per-file ceiling — inside the schedule's temp checkout, while a
+  second full test battery (the landing workstream's own finish-verify) ran
+  concurrently on the same host. Nine other files flaked in the same batch.
+- The three pass in isolation on both checkouts (`worktree-glm-v2-layout` and
+  the main checkout), twice each, before and after the blamed merge.
+- A full `pnpm test` on the main checkout on a quiet host: one failure, the
+  known environmental `scan-vision-claude-integration` login test — none of
+  these three.
+
+The landing was blamed because it was newest and graph-reachable; the trigger
+was two test batteries sharing the host. If the three-timeout-under-load shape
+recurs, the lever is scheduling (don't overlap full-suite with finish-verify)
+or raising the per-file ceiling for the slowest files — not any GLM change.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `64cad1b8`. Bisecting the landings since the last tested
