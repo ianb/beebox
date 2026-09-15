@@ -28,6 +28,15 @@ plan does not build. Not related:
 [2026-09-15-scan-vision-integration-fails-when-not-logged-in](../../../issues/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md)
 touches the same `claude auth status` weakness but is a dev-machine login problem.
 
+**Spike results (2026-09-15, recorded in the pluggability issue):** the full
+headless loop works on Z.ai — tools, streaming, thinking blocks, prompt caching
+(22k cache-read tokens on the second call), structured `json_schema` output,
+and resume — and both wire ids (`glm-5.3`, `glm-5.3-flash`) are confirmed.
+`total_cost_usd` is reported but tracks first-party-tier pricing, so the
+budget caveat stands in a weaker form: the number exists and is directionally
+useless. One credential finding: `beebox/.env`'s `GLM_API_KEY` 401s; the
+working key is the ambient `ANTHROPIC_AUTH_TOKEN` — boxholder to reconcile.
+
 **Review status:** a Codex (gpt-5.6-sol) adversarial plan review ran 2026-09-15
 (raw output: `scratch/cross-model-out.md`, worktree-local). Ten findings; all
 ten verified against source and adjudicated. The material revisions they forced:
@@ -347,9 +356,9 @@ none — the spike is a track with a recorded deliverable, not a design step.
 | GLM session resumes without its provider (retry/prewarm/thread) | new doctest (model carried through omitted-model invocations) | agent instance records its model; chat resolves model before env | clear — would have been silent without the review; this row is the fix |
 | Key invalid/rotated (401 mid-run) | no (needs live key) | Z.ai 401 surfaces as run error; presence preflight still passes | clear (error text names auth) but not classified — accepted, noted in docs |
 | Z.ai quota exhausted mid-run | none | ordinary failure path (batch retry); strings recorded by the spike for future work | clear error text, wrong retry class — accepted, see NOT in scope |
-| `total_cost_usd` is 0/wrong for GLM | spike records | `maxBudgetUsd` never trips; spend visible on Z.ai's quota endpoint | silent per-run, documented — accepted |
+| `total_cost_usd` is first-party-priced for GLM (spike: 0.158 for ~28k in / 46 out) | spike records | `maxBudgetUsd` trips at the wrong price point; spend authority lives on Z.ai's quota endpoint | silent per-run, documented — accepted |
 | Box on codex engine pins a glm id | doctest (tier degradation) | `resolveBoxModelForEngine` degrades to terra by tier | clear (existing warning) |
-| Prompt caching absent on Z.ai | spike records | none — latency/cost regression | silent, documented — accepted |
+| Prompt caching absent on Z.ai | spike records: caching WORKS (22k cache-read on call 2) | n/a — regression risk closed | n/a |
 | Prompt logging requested on a GLM run | covered in implementation choice | proxy forwards to Z.ai upstream (or warn-and-disable fallback) | clear either way |
 | Dev key pasted into a prod box store by mistake | no | secret store has no env-scoping; `owningBox`/`shareable` fields exist but unused here | silent — accepted; docs name it |
 

@@ -27,12 +27,43 @@ thinking-blocks and `cache_control`**, and those losses compound over long agent
 sessions (our exact shape). A true Anthropic-*compatible* endpoint should fare better
 than a translating proxy, but it's *compatible*, not Anthropic's own — must be tested.
 
-## Research (incomplete)
+## Research (complete 2026-09-15 — spike findings)
 
-Spike to run: point the SDK at GLM's `/api/anthropic` with `ANTHROPIC_DEFAULT_*_MODEL`
-remaps, run a real multi-turn reactor cycle, and check: (a) tools fire and results parse,
-(b) streaming works, (c) thinking blocks round-trip, (d) prompt caching isn't silently
-broken, (e) `tool_use`/`tool_result` turn-shape survives compaction. Record what breaks.
+Spike run from `worktree-glm-v2-layout` (`scratch/glm-spike.ts`, worktree-local)
+against `api.z.ai/api/anthropic` with the SDK options beebox actually sends
+(`permissionMode: bypassPermissions`, local harness plugin, preset system
+prompt, `outputFormat: json_schema`, `maxTurns`). Credential: the ambient
+`ANTHROPIC_AUTH_TOKEN` (the `.env` `GLM_API_KEY` is a different string and 401s
+— see the note below).
+
+- (a) Tools fire and results parse: multi-turn Bash tool loop succeeded.
+- (b) Streaming: message events arrive progressively (first `system` at ~1s).
+- (c) Thinking blocks: present in assistant messages.
+- (d) Prompt caching: WORKS — second call with the same prefix reports
+  `cache_read_input_tokens: 22336`. The translating-proxy losses do not apply.
+- (e) `tool_use`/`tool_result` across compaction: not directly forced; resume
+  across a fresh session with context survived (token recall test passed).
+  Long-session compaction evidence remains interactive-dev-use only.
+- (f) Wire model ids: `glm-5.3` and `glm-5.3-flash` both accepted
+  (`glm-4.5-flash` also works; `glm-5-flash` and `glm-5.3-air` rejected).
+- (g) Quota/rate-limit error strings: NOT captured — exhaustion was not
+  triggered. Still open for the unavailability classifier.
+- (h) `total_cost_usd`: reported non-zero (0.158 for ~28k input / 46 output) —
+  the CLI prices the run, but the number matches first-party-tier pricing, not
+  Z.ai's published rates. Treat as directional only; do not budget against it.
+
+**Credential note:** the working key rides the ambient environment (exported by
+whatever launched the GLM sessions), while `beebox/.env`'s `GLM_API_KEY` — the
+file `bin/lib/glm-provider.sh` and the dev quota reader use — is a different
+string that the endpoint rejects with 401. Either the .env key is stale or the
+ambient one comes from elsewhere. Boxholder should reconcile; until then,
+dev-side GLM launches that read `.env` are running on a dead credential.
+
+Verdict: the full headless loop survives a real non-Anthropic endpoint. The
+ADOPT recommendation in
+[provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md)
+is unblocked; the GLM slice ships via
+`beebox/docs/plans/box-glm-provider.md`.
 
 ## Decision context (updated 2026-07-18 by the deep pass)
 
