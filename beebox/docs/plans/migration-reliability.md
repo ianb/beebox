@@ -1,6 +1,6 @@
 ---
 title: "Reliable box maintenance and migration with Git recovery"
-status: active
+status: partial
 workstream: migration-reliability
 issues:
   - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
@@ -748,8 +748,9 @@ Final change-selected verification passed all 5,571 assertions across 430 test
 files. Package typecheck and lint, documentation checks, focused lifecycle and
 recovery tests, and the repair-policy knowledge audit pass.
 
-Implementation is in this worktree, not landed or deployed. Current operational
-instructions live in [migrations](../migrations.md), [server operations](../server-operations.md),
+Implementation and automated verification are complete. Deployment and live
+convergence evidence remain open. Current operational instructions live in
+[migrations](../migrations.md), [server operations](../server-operations.md),
 and the [deployment guide](../../deploy/README.md).
 
 Real-process fixtures cover shared closure/draining, retained descendants,
