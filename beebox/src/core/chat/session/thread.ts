@@ -149,7 +149,7 @@ export class ChatThreadSession extends EventEmitter {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
 
-    await withChatRunAdmission(this.boxRoot, async (work) => {
+    await withChatRunAdmission({ boxRoot: this.boxRoot, reason: `thread run ${this.getThreadRef()}` }, async (work) => {
     // A stored id the box has no record of is not resumable: nothing says which
     // engine wrote it, and no transcript exists in either store, so resuming it
     // would ask a guessed engine to continue a conversation it never had. Start
@@ -347,7 +347,7 @@ export class ChatThreadSession extends EventEmitter {
    * Returns a promise that resolves when the agent finishes its turn.
    */
   async send(message: string): Promise<void> {
-    return withBoxWork(this.boxRoot, () => this.sendAdmitted(message));
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "thread send" }, () => this.sendAdmitted(message));
   }
 
   private async sendAdmitted(message: string): Promise<void> {

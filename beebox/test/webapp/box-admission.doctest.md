@@ -20,7 +20,7 @@ server.post("/test/write", async () => {
   entered.resolve();
   await finish.promise;
   // Accepted work may still call its tools after closure.
-  const nested = await acquireBoxWork(box.root);
+  const nested = await acquireBoxWork(box.root, { reason: "test" });
   await nested.release();
   return { ok: true };
 });

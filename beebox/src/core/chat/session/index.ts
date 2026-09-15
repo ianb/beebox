@@ -159,7 +159,7 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    return withChatRunAdmission(this.boxRoot, async (work) => {
+    return withChatRunAdmission({ boxRoot: this.boxRoot, reason: `chat run ${this.sessionId ?? "new"}` }, async (work) => {
     // A coined session stops being "not created yet" the moment its transcript
     // exists — from this run or an earlier one — because the harness rejects a
     // session id it has already written (see reserve.ts).
@@ -302,7 +302,7 @@ export class ChatSession extends EventEmitter {
    * tokens in the text.
    */
   async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, options?.independent ? null : undefined);
+    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
     try { return await work.run(() => this.sendAdmitted(message)); }
     finally { await work.release(); }
   }

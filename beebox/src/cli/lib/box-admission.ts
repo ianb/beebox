@@ -56,7 +56,7 @@ export function installBoxAdmission(program: Command): () => Promise<void> {
       if (root === "chat" && process.env.BBX_SERVER_URL && process.env.BBX_BOX_NAME) return;
       throw new CliBoxRequiredError();
     }
-    work = await acquireBoxWork(boxRoot, inherited);
+    work = await acquireBoxWork(boxRoot, { reason: `bbx ${root}`, inherited });
     // Commander hooks do not wrap the action's async context. This process
     // executes one CLI action, so its explicit child environment carries it.
     process.env.BBX_BOX_WORK = work.run(boxWorkEnvironment).BBX_BOX_WORK;

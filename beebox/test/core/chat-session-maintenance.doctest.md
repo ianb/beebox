@@ -21,7 +21,7 @@ await done;
 await session.send("second");
 const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture", drainMs: 1000 });
 // This is the permit baked into the subprocess at spawn, after the first send's lease ended.
-const tool = await acquireBoxWork(box.root, run.startOptions.env.BBX_BOX_WORK);
+const tool = await acquireBoxWork(box.root, { reason: "test", inherited: run.startOptions.env.BBX_BOX_WORK });
 await tool.release();
 run.sent.length
 => 2

@@ -288,7 +288,7 @@ export const migrateCommand = new Command("migrate")
 
     if (options.markApplied !== undefined) {
       const name = options.markApplied;
-      await withBoxWork(boxRoot, () => handleMarkApplied(boxRoot, name));
+      await withBoxWork({ boxRoot, reason: "mark applied" }, () => handleMarkApplied(boxRoot, name));
       return;
     }
 
@@ -305,7 +305,7 @@ export const migrateCommand = new Command("migrate")
         name: m.name,
         "applied-at": now,
       }));
-      await withBoxWork(boxRoot, () => writeManifest(boxRoot, entries));
+      await withBoxWork({ boxRoot, reason: "mark all applied" }, () => writeManifest(boxRoot, entries));
       console.log(`Wrote ${String(entries.length)} entries to ${MANIFEST_PATH} (no migrations actually ran).`);
       return;
     }

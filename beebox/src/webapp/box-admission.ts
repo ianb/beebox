@@ -49,7 +49,7 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
     const header = request.headers["x-bbx-box-work"];
     void (async () => {
       for (const box of targets) {
-        const lease = await acquireBoxWork(box.boxRoot, typeof header === "string" ? header : null);
+        const lease = await acquireBoxWork(box.boxRoot, { reason: `${request.method} ${request.url.split("?")[0] ?? request.url}`, inherited: typeof header === "string" ? header : null });
         work.push(lease);
         requests.set(box.boxRoot, (requests.get(box.boxRoot) ?? 0) + 1);
       }

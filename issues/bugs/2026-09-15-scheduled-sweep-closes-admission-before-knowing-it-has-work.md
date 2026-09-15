@@ -1,6 +1,6 @@
 ---
 title: "The hourly sweep closes box admission before it knows whether it has any work"
-workstream: unattached
+workstream: migration-admission-cost
 area: beebox
 priority: important
 filed-by: agent
