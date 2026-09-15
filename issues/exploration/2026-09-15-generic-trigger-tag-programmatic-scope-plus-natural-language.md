@@ -21,11 +21,50 @@ agent call carrying their natural-language conditions: which of these actually
 fired, given what happened? Confirmed ones then run individually with their
 context.
 
-See [the to-do blocked-state issue](../features/2026-09-15-todos-have-no-blocked-state-or-non-date-triggers.md),
-which asks what a trigger may be made of. This is a candidate answer, and a much
-wider one: `start`/`due` become one currency of a general mechanism, a blocked
-to-do becomes a trigger on that to-do, and "re-examine this when X" stops being
-a per-feature invention.
+`start`/`due` become one currency of a general mechanism, a blocked to-do
+becomes a trigger on that to-do, and "re-examine this when X" stops being a
+per-feature invention. This supersedes the narrower to-do blocked-state issue,
+whose substance is kept below.
+
+## The case that motivated it
+
+`deriveTodoPlateState` puts an open to-do in `quiet` when today is before
+`start`. That one state carries two unrelated situations:
+
+- **Not yet time** — a project that begins in October. Needs no attention.
+- **Blocked on the world** — chasing a refund confirmation, a permit, a reply.
+  This is the one that rots, and the one worth reviewing.
+
+Nothing distinguishes them, which is why a box agent reported a missing
+"waiting" status.
+
+The staleness net has a matching hole. `review-sweep.ts` reports a to-do as
+`stale` only when it has `created`, is over 45 days old, and has **neither**
+`start` nor `due`. Give a blocked item a `start` date so it stops cluttering
+the plate, and it becomes invisible to every sweep until that date arrives.
+Correct for a deferral, wrong for a blocker.
+
+Read the existing to-do surface before redesigning any of it: the attributes
+on `{% todo %}` and frontmatter `todos:` (`shared/todo-model.ts`,
+`shared/markdoc-config.ts`), the derived plate-states, the `todo-review` sweep's
+three lists, the standing rule that the sweep computes and the agent raises
+while the boxholder decides, and the deliberate absence of a mutation command.
+
+**Ruled out for that case, with reasons.** A text convention
+(`"Waiting on X: ..."` leading the `text`) puts a queryable fact where nothing
+can query it, splits on spelling, and entangles rendering with the marker. A
+fifth status beside `open`/`done`/`dropped`/`parked` fails because blocked-ness
+is orthogonal to lifecycle, and the combination it destroys is the valuable
+one — **blocked *and* overdue**, meaning the thing being waited on is late.
+Reusing `assigned` fails because it names box-internal labor (absent = the
+boxholder, `"agent"` = the agent); an outside party is not a worker the box can
+assign.
+
+**Residual risk of the supersession.** The to-do gap is concrete and small; this
+design is general and speculative. If it is deferred or abandoned, the blocked
+to-do problem returns with nothing tracking it. A prose `waiting-for` plus a
+mandatory date remains available as a narrow fallback that needs none of the
+machinery here.
 
 ## What is right about it
 

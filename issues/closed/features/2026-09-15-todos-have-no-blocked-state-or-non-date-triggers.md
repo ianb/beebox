@@ -2,11 +2,17 @@
 title: "To-dos cannot say they are blocked, and `start` is the only trigger currency"
 workstream: unattached
 area: beebox
-needs: [design]
 filed-by: agent
 discovered-by: agent
 discovered-in: main — a box agent reported that to-dos have no "waiting" state; the boxholder shaped the constraints
+resolution: superseded
 ---
+
+> **Superseded by [the generic `{% trigger %}` sketch](../../exploration/2026-09-15-generic-trigger-tag-programmatic-scope-plus-natural-language.md)**,
+> the boxholder's call: the general mechanism is the better solution, and a
+> blocked to-do becomes a trigger on that to-do rather than its own feature.
+> This issue's substance — the `quiet` conflation, the staleness hole, and the
+> three ruled-out options — is carried there.
 
 A to-do that is blocked on the outside world has nowhere to say so, and no way
 to come back when the block clears. The design question is what a trigger may
@@ -56,7 +62,7 @@ Read this before redesigning any of it.
 ## Directions worth designing
 
 A candidate answer to the whole trigger-currency question is sketched in
-[the generic `{% trigger %}` issue](../exploration/2026-09-15-generic-trigger-tag-programmatic-scope-plus-natural-language.md):
+[the generic `{% trigger %}` issue](../../exploration/2026-09-15-generic-trigger-tag-programmatic-scope-plus-natural-language.md):
 a programmatic condition that scopes candidates, a natural-language condition
 that confirms them in one batched call, and a natural-language action. If that
 lands, a blocked to-do is a trigger on that to-do rather than its own feature.
