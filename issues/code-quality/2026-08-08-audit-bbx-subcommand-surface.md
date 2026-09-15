@@ -1,6 +1,6 @@
 ---
 title: "Audit the `bbx` subcommand surface — only box-agent commands belong there"
-workstream: unknown
+workstream: bbx-agent-surface
 area: beebox
 needs: [decision]
 labels: [cli, agent-surface]
