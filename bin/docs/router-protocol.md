@@ -19,7 +19,9 @@ The lifecycle state model these invariants operate over was formalized (Phase 2,
 guarded `transitionLifecycle` setter — lives in `workstreams-app/src/router/router-lifecycle.ts`
 (pure, zero-I/O, unit-testable). The engine that drives the transitions is
 `workstreams-app/src/router/router-core.ts` (the `worktrees` map, `ensureRunning`, assembly) plus
-`workstreams-app/src/router/router-worktree-start.ts` (cold start) and
+`workstreams-app/src/router/router-worktree-start.ts` (cold start, with the
+spawn and the children's exit listeners in
+`workstreams-app/src/router/router-generation.ts`) and
 `workstreams-app/src/router/router-worktree-teardown.ts` (exit/stop/shutdown), all reaching the world
 through the injected effects surface declared in `workstreams-app/src/router/router-effects.ts` and
 implemented in `workstreams-app/src/router/router-real-effects.ts`; `router.ts` constructs those real
@@ -79,9 +81,10 @@ lookup/404 check that used to happen — and `await` — before registration.
 
 ## 3. Swallow the execa child-process promise immediately at spawn time
 
-**Where:** `startWorktree`'s spawn sites in `workstreams-app/src/router/router-worktree-start.ts`
-(moved to `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in
-the 2026-08-28 size split), on both the `fastify` and `vite` `execa()` results.
+**Where:** `spawnGeneration` in `workstreams-app/src/router/router-generation.ts`
+(moved to `router-core.ts` from `router.ts` in Phase B, 2026-07-11, to
+`router-worktree-start.ts` in the 2026-08-28 size split, then here in the
+2026-09-15 one), on both the `fastify` and `vite` `execa()` results.
 
 `execa()` returns a promise that rejects when the child exits non-zero — a
 router routinely killing children on idle-shutdown or generation replacement
@@ -120,6 +123,17 @@ replaced generation reduces to a log line instead of tearing down the live
 entry. The same identity-check discipline applies to `stopWorktree`, which
 drops its own map entry before any `await` for exactly this reason (see its
 comment).
+
+**Listener lifetime (2026-09-15).** Each child gets exactly ONE `exit` listener,
+attached in `spawnGeneration` and never removed, which dispatches on the
+handle's current phase: `starting` fails the in-flight start (so a dying child
+is a signal rather than something the readiness stopwatch eventually notices),
+and anything else calls `onChildExit`, whose `if (!ready) return` makes it a
+no-op on the terminal phases. Do not go back to attaching a listener per phase.
+Attaching at publication left the whole of startup unwatched; attaching one for
+startup and swapping it at publication leaves a gap between the readiness probe
+resolving and the swap, and `SpawnedChild` (router-effects.ts) deliberately
+exposes no detach with which to close it.
 
 ## 5. A completed startup must re-check it's still the current generation before publishing
 
