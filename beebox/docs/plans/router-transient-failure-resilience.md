@@ -4,6 +4,7 @@ status: draft
 workstream: router-resilience
 issues:
   - ../../../issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md
+  - ../../../issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md
 ---
 # Dev router: survive load, and leave a record
 
@@ -16,7 +17,9 @@ it.
 
 **Issues addressed:**
 `issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md`
-(all three defects). The contention lever was handed over by
+(all three defects) and
+`issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md`
+(track 6, added on the boxholder's ruling this session). The contention lever was handed over by
 `issues/closed/bugs/2026-09-15-full-suite-red-glm-v2-layout-64cad1b8.md`, closed
 `wontfix` the same day: *"the lever is scheduling (don't overlap full-suite with
 finish-verify) or raising the per-file ceiling for the slowest files"*. That
@@ -31,7 +34,7 @@ secondary lever"*. A bigger fixed number still loses to a bigger load spike, and
 it makes every genuine breakage (bad config, syntax error) take that much longer
 to report.
 
-Five tracks, all in `workstreams-app/src/router/` except track 5 in `bin/`:
+Six tracks, all in `workstreams-app/src/router/` except track 5 in `bin/`:
 
 | Track | Source | Test |
 |---|---|---|
@@ -40,9 +43,10 @@ Five tracks, all in `workstreams-app/src/router/` except track 5 in `bin/`:
 | 3. Durable router log | ~150 | ~150 |
 | 4. Mobile bootstrap retry | ~80 | ~150 |
 | 5. Full-run fan-out cap | ~90 | ~130 |
-| **Total** | **~640** | **~880** |
+| 6. A down worktree answers 503 | ~70 | ~110 |
+| **Total** | **~710** | **~990** |
 
-About 1,520 changed lines (additions plus deletions), plus roughly 120 lines of
+About 1,700 changed lines (additions plus deletions), plus roughly 120 lines of
 authored documentation in `bin/docs/router-operations.md` and
 `beebox/docs/plans/change-based-test-selection.md`. No generated output. This is
 **not** a BIG CHANGE; it sits below the 2,000-line threshold.
@@ -583,6 +587,60 @@ per-run job count in prose, distinct from "slots" for semaphore capacity.
 in `runUnderSlot`, then the `.taprc:36-41` comment updated to record that the
 probe has now been run and what it found.
 
+### Track 6 — a down worktree is unavailable, not unauthorized
+
+**What.** When the worktree behind a box request is `failed`, answer 503 naming
+the real failure instead of letting the request fall through to a control-route
+401.
+
+**Why this needs to change.** Boxholder ruling, this session: *"the
+owner-session-required error message is also a bad error message! Should be…
+whatever the real error is"* and *"I don't see why we'd have a 401 instead of
+503, a down worktree is unavailable, not unauthorized."* That matches the
+standing filing,
+`issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md`: *"401
+with `owner-session-required` is a claim about the caller. A crashed dependency
+is a claim about the server — 503 with a reason is the honest shape."*
+
+The cost is measured, not hypothetical. It cost about half an hour on 2026-08-18,
+and it is the most likely explanation of the anchor issue's still-unexplained
+request: `classifyRouterRoot` maps the bare root to `control-read`
+(`router-auth.ts:262`), whose denial reason is `owner-session-required`
+(`:491`), so any client that falls back to a non-box path while its worktree is
+down gets an authentication error for a liveness failure.
+
+**Direction.** The router already knows the worktree is down —
+`failedLifecycle(handle)` is exactly that fact, and `router-pages.ts:198` already
+renders it for browsers with the captured error and a retry button. The gap is
+that an API client never reaches that surface. So:
+
+1. **Liveness is checked before authorization is reported.** For a request whose
+   first path segment names a worktree currently parked `failed`, the response is
+   `503` with a JSON body naming the worktree, the failure phase, and the retry
+   endpoint — regardless of whether the caller held a credential. This is the
+   ordering that matters: today the auth answer is computed first and a liveness
+   problem is reported in its vocabulary.
+2. **Disclosure stays bounded**, which is the design question the 2026-08-18
+   issue raised and left open: *"Don't leak more than the caller may know."* The
+   503 body names the worktree state and nothing else — no captured child output,
+   no paths, no ports. A worktree name is already in the URL the caller sent, so
+   this discloses nothing the caller did not supply, and the `phase` string is a
+   closed vocabulary (`"waitForHttp"`, `"childExit"`, `"spawn"`, …) rather than
+   free text from a child process.
+3. **The bare root stays 401.** A request for `/` names no worktree, so there is
+   no liveness fact to report and `owner-session-required` is the honest answer
+   there. This track narrows where that reason can appear; it does not remove it.
+
+Track 3's denial logging and this track are complementary: 3 records what was
+refused, 6 stops refusing for the wrong reason.
+
+**Vocabulary lock-ins.** The 503 body shape `{ error: "worktree-unavailable",
+worktree, phase, retry }`.
+
+**First implementation chunk.** The liveness-before-auth branch plus the 503
+body, with the "is this worktree parked?" lookup as a pure function over the
+handle so the decision is unit-testable without a server.
+
 ## Could this be simpler?
 
 The simplest version that plausibly works is track 1 alone, with the budget
@@ -647,6 +705,8 @@ plan depends on its answer.
 | Rotation races two writes at the 16MB boundary | New (pure boundary function) | New — rename-then-reopen, append-only | Clear: worst case a few lines land in `.1` |
 | `deny()` logging leaks a bearer token or cookie | New (assert the logged shape) | New — the call site logs four named fields, never the header map | Clear: test pins the field list |
 | A `rejected` bootstrap is misclassified as `transient` and retries a dead pairing | New | New — classification is on the box's status code | Clear: bounded by `retries` |
+| A box request arrives while its worktree is parked; the 503 body leaks child output or paths | New (assert the body shape) | New — the body carries worktree, a closed-vocabulary phase, and the retry path only | Clear: test pins the field list |
+| The liveness branch swallows a genuine auth failure on a healthy worktree | New | New — the branch fires only when `failedLifecycle(handle)` is non-null | Clear: 401 still reported for a running worktree |
 | `capJobs` caps a run that explicitly asked for `-j` | New | New — explicit argv wins, matching `tierCommand` | Clear |
 | `capJobs` reads `concurrency: null` (lock unavailable) and caps anyway | New | New — null means no cap | Clear |
 | A run starts solo, caps as solo, and is joined by a second run later | New (pure-function test) | Partial — the joiner caps to 3, the incumbent stays at 6 | **Silent**, and accepted: worst case is 9 concurrent jobs rather than 12. See Open design questions |
@@ -701,19 +761,17 @@ plan depends on its answer.
 - **Raising or lowering tap's per-file timeout.** See Open design questions: the
   ceiling that actually fired is not the one `.taprc` configures, and tuning a
   number we cannot yet locate would be guesswork.
-- **Reporting a down worktree as 503 instead of 401
-  `owner-session-required`** (`issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md`).
-  This is the likeliest explanation of the anchor issue's unexplained request and
-  it has now cost debugging time twice. It is left out because it is a fourth
-  defect rather than one of the three the boxholder scoped, and because the issue
-  itself names a design question this plan has not answered: *"Don't leak more
-  than the caller may know… The two cases need separating before the message can
-  be improved safely."* Cheap to add if wanted — it is a branch in the `box`-class
-  denial path plus a reason string — and it would add that issue to `issues:`.
-- **Tracking the dev router as unsupervised infrastructure.** Nothing in the open
-  queue holds this argument today (see Related open issues). Filing it is a
-  one-line action, not a code change, and it belongs to the boxholder's judgment
-  about how the dev machine is run rather than to this plan.
+- **Making the router not load-bearing.** This plan makes the router fail less
+  and makes its failures diagnosable. It does **not** reduce how much depends on
+  the router, and it does not let anything survive the router's own death. Filed
+  as `issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md`,
+  because the obvious version would make outages worse rather than better:
+  `sweepStaleChildren` (`workstreams-app/src/router/router-real-effects.ts:179-193`)
+  **kills** every pidfile-tracked child on boot, so a supervised restart would
+  tear down every worktree and then cold-start them all at once — the exact
+  failure tracks 1 and 2 exist to prevent. Adoption on boot is the prerequisite,
+  and the decision underneath both is whether the boxholder's phone should be
+  paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 
 ## Open design questions
 
@@ -747,9 +805,10 @@ plan depends on its answer.
   including a human's `finish-verify` on an otherwise idle machine — by roughly
   2x. **Lean:** ship the conditional cap and measure, because 9 is materially
   better than 12 and costs nobody anything, then revisit with the overlap data
-  the next question describes. **This is the boxholder's call**, since it trades
-  landing latency against headroom and the original direction ("lower jobs for
-  batch runs") was chosen before this asymmetry was visible.
+  the next question describes. **Settled this session:** the boxholder accepted
+  the conditional cap with the asymmetry stated ("the contention cap is fine or
+  whatever"), so track 5 ships as written and the residual — a worst case of 9
+  concurrent jobs rather than 6 — is an accepted risk, not an open question.
 - **What measurement would settle that?** Today's ledger records `concurrency`
   only at acquire (`bin/test-ledger-lib.ts:69`), which cannot see overlap that
   begins mid-run. Recording slot acquire and release timestamps would make true
@@ -822,7 +881,10 @@ when every chunk is done and the boxholder says so.
    must land before track 2.
 5. **Track 2, bounded retry.** Depends on chunk 4 for the `"childExit"` phase it
    dispatches against.
-6. **Track 5, `capJobs`.** Independent of every router change; last because it is
+6. **Track 6, the 503.** Touches `router-auth.ts`/`router-dispatch.ts` and reads
+   the lifecycle without changing it, so it lands after tracks 1 and 2 have
+   settled what `failed` means and which phases can produce it.
+7. **Track 5, `capJobs`.** Independent of every router change; last because it is
    the one chunk outside `workstreams-app/`, and keeping it separate keeps the
    router history readable.
 
@@ -841,7 +903,10 @@ Tests first, per `beebox/docs/testing.md`. Done-when is the following passing:
   `transient` bootstrap retrying and a `rejected` one not; a child exiting while
   the handle is `starting` failing the start, and the same listener calling
   `onChildExit` once the handle is `ready`; a `retryAttempts` entry evicted on
-  `ready` and on explicit retry.
+  `ready` and on explicit retry; a box request against a parked worktree
+  answering 503 with the pinned body shape; the same request against a running
+  worktree still answering 401 when the credential is genuinely missing; the bare
+  root still answering `owner-session-required`.
 - `bin/test-tiers.test.ts` — `capJobs` cases: explicit `-j` wins; `concurrency:
   null` does not cap; a full run at concurrency 1 halves; a selected run never
   caps.
