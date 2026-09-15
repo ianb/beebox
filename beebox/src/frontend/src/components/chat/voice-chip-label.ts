@@ -8,20 +8,22 @@ export interface VoiceChipState {
   muted: boolean;
   narrationEnabled: boolean;
   hqInFlight: boolean;
+  diarizationEnabled: boolean;
 }
 
 /**
  * "Voice" plus what the two participants are doing, in words.
  *
- * The glyphs say it by weight and shape; the name says it outright, because the
+ * The glyphs say it with participants, arrows, and output marks; the name says it outright, because the
  * two facts the chip carries are a relationship ("you are holding the floor")
  * and a channel ("it answers in text"), and neither survives being read as a
  * list of toggle names. A screen reader hears the sentence, not "narration on".
  */
-export function voiceChipLabel({ muted, narrationEnabled, hqInFlight }: VoiceChipState): string {
+export function voiceChipLabel({ muted, narrationEnabled, hqInFlight, diarizationEnabled }: VoiceChipState): string {
   const floor = narrationEnabled ? "you are narrating, it listens" : "taking turns";
   const channel = muted ? "answers in text" : "answers aloud";
   const parts = [floor, channel];
+  if (diarizationEnabled) parts.push("speaker labels on");
   if (hqInFlight) parts.push("transcribing");
   return `Voice — ${parts.join(", ")}`;
 }
