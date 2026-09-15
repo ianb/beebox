@@ -61,9 +61,13 @@ export async function glmChatAdditions(params: {
   model: string | null | undefined;
   /** Access-log label for the key resolution. */
   purpose: string;
+  /** When given, the additions are also merged into this env in place. */
+  env?: Record<string, string | undefined>;
 }): Promise<GlmEnvAdditions | null> {
   if (params.model === null || params.model === undefined || providerOf(params.model) !== "glm") return null;
-  return glmEnvAdditions(await resolveGlmKeyOrThrow(params.boxRoot, { purpose: params.purpose }));
+  const additions = glmEnvAdditions(await resolveGlmKeyOrThrow(params.boxRoot, { purpose: params.purpose }));
+  if (params.env) Object.assign(params.env, additions);
+  return additions;
 }
 
 /** Thrown when a GLM-model run has no usable key. Names the setup commands. */

@@ -17,7 +17,7 @@ import { buildScriptEnv } from "../../script-env.js";
 import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat.js";
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
-import { loadEffectiveBoxModel } from "../../model-policy.js";
+import { resolveSessionModel } from "./model.js";
 import { glmChatAdditions } from "../../glm-key.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
@@ -164,10 +164,12 @@ export class ChatThreadSession extends EventEmitter {
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
     const engine = await resolveChatEngine(this.boxRoot, { sessionId: this.sessionId });
-    // Thread chats run on the box default model; if that is GLM, the
-    // preflight and child env must say so or the chat runs first-party.
-    const threadDefault = await loadEffectiveBoxModel(this.boxRoot);
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine, model: threadDefault ?? undefined, boxRoot: this.boxRoot }))) return false;
+    // Box default model as THIS thread's recorded engine can run it — never
+    // the box's current engine, so a Codex thread gains no GLM env after an
+    // engine switch; and the model rides into backend.start, or the child
+    // would point at Z.ai while requesting the harness default.
+    const threadModel = (await resolveSessionModel(this.boxRoot, { engine, explicit: null })).model;
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine, model: threadModel ?? undefined, boxRoot: this.boxRoot }))) return false;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
@@ -190,8 +192,7 @@ export class ChatThreadSession extends EventEmitter {
       // BBX_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { BBX_CHAT_SESSION_ID: this.sessionId } : {}),
     });
-    const additions = await glmChatAdditions({ boxRoot: this.boxRoot, model: threadDefault, purpose: "thread-start" });
-    if (additions) Object.assign(env, additions);
+    await glmChatAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
@@ -200,6 +201,7 @@ export class ChatThreadSession extends EventEmitter {
       cwd: this.boxRoot,
       systemPrompt,
       resumeSessionId: this.sessionId ?? undefined,
+      model: threadModel ?? undefined,
       env,
     });
     this.state = nextLifecycle(this.state, { phase: "ready", run });
