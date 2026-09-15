@@ -15,6 +15,7 @@ import { globSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse } from "yaml";
 import type { Tier } from "./test-locks.js";
+import type { RunMode } from "./test-ledger-store.js";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 export const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
@@ -193,4 +194,61 @@ export function tierCommand(input: {
 /** The careful list in the graph's repo-relative vocabulary, for the selector. */
 export function carefulExclusions(packageRoot?: string): string[] {
   return readCarefulList(packageRoot ?? PACKAGE_ROOT).map((rel) => `beebox/${rel}`);
+}
+
+/**
+ * Cap a full run's tap fan-out when the host is already running another suite.
+ *
+ * The semaphore (bin/test-locks.ts) counts RUNS; the scarce resource is CORES.
+ * Two slots at `.taprc`'s `jobs: 6` is twelve tap processes on a twelve-logical
+ * / eight-performance-core machine, with nothing left for the dev router's Vite
+ * compiles, the hubs, the box children, or the agent sessions. `.taprc` records
+ * that this was never measured under load: *"the loaded-machine parallelism
+ * probe did not revalidate this setting."*
+ *
+ * It has been measured since, from the ledger's own records (933 runs, per-run
+ * `concurrency` and per-file `durations`, so files pair against themselves):
+ * with a second run holding a slot, a full-mode file takes 1.69x longer at the
+ * median, 3.05x at p90, 6.03x at worst, across 805 files. That is the
+ * 2026-09-15 shape, where the dev router's 30s readiness budget lost and a
+ * worktree parked for three hours.
+ *
+ * Why conditional rather than a smaller `jobs:` for everyone: 642 of the 756
+ * runs with a recorded value ran alone. A global reduction would slow 85% of
+ * runs to fix the other 15%.
+ *
+ * Known limit, accepted deliberately: `concurrency` is read when a slot is
+ * ACQUIRED, so this throttles the run that JOINS and never the one already
+ * going. In the 2026-09-15 shape the hourly batch keeps `-j6` and the later
+ * finish-verify drops to `-j3`, taking the worst case from twelve to nine
+ * rather than to six. tap cannot be re-jobbed mid-run, and measuring true
+ * overlap would need acquire/release timestamps the ledger does not record.
+ */
+export function capJobs(input: {
+  args: string[];
+  mode: RunMode;
+  concurrency: number | null;
+  cores: number;
+}): string[] {
+  const { args, mode, concurrency, cores } = input;
+  // Selected runs are short and are 85% of the traffic; queueing or slowing
+  // them would cost more than the contention does.
+  if (mode !== "full") return args;
+  // Alone, or the lock could not be taken at all. A lock directory that cannot
+  // be used is already not a reason to refuse to test, and it is not a reason
+  // to run slowly either.
+  if (concurrency === null || concurrency < 1) return args;
+  // An explicit -j always wins, matching `tierCommand`'s precedence — including
+  // the `-j1` that `tierCommand` itself adds for the careful tier, which must
+  // never be widened to 3 by this.
+  if (args.some((arg) => arg.startsWith("-j"))) return args;
+  return [...args, `-j${String(cappedJobs(cores))}`];
+}
+
+/**
+ * The per-run fan-out when two runs share the host: a quarter of the logical
+ * cores, so two runs together land on `.taprc`'s intended half.
+ */
+export function cappedJobs(cores: number): number {
+  return Math.max(1, Math.floor(cores / 4));
 }

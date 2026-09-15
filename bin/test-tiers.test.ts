@@ -12,6 +12,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import {
+  capJobs,
+  cappedJobs,
   carefulExclusions,
   parseCarefulList,
   readCarefulList,
@@ -199,4 +201,62 @@ test("the selector drops careful files unless the branch changed one", () => {
     [`${box}test/ordinary.doctest.md`],
   );
   assert.deepEqual(selectTests({ graph, changed: [member], exclude: careful }).selected, [member]);
+});
+
+// ── the fan-out cap ──────────────────────────────────────────────────────────
+// The semaphore counts runs; the scarce resource is cores. Two slots at
+// .taprc's `jobs: 6` is twelve tap processes on twelve logical cores, which the
+// ledger measures as 1.69x median / 3.05x p90 per-file inflation — and which
+// left the dev router unable to answer a readiness probe on 2026-09-15.
+
+test("capJobs: a full run joining a busy host halves its fan-out", () => {
+  assert.deepEqual(
+    capJobs({ args: ["a.test.ts"], mode: "full", concurrency: 1, cores: 12 }),
+    ["a.test.ts", "-j3"],
+  );
+});
+
+test("capJobs: a run that is alone keeps .taprc's default", () => {
+  // 85% of recorded runs are solo. Slowing them to fix the other 15% is the
+  // trade this conditional cap exists to avoid.
+  assert.deepEqual(capJobs({ args: ["a.test.ts"], mode: "full", concurrency: 0, cores: 12 }), ["a.test.ts"]);
+});
+
+test("capJobs: a selected run is never capped", () => {
+  // Selected runs are seconds long; the measured harm is concentrated in
+  // full-run overlap (1.43x median for selected against 1.69x for full).
+  assert.deepEqual(capJobs({ args: ["a.test.ts"], mode: "selected", concurrency: 1, cores: 12 }), ["a.test.ts"]);
+});
+
+test("capJobs: no slot means no cap, matching the ledger's fail-open posture", () => {
+  // A lock directory that cannot be used is already not a reason to refuse to
+  // test; it is not a reason to run slowly either.
+  assert.deepEqual(capJobs({ args: ["a.test.ts"], mode: "full", concurrency: null, cores: 12 }), ["a.test.ts"]);
+});
+
+test("capJobs: an explicit -j always wins, including the careful tier's own -j1", () => {
+  // tierCommand adds -j1 for the careful tier because "the flakes in this tier
+  // are contention". Widening that to 3 here would undo it.
+  assert.deepEqual(
+    capJobs({ args: ["-j1", "a.test.ts"], mode: "full", concurrency: 1, cores: 12 }),
+    ["-j1", "a.test.ts"],
+  );
+  assert.deepEqual(
+    capJobs({ args: ["-j8", "a.test.ts"], mode: "full", concurrency: 1, cores: 12 }),
+    ["-j8", "a.test.ts"],
+  );
+});
+
+test("capJobs: two capped runs together land on .taprc's intended half", () => {
+  // The whole point of the number: `jobs: 6` was chosen as "half the cores" for
+  // ONE run. Two runs at cappedJobs(12) = 3 is six, which is that same half.
+  assert.equal(cappedJobs(12) * 2, 6);
+});
+
+test("cappedJobs: never drops below one, however small the machine", () => {
+  assert.equal(cappedJobs(1), 1);
+  assert.equal(cappedJobs(2), 1);
+  assert.equal(cappedJobs(4), 1);
+  assert.equal(cappedJobs(8), 2);
+  assert.equal(cappedJobs(32), 8);
 });
