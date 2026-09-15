@@ -19,6 +19,13 @@ import {
   snapshotManifest,
   SOFT_FAILURE_EXIT,
 } from "./migration-run.js";
+/**
+ * How long a yielding pass waits for live work to clear. Long enough for the
+ * box's server to notice the phase and close idle chat runs (it polls every
+ * second), short enough that a box someone is actually using is shut only
+ * briefly before the pass gives up until next hour.
+ */
+const YIELD_DRAIN_MS = 15_000;
 
 /** One migration the sweep ran, and how it went. */
 export interface SweptMigration {
@@ -88,16 +95,14 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
   if (opts.withinMaintenance !== true) {
     const peek = await peekBoxWork({ boxRoot: opts.boxRoot, reason: "migration peek" }, () => sweepWithoutWork(opts));
     if (peek.admitted && peek.value !== null) return peek.value;
-    if (yielding) {
-      const holders = await boxWorkHolders(opts.boxRoot);
-      if (holders.length > 0) return { status: "deferred", holders };
-    }
   }
   let maintenance;
   try {
-    // A holder can arrive between the check and the close; a yielding pass
-    // gives up quickly rather than holding the box shut for the full drain.
-    maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true, ...(yielding ? { drainMs: 5_000 } : {}) });
+    // An idle chat run holds a lease until the server sees a phase and closes
+    // it, so a yielding pass cannot judge "in use" from the leases alone: it
+    // closes, waits briefly, and treats work that outlasts the wait as the
+    // box being in use.
+    maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true, ...(yielding ? { drainMs: YIELD_DRAIN_MS } : {}) });
   } catch (error) {
     if (yielding && error instanceof BoxMaintenanceError && error.reason === "timeout") return { status: "deferred", holders: await boxWorkHolders(opts.boxRoot) };
     throw error;

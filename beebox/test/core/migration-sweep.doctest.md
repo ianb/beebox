@@ -116,10 +116,12 @@ await box.cleanup();
 
 ## A scheduled pass yields to a box in use
 
-`--yield` is the hourly schedule's mode: pending work on a box that another
-process is using is deferred to the next pass, naming the holder, instead of
-closing the box and waiting for that work to end. Once the box is free the
-same pass applies the work. A deploy does not yield.
+`--yield` is the hourly schedule's mode. An idle chat run holds a lease until
+the box's server sees a maintenance phase and closes it, so the pass cannot
+tell "in use" from the leases alone: it closes, waits fifteen seconds, and
+work that outlasts the wait means the box is in use. That pass is deferred to
+the next hour, naming the holder, and the box reopens. Once the box is free
+the same pass applies the work. A deploy does not yield.
 
 ```ts
 const box = await makeTmpBox({ git: true });

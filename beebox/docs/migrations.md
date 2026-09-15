@@ -60,17 +60,20 @@ box with work is closed. A read refused because a maintenance phase already
 exists falls through to the recovery path.
 
 `bbx migrate --sweep --yield`, the hourly schedule's mode, defers to a box in
-use: when work is pending and another process holds a work lease, the result
-is `deferred` with the holders, exit 0, and the next pass retries. The
-schedule reports a deferral only once the box has held work for a day. Deploy
-(`bbx maintenance`) and supervised reload never yield.
+use. An idle chat run holds a lease until the box's server sees the phase and
+closes it (the server polls every second), so the pass closes, waits fifteen
+seconds instead of ten minutes, and treats work that outlasts the wait as the
+box being in use: the result is `deferred` with the holders, exit 0, the box
+reopens, and the next pass retries. The schedule reports a deferral only once
+the box has held work for a day. Deploy (`bbx maintenance`) and supervised
+reload never yield.
 
 Every admission carries a reason (`acquireBoxWork(boxRoot, { reason })`), and
 the process's lease sidecar lists the live reasons. A drain that gives up
 names them (`Timed out draining box work: deployment; held by chat run <id>
 since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
-process. A closed box refuses with its reason and, while draining, the
-expected wait (`Box is closed for migration; expected to reopen within 10
+process. A closed box refuses with the maintenance that closed it and, while
+draining, the expected wait (`Box is closed for migration; expected to reopen within 10
 min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
 once before reporting the refusal.
 

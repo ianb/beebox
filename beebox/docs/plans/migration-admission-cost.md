@@ -176,10 +176,13 @@ not.
 next hour is fine.
 
 **Direction.**
-- `SweepOptions.yield?: boolean`. After a peek that says work: `holders =
-  await boxWorkHolders(boxRoot)`; non-empty → deferred. Then close with
-  `drainMs: 5_000`; a `timeout` in yield mode is also `deferred` (a holder
-  arrived between check and close). Sweep result type gains
+- `SweepOptions.yield?: boolean`. After a peek that says work, close with
+  `drainMs: 15_000`; a `timeout` in yield mode is `deferred` with the holders
+  read back. No lease check before closing: an idle chat run holds its lease
+  until the server sees a phase and closes it (`server.ts:404-419`), so
+  leases alone cannot distinguish "in use" from "idle"; the brief close lets
+  the server free idle runs, and only work that outlasts the wait defers
+  (cross-model review finding, 2026-09-15). Sweep result type gains
   `{ status: "deferred"; holders: WorkHolder[] }`; CLI JSON exit 0.
 - `results.ts`: `deferred` → `null` unless the oldest holder `since` is over
   24 h old → `"deferred; box has held work for <n>h: <holders>"`. The lease
