@@ -1,6 +1,6 @@
 ---
 title: "Dev router: a transient startup failure is permanent, and nothing about it is logged"
-workstream: unattached
+workstream: router-resilience
 area: router
 priority: important
 filed-by: agent
