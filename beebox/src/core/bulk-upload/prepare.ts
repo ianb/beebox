@@ -4,7 +4,7 @@
  * Turns a bulk staging session into a committed `upload-batch` document under
  * the target chat's `tmp-upload/`: it **copies** (never moves — parity with
  * capture, which retains staging until delivery is confirmed) the staged files
- * into the batch's attach scope, writes that scope's asset `manifest.json` + a
+ * into the batch's attach scope, writes a
  * batch-local `.gitattributes`, writes the summary card, and commits the card
  * + the whole attach scope, so git-annex takes the blobs (see the staging
  * comment below for why the blobs must be staged, not excluded).
@@ -21,7 +21,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { sanitizeFilename, dedupeName, summarizeBatch } from "./batch-format.js";
-import { computeEntry, emptyManifest, saveManifest } from "../asset-manifest.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
   readStagingSession,
@@ -160,7 +159,7 @@ export async function prepareBulkBatch(opts: {
  *
  * `annex.largefiles=anything` is correct HERE and only here — a bulk batch
  * genuinely does hold arbitrary types, unlike an ordinary attach scope where
- * cards and manifests sit beside the assets. The control files are exempted so
+ * cards sit beside the assets. The control files are exempted so
  * they stay ordinary git objects.
  *
  * **It takes two files to annex a `.zip`.** This one widens what git-annex
@@ -174,7 +173,6 @@ export async function prepareBulkBatch(opts: {
 const ATTACH_GITATTRIBUTES = `# Managed by bbx bulk-upload. A batch holds arbitrary file types, so annex
 # everything in this scope except the control files. See docs/plans/asset-annex.md.
 * annex.largefiles=anything
-manifest.json annex.largefiles=nothing
 .gitattributes annex.largefiles=nothing
 *.card annex.largefiles=nothing
 `;
@@ -216,7 +214,6 @@ async function buildBatchSummary(opts: {
   const sessionDir = stagingSessionDir(boxRoot, session.id);
   await fs.mkdir(attachAbsDir, { recursive: true });
 
-  const manifest = emptyManifest();
   const received: UploadBatchReceived[] = [];
   const usedNames = new Set<string>();
   const arrivedKeys = new Set<string>();
@@ -225,10 +222,11 @@ async function buildBatchSummary(opts: {
     const destName = dedupeName(sanitizeFilename(file.originalName || file.filename), usedNames);
     const destAbs = path.join(attachAbsDir, destName);
     await fs.copyFile(path.join(sessionDir, file.filename), destAbs);
-    const entry = await computeEntry(destAbs);
-    manifest.files[destName] = entry;
+    // Size straight from the file: git-annex holds the bytes and records their
+    // hash itself, so nothing here needs to compute or store one.
+    const { size } = await fs.stat(destAbs);
 
-    const item: UploadBatchReceived = { name: destName, size: entry.size };
+    const item: UploadBatchReceived = { name: destName, size };
     if (file.mimeType !== "") item.mimetype = file.mimeType;
     received.push(item);
 
@@ -239,8 +237,6 @@ async function buildBatchSummary(opts: {
     if (file.itemId !== undefined) arrivedKeys.add(`id:${file.itemId}`);
     else arrivedKeys.add(`name:${file.originalName}`);
   }
-
-  await saveManifest(attachAbsDir, manifest);
 
   const failed = failedItems.map((f) => ({ name: f.name, reason: f.reason }));
   const failedKeys = new Set<string>();

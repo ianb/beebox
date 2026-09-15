@@ -1,7 +1,7 @@
 /**
  * "Is this box on git-annex?" — the cheap, binary-free probe.
  *
- * `bbx doctor annex` and `bbx attachments to-annex` ask this question through
+ * `bbx doctor annex` and every asset writer ask this question through
  * {@link GitAnnexService.isInitialized}, which shells out to `git annex info`.
  * That is the right call there: both are user-invoked, both need the binary
  * anyway, and both want git-annex's own opinion. It is the wrong call for a

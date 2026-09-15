@@ -6,6 +6,14 @@ issues: []
 ---
 # Off-Box Asset Storage — Content-Addressable Backup to R2
 
+> **⚠ Built on a retired premise** (full-embrace-annex, 2026-09-14). This plan
+> proposed keeping the hand-rolled asset manifests as the inventory for off-box
+> storage. Those manifests no longer exist — `asset-manifest.ts`,
+> `asset-manifest-scan.ts`, and every writer of `manifest.json` are deleted, and
+> git-annex records content hashes itself. The off-box *question* is still open;
+> the manifest-as-inventory design answering it is not available. Current model:
+> [`../assets.md`](../assets.md).
+
 **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
 here was implemented.
 

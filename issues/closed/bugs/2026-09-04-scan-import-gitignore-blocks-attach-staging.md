@@ -7,8 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — Track A2 (one-root box layout), 2026-09-04
 priority: normal
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Fresh boxes are annex-shaped from their first commit, so the default `.gitignore` no longer hides a box's own attach binaries. The scheme that did is deleted.
 `bbx scan-import` (photo flow and PDF extraction) writes originals and derived
 images straight into `_content/inbox/<session>.attach/…` and stages them with
 `stageAndCommitPaths` (`src/core/commands/scan-import.ts`,
@@ -102,7 +104,7 @@ graceful refusal: a manifest box becomes a broken invariant, not a supported
 state.
 
 **Owner:** `issues/features/2026-09-14-every-box-uses-git-annex.md`, with the
-design drafted at `beebox/docs/plans/annex-at-init.md`. Not being fixed in
+design drafted at `beebox/docs/implemented-plans/annex-at-init.md`. Not being fixed in
 `scan-ingest`, which was told to behave as though annex-always already ships.
 Kept open until that work lands, since the reproduction in this body is the
 regression test that work owes.

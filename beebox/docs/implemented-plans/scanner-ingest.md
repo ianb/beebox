@@ -6,6 +6,13 @@ issues: []
 ---
 # Scanner Ingest
 
+> **⚠ Its annex citations point at deleted files** (full-embrace-annex,
+> 2026-09-14). `src/core/annex/to-annex.ts` and `to-annex-errors.ts` no longer
+> exist, and neither does the migration they implemented — every box is
+> annex-shaped from creation, so there is nothing left to migrate *from*. The
+> scan pipeline this plan describes is otherwise live. Current model:
+> [`assets.md`](../assets.md).
+
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
 box. ScanSnap profiles save searchable PDFs and images into per-box folders on
 the boxholder's laptop. A stand-alone uploader sends new files to

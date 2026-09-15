@@ -1,13 +1,15 @@
 ---
 title: "Every box uses git-annex, now and forever: delete the manifest scheme"
-workstream: unattached
+workstream: full-embrace-annex
 area: beebox
 labels: [annex, git, scan]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-scan-ingest — 2026-09-14
+resolution: implemented
 ---
 
+> **Closed by the full-embrace-annex workstream, 2026-09-14.** Every box is annex-shaped at creation and the manifest scheme is deleted, along with `bbx attachments to-annex` and `--skip-git`. The fleet was converted and verified with `git check-ignore` first.
 Boxholder decision, 2026-09-14: *"I want every box currently and forever in the
 future to use annex. So we should just be making it right, always, and not worry
 about cases where it isn't right."*
@@ -59,7 +61,7 @@ The work, as scoped by the decision:
   which matters, because "the old `makeTmpBox` never ran the real init" is what
   the scan-import issue names as the reason its bug went unnoticed.
 
-The design work is drafted at `beebox/docs/plans/annex-at-init.md`, whose
+The design work is drafted at `beebox/docs/implemented-plans/annex-at-init.md`, whose
 leading note records this decision and marks exactly which of its sections the
 decision deletes. That plan's budget predates the decision and must be re-set
 before implementation.

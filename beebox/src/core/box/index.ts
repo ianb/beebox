@@ -15,8 +15,7 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
-import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
-import { isAnnexInitialized } from "../annex/is-annex-box.js";
+import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import { MIGRATED_SECTION_HEADER } from "../migrations/one-root-ignore-merge.js";
 import {
   installSchemasGuide,
@@ -112,8 +111,9 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // declaring beebox) BEFORE creating directories, the migration manifest,
   // config, or `.gitignore`. A missing/invalid package half or a stale
   // pre-v3 marker throws here, before any of those mutations land — so a bad
-  // init can't leave a half-written box behind.
-  const shape = await getBoxShape(resolvedRoot);
+  // init can't leave a half-written box behind. Called for that throw; the
+  // returned shape has no reader here since the annex probe went away.
+  await getBoxShape(resolvedRoot);
   if (!isUpdate) {
     try {
       await seedSystemCards(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
@@ -123,17 +123,6 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
       throw error;
     }
   }
-
-  // Which asset-tracking scheme is this box on? Every box starts on the
-  // manifest scheme (gitignored asset bytes) and `bbx attachments to-annex`
-  // moves it to git-annex (assets un-ignored). `.gitignore` is regenerated on
-  // EVERY init, so writing the manifest form unconditionally silently
-  // de-annexed any converted box on its next `bbx init` — assets ignored again
-  // — with nothing reporting it until the first commit or asset write failed.
-  // The probe is repo-level (`.git/annex/`), so it cannot be flipped by the
-  // files this function writes. (`.gitattributes` no longer varies: LFS is
-  // retired, so neither scheme gets filter rules.)
-  const annexed = await isAnnexInitialized(shape.boxRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
   // (BOX_DIRS) are skipped: they're populated by generated files
@@ -181,11 +170,9 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   }
 
   // Always write .gitattributes. Git LFS is retired: git-annex is the only
-  // asset backend, so no box — annexed or not — gets `filter=lfs` rules any
-  // more. Pre-annex boxes gitignore their asset bytes (GITIGNORE_BLOCK below),
-  // so an LFS filter could never fire on them either; the rules were dead
-  // config that only did harm, by re-LFS-ifying a converted box's new media if
-  // the annex probe ever read false. What stays is the section headers, so the
+  // asset backend, so no box gets `filter=lfs` rules any more. The rules were
+  // dead config that only did harm, by re-LFS-ifying a box's new media if the
+  // annex probe ever read false. What stays is the section headers, so the
   // file is byte-identical to what `bbx attachments to-annex` leaves behind and
   // re-running init is a no-op on every box. `stripLfsFilters` remains the
   // migration's tool for stripping rules off boxes that still carry them.
@@ -199,7 +186,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 `,
   );
 
-  await writeBoxGitignore(resolvedRoot, { annexed });
+  await writeBoxGitignore(resolvedRoot);
 
   // Install tricks types.d.ts and CLAUDE.md if missing
   await installTricksFiles(resolvedRoot);
@@ -241,9 +228,13 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
  * being spelled out here — the two must be identical, and an inlined copy is
  * what let `bbx init` keep writing the manifest-scheme block onto boxes that
  * had migrated to git-annex.
+ *
+ * There is no longer a choice of block. Every box is annex-shaped, so assets
+ * are always visible to git and the annex always holds their bytes. The
+ * `annexed` probe this used to branch on is gone with the manifest scheme it
+ * selected.
  */
-export async function writeBoxGitignore(boxRoot: string, options: { annexed: boolean }): Promise<void> {
-  const { annexed } = options;
+export async function writeBoxGitignore(boxRoot: string): Promise<void> {
   const gitignore = `# Bee Box .gitignore
 # npm package
 node_modules/
@@ -279,7 +270,7 @@ _tmp/
 *.swp
 *~
 
-${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
+${UNIGNORE_BLOCK}`;
   await writeRegeneratedFilePreservingMigratedSection(path.join(boxRoot, ".gitignore"), gitignore);
 }
 

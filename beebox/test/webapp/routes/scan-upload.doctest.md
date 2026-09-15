@@ -568,9 +568,19 @@ import into, answer every request with the contract's retryable 503. The client
 reports it and tries again later; it never dispositions a file on a 503, and
 nothing is written to quarantine.
 
+The box has to be broken on purpose now. Every box is annex-shaped from its
+first commit, so the only way to reach this state is to hand-edit the
+`.gitignore` back to hiding assets — which is what `assetsHiddenAgain` does,
+before the server boots, because the probe runs at registration.
+
+The routes keep answering 503 rather than asserting the way the CLI writers do
+(`assertAnnexBox`). The difference is the client: a scan client deletes its only
+copy of a file once the box says `accepted`, so it needs an answer it can act
+on and retry, not a stack trace.
+
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ assetsHiddenAgain: true });
 const png = await pngBytes();
 
 const checked = await check(ctx, [sha256(png)]);

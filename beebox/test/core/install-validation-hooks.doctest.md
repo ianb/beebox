@@ -309,7 +309,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 
 ## Not a git repo — skips pre-commit install silently
 
-If `.git/` doesn't exist (e.g. a `--skip-git` box, or a non-box directory), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
+If `.git/` does not exist (a non-box directory, or a fixture that skipped git), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 
 ```ts
 const box = await makeTmpBox();
