@@ -31,6 +31,7 @@ import {
   type RunContext,
   type RunMode,
 } from "./test-ledger-store.js";
+import { failureRecapLines } from "./test-ledger-lib.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 import {
   PACKAGE_ROOT,
@@ -177,8 +178,10 @@ async function runUnderSlot(input: {
     // hang here would stall a merge over bookkeeping. Budgeted and swallowed.
     console.warn(`test-ledger: not recorded (${String(e)})`);
   }
+  for (const line of failureRecapLines(output, exitCode)) console.error(line);
   return exitCode;
 }
+
 
 /** Ledger bookkeeping runs after the suite; it may never become the long pole. */
 const LEDGER_BUDGET_MS = 60_000;
