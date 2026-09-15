@@ -11,7 +11,11 @@ Boxes gain GLM as a set of model ids that run on the existing claude engine
 against Z.ai's Anthropic-compatible endpoint, with the API key held in the
 machine secret store and injected into the agent child's environment whenever
 the run's resolved provider is GLM. No third engine, no routing, no new auth
-flow. Provider selection stays an up-front, owner-controlled choice per box.
+flow. A session may start on GLM and continue anywhere, or the reverse:
+transcripts are local files (`core/chat/session/transcript-paths.ts:18-23`)
+and the provider is per-process environment, so the CLI does not care — the
+boxholder accepts mixed-provider sessions (all enabled agents in a box are
+equally trusted).
 
 **Issues addressed:** executes the spike gated by
 [2026-07-18-model-backend-pluggability](../../../issues/exploration/2026-07-18-model-backend-pluggability.md)
@@ -32,7 +36,11 @@ explicit lifecycle sites (commit retry, prewarm, thread path); chat-path
 injection moved into model resolution after the reviewer showed the env builder
 runs before the model exists; GLM availability made owner-gated per box; the
 secrets-refusal adapter made concrete; Track 4 cut (see NOT in scope); guide/
-uses/format registry entries added to Track 5.
+uses/format registry entries added to Track 5. Boxholder round-2 adjudication
+(2026-09-15): the per-provider consent gate is cut — *"I assume people trust
+all enabled agents equally in a box"* — and mixed-provider sessions are
+accepted, so GLM menu entries are unconditional; tier overlap confirmed as the
+intended design.
 
 ## Smallest fix and budget
 
@@ -43,13 +51,13 @@ dev-side lesson: `bin/lib/glm-provider.sh:16-17` refuses a second credential
 home and refuses `~/.claude/settings.json` because it would silently redirect
 every Claude session).
 
-Chosen design, four tracks, estimated **700–850 changed lines** across ~18
+Chosen design, four tracks, estimated **600–700 changed lines** across ~15
 files (source plus tests together; plan doc separate; no generated output):
 
 | Track | Subject | Est. lines |
 |---|---|---|
 | 1 | Headless-loop spike against Z.ai (research, mostly runtime) | ~100 (spike script + recorded findings) |
-| 2 | Model vocabulary: ids, tiers, provider-aware resolution, owner gating | ~220 |
+| 2 | Model vocabulary: ids, tiers, provider-aware resolution, menus | ~180 |
 | 3 | Key custody, provider-resolved injection across all spawn lifecycles, preflight | ~280 |
 | 4 | Setup/UX surfaces and docs | ~120 |
 
@@ -77,11 +85,10 @@ running engine does not know"). Not a BIG CHANGE.
 - Boxholder scoping recorded in the endpoint-config issue (2026-07-18): one
   provider chosen up front, *"no routing, no fallback logic."* Two
   consequences the review sharpened: (a) no fallback to first-party when Z.ai
-  fails — the run fails visibly; (b) provider choice is owner-configured per
-  box and gated, not per-chat-model drift: a chat follower cannot move a
-  conversation onto Z.ai unless the owner enabled GLM for that box, because
-  `setModel` is a `publicProcedure` any chat participant may call
-  (`webapp/trpc/routers/chat-control-procedures.ts:230`).
+  fails — the run fails visibly; (b) no per-provider consent gating inside a box: the boxholder accepts that
+  any agent a box runs is equally trusted with its content, so a chat moved to
+  a GLM model is not an information leak to defend against
+  (boxholder, 2026-09-15).
 - Shipped precedent for a provider key: `core/gemini-key.ts` (store name,
   `server` access, per-caller `purpose` labels). GLM follows the shape but NOT
   the null-collapse: `getGeminiApiKey` returns `null` on every refusal
@@ -221,23 +228,18 @@ offers"), absent from chat menus, and unknown to procedure tier resolution.
   (`core/procedure/engine-validate-model.ts:145-147`). Each loads the box's
   effective default model it is already entitled to load and derives the
   provider from it; a pinned GLM `smallModel` resolves provider glm directly.
-- **Owner gating:** new optional box-config field `providers`
-  (`core/box/config.ts`, beside `engines`): the providers this box's claude
-  engine may run, default = the provider of the effective `agentModel`
-  (so an unpinned box is `["anthropic"]` and a GLM-defaulted box is
-  `["glm"]`; the owner may list both). Chat menus and send-time validation
-  (`chatModelForEngine` / `chat-send-target`) filter GLM entries by it. This
-  is the up-front-provider decision made enforceable: a chat follower cannot
-  move a conversation to Z.ai on a box that did not opt in.
-- Chat menus: `shared/chat-models.ts` claude list gains GLM entries, shown
-  only under the `providers` gate above.
+- Chat menus: `shared/chat-models.ts` claude list gains GLM entries,
+  unconditionally — the static menu is the whole mechanism, and a box without
+  a usable key fails at spawn with the Track 3 refusal, which names the two
+  setup commands. No new config field gates them (boxholder, 2026-09-15:
+  enabled agents are equally trusted; provider drift inside a box is not an
+  information-leak surface).
 
 **Vocabulary lock-ins:** store secret name `glm`; provider names
-`"anthropic" | "glm"`; config field `providers`.
+`"anthropic" | "glm"`.
 
 **First chunk:** ids + tiers + predicate + config admission + doctest for
-resolution. Menus and gating are the second chunk; `providers` config lands
-with them.
+resolution. Menus are the second chunk.
 
 ### Track 3 — Key custody, provider-resolved injection, preflight
 
@@ -273,11 +275,9 @@ Z.ai resuming against Anthropic is a data-posture violation, not just a bug).
 - **Batch/agent injection:** `run.ts` setup env adds GLM additions when the
   run's effective model is GLM. When prompt logging is also active, the two
   collide on `ANTHROPIC_BASE_URL` (the logger is a local proxy,
-  `core/agent/prompt-logger.ts`); resolution: `startPromptLogger` gains an
-  `upstream` parameter so the proxy forwards to Z.ai and prompt logging keeps
-  working for GLM runs; if that proves disproportionate, the fallback is
-  warn-and-disable logging on GLM runs — decided in implementation, both
-  stated here.
+  `core/agent/prompt-logger.ts`); resolution: warn and disable prompt logging
+  for GLM runs (it is a debug surface, and teaching the proxy a Z.ai upstream
+  buys little), stated here so implementation does not re-litigate.
 - **Chat injection:** model resolution moves ahead of env assembly on the cold
   start: `buildBackendStartOptions` (`core/chat/session/start.ts`) resolves
   the session model itself and returns env + model + provider together, so
@@ -364,8 +364,10 @@ none — the spike is a track with a recorded deliverable, not a design step.
 - **Hand-edit drift** — boxholder writes `agentModel: "glm-4"` (typo):
   ADDRESSED (`readConfiguredModel` rejects unknown ids with a named warning,
   `core/box/config.ts:206-220`).
-- **Chat follower moves a chat to Z.ai on an opted-out box** — ADDRESSED
-  (Track 2 `providers` gate on menus and send-time validation).
+- **Chat follower moves a chat onto GLM** — ADDRESSED by decision, not
+  machinery: allowed everywhere the claude menu shows it; the boxholder trusts
+  all enabled agents with box content equally (2026-09-15). The data-posture
+  warning lives in the setup docs and the secret guide's `what` text.
 - **Two agents touching the same card**: unaffected — no new shared state.
 - **Fabricated free-form value**: N/A — no agent-authored input in this plan.
 - **Validation error UX**: ADDRESSED — the refusal names the two store
@@ -398,9 +400,12 @@ none — the spike is a track with a recorded deliverable, not a design step.
   box-side is a probe validation, not a card.
 - `maxBudgetUsd` enforcement for GLM runs — the CLI cannot price GLM; spend
   visibility lives on Z.ai's dashboard. Documented, not worked around.
-- Chat menus gated by key *presence* — gating keys on owner config
-  (`providers`), which is inspectable and intentional; secret-store state is
-  runtime data and would make menus flicker with store edits.
+- Per-provider consent gating inside a box (`providers` config field) —
+  designed, then cut by boxholder decision (2026-09-15): enabled agents are
+  equally trusted, so the gate was machinery without a threat model.
+- Chat menus gated by key *presence* — secret-store state is runtime data and
+  would make menus flicker with store edits; a missing key fails at spawn with
+  the actionable refusal instead.
 
 ## Open design questions
 
@@ -420,9 +425,9 @@ as opaque, and procedure tiers behave identically.
 
 - Doctests reach the risky decisions, which are extracted as pure functions or
   narrow seams: `glmProvider`/provider-aware tier resolution (track 2),
-  `glmEnvAdditions` and refusal wording (track 3), the
-  model-carried-through-retry agent behavior (track 3), and the `providers`
-  gate (track 2). One new doctest file per cluster under `beebox/test/`,
+  `glmEnvAdditions` and refusal wording (track 3), and the
+  model-carried-through-retry agent behavior (track 3). One new doctest file
+  per cluster under `beebox/test/`,
   following `agent-doctest/docs/syntax.md`.
 - No new mock tier and no mock written by this plan encodes a provider
   behavior: Z.ai's wire behavior is anchored by the spike's recorded findings
@@ -437,7 +442,7 @@ as opaque, and procedure tiers behave identically.
 1. Track 1 spike; findings recorded in the pluggability issue. **Gate: no
    Track 2 chunk before the wire model ids are confirmed.**
 2. Track 2 first chunk (ids, tiers, predicate, config admission + doctest).
-3. Track 2 second chunk (procedure provider column, `providers` gate, menus).
+3. Track 2 second chunk (procedure provider column, menus).
 4. Track 3 first chunk (glm-key + refusal mapping + agent-factory model
    carrying + run.ts injection + doctests).
 5. Track 3 second chunk (chat/thread injection + preflight branch).
