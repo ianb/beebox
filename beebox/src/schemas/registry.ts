@@ -24,6 +24,7 @@ import { LandmarksSchema } from "./landmarks.js";
 import { HistorySchema } from "./history.js";
 import { InventorySchema } from "./inventory.js";
 import { AdminSchema } from "./admin.js";
+import { SearchSchema } from "./search.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -95,6 +96,7 @@ export const cardSchemas: CardSchema[] = [
   HistorySchema,
   InventorySchema,
   AdminSchema,
+  SearchSchema,
   // authored — everyday recording types first
   DocSchema,
   RecordSchema,
