@@ -4,12 +4,12 @@
 the app bar's voice chip — renderable standalone, without the `Dropdown` or
 router context the full `VoiceChip` needs.
 
-It is a split pill carrying two **orthogonal** facts:
+One drawing shares a single bot between two **orthogonal** facts:
 
-- **Who holds the floor** (`FloorIcon`) — taking turns, or you narrating while
+- **Who holds the floor** (the arrows) — taking turns, or you narrating while
   the box listens. Podcast, the box holding the floor, is the third value of the
   same axis and is not built.
-- **How the box answers** (`SpeakerIcon`) — aloud, or in writing.
+- **How the box answers** (marks beside the bot) — aloud, or in writing.
 
 Both are shown because neither implies the other: in narration the box is silent
 by default but may still speak by exception — when asked, or when the boxholder
@@ -20,12 +20,12 @@ This replaced a microphone dimmed to 40% when narration was off. A mic cannot
 carry the distinction (voice input uses the mic in both modes), and the deeper
 reason is that narration is a *relationship*: it changes what the box does as
 much as what you do, and no single-participant picture shows a relationship
-(`issues/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`).
+(`issues/closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`).
 
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { VoiceChipFace } from "../../src/frontend/src/components/chat/VoiceChip.js";
+import { VoiceChipFace, voiceChipDiarizationEnabled } from "../../src/frontend/src/components/chat/VoiceChip.js";
 import { voiceChipLabel } from "../../src/frontend/src/components/chat/voice-chip-label.js";
 
 globalThis.React = React;
@@ -35,17 +35,17 @@ function renderFace(state) {
 }
 
 /** The floor glyph's flow path — the arrow between the two marks. */
-const TURNS = "M9 9.5 7.5 12 9 14.5M15 9.5l1.5 2.5L15 14.5M8 12h8";
-const YOU_HOLD_FLOOR = "M8 12h7m-2.5-2.5L15 12l-2.5 2.5";
+const TURNS = "M12 5h8l-2-2M20 11h-8l2 2";
+const YOU_HOLD_FLOOR = "M12 8h8m-3-3 3 3-3 3";
 /** The speaker segment: sound waves when aloud, written lines when in text. */
-const ALOUD = "M15.54 8.46a5 5 0 0 1 0 7.07";
-const IN_TEXT = "M5 5h14M5 9.5h14M5 14h9M5 18.5h6";
+const ALOUD = "M39 6a3 3 0 0 1 0 4";
+const IN_TEXT = "M37 4h11M37 8h8M37 12h11";
 ```
 
 ## Taking turns, answering aloud
 
 ```ts
-const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false });
+const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
 JSON.stringify([face.includes(TURNS), face.includes(YOU_HOLD_FLOOR), face.includes(ALOUD), face.includes(IN_TEXT)])
 => [true,false,true,false]
 ```
@@ -70,7 +70,7 @@ Written lines, not a slashed speaker: a slash says *suppressed*, and that is not
 what happens — the box still answers, in text.
 
 ```ts
-const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false });
+const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
 JSON.stringify([face.includes(IN_TEXT), face.includes(ALOUD), face.includes('data-voice-muted="true"')])
 => [true,false,true]
 ```
@@ -78,23 +78,23 @@ JSON.stringify([face.includes(IN_TEXT), face.includes(ALOUD), face.includes('dat
 ## You hold the floor
 
 ```ts
-const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false });
+const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false });
 JSON.stringify([face.includes(YOU_HOLD_FLOOR), face.includes(TURNS), face.includes('data-voice-narration="true"')])
 => [true,false,true]
 ```
 
 ## The two axes combine, and the name says both in words
 
-The glyphs carry it by weight and shape; the accessible name says it outright,
+The glyphs carry it with participants, arrows, and output marks; the accessible name says it outright,
 because a relationship and a channel do not survive being read as a list of
 toggle names.
 
 ```ts
 JSON.stringify([
-  voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: false }),
-  voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false }),
-  voiceChipLabel({ muted: false, narrationEnabled: true, hqInFlight: false }),
-  voiceChipLabel({ muted: true, narrationEnabled: true, hqInFlight: false }),
+  voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: true, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false }),
 ])
 => ["Voice — taking turns, answers aloud","Voice — taking turns, answers in text","Voice — you are narrating, it listens, answers aloud","Voice — you are narrating, it listens, answers in text"]
 ```
@@ -102,10 +102,48 @@ JSON.stringify([
 ## HQ transcription in flight keeps its readable label
 
 ```ts
-const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true });
+const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
 face.includes("transcribing…")
 => true
 
-voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true })
+voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false })
 => Voice — taking turns, answers aloud, transcribing
+```
+
+## Diarization changes people, not the floor or answer channel
+
+A diarized HQ service only applies when HQ dictation or narration is enabled.
+Narration automatically requests HQ; merely selecting a diarized HQ service
+while both modes are off does not enable speaker labels.
+
+```ts
+JSON.stringify(["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null].map(hqService =>
+  [
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: false }),
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: true, narrationEnabled: false }),
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: true }),
+  ]
+))
+=> [[false,true,true],[false,true,true],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false]]
+```
+
+The group works with both arrow states and both channels. Each face still has
+exactly one bot and one SVG; only the human head count changes.
+
+```ts
+const combinations = [false, true].flatMap(diarizationEnabled => [false, true].flatMap(narrationEnabled => [false, true].map(muted => {
+  const face = renderFace({ muted, narrationEnabled, diarizationEnabled, hqInFlight: false });
+  return [
+    (face.match(/<svg /g) ?? []).length,
+    (face.match(/<rect /g) ?? []).length,
+    (face.match(/r="2.2"/g) ?? []).length,
+    face.includes(narrationEnabled ? YOU_HOLD_FLOOR : TURNS),
+    face.includes(muted ? IN_TEXT : ALOUD),
+  ];
+})));
+JSON.stringify(combinations)
+=> [[1,1,1,true,true],[1,1,1,true,true],[1,1,1,true,true],[1,1,1,true,true],[1,1,2,true,true],[1,1,2,true,true],[1,1,2,true,true],[1,1,2,true,true]]
+
+voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: true })
+=> Voice — taking turns, answers in text, speaker labels on
 ```
