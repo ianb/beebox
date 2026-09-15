@@ -6,7 +6,24 @@ labels: [git, migration]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-embrace-annex — converting the last manifest-scheme boxes
+resolution: wontfix
 ---
+
+> **Closed wontfix, 2026-09-14.** Boxholder: *"meta-cb and tech-talk should be
+> purged, that's why they aren't converted."* Both were moved aside the same
+> day — `meta-cb` to `~/src/boxes/purged/`, `tech-talk` to the server's
+> `/home/beebox/purged-boxes/` (it was already absent from the hub registry).
+>
+> That empties the v2 population. Every box that exists is shapeVersion 3, so
+> the migrator has nothing left to migrate and none of the four blockers below
+> is reachable. They are recorded because the migrator is still in the codebase:
+> anyone who revives it, or who finds an old v2 box in a backup, meets these
+> four before anything works.
+>
+> The follow-on question — whether `scripts/migrate/one-root.ts`,
+> `src/core/migrations/one-root-v2-probe.ts`, and the `one-root` migration entry
+> should now be deleted as dead code — is not decided here.
+
 
 Every v2 box tried refuses or crashes. Two boxes were attempted — `about` and
 `meta-cb` — and between them they hit four distinct failures. `about` was
