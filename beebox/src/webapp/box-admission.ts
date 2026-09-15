@@ -58,7 +58,10 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
       if (work.length === 1) work[0]?.run(done); else done();
     })().catch(async (error: unknown) => {
       await release();
-      if (error instanceof BoxMaintenanceError) await reply.status(503).send({ error: error.message });
+      if (error instanceof BoxMaintenanceError) {
+        if (error.retryAfterMs !== undefined) void reply.header("Retry-After", String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));
+        await reply.status(503).send({ error: error.message });
+      }
       else done(toError(error));
     });
   }));

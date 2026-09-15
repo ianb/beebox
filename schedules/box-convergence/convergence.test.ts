@@ -23,6 +23,15 @@ test("JSON outcomes preserve questions and refuse unknown or failed coverage", (
   assert.match(resultDetail(report({ status: "no-manifest" }), 0) ?? "", /no-manifest/u);
 });
 
+test("a deferred pass is quiet until the box has held work for a day", () => {
+  const ago = (hours: number) => [{ pid: 4242, reason: "chat run abc", since: new Date(Date.now() - hours * 3_600_000).toISOString() }];
+  assert.equal(resultDetail(report({ status: "deferred", holders: ago(0.2) }), 0), null);
+  assert.equal(resultDetail(report({ status: "deferred", holders: ago(23) }), 0), null);
+  assert.match(resultDetail(report({ status: "deferred", holders: ago(25) }), 0) ?? "", /held work for 25h: chat run abc \(pid 4242/u);
+  assert.match(resultDetail(report({ status: "deferred" }), 0) ?? "", /Incomplete deferred/u);
+  assert.match(resultDetail(report({ status: "deferred", holders: [] }), 1) ?? "", /exit 1/u);
+});
+
 test("framing preserves exit failures and treats shell metacharacters as data", async () => {
   const value = "apostrophe' and $(printf BAD) and `printf BAD`";
   const result = await execa("bash", ["-c", framedCommand(`printf '%s' ${shellQuote(value)}; exit 2`)], { reject: false });

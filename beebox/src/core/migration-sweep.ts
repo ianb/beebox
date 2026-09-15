@@ -1,11 +1,11 @@
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
-import { refreshGeneratedDocs } from "./docs-refresh.js";
+import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
-import { acquireBoxMaintenance } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxWorkHolders, BoxMaintenanceError, peekBoxWork, type WorkHolder } from "../lib/box-maintenance.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { invariant } from "../lib/invariant.js";
@@ -34,6 +34,8 @@ export type SweepResult =
   | { readonly status: "no-manifest" }
   /** Nothing pending. The common case, and the quiet one. */
   | { readonly status: "current" }
+  /** Work is pending, but the box is in use and this pass may yield; the next one retries. */
+  | { readonly status: "deferred"; readonly holders: WorkHolder[] }
   | { readonly status: "attention"; readonly questions: string[]; readonly applied: SweptMigration[] }
   | { readonly status: "deferred-repair"; readonly failed: string; readonly recoveryRef: string; readonly applied: SweptMigration[] }
   /** Ran until a procedure-kind migration, which only a human/agent can apply. */
@@ -61,13 +63,45 @@ interface SweepOptions {
   repair?: boolean | undefined;
   withinMaintenance?: boolean | undefined;
   prepare?: boolean | undefined;
+  /** A scheduled pass yields to live work instead of draining it. */
+  yield?: boolean | undefined;
   runScript?: typeof runMigrationScript;
   repairAgent?: Agent;
 }
 
+/** The sweep's outcome when nothing needs the gate, or null when something does. */
+async function sweepWithoutWork(opts: SweepOptions): Promise<SweepResult | null> {
+  const manifest = await readManifest(opts.boxRoot);
+  if (manifest === null) return { status: "no-manifest" };
+  if (computePending(manifest).length > 0) return null;
+  if ((await migrationQuestions(opts.boxRoot)).length > 0) return null;
+  if (opts.refresh && await docsRefreshHasWork(opts.boxRoot)) return null;
+  return { status: "current" };
+}
+
 /** One application path for manual and unattended migration. */
 export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> {
-  const maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true });
+  // Closing admission costs the box its live work, so look before closing. A
+  // refused look means maintenance is already under way: recovery needs the
+  // gate and takes the ordinary path below.
+  const yielding = opts.yield === true && opts.withinMaintenance !== true;
+  if (opts.withinMaintenance !== true) {
+    const peek = await peekBoxWork({ boxRoot: opts.boxRoot, reason: "migration peek" }, () => sweepWithoutWork(opts));
+    if (peek.admitted && peek.value !== null) return peek.value;
+    if (yielding) {
+      const holders = await boxWorkHolders(opts.boxRoot);
+      if (holders.length > 0) return { status: "deferred", holders };
+    }
+  }
+  let maintenance;
+  try {
+    // A holder can arrive between the check and the close; a yielding pass
+    // gives up quickly rather than holding the box shut for the full drain.
+    maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true, ...(yielding ? { drainMs: 5_000 } : {}) });
+  } catch (error) {
+    if (yielding && error instanceof BoxMaintenanceError && error.reason === "timeout") return { status: "deferred", holders: await boxWorkHolders(opts.boxRoot) };
+    throw error;
+  }
   const controller = new AbortController();
   const executionMs = opts.executionMs ?? 15 * 60_000;
   const timer = startAwakeTimeout({ timeoutMs: executionMs,

@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
@@ -86,6 +87,22 @@ JSON.stringify({
   newCommits: Number(git(box, "rev-list", "--count", "HEAD")) - before,
 })
 => {"status":"current","newCommits":0}
+```
+
+Quiet also means the gate never closed. With live work admitted, a refresh that
+closed first would wait in its drain; this one answers while the work is still
+running and leaves no maintenance phase behind.
+
+```ts continue
+const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+const quiet = refreshGeneratedDocs({ boxRoot: box.root }).then((outcome) => outcome.status);
+await Promise.race([quiet, new Promise((resolve) => setTimeout(() => resolve("still draining"), 3000))])
+=> current
+
+await boxMaintenanceStatus(box.root)
+=> null
+
+await busy.release();
 ```
 
 ```ts cleanup

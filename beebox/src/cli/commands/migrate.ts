@@ -8,7 +8,7 @@
  * Manual and unattended application share the recovery-backed core runner.
  */
 
-import { boxWorkEnvironment, withBoxWork } from "../../lib/box-maintenance.js";
+import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
@@ -125,6 +125,7 @@ interface MigrateOptions {
   repair?: boolean;
   withinMaintenance?: boolean;
   prepare?: boolean;
+  yield?: boolean;
 }
 
 /**
@@ -144,6 +145,7 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
     repair: options.repair ?? options.apply,
     withinMaintenance: options.withinMaintenance,
     prepare: options.prepare,
+    yield: options.yield,
     runProcedure: options.apply ? async (procedure, signal) => {
       await installProcedures(boxRoot);
       await installGuides(boxRoot);
@@ -153,7 +155,7 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
   });
   if (options.json) {
     console.log(JSON.stringify(result));
-    return result.status === "current" || result.status === "applied" || result.status === "attention" ? 0 : 1;
+    return ["current", "applied", "attention", "deferred"].includes(result.status) ? 0 : 1;
   }
   switch (result.status) {
     case "attention":
@@ -161,6 +163,9 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
       console.warn(`Migration questions need attention: ${result.questions.join(", ")}`);
       return 0;
     case "current":
+      return 0;
+    case "deferred":
+      console.log(`Deferred: the box is in use (${describeWorkHolders(result.holders)}); the next scheduled pass retries.`);
       return 0;
     case "no-manifest":
       console.warn(`No migration manifest at ${MANIFEST_PATH}; not migrating. Seed it with \`bbx migrate --mark-all-applied\` after confirming the box is up to date.`);
@@ -258,6 +263,7 @@ export const migrateCommand = new Command("migrate")
   .addOption(new Option("--within-maintenance", "Join the calling maintenance transaction").hideHelp())
   .addOption(new Option("--prepare", "Declare startup readiness after final convergence").hideHelp())
   .option("--repair", "Allow one bounded agent repair after migration failure")
+  .option("--yield", "Defer instead of draining when the box has live work (scheduled passes)")
   .option("--json", "Report the application result as JSON")
   .action(async (options: MigrateOptions) => {
     // `topPath` is the stable top-level directory `requireBoxRoot` found —
