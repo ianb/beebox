@@ -60,6 +60,7 @@ import { createRealEffects, pidAlive, pruneRouterHubConfigs, resolveWorktree, sw
 import { isBenignSocketError } from "./router-proxy.js";
 import { dispatchRouterRequest, type DispatchContext } from "./router-dispatch.js";
 import { handleRouterUpgrade, type UpgradeState } from "./router-upgrade.js";
+import { routerLogPath, startRouterLogFile, stopRouterLogFile } from "./router-log-file.js";
 import {
   AGENT_BROWSER_BIN,
   BROWSE_DIR,
@@ -416,6 +417,10 @@ async function main(): Promise<void> {
     await Promise.all([core.stopAllChildren(), workstreamsApp?.shutdown()]);
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
     await fs.unlink(ROUTER_SOCK).catch(() => {});
+    // Last, so every line above reaches the durable log. The stream is flushed
+    // by end(); the process.exit below would otherwise drop buffered writes,
+    // losing exactly the shutdown reason a post-mortem starts from.
+    stopRouterLogFile();
     process.exit(0);
   };
 
@@ -438,6 +443,10 @@ async function main(): Promise<void> {
     void shutdown("uncaughtException");
   });
 
+  // Before the sweep, so everything boot does is in the durable record — the
+  // sweep's own kill lines are exactly what a post-mortem of a bad restart wants.
+  await startRouterLogFile(LOG_DIR);
+  log(`durable log: ${routerLogPath() ?? "unavailable"}`);
   await acquireRouterPidFile();
   // Two-stage sweep. sweepStaleChildren clears THIS state dir's pidfile-tracked
   // children (current generation + dashboard daemons). reclaimOrphans then

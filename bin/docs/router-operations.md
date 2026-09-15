@@ -18,6 +18,38 @@ One router on port 3210 fronts every checkout. Each worktree gets Vite plus
 `bbx hub`; the hub starts one `bbx serve` child per active box.
 `BBX_DEV_NO_HUB=1` selects the legacy single-server path.
 
+## Logs
+
+Two kinds, both under `$BBX_STATE_DIR/logs/` (`~/.cache/beebox/logs/` by
+default).
+
+`<worktree>.log` holds one worktree's child output: Vite and the hub, teed as
+they run, with a `=== router start <iso> ===` banner per generation.
+
+`router.log` holds the router's own lines — every `[router <iso>] …` line the
+console shows, which before 2026-09-15 existed only in the scrollback of
+whoever started the process. Start a post-mortem here. The shapes worth
+grepping:
+
+```
+[router <iso>] [<worktree>] frontend=<port> backend=<port> dashboard=<port> base=/<worktree>/
+[router <iso>] [<worktree>] ready
+[router <iso>] [<worktree>] startup failed in <phase>: <message> (load1 <n>)
+[router <iso>] [<worktree>] <vite|fastify> exited code=<n> signal=<s>
+[router <iso>] deny <method> <path> route=<kind> reason=<reason>
+```
+
+`<phase>` is a closed set — `dashboard-start`, `pidStore.write`, `waitForHttp`,
+`childExit` — and it is what distinguishes a machine that was too loaded to
+answer in time from a child that died. The `load1` stamp on a failure is the
+host's one-minute load average at that moment, so contention is recorded rather
+than reconstructed afterwards.
+
+The file is capped at 16MB with one rollover to `router.log.1`; there is no
+third file, so two caps bound the disk. Denials are logged once per request, and
+WebSocket-upgrade denials are throttled to one line per reason and path per ten
+seconds — a client reconnecting on a timer would otherwise bury the log.
+
 ## Authentication and exposure
 
 Authentication is always on. Every TCP request authenticates before proxying,
