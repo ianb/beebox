@@ -1,6 +1,6 @@
 ---
 title: "V2_LAYOUT_SNAPSHOT is exported only so knip stops flagging V2_LAYOUT"
-workstream: knip-sweep
+workstream: glm-v2-layout
 area: beebox
 priority: normal
 labels: [dead-code, migrations]
