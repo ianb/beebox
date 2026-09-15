@@ -75,9 +75,9 @@ const ENGINES: AgentEngine[] = ["claude", "codex"];
 /** Does every model this engine offers reverse to a tier selecting that same model? */
 function tiersRoundTrip(engine: AgentEngine): boolean {
   return PROCEDURE_MODEL_NAMES.every((name) => {
-    const model = resolveProcedureModel(engine, name);
+    const model = resolveProcedureModel({ engine, model: name });
     const tier = modelTier(model);
-    return tier !== null && resolveProcedureModel(engine, tier) === model;
+    return tier !== null && resolveProcedureModel({ engine, model: tier }) === model;
   });
 }
 ```
@@ -199,10 +199,10 @@ verbatim. **Nothing here can produce a name an engine does not know.**
 
 ```ts
 JSON.stringify([
-  resolveSmallModelForEngine("claude", null),
-  resolveSmallModelForEngine("codex", null),
-  resolveSmallModelForEngine("codex", "claude-sonnet-5"),
-  resolveSmallModelForEngine("claude", "claude-fable-5-1"),
+  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: "claude-sonnet-5", boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: "claude-fable-5-1", boxDefault: null }),
 ])
 => ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5-1"]
 ```
