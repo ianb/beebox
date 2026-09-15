@@ -74,7 +74,8 @@ async function waitFor(check, { timeoutMs, intervalMs, label }) {
   // enclosing test's FIRST block (the CLI build, line 116) because every step
   // below shares one test via `continue`, so without a label the diagnostic
   // points at code that already succeeded.
-  throw new Error(`waitFor: timed out after ${timeoutMs}ms waiting for ${label}`);
+  const described = typeof label === "function" ? label() : label;
+  throw new Error(`waitFor: timed out after ${timeoutMs}ms waiting for ${described}`);
 }
 
 /**
@@ -192,12 +193,25 @@ const hubPort = await waitFor(() => {
 hubPort === requestedPort
 => true
 
+// The supervisor records why a start failed in the box's `lastError`, and
+// `/healthz` carries it. Polling only for `status === "running"` throws that
+// away and leaves a bare timeout: an unadmittable box (no Git repository, so
+// no admission gate) reported "Box maintenance requires a Git repository"
+// here for two hours while the failure read as a 120s hang against the CLI
+// build. Keep the last row and put it in the error, as the hub-exit branch
+// above does with the hub's own output.
+let lastBoxRow = null;
 const health = await waitFor(async () => {
   const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
+  lastBoxRow = box ?? null;
   return box && box.status === "running" ? box : null;
-}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 300, label: "the fixture box to report status=running via /healthz" });
+}, {
+  timeoutMs: STARTUP_TIMEOUT_MS,
+  intervalMs: 300,
+  label: () => `the fixture box to report status=running via /healthz; last row: ${JSON.stringify(lastBoxRow)}`,
+});
 
 health.status
 => running
