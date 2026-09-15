@@ -127,7 +127,9 @@ Reuse, not rebuild, in every case below.
 - **The `-j` injection pattern.** `tierCommand` (`bin/test-tiers.ts:173`)
   already rewrites a bare `tap` argv to add `-j1` for the careful tier:
   *"-j1 is what 'carefully' means: the flakes in this tier are contention."*
-  Track 5 is the same move with a different trigger.
+  Track 5 reuses that shape, but not that call site — `tierCommand` runs before
+  the semaphore is acquired and cannot see `concurrency`. See track 5's
+  Direction.
 - **Host gating.** `waitForQuietHost` (`schedules/full-suite/run.ts:77`) already
   defers the batch when load1 exceeds `availableParallelism() *
   QUIET_LOAD_PER_CORE`, and `bin/host-pressure.ts` already reads memory
