@@ -14,6 +14,13 @@
 # specific model. Omitted Claude models use Claude's default; omitted Codex
 # models use gpt-5.6-sol.
 #
+# A `glm-*` model (e.g. --model glm-5.3) runs the session on Z.ai's GLM through
+# Claude Code itself: the agent is still claude and only the endpoint changes, so
+# liveness, --resume, remote control and the sweep are untouched. The key comes
+# from GLM_API_KEY in beebox/.env and is exported inside that one generated
+# launcher script — never written to ~/.claude/settings.json, which would
+# redirect every Claude Code session on the machine. See bin/lib/glm-provider.sh.
+#
 # --agent codex runs OpenAI's codex CLI instead of claude. Both paths call
 # `bin/workstreams create` directly (same worktree + box clone + installs; it
 # also generates the gitignored
