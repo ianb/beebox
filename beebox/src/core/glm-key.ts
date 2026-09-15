@@ -18,6 +18,7 @@
 
 import { resolveSecret } from "./secrets/resolve.js";
 import type { SecretRefusal } from "./secrets/errors.js";
+import { providerOf } from "../shared/agent-models.js";
 
 /** The store name this key lives under. */
 const GLM_SECRET_NAME = "glm";
@@ -47,6 +48,22 @@ export function glmEnvAdditions(key: string): GlmEnvAdditions {
     ANTHROPIC_AUTH_TOKEN: key,
     API_TIMEOUT_MS: GLM_API_TIMEOUT_MS,
   };
+}
+
+/**
+ * Resolve the GLM child-env additions for a resolved chat model, or null when
+ * the model is not GLM. The one seam for chat-path injection — the batch/agent
+ * path (run.ts) does its own because its prompt-logger interaction differs.
+ */
+export async function glmChatAdditions(params: {
+  boxRoot: string;
+  /** The resolved model for the run — null/undefined/non-glm means no additions. */
+  model: string | null | undefined;
+  /** Access-log label for the key resolution. */
+  purpose: string;
+}): Promise<GlmEnvAdditions | null> {
+  if (params.model === null || params.model === undefined || providerOf(params.model) !== "glm") return null;
+  return glmEnvAdditions(await resolveGlmKeyOrThrow(params.boxRoot, { purpose: params.purpose }));
 }
 
 /** Thrown when a GLM-model run has no usable key. Names the setup commands. */

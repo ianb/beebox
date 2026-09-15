@@ -14,13 +14,11 @@ import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env.js";
-import {
-  createChatBackend,
-  type ChatBackend,
-  type ChatBackendRun,
-} from "../../../services/claude-chat.js";
+import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat.js";
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
+import { loadEffectiveBoxModel } from "../../model-policy.js";
+import { glmChatAdditions } from "../../glm-key.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
@@ -166,7 +164,10 @@ export class ChatThreadSession extends EventEmitter {
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
     const engine = await resolveChatEngine(this.boxRoot, { sessionId: this.sessionId });
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return false;
+    // Thread chats run on the box default model; if that is GLM, the
+    // preflight and child env must say so or the chat runs first-party.
+    const threadDefault = await loadEffectiveBoxModel(this.boxRoot);
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine, model: threadDefault ?? undefined, boxRoot: this.boxRoot }))) return false;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
@@ -189,6 +190,8 @@ export class ChatThreadSession extends EventEmitter {
       // BBX_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { BBX_CHAT_SESSION_ID: this.sessionId } : {}),
     });
+    const additions = await glmChatAdditions({ boxRoot: this.boxRoot, model: threadDefault, purpose: "thread-start" });
+    if (additions) Object.assign(env, additions);
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
