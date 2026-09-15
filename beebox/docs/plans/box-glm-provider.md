@@ -412,9 +412,12 @@ none — the spike is a track with a recorded deliverable, not a design step.
 - Per-provider consent gating inside a box (`providers` config field) —
   designed, then cut by boxholder decision (2026-09-15): enabled agents are
   equally trusted, so the gate was machinery without a threat model.
-- Chat menus gated by key *presence* — secret-store state is runtime data and
-  would make menus flicker with store edits; a missing key fails at spawn with
-  the actionable refusal instead.
+- ~~Chat menus gated by key *presence*~~ — REVERSED by boxholder 2026-09-15
+  after seeing it live: GLM rows showed on boxes with no key, selectable but
+  unusable. The picker now filters GLM rows on a server-reported usability
+  check (`chat.status`'s `glmAvailable`, backed by a non-spending presence
+  resolve); the spawn refusal remains the backstop. Flicker risk accepted —
+  store edits are rare.
 
 ## Open design questions
 

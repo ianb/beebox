@@ -17,6 +17,7 @@ import {
 import { type ModelMarker } from "./InteractiveChat-helpers";
 import { chatModelOptions, parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 import { toastError } from "../ui/toast-store";
+import { setGlmAvailable } from "./glm-availability-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
 /**
@@ -91,6 +92,7 @@ export function useChatModelFeatures(opts: {
     setAgentEngine(status.engine);
     setEnabledEngines(status.enabledEngines);
     setBoxEngine(status.boxEngine);
+    setGlmAvailable(status.glmAvailable);
   }, [sessionId, scopeGenerationRef]);
 
   // For a fresh chat, status reports the box's configured engine and default.
@@ -106,6 +108,7 @@ export function useChatModelFeatures(opts: {
         setAgentEngine(status.engine);
         setEnabledEngines(status.enabledEngines);
         setBoxEngine(status.boxEngine);
+        setGlmAvailable(status.glmAvailable);
       })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);

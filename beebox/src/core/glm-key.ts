@@ -70,6 +70,18 @@ export async function glmChatAdditions(params: {
   return additions;
 }
 
+/**
+ * Can this box run a GLM model right now? A cheap, non-spending presence
+ * check (observed neither in `lastUsed` nor `purposes`) backing the chat
+ * model picker: GLM rows are only offered when this says true. The run path
+ * re-checks and refuses with the setup commands — the picker is a courtesy,
+ * the refusal is the gate.
+ */
+export async function glmKeyUsable(boxRoot: string): Promise<boolean> {
+  const resolved = await resolveSecret({ boxRoot, name: GLM_SECRET_NAME, purpose: "menu-availability", access: "server", observe: false });
+  return resolved.ok;
+}
+
 /** Thrown when a GLM-model run has no usable key. Names the setup commands. */
 export class GlmKeyError extends Error {
   readonly refusal: SecretRefusal;

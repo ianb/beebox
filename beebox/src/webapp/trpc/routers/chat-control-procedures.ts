@@ -15,6 +15,7 @@ import { loadBoxModel } from "../../../core/box/config.js";
 import { boxDefaultModel, liveModelState, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
 import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "../../../core/chat/session/engine.js";
+import { glmKeyUsable } from "../../../core/glm-key.js";
 import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import type { AgentEngine } from "../../../core/box/config.js";
@@ -86,6 +87,8 @@ export interface ChatSessionStatus {
   /** Engines this box may offer a NEW chat, and which of them it defaults to. */
   enabledEngines: AgentEngine[];
   boxEngine: AgentEngine;
+  /** A usable `glm` key exists for this box — gates the picker's GLM rows. */
+  glmAvailable: boolean;
 }
 
 /**
@@ -129,6 +132,7 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
     engine,
     enabledEngines: await loadEnabledEngines(boxRoot),
     boxEngine: await loadAgentEngine(boxRoot),
+    glmAvailable: await glmKeyUsable(boxRoot),
   };
 }
 
