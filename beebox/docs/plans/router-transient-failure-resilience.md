@@ -118,9 +118,12 @@ Reuse, not rebuild, in every case below.
   (`router-worktree-start.ts:72`, `captureOutput` `:147`). Track 3 adds a
   router-level file beside them in the same directory, not a new logging system.
 - **The test semaphore.** `bin/test-locks.ts` gives two slots, a careful-tier
-  barrier, and pid/boot-time/age staleness. `concurrency` is returned by `acquire()`, and `test-ledger.ts:68` already threads it into
-  `runUnderSlot`. Track 5 consumes a value that is already computed and already
-  recorded in the ledger.
+  barrier, and pid/boot-time/age staleness. `acquire()` returns `concurrency` and
+  `test-ledger.ts:68` already threads it into `runUnderSlot`, so track 5 consumes
+  a value that is already computed and already recorded. Note its meaning
+  precisely: it counts runs holding a slot *when this one started*
+  (`bin/test-ledger-lib.ts:69`), which is what makes the cap acquire-time only —
+  see Open design questions.
 - **The `-j` injection pattern.** `tierCommand` (`bin/test-tiers.ts:173`)
   already rewrites a bare `tap` argv to add `-j1` for the careful tier:
   *"-j1 is what 'carefully' means: the flakes in this tier are contention."*
@@ -242,9 +245,35 @@ await Promise.race([
 
 A child death sets `progress.failurePhase = "childExit"` before rejecting, so the
 parked `CapturedError.phase` distinguishes it from a budget expiry — which is
-exactly what track 2 dispatches on. `publishGeneration` keeps its own exit
-listeners for the ready phase; the startup listeners are detached when the race
-settles so a single exit is not handled twice.
+exactly what track 2 dispatches on.
+
+**One listener, attached once, for the whole generation.** The first design here
+attached startup listeners and detached them when the race settled, leaving
+`publishGeneration` to attach its own. That is wrong twice. It opens a window
+between `waitForHttp` resolving and `publishGeneration` running
+(`router-worktree-start.ts:392`) in which a dying child has no listener at all,
+so a `ready` handle could be published over a child that is already gone. And it
+cannot be built as described: `SpawnedChild` exposes only
+`on(event: "exit", …)` (`router-effects.ts:31`) with no detach, so "detach the
+startup listener" would mean widening the effects interface and the fake
+spawner to match.
+
+So the listener is attached once in `spawnGeneration` and never removed. Its
+handler dispatches on the handle's current phase:
+
+```ts
+const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
+  log(`[${name}] ${label} exited code=${code} signal=${signal}`);
+  if (handle.lifecycle.phase === "starting") failReadiness(new ChildExitError(label, code, signal));
+  else onChildExit(state, handle);
+};
+```
+
+`failReadiness` settles the `childDeath` promise; it is idempotent, so a second
+child exiting after the first changes nothing. `publishGeneration` no longer
+attaches exit listeners — it inherits the ones already in place, which is what
+closes the window. This needs `handle` in `spawnGeneration`'s scope; it is
+already threaded to every other function in the file.
 
 `READY_BUDGET_MS = 180_000`. The budget is now a backstop for a wedged-but-alive
 child, not the mechanism that catches breakage, so it can afford to be generous.
@@ -318,17 +347,39 @@ if (failed) {
 }
 ```
 
-The attempt count carries across generations through the map slot: `clearFailed`
-returns the count it dropped, and the fresh `createStartingHandle` seeds it, so a
-retry storm cannot reset the bound. Requests arriving before `retryAfter` get
-today's immediate 502 rather than queueing, which keeps a parked worktree cheap
-under a burst.
+**Where the attempt count actually lives.** It cannot live on the handle, and an
+earlier draft of this plan wrongly implied it could fall out of existing code.
+It cannot: `clearFailed` deletes the map entry and returns `boolean`
+(`router-worktree-teardown.ts:294-302`), and `createStartingHandle` takes only
+`{ name, startedAt }` (`router-lifecycle.ts:244`). A handle is per-generation and
+the retry destroys the generation, so any count stored there resets on the very
+event it is meant to bound.
 
-**Ordering matters and is load-bearing.** Track 2 must land after track 1.
-Without the child-exit race, an automatic retry would respawn Vite into a
-starving machine — discarding a compile that was nearly finished and adding two
-more processes to the contention. Track 1 is what makes the retry insurance
-rather than the mechanism.
+`CoreState` therefore gains one field — `retryAttempts: Map<string, number>`,
+keyed by worktree name, beside the existing `worktrees` map. `failStart` reads
+and increments it; `failedLifecycle.attempts` is a copy for rendering and never
+the authority. Two eviction rules, both deliberate:
+
+- **A successful `ready` publication deletes the entry.** A worktree that comes
+  up has no retry history worth keeping.
+- **An explicit `POST /__router/retry/<name>` deletes it too.** A human asking
+  for a retry is a fresh start, not the fourth of three. This preserves today's
+  behaviour, where the endpoint always works.
+
+The map is bounded by the number of worktrees and holds one integer each.
+Requests arriving before `retryAfter` get today's immediate 502 rather than
+queueing, which keeps a parked worktree cheap under a burst.
+
+**Ordering matters, for a narrower reason than it first appears.** Track 2 lands
+after track 1, but not because a retry would discard a nearly-finished compile:
+`failStart` calls `killChildren` before it parks anything
+(`router-worktree-start.ts:294`), so by the time a retry could fire, both
+children are already dead. The real reason is frequency. Without track 1's
+longer budget and its early-exit signal, parking is *common* under load, so the
+retry would fire often, and each firing spawns a fresh vite+hub pair into the
+same contention that caused the timeout — three times over, on backoff. Track 1
+makes parking rare, which is what turns the retry into insurance rather than an
+amplifier.
 
 **Vocabulary lock-ins.** `attempts` / `retryAfter` on `FailedLifecycle`;
 `MAX_AUTO_RETRIES`; `RETRY_BACKOFF_MS`.
@@ -376,7 +427,15 @@ component and leaves the repo-wide migration to its own issue.
 2. `deny()`'s call sites log `method`, `path`, `route.kind`, and `reason`. No
    headers, no cookie values, no bearer tokens. The function stays pure; the
    logging happens where the decision is consumed, so `authorizeRouterRequest`
-   remains unit-testable without a logger.
+   remains unit-testable without a logger. **Both consumers, not just the HTTP
+   one:** `writeDeny` in `router.ts` renders the HTTP denial, but a refused
+   WebSocket upgrade is `if (!decision.allow) { socket.destroy(); return; }`
+   (`router-upgrade.ts:49-51`) — entirely silent today, and a plausible source of
+   the anchor issue's unexplained request, since an iOS client reconnecting
+   during an outage upgrades rather than navigates. WS denials log at the same
+   four fields. They are throttled to one line per (reason, path) per ten
+   seconds, because a reconnecting client retries on a timer and an unthrottled
+   line would bury the log it is meant to make readable.
 3. `failStart` includes `os.loadavg()[0]` in the logged line, so "this was
    contention" is recorded rather than reconstructed a day later. This is the
    only new `os` read in the router and it goes through a new
@@ -451,12 +510,25 @@ pair against themselves):
 
 | Comparison | Median | p90 | Max |
 |---|---|---|---|
-| Full-mode file, 2 concurrent runs vs solo | **1.69x** | **3.05x** | **6.03x** |
-| Selected-mode file, same comparison | 1.42x | 1.75x | 3.64x |
+| Full-mode file, 2 concurrent runs vs solo | **1.69x** | **3.05x** | 6.03x |
+| Selected-mode file, same comparison | 1.43x | 1.69x | 10.58x (one outlier) |
 
-805 files compared with at least five solo and three concurrent samples. 88 files
-inflate past 3x; `test/core/docs-refresh.doctest.md` goes 17.2s to 85.9s. The
-harm is concentrated in full-run overlap, which is exactly the 2026-09-15 shape.
+805 full-mode files and 632 selected-mode files, each compared against itself
+with at least five solo and three concurrent samples. 88 full-mode files inflate
+past 3x; `test/core/docs-refresh.doctest.md` goes 17.2s to 85.9s. Read the
+median and p90, not the max: selected mode's 10.58x is a single file
+(`test/core/commands/pdf-extract-integration.doctest.md`) against a p90 of
+1.69x. The harm is concentrated in full-run overlap, which is exactly the
+2026-09-15 shape.
+
+**What this measurement does and does not establish.** `concurrency` is recorded
+at slot-acquire time (`bin/test-ledger-lib.ts:69`), so it counts runs already
+holding a slot when this one *started* — not overlap during the run. Two
+consequences, both stated rather than smoothed over. First, a run that begins
+alone and is joined halfway records `concurrency: 0`, so the solo bucket is
+contaminated with partially-contended runs and the real inflation is *at least*
+the figures above. Second, and more important for the design, see Open design
+questions: an acquire-time cap throttles the joiner but never the incumbent.
 
 The other half of the measurement decides the mechanism: **642 of 756 runs with
 a recorded value ran solo**. Lowering `.taprc`'s `jobs` globally would slow 85%
@@ -481,12 +553,22 @@ export function capJobs(input: {
 }): string[];
 ```
 
-An explicit `-j` in argv always wins, matching `tierCommand`'s existing
-precedence rule. `concurrency === null` (the fail-open path where no lock could
-be taken) means no cap — a lock directory that cannot be used is already not a
-reason to refuse to test, and it is not a reason to run slowly either. Applied in
-`runUnderSlot` (`bin/test-ledger.ts:123`), which already receives both
-`concurrency` and `context.mode`.
+An explicit `-j` in argv always wins, matching `tierCommand`'s precedence rule.
+`concurrency === null` (the fail-open path where no lock could be taken) means no
+cap — a lock directory that cannot be used is already not a reason to refuse to
+test, and it is not a reason to run slowly either.
+
+**The hook point is not `tierCommand`, and the difference matters.**
+`tierCommand` builds the tap argv at `bin/test-ledger.ts:274-281`, *before* the
+semaphore is acquired at `:66-68`, so it cannot see `concurrency` at all.
+`capJobs` therefore runs in `runUnderSlot` (`:123`), which receives both
+`concurrency` and `context.mode`, and it rewrites an argv that has already been
+built. This plan claims only that `capJobs` reuses the *shape* of `tierCommand`'s
+`-j1` injection, not its call site. Two consequences to implement deliberately:
+the explicit-`-j` scan runs over the built args (including any `-j` `tierCommand`
+itself added for the careful tier, which must not be overridden), and the cap
+appends its flag only when that scan finds none — never a second `-j` that tap
+would resolve by last-wins.
 
 Worst case becomes 6 + 3 = 9 rather than 12, and the common solo full run is
 unchanged — so no landing gets slower except one that was already contending,
@@ -552,7 +634,10 @@ plan depends on its answer.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Both children exit at once; the race handler runs twice and double-fails the start | New (harness `killChild` both) | New — listeners detach when the race settles | Clear: second call is a no-op |
-| A child exits *after* readiness but before `publishGeneration` attaches its own listeners | New | Existing — `onChildExit` guards on `worktrees.get(name) === handle` | Clear: tears down the generation |
+| A child exits *after* readiness but before `publishGeneration` runs | New | New — one continuous listener dispatches on phase, so no window exists; `onChildExit` still guards on `worktrees.get(name) === handle` | Clear: tears down the generation |
+| The phase-dispatching listener fires during `stopping` (a superseded self-clean) | New | Existing — `onChildExit`'s generation guard makes it a no-op | Clear |
+| WS denial logging floods the log when a client reconnects on a timer | New | New — one line per (reason, path) per 10s | Clear: throttled, not dropped silently |
+| `retryAttempts` entry outlives its worktree | New | New — evicted on `ready` and on explicit retry | Clear: one integer per worktree name |
 | Retry storm: many requests arrive past `retryAfter` at once | New | Existing — `ensureRunning`'s atomic registration (invariant #2) dedupes | Clear: one generation starts |
 | `attempts` resets because a retry goes through a path that rebuilds the slot | New (interleaved-request test) | New — `clearFailed` returns the count and seeds the fresh handle | Would be silent; the test is the guard |
 | Retry fires while the boxholder is mid-`POST /__router/retry` | New | Existing — `clearFailed` is idempotent and returns whether it cleared | Clear |
@@ -562,7 +647,7 @@ plan depends on its answer.
 | A `rejected` bootstrap is misclassified as `transient` and retries a dead pairing | New | New — classification is on the box's status code | Clear: bounded by `retries` |
 | `capJobs` caps a run that explicitly asked for `-j` | New | New — explicit argv wins, matching `tierCommand` | Clear |
 | `capJobs` reads `concurrency: null` (lock unavailable) and caps anyway | New | New — null means no cap | Clear |
-| Two full runs both see `concurrency: 0` because they acquire simultaneously | New (pure-function test) | Partial — both run at 6; worst case is today's behaviour | **Silent**, and accepted: the window is one poll interval, and the outcome is no worse than the status quo |
+| A run starts solo, caps as solo, and is joined by a second run later | New (pure-function test) | Partial — the joiner caps to 3, the incumbent stays at 6 | **Silent**, and accepted: worst case is 9 concurrent jobs rather than 12. See Open design questions |
 
 ## Agent-flow / user-flow edge cases
 
@@ -650,6 +735,26 @@ plan depends on its answer.
   client falling back to a non-box path during the outage. Unverified, and it
   cannot be verified retroactively; track 3's denial logging is what settles it
   the next time it happens. Nothing in this plan depends on the answer.
+- **An acquire-time cap throttles the joiner but never the incumbent — is 9
+  concurrent jobs good enough?** `capJobs` can only act when a run starts, so in
+  the 2026-09-15 shape the hourly batch (which started first, recording
+  `concurrency: 0`) keeps `-j6` and only the later `finish-verify` drops to
+  `-j3`. Worst case falls from 12 to 9, not to 6, and tap cannot be re-jobbed
+  mid-run (see Prior art). The alternative is a static `-j3` for every full-mode
+  run, which reaches 6 in the worst case but also slows a solo full run —
+  including a human's `finish-verify` on an otherwise idle machine — by roughly
+  2x. **Lean:** ship the conditional cap and measure, because 9 is materially
+  better than 12 and costs nobody anything, then revisit with the overlap data
+  the next question describes. **This is the boxholder's call**, since it trades
+  landing latency against headroom and the original direction ("lower jobs for
+  batch runs") was chosen before this asymmetry was visible.
+- **What measurement would settle that?** Today's ledger records `concurrency`
+  only at acquire (`bin/test-ledger-lib.ts:69`), which cannot see overlap that
+  begins mid-run. Recording slot acquire and release timestamps would make true
+  overlap duration computable, and turn "how often is a run joined after it
+  starts?" from a guess into a query. That is a small addition to the ledger
+  record and is NOT in scope here; it is the prerequisite for ever revisiting
+  the question above with evidence rather than a lean.
 - **Should `READY_BUDGET_MS` be elastic rather than fixed at 180s?** A budget
   scaled by `os.loadavg()` would track the actual contention instead of
   guessing a number that covers the worst observed case. **Lean:** no, for now —
@@ -729,8 +834,12 @@ Tests first, per `beebox/docs/testing.md`. Done-when is the following passing:
   `childExit` failure parking on the first failure; a request before `retryAfter`
   getting 502 without a spawn; `attempts` surviving interleaved requests;
   `router.log` rotation at the boundary; a write failure warning once then
-  staying quiet; `deny()` logging exactly four named fields; a `transient`
-  bootstrap retrying and a `rejected` one not.
+  staying quiet; `deny()` logging exactly four named fields; a refused WS upgrade
+  logging once and a reconnect burst logging once per throttle window; a
+  `transient` bootstrap retrying and a `rejected` one not; a child exiting while
+  the handle is `starting` failing the start, and the same listener calling
+  `onChildExit` once the handle is `ready`; a `retryAttempts` entry evicted on
+  `ready` and on explicit retry.
 - `bin/test-tiers.test.ts` — `capJobs` cases: explicit `-j` wins; `concurrency:
   null` does not cap; a full run at concurrency 1 halves; a selected run never
   caps.
