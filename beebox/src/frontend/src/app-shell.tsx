@@ -33,6 +33,7 @@ import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { DocumentIcon } from "./components/DocumentIcon";
 import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
+import { QuickSearchOverlay } from "./components/search/QuickSearchOverlay";
 
 
 // Re-exported for the route tree
@@ -116,6 +117,7 @@ export function ProductLayout() {
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
+          <QuickSearchOverlay />
         </Column>
     </BoxShellProviders>
   );

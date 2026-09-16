@@ -12,6 +12,7 @@ export function systemCardTemplate(type: SystemCardType): string {
     history: "History",
     inventory: "Storage",
     admin: "Admin",
+    search: "Search",
   }[type];
   return `---\ntitle: ${title}\n---\n`;
 }
@@ -26,3 +27,12 @@ for (const type of SYSTEM_CARD_COHORTS[REMAINING_SYSTEM_CARD_MIGRATION]) {
     generate: () => systemCardTemplate(type),
   });
 }
+
+registerTemplate({
+  name: "search",
+  description: "A copyable Search interface card with optional durable defaults.",
+  cardTypes: ["search"],
+  defaultForTypes: ["search"],
+  argsSchema: z.object({}),
+  generate: () => "---\ntitle: Search\n---\n",
+});
