@@ -8,7 +8,12 @@ const independentlyOwned = new Set([
   "auth", "secrets", "boxes", "tailscale", "scenario", "field-test",
   "show", "log", "diff", "inject", "step",
 ]);
-const inspection = new Set(["health", "status", "activity", "ls", "usage"]);
+// Read-only commands: they mutate nothing, so there is nothing to admit. Some
+// also run where no box exists at all — `agent-context --hook` fires in EVERY
+// Codex session including dev worktrees, and handles that itself by resolving
+// a nullable box root and exiting quietly. Admission runs in a `preAction`
+// hook, so a command left out of this set never reaches its own handling.
+const inspection = new Set(["health", "status", "activity", "ls", "usage", "agent-context"]);
 
 class CliBoxRequiredError extends Error {
   constructor() {
