@@ -12,6 +12,7 @@
 // drives it lives in ./router-core.ts.
 
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { execa } from "execa";
@@ -354,6 +355,7 @@ export function createRealEffects(): RouterEffects {
     clearTimer: (handle) => handle.cancel(),
     now: () => Date.now(),
     sleep,
+    load1: () => os.loadavg()[0] ?? 0,
     pidStore,
     writeHubConfig: writeWorktreeHubConfig,
     getPort: () => getPorts(),

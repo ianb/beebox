@@ -74,7 +74,8 @@ async function waitFor(check, { timeoutMs, intervalMs, label }) {
   // enclosing test's FIRST block (the CLI build, line 116) because every step
   // below shares one test via `continue`, so without a label the diagnostic
   // points at code that already succeeded.
-  throw new Error(`waitFor: timed out after ${timeoutMs}ms waiting for ${label}`);
+  const described = typeof label === "function" ? label() : label;
+  throw new Error(`waitFor: timed out after ${timeoutMs}ms waiting for ${described}`);
 }
 
 /**
@@ -102,16 +103,21 @@ async function pickFreePort() {
   });
 }
 
-/** Trimmed to what a served box actually needs (skips validation hooks and
- *  git -- irrelevant to HTTP serving), plus the `node_modules/.bin/bbx`
- *  symlink the supervisor looks for (a real `pnpm install` would populate
+/** Trimmed to what a served box actually needs (skips validation hooks), plus
+ *  the `node_modules/.bin/bbx` symlink the supervisor looks for (a real `pnpm install` would populate
  *  this; scaffoldPackageRoot only symlinks `node_modules/beebox`
- *  itself, matching the plan's F1 "no real install yet" note). */
+ *  itself, matching the plan's F1 "no real install yet" note).
+ *
+ *  The box IS a Git repository, and that is not incidental: the hub's child
+ *  spawn admits the box through `acquireBoxStartup`, whose gate lives in the
+ *  Git directory. A `skipGit` fixture makes every start throw "Box maintenance
+ *  requires a Git repository", which surfaces only as the readiness wait below
+ *  timing out. */
 async function makeFixtureBox() {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-hub-e2e-"));
   const { boxRoot } = await detectBoxTarget(target);
   await scaffoldPackageRoot(boxRoot);
-  await initBox(boxRoot, { skipGit: true, branch: "main" });
+  await initBox(boxRoot, { branch: "main" });
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installSchedules(boxRoot);
@@ -187,12 +193,25 @@ const hubPort = await waitFor(() => {
 hubPort === requestedPort
 => true
 
+// The supervisor records why a start failed in the box's `lastError`, and
+// `/healthz` carries it. Polling only for `status === "running"` throws that
+// away and leaves a bare timeout: an unadmittable box (no Git repository, so
+// no admission gate) reported "Box maintenance requires a Git repository"
+// here for two hours while the failure read as a 120s hang against the CLI
+// build. Keep the last row and put it in the error, as the hub-exit branch
+// above does with the hub's own output.
+let lastBoxRow = null;
 const health = await waitFor(async () => {
   const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
+  lastBoxRow = box ?? null;
   return box && box.status === "running" ? box : null;
-}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 300, label: "the fixture box to report status=running via /healthz" });
+}, {
+  timeoutMs: STARTUP_TIMEOUT_MS,
+  intervalMs: 300,
+  label: () => `the fixture box to report status=running via /healthz; last row: ${JSON.stringify(lastBoxRow)}`,
+});
 
 health.status
 => running

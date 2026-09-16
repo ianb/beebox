@@ -54,6 +54,6 @@ address, and nothing currently carries the old address forward.
 - [addressable URIs for cards](../../features/2026-05-11-addressable-uris-for-cards.md)
   — a stable identity independent of path would make this a non-issue for
   anything holding a URI instead of a path.
-- [chat history references pre-migration paths](../../bugs/2026-09-07-chat-history-still-references-pre-migration-paths.md)
+- [chat history references pre-migration paths](2026-09-07-chat-history-still-references-pre-migration-paths.md)
   — the same failure at a different timescale: an old path recorded somewhere
   we can't rewrite, hitting a 404 with no forwarding.

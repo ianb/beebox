@@ -32,27 +32,27 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.268`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.270`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.270` (SDK), `2.1.270` (Claude Code), `0.154.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.273` (SDK), `2.1.273` (Claude Code), `0.154.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.268` was taken this turn as the newest settled
-  version. The TodoWrite condition this ledger put on it **was disproven before
-  bumping**: reading the session's `system/init` tool list shows the
-  task-tracking tools already absent on `0.3.267` for `claude-sonnet-5`,
-  `claude-opus-5` and the default, so `0.3.268` changed nothing here (details in
-  its entry).
-  **Do not take `0.3.269` on its own.** 2.1.270 is a single-line repair of a
-  2.1.269 regression — read-only git commands in Bash start asking for
-  permission once a session has been running a while — so `0.3.269` and
-  `0.3.270` are a pair, like `0.3.265`/`0.3.266` before them. `0.3.269` settles
-  2026-09-13T18:15Z and `0.3.270` on 2026-09-14T18:53Z; the settled path would
-  otherwise take the broken half tomorrow. No Codex release since `0.154.0`.
+- **Current recommendation:** **No bump was due on either channel.** At this
+  turn `0.3.271` was 1.9h short of the window and `0.3.272` 5.7h short, so the
+  newest settled SDK version was still the pin, `0.3.270`; Codex has nothing
+  newer than `0.154.0`. Tomorrow `0.3.271` and `0.3.272` are both settled —
+  take them **together**, per their entries. `0.3.273` (~24h) settles
+  2026-09-17T18:09Z, just after a run at the usual hour, so it will likely wait
+  a further day.
+- **No run on 2026-09-14, and nothing was missed.** That run exited with
+  `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
+  after the run started at 17:14Z, so the newest release was `0.3.270` — already
+  reviewed the day before. The runner found nothing unreviewed and did not start
+  a session, which is the designed no-op path, not a bailed run.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -68,7 +68,108 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.270 / Claude Code 2.1.270 — pending (published 2026-09-12T18:53Z, ~20h at this turn)
+### 0.3.273 / Claude Code 2.1.273 — pending (published 2026-09-15T18:09Z, ~24h at this turn)
+
+- **Amends the `0.3.268` entry — a second deny-rule revert.** *"Reverted a
+  2.1.268 change that checked Read and Edit deny rules on Bash lines the
+  permission checker can't analyze (`eval`, `env -C`); commands like
+  `time -p make build` prompt again instead of being denied."* The `0.3.268`
+  entry counted that coverage toward `manual-tests`' `Read(private-issues/**)`.
+  It is gone again, one release after 2.1.260 reverted the Bash-argument
+  coverage for the same reason: the check denied ordinary commands. The pattern
+  is now clear — deny-rule coverage of arbitrary Bash is being tried and pulled
+  back — and the exposure is the same as before: `manual-tests` allowlists Bash
+  to two `bin/schedules` commands, so the deny rule is the second layer, and
+  2.1.251's Grep/Glob symlink fix, the one that mattered here, stands.
+- **SDK, checked and clear:** a `Stop`, `SubagentStop` or `SessionStart` hook
+  callback that exceeds its timeout now counts as no decision instead of a hook
+  failure that discards the other hooks' decisions, and the host gets a one-line
+  transcript notice. beebox registers only `PostToolUse` (the Write/Edit
+  validator) and `PreToolUse` (the `git mv` nudge) callbacks, in
+  `src/core/sdk-hooks.ts`, so neither change applies.
+- **SDK, relevant to the task strip:** `task_notification` gains
+  `reason: "worker_restart"` when a background task was stopped by a worker
+  process restart. beebox restarts box children on deploy and dev reload, so this
+  labels a stop beebox causes; another input for
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`.
+- **2.1.273, runtime-relevant:**
+  - *"Fixed SDK and `--output-format stream-json` output dropping a subagent's
+    remaining messages and final report after it is moved to the background
+    mid-run."* Chat surfaces subagent activity from exactly that stream.
+  - *"Fixed sub-agents and background agents being reported as failed, with
+    their result never delivered, when the final streamed reply omitted token
+    usage or carried no model id."* Worth remembering beside beebox's
+    `BBX_LOG_PROMPTS=1` path, which routes agent traffic through a local proxy.
+  - *"Fixed Read on macOS refusing a dragged-in screenshot, or any file the
+    system reports under a second path, with 'symlink resolution changed after
+    permission was checked'."* A false positive from 2.1.251's symlink TOCTOU fix.
+    On macOS, `/tmp` and `/var` are `/private/…` under a second name, so local
+    box agents could hit it; the Linux prod host could not.
+  - *"Fixed a long-running session recreating a stub `.git/info/exclude` after
+    the repository's `.git` directory was removed or moved away."* Worktree
+    teardown here moves a worktree into trash (`wt_remove_now_locked`), which is
+    that shape if a session is still alive in it.
+- **2.1.273, checked and clear:** *"Fixed saved scheduled tasks running in the
+  wrong session after `.claude/scheduled_tasks.json` was copied into another
+  folder, such as a new worktree."* That file does not exist in this worktree,
+  is excluded via `.git/info/exclude` (`**/.claude/scheduled_tasks.json`) so git
+  never carries it, and `bin/lib/worktree-create.sh` copies no `.claude/` state.
+- **Action:** Settled path; takeable 2026-09-17 at the earliest.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03273), [Claude Code 2.1.273](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21273)
+
+### 0.3.272 / Claude Code 2.1.272 — pending, nothing to assess (published 2026-09-14T23:34Z, ~42h at 2026-09-16; settles 2026-09-16T23:34Z)
+
+- **Upstream:** SDK parity-only; 2.1.272 says only "Bug fixes and reliability
+  improvements". Checked the tagged `v2.1.272` changelog as well as `main` — the
+  lesson from 2.1.247 — and it carries the same single line.
+- **Beebox applicability:** Nothing assessable. Worth noting for the next turn
+  that it landed **3h47m after `2.1.271`**, the interval that has twice meant a
+  hotfix for the release below it (`0.3.265`/`0.3.266`,
+  `0.3.269`/`0.3.270`). Take it together with `0.3.271` rather than splitting
+  them.
+- **Action:** Settled path; both takeable 2026-09-16.
+- **Sources:** [Claude Code 2.1.272](https://github.com/anthropics/claude-code/blob/v2.1.272/CHANGELOG.md#21272)
+
+### 0.3.271 / Claude Code 2.1.271 — pending (published 2026-09-14T19:47Z, ~46h at 2026-09-16; settles 2026-09-16T19:47Z)
+
+- **SDK:** `omitClaudeMd` on `AgentDefinition` in the `agents` option, letting a
+  subagent run without user, project and local CLAUDE.md files (managed policy
+  files still load); two Windows/`sessionStore` fixes that do not apply here;
+  and **`persistent` removed from the `MonitorInput` tool type** — checked, and
+  beebox references neither `MonitorInput` nor the `Monitor` tool anywhere, so
+  the removal is a no-op.
+- **2.1.271, the parts that touch this repo:**
+  - **Four more Bash permission-check fixes**, all in the family this ledger has
+    tracked since 2.1.251: a file read by `fmt`/`column` after an unrecognized
+    option, files a wildcard expands to inside a pattern or option value
+    (`grep -v dir/* file`), shell variable declaration flags misrepresenting the
+    command, and `cd`+`git` chains or subshells skipping the prompt under
+    `blockReadsOutsideWorkingDirectories`. The first three bear on
+    `manual-tests`' `Read(private-issues/**)`; the fourth needs a setting this
+    repo does not use.
+  - *"Fixed Claude starting a second copy of a background command (such as a
+    watch task or dev server) that was still running after the conversation was
+    compacted."* A duplicated dev server is a real hazard here — one router
+    serves every worktree, and starting a second one from a session is
+    explicitly out of bounds.
+  - *"Fixed settings file changes made outside the session going unnoticed on
+    macOS machines whose system file-event service is saturated; the watcher now
+    falls back to polling."* This machine runs many concurrent sessions, which is
+    how that service gets saturated.
+  - *"Fixed `/resume` and `/teleport` keeping the previous conversation's
+    file-read tracking, so Claude could edit files the resumed conversation had
+    never read."* Resumes are constant here.
+  - *"Fixed a stale `.git/config.lock` breaking `git checkout -b`, `git push -u`
+    and `git config` for the rest of a session after a sandboxed command failed
+    to start (Linux)."* The prod host is Linux and box agents run git, though the
+    trigger is a sandboxed command, which beebox does not use.
+  - `omitClaudeMd` also lands in agent frontmatter and `--agents` JSON — worth
+    knowing for `.claude/agents/`, where a subagent that does not need the
+    repo's CLAUDE.md currently loads it anyway.
+- **Action:** Settled path; takeable 2026-09-16, paired with `0.3.272`.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03271), [Claude Code 2.1.271](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21271)
+
+### 0.3.270 / Claude Code 2.1.270 — APPLIED 2026-09-15 with 0.3.269 (published 2026-09-12T18:53Z)
 
 - **Upstream:** the SDK entry is parity-only, and 2.1.270 is one line: *"Fixed
   read-only git commands in Bash unexpectedly asking for permission after a
@@ -80,12 +181,13 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   the boxholder's interactive sessions, and the `dontAsk` `manual-tests`
   schedule, where an unexpected prompt becomes a refusal. The installed CLI is
   already 2.1.270, so the boxholder's side is fixed.
-- **Action:** Settled path, and **paired with `0.3.269`** — takeable 2026-09-14,
-  when `0.3.270` clears the window. Taking `0.3.269` alone on 2026-09-13 would
-  pin the regression.
+- **Action:** Applied 2026-09-15 on the settled path (~71h old), together with
+  `0.3.269`, so the regression never sat in the pin alone — the pairing this
+  entry called for held. `pnpm -C beebox test`: **10,548 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
 - **Sources:** [Claude Code 2.1.270](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21270)
 
-### 0.3.269 / Claude Code 2.1.269 — pending (published 2026-09-11T18:15Z, ~45h at 2026-09-13; NOT to be taken without 0.3.270)
+### 0.3.269 / Claude Code 2.1.269 — APPLIED 2026-09-15 with 0.3.270 (published 2026-09-11T18:15Z; never pinned on its own)
 
 - **SDK:** `permission_denials` in the result no longer omits Read, Edit and
   Write calls blocked by a **path-scoped deny rule** — which is what
@@ -163,7 +265,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
     spelling of a symlink-mounted repo. With 2.1.251's Grep/Glob fix, the rule
     now holds on every tool route this ledger has tracked, apart from the
     Bash-argument coverage that 2.1.260 reverted. A sibling fix covers a deny
-    rule skipped when an `env -C` or `eval` shared the line.
+    rule skipped when an `env -C` or `eval` shared the line. **Reverted in 2.1.273** (see its entry): that coverage was pulled for denying ordinary commands, so it no longer counts toward this guard.
   - WebFetch now fails after 300 seconds instead of hanging on a server that
     never finishes — box agents use WebFetch, and a hung fetch is a hung turn.
   - A busy loop pinning a CPU core in long-running idle sessions, and a running

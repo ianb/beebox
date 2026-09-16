@@ -22,7 +22,7 @@ const { acquireBoxMaintenance, boxMaintenanceStatus, acquireBoxWork } = await im
 const roots = Object.keys(JSON.parse(process.env.BBX_MAINTENANCE_PERMITS));
 for (const root of roots) {
   if ((await boxMaintenanceStatus(root)).phase !== "exclusive") throw Error("not closed");
-  try { await acquireBoxWork(root); throw Error("admitted"); }
+  try { await acquireBoxWork(root, { reason: "test" }); throw Error("admitted"); }
   catch (error) { if (error.name !== "BoxMaintenanceError") throw error; }
 }
 for (const root of roots) {

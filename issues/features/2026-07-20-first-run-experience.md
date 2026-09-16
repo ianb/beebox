@@ -154,7 +154,7 @@ aren't re-proposed):
 
 Supporting changes from the audit: chat zero-state presenting the menu,
 a first-run dashboard state, hiding schedule internals until relevant
-([schedules-off-by-default](2026-07-20-schedules-off-by-default.md)
+([schedules-off-by-default](../closed/features/2026-07-20-schedules-off-by-default.md)
 does most of this), and whether a fresh box should land on the menu
 chat rather than the dashboard. Related:
 [demo-readiness](../docs-and-chores/2026-05-22-demo-readiness.md),

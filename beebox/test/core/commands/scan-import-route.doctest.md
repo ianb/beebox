@@ -27,7 +27,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 
 // Annex-converted boxes only: scan-import stages raw asset bytes, which a
-// manifest-scheme box gitignores (issues/bugs/2026-09-04-scan-import-gitignore-
+// manifest-scheme box gitignores (issues/closed/bugs/2026-09-04-scan-import-gitignore-
 // blocks-attach-staging.md).
 // The OCR decision reads the PDF's text layer, which needs poppler.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then(

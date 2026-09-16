@@ -407,6 +407,22 @@ export async function acquireLock(
 }
 
 /**
+ * Rewrite the diagnostic sidecar of a lock this process holds, keeping the
+ * original `acquiredAt`. A no-op for a lock we do not hold: the sidecar is
+ * someone else's (or nobody's) to write. Diagnostics only — exclusion never
+ * reads it.
+ */
+export async function updateLockMetadata(
+  target: LockTarget,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const lockPath = lockRef(target).lockPath;
+  if (!heldReleases.has(lockPath)) return;
+  const current = await readHolder(lockPath);
+  await writeSidecar(lockPath, { ...(current ?? makeHolder({})), metadata });
+}
+
+/**
  * Release a lock previously acquired by this process. Idempotent, and
  * foreign-holder-safe: with no recorded release for `path` this is a no-op,
  * and proper-lockfile's release verifies continued ownership before removing

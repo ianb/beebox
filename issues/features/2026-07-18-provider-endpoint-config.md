@@ -13,7 +13,7 @@ priority: backlog
 > unchanged in code: `src/core/script-env.ts:103-106` still deletes
 > `env.ANTHROPIC_API_KEY` to force subscription auth, and `src/core/agent/run.ts:196`
 > still documents that. The spike it depends on,
-> [model backend pluggability](../exploration/2026-07-18-model-backend-pluggability.md),
+> [model backend pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md),
 > still carries an unfilled `## Research (incomplete)`.
 >
 > Checked specifically whether the Codex-engine work superseded it. It does not:
@@ -55,6 +55,6 @@ Design questions:
   (`src/services/claude-cli.ts`).
 
 **Blocked on the empirical spike** in
-[model-backend-pluggability](../exploration/2026-07-18-model-backend-pluggability.md):
+[model-backend-pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md):
 verify the SDK's full loop (tools, images, streaming, caching) against one real
 non-Anthropic endpoint before designing the config surface.

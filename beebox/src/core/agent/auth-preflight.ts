@@ -22,6 +22,9 @@ import {
   redactCodexCliDetail,
   type CodexCliService,
 } from "../../services/codex-cli.js";
+import { GlmKeyError, resolveGlmKeyOrThrow } from "../glm-key.js";
+import { providerOf } from "../../shared/agent-models.js";
+import { invariant } from "../../lib/invariant.js";
 
 export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli.js";
 
@@ -176,6 +179,10 @@ export async function preflightChatBackend(params: {
     requiresCodexAuth?: boolean | undefined;
   };
   engine?: "claude" | "codex" | undefined;
+  /** The model this turn will run — a GLM model is gated on the store key. */
+  model?: string | undefined;
+  /** Box root for the GLM key check. Required when `model` is a glm id. */
+  boxRoot?: string | undefined;
   session: { emit(event: "error", error: Error): boolean };
   /** CLI service for the probe. Omit in production; tests inject a fake. */
   claudeCli?: ClaudeCliService | undefined;
@@ -192,6 +199,22 @@ export async function preflightChatBackend(params: {
         return false;
       }
       throw error;
+    }
+  }
+  // A GLM-model turn is gated on the store key, not on a Claude login:
+  // `claude auth status` reports token presence and says nothing about
+  // whether the endpoint will accept it.
+  if (params.model !== undefined && providerOf(params.model) === "glm") {
+    invariant(params.boxRoot !== undefined, "preflightChatBackend: a glm model requires boxRoot");
+    try {
+      await resolveGlmKeyOrThrow(params.boxRoot, { purpose: "chat-preflight" });
+      return true;
+    } catch (e) {
+      if (e instanceof GlmKeyError) {
+        params.session.emit("error", e);
+        return false;
+      }
+      throw e;
     }
   }
   if (params.backend.requiresClaudeAuth !== true) return true;

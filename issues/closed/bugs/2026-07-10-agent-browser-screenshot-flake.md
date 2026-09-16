@@ -4,8 +4,35 @@ workstream: unknown
 area: bin
 filed-by: agent
 priority: important
-next-action: discuss
+resolution: wontfix
 ---
+
+> **Closed 2026-09-15 — not reproducing; attributed to machine contention
+> (boxholder's call).** No code changed, here or upstream. `resolution: wontfix`
+> rather than `implemented` because nothing was fixed: the upstream defect below
+> is still present in the pinned `agent-browser 0.27.0` and will recur under the
+> same conditions.
+>
+> Evidence for closing: the issue's own reproduction — upstream `agent-browser`
+> against a `file://` page containing `<h1>hi</h1>`, the case that removed every
+> payload-size and animating-canvas hypothesis — now succeeds. `open` 1.86 s,
+> `screenshot` 1.00 s, producing a valid 1280x860 PNG. The 2026-09-09 note below
+> records that same page failing after 2 m 32 s. Same machine, same 0.27.0 pin,
+> nothing bumped. Two real captures earlier the same day were also correct and
+> current-state, which additionally fails to reproduce the stale-pixel
+> observation from that note.
+>
+> This is consistent with the root cause: `is_transient_error`
+> (`connection.rs:1032`) string-matches `(os error 35)`, so an expired
+> `SO_RCVTIMEO` read is indistinguishable from EAGAIN — a load-sensitive
+> failure, not a deterministic one. The 2026-09-09 note reached the same
+> conclusion from the other direction: "the change is environmental rather than
+> a new release."
+>
+> **Reopen on recurrence** rather than filing fresh; the upstream report with its
+> `connection.rs:1032` / `:1073` citations is written and still unsent, and it is
+> the only durable fix. `tour-check` is the canary — it is weekly and its last
+> run produced zero checkpoints.
 
 > **Trigger fired 2026-09-09 — no longer a flake, and no longer dormant.**
 > `screenshot` now fails **every time** in the `tour-check` worktree, on a fresh
@@ -94,7 +121,7 @@ occurrence. Upstream capture uses native CDP `Page.captureScreenshot`; this
 is not a Playwright font-readiness wait. Do not assume the older socket
 timeout diagnosis explains the stale pixels.
 
-The [closed ready-wait/profile issue](../closed/bugs/2026-08-15-browse-screenshot-hangs.md)
+The [closed ready-wait/profile issue](2026-08-15-browse-screenshot-hangs.md)
 has its fixes in place and describes different mechanisms; it was not reopened.
 This recurrence blocks screenshot exhibits despite usable DOM verification.
 The developer decision is whether to schedule a focused capture-tooling

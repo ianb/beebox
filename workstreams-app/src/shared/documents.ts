@@ -131,7 +131,7 @@ export const quotaWindowSchema = z.object({
 });
 
 export const quotaSchema = z.object({
-  provider: z.enum(["claude", "codex"]),
+  provider: z.enum(["claude", "codex", "glm"]),
   status: z.enum(["available", "unavailable"]),
   message: z.string().optional(),
   stale: z.boolean().optional(),

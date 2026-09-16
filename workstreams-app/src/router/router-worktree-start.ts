@@ -4,36 +4,40 @@
 // page. Split out of router-core.ts, which now owns only the map, the
 // registration guard (`ensureRunning`), and the assembly.
 //
-// Invariants #3 (swallow the execa rejection at the spawn site) and #5 (guarded
-// publication at BOTH terminals) live here; both have pointing comments at the
-// code that implements them. Read bin/docs/router-protocol.md before changing
-// anything in this file.
+// Invariant #5 (guarded publication at BOTH terminals) lives here, with a
+// pointing comment at the code implementing it. Invariant #3 (swallow the execa
+// rejection at the spawn site) moved to router-generation.ts with the spawn
+// itself, which also owns the children's exit listeners and the readiness
+// budget. Read bin/docs/router-protocol.md before changing either file.
 
-import { boxEntryToArg } from "./box-entry.js";
 import { createWriteStream, type WriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { type WorktreeHandle, type CapturedError, transitionLifecycle } from "./router-lifecycle.js";
+import {
+  type WorktreeHandle,
+  type CapturedError,
+  transitionLifecycle,
+  retryDecision,
+} from "./router-lifecycle.js";
 import type { PidExpectation } from "./router-pidfile.js";
 import {
   errMessage,
   statusError,
   readEnvFile,
   type ResolvedWorktree,
-  type SpawnedChild,
 } from "./router-effects.js";
+import { READY_BUDGET_MS, spawnGeneration, type Generation } from "./router-generation.js";
 import {
   browseDirsFor,
   isolatedSecretsFileFor,
   killChildren,
   stopDashboardCmd,
   touch,
-  onChildExit,
   type CoreState,
 } from "./router-worktree-teardown.js";
 
 /** Everything resolved before a single child is spawned. */
-interface StartPlan {
+export interface StartPlan {
   wt: ResolvedWorktree;
   logFile: string;
   logStream: WriteStream;
@@ -48,17 +52,9 @@ interface StartPlan {
 }
 
 /** Which stage the startup reached, for the failed-startup page. */
-interface StartProgress {
+export interface StartProgress {
   failurePhase: string;
   dashboardStarted: boolean;
-}
-
-/** The two spawned children plus the tails of their output. */
-interface Generation {
-  vite: SpawnedChild;
-  fastify: SpawnedChild;
-  viteOutput: { read: () => string };
-  fastifyOutput: { read: () => string };
 }
 
 async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<StartPlan> {
@@ -140,90 +136,6 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
 }
 
 /**
- * Tee a child's stdout+stderr into the worktree log AND a fixed-size ring
- * buffer holding the tail of the interleaved output, which the failed-startup
- * page surfaces. The ring is byte-counted.
- */
-function captureOutput(child: SpawnedChild, logStream: WriteStream): { read: () => string } {
-  const maxBytes = 8 * 1024;
-  let buf = "";
-  const write = (s: string): void => {
-    buf += s;
-    if (buf.length > maxBytes) buf = buf.slice(buf.length - maxBytes);
-  };
-  child.stdout?.pipe(logStream, { end: false });
-  child.stderr?.pipe(logStream, { end: false });
-  child.stdout?.on("data", (d: Buffer) => write(d.toString("utf8")));
-  child.stderr?.on("data", (d: Buffer) => write(d.toString("utf8")));
-  return { read: () => buf };
-}
-
-async function spawnGeneration(state: CoreState, plan: StartPlan): Promise<Generation> {
-  const { effects, config } = state;
-  const { wt, backendPort, frontendPort, childEnv, logStream } = plan;
-  const name = wt.name;
-
-  // Each of wt.boxes may be a legacy box dir, a v2 package root, or a v2
-  // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
-  // handing off to the backend, which no longer guesses the slug itself.
-  const resolvedBoxes = await effects.resolveBoxEntries(wt.boxes);
-  const backendArgs = config.devNoHub
-    ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
-    : ["./src/cli/index.ts", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
-  const fastify = effects.spawn("node", {
-    args: ["--import=./tsx-preload.mjs", "--import", "tsx", ...backendArgs],
-    options: {
-      cwd: wt.backendCwd,
-      env: childEnv,
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-      cleanup: true,
-    },
-  });
-  // Invariant #3 of bin/docs/router-protocol.md: swallow the execa rejection at
-  // spawn time — the VERY NEXT line, before any await. Without it the rejection
-  // becomes an unhandledRejection minutes later (when the killed child finally
-  // exits) and crashes the whole router. Actual exit handling happens via
-  // .on("exit") below; this only prevents the crash. Was a real bug until
-  // 2026-06-04. The waitForHttp-failure path throws between here and the exit
-  // wiring, so this MUST be here, not on the success path.
-  fastify.catch(() => {
-    /* handled via .on("exit") + failed-state UX */
-  });
-  const fastifyOutput = captureOutput(fastify, logStream);
-
-  // pnpm workspace with `nodeLinker: hoisted` (see /pnpm-workspace.yaml) puts all binaries
-  // at the workspace root's node_modules/.bin — per-package node_modules/.bin
-  // dirs aren't populated. Resolve vite from the worktree's monorepo root.
-  const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");
-  // `--strictPort` because Vite's default is to walk to the NEXT port when the
-  // requested one is taken — and the next port is, structurally, the hub's.
-  // The three getPort() probes above run in parallel, so the OS hands back
-  // sequential ephemeral ports; a frontend port stolen between probe and bind
-  // sends Vite onto `backendPort`, which it wins because the hub binds later.
-  // The hub then dies with EADDRINUSE and the worktree is `failed` with the
-  // cause 30 lines up its log (observed on `main`, 2026-08-18).
-  // Failing loudly here is strictly better: same failure, correct attribution,
-  // retryable through the router's existing failed-state path.
-  const vite = effects.spawn(viteBin, {
-    args: ["dev", "--port", String(frontendPort), "--strictPort"],
-    options: {
-      cwd: wt.frontendCwd,
-      env: childEnv,
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-      cleanup: true,
-    },
-  });
-  vite.catch(() => {
-    /* see fastify.catch above — same reason (invariant #3) */
-  });
-  const viteOutput = captureOutput(vite, logStream);
-
-  return { vite, fastify, viteOutput, fastifyOutput };
-}
-
-/**
  * Everything from the dashboard daemon through readiness, sharing ONE
  * try/catch: a synchronous/rejected failure at ANY of these stages (dashboard
  * start already catches its own; a rejected pidStore.write is the one that used
@@ -270,11 +182,17 @@ async function bringUpGeneration(
     startedAt: effects.now(),
   });
 
-  // Wait for both to serve HTTP — not just accept TCP.
+  // Wait for both to serve HTTP — not just accept TCP — or for either child to
+  // die first. A bad config or a syntax error kills Vite in about two seconds
+  // and now reports in about two seconds; only a child that is alive but never
+  // serves reaches the budget.
   progress.failurePhase = "waitForHttp";
-  await Promise.all([
-    effects.waitForHttp(frontendPort, { reqPath: baseUrl, timeoutMs: 30000, label: `vite/${name}` }),
-    effects.waitForHttp(backendPort, { reqPath: "/healthz", timeoutMs: 30000, label: `fastify/${name}` }),
+  await Promise.race([
+    Promise.all([
+      effects.waitForHttp(frontendPort, { reqPath: baseUrl, timeoutMs: READY_BUDGET_MS, label: `vite/${name}` }),
+      effects.waitForHttp(backendPort, { reqPath: "/healthz", timeoutMs: READY_BUDGET_MS, label: `fastify/${name}` }),
+    ]),
+    generation.childDeath,
   ]);
 }
 
@@ -284,7 +202,7 @@ async function failStart(
   state: CoreState,
   args: { handle: WorktreeHandle; plan: StartPlan; generation: Generation; progress: StartProgress; err: unknown },
 ): Promise<never> {
-  const { effects, worktrees, log } = state;
+  const { effects, worktrees, retryAttempts, log } = state;
   const { handle, plan, generation, progress, err } = args;
   const { browseEnv, dashboardPort } = plan;
   const name = handle.name;
@@ -305,7 +223,7 @@ async function failStart(
     fastifyOutput: generation.fastifyOutput.read(),
     at: effects.now(),
   };
-  log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
+  log(`[${name}] startup failed in ${captured.phase}: ${captured.message} (load1 ${effects.load1().toFixed(1)})`);
   // Invariant #5: guarded publication at the failure terminal too. If a stop
   // (or a newer generation) superseded us while we were failing, DON'T park a
   // `failed` record — this handle is off the map, so terminate it as
@@ -324,7 +242,15 @@ async function failStart(
     });
     throw statusError(captured.message, 502);
   }
-  transitionLifecycle(handle, { phase: "failed", lastError: captured });
+  // The count is keyed by NAME and lives on CoreState, so it survives the
+  // clear-and-restart that an automatic retry performs — a counter on the
+  // handle would reset on exactly the event it is meant to bound.
+  const attempts = retryAttempts.get(name) ?? 0;
+  const { retryAfter } = retryDecision({ phase: captured.phase, attempts, now: effects.now() });
+  if (retryAfter === null && attempts > 0) {
+    log(`[${name}] parked after ${String(attempts)} automatic retr${attempts === 1 ? "y" : "ies"}`);
+  }
+  transitionLifecycle(handle, { phase: "failed", lastError: captured, attempts, retryAfter });
   // The failed generation is parked for the error page + retry; its
   // escalation timer stays fire-and-forget (the `failed` variant carries no
   // children to cancel), but it still fires through the timer effect.
@@ -387,18 +313,16 @@ async function publishGeneration(
     lastStaleCheck: effects.now(),
   });
   touch(state, handle);
+  // Came up: there is no retry history worth keeping for this name.
+  state.retryAttempts.delete(name);
   log(`[${name}] ready`);
 
-  vite.on("exit", (code, signal) => {
-    log(`[${name}] vite exited code=${code} signal=${signal}`);
-    onChildExit(state, handle);
-  });
-  fastify.on("exit", (code, signal) => {
-    log(`[${name}] fastify exited code=${code} signal=${signal}`);
-    onChildExit(state, handle);
-  });
-  // execa-promise rejection handlers are attached at spawn time above — not
-  // here — so they're in place even on the waitForHttp-failure path.
+  // Exit listeners are NOT attached here: `spawnGeneration` attached them, and
+  // they have been watching since before this generation could have failed.
+  // Attaching them at this point was the old shape, and it meant a child dying
+  // between the readiness probe and this line went unnoticed.
+  // execa-promise rejection handlers are likewise attached at spawn time, so
+  // they're in place even on the waitForHttp-failure path.
 
   return handle;
 }
@@ -409,10 +333,12 @@ export async function startWorktree(state: CoreState, handle: WorktreeHandle): P
   // Taken BEFORE the spawn, so a source change that lands during startup
   // reads as stale rather than being baked in as this generation's baseline.
   const sourceToken = await effects.sourceToken(plan.wt.root);
-  const generation = await spawnGeneration(state, plan);
+  // Built BEFORE the spawn: the exit listeners attached inside spawnGeneration
+  // record which phase they failed in, so `progress` has to exist first.
+  const progress: StartProgress = { failurePhase: "spawn", dashboardStarted: false };
+  const generation = await spawnGeneration(state, { plan, handle, progress });
 
-  // Tracks which stage a failure below happened in, for the failed-startup page.
-  const progress: StartProgress = { failurePhase: "dashboard-start", dashboardStarted: false };
+  progress.failurePhase = "dashboard-start";
   try {
     await bringUpGeneration(state, { plan, generation, progress });
   } catch (err) {

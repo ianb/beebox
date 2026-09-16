@@ -128,3 +128,20 @@ Claude-only — the Codex harness has no equivalent.
 it had no id yet — which every chat on a Codex box did, since coined ids are
 Claude-only. The `chat-model-to-box-config` migration folds it into `agentModel`
 and removes it.
+
+## GLM (Z.ai) models
+
+The claude engine can also run GLM models — `glm-5.3` and `glm-5.3-flash` —
+through Z.ai's Anthropic-compatible endpoint. A box opts in by pinning one
+(`agentModel`, `smallModel`, or a chat's model dial). Every run on a GLM model
+resolves the machine secret store's `glm` key and injects it into the
+subprocess environment; a missing or ungranted key fails the run with the
+setup commands (`bbx secrets set glm`, `bbx secrets grant <box> glm`) and
+never falls back to first-party.
+
+Z.ai's coding-plan policy inspects request content and flags assistant-style
+use — choosing GLM for a box accepts that posture for its content. Sessions
+may move between providers freely: transcripts are local, so a conversation
+that starts on GLM can continue on Claude and the reverse. `total_cost_usd`
+on GLM runs tracks first-party pricing tables — treat it as directional and
+read spend from Z.ai's own usage dashboard.

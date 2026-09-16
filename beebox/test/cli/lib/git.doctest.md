@@ -19,7 +19,7 @@ import { rename } from "node:fs/promises";
 ## Repository detection
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 await isRepo(box.root)
 => false
 ```

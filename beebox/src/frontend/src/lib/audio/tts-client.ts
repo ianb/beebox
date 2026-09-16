@@ -13,7 +13,8 @@
  */
 
 import { getApiBase } from "../../api";
-import { playAudioBlob, playAudioStream, supportsMediaSource } from "./context";
+import { playAudioBlob, supportsMediaSource } from "./context";
+import { mediaTypeOf, playAudioResponse } from "./playable";
 import { getAudioCache, cacheKey } from "./cache";
 import { DEFAULT_VOICE_CONFIG } from "./tts-types";
 import { logSpeechEvent } from "./speech-test-log";
@@ -293,10 +294,11 @@ class TTSClient {
       throw new RequestError(message);
     }
 
-    const { stop, finished, buffer } = playAudioStream(
-      body,
-      { label, onPlaying: opts.onPlaybackStarted },
-    );
+    const { stop, finished, buffer } = playAudioResponse(body, {
+      contentType: mediaTypeOf(response.headers.get("content-type")),
+      label,
+      onPlaying: opts.onPlaybackStarted,
+    });
     this.currentStop = stop;
 
     const full = await buffer;

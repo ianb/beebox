@@ -18,6 +18,7 @@
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { isGlmModelId, useGlmAvailable } from "./glm-availability-store";
 
 const ENGINE_NAMES: Record<ChatAgentEngine, string> = { claude: "Claude", codex: "Codex" };
 
@@ -64,6 +65,8 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
   const { engine, agentEngine, boxEngine, enabledEngines, canChooseEngine, boxDefault, canPin, selectedModel } = props;
   const isOwn = engine === agentEngine;
   const enabled = enabledEngines.includes(engine);
+  // Hooks before the early return below.
+  const glmAvailable = useGlmAvailable();
   const heading = (
     <div role="none" className="px-3 pt-2 pb-1 flex justify-between gap-2">
       <span className="text-xs uppercase tracking-wide text-warm-500">{ENGINE_NAMES[engine]}</span>
@@ -85,10 +88,12 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
     );
   }
 
+  // GLM rows need a usable `glm` key (server-reported); without one they are
+  // noise — selectable rows whose every run refuses.
   return (
     <>
       {heading}
-      {chatModelOptions(engine).map((opt) => {
+      {chatModelOptions(engine).filter((opt) => opt.model === null || !isGlmModelId(opt.model) || glmAvailable).map((opt) => {
         const model = opt.model;
         if (model === null) return null;
         // Pinning is confined to the box's own engine: the pin writes one

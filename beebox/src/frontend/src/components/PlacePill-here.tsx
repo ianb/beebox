@@ -14,6 +14,7 @@ import { useState } from "react";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { href } from "../lib/routing";
 import { useViewNavigate } from "../hooks/useViewNavigate";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
 export interface HereLink {
   ref: string;
@@ -123,6 +124,9 @@ export function HereMenuBody({
       <MenuItem id="bbx-here-menu-open-dir" to={href(dir === "" ? `/${boxSlug}/browse` : `/${boxSlug}/browse/${dir}`)}>
         Open {dir === "" ? "/" : `${dir}/`}
       </MenuItem>
+      <MenuItem id="bbx-here-menu-search" onClick={() => openView({
+        path: SYSTEM_CARD_PATHS.search, viewer: null, params: {}, viewState: null,
+      }, { label: "Search" })}>Search</MenuItem>
       <MenuItem id="bbx-here-menu-landmark-card" onClick={() => openView({
         path: landmarkPath, viewer: null, params: {}, viewState: null,
       }, { label: "Landmark card" })}>Landmark card</MenuItem>

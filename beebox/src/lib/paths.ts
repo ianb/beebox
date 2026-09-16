@@ -158,7 +158,7 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
   if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
-    await withBoxWork(root, () => migrateBoxState(root));
+    await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
   }
   return root;
 }

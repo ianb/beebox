@@ -92,7 +92,7 @@ export async function forceWakeup(options: ForceWakeupOptions): Promise<
     );
     return { ok: true, value };
   } catch (error) {
-    return { ok: false, error: refusalFor(error) };
+    return { ok: false, error: refusalFor(error, { remote: true }) };
   }
 }
 

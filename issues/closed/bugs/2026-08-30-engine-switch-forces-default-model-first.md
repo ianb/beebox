@@ -7,7 +7,21 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — say switch to Haiku, it goes to Opus (default claude); only with Opus selected can I get to Haiku"
 priority: normal
+resolution: implemented
 ---
+
+> **Fixed 2026-09-16.** The spanning model list this issue asked for was
+> built — `SessionChip-model-panel.tsx` renders every engine's models and a
+> cross-engine click calls `onChooseStart({ engine, model })`. The symptom
+> survived anyway, reported again by the boxholder, because **two** places
+> build a conversation start target and only one carried the model:
+> `everywhere/resolve-conversation.ts` included it, while the fallback in
+> `conversation/use-conversation-machine.ts` set `engine` and dropped `model`.
+> That is precisely the reported behaviour — the engine switches, the model
+> resets to that engine's default. The builder is now an exported pure
+> function with its own regression test
+> (`test/frontend/chat/conversation-start-target.doctest.md`); the two tested
+> paths previously covered only the site that already worked.
 
 In a new session's picker (SessionChip panels), engine and model are chosen
 in separate steps that don't compose: asking for a specific model on the

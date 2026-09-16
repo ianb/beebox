@@ -112,6 +112,32 @@ export function parseTapFiles(raw: string): TapFileResult[] {
 }
 
 /**
+ * The lines that name what failed, for printing after everything else.
+ *
+ * Raw TAP reports each failure where it happens, then keeps printing — a run
+ * that loses one file out of a thousand ends thousands of lines later on
+ * `fail: 1`. Any capture that keeps only the tail (a scrollback, a CI excerpt,
+ * an agent harness that retains the last few lines) therefore knows a test
+ * failed and cannot say which, and the run is over by the time anyone looks.
+ * Emitting this last means the truncated tail still carries the names and the
+ * command to rerun them.
+ */
+export function failureRecapLines(raw: string, exitCode: number): string[] {
+  if (exitCode === 0) return [];
+  const files = parseTapFiles(raw).filter((result) => !result.ok).map((result) => result.file);
+  // A crash, a signal, or a reporter change: say that plainly rather than
+  // printing an empty failure list, which reads as "nothing failed".
+  if (files.length === 0) {
+    return [`test-ledger: exited ${String(exitCode)} with no failing test file in its TAP output.`];
+  }
+  return [
+    `test-ledger: ${String(files.length)} failing test file${files.length === 1 ? "" : "s"}:`,
+    ...files.map((file) => `  ${file}`),
+    `test-ledger: rerun with: pnpm exec tap ${files.join(" ")}`,
+  ];
+}
+
+/**
  * Entries — status plus path — out of `git status --porcelain -z` output.
  *
  * `-z` is required, not a nicety. Without it git *quotes* any path containing

@@ -7,8 +7,23 @@ labels: [chat, migration, box-shape]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "The images in this chat aren't displaying, but it seems like they should?"
-next-action: discuss
+resolution: wontfix
 ---
+
+> **Closed `wontfix` — the boxholder's call, 2026-09-15.** "There's only so many
+> chat histories and we don't go back that much." The affected set is bounded
+> and rarely read, so neither remedy earns its cost: read-time mapping is a
+> compatibility shim with no end state, and a transcript rewrite is one-shot
+> risk across every engine's session store. Pre-migration images and card links
+> in old chats stay broken, knowingly.
+>
+> Two findings kept in case this is ever reopened. `mapV2Path`'s module
+> (`core/migrations/one-root-mapping.ts`, 294 lines) imports only
+> `assertNever` — no `node:`, `fs`, or `path` — so it is pure and could move to
+> `src/shared/` and become frontend-reachable by a `git mv`, not a port. That
+> was the stated blocker on the read-time option and it does not really hold.
+> And `bbx validate` never scans transcripts, so the caveat below about its ref
+> checks describes no live behaviour.
 
 In a chat on a box migrated to the one-root layout, images in older messages
 show the "Failed to load" placeholder while newer ones render. The difference

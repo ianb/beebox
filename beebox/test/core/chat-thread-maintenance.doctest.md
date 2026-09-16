@@ -25,7 +25,7 @@ run.sent.length
 => 2
 
 const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture", drainMs: 1000 });
-const tool = await acquireBoxWork(box.root, run.startOptions.env.BBX_BOX_WORK);
+const tool = await acquireBoxWork(box.root, { reason: "test", inherited: run.startOptions.env.BBX_BOX_WORK });
 await tool.release();
 chatThreadsAreIdle(box.root)
 => false

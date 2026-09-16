@@ -91,6 +91,17 @@ function bearer(url: string): (value: string) => ProbeRequest {
 /** Keyed by exact store name, or by a `family/` prefix for per-box instances. */
 const probes: Record<string, ProbeEntry> = {
   mistral: { describe: "lists Mistral models", request: bearer("https://api.mistral.ai/v1/models") },
+  glm: {
+    describe: "reads the Z.ai usage-quota endpoint",
+    request: (value) => ({
+      // No `Bearer` prefix: Z.ai takes the key raw, and sending the prefix
+      // fails as unauthenticated (same as workstreams-app's quota reader).
+      // A wrong-method or other 4xx lands as `unchecked`, not `failed` — only
+      // 401/403 count as credential rejection.
+      url: "https://api.z.ai/api/monitor/usage/quota/limit",
+      headers: { Authorization: value },
+    }),
+  },
   openai: { describe: "lists OpenAI models", request: bearer("https://api.openai.com/v1/models") },
   "openai-thinking": { describe: "lists OpenAI models", request: bearer("https://api.openai.com/v1/models") },
   // `/key` reports the key's own limits and spend — the cheapest authenticated

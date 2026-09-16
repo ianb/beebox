@@ -29,6 +29,13 @@ function requestBoxes(request: FastifyRequest, boxes: BoxSpec[]): BoxSpec[] {
   return scoped.length > 0 ? scoped : boxes;
 }
 
+/** The route, not the request: no query string and at most the route's leading segments, since diagnostics travel into alerts. */
+function routeLabel(url: string): string {
+  const pathname = url.split("?")[0] ?? url;
+  const segments = pathname.split("/").filter(Boolean);
+  return `/${segments.slice(0, 4).join("/")}${segments.length > 4 ? "/…" : ""}`;
+}
+
 export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]): void {
   // eslint-disable-next-line max-params -- Fastify callback hooks require request, reply, and done to propagate async context.
   server.addHook("onRequest", (request, reply, done) => withoutBoxWork(() => {
@@ -43,22 +50,28 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
       }
     };
     admitted.set(request, work);
+    // Registered before acquiring: a client that abandons the request while
+    // admission is still pending must still be able to release what was taken.
+    releases.set(request, release);
     // The handler wrapper below releases after asynchronous preparation even
     // when the client disconnects. onResponse covers early auth/error replies.
     reply.raw.once("finish", () => { if (!handling.has(request)) void release().catch((error: unknown) => request.log.error(error)); });
     const header = request.headers["x-bbx-box-work"];
     void (async () => {
       for (const box of targets) {
-        const lease = await acquireBoxWork(box.boxRoot, typeof header === "string" ? header : null);
+        const lease = await acquireBoxWork(box.boxRoot, { reason: `${request.method} ${routeLabel(request.url)}`, inherited: typeof header === "string" ? header : null });
+        if (!admitted.has(request)) { await lease.release(); return; }
         work.push(lease);
         requests.set(box.boxRoot, (requests.get(box.boxRoot) ?? 0) + 1);
       }
-      releases.set(request, release);
       // A callback keeps all subsequent Fastify hooks inside the accepted context.
       if (work.length === 1) work[0]?.run(done); else done();
     })().catch(async (error: unknown) => {
       await release();
-      if (error instanceof BoxMaintenanceError) await reply.status(503).send({ error: error.message });
+      if (error instanceof BoxMaintenanceError) {
+        if (error.retryAfterMs !== undefined) void reply.header("Retry-After", String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));
+        await reply.status(503).send({ error: error.message });
+      }
       else done(toError(error));
     });
   }));
@@ -75,6 +88,9 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
     };
   });
   server.addHook("onResponse", async (request) => { if (!handling.has(request)) await releases.get(request)?.(); });
+  // No reply ever comes for an abandoned request, so neither hook above fires.
+  // A handler already running keeps its lease and releases when it returns.
+  server.addHook("onRequestAbort", async (request) => { if (!handling.has(request)) await releases.get(request)?.(); });
 }
 const handling = new WeakSet<FastifyRequest>();
 const releases = new WeakMap<FastifyRequest, () => Promise<void>>();

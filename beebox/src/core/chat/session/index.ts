@@ -159,17 +159,19 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    return withChatRunAdmission(this.boxRoot, async (work) => {
+    return withChatRunAdmission({ boxRoot: this.boxRoot, reason: `chat run ${this.sessionId ?? "new"}` }, async (work) => {
     // A coined session stops being "not created yet" the moment its transcript
     // exists — from this run or an earlier one — because the harness rejects a
     // session id it has already written (see reserve.ts).
     await this.coined.refresh({ boxRoot: this.boxRoot, sessionId: this.sessionId, contextDir: this.options.contextDir ?? null });
 
-    // Preflight login before transitioning or locking; fakes skip this.
+    // Resolve the model first: the preflight is provider-aware (a GLM model
+    // checks the store key, not the Claude login), and openChatRun injects
+    // the GLM provider env from it. Fakes skip the preflight.
     const preview = await this.buildBackendStartOptions();
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return false;
     // Cold start is the only place the box default is read.
     this.resolvedModel = (await resolveSessionModel(this.boxRoot, { engine: preview.engine ?? "claude", explicit: this.explicitModel })).model;
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine, model: this.resolvedModel ?? undefined, boxRoot: this.boxRoot }))) return false;
     this.transition({ phase: "starting" });
 
     // `openChatRun` either returns a live run or unwinds (lock released,
@@ -302,7 +304,7 @@ export class ChatSession extends EventEmitter {
    * tokens in the text.
    */
   async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, options?.independent ? null : undefined);
+    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
     try { return await work.run(() => this.sendAdmitted(message)); }
     finally { await work.release(); }
   }
