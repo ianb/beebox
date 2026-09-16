@@ -31,7 +31,7 @@ import {
 import { trackGmailThread, type TrackGmailThreadResult } from "../../../src/connectors/gmail-track.js";
 import { localCalendarService } from "../../../src/cli/commands/calendar.js";
 import { localGmailService } from "../../../src/cli/commands/connector.js";
-import { dispatchCredentialed, type VerbRefusal } from "../../../src/cli/lib/credentialed-verb.js";
+import { dispatchCredentialed, refusalFor, type VerbRefusal } from "../../../src/cli/lib/credentialed-verb.js";
 
 const SHELL_VARS = ["BBX_SPAWN_PROFILE", "BBX_SERVER_URL", "BBX_BOX_NAME", "BBX_AGENT_TOKEN"];
 const savedShell = Object.fromEntries(SHELL_VARS.map((name) => [name, process.env[name]]));
@@ -126,6 +126,17 @@ function refusalLine(result: { ok: boolean; error?: VerbRefusal }): string {
   if (result.ok || result.error === undefined) return "no refusal";
   return `${result.error.kind} | ${result.error.fix} | ${result.error.message}`;
 }
+```
+
+## A transport failure is not a grant refusal
+
+The server being down is a machine problem. An HTTP refusal still preserves
+the server's typed code and boxholder attribution.
+
+```ts
+const transport = refusalFor(new TypeError("fetch failed"), { remote: true });
+print(`${transport.kind} | ${transport.fix} | ${transport.message}`);
+=> BOX_UNREACHABLE | machine | The box's server could not be reached: fetch failed
 ```
 
 ## An agent's shell reaches all three verbs through its own box's server
