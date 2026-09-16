@@ -63,6 +63,13 @@ await boxMaintenanceStatus(box.root)
 
 await work.release();
 
+// A second owner is refused by name, not with a lock stack trace.
+const owner = await closeBoxMaintenance(box.root, { reason: "deployment" });
+const refused = await acquireBoxMaintenance(box.root, { reason: "migration" }).then(() => "unexpected", (error) => `${error.name}: ${error.message}; holder=${error.holder.reason}`);
+await owner.release();
+refused.replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)")
+=> BoxMaintenanceError: Box is closed for deployment (pid <n>, since <time>); holder=deployment
+
 // Independently owned CLI actions reject a parent's inherited permission
 // immediately, rather than closing admission and waiting for themselves.
 const parentWork = await acquireBoxWork(box.root, { reason: "test" });

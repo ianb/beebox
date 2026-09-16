@@ -11,7 +11,7 @@ import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
-import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 
 // Pinned rather than "whatever is last": appending a migration would otherwise
@@ -138,6 +138,19 @@ holder.stdin.end("finish");
 await once(holder, "exit");
 (await sweepMigrations({ boxRoot: box.root, yield: true })).status
 => applied
+```
+
+A deploy holding the maintenance owner lock is the other way a box is in use.
+That is what the lock is for, so a yielding pass defers and names it rather
+than failing the check.
+
+```ts continue
+await seedManifest(box, { pending: [PROBE] });
+const deploy = await closeBoxMaintenance(box.root, { reason: "deployment" });
+const behindDeploy = await sweepMigrations({ boxRoot: box.root, yield: true });
+await deploy.release();
+JSON.stringify({ status: behindDeploy.status, holders: behindDeploy.holders.map((entry) => entry.reason) })
+=> {"status":"deferred","holders":["deployment"]}
 ```
 
 ```ts cleanup

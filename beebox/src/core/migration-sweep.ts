@@ -104,7 +104,10 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
     // box being in use.
     maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true, ...(yielding ? { drainMs: YIELD_DRAIN_MS } : {}) });
   } catch (error) {
+    // Live work outlasted the wait, or another maintenance owner (a deploy)
+    // holds the box: both are the box being in use, not a failed check.
     if (yielding && error instanceof BoxMaintenanceError && error.reason === "timeout") return { status: "deferred", holders: await boxWorkHolders(opts.boxRoot) };
+    if (yielding && error instanceof BoxMaintenanceError && error.holder !== undefined) return { status: "deferred", holders: [error.holder] };
     throw error;
   }
   const controller = new AbortController();

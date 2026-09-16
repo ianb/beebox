@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { acquireLock, inspectLock, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "./file-lock.js";
+import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "./file-lock.js";
 import { resolveGitDir } from "./git-lock.js";
 import { writeFileAtomic } from "./atomic-write.js";
 import { errnoCode } from "./error-guards.js";
@@ -39,7 +39,9 @@ export class BoxMaintenanceError extends Error {
   readonly reason: MaintenanceRefusal;
   /** How long until a closed box is expected to reopen, when its phase records a deadline. */
   readonly retryAfterMs: number | undefined;
-  constructor(opts: { reason: MaintenanceRefusal; detail?: string; retryAfterMs?: number }) {
+  /** The maintenance owner that refused this one, when another owner holds the box. */
+  readonly holder: WorkHolder | undefined;
+  constructor(opts: { reason: MaintenanceRefusal; detail?: string; retryAfterMs?: number; holder?: WorkHolder }) {
     const messages = {
       foreign: "Work permission belongs to another box", expired: "Work permission has expired",
       closed: "Box admission is closed; retry after maintenance", recovery: "Interrupted maintenance needs recovery",
@@ -49,7 +51,15 @@ export class BoxMaintenanceError extends Error {
     this.name = "BoxMaintenanceError";
     this.reason = opts.reason;
     this.retryAfterMs = opts.retryAfterMs;
+    this.holder = opts.holder;
   }
+}
+
+/** Another maintenance owner holds the box: a refusal, not a crash, and its sidecar says who. */
+function ownerHeldError(error: LockHeldError): BoxMaintenanceError {
+  const reason = typeof error.holder.metadata.reason === "string" ? error.holder.metadata.reason : "maintenance";
+  const holder = { pid: error.holder.pid, reason, since: error.holder.acquiredAt };
+  return new BoxMaintenanceError({ reason: "closed", detail: `${reason} (pid ${String(holder.pid)}, since ${holder.since})`, holder });
 }
 
 function closedMessage(reason: string, retryAfterMs: number | undefined): string {
@@ -251,7 +261,11 @@ export async function closeBoxMaintenance(
   }
   if (await validPermit(directory)) throw new BoxMaintenanceError({ reason: "nested" });
   const permit = { directory, id: randomUUID(), maintenance: true };
-  await acquireLock(leasePath(permit), { id: permit.id, reason: opts.reason });
+  try { await acquireLock(leasePath(permit), { id: permit.id, reason: opts.reason }); }
+  catch (error) {
+    if (error instanceof LockHeldError) throw ownerHeldError(error);
+    throw error;
+  }
   let changing = true;
   let completed = false;
   let released = false;

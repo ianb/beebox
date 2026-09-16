@@ -64,7 +64,10 @@ use. An idle chat run holds a lease until the box's server sees the phase and
 closes it (the server polls every second), so the pass closes, waits fifteen
 seconds instead of ten minutes, and treats work that outlasts the wait as the
 box being in use: the result is `deferred` with the holders, exit 0, the box
-reopens, and the next pass retries. The schedule reports a deferral only once
+reopens, and the next pass retries. A deploy already holding the maintenance
+owner lock is the other way a box is in use; a yielding pass defers on it too,
+naming the owner (`deployment`), and a non-yielding caller is refused with
+`Box is closed for deployment (pid …)` rather than a lock error. The schedule reports a deferral only once
 the box has held work for a day. Deploy (`bbx maintenance`) and supervised
 reload never yield.
 
