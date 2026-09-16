@@ -1,9 +1,9 @@
 ---
 title: "Maintenance closes a box only when it has work, and says who holds it"
-status: draft
+status: implemented
 workstream: migration-admission-cost
 issues:
-  - ../../../issues/bugs/2026-09-15-scheduled-sweep-closes-admission-before-knowing-it-has-work.md
+  - ../../../issues/closed/bugs/2026-09-15-scheduled-sweep-closes-admission-before-knowing-it-has-work.md
 ---
 # Maintenance closes a box only when it has work, and says who holds it
 

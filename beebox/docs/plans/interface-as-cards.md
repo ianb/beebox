@@ -596,7 +596,7 @@ convergence remains a deployment follow-up; local evidence does not establish it
   scenario evidence. Screenshot capture stalled in normal and fresh browser
   sessions; the one returned image did not match the observed DOM/viewport and
   was excluded. Reproduction is recorded in the existing
-  [screenshot flake](../../../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md).
+  [screenshot flake](../../../issues/closed/bugs/2026-07-10-agent-browser-screenshot-flake.md).
   **Partial status reflects pending trustworthy visual/device signoff**, not
   an outstanding implementation or automated-test failure. Landing verification
   is recorded separately from production convergence.

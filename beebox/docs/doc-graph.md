@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-16T02:24:15Z
+Generated: 2026-09-16T02:35:29Z
 Total documents: 379
 
 ## Issues
@@ -28,6 +28,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines) · implementation review
 - **docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md** — "Plan Engineering Review — Markdoc Tags Design" (135 lines) · shipped history · implemented
 - **docs/implemented-plans/markdoc-tags-plan.review.md** — "Plan Engineering Review — Markdoc Tags Design" (505 lines) · implementation review
+- **docs/implemented-plans/migration-admission-cost.md** — "Maintenance closes a box only when it has work, and says who holds it" (324 lines) · shipped history · implemented
 - **docs/implemented-plans/moved-card-forwarding.md** — "Follow a card after its path moves" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/named-places.md** — "Named Places (`place` cards + `bbx location mark`)" (471 lines) · shipped history · implemented
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (704 lines) · shipped history · implemented
@@ -52,7 +53,6 @@ These documents are not referenced by any other document.
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
-- **docs/plans/migration-admission-cost.md** — "Maintenance closes a box only when it has work, and says who holds it" (324 lines) · proposal · draft
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
 - **docs/plans/public-site-box-authoring-export.md** — "Author public-site cards in a box and export them to the repository" (394 lines) · proposal · partial
@@ -1768,6 +1768,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:51 (mention) — **Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only mani
 - docs/implemented-plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- docs/implemented-plans/migration-admission-cost.md:317 (mention) — (`docs/migrations.md` admission section) updated.
 - docs/implemented-plans/one-root-box-layout.md:127 (mention) — | Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-p
 - docs/implemented-plans/questions-end-to-end.md:255 (mention) — `docs/migrations.md` on test1 + prod boxes. The two live test1 retro
 - docs/implemented-plans/remove-box-shape-v1.md:79 (mention) — - **1e — Docs** (was Track 3): `box-layout.md`, `migrations.md`, `box-layout-spec`
@@ -1779,7 +1780,6 @@ Referenced by:
 - docs/plans/agent-docs.md:381 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
 - docs/plans/asset-annex.md:761 (mention) — since it accurately records a system that existed. `docs/migrations.md`
 - docs/plans/asset-offbox-storage.md:577 (mention) — nothing in `docs/migrations.md`. The only state change is Track A2
-- docs/plans/migration-admission-cost.md:317 (mention) — (`docs/migrations.md` admission section) updated.
 - docs/plans/migration-reliability.md:753 (link) — [migrations](../migrations.md), [server operations](../server-operations.md),
 - docs/plans/scan-guide-card.md:88 (mention) — script + procedure kinds; `docs/migrations.md`). NOT used — see
 - docs/server-operations.md:37 (link) — explained in [migrations](migrations.md).
@@ -4103,6 +4103,15 @@ References:
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/migration-admission-cost.md **[ORPHAN]**
+
+Title: "Maintenance closes a box only when it has work, and says who holds it" | 324 lines | shipped history | implemented
+
+References:
+- → ../issues/bugs/2026-09-15-scheduled-sweep-closes-admission-before-knowing-it-has-work.md (frontmatter)
+- → docs/plans/migration-reliability.md (mention)
+- → docs/migrations.md (mention)
+
 #### docs/implemented-plans/mobile-parity-sync.md
 
 Title: "Mobile parity & contract-sync discipline" | 292 lines | shipped history | implemented
@@ -5790,7 +5799,7 @@ References:
 - → docs/plans/interface-cards-consolidation.md (link)
 - → docs/engineering-principles.md (link)
 - → docs/testing.md (link)
-- → ../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md (link)
+- → ../issues/closed/bugs/2026-07-10-agent-browser-screenshot-flake.md (link)
 - → docs/box/interface-cards.md (mention)
 
 #### docs/plans/interface-as-cards.review.md
@@ -5970,21 +5979,12 @@ References:
 - → docs/engineering-principles.md (mention)
 - → docs/mobile-contract.md (mention)
 
-#### docs/plans/migration-admission-cost.md **[ORPHAN]**
-
-Title: "Maintenance closes a box only when it has work, and says who holds it" | 324 lines | proposal | draft
-
-References:
-- → ../issues/bugs/2026-09-15-scheduled-sweep-closes-admission-before-knowing-it-has-work.md (frontmatter)
-- → docs/plans/migration-reliability.md (mention)
-- → docs/migrations.md (mention)
-
 #### docs/plans/migration-reliability.md
 
 Title: "Reliable box maintenance and migration with Git recovery" | 788 lines | proposal | partial
 
 Referenced by:
-- docs/plans/migration-admission-cost.md:112 (mention) — (`docs/plans/migration-reliability.md:244`: *"On drain timeout, abort
+- docs/implemented-plans/migration-admission-cost.md:112 (mention) — (`docs/plans/migration-reliability.md:244`: *"On drain timeout, abort
 
 References:
 - → ../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md (frontmatter)
