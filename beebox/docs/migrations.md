@@ -327,6 +327,14 @@ All scripts live in `scripts/migrate/`.
 
 (This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `question-lifecycle`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
 
+`trick-secret-runtime` is an agent-applied migration. It reviews existing
+box-local tricks for credentialed external services and adds the new sibling
+`secrets.json` declaration where the code requires one. It does not guess
+secret names, change grants, or write values. The procedure's machine gate runs
+`bbx trick --check-secrets`; the agent checklist records the judgment that the
+code review covered every trick. New tricks should follow the same contract
+when authored, rather than waiting for this migration.
+
 `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
 
 ### `box-packageify` (retired — v2-assert no-op)

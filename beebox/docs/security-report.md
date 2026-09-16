@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-14
-model: gpt-6-astra
+date: 2026-09-16
+model: gpt-5
 reviewed-by: DRAFT — unreviewed
 ---
 
@@ -145,6 +145,7 @@ pub-worker routes are in §6a.
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `_config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.beebox/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `BBX_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
+| Declared trick secrets — `secrets.json` plus `bbx trick` child environment (`cli/lib/trick-secrets.ts`, `cli/commands/trick.ts`) | Value remains in the machine secret store; the runner resolves it at launch and injects it only into the selected trick child under its declared env name | Spend/abuse the granted provider account | Per-box grant; one selected trick invocation | Re-resolved each run; revoke by changing the box grant or rotating the store entry | mitigated — the runner never puts the value in argv, files, logs, or the parent environment; a trick can still print its own environment because it runs with the box agent's permissions |
 | Mobile device tokens — `.beebox/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `bbx_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.beebox/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.beebox/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
@@ -174,6 +175,10 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
+The standard trick runner is a deliberate exception by declaration: it resolves
+only the selected trick's named dependencies and puts those values in that
+single child environment for that invocation; it does not widen the general
+allowlist or persist the values.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.bbx-session-secret`,
 `~/.bbx-auth.json`) stay readable by any process that goes looking; the

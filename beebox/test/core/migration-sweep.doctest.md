@@ -191,7 +191,9 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const later = MIGRATIONS.at(-1).name;
+// Keep this pinned to a script migration: procedure migrations are intentionally
+// not handled by the unattended sweep.
+const later = "search-interface-card";
 await seedManifest(box, { pending: [PROBE, later] });
 await box.commitAll("seed");
 let agents = 0;

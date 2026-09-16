@@ -5566,6 +5566,8 @@ tests:
     tags: [secrets]
 
   - id: secrets-adhoc-use
+    # Status (2026-09-16): 1/1 Claude — learned declaration, reason, grant,
+    # child-only environment delivery, and value-free failure handling.
     prompt: >
       I'm writing a trick that needs to call a credentialed third-party API
       (an API key). How should the trick get and use that key?
@@ -5573,14 +5575,14 @@ tests:
     watch_for: >
       Says: `bbx secrets declare <name>` to name the slot, the boxholder
       supplies the value and grants it (at `agent` access) via the capture
-      widget or admin page, and the trick resolves the value at call time via
-      `POST /api/secrets/resolve` with the agent bearer token — holding it
-      only for the length of that one outbound request. Should NOT say to
-      paste the key into the code, write it to a file, put it in an env var,
-      or log it.
-    correct_contains_any: ["bbx secrets declare", "secrets/resolve", "resolve"]
+      widget or admin page, and the trick declares a `secrets.json` mapping
+      with the secret name, a reason, and an environment variable name. It
+      runs through `bbx trick <name>`, which resolves the value at launch and
+      injects it only into that child process. Should NOT say to paste the key
+      into the code, write it to a file, print it, or debug with curl.
+    correct_contains_any: ["bbx secrets declare", "secrets.json", "bbx trick"]
     correct_matches:
-      - "call time|per[- ]call|each (?:call|request)|every (?:call|request|time)"
+      - "at launch|at invocation|per[- ]run|each run|every run"
     response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "_config/connectors", ".secret.json"]
     tags: [secrets]
 
