@@ -52,3 +52,27 @@ lockout; a deploy drain still fails on it after ten minutes, naming it.
 When the report names a holder, trace that release path. If it is the chat
 run pump, bound the wait on a dead subprocess (process exit should end the
 iterator) and release the lease on exit.
+
+## Resolution (2026-09-16)
+
+Two candidates were tested; one is ruled out and one is a reproduced leak.
+
+- SDK iterator on a dead subprocess: ruled out. A stub CLI exiting 0, exiting 1,
+  dying by SIGKILL, and exiting silently before any output all end
+  `query()`'s iterator within ~450 ms (SDK 0.3.268), so the run lease's
+  `finally` runs.
+- HTTP admission on an abandoned request: reproduced. `registerBoxAdmission`
+  released a request's lease on handler return, on the response's `finish`,
+  or in `onResponse`. A client that drops the connection before any reply —
+  a phone losing its link mid-upload, a tab closed during a slow POST — fires
+  none of those, and the lease stayed held until the server restarted. The
+  doctest `test/webapp/box-admission.doctest.md` ("A request the client
+  abandons releases its lease") failed against the old code and passes now:
+  `releases` is registered before acquisition, an `onRequestAbort` hook
+  releases when no handler is running, and a lease acquired after the abort
+  is released on the spot.
+
+Whether that was the incident's holder cannot be confirmed: the process was
+restarted before inspection. It is the only reachable path found that leaves a
+lease with no subprocess and no handler, and every admission now records its
+reason, so a different holder will name itself in the next drain report.
