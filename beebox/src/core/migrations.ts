@@ -158,6 +158,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "canonical-interface-cards", script: "scripts/migrate/canonical-interface-cards.ts" },
   { name: "remaining-interface-cards", script: "scripts/migrate/remaining-interface-cards.ts" },
   { name: "search-interface-card", script: "scripts/migrate/search-interface-card.ts" },
+  // Review existing tricks for credential dependencies and add sibling
+  // secrets.json declarations for the standard trick runtime.
+  { name: "trick-secret-runtime", procedure: "trick-secret-runtime" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

@@ -47,6 +47,23 @@ export function resultDetail(output: string, exitCode: number | null): string | 
     result.question, result.sessionId, ...(result.questions ?? []), `exit ${String(exitCode)}`].filter(Boolean).join("; ");
 }
 
+// ssh exits 255 for its own failures. Only a failure to reach the host means the
+// machine is offline; "Connection refused" means the host answered, so it is real.
+const SSH_UNREACHABLE = /^ssh: (?:connect to host \S+ port \d+: (?:Network is unreachable|No route to host|Operation timed out|Connection timed out)|Could not resolve hostname \S+: .+)$/mu;
+/** Unreachable production is routine (this laptop is offline) until it lasts this long. */
+const UNREACHABLE_REPORT_MS = 24 * 60 * 60_000;
+
+/** The ssh diagnostic line when the server was never reached, else null. */
+export function sshUnreachable(exitCode: number | null, output: string): string | null {
+  return exitCode === 255 ? (SSH_UNREACHABLE.exec(output)?.[0] ?? null) : null;
+}
+
+/** Quiet while production has been unreachable for less than a day. */
+export function unreachableDetail(since: number, opts: { now: number; line: string }): string | null {
+  const elapsed = opts.now - since;
+  return elapsed < UNREACHABLE_REPORT_MS ? null : `Production unreachable for ${String(Math.round(elapsed / 3_600_000))}h: ${opts.line}`;
+}
+
 /** Shell arguments are data, including paths read from the remote registry. */
 export function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;

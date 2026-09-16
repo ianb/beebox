@@ -5,7 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 import { execChild } from "../../bin/lib/schedules-exec.js";
-import { resultDetail, RESULT_PREFIX, framedCommand, shellQuote } from "./results.js";
+import { resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 import { configuredBoxes, localTargets, registryPaths } from "./targets.js";
 
 const report = (value: unknown): string => RESULT_PREFIX + JSON.stringify(value);
@@ -30,6 +30,18 @@ test("a deferred pass is quiet until the box has held work for a day", () => {
   assert.match(resultDetail(report({ status: "deferred", holders: ago(25) }), 0) ?? "", /held work for 25h: chat run abc \(pid 4242/u);
   assert.match(resultDetail(report({ status: "deferred" }), 0) ?? "", /Incomplete deferred/u);
   assert.match(resultDetail(report({ status: "deferred", holders: [] }), 1) ?? "", /exit 1/u);
+});
+
+test("an offline laptop is quiet for a day; a server that answers is not offline", () => {
+  const offline = "debug\nssh: connect to host 192.0.2.1 port 22: Network is unreachable\n";
+  assert.equal(sshUnreachable(255, offline), "ssh: connect to host 192.0.2.1 port 22: Network is unreachable");
+  assert.equal(sshUnreachable(255, "ssh: Could not resolve hostname box.example.com: nodename nor servname provided, or not known"),
+    "ssh: Could not resolve hostname box.example.com: nodename nor servname provided, or not known");
+  assert.equal(sshUnreachable(255, "ssh: connect to host 192.0.2.1 port 22: Connection refused"), null);
+  assert.equal(sshUnreachable(1, offline), null);
+  const now = Date.now();
+  assert.equal(unreachableDetail(now - 23 * 3_600_000, { now, line: "line" }), null);
+  assert.match(unreachableDetail(now - 25 * 3_600_000, { now, line: "line" }) ?? "", /unreachable for 25h: line/u);
 });
 
 test("framing preserves exit failures and treats shell metacharacters as data", async () => {

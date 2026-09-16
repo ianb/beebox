@@ -224,6 +224,7 @@ tricks/
   scripts/
     CLAUDE.md         <- This file
     clean-inbox/
+      secrets.json     <- optional declared credentials for this trick
       index.ts        <- bbx trick clean-inbox
     summarize/
       index.ts        <- bbx trick summarize
@@ -237,6 +238,7 @@ Tricks are standalone TypeScript programs. Environment variables provide context
 
 - \`BBX_BOX_ROOT\` -- absolute path to the box root
 - \`BBX_TRICK_NAME\` -- the trick name (e.g. "clean-inbox"), useful for usage/help output
+- declared secrets are injected only into this trick's child process environment
 - \`process.argv.slice(2)\` -- extra arguments after the trick name
 
 \`\`\`typescript
@@ -254,6 +256,16 @@ console.log("Done!");
 \`\`\`
 
 The \`export const description\` line is parsed (not executed) by \`bbx trick\` for the listing.
+
+If the trick needs a credential, add a \`secrets.json\` beside \`index.ts\`:
+
+\`\`\`json
+[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]
+\`\`\`
+
+The boxholder must supply and grant the secret. \`bbx trick <name>\` resolves
+declared secrets at launch and injects them only into that trick process. Never
+write a resolved value to a file, argument, or log.
 
 ## Running
 

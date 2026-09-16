@@ -53,7 +53,7 @@ To resolve all at once after a review sweep:
 pnpm dlx tsx collect.ts --resolve-all
 ```
 
-Resolving moves the file to `config/feedback/resolved/` in its box and commits it.
+Resolving moves the file to `_config/feedback/resolved/` in its box and commits it.
 
 ## Running a review session
 
