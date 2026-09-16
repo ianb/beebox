@@ -43,6 +43,11 @@ await ageDir(path.join(tmp, "chat/stale-batch-01"), 10);
 await writeAged(path.join(tmp, "chat/live-batch-002/IMG_0002.jpg"), 12);
 await writeAged(path.join(tmp, "chat/live-batch-002/late.txt"), 1);
 await ageDir(path.join(tmp, "chat/live-batch-002"), 12);
+// Only files age a batch: a stale nested directory holding a fresh file keeps it.
+await writeAged(path.join(tmp, "chat/nested-batch-04/old.txt"), 10);
+await writeAged(path.join(tmp, "chat/nested-batch-04/sub/fresh.txt"), 1);
+await ageDir(path.join(tmp, "chat/nested-batch-04/sub"), 10);
+await ageDir(path.join(tmp, "chat/nested-batch-04"), 10);
 // An empty batch directory ages by its own mtime.
 await fs.mkdir(path.join(tmp, "chat/empty-batch-03"), { recursive: true });
 await ageDir(path.join(tmp, "chat/empty-batch-03"), 30);
@@ -60,9 +65,10 @@ JSON.stringify(await Promise.all([
   exists(path.join(tmp, "chat/stale-batch-01")),
   exists(path.join(tmp, "chat/live-batch-002/IMG_0002.jpg")),
   exists(path.join(tmp, "chat/empty-batch-03")),
+  exists(path.join(tmp, "chat/nested-batch-04/sub/fresh.txt")),
   exists(path.join(tmp, "scan-quarantine/old.pdf")),
 ]))
-=> [false,true,false,true,false,true]
+=> [false,true,false,true,false,true,true]
 
 log.filter((l) => l.includes("Removed:")).map((l) => l.trim().replace(/ \(\d+ days old\)/, "")).sort().join("\n")
 => Removed: _tmp/chat/empty-batch-03/

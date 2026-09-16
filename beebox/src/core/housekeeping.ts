@@ -98,12 +98,24 @@ async function statOrNull(fullPath: string): Promise<Stats | null> {
   }
 }
 
-/** The newest mtime among a batch directory's files, or the directory's own when empty. */
+/**
+ * The newest mtime among a batch directory's files, at any depth, or the
+ * directory's own when it holds none. Only files count: a directory's mtime
+ * says when its listing changed, not when anything in it was written.
+ */
 async function newestMtime(dir: string, dirMtimeMs: number): Promise<number> {
-  let newest = dirMtimeMs;
+  const newestFile = await newestFileMtime(dir);
+  return newestFile ?? dirMtimeMs;
+}
+
+async function newestFileMtime(dir: string): Promise<number | null> {
+  let newest: number | null = null;
   for (const entry of await listEntries(dir)) {
-    const stat = await statOrNull(path.join(dir, entry));
-    if (stat !== null) newest = Math.max(newest, stat.mtimeMs);
+    const full = path.join(dir, entry);
+    const stat = await statOrNull(full);
+    if (stat === null) continue;
+    const candidate = stat.isDirectory() ? await newestFileMtime(full) : stat.mtimeMs;
+    if (candidate !== null && (newest === null || candidate > newest)) newest = candidate;
   }
   return newest;
 }

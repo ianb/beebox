@@ -25,6 +25,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { chatUploadBatchesDir, ensureBoxTmpDir } from "../../lib/box-tmp.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 interface RegisterChatUploadRoutesOptions {
   server: FastifyInstance;
@@ -62,18 +63,21 @@ function safeTimestamp(): string {
 /**
  * Within a batch a name is kept as the user has it, so the agent reads
  * `IMG_0001.jpg`, not a timestamp. Two attachments with one name in one
- * message get `-2`, `-3`, … before the extension.
+ * message get `-2`, `-3`, … before the extension. The name is claimed by
+ * the write itself (`wx`: create, never truncate): a message's uploads run
+ * in parallel, and two pasted clipboard images are both called `image.png`,
+ * so a check-then-write would let the second clobber the first.
  */
-async function unusedName(dir: string, safeName: string): Promise<string> {
+async function writeUnderUnusedName(dir: string, { safeName, buffer }: { safeName: string; buffer: Buffer }): Promise<string> {
   const ext = path.extname(safeName);
   const stem = safeName.slice(0, safeName.length - ext.length);
   for (let n = 1; ; n++) {
     const candidate = n === 1 ? safeName : `${stem}-${String(n)}${ext}`;
     try {
-      await fs.access(path.join(dir, candidate));
-    } catch (_e) {
-      // ENOENT is the answer we want: this name is free.
+      await fs.writeFile(path.join(dir, candidate), buffer, { flag: "wx" });
       return candidate;
+    } catch (e) {
+      if (errnoCode(e) !== "EEXIST") throw e;
     }
   }
 }
@@ -106,19 +110,11 @@ export async function registerChatUploadRoutes(
 
     const originalName = data.filename || "upload";
     const safeName = sanitizeFilename(originalName);
-    let dir = tmpDir;
-    let filename: string;
-    if (batch === null) {
-      filename = `${safeTimestamp()}_${safeName}`;
-    } else {
-      dir = path.join(chatUploadBatchesDir(boxRoot), batch);
-      await fs.mkdir(dir, { recursive: true });
-      filename = await unusedName(dir, safeName);
-    }
-    const fullPath = path.join(dir, filename);
+    const dir = batch === null ? tmpDir : path.join(chatUploadBatchesDir(boxRoot), batch);
 
-    // Defense in depth: ensure the resolved path stays inside tmpDir.
-    const resolved = path.resolve(fullPath);
+    // Defense in depth: ensure the resolved directory stays inside tmpDir
+    // (the sanitized name has no separators, so the file does too).
+    const resolved = path.resolve(dir);
     const tmpResolved = path.resolve(tmpDir);
     if (
       resolved !== tmpResolved &&
@@ -127,7 +123,15 @@ export async function registerChatUploadRoutes(
       return reply.status(400).send({ error: "Invalid filename" });
     }
 
-    await fs.writeFile(fullPath, buffer);
+    let filename: string;
+    if (batch === null) {
+      filename = `${safeTimestamp()}_${safeName}`;
+      await fs.writeFile(path.join(dir, filename), buffer);
+    } else {
+      await fs.mkdir(dir, { recursive: true });
+      filename = await writeUnderUnusedName(dir, { safeName, buffer });
+    }
+    const fullPath = path.join(dir, filename);
 
     return {
       path: path.relative(boxRoot, fullPath),

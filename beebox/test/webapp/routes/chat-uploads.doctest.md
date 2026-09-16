@@ -111,6 +111,21 @@ JSON.stringify([first.body, second.body, third.body].map((b) => (b as { path: st
 => receipt-bytes
 ```
 
+A message's uploads run in parallel, and two pasted clipboard images are
+both called `image.png`: the name is claimed by the write itself, so neither
+clobbers the other.
+
+```ts continue
+const race = await Promise.all([1, 2, 3].map((n) =>
+  ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "image.png", mimetype: "image/png", bytes: Buffer.from(`copy-${String(n)}`), batch }) })));
+const paths = race.map((r) => (r.body as { path: string }).path).sort();
+JSON.stringify(paths)
+=> ["_tmp/chat/m1abcd-x9y8z7w6/image-2.png","_tmp/chat/m1abcd-x9y8z7w6/image-3.png","_tmp/chat/m1abcd-x9y8z7w6/image.png"]
+
+(await Promise.all(paths.map((p) => readFile(join(ctx.boxRoot, p), "utf8")))).sort().join(",")
+=> copy-1,copy-2,copy-3
+```
+
 A batch id is a directory name the client minted, never a path: anything
 outside `[A-Za-z0-9_-]{8,64}` is refused, not sanitized.
 
