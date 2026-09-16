@@ -11,7 +11,7 @@ class UnfinishedChatUploadError extends Error {
 }
 
 export function checkedDraftAttachments(draft: EmissionDraft) {
-  const failed = draft.files.filter((file) => file.state.status === "failed" || file.state.status === "lost");
+  const failed = draft.files.filter((file) => file.state.status === "failed");
   if (failed.length > 0) throw new UnfinishedChatUploadError(failed.map((file) => file.originalName));
   if (draft.pendingImages > 0) throw new UnfinishedChatUploadError(["Image still being prepared"]);
   return draftAttachments(draft);

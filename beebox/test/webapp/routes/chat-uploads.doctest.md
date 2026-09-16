@@ -7,16 +7,25 @@ is the path the file is at: the agent Reads it verbatim, so a response that
 named a directory the box does not have (this route once said `tmp/` while
 writing to `_tmp/`) is an attachment the agent cannot open.
 
+A `batch` text field, sent ahead of the file, groups every attachment of one
+message — files and the originals of inline images alike — into
+`_tmp/chat/<batch>/`, where each keeps the name the user gave it. Without it
+(an older client) the file lands flat in `_tmp/` under a timestamped name.
+
 ```ts setup
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 
-/** A minimal multipart body with one `file` field. */
-function multipart(opts: { filename: string; mimetype: string; bytes: Buffer }) {
+/** A minimal multipart body: an optional `batch` text part, then one `file` part. */
+function multipart(opts: { filename: string; mimetype: string; bytes: Buffer; batch?: string }) {
   const boundary = "----bbx-doctest-boundary";
+  const batchPart = opts.batch === undefined
+    ? ""
+    : `--${boundary}\r\nContent-Disposition: form-data; name="batch"\r\n\r\n${opts.batch}\r\n`;
   const head = Buffer.from(
-    `--${boundary}\r\n` +
+    batchPart +
+      `--${boundary}\r\n` +
       `Content-Disposition: form-data; name="file"; filename="${opts.filename}"\r\n` +
       `Content-Type: ${opts.mimetype}\r\n\r\n`,
   );
@@ -76,6 +85,39 @@ const res = await ctx.request({
 });
 res.statusCode
 => 400
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## A batch groups one message's attachments in one directory
+
+Two uploads with the same batch land side by side under `_tmp/chat/<batch>/`,
+keeping their own names; a repeated name gets a counter rather than a
+timestamp, so the agent reads `IMG_0001.jpg`, not `2026-…Z_IMG_0001.jpg`.
+
+```ts
+const ctx = await makeTestServer();
+const bytes = Buffer.from("receipt-bytes");
+const batch = "m1abcd-x9y8z7w6";
+const first = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "IMG_0001.jpg", mimetype: "image/jpeg", bytes, batch }) });
+const second = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "notes.txt", mimetype: "text/plain", bytes, batch }) });
+const third = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "IMG_0001.jpg", mimetype: "image/jpeg", bytes, batch }) });
+JSON.stringify([first.body, second.body, third.body].map((b) => (b as { path: string }).path))
+=> ["_tmp/chat/m1abcd-x9y8z7w6/IMG_0001.jpg","_tmp/chat/m1abcd-x9y8z7w6/notes.txt","_tmp/chat/m1abcd-x9y8z7w6/IMG_0001-2.jpg"]
+
+(await readFile(join(ctx.boxRoot, "_tmp/chat/m1abcd-x9y8z7w6/notes.txt"), "utf8"))
+=> receipt-bytes
+```
+
+A batch id is a directory name the client minted, never a path: anything
+outside `[A-Za-z0-9_-]{8,64}` is refused, not sanitized.
+
+```ts continue
+const bad = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "x.txt", mimetype: "text/plain", bytes, batch: "../escape" }) });
+JSON.stringify([bad.statusCode, bad.body])
+=> [400,{"error":"Invalid batch id"}]
 ```
 
 ```ts cleanup

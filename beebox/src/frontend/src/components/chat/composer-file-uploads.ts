@@ -27,12 +27,14 @@ import type { EmissionStore, FileItem, FileTransferState } from "../../input/emi
 export interface ComposerFileUploads {
   /** Register a picked set, start their uploads, and return the items created. */
   addUploadFiles: (files: File[]) => FileItem[];
-  /** Start uploading an inline image's original; the image item must already be in the store. */
+  /**
+   * Start uploading an inline image's original; the image item must already
+   * be in the store. Silent: nothing in the UI shows this upload, and a
+   * failure only means the message lists no file for that image.
+   */
   uploadImageOriginal: (id: number, file: File) => void;
   /** Re-run a failed upload from the handle kept for it. */
   retryFileUpload: (id: number) => void;
-  /** Re-run a failed original upload from the handle kept for it. */
-  retryImageOriginal: (id: number) => void;
   /** Resolves once no upload is still running. Never rejects. */
   awaitPendingUploads: () => Promise<void>;
   /** Drop one file's handles — its chip was removed. */
@@ -78,6 +80,8 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
     const stillOurs = () => handles.get(id) === file;
     try {
       const uploaded = await uploadChatFile(file, {
+        // Every attachment of one message shares the draft's batch directory.
+        batch: editor.uploadBatch(),
         onProgress: (fraction) => {
           if (!stillOurs()) return;
           setState(kind, { id, state: { status: "uploading", progress: fraction } });
@@ -92,7 +96,7 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
       if (!stillOurs()) return;
       setState(kind, { id, state: { status: "failed", message: errorMessage(e) } });
     }
-  }, [setState]);
+  }, [editor, setState]);
 
   /** Hold an upload's promise until it settles, so a send can wait on it. */
   const track = useCallback((kind: UploadKind, { id, running }: { id: number; running: Promise<void> }): void => {
@@ -143,15 +147,14 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
   }, [start]);
 
   const retry = useCallback((kind: UploadKind, id: number): void => {
+    // Only files offer a retry; an image's original upload is silent.
     const file = pendingUploadsRef.current[kind].get(id);
     if (file === undefined) {
       // The handle is gone only if the page reloaded under a restored draft.
       // Restore drops every unfinished file (it has no path, so
-      // `partitionFiles` classes it dead) and restores an unfinished image
-      // original as `lost`, which offers no retry — so this is a state that
-      // shouldn't arise rather than one to paper over.
-      const what = kind === "file" ? "This file" : "This image's original";
-      setState(kind, { id, state: { status: "lost", message: `${what} can't be retried — remove it and pick it again.` } });
+      // `partitionFiles` classes it dead) — so this is a state that shouldn't
+      // arise rather than one to paper over.
+      setState(kind, { id, state: { status: "failed", message: "This file can't be retried — remove it and pick it again." } });
       return;
     }
     setState(kind, { id, state: { status: "uploading", progress: 0 } });
@@ -159,7 +162,6 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
   }, [setState, start]);
 
   const retryFileUpload = useCallback((id: number) => { retry("file", id); }, [retry]);
-  const retryImageOriginal = useCallback((id: number) => { retry("image", id); }, [retry]);
 
   const forgetKind = useCallback((kind: UploadKind, id: number) => {
     // The upload may still be running; the state setter no-ops once the item
@@ -181,7 +183,7 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
   }, []);
 
   return {
-    addUploadFiles, uploadImageOriginal, retryFileUpload, retryImageOriginal,
+    addUploadFiles, uploadImageOriginal, retryFileUpload,
     awaitPendingUploads, forget, forgetImage, forgetAll,
   };
 }

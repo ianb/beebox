@@ -501,6 +501,16 @@ passes in the simulator, and a real paste in the dev box produces a
 `_tmp/` file whose bytes equal the source file (checked with `cmp`). No
 data migration: no stored shape changes. Old transcripts are unaffected.
 
+## Boxholder direction after the first cut (2026-09-16)
+
+"This should be totally transparent to the user": no badge, no retry, no
+notice about originals. The upload is silent; a failure means no line. One
+directory per message, `_tmp/chat/<batch>/`, so a message's files clump;
+the batch id is minted per draft (the message id exists only at send) and
+sent as a multipart field ahead of the file. The sweep, which skipped
+directories, now removes a batch whole when its newest file is a week old.
+The `lost` state below was dropped again with the UI that showed it.
+
 ## Cross-model review of the diff (2026-09-16)
 
 Three findings, all applied:

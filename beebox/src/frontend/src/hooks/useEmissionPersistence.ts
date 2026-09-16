@@ -52,7 +52,6 @@ import {
   adoptLegacyComposerDrafts,
   partitionFiles,
   restoredImageOriginal,
-  RESTORED_ORIGINAL_SWEPT,
   type PersistedEmission,
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
@@ -187,12 +186,8 @@ export function useEmissionPersistence(opts: {
         original: restoredImageOriginal(image.original, { existingPaths }),
       }));
       editor.restoreImages(restoredImages);
-      // An image whose landed original was swept keeps its pixels but loses
-      // its file; say so alongside the dropped files rather than silently.
-      const sweptOriginals = restoredImages.flatMap((image) =>
-        image.original.status === "lost" && image.original.message === RESTORED_ORIGINAL_SWEPT
-          ? [`image#${String(image.id)} (original file)`]
-          : []);
+      // Later uploads from this draft join the same `_tmp/chat/<batch>/`.
+      if (p.uploadBatch !== undefined) editor.restoreUploadBatch(p.uploadBatch);
       for (const file of live) editor.addFile(file);
       // Dead files (their tmp/ upload was swept) must not leave dangling
       // [file#N] tokens in the restored text — a send would reference an
@@ -209,9 +204,8 @@ export function useEmissionPersistence(opts: {
         selection: maxId(p.selections),
       });
 
-      const expired = [...dead.map((f) => f.originalName), ...sweptOriginals];
-      if (expired.length > 0) {
-        setExpiredAttachments(expired);
+      if (dead.length > 0) {
+        setExpiredAttachments(dead.map((f) => f.originalName));
       }
     }
     // Restore is a one-shot per (empty) mount; `boxSlug`/`emissionStore`

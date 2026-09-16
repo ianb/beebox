@@ -65,15 +65,16 @@ An \`<upload doc="tmp-upload/....upload-batch.card" files="34" bytes="112 MB" fa
 
 ## Attachments
 
-Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`_tmp/\`:
+Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`_tmp/\`. One message's attachments share one directory, \`_tmp/chat/<id>/\`, so they are easy to handle together:
 
 \`\`\`
 <attachments>
-[file#1]: _tmp/2026-04-27T15-30-12-987Z_report.pdf
+[file#1]: _tmp/chat/m1abcd-x9y8z7w6/report.pdf
+[image#1]: _tmp/chat/m1abcd-x9y8z7w6/IMG_0001.jpg
 </attachments>
 \`\`\`
 
-An image the user pasted or picked is listed the same way, as \`[image#N]: _tmp/...\`. The image you see inline is a reduced copy; the file is the original, for cropping, OCR, attaching to a card, or handing to an API (a phone photo may be HEIC — convert it with \`sips\` or ImageMagick). An image with no \`[image#N]:\` line has no file: its upload failed, or the message predates this.
+An image the user pasted or picked is listed like a file, as \`[image#N]: <path>\`. The image you see inline is a reduced copy; the file is the original, for cropping, OCR, attaching to a card, or handing to an API (a phone photo may be HEIC — convert it with \`sips\` or ImageMagick). An image with no \`[image#N]:\` line has no file: its upload failed, or the message predates this. Older messages list flat \`_tmp/<timestamp>_<name>\` paths instead.
 
 Messages sent before 2026-08-25 use the older \`[file1]\` form, without the \`#\`. Read either; the token and its \`<attachments>\` line always agree within one message.
 

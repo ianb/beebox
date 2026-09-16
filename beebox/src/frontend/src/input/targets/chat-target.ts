@@ -146,7 +146,7 @@ export function applyRestorePlan(editor: EmissionEditor, plan: RestorePlan): voi
       // The emission carries only a landed path, and the file was written
       // moments ago by this tab, so no existence check. An image with no path
       // cannot be retried (the send reset dropped its `File`), so it comes
-      // back `lost`, as a reloaded draft does.
+      // back `failed`, as a reloaded draft does; the message lists no file.
       original: restoredImageOriginal(
         image.path === undefined ? undefined : { status: "uploaded", path: image.path },
         { existingPaths: null },

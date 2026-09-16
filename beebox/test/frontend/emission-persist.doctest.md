@@ -230,14 +230,14 @@ live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2
 ```
 
-## An image's original comes back landed, or lost — never resumable
+## An image's original comes back landed, or failed — never resumable
 
 The `File` behind an upload dies with the page, so a persisted `uploading` or
 `failed` original — and a draft from before originals were kept, which has no
-state at all — restores as `lost`: the tile says there will be no file and
-offers remove, not retry. A landed path survives when the restore-time
-existence check still finds it, and is `lost` with its own message when the
-sweep took it, so a swept path is never listed as a usable file.
+state at all — restores as `failed`, silently: the message just lists no file
+for that image. A landed path survives when the restore-time existence check
+still finds it, and is `failed` with its own message when the sweep took it,
+so a swept path is never listed as a usable file.
 
 ```ts
 const present = new Set(["_tmp/a.png"]);
@@ -256,7 +256,7 @@ JSON.stringify([
   restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
   restoredImageOriginal(undefined, { existingPaths: present }).message === RESTORED_ORIGINAL_LOST,
 ])
-=> ["lost","lost",true]
+=> ["failed","failed",true]
 ```
 
 The state itself rides through persistence with the image, so a landed path
@@ -267,4 +267,17 @@ const withOriginal = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBa
 const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
 JSON.stringify(parsePersistedEmission(payload)?.images[0]?.original)
 => {"status":"uploaded","path":"_tmp/a.png"}
+```
+
+The draft's upload batch persists with it, so attachments added after a
+reload join the same `_tmp/chat/<batch>/` directory; a draft saved before
+batches existed simply has none.
+
+```ts
+const batched = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
+parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch
+=> m1abcd-x9y8z7w6
+
+parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload)?.uploadBatch
+=> undefined
 ```

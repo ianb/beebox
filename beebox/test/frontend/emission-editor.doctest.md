@@ -322,3 +322,33 @@ store.editor.addImage({ id: 2, mimeType: "image/png", dataBase64: "b", objectUrl
 JSON.stringify(draftAttachments(store.get()).images)
 => [{"id":1,"mimeType":"image/png","dataBase64":"a","path":"_tmp/a.png"},{"id":2,"mimeType":"image/png","dataBase64":"b"}]
 ```
+
+## One upload batch per draft
+
+Every attachment of one message uploads into the same `_tmp/chat/<batch>/`
+directory. The id is minted by the first attachment that needs it, reused
+until the message goes, and cleared with the attachments after a send, so
+the next message gets its own directory. The message id itself is minted at
+send, too late to name the directory.
+
+```ts
+const store = createEmissionStore();
+store.get().uploadBatch
+=> null
+
+const first = store.editor.uploadBatch();
+/^[\w-]{8,64}$/.test(first) && store.editor.uploadBatch() === first && store.get().uploadBatch === first
+=> true
+
+store.editor.reset("attachments");
+store.get().uploadBatch
+=> null
+
+store.editor.uploadBatch() !== first
+=> true
+
+// A restored draft brings its batch back so later uploads join it.
+store.editor.restoreUploadBatch("restored-batch-01");
+store.editor.uploadBatch()
+=> restored-batch-01
+```

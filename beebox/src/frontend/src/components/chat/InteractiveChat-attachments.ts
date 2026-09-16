@@ -157,7 +157,7 @@ export function useChatAttachments(opts: {
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
-    addUploadFiles, uploadImageOriginal, retryFileUpload, retryImageOriginal, awaitPendingUploads,
+    addUploadFiles, uploadImageOriginal, retryFileUpload, awaitPendingUploads,
     forget: forgetUpload, forgetImage: forgetImageUpload, forgetAll: forgetAllUploads,
   } = useComposerFileUploads(editor);
   /**
@@ -311,7 +311,7 @@ export function useChatAttachments(opts: {
 
   return {
     fileInputRef,
-    addFiles, removeAttachment, removeFileAttachment, retryFileUpload, retryImageOriginal, awaitPendingUploads,
+    addFiles, removeAttachment, removeFileAttachment, retryFileUpload, awaitPendingUploads,
     handleAddFiles, handleFileInputChange, resetAttachments,
   };
 }

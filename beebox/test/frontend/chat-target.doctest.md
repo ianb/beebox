@@ -163,7 +163,7 @@ store.get().images.map((i) => i.id).join(",")
 A rejected send hands its images back through the emission, which carries a
 `path` only for an original that landed. That path is restored as `uploaded`,
 so the retry lists the same file line; an image with no path has no `File`
-to retry from, so it comes back `lost` and the message goes out with the
+to retry from, so it comes back `failed` and the message goes out with the
 pixels only.
 
 ```ts
@@ -178,5 +178,5 @@ const e = createTypedEmission({
 });
 applyRestorePlan(store.editor, planRestore(emptyDraft, e));
 JSON.stringify(store.get().images.map((image) => image.original))
-=> [{"status":"uploaded","path":"_tmp/a.jpg"},{"status":"lost","message":"Original not uploaded — the agent sees the reduced copy only"}]
+=> [{"status":"uploaded","path":"_tmp/a.jpg"},{"status":"failed","message":"Original not uploaded — the agent sees the reduced copy only"}]
 ```

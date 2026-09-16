@@ -4,11 +4,9 @@
  * Displays thumbnails of images pasted/dropped into the chat input. Each
  * thumbnail references a numeric id that appears as `[imageN]` in the
  * textarea; clicking a thumbnail opens it in a lightbox, the trash button
- * removes the attachment and strips its `[imageN]` token from the text. A
- * corner badge shows where the image's ORIGINAL file is in its upload
- * (`ImageItem.original`): the thumbnail is the reduced copy, and the badge is
- * the only place the user can see that the full-size file has not landed, or
- * failed and can be retried.
+ * removes the attachment and strips its `[imageN]` token from the text.
+ * The image's original file uploads silently alongside (`ImageItem.original`);
+ * nothing here shows it — the user attached one image, and sees one.
  *
  * The parallel `FileAttachmentPanel` shows uploaded non-image files which
  * the composer references via `[fileN]` tokens.
@@ -17,7 +15,7 @@
 import { Image } from "../ui/Image";
 import { useLightbox } from "../LightboxProvider";
 import { formatBytes } from "../../lib/format-bytes";
-import type { ImageItem, FileItem, FileTransferState } from "../../input/emission-store";
+import type { ImageItem, FileItem } from "../../input/emission-store";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -31,14 +29,11 @@ export function AttachmentPanel({
   attachments,
   pendingCount,
   onRemove,
-  onRetryOriginal,
 }: {
   attachments: AttachmentItem[];
   /** Images pasted/dropped but still encoding — shown as placeholder tiles. */
   pendingCount: number;
   onRemove: (id: number) => void;
-  /** Re-run a failed upload of the image's original file. */
-  onRetryOriginal: (id: number) => void;
 }) {
   const lightbox = useLightbox();
 
@@ -61,7 +56,6 @@ export function AttachmentPanel({
           attachment={att}
           onClick={() => openAt(att.id)}
           onRemove={() => onRemove(att.id)}
-          onRetryOriginal={() => onRetryOriginal(att.id)}
         />
       ))}
       {Array.from({ length: pendingCount }, (_unused, i) => (
@@ -91,21 +85,14 @@ function ThumbTile({
   attachment,
   onClick,
   onRemove,
-  onRetryOriginal,
 }: {
   attachment: AttachmentItem;
   onClick: () => void;
   onRemove: () => void;
-  onRetryOriginal: () => void;
 }) {
   const kb = Math.round(attachment.byteLength / 1024);
-  const { original } = attachment;
   return (
-    <div
-      className="relative group"
-      data-bbx-source={`attachment-${attachment.id}`}
-      data-bbx-original-state={original.status}
-    >
+    <div className="relative group" data-bbx-source={`attachment-${attachment.id}`}>
       <button
         type="button"
         onClick={onClick}
@@ -122,7 +109,6 @@ function ThumbTile({
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
-      <OriginalBadge original={original} onRetry={onRetryOriginal} />
       <button
         type="button"
         onClick={onRemove}
@@ -134,58 +120,6 @@ function ThumbTile({
         </svg>
       </button>
     </div>
-  );
-}
-
-/**
- * The original file's upload, along the tile's bottom edge: a progress bar
- * while it moves, a retry strip when it failed, a "no file" strip when there
- * is nothing to retry from, nothing once it landed. The message sends either
- * way — an original that did not land just means no file line for this
- * image — so the badge informs and offers, it never blocks. The tile is
- * thumbnail-sized, so the strip carries one word and the `title` the rest.
- */
-function OriginalBadge({ original, onRetry }: { original: FileTransferState; onRetry: () => void }) {
-  if (original.status === "uploaded") return null;
-  if (original.status === "failed") {
-    return (
-      <button
-        type="button"
-        onClick={onRetry}
-        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
-        title={`Original not uploaded: ${original.message}. Click to retry.`}
-        aria-label={`Original not uploaded: ${original.message}. Retry the upload.`}
-      >
-        ↻ Retry
-      </button>
-    );
-  }
-  if (original.status === "lost") {
-    return (
-      <span
-        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 pointer-events-none"
-        title={original.message}
-        role="status"
-      >
-        No file
-      </span>
-    );
-  }
-  return (
-    <span
-      className="absolute bottom-0 inset-x-0 h-1 bg-warm-300/80 overflow-hidden pointer-events-none"
-      role="progressbar"
-      aria-label="Uploading the original file"
-      aria-valuenow={Math.round(original.progress * 100)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      title="Uploading the original file…"
-    >
-      <span
-        className="block h-full bg-accent transition-[width] duration-150"
-        style={{ width: `${String(Math.max(4, Math.round(original.progress * 100)))}%` }}
-      />
-    </span>
   );
 }
 
@@ -241,11 +175,11 @@ function FileChip({
   const sizeLabel = formatBytes(attachment.size);
   const statusLabel = state.status === "uploaded"
     ? sizeLabel
-    : state.status === "uploading" ? `${sizeLabel} · uploading…` : state.message;
+    : state.status === "failed" ? state.message : `${sizeLabel} · uploading…`;
   return (
     <div
       className={`relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded border max-w-xs ${
-        state.status === "failed" || state.status === "lost" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
+        state.status === "failed" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
       }`}
       data-bbx-source={`file-attachment-${attachment.id}`}
       data-bbx-upload-state={state.status}

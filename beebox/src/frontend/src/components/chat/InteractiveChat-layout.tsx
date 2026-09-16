@@ -106,8 +106,6 @@ export interface ComposerSectionProps {
   onRemoveFileAttachment: (id: number) => void;
   /** Re-run a failed file upload from the chip. */
   onRetryFileAttachment: (id: number) => void;
-  /** Re-run a failed upload of an inline image's original from its tile. */
-  onRetryImageOriginal: (id: number) => void;
   onRemoveSelection: (id: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -126,7 +124,7 @@ export interface ComposerSectionProps {
 
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
-    attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRetryFileAttachment, onRetryImageOriginal, onRemoveSelection,
+    attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRetryFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
     isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow,
   } = props;
@@ -139,7 +137,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
       {expiredAttachmentsNotice}
 
       {/* Image attachment panel: shows thumbnails above the composer */}
-      <AttachmentPanel attachments={attachments} pendingCount={pendingImageCount} onRemove={onRemoveAttachment} onRetryOriginal={onRetryImageOriginal} />
+      <AttachmentPanel attachments={attachments} pendingCount={pendingImageCount} onRemove={onRemoveAttachment} />
 
       {/* Selection panel: pills for document text attached from the companion pane */}
       <SelectionPanel selections={selections} onRemove={onRemoveSelection} />

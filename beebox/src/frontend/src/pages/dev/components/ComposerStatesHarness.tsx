@@ -209,7 +209,6 @@ function StateBlock({ spec }: { spec: Spec }) {
         onRemoveAttachment={noop}
         onRemoveFileAttachment={noop}
         onRetryFileAttachment={noop}
-        onRetryImageOriginal={noop}
         onRemoveSelection={noop}
         fileInputRef={fileInputRef}
         onFileInputChange={noop}

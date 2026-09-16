@@ -73,9 +73,14 @@ class ChatFileUploadMalformedResponseError extends Error {
 export function uploadChatFile(file: File, opts: {
   /** Fraction moved, 0–1. Called with 0 at least once, before any bytes go. */
   onProgress: (fraction: number) => void;
+  /** The message's upload batch: every attachment of one message lands in `_tmp/chat/<batch>/`. */
+  batch: string;
 }): Promise<UploadedFile> {
-  const { onProgress } = opts;
+  const { onProgress, batch } = opts;
   const form = new FormData();
+  // Text fields BEFORE the file part: the route reads them off the file
+  // stream, and only sees what arrived ahead of it.
+  form.append("batch", batch);
   form.append("file", file, file.name);
   const init = withMobileAuth({ method: "POST", body: form });
   return new Promise<UploadedFile>((resolve, reject) => {
