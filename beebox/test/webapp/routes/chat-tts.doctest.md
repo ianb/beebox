@@ -164,3 +164,23 @@ JSON.stringify({ status: stalledRes.statusCode, body: stalledRes.body })
 ```ts cleanup
 await stalledCtx.cleanup();
 ```
+
+## The retry policy actually applies to these calls
+
+`retry: 2` was inert. ky excludes POST from `retry.methods` by default and sets
+`retryOnTimeout: false`, so both failures these endpoints actually produce — a
+provider 502 and a stalled request — were single attempts, on an endpoint whose
+provider documents 502/503/524/529 as transient and asks callers to retry.
+
+```ts
+const ttsSource = await (await import("node:fs/promises"))
+  .readFile(new URL("../../../src/services/tts.ts", import.meta.url), "utf8");
+const retryBlock = /const TTS_RETRY = \{([\s\S]*?)\} satisfies/.exec(ttsSource)?.[1] ?? "";
+JSON.stringify({
+  post: /methods:\s*\["post"\]/.test(retryBlock),
+  onTimeout: /retryOnTimeout:\s*true/.test(retryBlock),
+  openRouterCodes: [524, 529].every((code) => retryBlock.includes(String(code))),
+  bothCallSites: (ttsSource.match(/retry: TTS_RETRY/g) ?? []).length,
+})
+=> {"post":true,"onTimeout":true,"openRouterCodes":true,"bothCallSites":2}
+```
