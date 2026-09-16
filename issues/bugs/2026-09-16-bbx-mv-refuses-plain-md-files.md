@@ -19,5 +19,7 @@ walks dossiers for link rewriting inside a directory move.
 A box agent doing a layout refactor fell back to `git mv` and rewrote refs by
 hand for six files.
 
-Either accept a single `.md` source or correct the guide and the hook text.
-Accepting it matches what agents are told.
+## Decision (2026-09-16)
+
+The developer decided: `bbx mv` must accept a single `.md` file, with the same
+ref and link rewriting as a card move. Do not change the guide instead.
