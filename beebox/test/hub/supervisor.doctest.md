@@ -226,13 +226,13 @@ const reloadSupervisor = new Supervisor({
   checkReady: () => rejectReloadReady ? Promise.reject(new Error("replacement failed")) : Promise.resolve(),
 });
 await reloadSupervisor.startAll();
-const acceptedReloadWork = await acquireBoxWork(reloadFixture.root);
+const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
 reloadChildren[0].fireMessage({ type: "reload-request" });
 while ((await boxMaintenanceStatus(reloadFixture.root)) === null) await new Promise((resolve) => setImmediate(resolve));
 reloadChildren.length
 => 1
 
-await acquireBoxWork(reloadFixture.root)
+await acquireBoxWork(reloadFixture.root, { reason: "test" })
 => throws BoxMaintenanceError
 
 await acceptedReloadWork.release();
@@ -250,7 +250,7 @@ while (reloadSupervisor.getStatuses()[0].status !== "unhealthy" || (await boxMai
 (await boxMaintenanceStatus(reloadFixture.root)).phase
 => exclusive
 
-await acquireBoxWork(reloadFixture.root)
+await acquireBoxWork(reloadFixture.root, { reason: "test" })
 => throws BoxMaintenanceError
 
 ```
@@ -305,7 +305,7 @@ stopReloadSupervisor.getStatuses()[0].status
 stopReloadChildren.length
 => 1
 
-const afterStopWork = await acquireBoxWork(stopReloadFixture.root);
+const afterStopWork = await acquireBoxWork(stopReloadFixture.root, { reason: "test" });
 await afterStopWork.release();
 ```
 

@@ -36,7 +36,7 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<vo
     findings.push(`${where} ${root}: unchecked; whole-run time budget exhausted`);
     return;
   }
-  const args = dryRun ? ["migrate", "--status", "--json"] : ["migrate", "--sweep", "--repair", "--json"];
+  const args = dryRun ? ["migrate", "--status", "--json"] : ["migrate", "--sweep", "--repair", "--yield", "--json"];
   // Direct entrypoints avoid the CLI launcher's rebuild and compile-cache writes
   // during dry-run. Production always uses this box's installed engine registry.
   const command = where === "local"

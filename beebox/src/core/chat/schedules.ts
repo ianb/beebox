@@ -317,7 +317,7 @@ export class ChatScheduleManager {
   private async fireSchedule(schedule: ChatSchedule): Promise<void> {
     // Timers are new root work even when armed under startup/agent context.
     let work;
-    try { work = await acquireBoxWork(this.boxRoot, null); }
+    try { work = await acquireBoxWork(this.boxRoot, { reason: `chat schedule ${schedule.id}`, inherited: null }); }
     catch (error) {
       if (error instanceof BoxMaintenanceError) { this.pauseForMaintenance(); return; }
       throw error;

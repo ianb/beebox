@@ -312,7 +312,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 If `.git/` does not exist (a non-box directory, or a fixture that skipped git), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 const changed = await installValidationHooks(box.root);
 changed.sort()
 => [

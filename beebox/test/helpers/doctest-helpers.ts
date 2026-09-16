@@ -35,7 +35,15 @@ export interface TmpBox {
   cleanup(): Promise<void>;
 }
 
-export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Promise<TmpBox> {
+/**
+ * `git` — every box has a Git directory, because box admission
+ * (`src/lib/box-maintenance.ts`) keeps its gate under `.git/`: a fixture
+ * without one throws "Box maintenance requires a Git repository" the moment
+ * anything acquires box work. So the default is a bare `git init` (~60 ms);
+ * `true` adds the annex init and an initial commit that a committing test
+ * needs (~1.1 s); `"none"` is for the two tests that assert gitlessness.
+ */
+export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean }): Promise<TmpBox> {
   const root = await mkdtemp(join(tmpdir(), "bbx-doctest-"));
 
   // Build a minimal-but-valid shapeVersion-3 box via the same scaffolder
@@ -58,8 +66,8 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Prom
   // never ran the real init" is what
   // `issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md`
   // names as the reason its bug went unnoticed for months.
-  if (opts?.git) {
-    execSync("git init -q -b main", { cwd: root, stdio: "pipe" });
+  if (opts?.git !== "none") execSync("git init -q -b main", { cwd: root, stdio: "pipe" });
+  if (opts?.git === true) {
     await annexNewBox(createGitAnnexService(), root);
     execSync("git add -A && git commit --allow-empty -m init -q", { cwd: root, stdio: "pipe" });
   }
@@ -81,6 +89,8 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Prom
           return;
         }
         for (const item of items) {
+          // The repository is fixture plumbing, not box content.
+          if (d === root && item.name === ".git") continue;
           const rel = relative(root, join(d, item.name));
           entries.push(rel);
           if (item.isDirectory()) {

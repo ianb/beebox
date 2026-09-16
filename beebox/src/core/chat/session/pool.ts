@@ -87,7 +87,7 @@ export class ChatSessionPool {
    * Returns the collected <chat-response> texts.
    */
   async send(opts: SendOptions): Promise<SendResult> {
-    return withBoxWork(this.boxRoot, () => this.sendAdmitted(opts));
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "chat pool send" }, () => this.sendAdmitted(opts));
   }
 
   private async sendAdmitted(opts: SendOptions): Promise<SendResult> {
@@ -114,7 +114,7 @@ export class ChatSessionPool {
 
     // Waiting requests must not start another turn through an old admission.
     if (waited) {
-      const nextTurn = await acquireBoxWork(this.boxRoot, null);
+      const nextTurn = await acquireBoxWork(this.boxRoot, { reason: "chat pool next turn", inherited: null });
       await nextTurn.release();
     }
 

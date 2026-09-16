@@ -73,7 +73,7 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
 
         // Fire-and-forget: send to pool, deliver responses, archive
-        const work = await acquireBoxWork(boxRoot);
+        const work = await acquireBoxWork(boxRoot, { reason: "telegram message" });
         void work.run(() => handleChatMessage({
           pool,
           boxRoot,

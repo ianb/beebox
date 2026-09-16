@@ -424,7 +424,7 @@ Git history failure is reported as degraded measurement detail, not as box
 growth, when the filesystem counters remain healthy.
 
 ```ts
-const noGitBox = await makeTmpBox();
+const noGitBox = await makeTmpBox({ git: "none" });
 const noGitMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
   counts: { directories: 10, files: 20 },

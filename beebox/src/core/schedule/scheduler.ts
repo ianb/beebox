@@ -131,7 +131,7 @@ async function shutdownScheduler(signal: string): Promise<never> {
 
   const config = await loadSchedulerConfig().catch((): SchedulerConfig => ({ boxes: [] }));
   for (const boxPath of config.boxes) {
-    await withBoxWork(boxPath, () => writeBoxLog(boxPath, {
+    await withBoxWork({ boxRoot: boxPath, reason: "scheduler shutdown log" }, () => writeBoxLog(boxPath, {
       ts: new Date().toISOString(),
       event: "shutdown",
       box: boxPath,
@@ -185,7 +185,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
       try {
         // Each pass, including heartbeat, growth and credential housekeeping,
         // gets fresh admission. No daemon-wide permit survives into a later tick.
-        currentPass = withBoxWork(boxPath, async () => {
+        currentPass = withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, async () => {
           try {
             if (!(await isBox(boxPath))) {
               console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);

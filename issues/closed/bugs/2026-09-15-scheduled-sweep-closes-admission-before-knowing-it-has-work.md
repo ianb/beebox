@@ -1,12 +1,26 @@
 ---
 title: "The hourly sweep closes box admission before it knows whether it has any work"
-workstream: unattached
+workstream: migration-admission-cost
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — a local box refused a chat send with "Box admission is closed; retry after maintenance"
+resolution: implemented
 ---
+
+Resolved by `7bd19c63f` (every admission names its holder), `65af4d7a6`
+(peek before closing; `--yield`; refusal names reason and deadline), and
+`a78a172a3` (yield closes briefly since an idle chat run holds its lease
+until the server sees a phase). `sweepMigrations` and `refreshGeneratedDocs`
+now peek under an ordinary work lease (`peekBoxWork`,
+`src/lib/box-maintenance.ts`) before escalating, so a current box never
+closes admission. The scheduled pass also yields to live work instead of
+draining it unconditionally (`--yield`, `src/core/migration-sweep.ts`), and
+a refusal now names its holder and expected reopening
+(`describeWorkHolders`, `retryAfterMs`/`Retry-After`). Plan:
+`docs/implemented-plans/migration-admission-cost.md`. No divergence from the
+plan's four tracks.
 
 `sweepMigrations` shuts a box before reading its manifest. On a box with nothing
 pending, the hourly `box-convergence` schedule still takes the box away from the

@@ -6,11 +6,19 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-migration-reliability — the hourly full-suite run on main
+resolution: implemented
 ---
 
 > **Resolved in `0e37ecba0`.** The hub's fixture box had no Git repository,
 > and the new admission gate lives in the Git directory. Left open only if the
 > design question below gets an answer that changes the code.
+>
+> **Closed by `b69b048c8`** (workstream migration-admission-cost): the same
+> coupling — a bare `makeTmpBox()` fixture failing the moment it touches box
+> work, because admission now lives under `.git/` — recurred for
+> `test/manual/chat-queue-real`. `makeTmpBox()` now runs a bare `git init` by
+> default; `git: "none"` is the explicit opt-out for the tests that assert
+> gitlessness. No open design question remained.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `90b84947`. Bisecting the landings since the last tested
