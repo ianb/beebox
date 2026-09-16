@@ -1,6 +1,6 @@
 ---
 title: "Dev router: survive load, and leave a record"
-status: draft
+status: active
 workstream: router-resilience
 issues:
   - ../../../issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md
