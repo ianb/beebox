@@ -21,7 +21,7 @@ final class ChatAPITests: XCTestCase {
     }
 
     func testUploadDecodesCanonicalResponse() async throws {
-        let response = Data(#"{"path":"tmp/report.pdf","originalName":"report.pdf","size":8,"mimetype":"application/pdf"}"#.utf8)
+        let response = Data(#"{"path":"_tmp/report.pdf","originalName":"report.pdf","size":8,"mimetype":"application/pdf"}"#.utf8)
         let transport = StubChatTransport(data: response)
 
         let progress = ProgressRecorder()
@@ -34,7 +34,7 @@ final class ChatAPITests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(uploaded.path, "tmp/report.pdf")
+        XCTAssertEqual(uploaded.path, "_tmp/report.pdf")
         XCTAssertEqual(uploaded.size, 8)
         XCTAssertEqual(progress.values, [0, 1])
     }
@@ -103,7 +103,7 @@ private final class ProgressRecorder: @unchecked Sendable {
 
 private struct StubChatTransport: ChatTransport {
     var statusCode = 200
-    var data = Data(#"{"path":"tmp/x","originalName":"x","size":1,"mimetype":"text/plain"}"#.utf8)
+    var data = Data(#"{"path":"_tmp/x","originalName":"x","size":1,"mimetype":"text/plain"}"#.utf8)
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         let response = HTTPURLResponse(

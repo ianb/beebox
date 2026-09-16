@@ -165,6 +165,14 @@ struct NativeComposerView: View {
                 dismissPresentedContentForLock()
             }
         }
+        .onChange(of: draftStore.isReady) { _, isReady in
+            guard isReady else {
+                return
+            }
+            Task {
+                await resumeInterruptedImageOriginals()
+            }
+        }
         .onChange(of: locationShareResult) { _, result in
             guard let result else {
                 return
@@ -348,7 +356,8 @@ struct NativeComposerView: View {
                 ImageAttachmentStrip(
                     images: draftStore.draft.images,
                     draftStore: draftStore,
-                    onRetry: retryImage
+                    onRetry: retryImage,
+                    onRetryOriginal: retryImageOriginal
                 )
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
@@ -1149,12 +1158,7 @@ struct NativeComposerView: View {
     }
 
     private var hasIncompleteImages: Bool {
-        draftStore.draft.images.contains { image in
-            guard case .local = image.state else {
-                return true
-            }
-            return false
-        }
+        draftStore.draft.hasIncompleteImages
     }
 
     private var hasIncompleteFiles: Bool {
@@ -1607,13 +1611,92 @@ struct NativeComposerView: View {
             )
             return
         }
-        await draftStore.completeImageImport(
+        // The returned image carries `original`; the local value predates it.
+        guard let imported = await draftStore.completeImageImport(
             id: image.id,
             data: encoded.data,
             mimeType: encoded.mimeType,
             fileExtension: encoded.fileExtension,
             boxID: box.id
+        ) else {
+            return
+        }
+        await uploadImageOriginal(imported)
+    }
+
+    private func retryImageOriginal(_ image: DraftImage) {
+        Task {
+            await uploadImageOriginal(image)
+        }
+    }
+
+    /// Start an original's upload again for every image whose bytes survived an
+    /// interrupted one. The request cannot be resumed, but the payload is still
+    /// on disk, so it can be repeated.
+    private func resumeInterruptedImageOriginals() async {
+        for image in draftStore.resumableImageOriginals() {
+            await uploadImageOriginal(image)
+        }
+    }
+
+    /// Upload the image's ORIGINAL bytes so the agent gets a file, mirroring
+    /// `uploadFile(_:)`. A failure here never blocks the send: the inline copy
+    /// is the primary payload and the message simply carries no path.
+    private func uploadImageOriginal(_ image: DraftImage) async {
+        guard let original = image.original else {
+            return
+        }
+        await draftStore.setImageOriginalState(
+            id: image.id,
+            state: .uploading(progress: 0),
+            boxID: box.id
         )
+        guard let data = await draftStore.imageOriginalData(for: image, boxID: box.id) else {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: "The original image data is missing."),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original payload missing imageID=\(image.id)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        do {
+            let uploaded = try await ChatAPI(box: box).uploadFile(
+                data: data,
+                filename: original.filename,
+                mimeType: original.mimeType,
+                onProgress: { progress in
+                    Task {
+                        await draftStore.setImageOriginalProgress(
+                            id: image.id,
+                            progress: progress,
+                            boxID: box.id
+                        )
+                    }
+                }
+            )
+            await draftStore.markImageOriginalUploaded(
+                id: image.id,
+                path: uploaded.path,
+                boxID: box.id
+            )
+        } catch {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: error.localizedDescription),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original upload failed imageID=\(image.id) bytes=\(data.count)"
+                    + " mime=\(original.mimeType): \(error.localizedDescription)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+        }
     }
 }
 
@@ -1729,6 +1812,9 @@ private struct ImageAttachmentStrip: View {
     var images: [DraftImage]
     @ObservedObject var draftStore: ComposerDraftStore
     var onRetry: (DraftImage) -> Void
+    /// Retry the ORIGINAL's upload. Separate from `onRetry`, which re-runs the
+    /// encode: the two failures are independent and have different remedies.
+    var onRetryOriginal: (DraftImage) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -1772,15 +1858,50 @@ private struct ImageAttachmentStrip: View {
                                 .accessibilityLabel("Retry photo \(image.id)")
                                 .accessibilityHint(message)
                             }
+                            originalBadge(for: image)
                         }
                         if case .failed = image.state {
                             Text("Failed")
                                 .font(.caption2)
                                 .foregroundStyle(.red)
+                        } else if case .failed = image.original?.state {
+                            Text("No file")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
+        }
+    }
+
+    /// The ORIGINAL's upload, in the thumbnail's other bottom corner so it never
+    /// collides with the encode indicator. Nothing is drawn once it has landed.
+    @ViewBuilder
+    private func originalBadge(for image: DraftImage) -> some View {
+        switch image.original?.state {
+        case .uploading:
+            ProgressView()
+                .controlSize(.mini)
+                .padding(4)
+                .background(.regularMaterial, in: Circle())
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .accessibilityLabel("Uploading the original of photo \(image.id)")
+        case .failed(let message):
+            Button {
+                onRetryOriginal(image)
+            } label: {
+                Image(systemName: "exclamationmark.arrow.circlepath")
+                    .imageScale(.small)
+                    .padding(4)
+                    .background(.regularMaterial, in: Circle())
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .frame(minWidth: 44, minHeight: 44)
+            .accessibilityLabel("Retry the original of photo \(image.id)")
+            .accessibilityHint(message)
+        case .local, .uploaded, .none:
+            EmptyView()
         }
     }
 }
@@ -1814,15 +1935,19 @@ private struct DraftImageThumbnail: View {
     }
 
     private var accessibilityStatus: String {
-        switch image.state {
-        case .local:
-            "Ready"
-        case .uploading(let progress):
-            "Processing \(Int(progress * 100)) percent"
-        case .uploaded:
-            "Uploaded"
-        case .failed(let message):
-            "Failed: \(message)"
+        let encoding: String = switch image.state {
+        case .local: "Ready"
+        case .uploading(let progress): "Processing \(Int(progress * 100)) percent"
+        case .uploaded: "Uploaded"
+        case .failed(let message): "Failed: \(message)"
+        }
+        switch image.original?.state {
+        case .uploading:
+            return "\(encoding). Uploading the original"
+        case .failed:
+            return "\(encoding). The original could not be uploaded"
+        case .local, .uploaded, .none:
+            return encoding
         }
     }
 }

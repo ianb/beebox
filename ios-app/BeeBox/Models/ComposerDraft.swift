@@ -36,11 +36,57 @@ enum DraftTransferState: Codable, Equatable, Sendable {
     case failed(message: String)
 }
 
+/// The image's ORIGINAL bytes, kept beside the downscaled copy that goes inline
+/// and uploaded to the box so the agent gets a file it can crop, OCR, or attach.
+///
+/// `filename` names the `image-source-<uuid>` payload in the draft directory.
+/// That payload exists only until the upload lands: `.uploaded` keeps the
+/// box-relative path and nothing else, while `.uploading` and `.failed` keep the
+/// bytes so a retry has something to send.
+struct DraftOriginal: Codable, Equatable, Sendable {
+    var filename: String
+    /// The SOURCE mime type, which the image's own `mimeType` no longer carries
+    /// once the downscale has re-encoded it (an HEIC photo inlines as JPEG).
+    var mimeType: String
+    var state: DraftTransferState
+
+    /// Whether `filename` still names bytes on disk.
+    var hasPayload: Bool {
+        switch state {
+        case .local, .uploading, .failed:
+            true
+        case .uploaded:
+            false
+        }
+    }
+
+    /// The landed box-relative path, if the upload finished.
+    var uploadedPath: String? {
+        guard case .uploaded(let path) = state else {
+            return nil
+        }
+        return path
+    }
+}
+
 struct DraftImage: Codable, Equatable, Identifiable, Sendable {
     var id: Int
     var filename: String
     var mimeType: String
     var state: DraftTransferState
+    /// Absent in drafts persisted before originals were kept, and on images
+    /// added through paths that have no original (`addImage`).
+    var original: DraftOriginal? = nil
+
+    /// Every payload this image owns in the draft directory. Cleanup and
+    /// missing-payload checks iterate this, never `filename` alone, so no site
+    /// can leak or overlook the original.
+    var payloadFilenames: [String] {
+        guard let original, original.hasPayload else {
+            return [filename]
+        }
+        return [filename, original.filename]
+    }
 }
 
 struct DraftFile: Codable, Equatable, Identifiable, Sendable {
@@ -133,6 +179,28 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextFileID = try container.decode(Int.self, forKey: .nextFileID)
         nextSelectionID = try container.decode(Int.self, forKey: .nextSelectionID)
         processedCommandIDs = try container.decodeIfPresent([String].self, forKey: .processedCommandIDs) ?? []
+    }
+}
+
+extension ComposerDraft {
+    /// True while an image is not yet ready to send: still encoding, failed to
+    /// encode, or with its ORIGINAL upload still in flight.
+    ///
+    /// A `.failed` original deliberately does NOT block. The inline pixels are
+    /// the primary payload; the message simply carries no `[image#N]:` line.
+    var hasIncompleteImages: Bool {
+        images.contains { image in
+            switch image.state {
+            case .local:
+                break
+            case .uploading, .uploaded, .failed:
+                return true
+            }
+            if case .uploading = image.original?.state {
+                return true
+            }
+            return false
+        }
     }
 }
 

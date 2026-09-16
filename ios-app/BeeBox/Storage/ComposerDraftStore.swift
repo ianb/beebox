@@ -68,6 +68,7 @@ final class ComposerDraftStore: ObservableObject {
         do {
             if var restored = try await repository.load(boxID: boxID) {
                 let missingImageIDs = await repository.missingImageIDs(restored.images, boxID: boxID)
+                let missingOriginalIDs = await repository.missingOriginalIDs(restored.images, boxID: boxID)
                 let missingFileIDs = await repository.missingFileIDs(restored.files, boxID: boxID)
                 guard activationIsCurrent(boxID: boxID, generation: generation) else {
                     return
@@ -80,6 +81,14 @@ final class ComposerDraftStore: ObservableObject {
                 }
                 var interruptedUpload = false
                 for var image in restored.images {
+                    if missingOriginalIDs.contains(image.id) {
+                        // The original is gone, so the upload can never land.
+                        // The image itself still sends; it just gets no path.
+                        image.original?.state = .failed(
+                            message: "The original file is missing. The agent gets the reduced copy only."
+                        )
+                        ComposerDraftReducer.reduce(&restored, .updateImage(image))
+                    }
                     guard case .uploading = image.state else {
                         continue
                     }
@@ -97,7 +106,8 @@ final class ComposerDraftStore: ObservableObject {
                 }
                 draft = restored
                 isReady = true
-                if missingImageIDs.isEmpty == false || missingFileIDs.isEmpty == false {
+                if missingImageIDs.isEmpty == false || missingFileIDs.isEmpty == false
+                    || missingOriginalIDs.isEmpty == false {
                     restoreNotice = "Some draft attachments were missing and were removed."
                     await flush()
                 } else if interruptedUpload {
@@ -285,34 +295,49 @@ final class ComposerDraftStore: ObservableObject {
         }
     }
 
+    /// Repoint the image at its downscaled copy and hand the ORIGINAL payload to
+    /// the upload path.
+    ///
+    /// The source payload is deliberately kept: it is the only copy of the
+    /// original bytes on the device, and `markImageOriginalUploaded` removes it
+    /// once the box has them. Returns the UPDATED image, because the caller's
+    /// value predates `original` and starting the upload from it would upload
+    /// nothing.
     func completeImageImport(
         id: Int,
         data: Data,
         mimeType: String,
         fileExtension: String,
         boxID: UUID
-    ) async {
+    ) async -> DraftImage? {
         guard activeBoxID == boxID,
               var image = draft.images.first(where: { $0.id == id }) else {
-            return
+            return nil
         }
         let sourceFilename = image.filename
+        let sourceMimeType = image.mimeType
         let filename = "image-\(UUID().uuidString.lowercased()).\(fileExtension)"
         do {
             try await repository.savePayload(data, filename: filename, boxID: boxID)
             guard activeBoxID == boxID,
                   draft.images.contains(where: { $0.id == id }) else {
                 try? await repository.removePayload(filename: filename, boxID: boxID)
-                return
+                return nil
             }
             image.filename = filename
             image.mimeType = mimeType
             image.state = .local
+            image.original = DraftOriginal(
+                filename: sourceFilename,
+                mimeType: sourceMimeType,
+                state: .uploading(progress: 0)
+            )
             ComposerDraftReducer.reduce(&draft, .updateImage(image))
             await flush()
-            try? await repository.removePayload(filename: sourceFilename, boxID: boxID)
+            return image
         } catch {
             await failImageImport(id: id, message: "The processed image could not be saved.", boxID: boxID)
+            return nil
         }
     }
 
@@ -330,6 +355,101 @@ final class ComposerDraftStore: ObservableObject {
         await flush()
     }
 
+    /// Bytes of the image's ORIGINAL, for the upload. Nil once the upload has
+    /// landed and the payload has been removed.
+    func imageOriginalData(for image: DraftImage, boxID: UUID) async -> Data? {
+        guard let original = image.original, original.hasPayload else {
+            return nil
+        }
+        return try? await repository.loadPayload(filename: original.filename, boxID: boxID)
+    }
+
+    /// Images whose original upload was interrupted and whose bytes are still on
+    /// disk, so the upload can simply be started again. A relaunch cannot resume
+    /// an HTTP request, but it can repeat one.
+    func resumableImageOriginals() -> [DraftImage] {
+        draft.images.filter { image in
+            guard let original = image.original, original.hasPayload else {
+                return false
+            }
+            guard case .uploading = original.state else {
+                return false
+            }
+            return true
+        }
+    }
+
+    func setImageOriginalState(id: Int, state: DraftTransferState, boxID: UUID) async {
+        await updateImageOriginal(id: id, boxID: boxID, persist: .flush) { original in
+            original.state = state
+        }
+    }
+
+    func setImageOriginalProgress(id: Int, progress: Double, boxID: UUID) async {
+        let boundedProgress = min(1, max(0, progress))
+        await updateImageOriginal(id: id, boxID: boxID, persist: .schedule) { original in
+            guard case .uploading = original.state else {
+                return
+            }
+            original.state = .uploading(progress: boundedProgress)
+        }
+    }
+
+    /// The original landed on the box. Keep the path and drop the local copy:
+    /// the bytes now exist somewhere a retry can no longer need them.
+    func markImageOriginalUploaded(id: Int, path: String, boxID: UUID) async {
+        var payloadToRemove: String?
+        await updateImageOriginal(id: id, boxID: boxID, persist: .flush) { original in
+            payloadToRemove = original.filename
+            original.state = .uploaded(path: path)
+        }
+        guard let payloadToRemove else {
+            return
+        }
+        try? await repository.removePayload(filename: payloadToRemove, boxID: boxID)
+    }
+
+    private enum OriginalPersistence {
+        case flush
+        case schedule
+    }
+
+    /// Apply a change to one image's original, on the active draft or, after a
+    /// box switch, on that box's stored draft — the file setters' rule, so an
+    /// upload started before the switch still lands where it belongs.
+    private func updateImageOriginal(
+        id: Int,
+        boxID: UUID,
+        persist: OriginalPersistence,
+        _ mutate: (inout DraftOriginal) -> Void
+    ) async {
+        if activeBoxID == boxID {
+            guard var image = draft.images.first(where: { $0.id == id }),
+                  var original = image.original else {
+                return
+            }
+            mutate(&original)
+            image.original = original
+            ComposerDraftReducer.reduce(&draft, .updateImage(image))
+            switch persist {
+            case .flush:
+                await flush()
+            case .schedule:
+                scheduleSave()
+            }
+            return
+        }
+        guard var stored = try? await repository.load(boxID: boxID),
+              var image = stored.images.first(where: { $0.id == id }),
+              var original = image.original else {
+            return
+        }
+        mutate(&original)
+        image.original = original
+        ComposerDraftReducer.reduce(&stored, .updateImage(image))
+        try? await repository.save(stored, boxID: boxID)
+    }
+
     func removeImage(id: Int) async {
         guard let activeBoxID, let image = draft.images.first(where: { $0.id == id }) else {
             return
@@ -337,7 +457,9 @@ final class ComposerDraftStore: ObservableObject {
         ComposerDraftReducer.reduce(&draft, .removeImage(id))
         await flush()
         do {
-            try await repository.removePayload(filename: image.filename, boxID: activeBoxID)
+            for filename in image.payloadFilenames {
+                try await repository.removePayload(filename: filename, boxID: activeBoxID)
+            }
         } catch {
             restoreNotice = "Removed image data could not be cleaned up."
         }
