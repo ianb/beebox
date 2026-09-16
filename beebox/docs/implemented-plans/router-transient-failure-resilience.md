@@ -1,10 +1,10 @@
 ---
 title: "Dev router: survive load, and leave a record"
-status: active
+status: implemented
 workstream: router-resilience
 issues:
-  - ../../../issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md
-  - ../../../issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md
+  - ../../../issues/closed/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md
+  - ../../../issues/closed/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md
 ---
 # Dev router: survive load, and leave a record
 
