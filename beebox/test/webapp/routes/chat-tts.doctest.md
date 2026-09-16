@@ -128,3 +128,39 @@ JSON.stringify({ status: downRes.statusCode, body: downRes.body, logged: errors.
 ```ts cleanup
 await downCtx.cleanup();
 ```
+
+## A backend that accepts and never finishes is a 502 too
+
+A provider that takes the request and then stalls raises ky's `TimeoutError`,
+not a `TypeError` — a different class entirely, so it fell past the check above
+and reached the boxholder as the same bare 500 that section exists to prevent
+(2026-09-16: a real OpenRouter speech call timed out and the reason survived
+only in the server log).
+
+```ts
+const { TimeoutError } = await import("ky");
+const stalled = {
+  backend: "gemini" as const,
+  stylable: true,
+  textToSpeech: async () => {
+    throw new TimeoutError(new Request("https://openrouter.ai/api/v1/audio/speech", { method: "POST" }));
+  },
+};
+const stalledCtx = await makeTestServer({ services: { openaiAudio: stalled } });
+const stalledErrors: string[] = [];
+const priorError = console.error;
+console.error = (...args: unknown[]) => stalledErrors.push(args.map(String).join(" "));
+const stalledRes = await (async () => {
+  try {
+    return await stalledCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
+  } finally {
+    console.error = priorError;
+  }
+})();
+JSON.stringify({ status: stalledRes.statusCode, body: stalledRes.body })
+=> {"status":502,"body":{"error":"TTS backend timed out: Request timed out: POST https://openrouter.ai/api/v1/audio/speech"}}
+```
+
+```ts cleanup
+await stalledCtx.cleanup();
+```
