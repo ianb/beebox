@@ -227,7 +227,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
 | **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
-| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md) |
+| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
@@ -327,7 +327,7 @@ containment:
 - **Deployment model** — the audience is single-operator boxes; the
   blast radius is your own data, not other tenants'.
 - **Schedules off by default** — nothing auto-processes untrusted input
-  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md)).
+  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
 
