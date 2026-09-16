@@ -68,7 +68,7 @@ fi
 # This installation has no external convergence schedule. Startup permits one
 # bounded repair; blocked work leaves an inspectable container with admission closed.
 if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
-  if ! bbx maintenance --box "$BOX_ROOT" -- bash -s "$BOX_ROOT" <<'CONVERGE'
+  if ! bbx engine maintenance --box "$BOX_ROOT" -- bash -s "$BOX_ROOT" <<'CONVERGE'
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
