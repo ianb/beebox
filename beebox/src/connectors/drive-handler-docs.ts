@@ -43,6 +43,7 @@ import { createGdocTemplate } from "../schemas/gdoc.js";
 import type { GdocLossyType } from "../schemas/gdoc.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
+import { stripsUpstreamTrailingWhitespace } from "./drive-markdown-whitespace.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -389,15 +390,38 @@ const docsHandler: DriveTypeHandler = {
       file.modifiedTime !== state.lastModified ||
       (storedRevision !== undefined && doc !== null && doc.revisionId !== storedRevision);
 
-    if (remoteDiverged) {
-      const remoteMarkdown = await service.exportFile(file.id, MARKDOWN_MIME);
+    // Both the divergence conflict and the whitespace refusal below park the
+    // upstream copy next to the local file and let the following pull set
+    // status=conflict. Deleting the `.remote.md` is how either one is resolved.
+    const parkUpstream = async (remoteMarkdown: string, why: string): Promise<PushResult> => {
       await fs.writeFile(remoteMdPath, remoteMarkdown);
       pushed.push(path.relative(boxRoot, remoteMdPath));
       console.warn(
-        `[google-drive] Conflict on ${file.name}: remote changed since last pull. ` +
+        `[google-drive] Refusing to push ${file.name}: ${why}. ` +
           `Wrote upstream to ${cardBasename}.remote.md`,
       );
       return { pushed };
+    };
+
+    if (remoteDiverged) {
+      const remoteMarkdown = await service.exportFile(file.id, MARKDOWN_MIME);
+      return parkUpstream(remoteMarkdown, "remote changed since last pull");
+    }
+
+    // The remote is unchanged since the last pull, so its export is the text
+    // the local file was edited from. If the local change strips trailing
+    // whitespace off lines it otherwise keeps, treat it as lint damage rather
+    // than an edit: pushing it would destroy nested list structure that
+    // markdown encodes in exactly those spaces. Park the upstream copy so a
+    // human can say which is right.
+    const remoteMarkdown = await service.exportFile(file.id, MARKDOWN_MIME);
+    if (stripsUpstreamTrailingWhitespace(localContent, remoteMarkdown)) {
+      return parkUpstream(
+        remoteMarkdown,
+        "the local file strips trailing whitespace off lines it otherwise keeps, and that " +
+          "whitespace carries line breaks inside nested lists (redo the edit on top of the " +
+          ".remote.md, leaving its trailing whitespace alone)",
+      );
     }
 
     // Safe to push.

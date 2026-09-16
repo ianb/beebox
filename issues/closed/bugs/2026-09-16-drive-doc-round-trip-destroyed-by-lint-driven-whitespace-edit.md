@@ -1,13 +1,25 @@
 ---
 title: "A lint-driven whitespace edit round-tripped through the Drive connector and destroyed two Google Docs"
-workstream: unattached
+workstream: drive-roundtrip-safety
 area: beebox
 priority: important
 labels: [connectors, data-loss]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — an agent postmortem filed as box feedback after the boxholder found the damage
+resolution: implemented
 ---
+
+> **Closed 2026-09-15 — fixed by commit `5438d6053`** on
+> `worktree-drive-roundtrip-safety`. Connector-owned markdown is exempt from
+> markdownlint at both entry points, a whitespace-stripping push is refused and
+> parked as `.remote.md`, and the SDK hook + card instructions now say what the
+> file is and that an empty `lossy:` is not a safety check. Two of the
+> postmortem's five remedies were deliberately not implemented — extending
+> `LossyType` to cover nested lists, and letting the connector commit its own
+> pulls with `--no-verify` — see the Resolution section below for why. Verified
+> only against the Drive fakes; never exercised against a real synced Google
+> Doc.
 
 Two shared Google Docs lost their structure. A box agent stripped trailing
 whitespace from connector-owned markdown to get past a lint failure, the
@@ -86,10 +98,47 @@ is not ours to choose. The only lever on our side is post-processing the export,
 which is the same class of edit that caused this incident and would need the
 same round-trip guarantees before it could be safe.
 
+## A correction to the mechanism
+
+MD009 does not flag *every* trailing space. Its default `br_spaces: 2` tolerates
+a run of exactly two, which is the line-break form; it flags runs of one, three
+or more, and trailing whitespace on otherwise-blank lines. So the export line
+that actually failed the hook was not the two-space break itself but some other
+run in the same file — and the fix stripped both, because a whitespace sweep
+does not distinguish them. This does not change any remedy: the exemption covers
+the file regardless of which run fired.
+
+## Resolution
+
+Fixed on `worktree-drive-roundtrip-safety`:
+
+- `core/connector-owned-markdown.ts` identifies the markdown the docs connector
+  writes and pushes: `<basename>.attach/<basename>.md` beside a `.gdoc.card`,
+  plus the `<basename>.remote.md` a refused push parks there. Both lint entry
+  points — `runMarkdownlint` in `cli/commands/validate-markdown.ts` and the SDK
+  PostToolUse hook — skip those files, so connector output can never gate a
+  commit. Authored markdown elsewhere in the same attach scope still lints.
+- `drive-handler-docs.ts` push refuses a local change that strips trailing
+  whitespace off a line it otherwise keeps, parking the upstream copy as
+  `.remote.md` and letting the next pull set `status: conflict` — the existing
+  resolution path. The test is per line rather than per file: a lint sweep
+  bundled with a real content edit destroys exactly as much structure as a
+  whitespace-only one.
+- The SDK hook tells an agent what the file is at the moment it writes to one,
+  which is where a rule has to arrive to matter.
+- The gdoc schema instructions now state that an empty `lossy:` is not a safety
+  check. The `LossyType` enum was deliberately left alone: a closed list of
+  export-fidelity gaps can never be complete, and each addition re-asserts the
+  completeness that caused this.
+
+Not done, deliberately: the connector does not commit its own pulls with
+`--no-verify`. With the exemption in place the pressure is gone, and a
+hook-bypass hatch would hide the next instance.
+
 ## Notes
 
 The dirty-tree half overlaps
-[`bbx feedback` can fail on whitespace it introduced itself](2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
+[`bbx feedback` can fail on whitespace it introduced itself](../../bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
 — the same pattern of generated content failing a lint rule meant for authored
 content.
 
