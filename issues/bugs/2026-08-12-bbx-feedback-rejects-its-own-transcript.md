@@ -7,7 +7,17 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main session — bbx feedback triage from a real box
 priority: normal
+next-action: discuss
 ---
+
+> **Re-encountered 2026-09-16 — resolving feedback also fails.** Moving
+> committed feedback files into `_config/feedback/resolved/` on a production box
+> failed the pre-commit markdownlint (MD009) for 17 of 22 files. The session
+> transcripts carry single trailing spaces. The same files were committed in
+> `_config/feedback/` without error, so the lint applies to `resolved/` and not
+> to its parent. `feedback-review/collect.ts` now undoes the move on a failed
+> commit. The 17 items stay unresolved until this is fixed. Priority may be
+> stale.
 
 > **Checked 2026-08-18 — still live, nothing changed.** Tagged `reconfirm`;
 > removed. `src/cli/commands/feedback.ts:173` still does
