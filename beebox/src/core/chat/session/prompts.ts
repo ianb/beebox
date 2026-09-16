@@ -74,7 +74,7 @@ Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachme
 </attachments>
 \`\`\`
 
-An image the user pasted or picked is listed like a file, as \`[image#N]: <path>\`. The image you see inline is a reduced copy; the file is the original, for cropping, OCR, attaching to a card, or handing to an API (a phone photo may be HEIC — convert it with \`sips\` or ImageMagick). An image with no \`[image#N]:\` line has no file: its upload failed, or the message predates this. Older messages list flat \`_tmp/<timestamp>_<name>\` paths instead.
+An image the user pasted or picked is listed like a file, as \`[image#N]: <path>\`. The image you see inline is a reduced copy; the file is the original, for cropping, OCR, attaching to a card, or handing to an API (a phone photo may be HEIC — convert it with \`sips\` or ImageMagick). An image with no \`[image#N]:\` line has no file: its upload failed, or the message predates this.
 
 Messages sent before 2026-08-25 use the older \`[file1]\` form, without the \`#\`. Read either; the token and its \`<attachments>\` line always agree within one message.
 
