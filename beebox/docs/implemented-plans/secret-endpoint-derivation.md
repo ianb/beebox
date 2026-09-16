@@ -1,9 +1,9 @@
 ---
 title: "Derive the box server endpoint across process boundaries"
-status: draft
+status: implemented
 workstream: secret-endpoint-derivation
 issues:
-  - ../../../issues/bugs/2026-09-16-bbx-server-url-underivable-outside-the-serve-process.md
+  - ../../../issues/closed/bugs/2026-09-16-bbx-server-url-underivable-outside-the-serve-process.md
 ---
 # Derive the box server endpoint across process boundaries
 

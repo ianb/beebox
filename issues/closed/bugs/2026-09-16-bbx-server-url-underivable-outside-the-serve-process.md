@@ -1,6 +1,7 @@
 ---
 title: "`BBX_SERVER_URL` is underivable outside the serve process, so the documented secret-resolution path fails on a box without `publicUrl`"
 workstream: secret-endpoint-derivation
+resolution: implemented
 area: beebox
 priority: important
 labels: [secrets, tricks]
@@ -8,6 +9,11 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — a box agent spent a long session failing to resolve a granted secret
 ---
+
+**Closed:** Implemented by `f02f9b150` and `694bc5262`: the live endpoint is
+persisted per box after bind and read by fresh CLI processes, and transport
+failures now have distinct machine attribution. The secret-returning CLI
+redesign described below remains deferred.
 
 The agent guide gives box code exactly one way to use a credential:
 
