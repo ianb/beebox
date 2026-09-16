@@ -1,6 +1,6 @@
 ---
 title: "Make granted secrets available through the standard trick runtime"
-status: draft
+status: implemented
 workstream: secret-endpoint-derivation
 issues: []
 ---
