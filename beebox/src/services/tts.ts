@@ -13,7 +13,7 @@
  * an OpenRouter key must never change what the box sounds like.
  */
 
-import ky from "ky";
+import ky, { type RetryOptions } from "ky";
 import { OPENROUTER_BASE_URL, openRouterProvider } from "../core/openrouter.js";
 import { deliverStyle } from "../core/tts/style.js";
 import { resolveVoice } from "../core/tts/voices.js";
@@ -86,12 +86,32 @@ function assertPlayable(audio: Buffer, backend: TtsBackend): Buffer {
 }
 
 /** OpenAI's speech endpoint — the only backend with a dedicated style field. */
+/**
+ * Per-attempt budget, and a retry policy that actually applies to these calls.
+ *
+ * `retry: 2` did nothing here: ky excludes POST from `retry.methods` by default
+ * and sets `retryOnTimeout: false`, so both of the failures these endpoints
+ * actually produce — a provider 502 and a stalled request — were single
+ * attempts. OpenRouter documents 502/503/524/529 as transient and tells callers
+ * to retry them, so the shorter per-attempt budget buys three chances inside
+ * roughly the wall-clock one 60s attempt used to take.
+ */
+const TTS_ATTEMPT_MS = 30_000;
+const TTS_RETRY = {
+  limit: 2,
+  methods: ["post"],
+  // ky's defaults plus OpenRouter's own transient codes (524 infrastructure
+  // timeout, 529 provider overloaded), which it does not know about.
+  statusCodes: [408, 429, 500, 502, 503, 504, 524, 529],
+  retryOnTimeout: true,
+} satisfies RetryOptions;
+
 function createOpenAiTts(apiKey: string): TtsService {
   const api = ky.create({
     prefixUrl: "https://api.openai.com/v1",
     headers: { Authorization: `Bearer ${apiKey}` },
-    retry: 2,
-    timeout: 60_000,
+    retry: TTS_RETRY,
+    timeout: TTS_ATTEMPT_MS,
   });
 
   return {
@@ -137,8 +157,8 @@ function createGeminiTts(apiKey: string): TtsService {
       const res = await ky.post("audio/speech", {
         prefixUrl: OPENROUTER_BASE_URL,
         headers: { Authorization: `Bearer ${apiKey}` },
-        retry: 2,
-        timeout: 60_000,
+        retry: TTS_RETRY,
+        timeout: TTS_ATTEMPT_MS,
         json: {
           model: "google/gemini-3.1-flash-tts-preview",
           provider: openRouterProvider("google-ai-studio"),

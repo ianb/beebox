@@ -216,7 +216,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       // surfaces on that stream instead of as an HTTP status
       // (see startAckedRun; docs/plans/emission-model.md, Track A).
       recordUserMessage();
-      const work = await acquireBoxWork(boxRoot);
+      const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
       startAckedRun(chatSession, {
         work,
         input: buildSendInput({ text: fullMessage, images, channel, cardFields }),
@@ -267,7 +267,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     } else {
       registry.enforceLiveCap(targetId);
       registry.touch(targetId, { subprocessUse: true });
-      const work = await acquireBoxWork(boxRoot);
+      const work = await acquireBoxWork(boxRoot, { reason: "self-note" });
       work.run(() => target.send({ text: wrapped })).finally(work.release).catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[self-note] send failed:", msg);

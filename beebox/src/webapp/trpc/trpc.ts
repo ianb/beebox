@@ -26,7 +26,7 @@ const t = initTRPC.context<TrpcContext>().create({
 // Queries (including bootstrap and schema-cache reads) do not write box files.
 const admission = t.middleware(async ({ ctx, type, path, next }) => {
   if (type !== "mutation" || path === "actions.answer") return next();
-  try { return await withBoxWork(ctx.boxRoot, () => next()); }
+  try { return await withBoxWork({ boxRoot: ctx.boxRoot, reason: `trpc ${path}` }, () => next()); }
   catch (error) {
     if (error instanceof BoxMaintenanceError) throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: error.message });
     throw error;

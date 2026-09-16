@@ -1,11 +1,11 @@
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
-import { refreshGeneratedDocs } from "./docs-refresh.js";
+import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
-import { acquireBoxMaintenance } from "../lib/box-maintenance.js";
+import { acquireBoxMaintenance, boxWorkHolders, BoxMaintenanceError, peekBoxWork, type WorkHolder } from "../lib/box-maintenance.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { invariant } from "../lib/invariant.js";
@@ -19,6 +19,13 @@ import {
   snapshotManifest,
   SOFT_FAILURE_EXIT,
 } from "./migration-run.js";
+/**
+ * How long a yielding pass waits for live work to clear. Long enough for the
+ * box's server to notice the phase and close idle chat runs (it polls every
+ * second), short enough that a box someone is actually using is shut only
+ * briefly before the pass gives up until next hour.
+ */
+const YIELD_DRAIN_MS = 15_000;
 
 /** One migration the sweep ran, and how it went. */
 export interface SweptMigration {
@@ -34,6 +41,8 @@ export type SweepResult =
   | { readonly status: "no-manifest" }
   /** Nothing pending. The common case, and the quiet one. */
   | { readonly status: "current" }
+  /** Work is pending, but the box is in use and this pass may yield; the next one retries. */
+  | { readonly status: "deferred"; readonly holders: WorkHolder[] }
   | { readonly status: "attention"; readonly questions: string[]; readonly applied: SweptMigration[] }
   | { readonly status: "deferred-repair"; readonly failed: string; readonly recoveryRef: string; readonly applied: SweptMigration[] }
   /** Ran until a procedure-kind migration, which only a human/agent can apply. */
@@ -61,13 +70,46 @@ interface SweepOptions {
   repair?: boolean | undefined;
   withinMaintenance?: boolean | undefined;
   prepare?: boolean | undefined;
+  /** A scheduled pass yields to live work instead of draining it. */
+  yield?: boolean | undefined;
   runScript?: typeof runMigrationScript;
   repairAgent?: Agent;
 }
 
+/** The sweep's outcome when nothing needs the gate, or null when something does. */
+async function sweepWithoutWork(opts: SweepOptions): Promise<SweepResult | null> {
+  const manifest = await readManifest(opts.boxRoot);
+  if (manifest === null) return { status: "no-manifest" };
+  if (computePending(manifest).length > 0) return null;
+  if ((await migrationQuestions(opts.boxRoot)).length > 0) return null;
+  if (opts.refresh && await docsRefreshHasWork(opts.boxRoot)) return null;
+  return { status: "current" };
+}
+
 /** One application path for manual and unattended migration. */
 export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> {
-  const maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true });
+  // Closing admission costs the box its live work, so look before closing. A
+  // refused look means maintenance is already under way: recovery needs the
+  // gate and takes the ordinary path below.
+  const yielding = opts.yield === true && opts.withinMaintenance !== true;
+  if (opts.withinMaintenance !== true) {
+    const peek = await peekBoxWork({ boxRoot: opts.boxRoot, reason: "migration peek" }, () => sweepWithoutWork(opts));
+    if (peek.admitted && peek.value !== null) return peek.value;
+  }
+  let maintenance;
+  try {
+    // An idle chat run holds a lease until the server sees a phase and closes
+    // it, so a yielding pass cannot judge "in use" from the leases alone: it
+    // closes, waits briefly, and treats work that outlasts the wait as the
+    // box being in use.
+    maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", recover: opts.repair === true, join: opts.withinMaintenance === true, ...(yielding ? { drainMs: YIELD_DRAIN_MS } : {}) });
+  } catch (error) {
+    // Live work outlasted the wait, or another maintenance owner (a deploy)
+    // holds the box: both are the box being in use, not a failed check.
+    if (yielding && error instanceof BoxMaintenanceError && error.reason === "timeout") return { status: "deferred", holders: await boxWorkHolders(opts.boxRoot) };
+    if (yielding && error instanceof BoxMaintenanceError && error.holder !== undefined) return { status: "deferred", holders: [error.holder] };
+    throw error;
+  }
   const controller = new AbortController();
   const executionMs = opts.executionMs ?? 15 * 60_000;
   const timer = startAwakeTimeout({ timeoutMs: executionMs,
