@@ -1,0 +1,13 @@
+description: "Weekly agent-docs refresh: re-read the week's changes and adjust the public corpus"
+cadence: 7d
+timeout: 3h
+workstream:
+  agent: claude
+  model: sonnet
+  effort: high
+  worktree: true
+  # Nothing carries between weeks: the baseline sha in the store is the
+  # memory, and each refresh is judged on the branch it produces.
+  session: fresh
+  permissionMode: bypassPermissions
+  maxBudgetUsd: 15
