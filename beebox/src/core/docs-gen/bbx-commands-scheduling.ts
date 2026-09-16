@@ -7,8 +7,8 @@
 import { BOX_PACKAGE_DOCS } from "./shared.js";
 
 /**
- * Hand-written command sections: procedure, tick, scheduled, scheduler, finalize,
- * scenario.
+ * Hand-written command sections: procedure, tick, scheduled, health, scheduler,
+ * finalize, chat.
  */
 export function bbxCommandsScheduling(): string[] {
   return [
@@ -79,17 +79,13 @@ export function bbxCommandsScheduling(): string[] {
     "",
     "## bbx scheduler",
     "",
-    "Manage the background scheduler daemon that runs `bbx tick` on a recurring basis.",
+    "Read the state of the background scheduler daemon that runs `bbx tick` on a",
+    "recurring basis. Starting and installing the daemon is an operator act and",
+    "lives under `bbx engine scheduler`.",
     "",
     "```",
-    "bbx scheduler start [--interval <seconds>]  # Run daemon (foreground)",
-    "bbx scheduler add <path>                    # Add box to scheduler",
-    "bbx scheduler remove <path>                 # Remove box",
-    "bbx scheduler list                          # Show configured boxes",
     "bbx scheduler status                        # Show boxes + launchd status",
     "bbx scheduler log [--box <path>] [--limit <n>] [--errors] [--json]",
-    "bbx scheduler install                       # Install launchd plist",
-    "bbx scheduler uninstall                     # Remove launchd plist",
     "```",
     "",
     "The daemon polls every 60 seconds (configurable). Config at `~/.config/beebox/scheduler.json`.",
@@ -108,16 +104,6 @@ export function bbxCommandsScheduling(): string[] {
     "Symmetric counterpart to `bbx wakeup`. Sends any pending cards in `_bookkeeping/output/`",
     "(e.g. telegram messages). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
-    "",
-    "## bbx scenario",
-    "",
-    "Run scenario tests against boxes. Scenarios live in `~/src/boxes/scenarios/`.",
-    "",
-    "```bash",
-    "bbx scenario list                          # List available scenarios",
-    "bbx scenario run <name>                    # Run a scenario",
-    "bbx scenario run <name> --dry-run          # Preview steps",
-    "```",
     "",
     ...bbxCommandsChat(),
   ];

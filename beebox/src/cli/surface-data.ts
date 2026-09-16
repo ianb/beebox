@@ -85,6 +85,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "status", audience: "agent", smoke: { run: ["status"] } },
   { name: "health", audience: "agent", smoke: { run: ["health"] } },
   { name: "scheduled", audience: "agent", smoke: { run: ["scheduled"] } },
+  // Per-box, not fleet-wide: `--box` defaults to the current directory, and the
+  // generated reference tells agents to reach for `tick --script <name> --force`
+  // when the boxholder asks for a run from chat. The scheduler daemon does not
+  // go through this verb — it calls `runTick` in-process.
+  { name: "tick", audience: "agent", smoke: { run: ["tick", "--dry-run"] } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },
@@ -153,7 +158,6 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
   { name: "boxes", audience: "engine", reason: "the machine-wide box manifest; an agent has no second box" },
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },
-  { name: "tick", audience: "engine", reason: "drives every box's due scripts; the daemon calls runTick in-process" },
   { name: "wakeup", audience: "engine", reason: "tooling profile only; `force-wakeup` is the agent's counterpart" },
   { name: "tailscale", audience: "engine", reason: "machine networking, outside any box" },
   { name: "google-auth", audience: "engine", reason: "an interactive browser OAuth flow" },
@@ -162,7 +166,4 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "upgrade", audience: "engine", reason: "bumps the box's engine dependency; an installation act" },
   { name: "migrate", audience: "engine", reason: "applies data migrations to the installation; deploy sweeps every box" },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
-  // Registered here pending the boxholder's call on deleting it outright: no
-  // scenario files exist anywhere in the repo, so no invocation can succeed.
-  { name: "scenario", audience: "engine", reason: "a developer-run harness, and currently dead — the repo has no scenario files" },
 ];

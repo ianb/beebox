@@ -38,7 +38,7 @@ Open the owner for the area being changed:
 - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source tagging, and the enforced `className` boundary.
 - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/connectors/`; read [connector guidance](src/connectors/CLAUDE.md).
 - Hub routing: `src/hub/`; read [hub guidance](src/hub/CLAUDE.md). Tests mirror source paths under `test/` and use helpers in `test/helpers/`.
-- Schemas, scenarios, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/scenario/`, `src/dev/`, `deploy/`, and `plugins/` respectively.
+- Schemas, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/dev/`, `deploy/`, and `plugins/` respectively.
 
 Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports only public `beebox/{cards,schema,view-widgets}` specifiers, never engine internals. Read the [box layout](docs/box-layout.md) before changing its on-disk shape.
 

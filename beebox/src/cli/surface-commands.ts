@@ -39,7 +39,6 @@ import { googleAuthCommand } from "./commands/google-auth.js";
 import { calendarCommand } from "./commands/calendar.js";
 import { finishCommand } from "./commands/finish.js";
 import { reactorCommand } from "./commands/reactor.js";
-import { scenarioCommand } from "./commands/scenario.js";
 import { fieldTestCommand } from "./commands/field-test.js";
 import { tickCommand } from "./commands/tick.js";
 import { scheduledCommand } from "./commands/scheduled.js";
@@ -103,7 +102,6 @@ const ALL: readonly Command[] = [
   calendarCommand,
   finishCommand,
   reactorCommand,
-  scenarioCommand,
   fieldTestCommand,
   tickCommand,
   scheduledCommand,
