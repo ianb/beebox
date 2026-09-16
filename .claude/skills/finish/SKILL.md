@@ -12,8 +12,10 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
 ## What to do
 
 1. **Dispatch the `finish` subagent** (subagent_type `finish`, via your
-   subagent-launch tool). It runs the whole merge procedure headless on Sonnet
-   and lives in `.claude/agents/finish.md`: `bin/finish-preflight` merges main and
+   subagent-launch tool). It runs the whole merge procedure headless on a
+   pinned mid-tier model: Sonnet in Claude Code, `gpt-5.6-luna` in Codex. Do not
+   run it on the session's own model. It lives in `.claude/agents/finish.md`
+   (Codex gets a generated `.codex/agents/finish.toml`): `bin/finish-preflight` merges main and
    prints a decision sheet, `bin/finish-verify` runs the tests/typecheck/lint that
    sheet names (no full suite — `schedules/full-suite` covers `main` hourly), and the
    agent does the judgment steps, including a diff-scoped review (Track O) for what

@@ -20,11 +20,17 @@ agent moved every file into its card's `.attach` scope and rewrote the refs
 by hand on 2026-09-15. Other boxes with archived captures may still have this
 layout.
 
-## Options
+## Direction (2026-09-16)
 
-- The resolver accepts a box-absolute ref that exists.
-- A migration moves flat-layout media into `<stem>.attach/`. This matches the
-  current convention and removes the case that
-  [bbx mv self-refs](2026-09-16-bbx-mv-directory-leaves-self-refs-stale.md) trips on.
+The developer wants an automatic repair: remove the box-absolute path and write
+the ref that the card should hold, when that target can be determined with
+confidence. Example: the absolute ref names a file in the card's own directory
+that shares the card's stem, so the file moves into `<stem>.attach/` and the
+ref becomes `attach/<file>`. When the target is ambiguous, report the card and
+leave it unchanged.
 
-Check what writes the flat layout today, so new archives do not create more.
+This also removes the case that
+[bbx mv self-refs](2026-09-16-bbx-mv-directory-leaves-self-refs-stale.md) trips
+on. Check what writes the flat layout today, so new archives do not create
+more. Decide whether the repair runs as a migration, in `bbx validate --fix`,
+or both.
