@@ -101,7 +101,7 @@ export async function dispatchCredentialed<T>(options: {
     try {
       return ok(await options.local());
     } catch (error) {
-      return err(refusalFor(error, options.callerFault));
+      return err(refusalFor(error, { callerFault: options.callerFault }));
     }
   }
 
@@ -112,7 +112,7 @@ export async function dispatchCredentialed<T>(options: {
   try {
     return ok(await options.remote(client.value));
   } catch (error) {
-    return err(refusalFor(error, options.callerFault));
+    return err(refusalFor(error, { callerFault: options.callerFault, remote: true }));
   }
 }
 
@@ -123,7 +123,10 @@ export async function dispatchCredentialed<T>(options: {
  * only the tRPC half of this to classify; sharing it keeps one mapping from a
  * server code to the party who can act on it.
  */
-export function refusalFor(error: unknown, callerFault?: CallerFaultCheck): VerbRefusal {
+export function refusalFor(
+  error: unknown,
+  options?: { callerFault?: CallerFaultCheck | undefined; remote?: boolean },
+): VerbRefusal {
   if (error instanceof CredentialGapError) {
     return {
       kind: error.gap === "not-enabled" ? "FORBIDDEN" : "PRECONDITION_FAILED",
@@ -131,14 +134,27 @@ export function refusalFor(error: unknown, callerFault?: CallerFaultCheck): Verb
       fix: "boxholder",
     };
   }
-  if (callerFault?.(error) === true) {
+  if (options?.callerFault?.(error) === true) {
     return { kind: "BAD_REQUEST", message: errorMessage(error), fix: "caller" };
+  }
+  if (isTransportFailure(error, options?.remote === true)) {
+    return {
+      kind: "BOX_UNREACHABLE",
+      message: `The box's server could not be reached: ${errorMessage(error)}`,
+      fix: "machine",
+    };
   }
   if (error instanceof TRPCClientError) {
     const code = trpcErrorCode(error);
     return { kind: code, message: error.message, fix: fixFor(code) };
   }
   return { kind: "INTERNAL_SERVER_ERROR", message: errorMessage(error), fix: "machine" };
+}
+
+function isTransportFailure(error: unknown, remote: boolean): boolean {
+  if (error instanceof TypeError) return remote;
+  if (!(error instanceof TRPCClientError)) return false;
+  return !isRecord(error.data) || typeof error.data["code"] !== "string";
 }
 
 /**

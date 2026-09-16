@@ -137,6 +137,7 @@ completion signal, and `tmp-upload/` must not accumulate either. Plan:
 | `.beebox/box.json` | JSON marker. Presence identifies the directory as a box. Contains version, `shapeVersion`, and creation timestamp. |
 | `.bbx-reactor.lock` | Reactor lock. JSON with `pid` and `startedAt`. Removed on clean exit. |
 | `.bbx-serve.pid` | Web-server PID file when `bbx serve` is running. |
+| `.beebox/serve-endpoint.json` | Machine-owned live server URL and PID, replaced after each successful bind; removed on clean shutdown and possibly stale after a crash. |
 
 ## `_content/` — working state and user content
 
