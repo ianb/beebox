@@ -22,6 +22,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
+import { availableParallelism } from "node:os";
 import { pressureDecision, readMemoryPressure } from "./host-pressure.js";
 import { changedPaths, git, gitCommonDir } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
@@ -38,6 +39,8 @@ import {
   readCarefulList,
   taprcTestFiles,
   tierCommand,
+  capJobs,
+  cappedJobs,
   TierListError,
 } from "./test-tiers.js";
 
@@ -126,7 +129,24 @@ async function runUnderSlot(input: {
   context: RunContext;
   concurrency: number | null;
 }): Promise<number> {
-  const { executable, args } = input;
+  const { executable } = input;
+  // The cap runs HERE, not in `tierCommand`, because `tierCommand` builds the
+  // argv before the semaphore is acquired and so cannot see `concurrency`. It
+  // rewrites an already-built command; the explicit-`-j` check inside covers the
+  // careful tier's own `-j1`.
+  const args = executable === "tap"
+    ? capJobs({
+        args: input.args,
+        mode: input.context.mode,
+        concurrency: input.concurrency,
+        cores: availableParallelism(),
+      })
+    : input.args;
+  if (args.length !== input.args.length) {
+    console.error(
+      `test-ledger: another suite holds a slot; running at ${String(cappedJobs(availableParallelism()))} jobs instead of .taprc's default.`,
+    );
+  }
 
   // Tee stdout rather than using tap's `--output-file`.
   //

@@ -18,6 +18,76 @@ One router on port 3210 fronts every checkout. Each worktree gets Vite plus
 `bbx hub`; the hub starts one `bbx serve` child per active box.
 `BBX_DEV_NO_HUB=1` selects the legacy single-server path.
 
+## Startup failures and automatic retry
+
+A worktree whose start fails is parked as `failed` and serves 502 to every box
+under it; `POST /__router/retry/<name>` clears the record and starts a fresh
+generation, and it works over the UDS without an owner session:
+
+```
+curl -X POST --unix-socket ~/.cache/beebox/router.sock http://localhost/__router/retry/main
+```
+
+Parking is not always permanent. A failure in the `waitForHttp` phase — the
+router asked for a page and nothing answered within 180s — is the host saying
+"too busy" rather than the worktree saying "broken", so the router restarts it
+by itself up to three times, on a 2s / 8s / 30s backoff, and then parks for
+good. Every other phase parks on the first failure, because a child that died
+(`childExit`), a spawn that never happened, or a pidfile that could not be
+written says something about the worktree that restarting will not change.
+Requests arriving before a scheduled retry is due get the 502 immediately rather
+than queueing behind it.
+
+An explicit retry resets that budget: the boxholder asking is a fresh start, not
+the fourth of three. A worktree that reaches `ready` forgets its history, so an
+unrelated failure weeks later gets the full budget again.
+
+The failed-startup page says which of these applies in words, including how long
+until the next automatic attempt, so a reader does not have to know the phase
+vocabulary to tell "the machine was busy" from "this is broken".
+
+A request for a parked worktree answers **503** with
+`{"error":"worktree-unavailable","worktree","phase","retry"}`, or the rich page
+when the caller asked for HTML. A down worktree is unavailable, not
+unauthorized: it used to be reported through whichever authorization reason the
+gate happened to produce — `target-box-unresolved`, or `owner-session-required`
+once a client fell back to a non-box path — which points a reader at
+credentials, sessions, and recent deploys, all plausible and all wrong. The bare
+root `/` names no worktree, so it has no liveness fact to report and keeps its
+401.
+
+## Logs
+
+Two kinds, both under `$BBX_STATE_DIR/logs/` (`~/.cache/beebox/logs/` by
+default).
+
+`<worktree>.log` holds one worktree's child output: Vite and the hub, teed as
+they run, with a `=== router start <iso> ===` banner per generation.
+
+`router.log` holds the router's own lines — every `[router <iso>] …` line the
+console shows, which before 2026-09-15 existed only in the scrollback of
+whoever started the process. Start a post-mortem here. The shapes worth
+grepping:
+
+```
+[router <iso>] [<worktree>] frontend=<port> backend=<port> dashboard=<port> base=/<worktree>/
+[router <iso>] [<worktree>] ready
+[router <iso>] [<worktree>] startup failed in <phase>: <message> (load1 <n>)
+[router <iso>] [<worktree>] <vite|fastify> exited code=<n> signal=<s>
+[router <iso>] deny <method> <path> route=<kind> reason=<reason>
+```
+
+`<phase>` is a closed set — `dashboard-start`, `pidStore.write`, `waitForHttp`,
+`childExit` — and it is what distinguishes a machine that was too loaded to
+answer in time from a child that died. The `load1` stamp on a failure is the
+host's one-minute load average at that moment, so contention is recorded rather
+than reconstructed afterwards.
+
+The file is capped at 16MB with one rollover to `router.log.1`; there is no
+third file, so two caps bound the disk. Denials are logged once per request, and
+WebSocket-upgrade denials are throttled to one line per reason and path per ten
+seconds — a client reconnecting on a timer would otherwise bury the log.
+
 ## Authentication and exposure
 
 Authentication is always on. Every TCP request authenticates before proxying,
