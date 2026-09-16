@@ -43,12 +43,12 @@ export function QuickSearchOverlay() {
     else if (event.key === "Enter") { void openResult(list[active]); }
   };
   return <div className="fixed inset-0 z-50 bg-warm-900/30 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
-    <div className="mx-auto mt-[10vh] max-w-xl rounded-lg border border-warm-200 bg-white shadow-xl" role="dialog" aria-modal="true" aria-label="Quick search">
+    <div className="mx-auto mt-[10vh] max-h-[80vh] max-w-xl overflow-hidden rounded-lg border border-warm-200 bg-white shadow-xl" role="dialog" aria-modal="true" aria-label="Quick search">
       <div className="p-3"><TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" autoFocus /></div>
       {!query ? <Text tone="muted" className="px-3 pb-4">Type to search this box. Press Escape to close.</Text> : null}
       {results.isLoading ? <Text tone="muted" className="px-3 pb-4">Searching…</Text> : null}
       {results.error ? <Text tone="danger" className="px-3 pb-4">Could not search: {results.error.message}</Text> : null}
-      {results.data ? <SearchResults results={list} activeIndex={active} onOpen={(item) => { void openResult(item); }} /> : null}
+      {results.data ? <div className="max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
     </div>
   </div>;
 }

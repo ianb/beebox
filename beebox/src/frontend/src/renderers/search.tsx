@@ -5,6 +5,7 @@ import { TextField } from "../components/ui/fields";
 import { Text } from "../components/ui/Text";
 import { Badge } from "../components/ui/Badge";
 import { Row } from "../components/ui/Row";
+import { Column } from "../components/ui/Column";
 import { SearchResults, type SearchResult } from "../components/search/SearchResults";
 import { trpc } from "../lib/trpc";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
@@ -32,14 +33,14 @@ function SearchCardBody(props: RendererProps) {
   const result = trpc.search.query.useQuery({ query: term, ...(state.paths.length > 0 ? { pathPrefixes: state.paths } : {}), ...(state.types.length > 0 ? { kinds: state.types } : {}), limit: state.limit, mode: "text" }, { enabled: term.trim().length > 0 });
   const change = (next: Partial<SearchState>) => props.onViewStateChange?.({ ...state, ...next }, "replace");
   const open = (item: SearchResult) => props.onNavigate({ path: item.path, viewer: null, params: {}, viewState: null }, { label: item.path });
-  return <div className="mx-auto max-w-3xl p-4">
+  return <Column overflow="auto" className="mx-auto max-h-full max-w-3xl p-4">
     <Text as="h1" size="xl" weight="bold" className="mb-4">Search</Text>
     <TextField label="Search this box" type="search" hideLabel value={state.query} onChange={(query) => change({ query })} placeholder="Search cards and markdown…" autoFocus />
     <Row className="mt-2"><Badge tone="neutral">{state.paths.length > 0 ? `paths: ${state.paths.join(", ")}` : "all paths"}</Badge><Badge tone="neutral">{state.types.length > 0 ? `types: ${state.types.join(", ")}` : "all types"}</Badge></Row>
     {result.isLoading ? <Text tone="muted" className="py-6">Searching…</Text> : null}
     {result.error ? <Text tone="danger" className="py-6">Could not search: {result.error.message}</Text> : null}
-    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} /></div>{result.data.truncated ? <Text size="sm" tone="muted" className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Text> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
-  </div>;
+    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Text size="sm" tone="muted" className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Text> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
+  </Column>;
 }
 
 function SearchCard(props: RendererProps) {

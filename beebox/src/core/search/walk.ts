@@ -19,6 +19,7 @@ const SKIP_DIRS = new Set([
   "node_modules",
   ".beebox",
   ".claude", // agent rules/settings — machine config, not box content
+  ".agents", // mirrored agent skills — machine config, not box content
   "src", // box code (schemas/views/tricks) — tooling, not box content
   ".scan-archive",
   ".scan-api",

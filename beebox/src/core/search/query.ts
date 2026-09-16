@@ -197,6 +197,11 @@ export async function searchBox(
     hits = hits.filter((h) => prefixes.some((prefix) => hitDoc(h).path.startsWith(prefix)));
     total = hits.length;
   }
+  hits.sort((a, b) => {
+    const aContent = hitDoc(a).path.startsWith("_content/") ? 1 : 0;
+    const bContent = hitDoc(b).path.startsWith("_content/") ? 1 : 0;
+    return bContent - aContent || b.score - a.score;
+  });
   hits = hits.slice(0, limit);
 
   const results = hits.map((h): SearchHit => {
@@ -207,7 +212,7 @@ export async function searchBox(
       kind: doc.kind,
       title: doc.title,
       contains: doc.contains,
-      excerpt: generateExcerpt(doc.content !== "" ? doc.content : doc.contains, query),
+      excerpt: generateExcerpt(doc.contains !== "" ? doc.contains : doc.content, query),
       score: h.score,
     };
   });
