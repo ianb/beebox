@@ -6,6 +6,7 @@ box-scoped subprocess spawn site runs to get `BBX_BOX_NAME` and
 
 ```ts setup
 import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env.js";
+import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
 import { spawnProfile } from "../../src/lib/spawn-profile.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
@@ -167,6 +168,43 @@ print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL ?? "(unset)"}`);
 =>
 BBX_BOX_NAME: (unset)
 BBX_SERVER_URL: (unset)
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## buildScriptEnv — disk registration crosses a process boundary
+
+The server writes the registration after binding. A fresh CLI process has no
+ambient map, but it can read the machine-owned registration:
+
+```ts
+const box = await makeTmpBox();
+await writeServeEndpoint(box.root, { pid: 123, publicUrl: "http://127.0.0.1:60157/ephemeral-box" });
+const env = await buildScriptEnv(box.root);
+print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
+print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
+print(`file: ${(await fs.readFile(serveEndpointPath(box.root), "utf8")).trim()}`);
+=>
+BBX_BOX_NAME: ephemeral-box
+BBX_SERVER_URL: http://127.0.0.1:60157
+file: {"pid":123,"publicUrl":"http://127.0.0.1:60157/ephemeral-box"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+Malformed disk state is ignored rather than becoming a guessed endpoint:
+
+```ts
+const box = await makeTmpBox();
+await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
+await fs.writeFile(serveEndpointPath(box.root), "not-json");
+const env = await buildScriptEnv(box.root);
+print(env.BBX_SERVER_URL ?? "(unset)");
+=> (unset)
 ```
 
 ```ts cleanup

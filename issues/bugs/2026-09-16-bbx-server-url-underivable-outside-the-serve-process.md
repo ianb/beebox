@@ -1,6 +1,6 @@
 ---
 title: "`BBX_SERVER_URL` is underivable outside the serve process, so the documented secret-resolution path fails on a box without `publicUrl`"
-workstream: unattached
+workstream: secret-endpoint-derivation
 area: beebox
 priority: important
 labels: [secrets, tricks]
