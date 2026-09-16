@@ -393,7 +393,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
  * `_config/_template-updates/` when the boxholder has customized it (prior
  * stock hashes come from the ledger so a box on any shipped version overwrites
  * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
- * a fresh `bbx init` is what lets `bbx upgrade` (Track E) roll out guide
+ * a fresh `bbx engine init` is what lets `bbx upgrade` (Track E) roll out guide
  * updates later without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {

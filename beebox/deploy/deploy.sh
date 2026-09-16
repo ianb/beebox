@@ -391,7 +391,7 @@ echo "Building frontend..."
 echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
 (cd "$CHECKOUT/beebox" && node scripts/build-cli.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
-# the same way dist/ does. Any bbx activity on the server would rewrite it,
+# the same way dist/ does. Any bbx engine activity on the server would rewrite it,
 # but the per-box docs refresh below skips a dirty box, so build it here
 # rather than rely on that.
 echo "Building package reference docs (box-docs/)..."
@@ -427,7 +427,7 @@ RSYNC_OPTS=(-az --delete
   --exclude 'deploy/target.env'
   --exclude 'deploy/server-ip'
   --exclude 'deploy/.deploy-logs'
-  # pub-worker is a Cloudflare Worker deployed via `bbx pub setup` (wrangler), NOT
+  # pub-worker is a Cloudflare Worker deployed via `bbx engine pub setup` (wrangler), NOT
   # run on the box server. Excluding its dir makes it an absent workspace member
   # on prod, so the root `pnpm install --frozen-lockfile` skips its heavy CF
   # toolchain (workerd, wrangler) — same "partial workspace installs fine" path
@@ -523,7 +523,7 @@ ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
   # patch-package still runs via the root postinstall to patch eslint-config-agent.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
-  # The install competes for RAM with every running box's `bbx serve` +
+  # The install competes for RAM with every running box's `bbx engine serve` +
   # claude-agent-sdk subprocess on this single small server, and the kernel
   # OOM-kills it (exit 137) under a transient contention spike rather than a
   # permanent regression — a short backoff usually clears it. Retry only on
@@ -572,7 +572,7 @@ ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
-# package.json. `bbx init`/`box-packageify` scaffold a package.json declaring
+# package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
 # react/react-dom/typescript direct deps (view-metadata compilation needs a
 # real, box-owned react — see src/webapp/views/compiler.ts and
 # src/core/box/package.ts) but deliberately don't install them (Track F of
@@ -710,7 +710,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # and the deploy continues. This never fails the deploy: a box that needs a
   # human (dirty tree, agent-driven migration, hard failure) is a box to look
   # at, not a reason to abandon a shipped release. Two steps per box, in order:
-  # `bbx migrate --sweep` (data shape) then `bbx docs refresh` (generated
+  # `bbx engine migrate --sweep` (data shape) then `bbx docs refresh` (generated
   # guidance). They own their own policy — see src/core/migration-sweep.ts and
   # src/core/docs-refresh.ts.
   echo "Converging boxes (migrations, generated docs)..."
@@ -721,12 +721,12 @@ if [[ "$SKIP_RESTART" != true ]]; then
       # no nested content/ operational root to find. A box still on the
       # retired v2 layout (marker under content/.beebox/box.json instead)
       # gets a LOUD skip so its absence from this convergence step is
-      # visible, not silently missed — `bbx migrate` treats a manifest-less
+      # visible, not silently missed — `bbx engine migrate` treats a manifest-less
       # box as a human decision, and we don't attempt that migration here.
       if [[ -f "${boxdir}.beebox/box.json" ]]; then
         box="$boxdir"
       elif [[ -f "${boxdir}content/.beebox/box.json" ]]; then
-        echo "  $name: still v2-shaped (content/ subdir) — needs bbx migrate, skipped"
+        echo "  $name: still v2-shaped (content/ subdir) — needs bbx engine migrate, skipped"
         continue
       else
         echo "  $name: no .beebox/box.json found (root or content/) — not a box, skipped"
@@ -740,7 +740,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
       # hangs would wedge the whole deploy in the at-rest window rather than
       # just failing one box.
       out=$(sudo -u beebox -H bash -lc \
-              'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx migrate --sweep' \
+              'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx engine migrate --sweep' \
               bbx-sweep "$box" 2>&1)
       code=$?
       [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — migrations left pending, retried next deploy"
@@ -788,17 +788,23 @@ REMOTE
 set -euo pipefail
 install_dir="$1"
 changed=0
+# `all/` goes to every unit; `<unit>/` only to that one. The per-unit split
+# exists because ExecStart overrides are necessarily unit-specific — the hub and
+# the scheduler run different commands — and the old flat layout copied every
+# .conf into both.
 for unit in beebox-hub beebox-scheduler; do
   dir="/etc/systemd/system/$unit.service.d"
   mkdir -p "$dir"
-  for src in "$install_dir"/beebox/deploy/systemd/*.conf; do
-    [[ -e "$src" ]] || continue
-    dest="$dir/$(basename "$src")"
-    if ! cmp -s "$src" "$dest"; then
-      install -m 0644 "$src" "$dest"
-      echo "  $unit: installed $(basename "$src")"
-      changed=1
-    fi
+  for srcdir in "$install_dir/beebox/deploy/systemd/all" "$install_dir/beebox/deploy/systemd/$unit"; do
+    for src in "$srcdir"/*.conf; do
+      [[ -e "$src" ]] || continue
+      dest="$dir/$(basename "$src")"
+      if ! cmp -s "$src" "$dest"; then
+        install -m 0644 "$src" "$dest"
+        echo "  $unit: installed $(basename "$src")"
+        changed=1
+      fi
+    done
   done
 done
 if [[ $changed -eq 1 ]]; then

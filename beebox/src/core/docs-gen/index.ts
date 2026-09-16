@@ -11,7 +11,7 @@
  * installed package (`package-docs.ts`, `ensurePackageDocs`), which this
  * module keeps current on every run.
  *
- * Called by `bbx init` and at the start of `bbx reactor`.
+ * Called by `bbx engine init` and at the start of `bbx reactor`.
  */
 
 import { join } from "node:path";
@@ -267,16 +267,16 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installSchedules(boxRoot);
   // Refresh the box-local schemas guide so boxes carrying the old XML-only
   // version pick up the frontmatter-first rewrite on the normal cycle (not
-  // just on an explicit `bbx init`). Tracker-based, so user-edited guides are
+  // just on an explicit `bbx engine init`). Tracker-based, so user-edited guides are
   // parked, not clobbered.
   await installSchemasGuide(boxRoot);
   // Same tracker treatment for the views guide, so boxes carrying the old
   // standalone-view guide pick up the attach-to-cards rewrite on the normal
-  // cycle (not just an explicit `bbx init`); user-edited guides are parked.
+  // cycle (not just an explicit `bbx engine init`); user-edited guides are parked.
   await installViewsGuide(boxRoot);
   await generateRules(boxRoot);
   // Managed box skills refresh on the same path as the rules they mirror.
-  // They used to be provisioned only by `bbx init`, so a box that never got a
+  // They used to be provisioned only by `bbx engine init`, so a box that never got a
   // manual re-init kept whatever skills shipped the day it was created; the
   // engine's own upgrades (a renamed card type in a skill body, say) never
   // reached it. Same cache gate as everything else here, so this is a no-op

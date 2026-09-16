@@ -7,7 +7,7 @@
  * behind, discovered only because a card the boxholder expected was missing.
  *
  * Production was supposed to be the safe half: `beebox/deploy/deploy.sh` walks
- * `/home/beebox/boxes/*` and runs `bbx migrate --sweep` per box in the at-rest
+ * `/home/beebox/boxes/*` and runs `bbx engine migrate --sweep` per box in the at-rest
  * window of every deploy. But the sweep SKIPS a box whose tree is dirty at that
  * instant and says "the next deploy will apply them" — so the busiest box, the
  * one most likely to be mid-write during any given window, is the one that can
@@ -83,14 +83,14 @@ async function boxPaths(): Promise<string[]> {
  * failure this schedule exists to catch.
  */
 async function prodDrift(): Promise<Drift[] | null> {
-  // One remote script, one `bbx migrate --status` per box, emitted as
+  // One remote script, one `bbx engine migrate --status` per box, emitted as
   // `name<TAB>dirtyCount<TAB>pending,names` so the parsing stays on this side.
   const script = [
     "set -u",
     "for d in /home/beebox/boxes/*/; do",
     '  n=$(basename "$d")',
     '  dirty=$(sudo -u beebox git -C "$d" status --porcelain 2>/dev/null | wc -l | tr -d " ")',
-    '  status=$(sudo -u beebox -H bash -lc \'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && bbx migrate --status 2>/dev/null\' probe "$d" 2>/dev/null)',
+    '  status=$(sudo -u beebox -H bash -lc \'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && bbx engine migrate --status 2>/dev/null\' probe "$d" 2>/dev/null)',
     // The sed ranges are SINGLE-quoted in the shell: `$p` in a double-quoted
     // string is expanded by bash (unbound under `set -u`), which silently broke
     // the range and made every box look up to date — the same shape of failure
@@ -111,8 +111,8 @@ async function prodDrift(): Promise<Drift[] | null> {
 
 async function inspect(boxRoot: string): Promise<Drift | null> {
   const manifest = await readManifest(boxRoot);
-  // A manifest-less box predates `bbx migrate` and needs a human decision
-  // (`bbx migrate --mark-all-applied` or a real migration), which is not this
+  // A manifest-less box predates `bbx engine migrate` and needs a human decision
+  // (`bbx engine migrate --mark-all-applied` or a real migration), which is not this
   // job's call to make — and not drift in the sense being reported.
   if (manifest === null) return null;
   const pending = computePending(manifest).map((m) => m.name);
@@ -148,8 +148,8 @@ function describe(d: Drift): string[] {
   const fix = d.where === "prod" && d.dirty
     ? "  Deploy sweeps keep skipping this box (dirty tree). It will not converge on its own."
     : d.dirty
-      ? "  A dirty box cannot be swept — commit or stash first, then `bbx migrate --apply`."
-      : "  Fix with `bbx migrate --apply` in that box.";
+      ? "  A dirty box cannot be swept — commit or stash first, then `bbx engine migrate --apply`."
+      : "  Fix with `bbx engine migrate --apply` in that box.";
   return [`**${d.box}** (${d.where}) — ${String(d.pending.length)} pending${d.dirty ? ", working tree dirty" : ""}`, `  ${shown}${more}`, fix];
 }
 

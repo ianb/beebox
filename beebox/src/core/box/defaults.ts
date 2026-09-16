@@ -292,7 +292,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     notBefore: "10m",
     onWakeup: true,
     enabled: false,
-    runs: "bbx wakeup --connector gmail",
+    runs: "bbx engine wakeup --connector gmail",
     source: "Check email frequently during active hours",
     requires: ["gmail"],
   },
@@ -303,7 +303,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     notBefore: "30m",
     onWakeup: true,
     enabled: false,
-    runs: "bbx wakeup --connector google-calendar",
+    runs: "bbx engine wakeup --connector google-calendar",
     source: "Sync calendar changes hourly",
     requires: ["google"],
   },
@@ -317,7 +317,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     // The connector registers under `google-drive` (`connectors/google-drive.ts`),
     // and `--connector` matches the registered name exactly; `drive` would
     // report "Connector not found" every hour.
-    runs: "bbx wakeup --connector google-drive",
+    runs: "bbx engine wakeup --connector google-drive",
     source: "Sync Drive mounts hourly",
     // `drive`, not `google` — the latter is the legacy alias for calendar
     // (`connectors/requirements.ts`).

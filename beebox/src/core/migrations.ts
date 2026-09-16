@@ -140,6 +140,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
   { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
   { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
+  // The CLI split (docs/plans/bbx-agent-surface.md) moved `wakeup` and its
+  // siblings under `bbx engine`; stock schedule cards carry those verbs as
+  // literal shell strings and would otherwise run an unknown command.
+  { name: "schedule-engine-verbs-2026-09", script: "scripts/migrate/schedule-engine-verbs.ts" },
   // v2 -> v3 one-root layout conversion (docs/implemented-plans/one-root-box-layout.md,
   // Track E). Unlike every entry above, this migrator runs against a box
   // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly

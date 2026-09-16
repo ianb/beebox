@@ -439,7 +439,7 @@ export class Supervisor implements EndpointProvider {
       const env = buildChildEnv({ sourceEnv: process.env, hubExtras });
       const child = this.spawnChild({
         bbxBinary,
-        args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
+        args: ["engine", "serve", boxRoot, "--slug", box.slug, "--port", String(port)],
         cwd: shape.boxRoot,
         env,
       });

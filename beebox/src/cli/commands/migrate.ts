@@ -99,7 +99,7 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
 /** Fully provision the box (`bbx init`) before migrating. */
 function runInit(boxRoot: string): Promise<number> {
   return new Promise((resolve, reject) => {
-    const child = spawn(BBX_BIN, ["init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
+    const child = spawn(BBX_BIN, ["engine", "init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
     child.on("error", reject);
     child.on("close", (code) => resolve(code ?? 1));
   });

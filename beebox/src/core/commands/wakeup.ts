@@ -60,7 +60,10 @@ export async function runBbxWakeup(opts: {
   try {
     const { code, output } = await runCollectedChild({
       command: bbxPath,
-      args: opts.connector === undefined ? ["wakeup"] : ["wakeup", "--connector", opts.connector],
+      args:
+        opts.connector === undefined
+          ? ["engine", "wakeup"]
+          : ["engine", "wakeup", "--connector", opts.connector],
       cwd: opts.boxRoot,
       env,
       ...(opts.onChunk === undefined ? {} : { onChunk: opts.onChunk }),

@@ -169,7 +169,7 @@ async function spawnGeneration(state: CoreState, plan: StartPlan): Promise<Gener
   const resolvedBoxes = await effects.resolveBoxEntries(wt.boxes);
   const backendArgs = config.devNoHub
     ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
-    : ["./src/cli/index.ts", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
+    : ["./src/cli/index.ts", "engine", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
   const fastify = effects.spawn("node", {
     args: ["--import=./tsx-preload.mjs", "--import", "tsx", ...backendArgs],
     options: {
