@@ -173,18 +173,21 @@ function resolveLocalFile(item: FeedbackFile): void {
   const srcRel = item.relPath;
   const destRel = path.relative(item.boxRoot, dest);
 
+  // Commit ONLY these two paths: a box routinely has connector changes staged,
+  // and a bare `git commit` swept them in under this message. On failure (the
+  // box's pre-commit lint, usually) undo the move so nothing is left staged.
+  const git = (args: string): void => {
+    execSync(`git -C ${JSON.stringify(item.boxRoot)} ${args}`, { stdio: "pipe" });
+  };
+  const paths = `${JSON.stringify(srcRel)} ${JSON.stringify(destRel)}`;
   try {
-    execSync(
-      `git -C ${JSON.stringify(item.boxRoot)} add ${JSON.stringify(srcRel)} ${JSON.stringify(destRel)}`,
-      { stdio: "pipe" }
-    );
-    execSync(
-      `git -C ${JSON.stringify(item.boxRoot)} commit -m "resolve agent feedback: ${path.basename(item.filePath)}"`,
-      { stdio: "pipe" }
-    );
+    git(`add -- ${paths}`);
+    git(`commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)} -- ${paths}`);
     console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
   } catch (err) {
-    console.error(`Git error resolving ${item.filePath}: ${(err as Error).message}`);
+    git(`reset -q -- ${paths}`);
+    fs.renameSync(dest, item.filePath);
+    console.error(`Git error resolving ${item.filePath} (move undone): ${(err as Error).message}`);
   }
 }
 
@@ -202,17 +205,25 @@ function resolveRemoteFile(item: FeedbackFile): void {
   // `su` and let git run as root — root-owned commits leave root-owned
   // objects under .git/objects/ that later block beebox-user commits.
   // See feedback-review/run-on-server.ts for the why.
+  // Same rules as resolveLocalFile: commit only these two paths, and undo the
+  // move if the commit fails so the live box is left as it was.
+  const box = JSON.stringify(item.boxRoot);
+  const paths = `${JSON.stringify(item.relPath)} ${JSON.stringify(destRel)}`;
   const script = [
     "set -e",
     `mkdir -p ${JSON.stringify(path.dirname(destPath))}`,
     `mv ${JSON.stringify(item.filePath)} ${JSON.stringify(destPath)}`,
-    `git -C ${JSON.stringify(item.boxRoot)} add ${JSON.stringify(item.relPath)} ${JSON.stringify(destRel)}`,
-    `git -C ${JSON.stringify(item.boxRoot)} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)}`,
+    `git -C ${box} add -- ${paths}`,
+    `if ! git -C ${box} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)} -- ${paths}; then`,
+    `  git -C ${box} reset -q -- ${paths}`,
+    `  mv ${JSON.stringify(destPath)} ${JSON.stringify(item.filePath)}`,
+    "  exit 1",
+    "fi",
   ].join("\n");
 
   const r = runOnServer({ sshTarget: item.remoteSshTarget!, script });
   if (r.exitCode !== 0) {
-    console.error(`Remote git error resolving ${item.filePath}: ${r.stderr.trim()}`);
+    console.error(`Remote git error resolving ${item.filePath} (move undone): ${r.stderr.trim()}`);
     return;
   }
   console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
