@@ -6,7 +6,18 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-migration-admission-cost — inspecting the gate directory of the box in the sweep-closes-admission incident
+resolution: implemented
 ---
+
+Closed by commit 8828406ce: `registerBoxAdmission`
+(`beebox/src/webapp/box-admission.ts`) now registers the lease release before
+acquisition, adds an `onRequestAbort` hook that releases when no handler is
+running, and releases a lease acquired after the abort. Reproducing doctest
+in `beebox/test/webapp/box-admission.doctest.md` failed before, passes after.
+The incident's actual holder could not be directly confirmed (the process was
+restarted before inspection); this is the only reachable path found that
+leaves a lease with no subprocess and no handler, and holder reporting (see
+"What changed since" below) now names any other.
 
 The drain that shut a local box for ten minutes was waiting on one work lease
 held by the box's own `bbx serve`. That lease stayed held from 00:01:54 to at
