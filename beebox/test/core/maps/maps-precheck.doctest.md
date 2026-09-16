@@ -48,7 +48,7 @@ async function seedSkeletonMaps(box) {
 A directory that isn't a git repo is skipped:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 const brief = await precheck({ boxRoot: box.root });
 brief.needsWork
 => false
