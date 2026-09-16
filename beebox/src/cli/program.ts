@@ -17,7 +17,10 @@ export function buildProgram(): Command {
 
   program
     .name("bbx")
-    .description("Bee Box - file-based processing system")
+    .description(
+      "Bee Box — the box agent's command surface.\n" +
+        "Operator and machine commands live under `bbx engine`.",
+    )
     .version("0.1.0");
 
   buildSurface(program);

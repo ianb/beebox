@@ -160,6 +160,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },
   { name: "wakeup", audience: "engine", reason: "tooling profile only; `force-wakeup` is the agent's counterpart" },
   { name: "tailscale", audience: "engine", reason: "machine networking, outside any box" },
+  { name: "push", audience: "engine", reason: "`push test` fires a web push at this box's subscribers to prove delivery — an operator probe" },
   { name: "google-auth", audience: "engine", reason: "an interactive browser OAuth flow" },
   { name: "auth", audience: "engine", reason: "local accounts; every verb refuses an agent session without --agent-confirmed" },
   { name: "init", audience: "engine", reason: "scaffolds the box installation rather than its content" },

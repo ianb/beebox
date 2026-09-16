@@ -36,18 +36,59 @@ const MOVED_VERBS: readonly string[] = SURFACE.filter(
 /**
  * Rewrite one `runs:` command, or return null when nothing moved.
  *
- * Matches `bbx <verb>` at a command position — the start of the string, or
- * after a shell separator — so a `--message "bbx wakeup ran"` argument is not
- * rewritten. The binary may be an absolute path (`/usr/local/bin/bbx`), which
- * is why the name is matched with a trailing-segment pattern.
+ * Tokenized rather than pattern-matched. A regex over a verb list built at
+ * runtime is both a lint violation (`security/detect-non-literal-regexp`) and
+ * harder to read than the thing it encodes, which is simply: at each command
+ * position, is the program `bbx` and the next word a verb that moved?
+ *
+ * A command position is the start of the string or whatever follows a shell
+ * separator, so `--message "bbx wakeup ran"` is left alone. The program may be
+ * an absolute path (`/usr/local/bin/bbx`), so only the last path segment is
+ * compared.
  */
 export function repointRunsCommand(runs: string): string | null {
-  const verbs = MOVED_VERBS.join("|");
-  const pattern = new RegExp(String.raw`(^|[&;|]\s*)(\S*\bbbx)\s+(${verbs})\b`, "g");
-  const rewritten = runs.replace(pattern, (_match, lead: string, binary: string, verb: string) =>
-    `${lead}${binary} engine ${verb}`,
-  );
-  return rewritten === runs ? null : rewritten;
+  const tokens = runs.split(/(\s+)/);
+  let atCommandPosition = true;
+  let changed = false;
+  const out: string[] = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const piece = tokens[i];
+    if (piece === undefined) continue;
+    out.push(piece);
+    if (piece.trim() === "") continue;
+
+    if (atCommandPosition && isBbx(piece)) {
+      const next = nextWord(tokens, i);
+      if (next !== null && MOVED_VERBS.includes(next.word)) {
+        out.push(...tokens.slice(i + 1, next.index), "engine", " ");
+        i = next.index - 1;
+        changed = true;
+      }
+    }
+    // A separator opens a new command position; anything else closes it.
+    atCommandPosition = SEPARATORS.has(piece);
+  }
+
+  return changed ? out.join("") : null;
+}
+
+/** Shell tokens after which a new command begins. */
+const SEPARATORS = new Set(["&&", "||", ";", "|", "&"]);
+
+/** Whether a word names the bbx binary, path-qualified or not. */
+function isBbx(piece: string): boolean {
+  return piece.split("/").at(-1) === "bbx";
+}
+
+/** The next non-whitespace word after `from`, with its index. */
+function nextWord(tokens: readonly string[], from: number): { word: string; index: number } | null {
+  for (let i = from + 1; i < tokens.length; i += 1) {
+    const piece = tokens[i];
+    if (piece === undefined || piece.trim() === "") continue;
+    return { word: piece, index: i };
+  }
+  return null;
 }
 
 /** Every `*.scheduled-script.card` in the box, or [] when there are none. */
@@ -71,10 +112,10 @@ function isMissingDirectory(error: unknown): boolean {
 /**
  * The `runs:` line is edited as TEXT rather than parsed and reserialized.
  * Reserialization would reorder frontmatter and rewrite quoting across every
- * scheduled card in the box, turning a one-token change into a diff nobody can
+ * scheduled card in the box, turning a one-piece change into a diff nobody can
  * review — and these cards are ones boxholders hand-edit.
  */
-const RUNS_LINE = /^(runs:[ \t]*)(.*)$/m;
+const RUNS_LINE = /^(runs:[\t ]*)(.*)$/m;
 
 /** What one card needs, or null when it is already correct. */
 function planCard(text: string): { next: string; from: string; to: string } | null {
@@ -124,9 +165,14 @@ async function main(): Promise<number> {
   return 0;
 }
 
-try {
-  process.exit(await main());
-} catch (error) {
-  process.stderr.write(`[schedule-engine-verbs] failed: ${errorMessage(error)}\n`);
-  process.exit(1);
+// Guarded so `repointRunsCommand` can be imported by a test without the script
+// running and exiting the test process (the convention in
+// scripts/migrate/record-measurements.ts and its siblings).
+if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
+  try {
+    process.exit(await main());
+  } catch (error) {
+    process.stderr.write(`[schedule-engine-verbs] failed: ${errorMessage(error)}\n`);
+    process.exit(1);
+  }
 }
