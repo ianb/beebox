@@ -6,6 +6,7 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-search-card — the hourly full-suite run on main
+resolution: implemented
 ---
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
