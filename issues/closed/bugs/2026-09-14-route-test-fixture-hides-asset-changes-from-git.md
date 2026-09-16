@@ -6,7 +6,16 @@ labels: [annex, git, testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-embrace-annex — running the suite after assets became git-tracked
+resolution: wontfix
 ---
+
+> **Closed wontfix, 2026-09-14** (boxholder: *"that last one seems like a
+> wontfix boring"*). It affects one test, which is already worked around with a
+> comment naming this issue; nothing in production is affected. The mechanism
+> was never established and chasing it further is not worth the time. If someone
+> later writes a route test around asset dirtiness and loses an hour to it, the
+> reproduction and the ruled-out hypotheses below are what they need.
+
 
 In a box produced by `makeTestServer` (`test/helpers/test-server.ts`), a
 same-size overwrite of a committed, annexed asset is invisible to git.

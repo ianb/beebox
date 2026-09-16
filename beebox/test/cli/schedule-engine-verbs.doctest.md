@@ -92,3 +92,20 @@ so a diff shows only the inserted word:
 repointRunsCommand("bbx   wakeup")
 => bbx   engine wakeup
 ```
+
+A card still naming the retired pre-rename command is **not** this migrator's
+to fix. It only recognizes a command whose program is already `bbx`, which is
+why its registry entry must run after `schedule-runs-bbx-2026-09`, the
+migration that repoints those. Run first, this one would pass such a card over,
+and that rewrite would then leave a bare `bbx wakeup` which no longer resolves,
+with neither migration willing to look at it again.
+
+```ts
+repointRunsCommand("cb wakeup --connector gmail")
+=> null
+```
+
+```ts
+repointRunsCommand("bbx wakeup --connector gmail")
+=> bbx engine wakeup --connector gmail
+```

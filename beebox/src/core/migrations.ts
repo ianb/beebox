@@ -140,21 +140,6 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
   { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
   { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
-  // The CLI split (docs/implemented-plans/bbx-agent-surface.md) moved `wakeup` and its
-  // siblings under `bbx engine`; stock schedule cards carry those verbs as
-  // literal shell strings and would otherwise run an unknown command.
-  { name: "schedule-engine-verbs-2026-09", script: "scripts/migrate/schedule-engine-verbs.ts" },
-  // v2 -> v3 one-root layout conversion (docs/implemented-plans/one-root-box-layout.md,
-  // Track E). Unlike every entry above, this migrator runs against a box
-  // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly
-  // against a v2 box (see src/core/migrations/one-root-v2-probe.ts), not
-  // through the normal getBoxShape-gated flow. It moves the migrations
-  // manifest itself (content/config/migrations.jsonl -> _config/migrations.jsonl)
-  // as part of the conversion, then appends this entry to the RELOCATED
-  // manifest — so by the time this name is recorded as applied, the box is
-  // already v3 and every migration above it already ran (against v2 boxes,
-  // historically) or is a no-op for a fresh v3 box.
-  { name: "one-root", script: "scripts/migrate/one-root.ts" },
   // A landmark's mark moves out of the navigation role and onto the card
   // itself, now that `symbol` is a field every card may carry
   // (docs/plans/card-symbol.md). Readers accept both shapes during the
@@ -170,6 +155,16 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // `bbx`. Configuration, not card data, like the hooks and gitignore
   // entries above; the rename rewrote everything but the boxes' own `runs:`.
   { name: "schedule-runs-bbx-2026-09", script: "scripts/migrate/schedule-runs-bbx.ts" },
+  // MUST follow `schedule-runs-bbx-2026-09`, which repoints cards still naming
+  // the retired command. This migrator only recognizes a command whose program
+  // is already `bbx`, so running first it would pass such a card over, and that
+  // rewrite would then leave it at a bare `bbx wakeup` — which no longer
+  // resolves, with neither migration willing to look at it again.
+  //
+  // The CLI split (docs/implemented-plans/bbx-agent-surface.md) moved `wakeup`
+  // and its siblings under `bbx engine`; stock schedule cards carry those verbs
+  // as literal shell strings the scheduler runs through a shell.
+  { name: "schedule-engine-verbs-2026-09", script: "scripts/migrate/schedule-engine-verbs.ts" },
   { name: "canonical-interface-cards", script: "scripts/migrate/canonical-interface-cards.ts" },
   { name: "remaining-interface-cards", script: "scripts/migrate/remaining-interface-cards.ts" },
   { name: "search-interface-card", script: "scripts/migrate/search-interface-card.ts" },

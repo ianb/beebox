@@ -46,8 +46,10 @@ below the root (`_unsure`, say) are ordinary names, not reserved.
 understands (`getBoxShape`/`boxCodePaths` in `src/lib/box-shape.ts`). A box
 created before this layout landed (shapeVersion 2, retired) had two roots — a
 package root and a nested `content/` operational root — and is the reason
-this layout exists: `getBoxShape` on a v2 box throws a `bbx migrate`-pointing
-error rather than silently resolving the wrong directory. See
+this layout exists: `getBoxShape` on a v2 box throws rather than silently
+resolving the wrong directory. The error no longer points at a conversion — the
+v2→v3 migration was deleted on 2026-09-14 once the v2 population reached zero,
+so a v2 box can only come from an old backup and cannot be opened. See
 `docs/implemented-plans/one-root-box-layout.md` for that history.
 
 `getBoxShape` recognizes a box when `<root>/.beebox/box.json`
