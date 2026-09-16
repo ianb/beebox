@@ -16,6 +16,7 @@ import {
   adoptLegacyComposerDrafts,
   restoredImageOriginal,
   RESTORED_ORIGINAL_LOST,
+  RESTORED_ORIGINAL_SWEPT,
   partitionFiles,
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
@@ -229,25 +230,33 @@ live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2
 ```
 
-## An image's original comes back landed, or failed — never resumable
+## An image's original comes back landed, or lost — never resumable
 
-The `File` behind an in-flight upload dies with the page, so a persisted
-`uploading` original — and a draft from before originals were kept, which has
-no state at all — restores as `failed` with one message the tile shows. A
-landed path survives verbatim; a recorded failure keeps its own message.
+The `File` behind an upload dies with the page, so a persisted `uploading` or
+`failed` original — and a draft from before originals were kept, which has no
+state at all — restores as `lost`: the tile says there will be no file and
+offers remove, not retry. A landed path survives when the restore-time
+existence check still finds it, and is `lost` with its own message when the
+sweep took it, so a swept path is never listed as a usable file.
 
 ```ts
-JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }))
+const present = new Set(["_tmp/a.png"]);
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }, { existingPaths: present }))
 => {"status":"uploaded","path":"_tmp/a.png"}
 
-JSON.stringify(restoredImageOriginal({ status: "failed", message: "413" }))
-=> {"status":"failed","message":"413"}
-
-restoredImageOriginal({ status: "uploading", progress: 0.7 }).status
-=> failed
-
-restoredImageOriginal(undefined).message === RESTORED_ORIGINAL_LOST
+restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present }).message === RESTORED_ORIGINAL_SWEPT
 => true
+
+// A same-tab restore (a rejected send handed back) skips the check.
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.png" }, { existingPaths: null }))
+=> {"status":"uploaded","path":"_tmp/just-now.png"}
+
+JSON.stringify([
+  restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }).status,
+  restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
+  restoredImageOriginal(undefined, { existingPaths: present }).message === RESTORED_ORIGINAL_LOST,
+])
+=> ["lost","lost",true]
 ```
 
 The state itself rides through persistence with the image, so a landed path

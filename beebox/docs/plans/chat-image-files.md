@@ -1,6 +1,6 @@
 ---
 title: "Chat images: keep the original as a file the agent can use"
-status: draft
+status: active
 workstream: chat-image-files
 issues:
   - ../../../issues/features/2026-09-16-uploaded-chat-images-have-no-file-the-agent-can-use.md
@@ -500,3 +500,25 @@ knowledge audit is run and recorded, the iOS app builds and its test
 passes in the simulator, and a real paste in the dev box produces a
 `_tmp/` file whose bytes equal the source file (checked with `cmp`). No
 data migration: no stored shape changes. Old transcripts are unaffected.
+
+## Cross-model review of the diff (2026-09-16)
+
+Three findings, all applied:
+
+- A restored draft did not existence-check a landed image original, so a
+  swept `_tmp/` path came back as a usable line. The restore now HEAD-checks
+  image originals like files; a missing one is `lost` and named in the
+  expired-attachments notice.
+- Originals started uploading only after every sibling encode finished. Now
+  each photo's original starts the moment its own encode is done.
+- A restored failure offered a retry with no `File` to retry from.
+  `FileTransferState` gained `lost` (failed, nothing to retry); the tile
+  shows "No file" for it and "Retry" only for a live failure.
+
+Browser verification (worktree box): a 3000×2000 PNG pasted into chat landed
+in `_tmp/` byte-identical (same sha256 and size); the stored user entry has
+one image block and the `[image#1]: _tmp/…` line; the box agent read the
+original unaided. Two UI finds fixed on the way: the failure strip did not
+fit the tile (now one word plus `title`), and chat titles included the
+`<attachments>` block (pre-existing for files; `extractSnippet` now strips
+it).

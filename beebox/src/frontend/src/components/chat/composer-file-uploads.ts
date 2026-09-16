@@ -148,10 +148,10 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
       // The handle is gone only if the page reloaded under a restored draft.
       // Restore drops every unfinished file (it has no path, so
       // `partitionFiles` classes it dead) and restores an unfinished image
-      // original as `failed` with its own message — so this is a state that
+      // original as `lost`, which offers no retry — so this is a state that
       // shouldn't arise rather than one to paper over.
       const what = kind === "file" ? "This file" : "This image's original";
-      setState(kind, { id, state: { status: "failed", message: `${what} can't be retried — remove it and pick it again.` } });
+      setState(kind, { id, state: { status: "lost", message: `${what} can't be retried — remove it and pick it again.` } });
       return;
     }
     setState(kind, { id, state: { status: "uploading", progress: 0 } });

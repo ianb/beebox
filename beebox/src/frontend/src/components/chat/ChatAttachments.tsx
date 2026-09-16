@@ -138,10 +138,12 @@ function ThumbTile({
 }
 
 /**
- * The original file's upload, in the tile's bottom corner: a progress bar
- * while it moves, a retry when it failed, nothing once it landed. The message
- * sends either way — a failed original just means no file line for this
- * image — so the badge informs and offers, it never blocks.
+ * The original file's upload, along the tile's bottom edge: a progress bar
+ * while it moves, a retry strip when it failed, a "no file" strip when there
+ * is nothing to retry from, nothing once it landed. The message sends either
+ * way — an original that did not land just means no file line for this
+ * image — so the badge informs and offers, it never blocks. The tile is
+ * thumbnail-sized, so the strip carries one word and the `title` the rest.
  */
 function OriginalBadge({ original, onRetry }: { original: FileTransferState; onRetry: () => void }) {
   if (original.status === "uploaded") return null;
@@ -150,11 +152,23 @@ function OriginalBadge({ original, onRetry }: { original: FileTransferState; onR
       <button
         type="button"
         onClick={onRetry}
-        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 focus:outline-none focus:ring-2 focus:ring-danger"
-        title={`Original not uploaded: ${original.message} — click to retry`}
+        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
+        title={`Original not uploaded: ${original.message}. Click to retry.`}
+        aria-label={`Original not uploaded: ${original.message}. Retry the upload.`}
       >
-        Original failed — retry
+        ↻ Retry
       </button>
+    );
+  }
+  if (original.status === "lost") {
+    return (
+      <span
+        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 pointer-events-none"
+        title={original.message}
+        role="status"
+      >
+        No file
+      </span>
     );
   }
   return (
@@ -227,11 +241,11 @@ function FileChip({
   const sizeLabel = formatBytes(attachment.size);
   const statusLabel = state.status === "uploaded"
     ? sizeLabel
-    : state.status === "failed" ? state.message : `${sizeLabel} · uploading…`;
+    : state.status === "uploading" ? `${sizeLabel} · uploading…` : state.message;
   return (
     <div
       className={`relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded border max-w-xs ${
-        state.status === "failed" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
+        state.status === "failed" || state.status === "lost" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
       }`}
       data-bbx-source={`file-attachment-${attachment.id}`}
       data-bbx-upload-state={state.status}

@@ -66,7 +66,14 @@ export interface ImageItem {
 export type FileTransferState =
   | { status: "uploading"; /** 0–1, or 0 while the total is unknown. */ progress: number }
   | { status: "uploaded"; /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
-  | { status: "failed"; message: string };
+  | { status: "failed"; message: string }
+  /**
+   * Failed with nothing to retry from: the `File` died with the page, or the
+   * landed file was swept. The surface offers remove, never retry. A file
+   * attachment never reaches this (restore drops it instead); an image's
+   * original does, because the image itself is still worth sending.
+   */
+  | { status: "lost"; message: string };
 
 /**
  * The box-relative path a file landed at, or `null` while it is still moving or

@@ -115,21 +115,31 @@ export function serializePersistedEmission(
 }
 
 /**
- * The original-upload state an image comes back with. `uploaded` survives as
- * it was. `uploading` cannot resume (no `File` after a reload) and a draft
- * written before originals were kept has no state at all: both restore as
- * `failed` with one message, so the tile says why there will be no file line
- * and offers remove. `failed` keeps its own message, but is equally
- * unretryable; the tile's retry then reports that (`composer-file-uploads.ts`).
+ * The original-upload state an image comes back with after a restore (a
+ * reload, or a rejected send handed back). `uploaded` survives as it was
+ * when the file is still there. Everything else is `lost`: an upload that
+ * was still moving or had failed has no `File` to retry from once the page
+ * that held it is gone, a draft written before originals were kept has no
+ * state at all, and a landed file the sweep has since removed is a path the
+ * agent cannot open. The tile then says there will be no file line and offers
+ * remove, not retry. `existingPaths` is the restore-time existence check;
+ * `null` skips it, for a same-tab restore where the file was just written.
  */
-export function restoredImageOriginal(original: FileTransferState | undefined): FileTransferState {
-  if (original?.status === "uploaded") return original;
-  if (original?.status === "failed") return original;
-  return { status: "failed", message: RESTORED_ORIGINAL_LOST };
+export function restoredImageOriginal(
+  original: FileTransferState | undefined,
+  opts: { existingPaths: ReadonlySet<string> | null },
+): FileTransferState {
+  if (original?.status === "uploaded") {
+    if (opts.existingPaths === null || opts.existingPaths.has(original.path)) return original;
+    return { status: "lost", message: RESTORED_ORIGINAL_SWEPT };
+  }
+  return { status: "lost", message: RESTORED_ORIGINAL_LOST };
 }
 
 /** Why a restored image has no original: the page reloaded before it landed. */
 export const RESTORED_ORIGINAL_LOST = "Original not uploaded — the agent sees the reduced copy only";
+/** Why a restored image has no original: its `_tmp/` file was swept meanwhile. */
+export const RESTORED_ORIGINAL_SWEPT = "Original was swept from _tmp/ — the agent sees the reduced copy only";
 
 function isPersistedEmission(value: unknown): value is PersistedEmission {
   if (!isRecord(value)) return false;

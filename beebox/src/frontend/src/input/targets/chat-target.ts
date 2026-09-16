@@ -143,10 +143,14 @@ export function applyRestorePlan(editor: EmissionEditor, plan: RestorePlan): voi
       dataBase64: image.dataBase64,
       objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
       byteLength: estimateByteLength(image.dataBase64),
-      // The emission carries only a landed path. A restored image with none
-      // cannot be retried (no `File`), so it comes back `failed`, as a reloaded
-      // draft does.
-      original: restoredImageOriginal(image.path === undefined ? undefined : { status: "uploaded", path: image.path }),
+      // The emission carries only a landed path, and the file was written
+      // moments ago by this tab, so no existence check. An image with no path
+      // cannot be retried (the send reset dropped its `File`), so it comes
+      // back `lost`, as a reloaded draft does.
+      original: restoredImageOriginal(
+        image.path === undefined ? undefined : { status: "uploaded", path: image.path },
+        { existingPaths: null },
+      ),
     };
     editor.addImage(item);
   }

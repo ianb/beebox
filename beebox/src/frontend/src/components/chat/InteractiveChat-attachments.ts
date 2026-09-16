@@ -169,43 +169,48 @@ export function useChatAttachments(opts: {
   const addInlinePhotos = useCallback(async (photos: File[]): Promise<ImageItem[]> => {
     if (photos.length === 0) return [];
     editor.bumpPendingImages(photos.length);
-    // Process in parallel; a failure decrements its own pending slot
-    // immediately (nothing was added), while a success's slot is cleared by
-    // `addImage` itself once all results are in.
-    const processed = await Promise.all(
-      photos.map(async (f) => {
+    // Ids are minted up front, in selection order, so the tokens the caller
+    // inserts read in the order the user picked — whatever order the encodes
+    // finish in. An encode that fails leaves a gap; ids are never reused.
+    const ids = photos.map(() => editor.nextImageId());
+    // Each photo is independent: the moment ITS encode is done it is added
+    // and its original starts uploading, without waiting for its siblings —
+    // one stalled encode must not hold every other original off the box. A
+    // failure decrements its own pending slot immediately (nothing was
+    // added); a success's slot is cleared by `addImage` itself.
+    const results = await Promise.all(
+      photos.map(async (source, i): Promise<ImageItem | null> => {
+        const id = ids[i];
+        if (id === undefined) return null;
+        let p;
         try {
-          return await processImageBlob(f);
+          p = await processImageBlob(source);
         } catch (e) {
           console.error("[chat] Failed to process pasted image:", e);
           editor.bumpPendingImages(-1);
           return null;
         }
+        const item: ImageItem = {
+          id,
+          mimeType: p.mimeType,
+          dataBase64: p.dataBase64,
+          objectUrl: p.objectUrl,
+          byteLength: p.byteLength,
+          original: { status: "uploading", progress: 0 },
+        };
+        editor.addImage(item); // also decrements the pending count for this image
+        // The original goes up as-is — never the reduced copy — so the agent's
+        // file is the bytes the user actually has.
+        uploadImageOriginal(item.id, source);
+        return item;
       })
     );
-    const newItems: ImageItem[] = [];
-    for (const [i, p] of processed.entries()) {
-      const source = photos[i];
-      if (!p || source === undefined) continue;
-      const item: ImageItem = {
-        id: editor.nextImageId(),
-        mimeType: p.mimeType,
-        dataBase64: p.dataBase64,
-        objectUrl: p.objectUrl,
-        byteLength: p.byteLength,
-        original: { status: "uploading", progress: 0 },
-      };
-      editor.addImage(item); // also decrements the pending count for this image
-      // The original goes up as-is — never the reduced copy — so the agent's
-      // file is the bytes the user actually has.
-      uploadImageOriginal(item.id, source);
-      newItems.push(item);
-    }
+    const newItems = results.flatMap((item) => (item === null ? [] : [item]));
     // Say so when an image didn't make it. The encoder rejects formats the
     // browser can't decode (a HEIC straight off a phone, some SVGs), and this
     // is the only path such a file has: a console-only log would let a picked
     // file vanish with no signal at all (code-style.md defensiveness rule 5).
-    const failed = photos.filter((_f, i) => processed[i] === null);
+    const failed = photos.filter((_f, i) => results[i] === null);
     if (failed.length > 0) toastError(unsupportedImageMessage(failed));
     return newItems;
   }, [editor, uploadImageOriginal]);
