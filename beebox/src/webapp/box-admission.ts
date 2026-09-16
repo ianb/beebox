@@ -50,6 +50,9 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
       }
     };
     admitted.set(request, work);
+    // Registered before acquiring: a client that abandons the request while
+    // admission is still pending must still be able to release what was taken.
+    releases.set(request, release);
     // The handler wrapper below releases after asynchronous preparation even
     // when the client disconnects. onResponse covers early auth/error replies.
     reply.raw.once("finish", () => { if (!handling.has(request)) void release().catch((error: unknown) => request.log.error(error)); });
@@ -57,10 +60,10 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
     void (async () => {
       for (const box of targets) {
         const lease = await acquireBoxWork(box.boxRoot, { reason: `${request.method} ${routeLabel(request.url)}`, inherited: typeof header === "string" ? header : null });
+        if (!admitted.has(request)) { await lease.release(); return; }
         work.push(lease);
         requests.set(box.boxRoot, (requests.get(box.boxRoot) ?? 0) + 1);
       }
-      releases.set(request, release);
       // A callback keeps all subsequent Fastify hooks inside the accepted context.
       if (work.length === 1) work[0]?.run(done); else done();
     })().catch(async (error: unknown) => {
@@ -85,6 +88,9 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
     };
   });
   server.addHook("onResponse", async (request) => { if (!handling.has(request)) await releases.get(request)?.(); });
+  // No reply ever comes for an abandoned request, so neither hook above fires.
+  // A handler already running keeps its lease and releases when it returns.
+  server.addHook("onRequestAbort", async (request) => { if (!handling.has(request)) await releases.get(request)?.(); });
 }
 const handling = new WeakSet<FastifyRequest>();
 const releases = new WeakMap<FastifyRequest, () => Promise<void>>();
