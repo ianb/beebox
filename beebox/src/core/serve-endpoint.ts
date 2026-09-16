@@ -25,11 +25,29 @@ export async function readServeEndpoint(boxRoot: string): Promise<ServeEndpoint 
   try {
     const parsed = endpointSchema.safeParse(JSON.parse(await fs.readFile(serveEndpointPath(boxRoot), "utf8")));
     return parsed.success ? parsed.data : undefined;
-  } catch (_error) {
-    return undefined;
+  } catch (error) {
+    // Missing or malformed machine state means no endpoint is available; do
+    // not turn it into a guessed URL. Other filesystem errors need to remain
+    // visible to the caller rather than silently changing the source cascade.
+    if (isAbsentEndpoint(error) || error instanceof SyntaxError) return undefined;
+    throw error;
   }
 }
 
 export async function removeServeEndpoint(boxRoot: string): Promise<void> {
-  await fs.unlink(serveEndpointPath(boxRoot)).catch(() => {});
+  try {
+    await fs.unlink(serveEndpointPath(boxRoot));
+  } catch (error) {
+    // Clean shutdown is idempotent when the descriptor was never written.
+    if (isAbsentEndpoint(error)) return;
+    throw error;
+  }
+}
+
+function isAbsentEndpoint(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
 }
