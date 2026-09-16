@@ -5,9 +5,17 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
-next-action: discuss
 priority: backlog
+resolution: implemented
 ---
+
+> **Closed `implemented` 2026-09-15.** Both recorded decisions are live in
+> `src/core/box/defaults.ts`, verified by reading the seeded values:
+> `check-email`, `check-calendar`, `check-drive` and `chat-review` seed
+> `enabled: false`; `refresh-maps`, `gc-procedure-runs` and
+> `process-retrospective` seed `enabled: true`. `check-drive` post-dates the
+> decision text and follows the same rule. The `discuss` tag was stale — the
+> discussion happened in 2026-08 and produced the decisions below.
 
 > **Decision recorded 2026-08-07** — Fresh boxes enable `refresh-maps` and
 > `gc-procedure-runs`. The other four seeded schedules remain disabled until
@@ -27,7 +35,7 @@ Why: a brand-new box that runs jobs the user never asked for (a) burns
 their Claude subscription quota invisibly — cost-trust matters for the
 soft-launch audience, (b) fills the dashboard's schedule table with
 unexplained cron/budget internals as the first thing a new user sees
-(see [first-run-experience](2026-07-20-first-run-experience.md)), and
+(see [first-run-experience](../../features/2026-07-20-first-run-experience.md)), and
 (c) contradicts the system's own consent-and-teaching ethos.
 
 The original proposal was to seed all schedules `enabled: false`; activation becomes part of
