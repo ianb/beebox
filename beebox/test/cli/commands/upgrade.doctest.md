@@ -290,7 +290,7 @@ admission only after the final commit. No installer or live box is contacted.
 
 ```ts
 const boxRoot = await makeV3Fixture();
-const active = await acquireBoxWork(boxRoot);
+const active = await acquireBoxWork(boxRoot, { reason: "test" });
 const calls = [];
 let denied = false;
 let childJoins = false;
@@ -298,7 +298,7 @@ let maintenancePermit = false;
 const fake = makeFakeRunner({ boxRoot, calls });
 const runCommand = async (request) => {
   if (request.label === "pnpm-install") {
-    denied = await withoutBoxWork(() => acquireBoxWork(boxRoot)).then(async work => { await work.release(); return false; }, () => true);
+    denied = await withoutBoxWork(() => acquireBoxWork(boxRoot, { reason: "test" })).then(async work => { await work.release(); return false; }, () => true);
     maintenancePermit = JSON.parse(boxWorkEnvironment().BBX_BOX_WORK).maintenance;
   }
   if (request.label === "bbx-migrate") childJoins = request.args.includes("--within-maintenance");

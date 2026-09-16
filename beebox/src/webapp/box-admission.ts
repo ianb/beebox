@@ -29,6 +29,13 @@ function requestBoxes(request: FastifyRequest, boxes: BoxSpec[]): BoxSpec[] {
   return scoped.length > 0 ? scoped : boxes;
 }
 
+/** The route, not the request: no query string and at most the route's leading segments, since diagnostics travel into alerts. */
+function routeLabel(url: string): string {
+  const pathname = url.split("?")[0] ?? url;
+  const segments = pathname.split("/").filter(Boolean);
+  return `/${segments.slice(0, 4).join("/")}${segments.length > 4 ? "/…" : ""}`;
+}
+
 export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]): void {
   // eslint-disable-next-line max-params -- Fastify callback hooks require request, reply, and done to propagate async context.
   server.addHook("onRequest", (request, reply, done) => withoutBoxWork(() => {
@@ -49,7 +56,7 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
     const header = request.headers["x-bbx-box-work"];
     void (async () => {
       for (const box of targets) {
-        const lease = await acquireBoxWork(box.boxRoot, typeof header === "string" ? header : null);
+        const lease = await acquireBoxWork(box.boxRoot, { reason: `${request.method} ${routeLabel(request.url)}`, inherited: typeof header === "string" ? header : null });
         work.push(lease);
         requests.set(box.boxRoot, (requests.get(box.boxRoot) ?? 0) + 1);
       }
@@ -58,7 +65,10 @@ export function registerBoxAdmission(server: FastifyInstance, boxes: BoxSpec[]):
       if (work.length === 1) work[0]?.run(done); else done();
     })().catch(async (error: unknown) => {
       await release();
-      if (error instanceof BoxMaintenanceError) await reply.status(503).send({ error: error.message });
+      if (error instanceof BoxMaintenanceError) {
+        if (error.retryAfterMs !== undefined) void reply.header("Retry-After", String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));
+        await reply.status(503).send({ error: error.message });
+      }
       else done(toError(error));
     });
   }));

@@ -53,6 +53,33 @@ cannot extend that drain. Accepted agents and scripts retain a validated,
 box-scoped permission for their descendant tool calls. Their tools can finish
 while new independent work is refused. Due chat timers stay pending.
 
+Closing costs the box its live work, so the sweep and the docs refresh look
+before they close: each reads its inputs under an ordinary work lease and
+returns `current` without touching the gate when nothing is pending. Only a
+box with work is closed. A read refused because a maintenance phase already
+exists falls through to the recovery path.
+
+`bbx migrate --sweep --yield`, the hourly schedule's mode, defers to a box in
+use. An idle chat run holds a lease until the box's server sees the phase and
+closes it (the server polls every second), so the pass closes, waits fifteen
+seconds instead of ten minutes, and treats work that outlasts the wait as the
+box being in use: the result is `deferred` with the holders, exit 0, the box
+reopens, and the next pass retries. A deploy already holding the maintenance
+owner lock is the other way a box is in use; a yielding pass defers on it too,
+naming the owner (`deployment`), and a non-yielding caller is refused with
+`Box is closed for deployment (pid …)` rather than a lock error. The schedule reports a deferral only once
+the box has held work for a day. Deploy (`bbx maintenance`) and supervised
+reload never yield.
+
+Every admission carries a reason (`acquireBoxWork(boxRoot, { reason })`), and
+the process's lease sidecar lists the live reasons. A drain that gives up
+names them (`Timed out draining box work: deployment; held by chat run <id>
+since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
+process. A closed box refuses with the maintenance that closed it and, while
+draining, the expected wait (`Box is closed for migration; expected to reopen within 10
+min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
+once before reporting the refusal.
+
 A dirty tree is normal input. Before a mutation phase, the runner retains
 `refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.
 The snapshot stores working-tree versions, tracked deletions, and nonignored

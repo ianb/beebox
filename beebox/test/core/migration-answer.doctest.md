@@ -69,7 +69,7 @@ const open = await acquireBoxMaintenance(boxRoot, { reason: "done", recover: tru
 await open.complete();
 const ordinary = "_bookkeeping/questions/Ordinary.question.card";
 await writeFile(join(boxRoot, ordinary), createTextQuestionTemplate({ memo: "Question", askedAt: "2026-09-14T00:00:00Z", prompt: "Proceed?", directive: "Process answer" }));
-const accepted = await acquireBoxWork(boxRoot);
+const accepted = await acquireBoxWork(boxRoot, { reason: "test" });
 const drain = await closeBoxMaintenance(boxRoot, { reason: "drain accepted answer" });
 const normal = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", headers: { "x-bbx-box-work": accepted.run(boxWorkEnvironment).BBX_BOX_WORK }, payload: { questionPath: ordinary, answer: "yes" } });
 normal.statusCode

@@ -312,7 +312,7 @@ async function executeAnswer(
 export async function answerWithAdmission(opts: { ctx: CommandContext; args: Record<string, unknown>; onAnswered?: () => void }): Promise<CommandResult> {
   const { ctx, args } = opts;
   let work;
-  try { work = await acquireBoxWork(ctx.boxRoot); }
+  try { work = await acquireBoxWork(ctx.boxRoot, { reason: "answer" }); }
   catch (error) {
     if (!(error instanceof BoxMaintenanceError)) throw error;
     const parsed = parseCommandArgs(args, AnswerArgsSchema);

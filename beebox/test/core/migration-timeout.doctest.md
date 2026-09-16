@@ -79,7 +79,7 @@ await box.cleanup();
 
 ```ts
 const box = await preparedBox();
-const active = await acquireBoxWork(box.root);
+const active = await acquireBoxWork(box.root, { reason: "test" });
 let settled = false;
 const attempt = sweepMigrations({ boxRoot: box.root, executionMs: 50,
   runScript: async ({ signal }) => { await waitForAbort(signal); signal.throwIfAborted(); return 0; },

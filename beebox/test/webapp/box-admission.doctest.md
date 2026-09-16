@@ -20,7 +20,7 @@ server.post("/test/write", async () => {
   entered.resolve();
   await finish.promise;
   // Accepted work may still call its tools after closure.
-  const nested = await acquireBoxWork(box.root);
+  const nested = await acquireBoxWork(box.root, { reason: "test" });
   await nested.release();
   return { ok: true };
 });
@@ -32,6 +32,11 @@ await entered.promise;
 const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture", drainMs: 1000 });
 JSON.stringify({ idle: boxRequestsAreIdle(box.root), permission: typeof permission, rejected: (await server.inject({ method: "POST", url: "/test/write" })).statusCode, read: (await server.inject("/test/read")).statusCode, oauth: (await server.inject("/auth/google-services/callback?state=test:nonce")).statusCode })
 => {"idle":false,"permission":"string","rejected":503,"read":200,"oauth":503}
+
+// The refusal says what holds the box and how long, so a client can wait it out.
+const refused = await server.inject({ method: "POST", url: "/test/write" });
+JSON.stringify({ retryAfter: refused.headers["retry-after"], error: refused.json().error })
+=> {"retryAfter":"1","error":"Box is closed for fixture; expected to reopen within 1 min"}
 
 // Global identity remains available to inspect a closed box.
 (await server.inject({ method: "POST", url: "/auth/login" })).statusCode

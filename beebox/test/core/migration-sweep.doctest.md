@@ -5,12 +5,13 @@ code: apply pending **script** migrations, commit each one, and leave anything
 needing a human alone. See `src/core/migration-sweep.ts`.
 
 ```ts setup
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
-import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
+import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 
 // Pinned rather than "whatever is last": appending a migration would otherwise
@@ -49,6 +50,22 @@ const before = git(box, "rev-list", "--count", "HEAD");
 const result = await sweepMigrations({ boxRoot: box.root });
 JSON.stringify({ status: result.status, newCommits: Number(git(box, "rev-list", "--count", "HEAD")) - Number(before) })
 => {"status":"current","newCommits":0}
+```
+
+The quiet path never closes admission. With live work on the box, a sweep that
+closed first would sit in its drain until that work ended; this one reads,
+finds nothing, and returns while the work is still admitted.
+
+```ts continue
+const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+const quiet = sweepMigrations({ boxRoot: box.root }).then((outcome) => outcome.status);
+await Promise.race([quiet, new Promise((resolve) => setTimeout(() => resolve("still draining"), 3000))])
+=> current
+
+await boxMaintenanceStatus(box.root)
+=> null
+
+await busy.release();
 ```
 
 ```ts cleanup
@@ -94,6 +111,50 @@ A second sweep is a no-op — the manifest now records it:
 ```
 
 ```ts cleanup
+await box.cleanup();
+```
+
+## A scheduled pass yields to a box in use
+
+`--yield` is the hourly schedule's mode. An idle chat run holds a lease until
+the box's server sees a maintenance phase and closes it, so the pass cannot
+tell "in use" from the leases alone: it closes, waits fifteen seconds, and
+work that outlasts the wait means the box is in use. That pass is deferred to
+the next hour, naming the holder, and the box reopens. Once the box is free
+the same pass applies the work. A deploy does not yield.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: [PROBE] });
+await box.commitAll("seed migration manifest");
+const holder = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
+await once(holder.stdout, "data");
+
+const deferred = await sweepMigrations({ boxRoot: box.root, yield: true });
+JSON.stringify({ status: deferred.status, holders: deferred.holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) })
+=> {"status":"deferred","holders":["fixture child"],"phase":null}
+
+holder.stdin.end("finish");
+await once(holder, "exit");
+(await sweepMigrations({ boxRoot: box.root, yield: true })).status
+=> applied
+```
+
+A deploy holding the maintenance owner lock is the other way a box is in use.
+That is what the lock is for, so a yielding pass defers and names it rather
+than failing the check.
+
+```ts continue
+await seedManifest(box, { pending: [PROBE] });
+const deploy = await closeBoxMaintenance(box.root, { reason: "deployment" });
+const behindDeploy = await sweepMigrations({ boxRoot: box.root, yield: true });
+await deploy.release();
+JSON.stringify({ status: behindDeploy.status, holders: behindDeploy.holders.map((entry) => entry.reason) })
+=> {"status":"deferred","holders":["deployment"]}
+```
+
+```ts cleanup
+holder.kill();
 await box.cleanup();
 ```
 
