@@ -28,6 +28,7 @@ import {
   readyLifecycle,
   failedLifecycle,
   startPromiseOf,
+  MAX_AUTO_RETRIES,
 } from "./router-lifecycle.js";
 import { statusError, type RouterEffects, type RouterCoreConfig } from "./router-effects.js";
 import { startWorktree } from "./router-worktree-start.js";
@@ -77,7 +78,7 @@ export interface RouterCore {
 }
 
 export async function ensureRunning(state: CoreState, name: string): Promise<WorktreeHandle> {
-  const { effects, worktrees } = state;
+  const { effects, worktrees, log } = state;
   const existing = worktrees.get(name);
   if (existing) {
     if (readyLifecycle(existing)) {
@@ -87,12 +88,34 @@ export async function ensureRunning(state: CoreState, name: string): Promise<Wor
     }
     const inFlight = startPromiseOf(existing);
     if (inFlight) return inFlight;
-    // Failed worktrees stay failed until the user explicitly retries (via the
-    // /__router/retry/<name> endpoint). Auto-restarting on every page-fetch
-    // would mask the failure and burn CPU / log noise — a broken worktree
-    // should *look* broken, with the captured error visible.
+    // A failed worktree does NOT auto-restart on every page fetch. That would
+    // mask the failure and burn CPU / log noise — a broken worktree should
+    // *look* broken, with the captured error visible — and it stays the rule for
+    // every failure that says something about the WORKTREE: a child that died,
+    // a spawn that never happened, a pidfile that could not be written. Those
+    // park on the first failure, which is stricter than this code was before
+    // 2026-09-15, when a dead child was indistinguishable from a slow one.
+    //
+    // The exception is `waitForHttp`, where the host said "too busy" rather than
+    // the worktree saying "broken". That gets a bounded number of automatic
+    // restarts on a backoff and then parks exactly as everything else does;
+    // `retryDecision` owns the distinction and the bound. Without it, one CPU
+    // spike costs an outage lasting until a human notices — three hours, on the
+    // day this was written.
     const failed = failedLifecycle(existing);
-    if (failed) throw statusError(failed.lastError.message, 502);
+    if (failed) {
+      const now = effects.now();
+      if (failed.retryAfter !== null && now >= failed.retryAfter) {
+        const attempts = failed.attempts + 1;
+        state.retryAttempts.set(name, attempts);
+        log(`[${name}] retrying parked ${failed.lastError.phase} failure (attempt ${String(attempts)}/${String(MAX_AUTO_RETRIES)})`);
+        // Drop the handle WITHOUT resetting the count — unlike `clearFailed`,
+        // which is the boxholder asking and does reset it.
+        worktrees.delete(name);
+        return ensureRunning(state, name);
+      }
+      throw statusError(failed.lastError.message, 502);
+    }
     // Any other in-map phase is unreachable (stopping handles are unlinked
     // before the transition); fall through to start a fresh generation.
   }
@@ -123,7 +146,13 @@ export async function ensureRunning(state: CoreState, name: string): Promise<Wor
 }
 
 export function createRouterCore(effects: RouterEffects, config: RouterCoreConfig): RouterCore {
-  const state: CoreState = { effects, config, worktrees: new Map<string, WorktreeHandle>(), log: config.log };
+  const state: CoreState = {
+    effects,
+    config,
+    worktrees: new Map<string, WorktreeHandle>(),
+    retryAttempts: new Map<string, number>(),
+    log: config.log,
+  };
   const { worktrees } = state;
   return {
     ensureRunning: (name) => ensureRunning(state, name),

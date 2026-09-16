@@ -32,4 +32,7 @@ systemCardLocationError("admin", SYSTEM_CARD_PATHS.admin)
 
 systemCardLocationError("history", "_content/Saved.history.card")?.includes(SYSTEM_CARD_PATHS.history)
 => true
+
+systemCardLocationError("search", "_content/Focused.search.card")
+=> null
 ```

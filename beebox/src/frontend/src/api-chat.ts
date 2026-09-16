@@ -115,6 +115,8 @@ export interface ChatStatus {
   /** Engines this box may start a new chat on, and the one it defaults to. */
   enabledEngines: ChatAgentEngine[];
   boxEngine: ChatAgentEngine;
+  /** A usable `glm` key exists for this box — gates the picker's GLM rows. */
+  glmAvailable: boolean;
 }
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<ChatStatus> {

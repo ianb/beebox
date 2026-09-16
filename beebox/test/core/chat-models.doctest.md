@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 JSON.stringify(chatModelOptions("claude").map((option) => option.label))
-=> ["Default (Opus)","Fable 5.1","Opus 5","Sonnet 5","Haiku 4.5"]
+=> ["Default (Opus)","Fable 5.1","Opus 5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
 
 JSON.stringify(chatModelOptions("codex"))
 => [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
@@ -75,9 +75,9 @@ const ENGINES: AgentEngine[] = ["claude", "codex"];
 /** Does every model this engine offers reverse to a tier selecting that same model? */
 function tiersRoundTrip(engine: AgentEngine): boolean {
   return PROCEDURE_MODEL_NAMES.every((name) => {
-    const model = resolveProcedureModel(engine, name);
+    const model = resolveProcedureModel({ engine, model: name });
     const tier = modelTier(model);
-    return tier !== null && resolveProcedureModel(engine, tier) === model;
+    return tier !== null && resolveProcedureModel({ engine, model: tier }) === model;
   });
 }
 ```
@@ -199,10 +199,10 @@ verbatim. **Nothing here can produce a name an engine does not know.**
 
 ```ts
 JSON.stringify([
-  resolveSmallModelForEngine("claude", null),
-  resolveSmallModelForEngine("codex", null),
-  resolveSmallModelForEngine("codex", "claude-sonnet-5"),
-  resolveSmallModelForEngine("claude", "claude-fable-5-1"),
+  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: "claude-sonnet-5", boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: "claude-fable-5-1", boxDefault: null }),
 ])
 => ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5-1"]
 ```

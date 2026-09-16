@@ -32,27 +32,28 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.268`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.270`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.270` (SDK), `2.1.270` (Claude Code), `0.154.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.272` (SDK), `2.1.272` (Claude Code), `0.154.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.268` was taken this turn as the newest settled
-  version. The TodoWrite condition this ledger put on it **was disproven before
-  bumping**: reading the session's `system/init` tool list shows the
-  task-tracking tools already absent on `0.3.267` for `claude-sonnet-5`,
-  `claude-opus-5` and the default, so `0.3.268` changed nothing here (details in
-  its entry).
-  **Do not take `0.3.269` on its own.** 2.1.270 is a single-line repair of a
-  2.1.269 regression — read-only git commands in Bash start asking for
-  permission once a session has been running a while — so `0.3.269` and
-  `0.3.270` are a pair, like `0.3.265`/`0.3.266` before them. `0.3.269` settles
-  2026-09-13T18:15Z and `0.3.270` on 2026-09-14T18:53Z; the settled path would
-  otherwise take the broken half tomorrow. No Codex release since `0.154.0`.
+- **Current recommendation:** `0.3.270` was taken this turn as the newest settled
+  version, which resolves the pairing the last turn flagged — it carries
+  `0.3.269` with it, so the 2.1.269 read-only-git permission regression never
+  sat in the pin on its own. Pending: `0.3.271` (~22h) and `0.3.272` (~18h).
+  **Treat those two as a pair as well:** `2.1.272` published 3h47m after
+  `2.1.271` and says only "bug fixes and reliability improvements" (confirmed at
+  the `v2.1.272` tag, not just on `main`), which is the shape both previous
+  hotfix pairs took. Both settle 2026-09-16. No Codex release since `0.154.0`.
+- **No run on 2026-09-14, and nothing was missed.** That run exited with
+  `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
+  after the run started at 17:14Z, so the newest release was `0.3.270` — already
+  reviewed the day before. The runner found nothing unreviewed and did not start
+  a session, which is the designed no-op path, not a bailed run.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -68,7 +69,59 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.270 / Claude Code 2.1.270 — pending (published 2026-09-12T18:53Z, ~20h at this turn)
+### 0.3.272 / Claude Code 2.1.272 — pending, nothing to assess (published 2026-09-14T23:34Z, ~18h at this turn)
+
+- **Upstream:** SDK parity-only; 2.1.272 says only "Bug fixes and reliability
+  improvements". Checked the tagged `v2.1.272` changelog as well as `main` — the
+  lesson from 2.1.247 — and it carries the same single line.
+- **Beebox applicability:** Nothing assessable. Worth noting for the next turn
+  that it landed **3h47m after `2.1.271`**, the interval that has twice meant a
+  hotfix for the release below it (`0.3.265`/`0.3.266`,
+  `0.3.269`/`0.3.270`). Take it together with `0.3.271` rather than splitting
+  them.
+- **Action:** Settled path; both takeable 2026-09-16.
+- **Sources:** [Claude Code 2.1.272](https://github.com/anthropics/claude-code/blob/v2.1.272/CHANGELOG.md#21272)
+
+### 0.3.271 / Claude Code 2.1.271 — pending (published 2026-09-14T19:47Z, ~22h at this turn)
+
+- **SDK:** `omitClaudeMd` on `AgentDefinition` in the `agents` option, letting a
+  subagent run without user, project and local CLAUDE.md files (managed policy
+  files still load); two Windows/`sessionStore` fixes that do not apply here;
+  and **`persistent` removed from the `MonitorInput` tool type** — checked, and
+  beebox references neither `MonitorInput` nor the `Monitor` tool anywhere, so
+  the removal is a no-op.
+- **2.1.271, the parts that touch this repo:**
+  - **Four more Bash permission-check fixes**, all in the family this ledger has
+    tracked since 2.1.251: a file read by `fmt`/`column` after an unrecognized
+    option, files a wildcard expands to inside a pattern or option value
+    (`grep -v dir/* file`), shell variable declaration flags misrepresenting the
+    command, and `cd`+`git` chains or subshells skipping the prompt under
+    `blockReadsOutsideWorkingDirectories`. The first three bear on
+    `manual-tests`' `Read(private-issues/**)`; the fourth needs a setting this
+    repo does not use.
+  - *"Fixed Claude starting a second copy of a background command (such as a
+    watch task or dev server) that was still running after the conversation was
+    compacted."* A duplicated dev server is a real hazard here — one router
+    serves every worktree, and starting a second one from a session is
+    explicitly out of bounds.
+  - *"Fixed settings file changes made outside the session going unnoticed on
+    macOS machines whose system file-event service is saturated; the watcher now
+    falls back to polling."* This machine runs many concurrent sessions, which is
+    how that service gets saturated.
+  - *"Fixed `/resume` and `/teleport` keeping the previous conversation's
+    file-read tracking, so Claude could edit files the resumed conversation had
+    never read."* Resumes are constant here.
+  - *"Fixed a stale `.git/config.lock` breaking `git checkout -b`, `git push -u`
+    and `git config` for the rest of a session after a sandboxed command failed
+    to start (Linux)."* The prod host is Linux and box agents run git, though the
+    trigger is a sandboxed command, which beebox does not use.
+  - `omitClaudeMd` also lands in agent frontmatter and `--agents` JSON — worth
+    knowing for `.claude/agents/`, where a subagent that does not need the
+    repo's CLAUDE.md currently loads it anyway.
+- **Action:** Settled path; takeable 2026-09-16, paired with `0.3.272`.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03271), [Claude Code 2.1.271](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21271)
+
+### 0.3.270 / Claude Code 2.1.270 — APPLIED 2026-09-15 with 0.3.269 (published 2026-09-12T18:53Z)
 
 - **Upstream:** the SDK entry is parity-only, and 2.1.270 is one line: *"Fixed
   read-only git commands in Bash unexpectedly asking for permission after a
@@ -80,12 +133,13 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   the boxholder's interactive sessions, and the `dontAsk` `manual-tests`
   schedule, where an unexpected prompt becomes a refusal. The installed CLI is
   already 2.1.270, so the boxholder's side is fixed.
-- **Action:** Settled path, and **paired with `0.3.269`** — takeable 2026-09-14,
-  when `0.3.270` clears the window. Taking `0.3.269` alone on 2026-09-13 would
-  pin the regression.
+- **Action:** Applied 2026-09-15 on the settled path (~71h old), together with
+  `0.3.269`, so the regression never sat in the pin alone — the pairing this
+  entry called for held. `pnpm -C beebox test`: **10,548 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
 - **Sources:** [Claude Code 2.1.270](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21270)
 
-### 0.3.269 / Claude Code 2.1.269 — pending (published 2026-09-11T18:15Z, ~45h at 2026-09-13; NOT to be taken without 0.3.270)
+### 0.3.269 / Claude Code 2.1.269 — APPLIED 2026-09-15 with 0.3.270 (published 2026-09-11T18:15Z; never pinned on its own)
 
 - **SDK:** `permission_denials` in the result no longer omits Read, Edit and
   Write calls blocked by a **path-scoped deny rule** — which is what

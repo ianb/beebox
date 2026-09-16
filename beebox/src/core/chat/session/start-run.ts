@@ -19,6 +19,7 @@ import * as fs from "node:fs";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { generateDocs } from "../../docs-gen/index.js";
 import { makeLog } from "./log.js";
+import { glmChatAdditions } from "../../glm-key.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -123,11 +124,16 @@ export async function openChatRun(opts: {
     // mid-response and defer commits that would race with agent writes.
     await opts.acquireLock();
 
-    return startBackendRun(opts.backend, {
+    const startOptions: ChatBackendStartOptions = {
       ...opts.startOptions,
       resumeSessionId: opts.resumeSessionId,
       model: opts.model,
-    });
+    };
+    // GLM-provider runs carry the store key and endpoint in the child env; a
+    // missing key refuses here, before the subprocess exists.
+    const additions = await glmChatAdditions({ boxRoot: opts.boxRoot, model: opts.model, purpose: "chat-start" });
+    if (additions) startOptions.env = { ...startOptions.env, ...additions };
+    return startBackendRun(opts.backend, startOptions);
   } catch (e) {
     log("start", `Run start failed, resetting session to idle: ${errorMessage(e)}`);
     // The state reset must happen even if releasing the lock fails, and the

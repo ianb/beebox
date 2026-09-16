@@ -9,7 +9,7 @@
  */
 
 import { isChatModelAllowed } from "../shared/chat-models.js";
-import { modelTier, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
+import { modelTier, providerOf, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
 import { loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
 
@@ -59,7 +59,7 @@ export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | n
   if (isChatModelAllowed(engine, model)) return model;
   const tier = modelTier(model);
   if (tier === null) return null;
-  return resolveProcedureModel(engine, tier);
+  return resolveProcedureModel({ engine, model: tier, provider: providerOf(model) });
 }
 
 /**
@@ -78,7 +78,7 @@ export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | n
  * quietly substituting a default there would hide a misconfiguration.
  */
 export function boxDefaultModel(engine: AgentEngine, pinned: string | null): string | null {
-  if (pinned === null) return resolveProcedureModel(engine, UNPINNED_DEFAULT_TIER);
+  if (pinned === null) return resolveProcedureModel({ engine, model: UNPINNED_DEFAULT_TIER });
   return resolveBoxModelForEngine(engine, pinned);
 }
 
@@ -139,13 +139,27 @@ export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | n
  * procedures (`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`).
  * Nothing here can produce a name an engine does not know.
  */
-export function resolveSmallModelForEngine(engine: AgentEngine, pinned: string | null): string {
-  const chosen = resolveBoxModelForEngine(engine, pinned);
-  return chosen ?? resolveProcedureModel(engine, "efficient");
+export function resolveSmallModelForEngine(params: {
+  engine: AgentEngine;
+  pinned: string | null;
+  /** The box's effective default model — picks the efficient tier's provider when `pinned` is null. */
+  boxDefault: string | null;
+}): string {
+  const chosen = resolveBoxModelForEngine(params.engine, params.pinned);
+  if (chosen !== null) return chosen;
+  // No pinned small model: take the engine's efficient tier on the provider
+  // the box's own default runs, so a GLM-defaulted box's cheap passes stay GLM
+  // instead of silently billing first-party Haiku.
+  return resolveProcedureModel({
+    engine: params.engine,
+    model: "efficient",
+    ...(params.boxDefault === null ? {} : { provider: providerOf(params.boxDefault) }),
+  });
 }
 
 /** The box's small-pass model for its own engine. One read, one concrete id. */
 export async function loadEffectiveSmallModel(boxRoot: string): Promise<string> {
   const engine = await loadAgentEngine(boxRoot);
-  return resolveSmallModelForEngine(engine, await loadSmallModel(boxRoot));
+  const boxDefault = await loadEffectiveBoxModel(boxRoot);
+  return resolveSmallModelForEngine({ engine, pinned: await loadSmallModel(boxRoot), boxDefault });
 }

@@ -35,6 +35,7 @@ import { href } from "../../lib/routing";
 import { toDisplayPath } from "@shared/display-path";
 import { LandmarkLinksPanel } from "./LandmarkLinksPanel";
 import { RecentFilesPanel } from "./RecentFilesPanel";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { SessionEntry } from "../../api";
 import type { OnZoomView } from "./ChatMessages";
 
@@ -73,15 +74,18 @@ function RootPanel({
   boxSlug,
   onLandmarkPanel,
   onOpenRecentFiles,
+  onOpenSearch,
 }: {
   dir: string | null;
   boxSlug: string;
   onLandmarkPanel: (link: ResolvedLink) => void;
   onOpenRecentFiles: () => void;
+  onOpenSearch: () => void;
 }) {
   return (
     <>
       {dir !== null ? <OpenDirLink dir={dir} boxSlug={boxSlug} /> : null}
+      <MenuItem id="bbx-here-search" onClick={onOpenSearch} keepOpen>Search</MenuItem>
       <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
       <MenuDivider />
       <MenuItem id="bbx-here-recent-files" onClick={onOpenRecentFiles} keepOpen>
@@ -150,6 +154,7 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
           boxSlug={boxSlug}
           onLandmarkPanel={onLandmarkPanel}
           onOpenRecentFiles={() => setPanel("recent-files")}
+          onOpenSearch={() => onZoomView({ target: { path: SYSTEM_CARD_PATHS.search, viewer: null, params: {}, viewState: null }, label: "Search" })}
         />
       );
     case "recent-files":

@@ -75,7 +75,7 @@ git(box, "add", SYSTEM_CARD_PATHS.browse);
 git(box, "reset", "--hard", "HEAD");
 await rm(box.path("_config/interface"), { recursive: true });
 git(box, "add", "-A");
-(await checkStagedSystemCards(box.root)).length === Object.keys(SYSTEM_CARD_PATHS).length
+(await checkStagedSystemCards(box.root)).length === Object.keys(SYSTEM_CARD_PATHS).length - 1
 => true
 
 (await checkSystemCards(box.root)).length
