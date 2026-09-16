@@ -9,6 +9,7 @@ elsewhere by typecheck + manual verification.
 
 ```ts setup
 import { createEmissionStore } from "../../src/frontend/src/input/emission-store.js";
+import { draftAttachments } from "../../src/frontend/src/input/emission.js";
 ```
 
 ## setText: updater + no-op on an equal value (no notify)
@@ -56,12 +57,12 @@ store.get().pendingImages
 => 2
 
 const id1 = store.editor.nextImageId();
-store.editor.addImage({ id: id1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100 });
+store.editor.addImage({ id: id1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
 store.get().pendingImages
 => 1
 
 const id2 = store.editor.nextImageId();
-store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100 });
+store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
 store.get().pendingImages
 => 0
 
@@ -140,9 +141,9 @@ const store = createEmissionStore();
 store.editor.setText("two photos");
 store.editor.bumpPendingImages(1);
 const a = store.editor.nextImageId();
-store.editor.addImage({ id: a, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:a", byteLength: 1 });
+store.editor.addImage({ id: a, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:a", byteLength: 1, original: { status: "uploading", progress: 0 } });
 const b = store.editor.nextImageId();
-store.editor.addImage({ id: b, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:b", byteLength: 1 });
+store.editor.addImage({ id: b, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:b", byteLength: 1, original: { status: "uploading", progress: 0 } });
 const f = store.editor.nextFileId();
 store.editor.addFile({ id: f, path: "_tmp/x.txt", originalName: "x.txt", size: 1, mimetype: "text/plain" });
 
@@ -204,7 +205,7 @@ store.editor.nextImageId()
 store.editor.nextImageId()
 => 2
 
-store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:1", byteLength: 1 });
+store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:1", byteLength: 1, original: { status: "uploading", progress: 0 } });
 store.editor.removeImage(1);
 store.editor.nextImageId()
 => 3
@@ -278,8 +279,46 @@ message ships a reference to a photo that is no longer attached.
 ```ts
 const store = createEmissionStore();
 store.editor.setText("look at [image1] here");
-store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100 });
+store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
 store.editor.removeImage(1);
 store.get().text
 => look at here
+```
+
+## An image's original file has its own upload state
+
+The inline copy is what the agent sees; the original goes up beside it and
+its state lives on the image (`ImageItem.original`). `setImageOriginal`
+follows `setFileState`'s rule: a result for an image that was removed is a
+no-op, never a resurrection.
+
+```ts
+const store = createEmissionStore();
+store.editor.bumpPendingImages(1);
+const id = store.editor.nextImageId();
+store.editor.addImage({ id, mimeType: "image/jpeg", dataBase64: "x", objectUrl: "blob:o", byteLength: 1, original: { status: "uploading", progress: 0 } });
+store.editor.setImageOriginal({ id, state: { status: "uploading", progress: 0.5 } });
+JSON.stringify(store.get().images[0]?.original)
+=> {"status":"uploading","progress":0.5}
+
+store.editor.setImageOriginal({ id, state: { status: "uploaded", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" } });
+JSON.stringify(store.get().images[0]?.original)
+=> {"status":"uploaded","path":"_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg"}
+
+store.editor.removeImage(id);
+store.editor.setImageOriginal({ id, state: { status: "failed", message: "late" } });
+store.get().images.length
+=> 0
+```
+
+The emission projection carries the path only once the original landed — a
+failed or in-flight original is an image with pixels and no file.
+
+```ts
+const store = createEmissionStore();
+store.editor.bumpPendingImages(2);
+store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "a", objectUrl: "blob:1", byteLength: 1, original: { status: "uploaded", path: "_tmp/a.png" } });
+store.editor.addImage({ id: 2, mimeType: "image/png", dataBase64: "b", objectUrl: "blob:2", byteLength: 1, original: { status: "failed", message: "offline" } });
+JSON.stringify(draftAttachments(store.get()).images)
+=> [{"id":1,"mimeType":"image/png","dataBase64":"a","path":"_tmp/a.png"},{"id":2,"mimeType":"image/png","dataBase64":"b"}]
 ```

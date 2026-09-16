@@ -41,6 +41,16 @@ export interface ImageItem {
   objectUrl: string;
   /** Approximate byte size of the encoded image. */
   byteLength: number;
+  /**
+   * The original file's trip to the box. `dataBase64` is the reduced copy the
+   * agent sees inline (`lib/image-paste.ts` downscales to 1920px); the
+   * original is uploaded alongside it, exactly as a non-image file is, so the
+   * agent also has a file to crop, OCR, attach, or hand to an API. `uploaded`
+   * carries the `_tmp/` path the message's `<attachments>` block lists as
+   * `[image#N]: <path>`; `failed` means the message goes out with the pixels
+   * only and no line.
+   */
+  original: FileTransferState;
 }
 
 /**
@@ -55,7 +65,7 @@ export interface ImageItem {
  */
 export type FileTransferState =
   | { status: "uploading"; /** 0–1, or 0 while the total is unknown. */ progress: number }
-  | { status: "uploaded"; /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
+  | { status: "uploaded"; /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
   | { status: "failed"; message: string };
 
 /**
@@ -130,6 +140,8 @@ export interface EmissionEditor {
    * resurrect it.
    */
   setFileState(opts: { id: number; state: FileTransferState }): void;
+  /** Advance an image's ORIGINAL-file upload (see {@link ImageItem.original}); same no-op rule as `setFileState`. */
+  setImageOriginal(opts: { id: number; state: FileTransferState }): void;
   addSelection(item: SelectionItem): void;
   /** Removes the image and strips its `[imageN]` token (plus a bounding whitespace char) from the text. */
   removeImage(id: number): void;
@@ -227,6 +239,10 @@ export function createEmissionStore(): EmissionStore {
     setFileState({ id, state }) {
       if (!draft.files.some((file) => file.id === id)) return;
       patch({ files: draft.files.map((file) => (file.id === id ? { ...file, state } : file)) });
+    },
+    setImageOriginal({ id, state }) {
+      if (!draft.images.some((image) => image.id === id)) return;
+      patch({ images: draft.images.map((image) => (image.id === id ? { ...image, original: state } : image)) });
     },
     addSelection(item) {
       patch({ selections: [...draft.selections, item] });

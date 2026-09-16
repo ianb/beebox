@@ -51,6 +51,7 @@ import {
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
   partitionFiles,
+  restoredImageOriginal,
   type PersistedEmission,
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
@@ -179,6 +180,7 @@ export function useEmissionPersistence(opts: {
       editor.restoreImages(p.images.map((image): ImageItem => ({
         ...image,
         objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
+        original: restoredImageOriginal(image.original),
       })));
       for (const file of live) editor.addFile(file);
       // Dead files (their tmp/ upload was swept) must not leave dangling

@@ -4427,6 +4427,14 @@ test1:
       peak: 57900
       added: 10952
       turns: 19
+  chat-image-original-path:
+    - date: 2026-09-16T18:53:52.540Z
+      boxCommit: 85dd7f328089666edc081ea987ab9e6ce436179a
+      repoCommit: 1e4241e17f68f7b65fff9b56d8d7eb8d94d460c9
+      initial: 50971
+      peak: 63283
+      added: 12312
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

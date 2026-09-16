@@ -2,10 +2,15 @@
  * File-upload route for the chat composer.
  *
  * POST /api/chat/upload-file - multipart upload of a single file. The file is
- * written to <boxRoot>/tmp/<isoTimestamp>_<sanitizedName> and the relative
- * path is returned. The chat composer then references it inline as `[fileN]`
- * and lists `[fileN]: tmp/...` inside an <attachments> block sibling to
- * <typed>, so the agent sees a markdown-style reference link it can Read.
+ * written to <boxRoot>/_tmp/<isoTimestamp>_<sanitizedName> and the
+ * box-relative path is returned. The chat composer then references it inline
+ * as `[file#N]` (or, for an inline image's original, `[image#N]`) and lists
+ * `[file#N]: _tmp/...` inside an <attachments> block sibling to <typed>, so
+ * the agent sees a markdown-style reference link it can Read.
+ *
+ * The returned path is the one the file is actually at: `_tmp/`, the box's
+ * swept scratch area (`lib/box-tmp.ts`). It used to say `tmp/`, a directory
+ * no box has, so every attachment line pointed at a file that was not there.
  *
  * Uploads accumulate until bbx wakeup's housekeeping sweep removes them.
  */
@@ -74,7 +79,7 @@ export async function registerChatUploadRoutes(
     await fs.writeFile(fullPath, buffer);
 
     return {
-      path: `tmp/${filename}`,
+      path: path.relative(boxRoot, fullPath),
       originalName,
       size: buffer.length,
       mimetype: data.mimetype,

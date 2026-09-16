@@ -4,7 +4,11 @@
  * Displays thumbnails of images pasted/dropped into the chat input. Each
  * thumbnail references a numeric id that appears as `[imageN]` in the
  * textarea; clicking a thumbnail opens it in a lightbox, the trash button
- * removes the attachment and strips its `[imageN]` token from the text.
+ * removes the attachment and strips its `[imageN]` token from the text. A
+ * corner badge shows where the image's ORIGINAL file is in its upload
+ * (`ImageItem.original`): the thumbnail is the reduced copy, and the badge is
+ * the only place the user can see that the full-size file has not landed, or
+ * failed and can be retried.
  *
  * The parallel `FileAttachmentPanel` shows uploaded non-image files which
  * the composer references via `[fileN]` tokens.
@@ -13,7 +17,7 @@
 import { Image } from "../ui/Image";
 import { useLightbox } from "../LightboxProvider";
 import { formatBytes } from "../../lib/format-bytes";
-import type { ImageItem, FileItem } from "../../input/emission-store";
+import type { ImageItem, FileItem, FileTransferState } from "../../input/emission-store";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -27,11 +31,14 @@ export function AttachmentPanel({
   attachments,
   pendingCount,
   onRemove,
+  onRetryOriginal,
 }: {
   attachments: AttachmentItem[];
   /** Images pasted/dropped but still encoding — shown as placeholder tiles. */
   pendingCount: number;
   onRemove: (id: number) => void;
+  /** Re-run a failed upload of the image's original file. */
+  onRetryOriginal: (id: number) => void;
 }) {
   const lightbox = useLightbox();
 
@@ -54,6 +61,7 @@ export function AttachmentPanel({
           attachment={att}
           onClick={() => openAt(att.id)}
           onRemove={() => onRemove(att.id)}
+          onRetryOriginal={() => onRetryOriginal(att.id)}
         />
       ))}
       {Array.from({ length: pendingCount }, (_unused, i) => (
@@ -83,14 +91,21 @@ function ThumbTile({
   attachment,
   onClick,
   onRemove,
+  onRetryOriginal,
 }: {
   attachment: AttachmentItem;
   onClick: () => void;
   onRemove: () => void;
+  onRetryOriginal: () => void;
 }) {
   const kb = Math.round(attachment.byteLength / 1024);
+  const { original } = attachment;
   return (
-    <div className="relative group" data-bbx-source={`attachment-${attachment.id}`}>
+    <div
+      className="relative group"
+      data-bbx-source={`attachment-${attachment.id}`}
+      data-bbx-original-state={original.status}
+    >
       <button
         type="button"
         onClick={onClick}
@@ -107,6 +122,7 @@ function ThumbTile({
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
+      <OriginalBadge original={original} onRetry={onRetryOriginal} />
       <button
         type="button"
         onClick={onRemove}
@@ -118,6 +134,44 @@ function ThumbTile({
         </svg>
       </button>
     </div>
+  );
+}
+
+/**
+ * The original file's upload, in the tile's bottom corner: a progress bar
+ * while it moves, a retry when it failed, nothing once it landed. The message
+ * sends either way — a failed original just means no file line for this
+ * image — so the badge informs and offers, it never blocks.
+ */
+function OriginalBadge({ original, onRetry }: { original: FileTransferState; onRetry: () => void }) {
+  if (original.status === "uploaded") return null;
+  if (original.status === "failed") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="absolute bottom-0 inset-x-0 text-[10px] leading-4 bg-danger text-white text-center truncate px-1 focus:outline-none focus:ring-2 focus:ring-danger"
+        title={`Original not uploaded: ${original.message} — click to retry`}
+      >
+        Original failed — retry
+      </button>
+    );
+  }
+  return (
+    <span
+      className="absolute bottom-0 inset-x-0 h-1 bg-warm-300/80 overflow-hidden pointer-events-none"
+      role="progressbar"
+      aria-label="Uploading the original file"
+      aria-valuenow={Math.round(original.progress * 100)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      title="Uploading the original file…"
+    >
+      <span
+        className="block h-full bg-accent transition-[width] duration-150"
+        style={{ width: `${String(Math.max(4, Math.round(original.progress * 100)))}%` }}
+      />
+    </span>
   );
 }
 

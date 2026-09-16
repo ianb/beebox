@@ -1,6 +1,6 @@
 ---
 title: "An uploaded chat image is visible but unusable: the agent sees the pixels and has no file"
-workstream: unattached
+workstream: chat-image-files
 area: beebox
 priority: important
 labels: [chat, images]

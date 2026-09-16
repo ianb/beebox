@@ -68,6 +68,14 @@ export interface ChatImageAttachment {
   mimeType: string;
   /** Raw base64 data (no data: URL prefix) */
   dataBase64: string;
+  /**
+   * Box-relative path of the uploaded ORIGINAL file (`_tmp/…`), when its
+   * upload landed. `dataBase64` is the reduced inline copy; this is the file
+   * the message's `<attachments>` block lists as `[image#N]: <path>`. It
+   * travels on the emission and the native bridge, not in the `/chat/send`
+   * body: the path reaches the agent through the message text.
+   */
+  path?: string;
 }
 
 export interface SessionEntry {

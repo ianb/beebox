@@ -181,7 +181,7 @@ function ComposerRegion(props: ChatBodyProps) {
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled, captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, retryFileUpload, handleAddFiles, handleFileInputChange, addFiles } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, retryFileUpload, retryImageOriginal, handleAddFiles, handleFileInputChange, addFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -200,6 +200,7 @@ function ComposerRegion(props: ChatBodyProps) {
       onRemoveAttachment={removeAttachment}
       onRemoveFileAttachment={removeFileAttachment}
       onRetryFileAttachment={retryFileUpload}
+      onRetryImageOriginal={retryImageOriginal}
       fileInputRef={fileInputRef}
       onFileInputChange={handleFileInputChange}
       typingMode={typingMode}

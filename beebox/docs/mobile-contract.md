@@ -282,7 +282,7 @@ the contract.
   ```json
   { "version": 2, "id": "<UUID string>", "text": "<string>",
     "origin": "typed"|"voice", "diarized": <bool>,
-    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
+    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>", "path"?: "<_tmp/...>" } ],
     "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
     "selections": [ { "id": <int>, "ref": "<string>"?, "text": "<string>",
@@ -290,6 +290,10 @@ the contract.
   ```
   A selection's `ref` is absent or null when the text was quoted from the chat transcript (no file
   behind it); web normalizes both to `null`.
+  An image's `path` is the box path of its **original** file, uploaded through §5.4 beside the
+  reduced inline copy (`dataBase64`); web lists it in the message's `<attachments>` block as
+  `[image#N]: <path>` (§4.1a). Optional: absent when the original's upload failed or from a build
+  that predates it. When present it must be a string, or the payload is malformed (V2 rule).
 - **V3 destination binding:** updated iOS sends the same V2 content fields with
   `version: 3`, `bindingRevision`, and immutable
   `binding: {boxSlug, target, attention}`. Target is either
@@ -392,6 +396,11 @@ mint them independently; the ids are per-emission and per-kind.
 - **Within one message the token and whatever resolves it always agree**: a
   body that says `[file1]` gets an `<attachments>` line that says `[file1]`.
   The agent reads either form and is never asked to reconcile two.
+- **An inline image's original file** is listed in the same block, `[image#N]:
+  <path>`, when the emission image carries `path` (§4.1). Readers that expand
+  or strip `[image#N]` stop at the trailing `<attachments>` block
+  (`shared/composer-tokens.ts` · `attachmentsBlockStart`), so the line is never
+  taken for a second anchor. No line means no file.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -878,7 +887,9 @@ See §1.3 (full request/response/errors).
   `Authorization: Bearer <token>`. One file field named `file` with the original filename and MIME
   type. Native reports `URLSession` byte progress while uploading.
 - **Response 200:** `{ path: string, originalName: string, size: number, mimetype: string }`; `path`
-  points under the box's `_tmp/` directory and becomes the Emission V2 file `path`.
+  points under the box's `_tmp/` directory and becomes the Emission V2 file `path`, or the image
+  `path` when the upload is an inline image's original (§4.1). Before 2026-09-16 the route answered
+  `tmp/<file>` while writing to `_tmp/`; native round-trips the value unmodified either way.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1170,9 +1181,10 @@ without the other is a contract break.
   therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
-- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
-  `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
-  `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
+- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}`; image
+  entry keys `{id,mimeType,dataBase64,path?}` — `Models/NativeComposerContract.swift` ·
+  `NativeEmissionV2`, `Models/ChatImageAttachment.swift` ↔ `native-emission.ts` ·
+  `NativeEmissionV2` / `parseNativeEmissionDetail`.
 - **Emission V3 JSON keys** V2 content plus `{binding,bindingRevision}`; binding uses the
   shared target/attention unions in `shared/chat-composer-binding.ts`.
 - **Receipt shape** `{disposition,emissionId,reason?,deduplicated?,definitive?}`, dispositions
@@ -1243,6 +1255,10 @@ without the other is a contract break.
 
   - **inline** — a photo, base64 in the `/chat/send` body, anchored by `[image#N]`, while the
     composer's *total* inline photo count (in-flight encodes included) stays within the limit.
+    The inline copy is reduced (1920px); the photo's **original** is uploaded beside it through
+    `/chat/upload-file` and its path rides on the emission image (`path`, §4.1), so the agent has
+    the full file as well as the pixels. A failed original never blocks the send — the message
+    goes out with the pixels and no file line.
   - **upload** — everything else: any **non-image**, and **photos past the limit**. Uploaded ahead
     of the send (`/chat/upload-file`) and anchored by `[file#N]`, which carries only a path — so it
     adds nothing to the send payload however large it is. **No count or size limit applies**, since

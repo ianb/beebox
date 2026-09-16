@@ -73,6 +73,8 @@ Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachme
 </attachments>
 \`\`\`
 
+An image the user pasted or picked is listed the same way, as \`[image#N]: _tmp/...\`. The image you see inline is a reduced copy; the file is the original, for cropping, OCR, attaching to a card, or handing to an API (a phone photo may be HEIC — convert it with \`sips\` or ImageMagick). An image with no \`[image#N]:\` line has no file: its upload failed, or the message predates this.
+
 Messages sent before 2026-08-25 use the older \`[file1]\` form, without the \`#\`. Read either; the token and its \`<attachments>\` line always agree within one message.
 
 Read them with the right tool (Read for text/images/PDFs; \`pandoc <path> -t plain\` for Office docs — see External Tools in the guide). **\`_tmp/\` is not storage** — it's gitignored and swept after 7 days. Once you've used a file, decide: a keeper goes *into* the box (a card that attaches it, or a spot under \`_content/inbox/\` / \`_content/\`) — don't leave it in \`_tmp/\`; otherwise \`rm\` it or let the sweep take it.

@@ -4,7 +4,7 @@
  *
  * A file routed inline (`components/chat/file-routing.ts`) is POSTed multipart
  * to `/api/chat/upload-file` *before* the message is sent. The server writes it
- * to `<boxRoot>/tmp/` and returns the relative path; the composer inserts a
+ * to `<boxRoot>/_tmp/` and returns the box-relative path; the composer inserts a
  * `[file#N]` token at the cursor and emits a sibling `<attachments>` block
  * mapping each token to its path on send. So the file never rides in the
  * `/chat/send` body the way an inline photo does — only its path does.
@@ -20,7 +20,7 @@ import { errorMessage } from "@shared/error-guards";
 
 /** Server response shape of POST /api/chat/upload-file (see routes/chat-uploads.ts). */
 const uploadedFileSchema = z.object({
-  /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
+  /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */
   path: z.string(),
   originalName: z.string(),
   size: z.number(),

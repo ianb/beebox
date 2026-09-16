@@ -6,10 +6,14 @@
  *
  * Photos small enough to ride inline are downscaled + base64-encoded
  * client-side and drop an `[image#N]` token at the textarea cursor (removal
- * strips the matching token back out).
+ * strips the matching token back out). Their ORIGINAL bytes go up to the
+ * box's `_tmp/` dir at the same time, through the same upload as any file,
+ * so the message can list `[image#N]: <path>` beside the pixels and the
+ * agent has a file to work on, not just a reduced copy to look at
+ * (`ImageItem.original`).
  *
  * Everything else — any non-image, and photos over the inline limit — is
- * uploaded to the box's `tmp/` dir and anchored by a `[file#N]` token carrying
+ * uploaded to the box's `_tmp/` dir and anchored by a `[file#N]` token carrying
  * only its path, so it adds nothing to the send payload however large it is.
  * Its token goes in **immediately**, before the bytes have moved, so the user
  * can keep writing around it; the chip shows the upload's progress and the send
@@ -152,8 +156,10 @@ export function useChatAttachments(opts: {
   const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addUploadFiles, retryFileUpload, awaitPendingUploads, forget: forgetUpload, forgetAll: forgetAllUploads } =
-    useComposerFileUploads(editor);
+  const {
+    addUploadFiles, uploadImageOriginal, retryFileUpload, retryImageOriginal, awaitPendingUploads,
+    forget: forgetUpload, forgetImage: forgetImageUpload, forgetAll: forgetAllUploads,
+  } = useComposerFileUploads(editor);
   /**
    * Downscale, encode and store the photo half of an inline selection,
    * returning the items that made it. Placeholder tiles go up immediately so
@@ -178,16 +184,21 @@ export function useChatAttachments(opts: {
       })
     );
     const newItems: ImageItem[] = [];
-    for (const p of processed) {
-      if (!p) continue;
+    for (const [i, p] of processed.entries()) {
+      const source = photos[i];
+      if (!p || source === undefined) continue;
       const item: ImageItem = {
         id: editor.nextImageId(),
         mimeType: p.mimeType,
         dataBase64: p.dataBase64,
         objectUrl: p.objectUrl,
         byteLength: p.byteLength,
+        original: { status: "uploading", progress: 0 },
       };
       editor.addImage(item); // also decrements the pending count for this image
+      // The original goes up as-is — never the reduced copy — so the agent's
+      // file is the bytes the user actually has.
+      uploadImageOriginal(item.id, source);
       newItems.push(item);
     }
     // Say so when an image didn't make it. The encoder rejects formats the
@@ -197,7 +208,7 @@ export function useChatAttachments(opts: {
     const failed = photos.filter((_f, i) => processed[i] === null);
     if (failed.length > 0) toastError(unsupportedImageMessage(failed));
     return newItems;
-  }, [editor]);
+  }, [editor, uploadImageOriginal]);
 
   /**
    * Run one file's upload, moving its chip through `uploading` → `uploaded` or
@@ -251,9 +262,11 @@ export function useChatAttachments(opts: {
     if (target) {
       try { URL.revokeObjectURL(target.objectUrl); } catch (_e) { /* already revoked — harmless */ }
     }
+    // Its original may still be uploading; same rule as a file chip.
+    forgetImageUpload(id);
     // Strips the matching `[imageN]` token from the text too.
     editor.removeImage(id);
-  }, [editor, emissionStore]);
+  }, [editor, emissionStore, forgetImageUpload]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -293,7 +306,7 @@ export function useChatAttachments(opts: {
 
   return {
     fileInputRef,
-    addFiles, removeAttachment, removeFileAttachment, retryFileUpload, awaitPendingUploads,
+    addFiles, removeAttachment, removeFileAttachment, retryFileUpload, retryImageOriginal, awaitPendingUploads,
     handleAddFiles, handleFileInputChange, resetAttachments,
   };
 }

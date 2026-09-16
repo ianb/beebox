@@ -19,13 +19,16 @@
  * Images are size-gated: base64 payloads persist only while the total
  * serialized size stays under PERSIST_BYTE_BUDGET — text, files, and
  * selections always fit and always persist. Restored file attachments
- * point at `tmp/…` uploads that housekeeping sweeps after 7 days; the
+ * point at `_tmp/…` uploads that housekeeping sweeps after 7 days; the
  * pure `partitionFiles` supports the restore-time validation the React
- * layer performs (drop dead ones with a visible note).
+ * layer performs (drop dead ones with a visible note). An image's original
+ * upload (`ImageItem.original`) restores through `restoredImageOriginal`:
+ * a landed path comes back as-is, anything still moving is `failed` — the
+ * `File` handle died with the page, so it can be removed but not retried.
  */
 
 import { uploadedPath } from "./emission-store";
-import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
+import type { EmissionDraft, ImageItem, FileItem, FileTransferState } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -43,7 +46,8 @@ export interface KeyValueStorage {
 export interface PersistedEmission {
   version: 1;
   text: string;
-  images: ImageItem[];
+  /** `original` is absent in drafts written before originals were kept. */
+  images: Array<Omit<ImageItem, "original"> & Partial<Pick<ImageItem, "original">>>;
   files: FileItem[];
   selections: SelectionItem[];
   updatedAt: number;
@@ -109,6 +113,23 @@ export function serializePersistedEmission(
   payload = JSON.stringify({ ...full, images: [] });
   return { payload, imagesDropped: true };
 }
+
+/**
+ * The original-upload state an image comes back with. `uploaded` survives as
+ * it was. `uploading` cannot resume (no `File` after a reload) and a draft
+ * written before originals were kept has no state at all: both restore as
+ * `failed` with one message, so the tile says why there will be no file line
+ * and offers remove. `failed` keeps its own message, but is equally
+ * unretryable; the tile's retry then reports that (`composer-file-uploads.ts`).
+ */
+export function restoredImageOriginal(original: FileTransferState | undefined): FileTransferState {
+  if (original?.status === "uploaded") return original;
+  if (original?.status === "failed") return original;
+  return { status: "failed", message: RESTORED_ORIGINAL_LOST };
+}
+
+/** Why a restored image has no original: the page reloaded before it landed. */
+export const RESTORED_ORIGINAL_LOST = "Original not uploaded — the agent sees the reduced copy only";
 
 function isPersistedEmission(value: unknown): value is PersistedEmission {
   if (!isRecord(value)) return false;

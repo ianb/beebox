@@ -14,6 +14,8 @@ import {
   commitPersistedEmission,
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
+  restoredImageOriginal,
+  RESTORED_ORIGINAL_LOST,
   partitionFiles,
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
@@ -142,7 +144,7 @@ loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text
 ## Oversized images are dropped from persistence, not from memory
 
 ```ts
-const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET }] };
+const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
 const { payload, imagesDropped } = serializePersistedEmission(big, { updatedAt: 1 });
 imagesDropped
 => true
@@ -225,4 +227,35 @@ const files = [uploaded(1, "_tmp/alive.pdf"), uploaded(2, "_tmp/swept.pdf")];
 const { live, dead } = partitionFiles(files, new Set(["_tmp/alive.pdf"]));
 live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2
+```
+
+## An image's original comes back landed, or failed — never resumable
+
+The `File` behind an in-flight upload dies with the page, so a persisted
+`uploading` original — and a draft from before originals were kept, which has
+no state at all — restores as `failed` with one message the tile shows. A
+landed path survives verbatim; a recorded failure keeps its own message.
+
+```ts
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }))
+=> {"status":"uploaded","path":"_tmp/a.png"}
+
+JSON.stringify(restoredImageOriginal({ status: "failed", message: "413" }))
+=> {"status":"failed","message":"413"}
+
+restoredImageOriginal({ status: "uploading", progress: 0.7 }).status
+=> failed
+
+restoredImageOriginal(undefined).message === RESTORED_ORIGINAL_LOST
+=> true
+```
+
+The state itself rides through persistence with the image, so a landed path
+is still there after a reload.
+
+```ts
+const withOriginal = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
+const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
+JSON.stringify(parsePersistedEmission(payload)?.images[0]?.original)
+=> {"status":"uploaded","path":"_tmp/a.png"}
 ```
