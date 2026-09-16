@@ -1,9 +1,9 @@
 ---
 title: "Chat images: keep the original as a file the agent can use"
-status: active
+status: implemented
 workstream: chat-image-files
 issues:
-  - ../../../issues/features/2026-09-16-uploaded-chat-images-have-no-file-the-agent-can-use.md
+  - ../../../issues/closed/features/2026-09-16-uploaded-chat-images-have-no-file-the-agent-can-use.md
 ---
 # Chat images: keep the original as a file the agent can use
 
