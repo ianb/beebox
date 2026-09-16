@@ -97,6 +97,7 @@ browser-task-drain.procedure.card
 process-pages.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
+trick-secret-runtime.procedure.card
 view-card-shape.procedure.card
 ```
 
