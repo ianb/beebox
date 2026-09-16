@@ -119,6 +119,18 @@ export function taprcTestFiles(packageRoot: string): string[] {
 // ── argv ────────────────────────────────────────────────────────────────────
 
 /**
+ * Whether argv already fixes tap's job count, in ANY spelling tap accepts.
+ *
+ * `tap --help`: "-j<n> --jobs=<n>". A `startsWith("-j")` test alone misses the
+ * long forms, so `tap --jobs=8` would have had a second, contradictory `-j`
+ * appended — and the careful tier's `-j1` would have been added on top of a
+ * caller's explicit `--jobs=4`, silently overriding it.
+ */
+export function hasExplicitJobs(args: string[]): boolean {
+  return args.some((arg) => arg.startsWith("-j") || arg === "--jobs" || arg.startsWith("--jobs="));
+}
+
+/**
  * Whether the caller already named the files to run, in which case we do not.
  *
  * "Not a flag" is not enough: `tap --timeout 300` and `tap --grep foo` put a
@@ -171,7 +183,7 @@ export function tierCommand(input: {
   if (executable !== "tap") return input.command;
 
   // -j1 is what "carefully" means: the flakes in this tier are contention.
-  const flags = input.tier === "careful" && !args.some((a) => a.startsWith("-j")) ? ["-j1"] : [];
+  const flags = input.tier === "careful" && !hasExplicitJobs(args) ? ["-j1"] : [];
   const explicit = hasExplicitFiles({
     args,
     known: [...input.taprcFiles, ...input.careful],
@@ -238,10 +250,10 @@ export function capJobs(input: {
   // be used is already not a reason to refuse to test, and it is not a reason
   // to run slowly either.
   if (concurrency === null || concurrency < 1) return args;
-  // An explicit -j always wins, matching `tierCommand`'s precedence — including
-  // the `-j1` that `tierCommand` itself adds for the careful tier, which must
-  // never be widened to 3 by this.
-  if (args.some((arg) => arg.startsWith("-j"))) return args;
+  // An explicit job count always wins, matching `tierCommand`'s precedence —
+  // including the `-j1` that `tierCommand` itself adds for the careful tier,
+  // which must never be widened to 3 by this.
+  if (hasExplicitJobs(args)) return args;
   return [...args, `-j${String(cappedJobs(cores))}`];
 }
 

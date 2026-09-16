@@ -215,6 +215,14 @@ export async function stopWorktree(state: CoreState, name: string): Promise<void
   const handle = worktrees.get(name);
   if (!handle) return;
   worktrees.delete(name);
+  // Same reasoning as `clearFailed`: a deliberate stop is a fresh start, so it
+  // resets the automatic-retry budget. Without this, stopping a worktree whose
+  // retry was mid-flight leaves the count behind, and the NEXT cold start's
+  // first failure is mislabelled as attempt 2 with a short budget — for a
+  // reason nothing visible to the boxholder explains. (An idle stop reaches
+  // here too, but a ready generation already cleared its own count, so that
+  // case is a no-op.)
+  state.retryAttempts.delete(name);
   const ready = readyLifecycle(handle);
   if (!ready) {
     // `starting`: the in-flight start owns the children (they live in

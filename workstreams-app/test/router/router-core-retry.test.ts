@@ -176,3 +176,33 @@ test("coming up clears the history, so a later unrelated failure gets a full bud
   await failOnce(h);
   assert.equal(failedLifecycle(h.core.getHandle("wt")!)?.attempts, 0);
 });
+
+test("an explicit stop resets the retry budget, so the next start is not mislabelled", async (t) => {
+  const h = await makeHarness();
+  t.after(() => h.cleanup());
+  h.manualProbes();
+
+  // Spend one automatic retry, then stop the worktree while that retry's
+  // generation is still starting — `bin/workstreams down <name>` mid-recovery.
+  await failOnce(h);
+  h.clock.advance(RETRY_BACKOFF_MS[0]);
+  const retried = h.core.ensureRunning("wt");
+  const probes = await h.awaitProbes(2);
+  await h.core.stopWorktree("wt");
+  // Settle the in-flight probes, or the superseded start waits on them forever:
+  // stopWorktree unlinks the handle but does not reach into the start it left
+  // running. The host is still loaded, so they fail.
+  for (const probe of probes) probe.reject(new FakeProbeTimeoutError());
+  await retried.catch(() => {
+    /* the superseded start self-cleans without publishing (invariant #5) */
+  });
+  await ticks(4);
+
+  // A later cold start's first failure is attempt 0 with a full budget. Leaving
+  // the count behind would quietly shorten it, for a reason nothing visible
+  // explains.
+  await failOnce(h);
+  const failed = failedLifecycle(h.core.getHandle("wt")!);
+  assert.equal(failed?.attempts, 0);
+  assert.equal(failed?.retryAfter, h.clock.now() + RETRY_BACKOFF_MS[0]);
+});

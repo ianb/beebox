@@ -14,6 +14,7 @@ import { join, dirname } from "node:path";
 import {
   capJobs,
   cappedJobs,
+  hasExplicitJobs,
   carefulExclusions,
   parseCarefulList,
   readCarefulList,
@@ -259,4 +260,30 @@ test("cappedJobs: never drops below one, however small the machine", () => {
   assert.equal(cappedJobs(4), 1);
   assert.equal(cappedJobs(8), 2);
   assert.equal(cappedJobs(32), 8);
+});
+
+test("hasExplicitJobs: every spelling tap documents, so none is silently overridden", () => {
+  // `tap --help`: "-j<n> --jobs=<n>". A startsWith("-j") test alone misses the
+  // long forms.
+  for (const args of [["-j3"], ["-j", "3"], ["--jobs=3"], ["--jobs", "3"]]) {
+    assert.equal(hasExplicitJobs(args), true, args.join(" "));
+  }
+  assert.equal(hasExplicitJobs(["test/a.test.ts", "--grep", "foo"]), false);
+  // Not a jobs flag despite the prefix overlap.
+  assert.equal(hasExplicitJobs(["--jobsomething"]), false);
+});
+
+test("capJobs: a long-form --jobs is respected rather than contradicted", () => {
+  assert.deepEqual(
+    capJobs({ args: ["--jobs=8", "a.test.ts"], mode: "full", concurrency: 1, cores: 12 }),
+    ["--jobs=8", "a.test.ts"],
+    "appending -j3 here would hand tap two conflicting job counts",
+  );
+});
+
+test("tierCommand: a caller's explicit --jobs is not overridden by the careful tier's -j1", () => {
+  assert.deepEqual(
+    tierCommand({ command: ["tap", "--jobs=4"], tier: "careful", taprcFiles: TAPRC_FILES, careful: CAREFUL }),
+    ["tap", "--jobs=4", "test/flaky.doctest.md"],
+  );
 });
