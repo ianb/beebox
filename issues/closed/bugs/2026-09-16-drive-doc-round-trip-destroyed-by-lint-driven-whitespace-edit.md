@@ -7,7 +7,19 @@ labels: [connectors, data-loss]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — an agent postmortem filed as box feedback after the boxholder found the damage
+resolution: implemented
 ---
+
+> **Closed 2026-09-15 — fixed by commit `5438d6053`** on
+> `worktree-drive-roundtrip-safety`. Connector-owned markdown is exempt from
+> markdownlint at both entry points, a whitespace-stripping push is refused and
+> parked as `.remote.md`, and the SDK hook + card instructions now say what the
+> file is and that an empty `lossy:` is not a safety check. Two of the
+> postmortem's five remedies were deliberately not implemented — extending
+> `LossyType` to cover nested lists, and letting the connector commit its own
+> pulls with `--no-verify` — see the Resolution section below for why. Verified
+> only against the Drive fakes; never exercised against a real synced Google
+> Doc.
 
 Two shared Google Docs lost their structure. A box agent stripped trailing
 whitespace from connector-owned markdown to get past a lint failure, the
@@ -126,7 +138,7 @@ hook-bypass hatch would hide the next instance.
 ## Notes
 
 The dirty-tree half overlaps
-[`bbx feedback` can fail on whitespace it introduced itself](2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
+[`bbx feedback` can fail on whitespace it introduced itself](../../bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
 — the same pattern of generated content failing a lint rule meant for authored
 content.
 
