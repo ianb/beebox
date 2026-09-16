@@ -356,8 +356,7 @@ struct NativeComposerView: View {
                 ImageAttachmentStrip(
                     images: draftStore.draft.images,
                     draftStore: draftStore,
-                    onRetry: retryImage,
-                    onRetryOriginal: retryImageOriginal
+                    onRetry: retryImage
                 )
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
@@ -1522,11 +1521,13 @@ struct NativeComposerView: View {
             )
             return
         }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
         do {
             let uploaded = try await ChatAPI(box: box).uploadFile(
                 data: data,
                 filename: file.originalName,
                 mimeType: file.mimetype,
+                batch: batch,
                 onProgress: { progress in
                     Task {
                         await draftStore.setFileProgress(id: file.id, progress: progress, boxID: box.id)
@@ -1624,12 +1625,6 @@ struct NativeComposerView: View {
         await uploadImageOriginal(imported)
     }
 
-    private func retryImageOriginal(_ image: DraftImage) {
-        Task {
-            await uploadImageOriginal(image)
-        }
-    }
-
     /// Start an original's upload again for every image whose bytes survived an
     /// interrupted one. The request cannot be resumed, but the payload is still
     /// on disk, so it can be repeated.
@@ -1664,11 +1659,13 @@ struct NativeComposerView: View {
             )
             return
         }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
         do {
             let uploaded = try await ChatAPI(box: box).uploadFile(
                 data: data,
                 filename: original.filename,
                 mimeType: original.mimeType,
+                batch: batch,
                 onProgress: { progress in
                     Task {
                         await draftStore.setImageOriginalProgress(
@@ -1812,9 +1809,6 @@ private struct ImageAttachmentStrip: View {
     var images: [DraftImage]
     @ObservedObject var draftStore: ComposerDraftStore
     var onRetry: (DraftImage) -> Void
-    /// Retry the ORIGINAL's upload. Separate from `onRetry`, which re-runs the
-    /// encode: the two failures are independent and have different remedies.
-    var onRetryOriginal: (DraftImage) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -1858,50 +1852,15 @@ private struct ImageAttachmentStrip: View {
                                 .accessibilityLabel("Retry photo \(image.id)")
                                 .accessibilityHint(message)
                             }
-                            originalBadge(for: image)
                         }
                         if case .failed = image.state {
                             Text("Failed")
                                 .font(.caption2)
                                 .foregroundStyle(.red)
-                        } else if case .failed = image.original?.state {
-                            Text("No file")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
-        }
-    }
-
-    /// The ORIGINAL's upload, in the thumbnail's other bottom corner so it never
-    /// collides with the encode indicator. Nothing is drawn once it has landed.
-    @ViewBuilder
-    private func originalBadge(for image: DraftImage) -> some View {
-        switch image.original?.state {
-        case .uploading:
-            ProgressView()
-                .controlSize(.mini)
-                .padding(4)
-                .background(.regularMaterial, in: Circle())
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .accessibilityLabel("Uploading the original of photo \(image.id)")
-        case .failed(let message):
-            Button {
-                onRetryOriginal(image)
-            } label: {
-                Image(systemName: "exclamationmark.arrow.circlepath")
-                    .imageScale(.small)
-                    .padding(4)
-                    .background(.regularMaterial, in: Circle())
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            .frame(minWidth: 44, minHeight: 44)
-            .accessibilityLabel("Retry the original of photo \(image.id)")
-            .accessibilityHint(message)
-        case .local, .uploaded, .none:
-            EmptyView()
         }
     }
 }
@@ -1935,19 +1894,17 @@ private struct DraftImageThumbnail: View {
     }
 
     private var accessibilityStatus: String {
-        let encoding: String = switch image.state {
-        case .local: "Ready"
-        case .uploading(let progress): "Processing \(Int(progress * 100)) percent"
-        case .uploaded: "Uploaded"
-        case .failed(let message): "Failed: \(message)"
-        }
-        switch image.original?.state {
-        case .uploading:
-            return "\(encoding). Uploading the original"
-        case .failed:
-            return "\(encoding). The original could not be uploaded"
-        case .local, .uploaded, .none:
-            return encoding
+        // The original's upload is deliberately invisible here: it is a silent
+        // bonus, and a failure costs the message its path, nothing the user acts on.
+        switch image.state {
+        case .local:
+            "Ready"
+        case .uploading(let progress):
+            "Processing \(Int(progress * 100)) percent"
+        case .uploaded:
+            "Uploaded"
+        case .failed(let message):
+            "Failed: \(message)"
         }
     }
 }

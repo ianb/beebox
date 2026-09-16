@@ -7,7 +7,8 @@ final class ChatAPITests: XCTestCase {
         let request = try api.uploadFileRequest(
             data: Data("contents".utf8),
             filename: "../report\"\r\n.pdf",
-            mimeType: "application/pdf"
+            mimeType: "application/pdf",
+            batch: nil
         )
 
         XCTAssertEqual(request.url?.path, "/box/api/chat/upload-file")
@@ -18,6 +19,26 @@ final class ChatAPITests: XCTestCase {
         XCTAssertTrue(body.contains("filename=\"report___.pdf\""))
         XCTAssertTrue(body.contains("Content-Type: application/pdf"))
         XCTAssertTrue(body.contains("contents"))
+        // A draft restored from before batches existed uploads without the field.
+        XCTAssertFalse(body.contains("name=\"batch\""))
+    }
+
+    /// The `batch` text field files the upload under one directory per composed
+    /// message, and it MUST precede the file part: the server reads text fields
+    /// off the file's own multipart entry, so a later field is invisible.
+    func testUploadRequestPlacesTheBatchFieldBeforeTheFilePart() throws {
+        let api = ChatAPI(box: makeBox(), transport: StubChatTransport())
+        let request = try api.uploadFileRequest(
+            data: Data("contents".utf8),
+            filename: "report.pdf",
+            mimeType: "application/pdf",
+            batch: "aB3-_xYz01234567"
+        )
+
+        let body = try XCTUnwrap(request.httpBody.flatMap { String(data: $0, encoding: .utf8) })
+        let batchField = try XCTUnwrap(body.range(of: "Content-Disposition: form-data; name=\"batch\"\r\n\r\naB3-_xYz01234567\r\n"))
+        let fileField = try XCTUnwrap(body.range(of: "name=\"file\"; filename=\"report.pdf\""))
+        XCTAssertTrue(batchField.upperBound <= fileField.lowerBound, "batch must be written before the file part")
     }
 
     func testUploadDecodesCanonicalResponse() async throws {
@@ -29,6 +50,7 @@ final class ChatAPITests: XCTestCase {
             data: Data("contents".utf8),
             filename: "report.pdf",
             mimeType: "application/pdf",
+            batch: "batch0123456789a",
             onProgress: { value in
                 progress.append(value)
             }
@@ -45,7 +67,8 @@ final class ChatAPITests: XCTestCase {
             _ = try await ChatAPI(box: makeBox(), transport: malformed).uploadFile(
                 data: Data("x".utf8),
                 filename: "x.txt",
-                mimeType: "text/plain"
+                mimeType: "text/plain",
+                batch: nil
             )
         }
 
@@ -54,7 +77,8 @@ final class ChatAPITests: XCTestCase {
             try api.uploadFileRequest(
                 data: Data(count: ChatUploadLimits.maximumFileBytes + 1),
                 filename: "large.bin",
-                mimeType: "application/octet-stream"
+                mimeType: "application/octet-stream",
+                batch: nil
             )
         )
     }

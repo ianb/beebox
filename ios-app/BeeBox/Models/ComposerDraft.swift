@@ -36,6 +36,24 @@ enum DraftTransferState: Codable, Equatable, Sendable {
     case failed(message: String)
 }
 
+/// The draft's upload batch: one directory on the box per composed message.
+///
+/// Both composers mint the message id only at send, so the batch id is the
+/// draft's own identity instead. It is minted lazily by the first attachment
+/// upload and dies with the draft, so a message's originals and files land
+/// together and a later message never joins them.
+enum ComposerUploadBatch {
+    /// 16 characters of `[A-Za-z0-9_-]`, URL-safe and directory-safe.
+    static let idLength = 16
+
+    static func newID() -> String {
+        let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+        return String((0..<idLength).map { _ in
+            alphabet[Int.random(in: 0..<alphabet.count)]
+        })
+    }
+}
+
 /// The image's ORIGINAL bytes, kept beside the downscaled copy that goes inline
 /// and uploaded to the box so the agent gets a file it can crop, OCR, or attach.
 ///
@@ -121,6 +139,9 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     var nextFileID: Int
     var nextSelectionID: Int
     var processedCommandIDs: [String] = []
+    /// Minted by the first attachment upload; absent until then, and in drafts
+    /// persisted before batches existed.
+    var uploadBatchID: String? = nil
 
     static let empty = ComposerDraft(
         text: "",
@@ -131,7 +152,8 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextImageID: 1,
         nextFileID: 1,
         nextSelectionID: 1,
-        processedCommandIDs: []
+        processedCommandIDs: [],
+        uploadBatchID: nil
     )
 
     private enum CodingKeys: String, CodingKey {
@@ -144,6 +166,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         case nextFileID
         case nextSelectionID
         case processedCommandIDs
+        case uploadBatchID
     }
 
     init(
@@ -155,7 +178,8 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextImageID: Int,
         nextFileID: Int,
         nextSelectionID: Int,
-        processedCommandIDs: [String] = []
+        processedCommandIDs: [String] = [],
+        uploadBatchID: String? = nil
     ) {
         self.text = text
         self.selection = selection
@@ -166,6 +190,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         self.nextFileID = nextFileID
         self.nextSelectionID = nextSelectionID
         self.processedCommandIDs = processedCommandIDs
+        self.uploadBatchID = uploadBatchID
     }
 
     init(from decoder: Decoder) throws {
@@ -179,6 +204,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         nextFileID = try container.decode(Int.self, forKey: .nextFileID)
         nextSelectionID = try container.decode(Int.self, forKey: .nextSelectionID)
         processedCommandIDs = try container.decodeIfPresent([String].self, forKey: .processedCommandIDs) ?? []
+        uploadBatchID = try container.decodeIfPresent(String.self, forKey: .uploadBatchID)
     }
 }
 
@@ -410,6 +436,7 @@ enum ComposerDraftMutation: Equatable, Sendable {
     case addSelection(DraftSelection)
     case updateFile(DraftFile)
     case updateImage(DraftImage)
+    case setUploadBatchID(String)
     case applySelectionCommand(commandID: String, selection: DraftSelection)
     case removeImage(Int)
     case removeFile(Int)
@@ -453,6 +480,12 @@ enum ComposerDraftReducer {
                 return
             }
             draft.images[index] = image
+        case .setUploadBatchID(let batchID):
+            // Idempotent: the first attachment mints it and the rest reuse it.
+            guard draft.uploadBatchID == nil else {
+                return
+            }
+            draft.uploadBatchID = batchID
         case .applySelectionCommand(let commandID, let selection):
             guard draft.processedCommandIDs.contains(commandID) == false else {
                 return

@@ -355,6 +355,34 @@ final class ComposerDraftStore: ObservableObject {
         await flush()
     }
 
+    /// The batch every upload from this draft is filed under, minting it on
+    /// first use so an untouched draft never claims a directory.
+    ///
+    /// Works off the active box or, after a switch, that box's stored draft —
+    /// an upload started before the switch must file under the draft it came
+    /// from, not the one now on screen.
+    func ensureUploadBatchID(boxID: UUID) async -> String? {
+        if activeBoxID == boxID {
+            if let existing = draft.uploadBatchID {
+                return existing
+            }
+            let batchID = ComposerUploadBatch.newID()
+            ComposerDraftReducer.reduce(&draft, .setUploadBatchID(batchID))
+            await flush()
+            return draft.uploadBatchID
+        }
+        guard var stored = try? await repository.load(boxID: boxID) else {
+            return nil
+        }
+        if let existing = stored.uploadBatchID {
+            return existing
+        }
+        let batchID = ComposerUploadBatch.newID()
+        ComposerDraftReducer.reduce(&stored, .setUploadBatchID(batchID))
+        try? await repository.save(stored, boxID: boxID)
+        return stored.uploadBatchID
+    }
+
     /// Bytes of the image's ORIGINAL, for the upload. Nil once the upload has
     /// landed and the payload has been removed.
     func imageOriginalData(for image: DraftImage, boxID: UUID) async -> Data? {

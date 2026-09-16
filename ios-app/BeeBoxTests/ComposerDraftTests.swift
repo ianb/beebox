@@ -1729,6 +1729,41 @@ final class ComposerImageOriginalTests: XCTestCase {
     }
 
     @MainActor
+    func testUploadBatchIDIsMintedOnceReusedPersistedAndClearedOnSend() async throws {
+        let suite = "ComposerUploadBatch.\(UUID().uuidString)"
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let (store, defaults) = try makeStore(repository, suite: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        await store.activate(boxID: boxID)
+
+        // An untouched draft claims no directory.
+        XCTAssertNil(store.draft.uploadBatchID)
+
+        let minted = await store.ensureUploadBatchID(boxID: boxID)
+        let first = try XCTUnwrap(minted)
+        XCTAssertEqual(first.count, ComposerUploadBatch.idLength)
+        XCTAssertNil(first.rangeOfCharacter(from: CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        ).inverted))
+        // The draft's other attachments file under the same batch.
+        let second = await store.ensureUploadBatchID(boxID: boxID)
+        XCTAssertEqual(second, first)
+        XCTAssertEqual(store.draft.uploadBatchID, first)
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.uploadBatchID, first)
+
+        await relaunched.clearForSending(boxID: boxID)
+        XCTAssertNil(relaunched.draft.uploadBatchID)
+        // The next message gets its own directory.
+        let reminted = await relaunched.ensureUploadBatchID(boxID: boxID)
+        let next = try XCTUnwrap(reminted)
+        XCTAssertNotEqual(next, first)
+    }
+
+    @MainActor
     func testRelaunchResumesAnInterruptedOriginalAndFailsAVanishedOne() async throws {
         let repository = ComposerDraftRepository(rootURL: rootURL)
         let boxID = UUID()

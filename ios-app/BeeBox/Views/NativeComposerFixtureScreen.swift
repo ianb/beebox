@@ -351,8 +351,7 @@ struct NativeComposerFixtureScreen: View {
                     id: index,
                     filename: "fixture-\(index).png",
                     mimeType: "image/png",
-                    state: failed ? .failed(message: "Image unavailable") : .local,
-                    original: fixtureOriginal(index: index)
+                    state: failed ? .failed(message: "Image unavailable") : .local
                 ))
             )
         }
@@ -369,21 +368,6 @@ struct NativeComposerFixtureScreen: View {
         )
         ComposerDraftReducer.reduce(&value, .addSelection(fixtureSelection))
         return value
-    }
-
-    /// Original-upload states for the attachment strip: one image shows the
-    /// retry badge, the rest show the landed (badgeless) case. Deliberately no
-    /// in-flight original, which would block this fixture's send button and
-    /// change what the reference screenshot is for.
-    private func fixtureOriginal(index: Int) -> DraftOriginal {
-        let state: DraftTransferState = index == 2
-            ? .failed(message: "The original could not be uploaded.")
-            : .uploaded(path: "_tmp/fixture-original.png")
-        return DraftOriginal(
-            filename: "fixture-source-\(index).png",
-            mimeType: "image/png",
-            state: state
-        )
     }
 
     private func transferDraft(state: DraftTransferState, message: String) -> ComposerDraft {
