@@ -267,8 +267,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   if (isFresh) {
     // Point at the thing to open, not at another CLI command: the box is a web
     // app, and a fresh box's chat now opens with suggested questions to start
-    // from. `bbx serve` prints the box's URL on startup.
-    console.log(`\nNext: run 'bbx serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
+    // from. `bbx engine serve` prints the box's URL on startup.
+    console.log(`\nNext: run 'bbx engine serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
   }
 }
 

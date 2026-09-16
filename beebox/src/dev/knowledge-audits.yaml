@@ -5722,7 +5722,7 @@ tests:
   #   `ask-about-audio` on the recording first, which is a reasonable check
   #   rather than a violation.
 
-  # === bbx agent surface (docs/plans/bbx-agent-surface.md) ===
+  # === bbx agent surface (docs/implemented-plans/bbx-agent-surface.md) ===
   #
   # The split moved verbs the agent was previously told about. These test the
   # two places that guidance could leave an agent stranded: reaching for the

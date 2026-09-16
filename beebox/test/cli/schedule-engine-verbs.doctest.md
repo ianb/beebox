@@ -60,6 +60,23 @@ repointRunsCommand("bbx wakeup --connector gmail; bbx finalize")
 => bbx engine wakeup --connector gmail; bbx finalize
 ```
 
+A leading environment assignment keeps the command position open. A
+hand-edited card that sets a variable inline is exactly the case a migration
+must not skip, because skipping leaves the box running a dead command:
+
+```ts
+repointRunsCommand("BBX_LOG_PROMPTS=1 bbx wakeup --connector gmail")
+=> BBX_LOG_PROMPTS=1 bbx engine wakeup --connector gmail
+```
+
+An `=` inside an ordinary argument is not an assignment — it is not at a
+command position, and must not reopen one:
+
+```ts
+repointRunsCommand("bbx validate --format=json && bbx wakeup")
+=> bbx validate --format=json && bbx engine wakeup
+```
+
 A split family keeps its top-level name — `bbx secrets status` is still the
 agent's — so the family name alone is never re-pointed:
 

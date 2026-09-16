@@ -1,9 +1,9 @@
 ---
 title: "bbx is the box agent's surface; everything else moves under `bbx engine`"
-status: draft
+status: implemented
 workstream: bbx-agent-surface
 issues:
-  - ../../../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md
+  - ../../../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md
 ---
 # bbx is the box agent's surface; everything else moves under `bbx engine`
 
@@ -535,7 +535,10 @@ questions*, not a design step.
 
 ## Open design questions
 
-**Delete `scenario`, or move it to `bbx engine`?** Lean: delete. There are no
+**Delete `scenario`, or move it to `bbx engine`?** SETTLED (boxholder,
+2026-09-16): deleted. Original reasoning kept below.
+
+Lean was delete. There are no
 scenario YAML files anywhere in the repo — only `src/scenario/{loader,runner,types}.ts`
 (502 lines) — so no invocation can succeed. Its last commit was the Bee Box
 rename (2026-08-30), while `src/field-test/` kept receiving
@@ -545,6 +548,17 @@ it removes the verb, the three modules, the mention at
 every box's reference (`docs-gen/bbx-commands-scheduling.ts`). Dropping a verb
 is the boxholder's decision and is not taken here; if the answer is no, it
 becomes an ordinary engine entry and the generated-docs block still goes.
+
+**Should the per-verb smoke run be built?** The table carries a `smoke` entry
+for every agent verb and the doctest asserts those entries are well-formed, but
+nothing yet spawns them. What is enforced today is that the classification is
+total and that no evicted verb is reachable or documented to agents — not that
+every agent verb actually runs without a credential dead end. Building it means
+~38 `bbx` subprocesses under `tsx`, which is a new and slower test shape than
+anything in the suite. Lean: leave it. The 2026-09-14 incident's mechanism is
+already covered by `drive-delegation.doctest.md` and
+`connector-delegation.doctest.md` at the dispatch layer, and the structural
+check is what stops the drift this issue was filed about.
 
 **Does `field-test` belong in `bin/` instead?** The boxholder raised this. Lean:
 no. It is 4,088 lines under `src/field-test/` importing beebox internals
@@ -596,6 +610,48 @@ dependent on the slow half.
 The deploy change has no test; there is no systemd in CI. It is held by the
 pre-restart `systemctl show -p ExecStart` verification in the rollout, which is a
 procedure, and the plan says so rather than claiming coverage.
+
+## What changed during implementation
+
+Recorded against the plan above rather than rewriting it, so the difference
+stays visible.
+
+**`tick` came back to the agent surface.** The plan evicted it as a fleet-wide
+driver. It is not: `--box` defaults to the current directory, the scheduler
+daemon calls `runTick` in-process rather than through the verb, and the
+generated reference tells agents to reach for `tick --script <name> --force`
+when the boxholder asks for a run from chat.
+
+**`push` was missing from the plan's table entirely** and turned up only when
+the totality doctest failed. It is engine: `push test` fires a web push at this
+box's subscribers to prove delivery.
+
+**A box data migration was not budgeted and was required.** Stock schedule
+cards carry `runs: bbx wakeup --connector <name>` as a literal shell string
+that the scheduler executes through a shell, so the rename would have stopped
+every box's connector sync. `schedule-engine-verbs-2026-09` rewrites them.
+That migrator grew from a regex into a small tokenizer once lint rejected a
+runtime-built `RegExp`, which earned it its own doctest.
+
+**The three splits were done by partitioning, not by restructuring modules.**
+`scheduler` and `secrets` attach subcommands with `parent.command(...)`, so the
+plan's "export the subcommands individually" would have meant rewriting three
+modules. `surface-build.ts` reads them off the assembled parent instead. Cross-
+model review confirmed parent pointers and help output are correct on both
+sides.
+
+**The cutover was deliberately unengineered** after the boxholder saw the real
+failure mode (2026-09-14: "Don't make this complicated! There's half a dozen
+boxes and if it's broken I'll just wait"). No alias window, no restore path.
+
+**The smoke half of Track D was not built.** The totality and partition checks
+were, and they are what stops the drift. The per-verb subprocess run remains
+specified in the table (`Smoke`, with a stated skip reason on every verb that
+has no safe invocation) but unimplemented — see *Open design questions*.
+
+**Cross-model review of the diff found four call sites no string grep reaches**,
+the sharpest being the launchd plist, which builds its argv as an array of
+`<string>` elements.
 
 ## Implementation order
 

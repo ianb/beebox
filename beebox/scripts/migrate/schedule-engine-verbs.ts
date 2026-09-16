@@ -44,7 +44,10 @@ const MOVED_VERBS: readonly string[] = SURFACE.filter(
  * A command position is the start of the string or whatever follows a shell
  * separator, so `--message "bbx wakeup ran"` is left alone. The program may be
  * an absolute path (`/usr/local/bin/bbx`), so only the last path segment is
- * compared.
+ * compared. Leading environment assignments (`BBX_LOG_PROMPTS=1 bbx wakeup`)
+ * keep the position open: a hand-edited card that sets a variable inline would
+ * otherwise be skipped and left running a command that no longer resolves,
+ * which is the silent failure this migration exists to prevent.
  */
 export function repointRunsCommand(runs: string): string | null {
   const tokens = runs.split(/(\s+)/);
@@ -66,15 +69,25 @@ export function repointRunsCommand(runs: string): string | null {
         changed = true;
       }
     }
-    // A separator opens a new command position; anything else closes it.
-    atCommandPosition = SEPARATORS.has(piece);
+    // A separator opens a new command position; an environment assignment keeps
+    // one open; anything else closes it.
+    atCommandPosition = SEPARATORS.has(piece) || (atCommandPosition && isAssignment(piece));
   }
 
   return changed ? out.join("") : null;
 }
 
-/** Shell tokens after which a new command begins. */
+/** Shell words after which a new command begins. */
 const SEPARATORS = new Set(["&&", "||", ";", "|", "&"]);
+
+/**
+ * A leading `NAME=value` environment assignment. Matched conservatively — a
+ * shell variable name, then `=` — and only consulted while already at a command
+ * position, so a `--flag=value` argument can never be mistaken for one.
+ */
+function isAssignment(piece: string): boolean {
+  return /^[A-Z_a-z]\w*=/.test(piece);
+}
 
 /** Whether a word names the bbx binary, path-qualified or not. */
 function isBbx(piece: string): boolean {

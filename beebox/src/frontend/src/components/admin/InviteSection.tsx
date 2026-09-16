@@ -16,7 +16,7 @@ function InviteError({ message }: { message: string }) {
     <div role="alert">
       <Stack gap="xs">
         <Text as="p" size="sm" tone="danger">{message}</Text>
-        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx auth create-user</Text> : null}
+        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx engine auth create-user</Text> : null}
       </Stack>
     </div>
   );

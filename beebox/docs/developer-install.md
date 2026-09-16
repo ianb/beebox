@@ -91,21 +91,21 @@ pnpm install
 pnpm run doctor
 pnpm --dir beebox build:frontend
 cd beebox
-pnpm bbx init ~/boxes/dev1
+pnpm bbx engine init ~/boxes/dev1
 (cd ~/boxes/dev1 && pnpm install)      # boxes are packages
-pnpm bbx serve ~/boxes/dev1
+pnpm bbx engine serve ~/boxes/dev1
 pnpm run doctor
 ```
 
-Then open the URL `bbx serve` prints (default `http://localhost:3210/`).
+Then open the URL `bbx engine serve` prints (default `http://localhost:3210/`).
 
 Notes:
 - `pnpm doctor` is shadowed by pnpm's own built-in `doctor` subcommand —
   use `pnpm run doctor` (with `run`), not `pnpm doctor`.
-- `bbx init` scaffolds a *package* at `~/boxes/dev1` — the box root and the
+- `bbx engine init` scaffolds a *package* at `~/boxes/dev1` — the box root and the
   operational box are the same directory; it needs its own `pnpm install` to
   replace the scaffold-time symlink before it will run.
-- `bbx init` defaults the new box's `beebox` dependency to a `link:`
+- `bbx engine init` defaults the new box's `beebox` dependency to a `link:`
   reference back to this checkout, so edits here are picked up by the box
   without republishing anything.
 - From the repo root, `pnpm bbx <args>` also works as a shortcut for
@@ -115,14 +115,14 @@ Notes:
 
 ## Working on the frontend
 
-`bbx serve --dev` only watches the backend — it does not run Vite, so
-frontend edits won't hot-reload under plain `bbx serve --dev`. For a full
+`bbx engine serve --dev` only watches the backend — it does not run Vite, so
+frontend edits won't hot-reload under plain `bbx engine serve --dev`. For a full
 edit-and-see loop, run two terminals:
 
 ```bash
 # terminal 1 — backend, watch mode
 cd beebox
-pnpm bbx serve --dev --port 3211 ~/boxes/dev1
+pnpm bbx engine serve --dev --port 3211 ~/boxes/dev1
 
 # terminal 2 — frontend, Vite + HMR, proxies /api and /auth to the backend
 cd beebox/src/frontend

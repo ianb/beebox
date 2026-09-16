@@ -1,8 +1,8 @@
 /**
- * The unattended migration sweep — `bbx migrate --sweep`, run per box by
+ * The unattended migration sweep — `bbx engine migrate --sweep`, run per box by
  * `deploy/deploy.sh` after new engine code ships.
  *
- * Interactive `bbx migrate --apply` is built around a human at the terminal: it
+ * Interactive `bbx engine migrate --apply` is built around a human at the terminal: it
  * refuses a dirty tree, runs agent-driven procedure migrations, and leaves the
  * result uncommitted for review. None of those work unattended, so the sweep
  * takes a narrower shape rather than reusing that path with flags:
@@ -20,7 +20,7 @@
  *   manifest entry unwritten and stops the queue, so the box retries later.
  *
  * The sweep exists because box configuration and card shapes both go stale
- * silently: `bbx migrate` was manual, `deploy.sh` had no per-box convergence
+ * silently: `bbx engine migrate` was manual, `deploy.sh` had no per-box convergence
  * step, and three of four production boxes sat on a stale git-annex classifier
  * for two weeks before anyone looked.
  */
@@ -49,7 +49,7 @@ export interface SweptMigration {
 }
 
 export type SweepResult =
-  /** No manifest — the box predates `bbx migrate` and needs an explicit human decision. */
+  /** No manifest — the box predates `bbx engine migrate` and needs an explicit human decision. */
   | { readonly status: "no-manifest" }
   /** Nothing pending. The common case, and the quiet one. */
   | { readonly status: "current" }
@@ -66,10 +66,10 @@ export type SweepResult =
 /**
  * Apply every pending script migration to one box, committing each.
  *
- * Does NOT provision the box first. Interactive `bbx migrate --apply` runs
- * `bbx init` up front because a migration may depend on provisioned state; the
+ * Does NOT provision the box first. Interactive `bbx engine migrate --apply` runs
+ * `bbx engine init` up front because a migration may depend on provisioned state; the
  * caller owns that here, since a deploy already ships templates and running a
- * full `bbx init` per box mid-sweep is a much larger action than the sweep's own
+ * full `bbx engine init` per box mid-sweep is a much larger action than the sweep's own
  * work. A migration that genuinely needs fresh provisioning should say so by
  * failing rather than by relying on a side effect of the runner.
  */

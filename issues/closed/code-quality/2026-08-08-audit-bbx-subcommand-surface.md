@@ -2,13 +2,27 @@
 title: "Audit the `bbx` subcommand surface — only box-agent commands belong there"
 workstream: bbx-agent-surface
 area: beebox
-needs: [decision]
+needs: []
 labels: [cli, agent-surface]
 priority: important
+resolution: implemented
+design: ../../../beebox/docs/implemented-plans/bbx-agent-surface.md
 ---
 
+**Resolved 2026-09-16** — see `beebox/docs/implemented-plans/bbx-agent-surface.md`.
+The criterion the issue asked for is the boxholder's: only what an agent can
+call (chat, scheduled script, procedure) stays in `bbx`; the rest moved under
+`bbx engine`, which is also the list the `bbx serve` extraction needs.
+`src/cli/surface-data.ts` holds the classification with a reason per eviction,
+and `test/cli/surface.doctest.md` fails when a new verb is registered without
+being classified — the drift this issue was filed about. The docs half landed
+as the per-audience statement in `beebox/CLAUDE.md`. Dead surface removed:
+`scenario` and its runner, the five never-implemented stubs (`show`, `log`,
+`diff`, `inject`, `step` — `show --raw` was the stale XML flag below), and the
+deprecated `scheduler add|remove|list` aliases. The original write-up follows.
+
 `bbx` is the box-agent-facing command surface, but operator, deploy, and dev
-commands keep landing in it. [Extracting `bbx serve`](2026-08-08-extract-bbx-serve-from-the-box-cli.md)
+commands keep landing in it. [Extracting `bbx serve`](../../code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md)
 is one instance; the pattern recurs often enough that the surface needs a
 deliberate pass rather than another one-off extraction.
 
@@ -74,7 +88,7 @@ agent support.
   credentials without `--agent-confirmed`)
 
 Then: where does everything else go? One `bbx-admin`, several entry points, or
-`pnpm` scripts — the [`bbx serve` issue](2026-08-08-extract-bbx-serve-from-the-box-cli.md)
+`pnpm` scripts — the [`bbx serve` issue](../../code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md)
 raises the same question and they should be answered together.
 
 ## Constraints
@@ -90,7 +104,7 @@ raises the same question and they should be answered together.
   --help` rather than moving them — it shrinks the agent's surface immediately
   with no deploy risk, and separates "what agents see" from "what exists."
 
-Related: [extract `bbx serve`](2026-08-08-extract-bbx-serve-from-the-box-cli.md).
+Related: [extract `bbx serve`](../../code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md).
 
 ## The other half: nobody tells *coding* agents who `bbx` is for (2026-08-17)
 
