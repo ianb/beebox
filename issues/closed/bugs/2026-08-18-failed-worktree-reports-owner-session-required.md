@@ -1,13 +1,23 @@
 ---
 title: "A failed worktree surfaces to clients as `owner-session-required`, which sends debugging the wrong way"
-workstream: unattached
+workstream: router-resilience
 area: router
 labels: [router, auth, error-messages]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — iOS reported an auth error for what was a crashed worktree
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-09-15:** resolved by Track 6 of
+`beebox/docs/implemented-plans/router-transient-failure-resilience.md`
+(`workstreams-app/src/router/router-failed-page.ts:160`
+`writeWorktreeUnavailable`, wired at `router-dispatch.ts:296`). A parked
+worktree now answers 503 `worktree-unavailable` instead of the 401
+`owner-session-required` this issue described. Not yet exercised against the
+live shared router — only the deterministic test harness and an isolated
+router instance.
 
 When a worktree is in state `failed`, a client asking for a box inside it gets
 
@@ -17,7 +27,7 @@ When a worktree is in state `failed`, a client asking for a box inside it gets
 
 That names an authentication problem. The actual problem was that the
 worktree's hub had crashed on startup 45 minutes earlier
-([Vite port-walk steals the hub port](2026-08-18-vite-port-walk-steals-the-hub-port.md)).
+([Vite port-walk steals the hub port](../../bugs/2026-08-18-vite-port-walk-steals-the-hub-port.md)).
 
 Observed from iOS, 2026-08-18: the app first complained the box would not
 start, then showed the auth error. The boxholder's reasonable reading was that

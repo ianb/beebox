@@ -6,7 +6,23 @@ priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — a worktree died under test-suite load and stayed dead for three hours
+resolution: implemented
 ---
+
+**Closed 2026-09-15:** resolved by `beebox/docs/implemented-plans/router-transient-failure-resilience.md`
+(commit 118dec404 and its predecessors on `worktree-router-resilience`). All
+three defects: Track 2 (`retryDecision`, `workstreams-app/src/router/router-lifecycle.ts:181`)
+bounds `waitForHttp` retries with backoff before parking; Track 4
+(`BootstrapOutcome`, `workstreams-app/src/router/router-mobile-bootstrap.ts:64`)
+joins the mobile bootstrap to the proxy's existing retry loop instead of writing
+401 on a transient failure; Track 3 (`router-log-file.ts`, `router-deny-log.ts`)
+adds a durable `router.log` and logs auth denials on both HTTP and WebSocket
+paths. The "Still unexplained, and blocked on 3" section is now explainable:
+`classifyRouterRoot` maps the bare root to `control-read`, whose denial reason
+is `owner-session-required` — denial logging means a recurrence will be
+recorded. None of this has been exercised against the live shared router yet;
+it reaches it only after this branch merges to `main` and the boxholder
+restarts `pnpm dev`.
 
 The dev router turns a momentary load spike into an outage that lasts until a
 human notices, and it keeps no durable record of any of it. Three defects share

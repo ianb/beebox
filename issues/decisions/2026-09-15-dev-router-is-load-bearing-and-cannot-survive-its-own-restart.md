@@ -6,7 +6,7 @@ labels: [router, availability, dev-machine]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-router-resilience — while planning the 2026-09-15 outage fixes
-design: ../../beebox/docs/plans/router-transient-failure-resilience.md
+design: ../../beebox/docs/implemented-plans/router-transient-failure-resilience.md
 ---
 
 One dev router on port 3210 fronts every checkout and every box on this machine,
