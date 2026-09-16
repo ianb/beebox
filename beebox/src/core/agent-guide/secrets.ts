@@ -15,15 +15,15 @@
 export function secretsSection(): string {
   return `## API keys & secrets
 
-Credentials live in a machine-level store outside this box, one copy each, granted per box by the boxholder — never in a card, a config file, an env var, a log, or any committed file.
+Credentials live in a machine-level store outside this box, one copy each, granted per box by the boxholder — never written by the agent into a card, a config file, an env var, a log, or any committed file. The trick runner may inject a granted value into the child process environment for the duration of one run.
 
 - **Need a key for something you are building?** \`bbx secrets declare <name> --note "what it is and where to get it" --use "why you need it"\` names the slot; the boxholder supplies the value and grants it. \`bbx secrets status <this box>\` shows what this box has and what it is still waiting on (your own box only — the machine's other boxes are the boxholder's business). Needing a credential you were not given is a question for a human, not an obstacle to work around.
 - **Building something new on a key that is already granted?** Say so: \`bbx secrets describe <name> --add-use "the umbrella reminder trick"\`. Reasons are additive — one key usually serves several tricks — and this is the list the boxholder reads when deciding whether a key still earns its keep. You may add a reason; removing one is theirs.
-- **Using one from box code** (a trick, a script) — resolve it at call time, every time, and hold it only for that one outbound request:
+- **Using one from a trick** — declare the dependency in that trick's
+  \`secrets.json\`, then run it normally with \`bbx trick <name>\`:
   \`\`\`
-  POST $BBX_SERVER_URL/$BBX_BOX_NAME/api/secrets/resolve   (header: Authorization: Bearer $BBX_AGENT_TOKEN)
-  body {"name":"<name>","purpose":"<short-label>"}  ->  {"value":"…","suspect":false}
+  [{"name":"<name>","reason":"<short-label>","env":"SERVICE_API_KEY"}]
   \`\`\`
-  Every resolve is logged with that purpose. A refusal comes back as \`{kind, message}\`; the message says exactly what the boxholder needs to do (usually: grant it, or raise the grant to agent access) — relay it rather than guessing.
+  The runner resolves each declaration at launch and provides the value only to that trick process under the declared environment name. Every resolve is logged with the reason. A refusal or unreachable server is reported without the value; relay the message rather than trying a raw \`curl\` (which prints the credential into the transcript).
 - **Never paste the value into the code, a file, or a card.** One copy exists so rotation touches one place; a copy in the tree is the thing this design removes.`;
 }

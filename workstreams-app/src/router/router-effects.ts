@@ -81,6 +81,11 @@ export interface RouterEffects {
   clearTimer(handle: TimerHandle): void;
   now(): number;
   sleep(ms: number): Promise<void>;
+  /** The host's one-minute load average, stamped onto startup failures so
+   *  "this was contention, not a broken worktree" is in the record rather than
+   *  reconstructed a day later. An effect rather than a direct `os.loadavg()`
+   *  so the lifecycle stays deterministic under the test harness. */
+  load1(): number;
   /** The per-name-serialized pidfile store (invariants #1 + #6). */
   pidStore: PidStore;
   /** Write this worktree's single-slot `hub.json`, returning its path. */

@@ -23,6 +23,7 @@ import { buildChildEnv, Supervisor } from "../../src/hub/supervisor.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 
 /** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use
  *  (`pid`, `on("exit", ...)`, `catch()`) plus a way for the test to fire the
@@ -30,12 +31,21 @@ import * as path from "node:path";
  *  `killGroup()` would eventually cause. No real process is ever spawned. */
 function makeFakeChild(pid) {
   const exitHandlers = [];
+  const messageHandlers = [];
   return {
     pid,
     on(event, bbx) {
       if (event === "exit") exitHandlers.push(bbx);
+      if (event === "message") messageHandlers.push(bbx);
     },
     catch() {},
+    send(message, callback) {
+      callback?.(null);
+      if (message.type === "reload-now") setImmediate(() => this.fireExit(75, null));
+    },
+    fireMessage(message) {
+      for (const handler of messageHandlers) handler(message);
+    },
     fireExit(code, signal) {
       for (const bbx of exitHandlers) bbx(code, signal);
     },
@@ -136,7 +146,7 @@ JSON.stringify(buildChildEnv({ sourceEnv: {}, hubExtras: { BBX_HUB_SECRET: "x" }
 ## A readiness-timeout kill's own exit event doesn't double-schedule a restart
 
 ```ts continue
-const fixture = await makeTmpBox();
+const fixture = await makeTmpBox({ git: true });
 const children = [];
 function spawnChild() {
   const child = makeFakeChild(900000 + children.length);
@@ -195,7 +205,7 @@ await fixture.cleanup();
 ## A development reload exit restarts cleanly without consuming crash budget
 
 ```ts continue
-const reloadFixture = await makeTmpBox();
+const reloadFixture = await makeTmpBox({ git: true });
 const reloadChildren = [];
 function reloadSpawnChild() {
   const child = makeFakeChild(905000 + reloadChildren.length);
@@ -208,23 +218,100 @@ const reloadConfig = {
   boxes: { fixture: { path: reloadFixture.root } },
   configPath: reloadFixture.path("hub.json"),
 };
+let rejectReloadReady = false;
 const reloadSupervisor = new Supervisor({
   config: reloadConfig,
   hubSecret: "test-hub-secret",
   spawnChild: reloadSpawnChild,
-  checkReady: () => Promise.resolve(),
+  checkReady: () => rejectReloadReady ? Promise.reject(new Error("replacement failed")) : Promise.resolve(),
 });
 await reloadSupervisor.startAll();
-reloadChildren[0].fireExit(75, null);
-await awaitRunning(reloadSupervisor);
+const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
+reloadChildren[0].fireMessage({ type: "reload-request" });
+while ((await boxMaintenanceStatus(reloadFixture.root)) === null) await new Promise((resolve) => setImmediate(resolve));
+reloadChildren.length
+=> 1
+
+await acquireBoxWork(reloadFixture.root, { reason: "test" })
+=> throws BoxMaintenanceError
+
+await acceptedReloadWork.release();
+while (reloadChildren.length < 2 || reloadSupervisor.getStatuses()[0].status !== "running" || (await boxMaintenanceStatus(reloadFixture.root)) !== null) {
+  await new Promise((resolve) => setImmediate(resolve));
+}
 const reloadStatus = reloadSupervisor.getStatuses()[0];
 JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
 => {"status":"running","pid":905001,"restarts":1,"failures":0}
+
+await new Promise((resolve) => setImmediate(resolve));
+rejectReloadReady = true;
+reloadChildren[1].fireMessage({ type: "reload-request" });
+while (reloadSupervisor.getStatuses()[0].status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.phase !== "exclusive") await new Promise((resolve) => setImmediate(resolve));
+(await boxMaintenanceStatus(reloadFixture.root)).phase
+=> exclusive
+
+await acquireBoxWork(reloadFixture.root, { reason: "test" })
+=> throws BoxMaintenanceError
+
 ```
 
 ```ts cleanup
 await reloadSupervisor.stopAll();
 await reloadFixture.cleanup();
+```
+
+## Stopping after the reload acknowledgment leaves a stopped box open
+
+The old child has exited cleanly and no successor has performed startup writes.
+A simultaneous hub stop must release maintenance rather than strand the box.
+
+```ts continue
+const stopReloadFixture = await makeTmpBox({ git: true });
+const stopReloadChildren = [];
+let stopReloadAcknowledged = false;
+const stopReloadSupervisor = new Supervisor({
+  config: { ...reloadConfig, boxes: { fixture: { path: stopReloadFixture.root } }, configPath: stopReloadFixture.path("hub.json") },
+  hubSecret: "test-hub-secret",
+  spawnChild: () => {
+    const child = makeFakeChild(907000 + stopReloadChildren.length);
+    child.send = (message, callback) => {
+      callback?.(null);
+      if (message.type === "reload-now") {
+        void stopReloadSupervisor.stopAll().then(() => {
+          stopReloadAcknowledged = true;
+          child.fireExit(75, null);
+        });
+      }
+    };
+    stopReloadChildren.push(child);
+    return child;
+  },
+  checkReady: () => Promise.resolve(),
+});
+await stopReloadSupervisor.startAll();
+stopReloadChildren[0].fireMessage({ type: "reload-request" });
+while (!stopReloadAcknowledged) await new Promise((resolve) => setImmediate(resolve));
+const stopReloadDeadline = Date.now() + 2000;
+while ((await boxMaintenanceStatus(stopReloadFixture.root)) !== null && Date.now() < stopReloadDeadline) {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+const stopReloadPhase = await boxMaintenanceStatus(stopReloadFixture.root);
+stopReloadPhase
+=> null
+
+stopReloadSupervisor.getStatuses()[0].status
+=> stopped
+
+stopReloadChildren.length
+=> 1
+
+const afterStopWork = await acquireBoxWork(stopReloadFixture.root, { reason: "test" });
+await afterStopWork.release();
+```
+
+```ts cleanup
+await stopReloadSupervisor.stopAll();
+await stopReloadFixture.cleanup();
 ```
 
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
@@ -236,7 +323,7 @@ same way as above, and the idle timer is driven by a tiny `idleMs` so the
 doctest doesn't wait out a real 5-minute default.
 
 ```ts continue
-const lazyFixture = await makeTmpBox();
+const lazyFixture = await makeTmpBox({ git: true });
 let lazyChildren = [];
 function lazySpawnChild() {
   const child = makeFakeChild(910000 + lazyChildren.length);
@@ -340,7 +427,7 @@ drives it deterministically via an injected clock, with a large `idleMs` so no
 real timer fires mid-test.
 
 ```ts continue
-const keepFixture = await makeTmpBox();
+const keepFixture = await makeTmpBox({ git: true });
 let keepChildren = [];
 function keepSpawnChild() {
   const child = makeFakeChild(920000 + keepChildren.length);
@@ -426,7 +513,7 @@ reads it back and its lazy `startAll` pre-starts the top-`keepRecent` boxes by
 persisted recency instead of leaving everything stopped.
 
 ```ts continue
-const rtFixture = await makeTmpBox();
+const rtFixture = await makeTmpBox({ git: true });
 function makeRtSupervisor() {
   const children = [];
   const config = {
@@ -504,7 +591,7 @@ when it's outside the keep-set (`keepRecent: 0`). Once the file empties (the
 last schedule fired), the next idle evaluation stops it normally.
 
 ```ts continue
-const schedFixture = await makeTmpBox();
+const schedFixture = await makeTmpBox({ git: true });
 const validEntry = {
   id: "sch_1",
   label: "rice timer",
@@ -581,7 +668,7 @@ of `keepRecent` and of any persisted recency — so an overdue or soon-to-fire
 schedule fires on time after a hub restart, without waiting for a request:
 
 ```ts continue
-const bootFixture = await makeTmpBox();
+const bootFixture = await makeTmpBox({ git: true });
 await bootFixture.write(".beebox/chat-schedules.json", JSON.stringify([validEntry]));
 
 let bootChildren = [];
@@ -618,7 +705,7 @@ A box with no schedule file is left stopped by the same `startAll` (the scan
 only starts boxes that actually hold pending schedules):
 
 ```ts continue
-const idleFixture = await makeTmpBox();
+const idleFixture = await makeTmpBox({ git: true });
 let idleChildren = [];
 const idleSupervisor = new Supervisor({
   config: {

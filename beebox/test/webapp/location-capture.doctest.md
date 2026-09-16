@@ -24,7 +24,7 @@ function caller(boxRoot) {
 ## Valid capture stores a readable fix, stamped web + capturedAt
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 await caller(box.root).location.capture({ lat: 45.5, lng: -122.6, accuracy: 15 });
 const stored = await loadLocation(box.root);
 JSON.stringify({ lat: stored.lat, lng: stored.lng, accuracy: stored.accuracy, source: stored.source })
@@ -41,7 +41,7 @@ await box.cleanup();
 ## Out-of-range input is rejected; nothing is written
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const rejected = await caller(box.root).location.capture({ lat: 999, lng: 0, accuracy: 10 }).then(() => false, () => true);
 rejected
 => true

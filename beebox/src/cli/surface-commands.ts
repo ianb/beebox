@@ -14,6 +14,7 @@
  */
 
 import type { Command } from "commander";
+import { maintenanceCommand } from "./commands/maintenance.js";
 import { initCommand } from "./commands/init.js";
 import { migrateCommand } from "./commands/migrate.js";
 import { docsCommand } from "./commands/docs.js";
@@ -77,6 +78,7 @@ import { connectorCommand } from "./commands/connector.js";
 
 /** Registration order is irrelevant — the surface table decides placement. */
 const ALL: readonly Command[] = [
+  maintenanceCommand,
   initCommand,
   migrateCommand,
   docsCommand,

@@ -10,6 +10,7 @@ import * as path from "node:path";
 import type { LintError } from "markdownlint";
 import { customLinkRules, linkRuleConfig } from "../../core/markdown-lint-rules.js";
 import { listBoxMarkdownFiles, isBuiltinLintableMarkdown } from "../../core/list-cards.js";
+import { filterLintableMarkdown } from "../../core/connector-owned-markdown.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { listStagedRelPaths } from "../../lib/staged-files.js";
 
@@ -56,7 +57,13 @@ export interface MarkdownLintSummary {
   errors: Record<string, LintError[]>;
 }
 
-async function runMarkdownlint(files: string[], config: Record<string, unknown>): Promise<MarkdownLintSummary> {
+async function runMarkdownlint(allFiles: string[], config: Record<string, unknown>): Promise<MarkdownLintSummary> {
+  // A gdoc/gsheet card's markdown is Google's export, not authored here, and
+  // the connector pushes whatever is on disk back upstream. Linting it gates
+  // commits on a file nobody wrote and invites an "edit to fix the lint" that
+  // round-trips as data loss. See core/connector-owned-markdown.ts.
+  const files = await filterLintableMarkdown(allFiles);
+  if (files.length === 0) return { filesChecked: 0, filesWithErrors: 0, totalErrors: 0, errors: {} };
   const { lint: markdownlint } = await import("markdownlint/promise");
   const results = await markdownlint({ files, config, customRules: customLinkRules });
   let filesWithErrors = 0;

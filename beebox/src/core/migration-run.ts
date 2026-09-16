@@ -9,9 +9,10 @@
  * live with each of them.
  */
 
+import { boxWorkEnvironment } from "../lib/box-maintenance.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
+import { runMigrationProcess } from "./migration-process.js";
 import { assertSystemCardsComplete } from "./system-cards.js";
 import { isSystemCardMigration } from "../shared/system-card-paths.js";
 import { isRecord } from "../lib/is-record.js";
@@ -141,16 +142,11 @@ export function computePending(applied: ManifestEntry[]): Migration[] {
  * `bbx validate` surfaces them), anything else is a hard failure that stops the
  * queue.
  */
-export function runMigrationScript(args: { script: string; boxRoot: string }): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.join(PACKAGE_ROOT, args.script);
-    const child = spawn(
-      process.execPath,
-      ["--import", "tsx", scriptPath, args.boxRoot, "--apply"],
-      { cwd: PACKAGE_ROOT, stdio: "inherit" }
-    );
-    child.on("error", reject);
-    child.on("close", (code) => resolve(code ?? 1));
+export function runMigrationScript(args: { script: string; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
+  return runMigrationProcess({
+    file: process.execPath, args: ["--import", "tsx", path.join(PACKAGE_ROOT, args.script), args.boxRoot, "--apply"],
+    cwd: PACKAGE_ROOT, env: { ...process.env, ...boxWorkEnvironment() },
+    signal: args.signal, diagnosticsToStderr: args.diagnosticsToStderr, onOutput: args.onOutput,
   });
 }
 

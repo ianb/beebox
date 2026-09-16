@@ -12,8 +12,14 @@ import {
   type CodexRateLimitResult,
 } from "./quota-parse.js";
 import { requestClaudeUsage, requestCodexRateLimits } from "./quota-requests.js";
+import { parseGlmQuota, type GlmQuotaResponse } from "./quota-glm.js";
+import { readGlmKey, requestGlmQuota } from "./quota-glm-request.js";
 
 const CODEX_CACHE_MS = 60_000;
+// The same minute-long cache as Codex: one plain HTTP call, and the panel is
+// polled far more often than the numbers move.
+const GLM_CACHE_MS = 60_000;
+let glmCache: { expiresAt: number; value: Quota } | null = null;
 export const CLAUDE_CACHE_MS = 10 * 60_000;
 let codexCache: { expiresAt: number; value: Quota } | null = null;
 let codexPending: Promise<Quota> | null = null;
@@ -147,25 +153,67 @@ async function collectClaude(options: {
   }
 }
 
+/**
+ * `null` — and so no GLM card at all — when the key is absent. A machine that
+ * never signed up for a coding plan should not be told its quota is
+ * "unavailable" forever; that reads as breakage rather than as absence.
+ */
+async function collectGlm(now: Date, request: (() => Promise<GlmQuotaResponse>) | null): Promise<Quota | null> {
+  if (request === null) return null;
+  if (glmCache && glmCache.expiresAt > now.getTime()) return glmCache.value;
+  const fetchedAt = now.toISOString();
+  const value = await request()
+    .then((response) => parseGlmQuota(response, fetchedAt))
+    .catch((error: unknown): Quota => ({
+      provider: "glm", status: "unavailable", fetchedAt, windows: [],
+      message: error instanceof Error ? error.message : String(error),
+    }));
+  glmCache = { expiresAt: now.getTime() + GLM_CACHE_MS, value };
+  return value;
+}
+
 export interface CollectQuotasOptions {
   backgroundClaudeRefresh?: boolean;
   claudeRequest?: () => Promise<ClaudeUsageResult>;
   stateDir?: string;
   codexRequest?: () => Promise<CodexRateLimitResult>;
+  /**
+   * Opt-in, unlike the other two: omitting it collects NO GLM quota.
+   *
+   * Claude and Codex resolve through a local CLI/SDK, so a default that does
+   * the real thing costs a caller nothing. GLM is an authenticated call to a
+   * third party with the boxholder's key — a test that forgot to stub it would
+   * spend real credit against a real account, which is what happened the first
+   * time this defaulted to live. `glmQuotaFromEnv()` is the explicit opt-in the
+   * service uses.
+   */
+  glmRequest?: (() => Promise<GlmQuotaResponse>) | null;
   now?: Date;
+}
+
+/**
+ * The real GLM request, or `null` when this machine has no coding-plan key —
+ * in which case no GLM card appears at all, rather than one that reads
+ * "unavailable" forever and looks like breakage.
+ */
+export async function glmQuotaFromEnv(): Promise<(() => Promise<GlmQuotaResponse>) | null> {
+  const key = await readGlmKey();
+  return key === null ? null : () => requestGlmQuota(key, 10_000);
 }
 
 export async function collectAgentQuotas(options: CollectQuotasOptions): Promise<Quota[]> {
   const now = options.now ?? new Date();
   const fetchedAt = now.toISOString();
   const stateDir = options.stateDir ?? process.env.BBX_STATE_DIR ?? path.join(os.homedir(), ".cache/beebox");
-  const [claude, codex] = await Promise.all([
+  const glmRequest = options.glmRequest ?? null;
+  const [claude, codex, glm] = await Promise.all([
     collectClaude({
       background: options.backgroundClaudeRefresh ?? false,
       cachePath: path.join(stateDir, "claude-rate-limits.json"), fetchedAt, now,
       request: options.claudeRequest ?? (() => requestClaudeUsage(15_000)),
     }),
     collectCodex(now, options.codexRequest ?? (() => requestCodexRateLimits(5_000, "codex"))),
+    collectGlm(now, glmRequest),
   ]);
-  return [claude, codex];
+  return glm === null ? [claude, codex] : [claude, codex, glm];
 }

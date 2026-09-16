@@ -23,6 +23,17 @@ server), the Docker path is simpler: see
   ```
 - **pnpm**, via [corepack](https://nodejs.org/api/corepack.html):
   `corepack enable` (the root `package.json` pins the exact pnpm version).
+- **git-annex** — a hard requirement, not an optional extra. Every box holds
+  its assets (images, audio, PDFs) in the annex from its first commit, and
+  `bbx init` refuses to create a box without the binary. Once a box exists,
+  a machine missing git-annex fails *every* commit on it, not just asset
+  commits, because the installed pre-commit hook runs `git annex pre-commit`.
+
+  ```bash
+  brew install git-annex          # macOS
+  sudo apt-get install git-annex  # Debian/Ubuntu
+  ```
+
 - **System binaries** the agent uses for document/image/spreadsheet handling —
   `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`, an Excel reader
   (`openpyxl` + the `xlsx2csv` CLI, for `.xlsx`), and `fclones` (duplicate

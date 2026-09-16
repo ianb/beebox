@@ -12,7 +12,9 @@ import { buildTimezoneContext } from "../box/config.js";
 import { buildScriptEnv } from "../script-env.js";
 import { gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
-import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
+import { startPromptLogger, stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
+import { glmEnvAdditions, GlmKeyError, resolveGlmKeyOrThrow } from "../glm-key.js";
+import { providerOf } from "../../shared/agent-models.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
@@ -22,6 +24,7 @@ import type { AgentResult, AgentResultBase } from "./types.js";
 import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
+  signal?: AbortSignal | undefined;
   boxRoot: string;
   systemPrompt: string;
   prompt: string;
@@ -199,7 +202,18 @@ async function setupRunEnv(
 ): Promise<{ logger: PromptLogger | null; env: Record<string, string> }> {
   const { boxRoot, onOutput } = options;
   const shouldLog = process.env.BBX_LOG_PROMPTS === "1";
-  const logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
+  let logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
+
+  // A GLM run bypasses the logging proxy: the proxy forwards to first-party,
+  // and the two features claim the same ANTHROPIC_BASE_URL slot. Warn and
+  // disable rather than teach the proxy a second upstream
+  // (docs/plans/box-glm-provider.md, Track 3).
+  const glmRun = options.model !== undefined && providerOf(options.model) === "glm";
+  if (glmRun && logger) {
+    stopPromptLogger(logger);
+    logger = null;
+    onOutput?.("Prompt logging disabled for this run: GLM runs bypass the logging proxy.\n");
+  }
 
   if (shouldLog && logger) {
     onOutput?.(`Prompt logging enabled → .beebox/logs/${filenameHint}.log\n`);
@@ -214,6 +228,14 @@ async function setupRunEnv(
     ...(logger ? { ANTHROPIC_BASE_URL: `http://localhost:${logger.port}/` } : {}),
   });
 
+  if (glmRun) {
+    // GLM rides the claude engine via Z.ai's Anthropic-compatible endpoint.
+    // The key comes from the machine secret store (server-level grant); a
+    // missing one throws GlmKeyError, which runAgent shapes below.
+    const key = await resolveGlmKeyOrThrow(boxRoot, { purpose: "agent-run" });
+    Object.assign(env, glmEnvAdditions(key));
+  }
+
   return { logger, env: dropUndefined(env) };
 }
 
@@ -221,6 +243,7 @@ async function setupRunEnv(
  * Run a single agent turn (or session-resume turn) via the SDK.
  */
 export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
+  options.signal?.throwIfAborted();
   const { boxRoot, systemPrompt, prompt, dryRun = false, maxTurns = 20 } = options;
 
   const isResume = options.resumeSessionId !== undefined;
@@ -241,9 +264,16 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   // Fakes replace `createAgent`, so this real SDK path (and its probe) is never
   // reached by fake-injecting tests.
   try {
-    await checkClaudeAuth();
+    // Provider-aware preflight: a GLM model is gated on the store key, not on
+    // a Claude login — `claude auth status` reports token presence and says
+    // nothing about whether the endpoint will accept it.
+    if (options.model !== undefined && providerOf(options.model) === "glm") {
+      await resolveGlmKeyOrThrow(boxRoot, { purpose: "agent-run" });
+    } else {
+      await checkClaudeAuth();
+    }
   } catch (e) {
-    if (e instanceof ClaudeAuthError) {
+    if (e instanceof ClaudeAuthError || e instanceof GlmKeyError) {
       return {
         success: false,
         output: "",
@@ -270,13 +300,19 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     binaryPath,
     appendedSystem,
   });
-  const outcome = await consumeAgentStream({
-    prompt: options.prompt,
-    queryOptions,
-    onOutput: options.onOutput,
-    onSessionId: options.onSessionId,
-    logger,
-  });
+  const controller = new AbortController();
+  const onAbort = (): void => controller.abort(options.signal?.reason);
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  if (options.signal?.aborted) onAbort();
+  let outcome: RunStreamOutcome;
+  try {
+    outcome = await consumeAgentStream({
+      prompt: options.prompt, queryOptions: { ...queryOptions, abortController: controller },
+      onOutput: options.onOutput, onSessionId: options.onSessionId, logger,
+    });
+  } finally {
+    options.signal?.removeEventListener("abort", onAbort);
+  }
 
   return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
     provider: "claude",

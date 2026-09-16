@@ -23,8 +23,8 @@ import { runOnServer } from "./run-on-server.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BOX_MARKER = ".beebox";
-const FEEDBACK_DIR = path.join("config", "feedback");
-const RESOLVED_DIR = path.join("config", "feedback", "resolved");
+const FEEDBACK_DIR = path.join("_config", "feedback");
+const RESOLVED_DIR = path.join("_config", "feedback", "resolved");
 const REMOTE_BOXES_DIR = "/home/beebox/boxes";
 
 // `bbx feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
@@ -127,7 +127,7 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
 function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
   const find = runOnServer({
     sshTarget,
-    script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
+    script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/_config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
   });
   if (find.exitCode !== 0) {
     console.error(`Warning: could not reach ${sshTarget}: ${find.stderr.trim()}`);
@@ -138,7 +138,7 @@ function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {
-    // Path format: /home/beebox/boxes/<boxname>/config/feedback/<file>
+    // Path format: /home/beebox/boxes/<boxname>/_config/feedback/<file>
     const boxName = filePath.split("/")[4];
     if (!boxName) continue;
     const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
@@ -190,12 +190,12 @@ function resolveLocalFile(item: FeedbackFile): void {
 
 function resolveRemoteFile(item: FeedbackFile): void {
   const destPath = item.filePath.replace(
-    "/config/feedback/",
-    "/config/feedback/resolved/"
+    "/_config/feedback/",
+    "/_config/feedback/resolved/"
   );
   const destRel = item.relPath.replace(
-    "config/feedback/",
-    "config/feedback/resolved/"
+    "_config/feedback/",
+    "_config/feedback/resolved/"
   );
 
   // Runs as the `beebox` user (run-on-server default). NEVER drop the

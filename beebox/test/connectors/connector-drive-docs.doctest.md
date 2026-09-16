@@ -567,3 +567,109 @@ info7.details.comments
 (info7.details.lossy as Record<string, number>).footnotes
 => 1
 ```
+
+## Stripped trailing whitespace — refused, not pushed
+
+Google's markdown export encodes a line break inside a nested list item as
+trailing spaces. A local change that strips them is lint damage rather than an
+edit, and pushing it would collapse nested checklists into paragraphs upstream.
+Push refuses and parks the upstream copy as `.remote.md`, the same resolution
+path as a divergence conflict.
+
+```ts
+const boxW = await makeTmpBox({ git: true });
+await initBox(boxW.root);
+boxW.commitAll("init box");
+
+const upstream = "- [ ] Parent  \n      - [ ] Child  \n";
+const driveW = createFakeGoogleDrive({
+  files: [{
+    id: "doc-w",
+    name: "Checklist",
+    mimeType: "application/vnd.google-apps.document",
+    modifiedTime: "2026-04-26T10:00:00Z",
+    trashed: false,
+    owners: [{ emailAddress: "test@example.com" }],
+    webViewLink: "https://docs.google.com/document/d/doc-w/edit",
+  }],
+  documents: new Map([["doc-w", makeDoc({
+    id: "doc-w",
+    title: "Checklist",
+    markdown: upstream,
+  })]]),
+});
+
+await boxW.seed("_content/drive/Checklist.gdoc.card", createGdocTemplate({
+  driveId: "doc-w",
+  title: "Checklist",
+  modified: "2026-04-26T10:00:00Z",
+  revision: "rev-1",
+  link: "https://docs.google.com/document/d/doc-w/edit",
+  owner: "test@example.com",
+  contentFile: "Checklist.md",
+  status: "new",
+}));
+boxW.commitAll("add checklist");
+
+const connW = createGoogleDriveConnector(boxW.root, driveW);
+await connW.sync();
+
+// An agent strips the trailing spaces to satisfy markdownlint MD009.
+await boxW.seed(
+  "_content/drive/Checklist.attach/Checklist.md",
+  "- [ ] Parent\n      - [ ] Child\n",
+);
+boxW.commitAll("strip trailing whitespace");
+
+await connW.sync();
+
+driveW.contentUpdateLog.length
+=> 0
+```
+
+The upstream copy is parked for resolution and the card flips to `conflict`:
+
+```ts continue
+JSON.stringify(await boxW.read("_content/drive/Checklist.attach/Checklist.remote.md"))
+=> "- [ ] Parent  \n      - [ ] Child  \n"
+```
+
+```ts continue
+(await boxW.read("_content/drive/Checklist.gdoc.card")).includes("status: conflict")
+=> true
+```
+
+A real content edit bundled with the same whitespace strip is refused too — the
+structural loss is identical, so the question is asked per line, not per file.
+(Resolve the parked conflict first, as a human would.)
+
+```ts continue
+await unlink(join(boxW.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
+await boxW.seed(
+  "_content/drive/Checklist.attach/Checklist.md",
+  "- [ ] Parent\n      - [x] Child\n",
+);
+boxW.commitAll("edit plus strip");
+
+await connW.sync();
+
+driveW.contentUpdateLog.length
+=> 0
+```
+
+The same edit that leaves the export's trailing whitespace alone is a real edit
+and pushes:
+
+```ts continue
+await unlink(join(boxW.root, "_content/drive/Checklist.attach/Checklist.remote.md"));
+await boxW.seed(
+  "_content/drive/Checklist.attach/Checklist.md",
+  "- [ ] Parent  \n      - [x] Child  \n",
+);
+boxW.commitAll("real edit");
+
+await connW.sync();
+
+driveW.contentUpdateLog.length
+=> 1
+```

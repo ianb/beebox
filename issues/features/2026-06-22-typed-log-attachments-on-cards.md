@@ -6,6 +6,12 @@ area: beebox
 priority: backlog
 ---
 
+> **⚠ Stale citation** (full-embrace-annex, 2026-09-14): `asset-manifest.ts` is
+> deleted. The manifest scheme it names as prior art for an append-only
+> inventory no longer exists — git-annex is the only asset scheme, and it
+> records content hashes itself. The design question here is unaffected; only
+> the comparison is.
+
 A card should be able to carry **typed, append-only logs** as a first-class kind
 of attachment — kin to commentary, but *not itself a card*: a raw JSONL event
 stream named by its type, e.g. `Learning_Progress.log.jsonl` (the general shape

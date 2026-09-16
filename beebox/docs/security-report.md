@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-09
-model: gpt-6-astra
+date: 2026-09-16
+model: gpt-5
 reviewed-by: DRAFT — unreviewed
 ---
 
@@ -13,6 +13,13 @@ is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root).
+
+**Scoped amendment (2026-09-14):** This draft adds migration-maintenance
+accounting against `23e37c44c6438f9f5832baa1fd2437144b5b89a8` plus the
+migration-reliability worktree changes. It does not refresh unrelated inventory
+or the private security tier; the full-inventory revision remains unchanged.
+The overview is unchanged: existing authentication and agent permissions remain
+the boundaries, and maintenance does not provide additional process containment.
 
 **Scoped amendment (2026-09-09):** Added only the `files.kind` accounting below,
 against `35a480fd64e738fe4457608d5745362a89d1f381` plus its uncommitted
@@ -138,6 +145,7 @@ pub-worker routes are in §6a.
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `_config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.beebox/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `BBX_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
+| Declared trick secrets — `secrets.json` plus `bbx trick` child environment (`cli/lib/trick-secrets.ts`, `cli/commands/trick.ts`) | Value remains in the machine secret store; the runner resolves it at launch and injects it only into the selected trick child under its declared env name | Spend/abuse the granted provider account | Per-box grant; one selected trick invocation | Re-resolved each run; revoke by changing the box grant or rotating the store entry | mitigated — the runner never puts the value in argv, files, logs, or the parent environment; a trick can still print its own environment because it runs with the box agent's permissions |
 | Mobile device tokens — `.beebox/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `bbx_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.beebox/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.beebox/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
@@ -151,7 +159,9 @@ pub-worker routes are in §6a.
 
 **Positive control — the hub child-env allowlist**
 (`src/hub/child-env.ts:42-119`): per-box children receive an exact-name
-allowlist of env vars, never a spread. `BBX_SESSION_SECRET` never reaches a
+allowlist of env vars, never a spread. `src/hub/child-spawn.ts` explicitly sets
+`extendEnv: false`, so the subprocess library cannot merge ambient parent
+variables back into that allowlist. `BBX_SESSION_SECRET` never reaches a
 child (a box that could verify a cookie could forge one for a sibling);
 `ANTHROPIC_API_KEY` is excluded; widening requires a named entry with a
 reasoned comment. `src/core/script-env.ts` applies the same posture one
@@ -165,6 +175,10 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
+The standard trick runner is a deliberate exception by declaration: it resolves
+only the selected trick's named dependencies and puts those values in that
+single child environment for that invocation; it does not widen the general
+allowlist or persist the values.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.bbx-session-secret`,
 `~/.bbx-auth.json`) stay readable by any process that goes looking; the
@@ -202,6 +216,8 @@ wakeup cycle or routine use without a per-action confirmation.
 
 | Practice | Where | State | Notes |
 |---|---|---|---|
+| Maintenance admission | `src/lib/box-maintenance.ts`, `src/webapp/box-admission.ts`, `src/webapp/trpc/trpc.ts` | mitigated | Low severity; authenticated/local reachability. `BBX_BOX_WORK` and its loopback header must match a live, box-scoped lease or maintenance owner. They preserve accepted work through draining and do not replace route authentication. Global login/setup remains available while box writes are closed. `actions.answer` delegates admission to the shared answer command; only a pending migration question with its real Git recovery ref can be answered under a recovery owner while closed. That path keeps maintenance closed and does not run a generic follow-up job. |
+| Migration recovery | `src/core/migration-recovery.ts`, `src/core/migration-repair.ts` | mitigated | Medium severity; local/operator reachability. Git recovery refs preserve tracked and unignored input without changing HEAD/index; ignored runtime data and missing annex objects are outside that snapshot. Bounded repair uses the configured agent's existing permissions, with human questions for unresolved data choices; the bound is not a sandbox. |
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
 | Client error sanitization | `webapp/trpc/trpc.ts`, `webapp/server.ts:114-128` | ok | tRPC unconditionally removes response stacks and replaces internal-error messages; raw 5xx responses stay generic; full errors remain in server-side logs |
 | Development-surface opt-in | `server-types.ts`, `lib/env.ts`, `routes/api.ts`, `routes/chat-audio-routes.ts` | mitigated | `BBX_DEV_SURFACES=1` is a strict positive opt-in set only by development launchers; omission disables the external-file route and rejects mock TTS before provider lookup |
@@ -216,7 +232,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
 | **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
-| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md) |
+| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
@@ -316,7 +332,7 @@ containment:
 - **Deployment model** — the audience is single-operator boxes; the
   blast radius is your own data, not other tenants'.
 - **Schedules off by default** — nothing auto-processes untrusted input
-  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md)).
+  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
 

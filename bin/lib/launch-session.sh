@@ -10,6 +10,7 @@
 
 # shellcheck source=launch-headless.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/glm-provider.sh"
 
 launch_session_build() {
   local model_arg="" rc_arg="" model_line="" resume_arg=""
@@ -20,8 +21,22 @@ launch_session_build() {
     LS_MODEL="gpt-5.6-sol"
   fi
 
+  # A `glm-*` model routes the SAME claude agent at Z.ai's Anthropic-compatible
+  # endpoint. `--model` is not passed: Claude Code asks by tier name, and the
+  # tier variables in the env block carry the choice instead.
+  local glm_env=""
+  if [ "$LS_AGENT" = "claude" ] && glm_is_model "${LS_MODEL:-}"; then
+    local glm_key
+    if ! glm_key=$(glm_read_key "$LS_MONO"); then
+      echo "launch-session: $LS_MODEL needs GLM_API_KEY in beebox/.env; Terminal was not opened" >&2
+      return 1
+    fi
+    glm_env="$(glm_env_block "$LS_MODEL" "$glm_key")
+"
+  fi
+
   if [ "$LS_AGENT" = "claude" ]; then
-    [ -n "$LS_MODEL" ] && model_arg="--model $LS_MODEL"
+    [ -n "$LS_MODEL" ] && [ -z "$glm_env" ] && model_arg="--model $LS_MODEL"
     [ "$LS_REMOTE_CONTROL" = "1" ] && rc_arg="--remote-control $LS_WORKSTREAM"
     # Continuing a conversation instead of starting one. The id is interpolated
     # into a generated script unquoted, and `--resume` takes an OPTIONAL value —
@@ -38,7 +53,7 @@ launch_session_build() {
 #!/usr/bin/env bash
 set -euo pipefail
 printf '\033]0;%s\007' "$LS_SESSION_NAME"
-cd "$LS_MONO"
+${glm_env}cd "$LS_MONO"
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_pending=1
 launch_on_exit() {

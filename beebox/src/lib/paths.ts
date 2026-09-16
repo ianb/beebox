@@ -2,17 +2,18 @@
  * Path utilities for finding and working with Bee Box directories.
  */
 
+import { withBoxWork } from "./box-maintenance.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "./invariant.js";
-import { LEGACY_BOX_MARKER, migrateBoxState } from "./state-migration.js";
+import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "./state-migration.js";
 import { PreV3ShapeError } from "./box-shape-errors.js";
 import { isRecord } from "./is-record.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
-class NotInBoxError extends Error {
+export class NotInBoxError extends Error {
   constructor() {
     super("Not in a Bee Box. Run 'bbx init' to create one, or navigate to an existing box.");
     this.name = "NotInBoxError";
@@ -157,7 +158,9 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // State directory names are persisted identity. Migrate before callers
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
-  await migrateBoxState(root);
+  if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
+    await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
+  }
   return root;
 }
 

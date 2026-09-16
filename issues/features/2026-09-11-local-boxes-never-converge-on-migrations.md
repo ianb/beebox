@@ -1,6 +1,6 @@
 ---
 title: "Nothing migrates local boxes — only prod converges, so a dev box silently falls behind until someone notices a missing card"
-workstream: unattached
+workstream: migration-reliability
 area: beebox
 priority: important
 labels: [migrations, boxes, dev-environment]

@@ -21,6 +21,9 @@ function failedHandle(name: string): WorktreeHandle {
     lifecycle: {
       phase: "failed",
       lastError: { message: "gone", phase: "spawn", viteOutput: "", fastifyOutput: "", at: 0 },
+      // `spawn` never earns an automatic retry — only `waitForHttp` does.
+      attempts: 0,
+      retryAfter: null,
     },
   };
 }

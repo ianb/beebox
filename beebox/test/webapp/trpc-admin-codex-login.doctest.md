@@ -12,7 +12,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
 const ctx = {
   boxRoot: box.root,

@@ -123,6 +123,8 @@ async function getBeeBoxVersion(): Promise<string | null> {
 }
 
 export interface GenerateDocsOptions {
+  /** Let the maintenance controller commit only measured output paths. */
+  commit?: boolean | undefined;
   /** Add DOCID markers to each generated file for debugging prompt inclusion.
    *  If not specified, checks for a `.beebox/docid-debug` marker file. */
   docIdDebug?: boolean | undefined;
@@ -259,7 +261,7 @@ async function checkChatGuideMtimes(
  * on hosts that don't routinely run `bbx tick` (which would otherwise sweep
  * the changes via its post-script housekeeping commit).
  */
-async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
+async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): Promise<void> {
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installPersonality(boxRoot);
@@ -285,7 +287,7 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
 
-  await commitTemplateSyncChanges(boxRoot);
+  if (shouldCommit) await commitTemplateSyncChanges(boxRoot);
 }
 
 /**
@@ -381,6 +383,11 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
   ]);
 }
 
+/** Read-only cache check before taking a maintenance recovery snapshot. */
+export async function generatedDocsAreCurrent(boxRoot: string): Promise<boolean> {
+  return canSkipGeneration({ markerPath: join(boxRoot, GENERATE_MARKER), inputMtime: await newestInputMtime(boxRoot), currentCommit: await getBeeBoxVersion(), force: false });
+}
+
 /**
  * Generate all agent documentation for a box.
  */
@@ -412,7 +419,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // writes files where the box's copy differs (and emits .orig-*.card
   // entries when the user modified a template). Runs before doc generation
   // so newly-installed procedures are picked up by scanProcedures().
-  await syncTemplatesFromSource(boxRoot);
+  await syncTemplatesFromSource(boxRoot, options.commit !== false);
 
   const debug = options.docIdDebug ?? await hasDocIdMarker(boxRoot);
 

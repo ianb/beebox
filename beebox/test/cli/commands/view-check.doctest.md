@@ -22,10 +22,10 @@ const TEST_VIEW_TIMEOUT_MS = 60000;
 
 // A v2 box carries its own physical React copy. The renderer overrides it
 // with the engine's copy so hook-using views share react-dom/server's
-// dispatcher. `makeTmpBox({ deps: true })` therefore simulates the normal
+// dispatcher. `makeTmpBox({ deps: true, git: true })` therefore simulates the normal
 // package layout by placing React beside the symlinked `beebox` package.
 async function makeViewBox() {
-  const box = await makeTmpBox({ deps: true });
+  const box = await makeTmpBox({ deps: true, git: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
   await symlink(join(reactNodeModules, "react"), join(box.root, "node_modules", "react"), "dir");
   return box;

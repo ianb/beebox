@@ -7,9 +7,10 @@ validation hook paths: the shell `bbx validate --hook` (installed
 and agent-run sessions use. Both call the shared `lintViewFile`.
 
 ```ts setup
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdir, writeFile, rm } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { spawn } from "node:child_process";
 import { isViewFile } from "../../../src/lib/paths.js";
 import { lintViewFile } from "../../../src/webapp/views/compiler.js";
@@ -24,8 +25,9 @@ export default function Good() { return <div>ok</div>; }
 const BROKEN_VIEW = `export default function Broken() { return <div`;
 
 async function makeViews() {
-  const tmp = await mkdtemp(join(tmpdir(), "view-lint-"));
-  const viewsDir = join(tmp, "views");
+  const box = await makeTmpBox({ git: true });
+  const tmp = box.root;
+  const viewsDir = join(tmp, "src", "views");
   await mkdir(viewsDir, { recursive: true });
   await writeFile(join(viewsDir, "good.tsx"), GOOD_VIEW);
   await writeFile(join(viewsDir, "broken.tsx"), BROKEN_VIEW);
@@ -36,7 +38,7 @@ async function makeViews() {
 // payload on stdin; resolve its exit code + stderr.
 function runShellHook(filePath) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["dist/cli.mjs", "validate", "--hook"], { cwd: process.cwd() });
+    const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "validate", "--hook"], { cwd: dirname(filePath) });
     let stderr = "";
     child.stderr.on("data", (d) => { stderr += String(d); });
     child.on("close", (code) => resolve({ code, stderr }));
@@ -77,6 +79,10 @@ typeof err === "string" && err.length > 0
 => true
 ```
 
+```ts cleanup
+await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
+```
+
 ## In-process hook (cardValidatorHook)
 
 The hook agent sessions actually run surfaces a broken view's compile error as
@@ -112,6 +118,10 @@ cardValidatorHook().matcher
 => Write|Edit|MultiEdit
 ```
 
+```ts cleanup
+await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
+```
+
 ## Shell hook (bbx validate --hook)
 
 A broken view through the installed shell hook exits 2 (the nudge contract) with
@@ -135,4 +145,8 @@ A clean view exits 0:
 const good = await runShellHook(join(viewsDir, "good.tsx"));
 good.code
 => 0
+```
+
+```ts cleanup
+await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
 ```

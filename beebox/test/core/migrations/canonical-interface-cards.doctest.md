@@ -9,10 +9,11 @@ import { appendManifestEntry, runMigrationScript, readManifest, writeManifest } 
 import { markMigrationApplied } from "../../../src/cli/commands/migrate.js";
 import { sweepMigrations } from "../../../src/core/migration-sweep.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../../src/core/migrations.js";
-import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION } from "../../../src/shared/system-card-paths.js";
+import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from "../../../src/shared/system-card-paths.js";
 import { seedSystemCards, checkSystemCards } from "../../../src/core/system-cards.js";
 const migration = MIGRATIONS.find((entry) => entry.name === SYSTEM_CARD_MIGRATION)!;
 const remainingMigration = MIGRATIONS.find((entry) => entry.name === REMAINING_SYSTEM_CARD_MIGRATION)!;
+const searchMigration = MIGRATIONS.find((entry) => entry.name === SEARCH_SYSTEM_CARD_MIGRATION)!;
 async function pendingManifest(box) {
   await box.write(MANIFEST_PATH, MIGRATIONS.filter((entry) => entry.name !== SYSTEM_CARD_MIGRATION && entry.name !== REMAINING_SYSTEM_CARD_MIGRATION).map((entry) => JSON.stringify({ name: entry.name, "applied-at": "2026-09-09T00:00:00Z" })).join("\n") + "\n");
 }
@@ -110,6 +111,9 @@ await markMigrationApplied({ boxRoot: oldOnly.root, name: REMAINING_SYSTEM_CARD_
 
 await rm(oldOnly.path("_content/Future.admin.card"));
 await runMigrationScript({ script: remainingMigration.script, boxRoot: oldOnly.root })
+=> 0
+
+await runMigrationScript({ script: searchMigration.script, boxRoot: oldOnly.root })
 => 0
 
 Object.values(SYSTEM_CARD_PATHS).every((path) => existsSync(oldOnly.path(path)))

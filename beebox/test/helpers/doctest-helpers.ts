@@ -11,7 +11,8 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { makeBoxAnnexShaped } from "./annex-box.js";
+import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
+import { createGitAnnexService } from "../../src/services/git-annex.js";
 
 export interface TmpBox {
   /** Absolute path to the box root — the one root; holds `.beebox/box.json`,
@@ -34,7 +35,15 @@ export interface TmpBox {
   cleanup(): Promise<void>;
 }
 
-export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?: boolean }): Promise<TmpBox> {
+/**
+ * `git` — every box has a Git directory, because box admission
+ * (`src/lib/box-maintenance.ts`) keeps its gate under `.git/`: a fixture
+ * without one throws "Box maintenance requires a Git repository" the moment
+ * anything acquires box work. So the default is a bare `git init` (~60 ms);
+ * `true` adds the annex init and an initial commit that a committing test
+ * needs (~1.1 s); `"none"` is for the two tests that assert gitlessness.
+ */
+export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean }): Promise<TmpBox> {
   const root = await mkdtemp(join(tmpdir(), "bbx-doctest-"));
 
   // Build a minimal-but-valid shapeVersion-3 box via the same scaffolder
@@ -45,19 +54,22 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
   // natively.
   await scaffoldBoxRoot(root, { deps: opts?.deps === true });
 
-  if (opts?.git) {
-    execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
-      cwd: root,
-      stdio: "pipe",
-    });
-  }
-
-  // `annex`: the box has been through `bbx attachments to-annex` — assets are
-  // visible to git and the annex holds their bytes. Anything that writes asset
-  // bytes into a box gates on this shape (see core/annex/is-annex-box.ts), so a
-  // fixture exercising that path has to declare which side it is testing.
-  if (opts?.annex) {
-    await makeBoxAnnexShaped(root);
+  // A box IS annex-shaped — there is no other kind, and no `annex` option to
+  // declare it with. The annex step goes between `git init` and the initial
+  // commit, where real `bbx init` does it (`announceAndInitGit`): annexing
+  // after the commit would leave every fixture with a modified `.gitignore`
+  // and reading as dirty.
+  //
+  // This runs the REAL binary rather than fabricating `.git/annex/`, which is
+  // the point. The old fixture wrote that directory by hand, so annex fixtures
+  // proved the ignore block did not block — not that bytes annex. "The fixture
+  // never ran the real init" is what
+  // `issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md`
+  // names as the reason its bug went unnoticed for months.
+  if (opts?.git !== "none") execSync("git init -q -b main", { cwd: root, stdio: "pipe" });
+  if (opts?.git === true) {
+    await annexNewBox(createGitAnnexService(), root);
+    execSync("git add -A && git commit --allow-empty -m init -q", { cwd: root, stdio: "pipe" });
   }
 
   const box: TmpBox = {
@@ -77,6 +89,8 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
           return;
         }
         for (const item of items) {
+          // The repository is fixture plumbing, not box content.
+          if (d === root && item.name === ".git") continue;
           const rel = relative(root, join(d, item.name));
           entries.push(rel);
           if (item.isDirectory()) {
@@ -106,6 +120,14 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
       });
     },
     async cleanup() {
+      // git-annex marks object files AND their parent directories read-only so
+      // content cannot be modified in place, which makes `rm` fail with EACCES
+      // on any box that annexed something. Restore write permission first.
+      try {
+        execSync(`chmod -R u+w ${JSON.stringify(root)}`, { stdio: "pipe" });
+      } catch (_e) {
+        /* best-effort: the rm below reports anything that actually matters */
+      }
       await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };

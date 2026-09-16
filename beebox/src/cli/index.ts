@@ -11,6 +11,8 @@
 // MUST be first import - sets TSX_TSCONFIG_PATH before any JSX modules load
 import "./bootstrap.js";
 
+import { installBoxAdmission } from "./lib/box-admission.js";
+import { BoxMaintenanceError } from "../lib/box-maintenance.js";
 import { loadEnv, cliEnvSchema } from "../lib/env.js";
 import { migrateUserState } from "../lib/state-migration.js";
 import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } from "../lib/state-dir.js";
@@ -18,10 +20,21 @@ import { buildProgram } from "./program.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
 // schema is permissive (every field optional) — this only rejects a genuinely
-// malformed value (e.g. a non-numeric PORT), never absence, so scenario/test
+// malformed value (e.g. a non-numeric PORT), never absence, so test
 // invocations that set only harness vars pass through untouched.
 loadEnv(cliEnvSchema);
 await migrateUserState(LEGACY_STATE_DIR, BBX_STATE_DIR);
 await migrateUserState(LEGACY_CONFIG_DIR, BBX_CONFIG_DIR);
 
-buildProgram().parse();
+const program = buildProgram();
+
+const releaseAdmission = installBoxAdmission(program);
+try {
+  await program.parseAsync();
+} catch (error) {
+  if (!(error instanceof BoxMaintenanceError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
+} finally {
+  await releaseAdmission();
+}

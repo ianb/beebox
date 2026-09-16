@@ -21,6 +21,10 @@ export const MODEL_ID = {
   terra: "gpt-5.6-terra",
   sol: "gpt-5.6-sol",
   astra: "gpt-6-astra",
+  // GLM family (Z.ai's Anthropic-compatible endpoint) — rides the claude
+  // engine; the endpoint/token come from the machine secret store per run.
+  glm: "glm-5.3",
+  glmFlash: "glm-5.3-flash",
 } as const;
 
 /**

@@ -6,6 +6,31 @@ import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
 import { ConversationControllerPool, conversationKey, type SessionAssignment } from "./controller-pool";
 
+/**
+ * The target a conversation starts from when no caller supplied one.
+ *
+ * `model` is as much a part of a start choice as `engine`. Dropping it here
+ * left a cross-engine pick landing on the new engine's DEFAULT model — the
+ * two-step switch of
+ * `issues/bugs/2026-08-30-engine-switch-forces-default-model-first.md`, which
+ * survived the picker fix because the other construction site
+ * (`everywhere/resolve-conversation.ts`) carries the model and this one did
+ * not. Exported so that stays covered.
+ */
+export function conversationTargetFor(input: ChatMachineInput, clientConversationId: string): ConversationTarget {
+  const contextDir = input.contextDir ?? "";
+  if (input.sessionInput !== "new") {
+    return { kind: "session", sessionId: input.sessionInput, contextDir };
+  }
+  return {
+    kind: "start",
+    clientConversationId,
+    contextDir,
+    engine: input.startEngine === "codex" ? "codex" : "claude",
+    ...(input.startModel === undefined ? {} : { model: input.startModel }),
+  };
+}
+
 export function useConversationMachine(opts: {
   boxSlug: string;
   input: ChatMachineInput;
@@ -13,9 +38,10 @@ export function useConversationMachine(opts: {
   onSessionAssignment?: (sessionId: string, assignment?: SessionAssignment) => void;
 }) {
   const freshId = useMemo(() => crypto.randomUUID(), []);
-  const target: ConversationTarget = useMemo(() => opts.target ?? (opts.input.sessionInput === "new"
-    ? { kind: "start", clientConversationId: freshId, contextDir: opts.input.contextDir ?? "", engine: opts.input.startEngine === "codex" ? "codex" : "claude" }
-    : { kind: "session", sessionId: opts.input.sessionInput, contextDir: opts.input.contextDir ?? "" }), [opts.target, opts.input.sessionInput, opts.input.contextDir, opts.input.startEngine, freshId]);
+  const target: ConversationTarget = useMemo(
+    () => opts.target ?? conversationTargetFor(opts.input, freshId),
+    [opts.target, opts.input, freshId],
+  );
   const pool = useMemo(() => new ConversationControllerPool(opts.boxSlug, { storage: { getItem: (key) => sessionStorage.getItem(key), setItem: (key, value) => sessionStorage.setItem(key, value) } }), [opts.boxSlug]);
   const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
   const key = conversationKey(target);

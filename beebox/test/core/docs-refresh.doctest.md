@@ -8,9 +8,10 @@ a box that needs a human alone. See `src/core/docs-refresh.ts`.
 ```ts setup
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { rm, writeFile } from "node:fs/promises";
+import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
+import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
@@ -42,9 +43,7 @@ function git(box, ...args) {
 
 The first run on a box that has never generated: rules and skills land together
 (they share one path now — `syncTemplatesFromSource` calls `generateRules` and
-`generateSkills` side by side), and the tree is left **clean**. Clean is the
-load-bearing part: a dirty box is one this step and the migration sweep both
-skip, so a refresh that parked the box dirty would converge it exactly once.
+`generateSkills` side by side), and the generated output is committed together.
 
 ```ts
 const box = await makeCleanBox();
@@ -59,18 +58,11 @@ JSON.stringify({
 => {"status":"refreshed","rules":true,"skills":true,"clean":true}
 ```
 
-Two commits, carrying the attribution of the two writers involved:
-`generateDocs`'s own selective template-sync commit, then the sweep of what the
-rest of the run wrote.
+One measured output commit carries the refresh attribution.
 
 ```ts continue
-// `valueonly` still emits the trailer block's trailing newline, so drop blanks.
-git(box, "log", "--format=%s|%(trailers:key=Triggered-By,valueonly)%(trailers:key=Created-By,valueonly)", "-2")
-  .split("\n").filter((l) => l !== "")
-=> [
-  "Refresh generated docs|docs-refresh",
-  "Sync templates from upstream|generateDocs"
-]
+git(box, "log", "-1", "--format=%s|%(trailers:key=Created-By,valueonly)")
+=> Refresh generated docs|docs-refresh
 ```
 
 ```ts cleanup
@@ -95,6 +87,22 @@ JSON.stringify({
   newCommits: Number(git(box, "rev-list", "--count", "HEAD")) - before,
 })
 => {"status":"current","newCommits":0}
+```
+
+Quiet also means the gate never closed. With live work admitted, a refresh that
+closed first would wait in its drain; this one answers while the work is still
+running and leaves no maintenance phase behind.
+
+```ts continue
+const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+const quiet = refreshGeneratedDocs({ boxRoot: box.root }).then((outcome) => outcome.status);
+await Promise.race([quiet, new Promise((resolve) => setTimeout(() => resolve("still draining"), 3000))])
+=> current
+
+await boxMaintenanceStatus(box.root)
+=> null
+
+await busy.release();
 ```
 
 ```ts cleanup
@@ -132,22 +140,47 @@ JSON.stringify({
 await box.cleanup();
 ```
 
-## A dirty box is skipped, not refreshed
-
-Same bargain `sweepMigrations` makes: uncommitted changes mean someone's work is
-in flight, and this runs where nobody can be asked. The skip is reported and the
-next deploy retries.
+## Dirty input remains outside the generated-output commit
 
 ```ts
 const box = await makeCleanBox();
 await box.write("_content/notes.md", "work in progress\n");
-
+git(box, "add", "_content/notes.md");
 const result = await refreshGeneratedDocs({ boxRoot: box.root });
-JSON.stringify({
-  status: result.status,
-  generated: git(box, "ls-files", ".claude/rules") !== "",
-})
-=> {"status":"skipped-dirty","generated":false}
+JSON.stringify({ status: result.status, staged: git(box, "diff", "--cached", "--name-only"), committed: git(box, "ls-tree", "--name-only", "HEAD", "_content/notes.md") })
+=> {"status":"refreshed","staged":"_content/notes.md","committed":""}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Rejected output invalidates the cache and retains its original recovery baseline
+
+The failed generation has already written files. Retrying must commit those
+files, rather than treating them as unrelated dirt in a fresh snapshot.
+
+```ts
+const box = await makeCleanBox();
+const hooks = join(git(box, "rev-parse", "--absolute-git-dir"), "reject-hooks");
+await mkdir(hooks);
+await writeFile(join(hooks, "pre-commit"), "#!/bin/sh\nexit 1\n");
+await chmod(join(hooks, "pre-commit"), 0o755);
+git(box, "config", "core.hooksPath", hooks);
+await refreshGeneratedDocs({ boxRoot: box.root })
+=> throws DocsRefreshError
+
+await access(box.path(GENERATE_MARKER))
+=> throws Error
+
+const pending = git(box, "rev-parse", "refs/bbx/migrations/docs-refresh/pending");
+pending.length > 0
+=> true
+
+git(box, "config", "--unset", "core.hooksPath");
+const result = await refreshGeneratedDocs({ boxRoot: box.root, recover: true });
+JSON.stringify({ status: result.status, rules: git(box, "ls-files", ".claude/rules").includes("card-pdf.md"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), clean: git(box, "status", "--porcelain") === "" })
+=> {"status":"refreshed","rules":true,"pending":"","clean":true}
 ```
 
 ```ts cleanup

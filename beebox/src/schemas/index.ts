@@ -33,6 +33,7 @@ export { LandmarksSchema } from "./landmarks.js";
 export { HistorySchema } from "./history.js";
 export { InventorySchema } from "./inventory.js";
 export { AdminSchema } from "./admin.js";
+export { SearchSchema } from "./search.js";
 
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";

@@ -13,6 +13,7 @@ import {
   deriveFlakes,
   hashFileset,
   parsePorcelainPaths,
+  failureRecapLines,
   parseTapFiles,
   summarize,
   type LedgerRecord,
@@ -43,6 +44,24 @@ test("ignores indented subtest lines, which would double-count", () => {
     "ok 1 - test/core/geo.doctest.md # time=1ms",
   ].join("\n");
   assert.deepEqual(parseTapFiles(raw).map((r) => r.file), ["test/core/geo.doctest.md"]);
+});
+
+test("the failure recap names the failing files last, so a truncated tail keeps them", () => {
+  // This is what survives when only the end of a run is kept; a crash that
+  // names no file must say so rather than listing nothing.
+  const raw = [
+    "ok 1 - test/core/geo.doctest.md # time=630.192ms",
+    "not ok 2 - test/webapp/routes/routes-api.doctest.md # time=5548.991ms",
+  ].join("\n");
+  assert.deepEqual(failureRecapLines(raw, 1), [
+    "test-ledger: 1 failing test file:",
+    "  test/webapp/routes/routes-api.doctest.md",
+    "test-ledger: rerun with: pnpm exec tap test/webapp/routes/routes-api.doctest.md",
+  ]);
+  assert.deepEqual(failureRecapLines(raw, 0), []);
+  assert.deepEqual(failureRecapLines("Segmentation fault", 139), [
+    "test-ledger: exited 139 with no failing test file in its TAP output.",
+  ]);
 });
 
 test("a file result with no timing still parses, with zero duration", () => {

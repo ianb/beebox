@@ -34,12 +34,12 @@ pinned nothing reports the `strong` tier for its engine rather than `null`.
 ```ts
 const server = await makeTestServer();
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false}
 ```
 
 Clearing the pin returns the box to the `strong` tier, not to "whatever the
