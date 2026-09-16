@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-16T18:23:29Z
+Generated: 2026-09-16T18:33:11Z
 Total documents: 380
 
 ## Issues
@@ -1769,7 +1769,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:51 (mention) — **Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only mani
 - docs/implemented-plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
-- docs/implemented-plans/migration-admission-cost.md:317 (mention) — (`docs/migrations.md` admission section) updated.
+- docs/implemented-plans/migration-admission-cost.md:326 (mention) — (`docs/migrations.md` admission section) updated.
 - docs/implemented-plans/one-root-box-layout.md:127 (mention) — | Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-p
 - docs/implemented-plans/questions-end-to-end.md:255 (mention) — `docs/migrations.md` on test1 + prod boxes. The two live test1 retro
 - docs/implemented-plans/remove-box-shape-v1.md:79 (mention) — - **1e — Docs** (was Track 3): `box-layout.md`, `migrations.md`, `box-layout-spec`
@@ -4106,7 +4106,7 @@ References:
 
 #### docs/implemented-plans/migration-admission-cost.md
 
-Title: "Maintenance closes a box only when it has work, and says who holds it" | 324 lines | shipped history | implemented
+Title: "Maintenance closes a box only when it has work, and says who holds it" | 333 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/bugs/2026-09-15-scheduled-sweep-closes-admission-before-knowing-it-has-work.md:22 (mention) — `docs/implemented-plans/migration-admission-cost.md`. No divergence from the

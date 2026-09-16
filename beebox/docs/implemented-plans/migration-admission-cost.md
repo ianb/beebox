@@ -195,6 +195,15 @@ next hour is fine.
 `test/helpers/box-maintenance-child.ts` as the foreign holder, and a
 `convergence.test.ts` case for the 24 h bound.
 
+**Follow-up (`c97fea1ad`).** The peek above only sees another work lease, not
+the maintenance owner lock itself: a deploy holding that lock made
+`acquireBoxMaintenance` raise a bare `LockHeldError` before any peek or drain,
+which the sweep didn't classify as deferrable and the schedule alerted on
+every prod box. `closeBoxMaintenance` now wraps that case in a
+`BoxMaintenanceError` naming the owner from its lock sidecar
+(`box-maintenance.ts`), and a yielding sweep reports it `deferred` like live
+work (`migration-sweep.ts`).
+
 ### D. Refusal names the reason and deadline; the chat client retries
 
 **What.** `phase.json` gains `until` (drain deadline). The `closed` error
