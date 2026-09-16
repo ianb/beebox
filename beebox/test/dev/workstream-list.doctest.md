@@ -49,7 +49,6 @@ await writeFile(join(stateDir, "workstreams/culled.json"), JSON.stringify({
   branch: "worktree-culled",
   agent: "claude",
   sessionId: "session-id",
-  emoji: "🧵",
   updatedAt: "2026-08-09T00:00:00Z",
   removed: { at: "2026-08-09T00:00:00Z", finalSha: "abc", merged: true },
 }));

@@ -109,10 +109,9 @@ const MIN_ACCEPTED_SHAPE_VERSION = 3;
  * marker must not be handed back as if it were a valid v3 root: a caller that
  * then read `_content/` or `_config/` under it would find nothing there and
  * report false success (the original bug — `bbx tick` inside a v2 `content/`
- * dir silently found zero jobs). The migration bootstrap probe
- * (`cli/commands/migrate-bootstrap.ts` → `probeV2Box`) is the one place
- * allowed to tolerate a v2 marker, and it reads the marker directly rather
- * than going through this function.
+ * dir silently found zero jobs). Nothing tolerates a v2 marker any more: the
+ * bootstrap probe that did was deleted with the conversion, so throwing is now
+ * the only outcome.
  *
  * @param startPath - Directory to start searching from
  * @returns The box root path, or null if no marker exists anywhere above it

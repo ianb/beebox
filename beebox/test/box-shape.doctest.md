@@ -52,8 +52,8 @@ const makeV2PackageRoot = async () => {
 const box = await makeTmpBox();
 await box.write(".beebox/box.json", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
 const err = await tryGetBoxShape(box.root);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsMigrate: err.message.includes("bbx migrate") })
-=> {"isBoxShapeError":true,"mentionsMigrate":true}
+JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed") })
+=> {"isBoxShapeError":true,"saysNoConversion":true}
 ```
 
 ```ts cleanup
@@ -93,8 +93,8 @@ await box.cleanup();
 ```ts
 const dir = await makeV2PackageRoot();
 const err = await tryGetBoxShape(dir);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsMigrate: err.message.includes("bbx migrate"), mentionsPackageRoot: err.message.includes("package root") })
-=> {"isBoxShapeError":true,"mentionsMigrate":true,"mentionsPackageRoot":true}
+JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed"), mentionsPackageRoot: err.message.includes("package root") })
+=> {"isBoxShapeError":true,"saysNoConversion":true,"mentionsPackageRoot":true}
 ```
 
 ```ts cleanup
@@ -107,8 +107,8 @@ await fs.rm(dir, { recursive: true, force: true });
 const dir = await makeV2PackageRoot();
 const contentRoot = path.join(dir, "content");
 const err = await tryGetBoxShape(contentRoot);
-JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsMigrate: err.message.includes("bbx migrate"), mentionsContentDir: err.message.includes("content/ root") })
-=> {"isBoxShapeError":true,"mentionsMigrate":true,"mentionsContentDir":true}
+JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, saysNoConversion: err.message.includes("conversion has been removed"), mentionsContentDir: err.message.includes("content/ root") })
+=> {"isBoxShapeError":true,"saysNoConversion":true,"mentionsContentDir":true}
 ```
 
 ```ts cleanup
@@ -250,9 +250,9 @@ A v2 package root is a real error too (the migration-pointing one) — `getBoxSh
 
 ```ts
 const v2dir = await makeV2PackageRoot();
-const outcome = await getBoxShapeIfPresent(v2dir).then(() => "did-not-throw", (e) => e.message.includes("bbx migrate") ? "threw-migrate" : "threw-other");
+const outcome = await getBoxShapeIfPresent(v2dir).then(() => "did-not-throw", (e) => e.message.includes("conversion has been removed") ? "threw-no-conversion" : "threw-other");
 outcome
-=> threw-migrate
+=> threw-no-conversion
 ```
 
 ```ts continue
@@ -282,9 +282,9 @@ A v2 shape still throws the migration-pointing error — `resolveBoxRoot` never 
 
 ```ts continue
 const v2dir = await makeV2PackageRoot();
-const outcome = await resolveBoxRoot(v2dir).then(() => "did-not-throw", (e) => e.message.includes("bbx migrate") ? "threw-migrate" : "threw-other");
+const outcome = await resolveBoxRoot(v2dir).then(() => "did-not-throw", (e) => e.message.includes("conversion has been removed") ? "threw-no-conversion" : "threw-other");
 outcome
-=> threw-migrate
+=> threw-no-conversion
 ```
 
 ```ts cleanup
