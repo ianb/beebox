@@ -160,6 +160,14 @@ for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
     exit 1
   fi
 done
+for claude_agent in "\$wt_path"/.claude/agents/*.md; do
+  [ -f "\$claude_agent" ] || continue
+  agent_name=\$(basename "\$claude_agent" .md)
+  if [ ! -f "\$wt_path/.codex/agents/\$agent_name.toml" ]; then
+    echo "launch-worktree-session: missing Codex mirror for agent \$agent_name — refusing to launch codex without its pinned model" >&2
+    exit 1
+  fi
+done
 cd "\$wt_path"
 codex_args=(
   -s danger-full-access -a never
