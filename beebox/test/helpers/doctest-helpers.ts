@@ -64,7 +64,7 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
   // the point. The old fixture wrote that directory by hand, so annex fixtures
   // proved the ignore block did not block — not that bytes annex. "The fixture
   // never ran the real init" is what
-  // `issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md`
+  // `issues/closed/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md`
   // names as the reason its bug went unnoticed for months.
   if (opts?.git !== "none") execSync("git init -q -b main", { cwd: root, stdio: "pipe" });
   if (opts?.git === true) {

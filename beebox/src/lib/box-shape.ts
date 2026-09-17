@@ -64,7 +64,7 @@ type PackageJsonShape = z.infer<typeof packageJsonShapeSchema>;
  * absent or `< 3` predates the one-root layout — including the common case
  * of a v2 PACKAGE root (no marker of its own, but one at `<boxRoot>/content`)
  * or a v2 CONTENT root (basename `content`, marker `shapeVersion: 2`) — and
- * gets a `bbx migrate`-pointing hard error.
+ * gets a hard error naming the shape (there is no conversion any more).
  *
  * @param boxRoot - The box root directory (contains `.beebox/box.json`)
  * @throws BoxShapeError if the marker predates the one-root layout
