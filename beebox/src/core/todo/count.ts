@@ -1,8 +1,16 @@
 /**
- * Box-wide count of todos that are on the plate NOW — `escalated` (past due)
- * plus `on-plate` (started, or undated). This is the number behind the app
- * nav's plate badge (`docs/implemented-plans/todo-annotation.md` Track 4), which
- * every page's first request pays for.
+ * Box-wide count of the BOXHOLDER's todos that are on the plate NOW —
+ * `escalated` (past due) plus `on-plate` (started, or undated). This is the
+ * number behind the app nav's plate badge
+ * (`docs/implemented-plans/todo-annotation.md` Track 4), which every page's
+ * first request pays for.
+ *
+ * `assigned="agent"` todos are excluded: they are the agent's own follow-ups,
+ * and a badge that counts them tells the boxholder they owe work they never
+ * took on — which is also why an agent would otherwise avoid opening one at
+ * all. They stay visible through `bbx todos --assigned agent`, a todo-view
+ * card, and the review sweep's job brief. See `isBoxholderTodo`
+ * (`src/shared/todo-model.ts`).
  *
  * It is a fast path over the same machinery `collectTodos` uses — same card
  * set, same context, same per-card extraction (`collectCardTodos`) — with two
@@ -24,6 +32,7 @@ import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { errorMessage } from "../../lib/error-guards.js";
 import { mapInBatches } from "../../lib/map-batched.js";
+import { isBoxholderTodo } from "../../shared/todo-model.js";
 import { buildTodoScanContext, collectCardTodos, listTodoCardPaths } from "./collect.js";
 import type { CollectedTodo, TodoCollectionIssue } from "./collect-types.js";
 
@@ -88,5 +97,5 @@ export async function countOnPlateTodos(boxRoot: string): Promise<number> {
     });
   }
 
-  return todos.filter((t) => t.plateState === "escalated" || t.plateState === "on-plate").length;
+  return todos.filter((t) => isBoxholderTodo(t) && (t.plateState === "escalated" || t.plateState === "on-plate")).length;
 }

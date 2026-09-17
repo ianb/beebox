@@ -114,6 +114,32 @@ A second sweep is a no-op — the manifest now records it:
 await box.cleanup();
 ```
 
+## A procedure migration after an applied script reopens the box
+
+An unattended sweep has no procedure runner. It applies and commits the script
+migrations before the first procedure migration, then stops there. The box is
+consistent at that point: every applied migration is committed and the procedure
+has not started. The sweep must reopen the box. A box left "exclusive" here
+refused every request with "Box is closed for migration" until someone repaired
+it by hand (all four local dev boxes, 2026-09-16).
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: [PROBE, "trick-secret-runtime"] });
+await box.commitAll("script then procedure pending");
+const result = await sweepMigrations({ boxRoot: box.root });
+JSON.stringify({
+  status: result.status,
+  applied: result.applied.map((m) => m.name),
+  phase: await boxMaintenanceStatus(box.root),
+})
+=> {"status":"needs-procedure","applied":["annex-config-2026-08"],"phase":null}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A scheduled pass yields to a box in use
 
 `--yield` is the hourly schedule's mode. An idle chat run holds a lease until

@@ -59,6 +59,23 @@ math depends on it. Nest \`{% see-also ref="..." %}...{% /see-also %}\` inside
 a todo (or a frontmatter \`see-also:\` list) to point at supporting evidence —
 this is what proves a todo is done, not just claimed done.
 
+### Your own follow-ups
+
+You may open a todo for yourself — \`by="agent" assigned="agent"\`, with
+\`created\` — whenever you notice work worth doing that isn't this turn's
+job: a card that wants a second pass, a gap you spotted while doing
+something else, a cleanup the boxholder never asked for. You don't need
+permission for these and they don't go on the boxholder's plate, so they
+cost the person nothing. Close your own with \`done\` and a
+\`{% see-also %}\` pointing at the evidence, or \`dropped\` when you've
+decided against it — and say why in the text.
+
+Two limits. This is not a way to defer a decision that is really a question
+(see above — that rule doesn't relax just because the list is yours). And an
+agent todo you keep stepping over for months is noise: drop it, or raise it
+as a real question. \`bbx todos --assigned agent\` is how you find them
+again, and the \`todo-review\` sweep will bring the stale ones back to you.
+
 ### Querying
 
 \`bbx todos\` is your query path — filterable by \`--status\`, \`--assigned\`,
