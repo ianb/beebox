@@ -32,22 +32,20 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.270`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.272`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.273` (SDK), `2.1.273` (Claude Code), `0.154.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.274` (SDK), `2.1.274` (Claude Code), `0.154.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** **No bump was due on either channel.** At this
-  turn `0.3.271` was 1.9h short of the window and `0.3.272` 5.7h short, so the
-  newest settled SDK version was still the pin, `0.3.270`; Codex has nothing
-  newer than `0.154.0`. Tomorrow `0.3.271` and `0.3.272` are both settled —
-  take them **together**, per their entries. `0.3.273` (~24h) settles
-  2026-09-17T18:09Z, just after a run at the usual hour, so it will likely wait
-  a further day.
+- **Current recommendation:** `0.3.272` was taken this turn as the newest settled
+  version, carrying `0.3.271` with it as the pairing required. `0.3.273` was
+  12 minutes short of the window when the updater ran, so it waits a day.
+  Pending: `0.3.273` (settles 2026-09-17T18:09Z) and `0.3.274` (~19h, settles
+  2026-09-18T22:38Z). No Codex release since `0.154.0`.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -68,7 +66,51 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.273 / Claude Code 2.1.273 — pending (published 2026-09-15T18:09Z, ~24h at this turn)
+### 0.3.274 / Claude Code 2.1.274 — pending (published 2026-09-16T22:38Z, ~19h at this turn)
+
+- **Probed, not reproduced — a watch item:** *"Changed queued background-task
+  completions to share one model call: each still gets its own `result`, all but
+  the last empty with `num_turns: 0`."* beebox treats **every** `result` as a
+  turn end: `ChatSession` (`src/core/chat/session/index.ts:257`) records a turn
+  marker, flips to ready, emits `done` and calls `drainQueue()`, sending any
+  queued user message; `ChatThreadSession` (`thread.ts:276`) emits `turn-text`
+  and `done` and calls `resolveTurn()`. Neither checks `num_turns`, so an empty
+  result arriving before the real one would end the turn early — a queued
+  message sent mid-sequence, a thread turn resolved before its reply. Probed
+  before filing: a streaming session told to start two background Bash tasks
+  (`sleep 5 && echo ONE` / `TWO`) and stay open, with every message logged. On
+  `0.3.274` and on the `0.3.272` pin alike, the completions arrived ~0.4s apart
+  — the second while the model was busy with the first — and each still got its
+  own model call: three results, all `num_turns` ≥ 1, none empty. The batched
+  shape needs a trigger this probe does not reach, so nothing is filed. If it
+  ever appears, the guard is to skip `num_turns === 0` results as turn
+  boundaries in those two handlers.
+- **SDK, also relevant:** `startup_failure_reason` on the error result a
+  stream-json run writes before exiting on a known startup failure — context
+  beebox's run-start failure handling could surface. The first turn no longer
+  waits up to 2s for MCP servers from settings files or plugins whose tools tool
+  search defers; box agents load user settings, so their first turn can start
+  sooner, and `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` bounds the wait. `mcpServer` /
+  `mcp_server` / `source` additions for MCP trust do not apply — beebox hosts and
+  configures no MCP servers. The `getSessionMessages()` fix does not apply —
+  beebox never calls it.
+- **2.1.274, relevant:**
+  - *"Fixed sessions getting stuck endlessly retrying 'unexpected tool_use_id'
+    400 errors: corrupted transcripts now self-heal where possible."* The sixth
+    permanent-wedge fix this ledger has tracked; beebox resumes transcripts
+    constantly.
+  - *"Fixed a plugin or marketplace directory with no git repository of its own
+    taking its version from an enclosing git repository."* beebox's local plugin
+    (`beebox/plugins/beebox-claude`) sits inside the monorepo with no repository
+    of its own — the exact shape — so its version had been following the
+    monorepo's commits.
+  - *"Fixed hook-driven sessions … ending with 'Prompt is too long' instead of
+    compacting when the context overflowed again after a reactive compaction."*
+  - A visible warning when memory usage is critical.
+- **Action:** Settled path; takeable 2026-09-19.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03274), [Claude Code 2.1.274](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21274)
+
+### 0.3.273 / Claude Code 2.1.273 — pending (published 2026-09-15T18:09Z, 12 minutes short of the window at 2026-09-17)
 
 - **Amends the `0.3.268` entry — a second deny-rule revert.** *"Reverted a
   2.1.268 change that checked Read and Edit deny rules on Bash lines the
@@ -117,7 +159,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-09-17 at the earliest.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03273), [Claude Code 2.1.273](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21273)
 
-### 0.3.272 / Claude Code 2.1.272 — pending, nothing to assess (published 2026-09-14T23:34Z, ~42h at 2026-09-16; settles 2026-09-16T23:34Z)
+### 0.3.272 / Claude Code 2.1.272 — APPLIED 2026-09-17 with 0.3.271, nothing to assess (published 2026-09-14T23:34Z)
 
 - **Upstream:** SDK parity-only; 2.1.272 says only "Bug fixes and reliability
   improvements". Checked the tagged `v2.1.272` changelog as well as `main` — the
@@ -127,10 +169,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   hotfix for the release below it (`0.3.265`/`0.3.266`,
   `0.3.269`/`0.3.270`). Take it together with `0.3.271` rather than splitting
   them.
-- **Action:** Settled path; both takeable 2026-09-16.
+- **Action:** Applied 2026-09-17 on the settled path (~66h old) together with
+  `0.3.271`, as the pairing asked. `pnpm -C beebox test`: **10,571 pass, 0
+  fail**. `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Claude Code 2.1.272](https://github.com/anthropics/claude-code/blob/v2.1.272/CHANGELOG.md#21272)
 
-### 0.3.271 / Claude Code 2.1.271 — pending (published 2026-09-14T19:47Z, ~46h at 2026-09-16; settles 2026-09-16T19:47Z)
+### 0.3.271 / Claude Code 2.1.271 — APPLIED 2026-09-17 with 0.3.272 (published 2026-09-14T19:47Z)
 
 - **SDK:** `omitClaudeMd` on `AgentDefinition` in the `agents` option, letting a
   subagent run without user, project and local CLAUDE.md files (managed policy
