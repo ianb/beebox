@@ -41,6 +41,17 @@ export interface ImageItem {
   objectUrl: string;
   /** Approximate byte size of the encoded image. */
   byteLength: number;
+  /**
+   * The original file's trip to the box — internal, never shown. `dataBase64`
+   * is the reduced copy the agent sees inline (`lib/image-paste.ts` downscales
+   * to 1920px); the original is uploaded silently alongside it, exactly as a
+   * non-image file is, so the agent also has a file to crop, OCR, attach, or
+   * hand to an API. `uploaded` carries the `_tmp/chat/<batch>/` path the
+   * message's `<attachments>` block lists as `[image#N]: <path>`; `failed`
+   * means the message goes out with the pixels only and no line. A send
+   * waits while it is `uploading`, as it does for a file.
+   */
+  original: FileTransferState;
 }
 
 /**
@@ -55,7 +66,7 @@ export interface ImageItem {
  */
 export type FileTransferState =
   | { status: "uploading"; /** 0–1, or 0 while the total is unknown. */ progress: number }
-  | { status: "uploaded"; /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
+  | { status: "uploaded"; /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
   | { status: "failed"; message: string };
 
 /**
@@ -91,6 +102,13 @@ export interface EmissionDraft {
   readonly pendingImages: number;
   readonly files: FileItem[];
   readonly selections: SelectionItem[];
+  /**
+   * The directory this message's uploads share, `_tmp/chat/<uploadBatch>/`
+   * on the box: minted by the first attachment, sent with every upload, and
+   * cleared when the attachments reset after a send. `null` until then. The
+   * message id is minted only at send, so it cannot name the directory.
+   */
+  readonly uploadBatch: string | null;
 }
 
 /** What `reset()` hands back so the caller can release resources the store never touches. */
@@ -130,6 +148,8 @@ export interface EmissionEditor {
    * resurrect it.
    */
   setFileState(opts: { id: number; state: FileTransferState }): void;
+  /** Advance an image's ORIGINAL-file upload (see {@link ImageItem.original}); same no-op rule as `setFileState`. */
+  setImageOriginal(opts: { id: number; state: FileTransferState }): void;
   addSelection(item: SelectionItem): void;
   /** Removes the image and strips its `[imageN]` token (plus a bounding whitespace char) from the text. */
   removeImage(id: number): void;
@@ -137,6 +157,10 @@ export interface EmissionEditor {
   removeFile(id: number): void;
   /** Removes the selection and strips its `[selectionN]` token from the text. */
   removeSelection(id: number): void;
+  /** The draft's upload batch id, minting it on first use (see {@link EmissionDraft.uploadBatch}). */
+  uploadBatch(): string;
+  /** Adopt a restored draft's batch id, so its later uploads join the same directory. */
+  restoreUploadBatch(id: string): void;
   /** Mints the next image id (monotonic; not reused after removal). */
   nextImageId(): number;
   /** Mints the next file id (monotonic; not reused after removal). */
@@ -171,6 +195,15 @@ export interface EmissionStore {
 
 const NO_REMOVALS: ResetResult = { removedImageObjectUrls: [] };
 
+/**
+ * A URL-safe id the route accepts as a directory name (`[\w-]{8,64}`,
+ * `webapp/routes/chat-uploads.ts`). Time-prefixed so batch directories list
+ * in order on the box; the random tail keeps two tabs apart.
+ */
+function newUploadBatchId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // Each token plus a bounding whitespace char on each side. `#?` matches the
 // pre-2026-08-25 form too — see shared/composer-tokens.ts.
 const TOKEN_PATTERNS: Record<ComposerTokenKind, RegExp> = {
@@ -187,7 +220,7 @@ function stripToken(text: string, opts: { word: ComposerTokenKind; id: number })
 }
 
 export function createEmissionStore(): EmissionStore {
-  let draft: EmissionDraft = { text: "", images: [], pendingImages: 0, files: [], selections: [] };
+  let draft: EmissionDraft = { text: "", images: [], pendingImages: 0, files: [], selections: [], uploadBatch: null };
   let nextImageIdValue = 1;
   let nextFileIdValue = 1;
   let nextSelectionIdValue = 1;
@@ -228,6 +261,10 @@ export function createEmissionStore(): EmissionStore {
       if (!draft.files.some((file) => file.id === id)) return;
       patch({ files: draft.files.map((file) => (file.id === id ? { ...file, state } : file)) });
     },
+    setImageOriginal({ id, state }) {
+      if (!draft.images.some((image) => image.id === id)) return;
+      patch({ images: draft.images.map((image) => (image.id === id ? { ...image, original: state } : image)) });
+    },
     addSelection(item) {
       patch({ selections: [...draft.selections, item] });
     },
@@ -248,6 +285,15 @@ export function createEmissionStore(): EmissionStore {
         selections: draft.selections.filter((selection) => selection.id !== id),
         text: stripToken(draft.text, { word: "selection", id }),
       });
+    },
+    uploadBatch() {
+      if (draft.uploadBatch !== null) return draft.uploadBatch;
+      const id = newUploadBatchId();
+      patch({ uploadBatch: id });
+      return id;
+    },
+    restoreUploadBatch(id) {
+      patch({ uploadBatch: id });
     },
     nextImageId() {
       return nextImageIdValue++;
@@ -272,7 +318,7 @@ export function createEmissionStore(): EmissionStore {
       const removedImageObjectUrls = draft.images.map((image) => image.objectUrl);
       nextImageIdValue = 1;
       nextFileIdValue = 1;
-      patch({ images: [], files: [], pendingImages: 0 });
+      patch({ images: [], files: [], pendingImages: 0, uploadBatch: null });
       return { removedImageObjectUrls };
     },
   };

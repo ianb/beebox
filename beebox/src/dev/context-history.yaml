@@ -4441,6 +4441,14 @@ test1:
       peak: 57900
       added: 10952
       turns: 19
+  chat-image-original-path:
+    - date: 2026-09-16T18:53:52.540Z
+      boxCommit: 85dd7f328089666edc081ea987ab9e6ce436179a
+      repoCommit: 1e4241e17f68f7b65fff9b56d8d7eb8d94d460c9
+      initial: 50971
+      peak: 63283
+      added: 12312
+      turns: 6
   bbx-surface-force-wakeup:
     - date: 2026-09-16T19:44:08.326Z
       boxCommit: fc77dfbe8ba8c44fae0845b7e1ee9a64d3e0c318

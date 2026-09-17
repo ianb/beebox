@@ -19,13 +19,16 @@
  * Images are size-gated: base64 payloads persist only while the total
  * serialized size stays under PERSIST_BYTE_BUDGET — text, files, and
  * selections always fit and always persist. Restored file attachments
- * point at `tmp/…` uploads that housekeeping sweeps after 7 days; the
+ * point at `_tmp/…` uploads that housekeeping sweeps after 7 days; the
  * pure `partitionFiles` supports the restore-time validation the React
- * layer performs (drop dead ones with a visible note).
+ * layer performs (drop dead ones with a visible note). An image's original
+ * upload (`ImageItem.original`) restores through `restoredImageOriginal`:
+ * a landed path comes back as-is, anything still moving is `failed` — the
+ * `File` handle died with the page, so it can be removed but not retried.
  */
 
 import { uploadedPath } from "./emission-store";
-import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
+import type { EmissionDraft, ImageItem, FileItem, FileTransferState } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -43,7 +46,10 @@ export interface KeyValueStorage {
 export interface PersistedEmission {
   version: 1;
   text: string;
-  images: ImageItem[];
+  /** The draft's upload batch (`EmissionDraft.uploadBatch`); absent in older drafts. */
+  uploadBatch?: string;
+  /** `original` is absent in drafts written before originals were kept. */
+  images: Array<Omit<ImageItem, "original"> & Partial<Pick<ImageItem, "original">>>;
   files: FileItem[];
   selections: SelectionItem[];
   updatedAt: number;
@@ -84,12 +90,13 @@ function warn(what: string, e: unknown): void {
  * design's best-effort stance on blobs).
  */
 export function serializePersistedEmission(
-  draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">,
+  draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">,
   opts: { updatedAt: number },
 ): { payload: string; imagesDropped: boolean } {
   const full: PersistedEmission = {
     version: 1,
     text: draft.text,
+    ...(draft.uploadBatch === null ? {} : { uploadBatch: draft.uploadBatch }),
     images: [...draft.images],
     // Unfinished uploads are persisted too, even though they can never be
     // resumed (the `File` handle dies with the page). Filtering them out here
@@ -110,12 +117,40 @@ export function serializePersistedEmission(
   return { payload, imagesDropped: true };
 }
 
+/**
+ * The original-upload state an image comes back with after a restore (a
+ * reload, or a rejected send handed back). `uploaded` survives as it was
+ * when the file is still there. Everything else is `failed`, silently: an
+ * upload that was still moving or had failed has no `File` to retry from
+ * once the page that held it is gone, a draft written before originals were
+ * kept has no state at all, and a landed file the sweep has since removed is
+ * a path the agent cannot open. The message then lists no file for that
+ * image. `existingPaths` is the restore-time existence check; `null` skips
+ * it, for a same-tab restore where the file was just written.
+ */
+export function restoredImageOriginal(
+  original: FileTransferState | undefined,
+  opts: { existingPaths: ReadonlySet<string> | null },
+): FileTransferState {
+  if (original?.status === "uploaded") {
+    if (opts.existingPaths === null || opts.existingPaths.has(original.path)) return original;
+    return { status: "failed", message: RESTORED_ORIGINAL_SWEPT };
+  }
+  return { status: "failed", message: RESTORED_ORIGINAL_LOST };
+}
+
+/** Why a restored image has no original: the page reloaded before it landed. Internal. */
+export const RESTORED_ORIGINAL_LOST = "Original not uploaded — the agent sees the reduced copy only";
+/** Why a restored image has no original: its `_tmp/` file was swept meanwhile. Internal. */
+export const RESTORED_ORIGINAL_SWEPT = "Original was swept from _tmp/ — the agent sees the reduced copy only";
+
 function isPersistedEmission(value: unknown): value is PersistedEmission {
   if (!isRecord(value)) return false;
   const v = value;
   return (
     v["version"] === 1 &&
     typeof v["text"] === "string" &&
+    (v["uploadBatch"] === undefined || typeof v["uploadBatch"] === "string") &&
     Array.isArray(v["images"]) &&
     Array.isArray(v["files"]) &&
     Array.isArray(v["selections"]) &&
@@ -151,7 +186,7 @@ export function savePersistedEmission(
   input: {
     boxSlug: string | undefined;
     scope: string;
-    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
+    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
     updatedAt: number;
   },
 ): void {
@@ -193,7 +228,7 @@ export function commitPersistedEmission(
   input: {
     boxSlug: string | undefined;
     scope: string;
-    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
+    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
     updatedAt: number;
   },
 ): void {

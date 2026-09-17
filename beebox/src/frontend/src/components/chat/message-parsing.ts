@@ -66,7 +66,8 @@ export function stripUserDisplayTags(
 /**
  * Extract file attachments from a user message's text. Looks for the
  * `<attachments>` block written by the chat composer and parses
- * `[fileN]: tmp/<timestamp>_<original-name>` reference lines.
+ * `[file#N]: _tmp/<timestamp>_<original-name>` reference lines (older messages
+ * say `tmp/`, the path the route returned before it named the real directory).
  */
 export interface FileAttachmentRef {
   id: number;
@@ -77,7 +78,7 @@ export interface FileAttachmentRef {
 
 const ATTACHMENTS_BLOCK_RE = /<attachments>([\S\s]*?)<\/attachments>/i;
 const FILE_REF_LINE_RE = /\[file#?(\d+)]:\s*(\S+)/g;
-const TMP_FILENAME_PREFIX_RE = /^tmp\/[^/_]+_(.+)$/;
+const TMP_FILENAME_PREFIX_RE = /^_?tmp\/[^/_]+_(.+)$/;
 
 export function extractFileAttachments(text: string): FileAttachmentRef[] {
   const inner = text.match(ATTACHMENTS_BLOCK_RE)?.[1];
