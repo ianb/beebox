@@ -419,7 +419,7 @@ export async function runAnnexDoctor(
   checks.push({ id: "smudge-hooks", ...(await checkAnnexSmudgeHooks(repoRoot, readOnly)) });
 
   // 11. The pre-commit hook actually invokes annex. `git annex init` declines
-  //    to install its own hook when one already exists, and `bbx init` leaves a
+  //    to install its own hook when one already exists, and `bbx engine init` leaves a
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.
   const hook = await readHook(repoRoot, "pre-commit");
@@ -431,9 +431,9 @@ export async function runAnnexDoctor(
       status: "failed",
       message:
         hook === null
-          ? "no pre-commit hook installed; run `bbx init` so annex runs at commit time."
+          ? "no pre-commit hook installed; run `bbx engine init` so annex runs at commit time."
           : "the pre-commit hook does not invoke `git annex pre-commit`. If bbx manages this hook, " +
-            "`bbx init` regenerates it; if it is hand-written, add the line yourself.",
+            "`bbx engine init` regenerates it; if it is hand-written, add the line yourself.",
     });
   }
 

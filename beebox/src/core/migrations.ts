@@ -155,6 +155,16 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // `bbx`. Configuration, not card data, like the hooks and gitignore
   // entries above; the rename rewrote everything but the boxes' own `runs:`.
   { name: "schedule-runs-bbx-2026-09", script: "scripts/migrate/schedule-runs-bbx.ts" },
+  // MUST follow `schedule-runs-bbx-2026-09`, which repoints cards still naming
+  // the retired command. This migrator only recognizes a command whose program
+  // is already `bbx`, so running first it would pass such a card over, and that
+  // rewrite would then leave it at a bare `bbx wakeup` — which no longer
+  // resolves, with neither migration willing to look at it again.
+  //
+  // The CLI split (docs/implemented-plans/bbx-agent-surface.md) moved `wakeup`
+  // and its siblings under `bbx engine`; stock schedule cards carry those verbs
+  // as literal shell strings the scheduler runs through a shell.
+  { name: "schedule-engine-verbs-2026-09", script: "scripts/migrate/schedule-engine-verbs.ts" },
   { name: "canonical-interface-cards", script: "scripts/migrate/canonical-interface-cards.ts" },
   { name: "remaining-interface-cards", script: "scripts/migrate/remaining-interface-cards.ts" },
   { name: "search-interface-card", script: "scripts/migrate/search-interface-card.ts" },

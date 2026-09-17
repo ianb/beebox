@@ -134,7 +134,7 @@ export function generateConnectorsDocs(): string {
     lines.push("");
 
     if (c.produces.length > 0) {
-      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`bbx wakeup\`)`);
+      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via the wakeup cycle)`);
     } else {
       lines.push("**Outbound only** — no cards produced.");
     }

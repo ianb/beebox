@@ -158,7 +158,7 @@ const driveFields = parseFrontmatterObject(
   await fs.readFile(path.join(boxRoot, "_config/schedules/check-drive.scheduled-script.card"), "utf8"),
 );
 `runs=${driveFields?.runs}; enabled=${String(driveFields?.enabled)}; requires=${JSON.stringify(driveFields?.requires)}`
-=> runs=bbx wakeup --connector google-drive; enabled=false; requires={"connectors":["drive"]}
+=> runs=bbx engine wakeup --connector google-drive; enabled=false; requires={"connectors":["drive"]}
 ```
 
 Reinstalling the templates does not undo a boxholder's explicit choice. `enabled`

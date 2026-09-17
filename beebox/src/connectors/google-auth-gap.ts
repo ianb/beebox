@@ -5,7 +5,7 @@
  * box, client credentials this process may not read, no token file where this
  * process looks, and a token record with no refresh token — and every call site
  * printed the same sentence for all of them: "Google auth not configured. Run:
- * bbx google-auth."
+ * bbx engine google-auth."
  *
  * That sentence is wrong for three of the four, and expensively so. A boxholder
  * reauthorized twice against a grant that was already healthy, because the box
@@ -28,7 +28,7 @@ import { GOOGLE_CLIENT_ID_SECRET_NAME, GOOGLE_CLIENT_SECRET_SECRET_NAME } from "
 import { centralTokenPath, legacySecretPath, loadGoogleTokens } from "./google-token-store.js";
 
 /** The sentence every caller used to print, kept for the one case it fits. */
-const RUN_GOOGLE_AUTH = "Google auth not configured. Run: bbx google-auth";
+const RUN_GOOGLE_AUTH = "Google auth not configured. Run: bbx engine google-auth";
 
 /**
  * A relay-ready explanation of why Google auth is unavailable for this box, in
@@ -60,7 +60,7 @@ export async function explainGoogleAuthGap(boxRoot?: string): Promise<string> {
     }
     if (!tokens.refreshToken) {
       return "Google auth unavailable: the token record has no refresh token, so it cannot be renewed. "
-        + "This is the one case where `bbx google-auth` is the fix.";
+        + "This is the one case where `bbx engine google-auth` is the fix.";
     }
     return RUN_GOOGLE_AUTH;
   } catch (_error) {

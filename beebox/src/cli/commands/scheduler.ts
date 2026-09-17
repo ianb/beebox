@@ -164,6 +164,7 @@ schedulerCommand
   <key>ProgramArguments</key>
   <array>
     <string>${bbxPath}</string>
+    <string>engine</string>
     <string>scheduler</string>
     <string>start</string>
   </array>

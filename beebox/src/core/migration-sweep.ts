@@ -37,7 +37,7 @@ export interface SweptMigration {
 }
 
 export type SweepResult =
-  /** No manifest — the box predates `bbx migrate` and needs an explicit human decision. */
+  /** No manifest — the box predates `bbx engine migrate` and needs an explicit human decision. */
   | { readonly status: "no-manifest" }
   /** Nothing pending. The common case, and the quiet one. */
   | { readonly status: "current" }

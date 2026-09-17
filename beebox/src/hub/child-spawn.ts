@@ -86,6 +86,6 @@ export async function spawnBoxChild(args: {
   const bbxBinary = await resolveBbxBinary(shape);
   const port = await getPorts();
   const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { BBX_BIN: bbxBinary, BBX_HUB_SECRET: args.hubSecret } });
-  const child = args.spawn({ bbxBinary, args: ["serve", boxRoot, "--slug", args.slug, "--port", String(port)], cwd: shape.boxRoot, env });
+  const child = args.spawn({ bbxBinary, args: ["engine", "serve", boxRoot, "--slug", args.slug, "--port", String(port)], cwd: shape.boxRoot, env });
   return { child, port, boxRoot };
 }
