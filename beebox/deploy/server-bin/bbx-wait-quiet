@@ -16,7 +16,7 @@ set -u
 BBX_USER="${BBX_USER:-beebox}"
 DEADLINE=$(( $(date +%s) + 180 ))
 while true; do
-  if su - "$BBX_USER" -c 'BBX_CLI_PREBUILT=1 /usr/local/bin/bbx activity' >/tmp/bbx-activity.out 2>&1; then
+  if su - "$BBX_USER" -c 'BBX_CLI_PREBUILT=1 /usr/local/bin/bbx engine activity' >/tmp/bbx-activity.out 2>&1; then
     echo "bbx-wait-quiet: at rest"; exit 0
   fi
   if [ "$(date +%s)" -ge "$DEADLINE" ]; then

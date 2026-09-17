@@ -30,7 +30,6 @@ export { googleAuthCommand } from "./google-auth.js";
 export { calendarCommand } from "./calendar.js";
 export { finishCommand } from "./finish.js";
 export { reactorCommand } from "./reactor.js";
-export { scenarioCommand } from "./scenario.js";
 export { fieldTestCommand } from "./field-test.js";
 export { tickCommand } from "./tick.js";
 export { scheduledCommand } from "./scheduled.js";

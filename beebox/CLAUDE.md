@@ -2,6 +2,8 @@
 
 Bee Box is a personal assistant and operating system: agents process inputs, take actions, or ask questions. The filesystem is state, Git is history, and `bbx` is the command-line interface.
 
+**`bbx` is the box agent's surface, not yours.** Its verbs are what an agent running inside a box does there — read and write that box's cards, answer a question, run a procedure. Operators and the deploy scripts get `bbx engine`, a small permanent set that starts servers and manages the machine. End users get neither; they live in the web UI and chat. An agent developing Bee Box in this repository gets **none of it**: `bbx health`, `bbx status`, and `bbx doctor` are not developer diagnostics, and running them against a real box is touching someone's data to answer a question about your own code. Use the tests, the dev router, and the box's own files instead. `src/cli/surface-data.ts` classifies every verb and says why.
+
 Work only on the requested problem. Do not expand scope into adjacent cleanup, policy, schemas, UI, or workflows without the boxholder's approval. Read the relevant code, schema, and tests before changing a format or contract.
 
 Never copy private box content or personal operational details into tracked source, docs, tests, or public issues. Follow the monorepo root's `private-issues/` boundary, and ask when publication safety is uncertain.
@@ -38,7 +40,7 @@ Open the owner for the area being changed:
 - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source tagging, and the enforced `className` boundary.
 - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/connectors/`; read [connector guidance](src/connectors/CLAUDE.md).
 - Hub routing: `src/hub/`; read [hub guidance](src/hub/CLAUDE.md). Tests mirror source paths under `test/` and use helpers in `test/helpers/`.
-- Schemas, scenarios, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/scenario/`, `src/dev/`, `deploy/`, and `plugins/` respectively.
+- Schemas, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/dev/`, `deploy/`, and `plugins/` respectively.
 
 Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports only public `beebox/{cards,schema,view-widgets}` specifiers, never engine internals. Read the [box layout](docs/box-layout.md) before changing its on-disk shape.
 

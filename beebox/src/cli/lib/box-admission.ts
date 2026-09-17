@@ -5,8 +5,7 @@ import { acquireBoxWork, boxWorkEnvironment, type BoxWork } from "../../lib/box-
 
 const independentlyOwned = new Set([
   "answer", "maintenance", "migrate", "docs", "upgrade", "serve", "hub", "scheduler",
-  "auth", "secrets", "boxes", "tailscale", "scenario", "field-test",
-  "show", "log", "diff", "inject", "step",
+  "auth", "secrets", "boxes", "tailscale", "field-test",
 ]);
 // Read-only commands: they mutate nothing, so there is nothing to admit. Some
 // also run where no box exists at all — `agent-context --hook` fires in EVERY
@@ -27,6 +26,13 @@ function commandPath(command: Command): string[] {
   for (let current = command; current.parent; current = current.parent) {
     names.unshift(current.name());
   }
+  // `bbx engine <verb>` is the operator half of the same CLI, not a different
+  // command: the sets below are keyed on the verb, and `engine` in front of it
+  // would make every one of them miss (`bbx engine init` would look like a
+  // command named "engine" and get admitted as ordinary box work, which for a
+  // fresh directory means a spurious "Not in a Bee Box"). The namespace is a
+  // presentation split — see `cli/surface-data.ts` — so admission looks past it.
+  if (names[0] === "engine") names.shift();
   return names;
 }
 

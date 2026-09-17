@@ -175,7 +175,7 @@ async function tryGetDocument(
     console.warn(
       "[google-drive] Could not fetch Docs API metadata for " +
         opts.fileName + ": " + msg +
-        ". If this is a 403, run 'bbx google-auth' to grant the documents.readonly scope.",
+        ". If this is a 403, run 'bbx engine google-auth' to grant the documents.readonly scope.",
     );
     return null;
   }

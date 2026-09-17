@@ -4441,6 +4441,22 @@ test1:
       peak: 57900
       added: 10952
       turns: 19
+  bbx-surface-force-wakeup:
+    - date: 2026-09-16T19:44:08.326Z
+      boxCommit: fc77dfbe8ba8c44fae0845b7e1ee9a64d3e0c318
+      repoCommit: 413f82736e296d4d3858ef147b05bdeedc331d1e
+      initial: 50872
+      peak: 52022
+      added: 1150
+      turns: 6
+  bbx-surface-engine-boundary:
+    - date: 2026-09-16T19:44:08.326Z
+      boxCommit: fc77dfbe8ba8c44fae0845b7e1ee9a64d3e0c318
+      repoCommit: 413f82736e296d4d3858ef147b05bdeedc331d1e
+      initial: 50769
+      peak: 53467
+      added: 2698
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

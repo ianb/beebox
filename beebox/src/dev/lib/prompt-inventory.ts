@@ -14,7 +14,6 @@ import { CHAT_SYSTEM_PROMPT } from "../../core/chat/session/index.js";
 import { buildThreadSystemPrompt } from "../../core/chat/session/thread.js";
 import { COMMIT_NUDGE_PROMPT } from "../../core/agent/index.js";
 import { OBSERVER_SYSTEM_PROMPT } from "../../core/retro/observer.js";
-import { VALIDATION_SYSTEM_PROMPT } from "../../scenario/runner.js";
 import { buildJudgePrompt } from "../../core/procedure/engine-validate-model.js";
 import { buildTriageSystemPrompt } from "../../core/triage/index.js";
 import { connectorRules } from "../../core/init-rules.js";
@@ -88,13 +87,6 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
     source: "src/core/retro/observer.ts → OBSERVER_SYSTEM_PROMPT",
     scope: "System prompt for the retrospective observer — one tool-less LLM pass (cheap tier) per chat session during a retro scan, extracting what the boxholder implicitly taught the assistant into structured observations.",
     text: OBSERVER_SYSTEM_PROMPT,
-  });
-
-  entries.push({
-    title: "Scenario Validator System Prompt",
-    source: "src/scenario/runner.ts → VALIDATION_SYSTEM_PROMPT",
-    scope: "System prompt for a scenario step's `prompt`-type validation check (non-dry-run): a fresh agent inspects the box state and answers PASS/FAIL against the check's described condition.",
-    text: VALIDATION_SYSTEM_PROMPT,
   });
 
   entries.push({

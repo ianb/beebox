@@ -96,6 +96,12 @@
     "reason": "The registry comment for schedule-runs-bbx-2026-09 names the retired command the migration retires."
   },
   {
+    "path": "beebox/test/cli/schedule-engine-verbs.doctest.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The migrator must DECLINE a card still naming the retired command; asserting that requires the literal."
+  },
+  {
     "path": "beebox/src/lib/state-migration.ts",
     "occurrenceClass": "config-cli-directory",
     "expectedCount": 2,

@@ -41,7 +41,7 @@ JSON.stringify({
   procedures: fresh.some((l) => l.startsWith("Installed 6 procedure(s)")),
   schedules: fresh.some((l) => l.startsWith("Installed 7 schedule(s)")),
   personality: fresh.includes("Installed _config/main.personality.card"),
-  nextStep: fresh.some((l) => l.includes("Next: run 'bbx serve'")),
+  nextStep: fresh.some((l) => l.includes("Next: run 'bbx engine serve'")),
 })
 => {"banner":true,"structure":true,"procedures":true,"schedules":true,"personality":true,"nextStep":true}
 ```

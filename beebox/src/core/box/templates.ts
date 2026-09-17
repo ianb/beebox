@@ -148,13 +148,13 @@ Two independent things happen — don't conflate them:
 **1. The card type works immediately.** Loading, validation, and rendering pick
 up a new or edited schema on the next \`bbx\` command automatically, and the running
 web server hot-reloads schema files on save too. You do **not** need to run
-anything to "register" a schema — that was never what \`bbx init\` did.
+anything to "register" a schema — that was never what \`bbx engine init\` did.
 
 **2. Regenerate the agent-facing docs from \`instructions\`** — this is what
-\`bbx init\` is for:
+\`bbx engine init\` is for:
 
 \`\`\`bash
-bbx init .
+bbx engine init .
 \`\`\`
 
 This regenerates, from each schema's \`instructions\`:
@@ -405,7 +405,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
  * `_config/_template-updates/` when the boxholder has customized it (prior
  * stock hashes come from the ledger so a box on any shipped version overwrites
  * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
- * a fresh `bbx init` is what lets `bbx upgrade` (Track E) roll out guide
+ * a fresh `bbx engine init` is what lets `bbx upgrade` (Track E) roll out guide
  * updates later without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {

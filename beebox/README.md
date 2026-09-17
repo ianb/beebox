@@ -27,15 +27,15 @@ for the roadmap). Given a tarball URL or path:
 
 ```bash
 mkdir my-box && cd my-box
-pnpm dlx --package=<beebox tarball> bbx init .
+pnpm dlx --package=<beebox tarball> bbx engine init .
 pnpm install
-pnpm exec bbx serve content
+pnpm exec bbx engine serve content
 ```
 
-`bbx init` scaffolds the package (`package.json`, `tsconfig.json`, a thin
+`bbx engine init` scaffolds the package (`package.json`, `tsconfig.json`, a thin
 `CLAUDE.md`) and the box itself under `content/` — directories, default
 procedures and guides, generated agent docs, and an initial git commit. The
-`pnpm install` resolves the real dependency `bbx init` just wrote. `bbx serve`
+`pnpm install` resolves the real dependency `bbx engine init` just wrote. `bbx engine serve`
 then boots a local server for the box; open the printed URL in a browser.
 
 From here, open a Claude Code session at `content/` (or point it at the box
@@ -71,7 +71,7 @@ writes, and moves as it works. See [`docs/box-layout.md`](docs/box-layout.md)
 for the full directory reference.
 
 Upgrading the engine (bumping the `beebox` dependency and running data
-migrations) is `bbx upgrade`, run from the package root.
+migrations) is `bbx engine upgrade`, run from the package root.
 
 ## What leaves your machine
 

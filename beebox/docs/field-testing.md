@@ -12,9 +12,9 @@ The harness lives in `src/field-test/`; checked-in scenarios live in
 ## Run a scenario
 
 ```bash
-bbx field-test list
-bbx field-test run onboarding-first-days
-bbx field-test report <run-dir>
+bbx engine field-test list
+bbx engine field-test run onboarding-first-days
+bbx engine field-test report <run-dir>
 ```
 
 `run` accepts a checked-in scenario name or a path to an in-progress scenario
@@ -31,7 +31,7 @@ The default run root is `~/src/boxes/field-runs/`. Each run directory contains:
 - `questionnaires/<item-id>.md` and `activities/<item-id>.md`;
 - `screenshots/<item-id>/`.
 
-Use `bbx field-test report <run-dir>` to regenerate `report.md` from the saved
+Use `bbx engine field-test report <run-dir>` to regenerate `report.md` from the saved
 results after a run directory is moved or copied.
 
 ## Review findings
@@ -47,7 +47,7 @@ private issue rules.
 
 ## Scenario support
 
-`bbx field-test inject-email <fixture> --state <path>` appends a YAML email
+`bbx engine field-test inject-email <fixture> --state <path>` appends a YAML email
 fixture to fake-Gmail state for manual scenario work. Run `bbx field-test
 inject-email --help` for the fixture schema. This helper does not replace a
 full scenario run.

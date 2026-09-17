@@ -2,7 +2,7 @@
 
 **Bee Box is not yet "public" (I'm not widely telling people about it), but you are welcome to check it out...**
 
-A personal assistant built on a coding agent — Claude Code and Codex (ChatGPT) are supported today. Feed it inputs (voice memos, emails, web clippings); agents process them and take actions or ask questions. The filesystem is state, git is history, the `bbx` CLI is the interface.
+A personal assistant built on a coding agent — Claude Code and Codex (ChatGPT) are supported today. Feed it inputs (voice memos, emails, web clippings); agents process them and take actions or ask questions. The filesystem is state, git is history, and the `bbx` CLI is how the agent operates the box.
 
 The coding agent operates it. You teach it by writing rules, answering questions, and correcting mistakes. All of it lives in files and commits.
 

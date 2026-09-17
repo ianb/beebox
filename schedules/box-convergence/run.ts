@@ -37,7 +37,11 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<st
     findings.push(`${where} ${root}: unchecked; whole-run time budget exhausted`);
     return null;
   }
-  const args = dryRun ? ["migrate", "--status", "--json"] : ["migrate", "--sweep", "--repair", "--yield", "--json"];
+  // `migrate` lives under `bbx engine` (beebox/src/cli/surface-data.ts): it acts
+  // on a box's installation, not its content, so it is not the agent's verb.
+  const args = dryRun
+    ? ["engine", "migrate", "--status", "--json"]
+    : ["engine", "migrate", "--sweep", "--repair", "--yield", "--json"];
   // Direct entrypoints avoid the CLI launcher's rebuild and compile-cache writes
   // during dry-run. Production always uses this box's installed engine registry.
   const command = where === "local"

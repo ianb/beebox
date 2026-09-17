@@ -325,7 +325,7 @@ wt_create_locked() {
 
       # Carry over the box marker. Since the 2026-08-30 rename it lives in the
       # gitignored state directory (`.beebox/box.json`), so a clone has none —
-      # and without it `bbx init` below sees "a directory with a package.json"
+      # and without it `bbx engine init` below sees "a directory with a package.json"
       # and refuses instead of refreshing hooks (broke every worktree launch on
       # 2026-09-05; the marker question itself is
       # issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md).
@@ -451,9 +451,9 @@ EOF
 
   # 5. Refresh box hooks: the cloned box's .git/hooks/pre-commit and
   # .claude/settings.json have the source box's bbx path baked in (often the
-  # pre-migration path). Re-run bbx init against the cloned box from the
+  # pre-migration path). Re-run bbx engine init against the cloned box from the
   # WORKTREE's bbx so its hooks point at the worktree's bbx.
-  # Idempotent (bbx init is "initialize or update").
+  # Idempotent (bbx engine init is "initialize or update").
   if [ -d "$BOX_DEST" ]; then
     echo "[worktree-create] refreshing box hooks (worktree's bbx -> $BOX_DEST)..." >&2
     # BBX_HOOK_BIN: without it, resolveBbxBin() detects it's running from a linked
