@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { z } from "zod";
 import { execChild } from "../../bin/lib/schedules-exec.js";
 import { localTargets, optionalText } from "./targets.js";
-import { framedCommand, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { framedCommand, reportDecision, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 
 class ConvergenceScheduleError extends Error {
   constructor(opts: { reason: "state" | "checkout" }) {
@@ -130,7 +130,9 @@ async function report(): Promise<void> {
   const baseline = path.join(stateDir, "last-report.json");
   const oldText = await optionalText(baseline);
   const old = oldText === null ? null : z.object({ message: z.string(), reportedAt: z.number() }).parse(JSON.parse(oldText));
-  if (message && (old?.message !== message || Date.now() - old.reportedAt >= 24 * 60 * 60_000)) {
+  const decision = reportDecision(message, { old, now: Date.now() });
+  if (decision.log !== null) process.stdout.write(`${decision.log}\n`);
+  if (decision.alert) {
     await execa(path.join(REPO_ROOT, "bin/schedules"), ["alert", "--priority", "important",
       "--title", "Box convergence needs attention", "--message", message], { stdout: "inherit", stderr: "inherit" });
     await fs.writeFile(baseline, JSON.stringify({ message, reportedAt: Date.now() }));

@@ -728,7 +728,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
       # permits into the trusted nested migration command; no repair agents run.
       sudo -u beebox -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
         'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
-        bbx-sweep "$boxdir" || echo "  $boxdir: convergence requires recovery; box stays closed" >&2
+        bbx-sweep "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
     done
 REMOTE
 

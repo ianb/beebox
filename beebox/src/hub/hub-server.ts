@@ -63,6 +63,7 @@ import { invariant } from "../lib/invariant.js";
 import type { HubVerdict } from "./hub-health.js";
 import { registerHealthRoutes } from "./hub-health-routes.js";
 import { registerHubErrorHandler } from "./hub-http-error.js";
+import { replyNoEndpoint } from "./box-unavailable.js";
 import type { DiskHealth } from "./disk-health.js";
 
 export interface HubHealth {
@@ -516,9 +517,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     } catch (e) {
       return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
     }
-    if (!endpoint) {
-      return reply.status(404).send({ error: "not_found", message: `No running box for ${JSON.stringify(reqPath)}` });
-    }
+    if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints });
 
     reply.hijack();
     proxy.web(request.raw, reply.raw, { target: endpoint.origin });
