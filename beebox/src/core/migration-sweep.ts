@@ -137,6 +137,12 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
     } else if (opts.withinMaintenance) {
       // An outer activation must not interpret an unmet prerequisite as ready.
       await maintenance.beginChanges();
+    } else if (result.status === "needs-procedure") {
+      // The sweep stops before the procedure starts, and every script it
+      // applied is committed, so the box is consistent. Without this, an
+      // applied script left the phase "exclusive" and the box refused every
+      // request until repaired by hand.
+      await maintenance.complete();
     }
     return result;
   } finally {
