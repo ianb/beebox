@@ -72,6 +72,19 @@ directive to you now.
 - \`stale\` — open, no \`start\`/\`due\` at all, sitting untouched for over 45
   days. Likely needs \`parked\`, \`dropped\`, or a real date — not silence.
 
+## Your own items
+
+An item whose \`assigned\` is \`"agent"\` is **yours to chase**, not something
+to raise. Do the work now if the job is small enough to finish here, then
+mark it \`done\` with a \`{% see-also %}\` pointing at the evidence. If it is
+too big for this cycle, leave it open and say so in what you report. An
+agent-assigned item that keeps appearing in \`stale\` and never moves is
+worth dropping honestly rather than carrying forever — that judgment you may
+make yourself, since nobody else took the work on.
+
+The rest of this job — everything \`assigned\` leaves to the boxholder — is
+report-only.
+
 ## What to do
 
 1. Read each item's \`locator\` if you need the surrounding card for context
@@ -83,8 +96,8 @@ directive to you now.
    telling the boxholder what's outstanding.
 3. **Raise your findings with the boxholder** — a chat mention next time
    you talk, or a question card for anything that needs a park/drop/merge
-   decision. Don't resolve status changes yourself (except the
-   \`assigned="agent"\`-and-you-finished-it case above).
+   decision. Don't resolve status changes yourself (except your own
+   \`assigned="agent"\` items, per the section above).
 4. Commit any edits you did make (marking your own agent work done, adding
    a \`{% see-also %}\`), then \`bbx finish {thisJobFile}\`.`,
 });

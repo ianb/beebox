@@ -4457,6 +4457,22 @@ test1:
       peak: 53467
       added: 2698
       turns: 4
+  todo-agent-own-followup:
+    - date: 2026-09-17T14:59:08.842Z
+      boxCommit: 9d3e7295d082ce2d5c66096c20be33312dd6ed1e
+      repoCommit: f95249a14561c9397e3783689ea3edb42d85d88c
+      initial: 47989
+      peak: 47989
+      added: 0
+      turns: 1
+  todo-agent-own-followup-limits:
+    - date: 2026-09-17T14:59:08.842Z
+      boxCommit: 9d3e7295d082ce2d5c66096c20be33312dd6ed1e
+      repoCommit: f95249a14561c9397e3783689ea3edb42d85d88c
+      initial: 47924
+      peak: 47924
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
