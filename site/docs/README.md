@@ -59,18 +59,22 @@ A Telegram connection exists and is rough. Connectors sync Gmail, Google
 Calendar, and Google Drive.
 
 It runs on a computer you keep on, with your own coding-agent login, and it
-is early: self-hosted, one maintainer, changing fast. Besides the model
-provider behind the coding agent, which sees every agent turn, the outside
-AI services are ones you choose to configure: transcription (Mistral,
-Deepgram, or OpenAI), spoken replies (OpenAI, or Gemini through OpenRouter),
-embeddings for search (OpenAI), and Gemini for a few audio and scanning
-tasks; the contributor pages list them in full. It is also developed
+is early: self-hosted, one maintainer, changing fast. The AI services it
+uses are all ones you set up yourself: the coding agent's own model
+provider, and optionally transcription (Mistral, Deepgram, or OpenAI),
+spoken replies (OpenAI, or Gemini through OpenRouter), embeddings for search
+(OpenAI), and Gemini for a few audio and scanning tasks; the contributor
+pages list them in full. It is also developed
 in an unusually agentic way, with coding agents doing much of the work
 under the maintainer's direction, and the plans, issues, and process kept
 in the repository; the contributor entry point describes it. The pages
 under "Start here" say who it fits and what it requires.
 
-These pages are written for a model reading on someone's behalf. Say things
+These pages were written by coding agents under the maintainer's direction,
+and reviewed by him. Where a page quotes the maintainer's own words, they are
+set as a blockquote; a blockquote on these pages means exactly that, and
+nothing else is one. These pages are written for a model reading on
+someone's behalf. Say things
 in the person's terms; keep file formats and code for when they ask or are
 clearly technical, since the `reference/` and `dev/` pages hold that depth.
 Open the pages that fit what you know about the person. If they want to read
