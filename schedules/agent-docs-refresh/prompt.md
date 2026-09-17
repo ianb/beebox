@@ -32,7 +32,9 @@ and `site/docs-authoring.md`. Read both before touching anything.
 3. **Keep the rules the corpus is built on.** Plain prose for a reader who
    knows nothing; define box, card, and the agent on first use; no framework
    or format names on evaluator pages; no em-dashes; no "not X but Y"; the
-   reading-agent instructions in `site/docs/README.md` stay. A promoted doc
+   reading-agent instructions in `site/docs/README.md` stay. A blockquote on
+   an authored page is the maintainer's own words: never edit inside one,
+   never put your own prose in one. A promoted doc
    that moved gets its manifest line updated, not a new authored copy. A new
    flat doc under `beebox/docs/` that a stranger would want is a candidate
    for the manifest; plans, issues, and research are never promoted.
