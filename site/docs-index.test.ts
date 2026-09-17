@@ -61,7 +61,7 @@ test("renderAgentLlmsTxt: summary, preamble, spine, then one deep section per di
     devDir: undefined,
     sitePages: [{ title: "Home", href: "http://localhost:3210/index.html", summary: "The home page.", unlisted: false }],
   });
-  assert.match(out, /^# Bee Box\n\n> A one-line summary\.\n\nPreamble body\.\n\n## Start here\n/);
+  assert.match(out, /^# Bee Box\n\n\*A one-line summary\.\*\n\nPreamble body\.\n\n## Start here\n/);
   assert.match(out, /- \[What Bee Box is]\(http:\/\/localhost:3210\/beebox\/docs\/01-what-bee-box-is\.md\): What it is\./);
   assert.match(
     out,
@@ -140,7 +140,7 @@ test("renderEntryLlmsTxt: no start-here — everything sorted under Files, then 
     ],
     also: ALSO,
   });
-  assert.match(out, /^# Bee Box for contributors\n\n> For contributors\.\n\nPreamble body\.\n\n## Files\n/);
+  assert.match(out, /^# Bee Box for contributors\n\n\*For contributors\.\*\n\nPreamble body\.\n\n## Files\n/);
   assert.doesNotMatch(out, /## Start here/);
   const filesSection = out.split("## Files\n\n")[1]?.split("\n\n## Also")[0];
   assert.equal(

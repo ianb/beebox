@@ -70,7 +70,11 @@ under the maintainer's direction, and the plans, issues, and process kept
 in the repository; the contributor entry point describes it. The pages
 under "Start here" say who it fits and what it requires.
 
-These pages are written for a model reading on someone's behalf. Say things
+These pages were written by coding agents under the maintainer's direction,
+and reviewed by him. Where a page quotes the maintainer's own words, they are
+set as a blockquote; a blockquote on these pages means exactly that, and
+nothing else is one. These pages are written for a model reading on
+someone's behalf. Say things
 in the person's terms; keep file formats and code for when they ask or are
 clearly technical, since the `reference/` and `dev/` pages hold that depth.
 Open the pages that fit what you know about the person. If they want to read
