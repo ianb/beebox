@@ -56,12 +56,12 @@ tell a person or an agent what is in there, and ours tells them nothing. A
 `grep` for "dentist" finds the file by its `SUMMARY:` line, but every
 directory listing, commit diff, and file-picker view is opaque.
 
-Shape of the change: keep the date prefix, add a slugged summary, keep a short
-id for uniqueness. The rename rule already in the design stays — **no existing
-file is renamed**, because the state index maps each event to the filename it
-already has and tolerates both conventions. New events get readable names;
-old ones keep theirs until something else rewrites them. The collision path
-(a calendar-id hash suffix) is unaffected.
+Filed separately, with the implementation hazard it turned up:
+[calendar .ics filenames should carry the event title](../features/2026-09-17-calendar-ics-filenames-carry-the-title.md).
+Changing the name function is contained, but it makes every existing file
+fall through to a fresh name on the next pull, against the design's stated
+"no existing file is ever renamed" rule — so it needs a call on whether to
+accept one rename pass.
 
 ## Note: the provider gap, and where it would strain
 
