@@ -927,7 +927,18 @@ install_dir="$2"
 # A new gate cannot observe work admitted by an older engine. The first
 # rollout therefore requires a deliberate quiet/stop of the legacy units;
 # an advisory activity probe alone cannot establish exclusion.
-if [[ -d "$install_dir/beebox" ]] && ! timeout 30 node "$install_dir/beebox/dist/cli.mjs" maintenance --help >/dev/null 2>&1; then
+# Either spelling counts: the verb moved to `bbx engine maintenance` when the
+# CLI split into the agent surface and everything else, so an engine installed
+# before that split answers the bare form and one installed after answers the
+# namespaced form. The question here is only "does the installed engine have a
+# maintenance gate at all" — asking with one spelling would read every deploy
+# after the split as a first rollout and demand the units be stopped by hand.
+installed_cli="$install_dir/beebox/dist/cli.mjs"
+has_maintenance_gate() {
+  timeout 30 node "$installed_cli" engine maintenance --help >/dev/null 2>&1 ||
+    timeout 30 node "$installed_cli" maintenance --help >/dev/null 2>&1
+}
+if [[ -d "$install_dir/beebox" ]] && ! has_maintenance_gate; then
   for unit in beebox-hub beebox-scheduler; do
     state=$(systemctl show "$unit" --property=ActiveState --value)
     group=$(systemctl show "$unit" --property=ControlGroup --value)
@@ -953,7 +964,7 @@ done
 set -a
 source /home/beebox/.env
 set +a
-node "$stage_dir/beebox/dist/cli.mjs" maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh"
+node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh"
 CONTROL
 
 echo "Deploy complete."
