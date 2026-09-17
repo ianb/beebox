@@ -1,5 +1,5 @@
 ---
-description: "Where box data lives, what leaves the machine, what the agent is allowed to do, and the prompt-injection risk."
+description: "Where your data lives, what leaves the machine, and what the agent can do and how that is bounded."
 ---
 # Your data and safety
 
