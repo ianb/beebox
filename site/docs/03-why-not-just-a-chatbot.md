@@ -45,8 +45,8 @@ text. **The agent** is the coding agent that operates the box
   from a phone or browser become cards in the one box
   ([capabilities/phone-capture.md](capabilities/phone-capture.md),
   [capabilities/web-clipping.md](capabilities/web-clipping.md)).
-- **Nothing is hosted.** The data stays on your machine, and so does the risk
-  ([10-your-data-and-safety.md](10-your-data-and-safety.md)).
+- **Nothing is hosted.** The data stays on your machine, and so does the
+  responsibility for it ([10-your-data-and-safety.md](10-your-data-and-safety.md)).
 
 ## Against Claude Code or Codex on their own
 
