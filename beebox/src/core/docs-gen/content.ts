@@ -28,7 +28,17 @@ const CONNECTORS: ConnectorInfo[] = [
   {
     name: "google-drive",
     produces: ["gsheet", "gdoc"],
-    description: "Two-way sync with Google Drive. Spreadsheets become `.gsheet.card` files with JSON tabs; Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when remote changed since the last pull.",
+    description: [
+      "Two-way sync with Google Drive. Spreadsheets become `.gsheet.card` files with JSON tabs;",
+      "Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when",
+      "remote changed since the last pull.",
+      "",
+      "The `bbx drive` verbs (`inspect`, `mount`, `link`, `add`, `list`) work from your shell even",
+      "though you hold no Google credential: the server holds it and does that half for you. If",
+      "Drive is not enabled, you may set `googleServices.drive: true` in `_config/box.json` when",
+      "the boxholder asks for Drive. After mounting, run `bbx force-wakeup --connector google-drive`",
+      "to confirm the first sync.",
+    ].join("\n"),
   },
 ];
 
@@ -124,7 +134,7 @@ export function generateConnectorsDocs(): string {
     lines.push("");
 
     if (c.produces.length > 0) {
-      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`bbx wakeup\`)`);
+      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via the wakeup cycle)`);
     } else {
       lines.push("**Outbound only** — no cards produced.");
     }

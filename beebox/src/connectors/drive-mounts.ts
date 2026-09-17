@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { triggeredByTrailer } from "../shared/commit-trailers.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../core/commands/trash.js";
 import { createCliContext } from "../core/command-runner.js";
 import type { DriveFile, GoogleDriveService } from "../services/google-drive.js";
@@ -22,6 +23,7 @@ import { writeGfolderCard, writeGlinkCard } from "./drive-card-stamp.js";
 import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
 import { mirrorFolderOnce } from "./drive-mount-sync.js";
+import { checkDriveScheduleHint } from "./drive-schedule-hint.js";
 import { withDriveMirrorLock } from "./drive-lock.js";
 import { resolveMountTarget, assertMountTargetWritable } from "./drive-mount-path.js";
 import { safeFilename } from "./chat-utils.js";
@@ -35,14 +37,13 @@ import {
   UnreadableDriveInputError,
 } from "./drive-mount-errors.js";
 import {
-  findDriveCardTracking,
+  driveIdClaimants,
   GFOLDER_CARD_TYPE,
   GLINK_CARD_TYPE,
-  type DriveCardTracking,
 } from "./google-drive-tracking.js";
 
 /** A Drive URL or bare id, or a refusal naming what was unusable. */
-function requireDriveId(input: string): string {
+export function requireDriveId(input: string): string {
   const driveId = extractDriveFileId(input);
   if (driveId === null) throw new UnreadableDriveInputError(input);
   return driveId;
@@ -54,16 +55,8 @@ function requireDriveId(input: string): string {
  * copies that overwrite each other upstream — the connector skips both rather
  * than pick one, which would leave the new mount silently dead.
  */
-async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
-  const tracking: DriveCardTracking = await findDriveCardTracking(opts.boxRoot);
-  const claimedBy = [
-    ...tracking.liveCards
-      .filter((card) => card.driveId === opts.driveId)
-      .map((card) => card.relPath),
-    ...tracking.duplicates
-      .filter((duplicate) => duplicate.driveId === opts.driveId)
-      .flatMap((duplicate) => duplicate.relPaths),
-  ];
+export async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Promise<void> {
+  const claimedBy = await driveIdClaimants(opts);
   if (claimedBy.length > 0) {
     throw new DriveIdClaimedError({ driveId: opts.driveId, claimedBy });
   }
@@ -98,6 +91,12 @@ export interface MountFolderResult {
   failures: string[];
   /** Things worth knowing that are not failures (a child that left, a cap). */
   notes: string[];
+  /**
+   * What to say about the box's hourly Drive sync being off, or null when it is
+   * on (or was never seeded). A mount that nothing keeps in step is the one
+   * thing a caller cannot see from the card it just wrote.
+   */
+  scheduleHint: string | null;
 }
 
 /**
@@ -109,8 +108,10 @@ export async function mountDriveFolder(options: {
   service: GoogleDriveService;
   input: string;
   dir: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<MountFolderResult> {
-  const { boxRoot, service, input, dir } = options;
+  const { boxRoot, service, input, dir, actor } = options;
   const driveId = requireDriveId(input);
 
   const file = await service.getFile(driveId);
@@ -128,7 +129,7 @@ export async function mountDriveFolder(options: {
   // so `mirrorFolderOnce` inside just passes through. The git commit nests
   // INSIDE this lock, which is the safe order (see drive-lock.ts).
   return withDriveMirrorLock(boxRoot, () =>
-    mountUnderLock({ boxRoot, service, folder: { file, driveId, mountDir } }),
+    mountUnderLock({ boxRoot, service, folder: { file, driveId, mountDir }, actor }),
   );
 }
 
@@ -136,6 +137,7 @@ async function mountUnderLock(options: {
   boxRoot: string;
   service: GoogleDriveService;
   folder: { file: DriveFile; driveId: string; mountDir: string };
+  actor: string | undefined;
 }): Promise<MountFolderResult> {
   const { boxRoot, service } = options;
   const { file, driveId, mountDir } = options.folder;
@@ -158,7 +160,11 @@ async function mountUnderLock(options: {
   const mirror = await mirrorFolderOnce({ boxRoot, service, driveId, cardPath });
 
   const paths = [...new Set([relCard, ...mirror.created, ...mirror.updated, ...mirror.pushed])];
-  await stageAndCommitPaths(boxRoot, { paths, message: `Mount Drive folder: ${file.name}` });
+  await stageAndCommitPaths(boxRoot, {
+    paths,
+    message: `Mount Drive folder: ${file.name}`,
+    trailers: triggeredByTrailer(options.actor),
+  });
 
   return {
     cardPath: relCard,
@@ -168,6 +174,7 @@ async function mountUnderLock(options: {
     pushed: mirror.pushed,
     failures: mirror.failures,
     notes: mirror.notes,
+    scheduleHint: await checkDriveScheduleHint(boxRoot),
   };
 }
 
@@ -187,6 +194,8 @@ export async function linkDriveItem(options: {
   service: GoogleDriveService;
   input: string;
   target: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<LinkResult> {
   const { boxRoot, service, input, target } = options;
   const driveId = requireDriveId(input);
@@ -210,6 +219,7 @@ export async function linkDriveItem(options: {
   await stageAndCommitPaths(boxRoot, {
     paths: [relCard],
     message: `Link Drive item: ${file.name}`,
+    trailers: triggeredByTrailer(options.actor),
   });
 
   return { cardPath: relCard, name: file.name, mimeType: file.mimeType };
@@ -233,6 +243,8 @@ export interface UnmountResult {
 export async function unmountDriveFolder(options: {
   boxRoot: string;
   target: string;
+  /** Who asked, for the commit's `Triggered-By` trailer. */
+  actor?: string;
 }): Promise<UnmountResult> {
   const { boxRoot, target } = options;
   const resolved = resolveMountTarget(boxRoot, { raw: target, label: "The mount card" });
@@ -244,7 +256,11 @@ export async function unmountDriveFolder(options: {
     : await onlyMountIn({ boxRoot, dir: resolved });
 
   const receipt = await moveCardsToTrash(createCliContext(boxRoot), [cardPath]);
-  await commitTrashReceipt(boxRoot, { receipt, reason: "unmounted Drive folder" });
+  await commitTrashReceipt(boxRoot, {
+    receipt,
+    reason: "unmounted Drive folder",
+    actor: options.actor,
+  });
 
   const move = receipt.moves.at(0);
   invariant(move !== undefined, "moveCardsToTrash returns one move per path or throws");

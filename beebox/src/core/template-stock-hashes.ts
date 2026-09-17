@@ -31,22 +31,24 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "schemas-guide-v2": {
-    current: "1290649a5abe4684c99ebd86386e152cd2cb3af411b0fb33d86673736dea972c",
+    current: "238a9263cfa2194a6c06a44e8155e0b7a65042e883fb97880cb10592b5c3b4ff",
     superseded: [
       "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
       "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
       "f42242f4226592409bd2e95b076f9e88f0bf2270480df68e288a31ea1f6212df",
       "8cef3e54d557d88bc5916e92861159bea1d41e505a4ba6b660ae429358369f0f",
+      "1290649a5abe4684c99ebd86386e152cd2cb3af411b0fb33d86673736dea972c",
     ],
   },
   "tricks-guide-v2": {
-    current: "26f9d95120144fe955ce38f444bbc1b41f7a28472b4f6c7aa2e1fdf62599f58f",
+    current: "6028707b9584cd03ed9c6290d9d0dcfca4cc84de292bec100963712492a6926d",
     superseded: [
       "137dce417fdadb44e12aaf9c8eb1378bf9dad35491b7f0d5ab0eed92c5c6a52a",
       "7c4e400f08d7ce0f4c524183b39c8e93a96d57ffa0b6794f4c04adce58f5b30f",
       "cb0f9f6f702e68a4033bc1192bd1366ae28038fbfed4726db8500da30e80e2c8",
       "661f67ec143797b2201db7c0386f1a684dd74dc5a219480f9793d748408554e9",
       "7302df58560d8a727a8c3d1feedca9e8d6b1bb6533a6a2d558eae4ce895244b0",
+      "26f9d95120144fe955ce38f444bbc1b41f7a28472b4f6c7aa2e1fdf62599f58f",
     ],
   },
   "views-guide-v2": {

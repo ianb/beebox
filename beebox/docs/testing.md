@@ -240,159 +240,6 @@ Reserved for things that would be circular as doctests: testing the test infrast
 | `test/check.test.ts` | Wildcard matching, extractions, diff output, serializers, inspect() |
 | `test/doctest.test.ts` | Doctest parser and generator (meta-testing) |
 
-## 2. Scenario Tests
-
-**Location:** Definitions in `~/src/boxes/scenarios/<name>/`, runner in `src/scenario/`
-**Run:** `bbx scenario list` / `bbx scenario run <name>`
-
-Scenario tests are end-to-end integration tests that run the full system (CLI commands, connectors, agents) against a real box, with stubbed time and HTTP. They verify that the whole pipeline works — from connector sync through agent processing to output generation.
-
-**When to use:** Testing system behavior that spans multiple components — connector pulls items, wakeup creates jobs, reactor processes them, output appears in the right place. Also useful for testing agent behavior (via `prompt:` validations) in realistic contexts.
-
-### Scenario Definition (`scenario.yaml`)
-
-```yaml
-name: intake-basic
-description: Basic intake-job creation and processing
-
-steps:
-  - name: sync
-    run: bbx wakeup
-    time: "2026-01-20T15:00:00Z"     # sets BBX_TIME for this step onward
-    checkpoint: after-sync            # git tag on the step's commit, for manual inspection
-    validate:
-      - committed: true               # working tree must be clean
-      - script: "ls _bookkeeping/jobs/*.intake.job.card | wc -l | grep -q 2"
-      - prompt: "Check that intake jobs were created for the seeded inbox items"
-
-  - name: process
-    run: bbx reactor
-    validate:
-      - committed: true
-      - script: "ls _bookkeeping/jobs/*.intake.job.card 2>/dev/null | wc -l | grep -q '^0$'"
-```
-
-### Stubs (`stubs.yaml`)
-
-```yaml
-time: "2026-01-15T12:00:00Z"         # freeze BBX_TIME globally
-
-http:
-  - pattern: "https://techblog.test/feed.xml"
-    response_file: stubs/feed.xml      # relative to scenario dir
-
-  - pattern: "https://techblog.test/feed.xml"
-    response_file: stubs/feed-with-articles.xml
-    after: "4h"                        # only active after 4h of scenario time
-
-  - pattern: "https://techblog.test/2026/01/ai-consumer-products*"
-    response_file: stubs/article-1.html
-```
-
-HTTP stubs intercept `fetch()` calls. Patterns can use `*` suffix wildcards. When multiple stubs match, the last one whose `after:` constraint is met wins. Strict fetch mode (`BBX_STRICT_FETCH=1`) rejects any un-stubbed non-localhost fetch.
-
-### Validation Types
-
-1. **`committed: true`** — Working tree must be clean (no staged/modified/untracked files).
-2. **`script: "shell command"`** — Runs in the box root; passes if exit code is 0. Prefix with `!` for negation.
-3. **`prompt: "natural language check"`** — Sends the prompt to a Claude agent acting as test validator. Response must start with `PASS` or `FAIL`.
-
-### Runner Mechanics
-
-1. Verifies box is on `main` with clean working tree
-2. Creates test branch `test/<name>/<timestamp>`
-3. Installs fetch stubs and strict fetch mode
-4. Runs steps sequentially; failed step skips remaining steps
-5. On completion, checks out `main` (test branch preserved for inspection)
-
-Dry run: `bbx scenario run <name> --dry-run`
-
-Scenarios always run every step from the beginning — there is no flag to
-resume from a checkpoint. `checkpoint:` on a step still tags the commit
-(`scenario/<name>/<checkpoint>`) for manual inspection with `git checkout`,
-but nothing restores state from it; a prior `--from <checkpoint>` flag that
-only skipped steps without restoring their state was removed.
-
-### Available Scenarios
-
-| Scenario | What it tests |
-|----------|--------------|
-| `intake-basic` | Wakeup creates intake jobs for unjobbed inbox items; reactor processes them |
-| `tick-basic` | Scheduled script listing, dry-run, execution, skip-if-recently-run |
-| `tick-chain` | `create-after-success` chaining between scheduled scripts across ticks |
-
-### Creating a New Scenario
-
-Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
-
-**Directory structure:** `bbx init` scaffolds the one-root layout by default (`package.json`/`tsconfig`/`src/` plus the underscore operational areas at the same root — see `docs/box-layout.md`), so a freshly-created scenario's `box/` looks like:
-```
-~/src/boxes/scenarios/my-scenario/
-  scenario.yaml      # step definitions (required)
-  stubs.yaml         # time/HTTP stubs (optional)
-  stubs/             # stub response files (optional)
-    feed.xml
-    article.html
-  setup.md           # human-readable description of what this tests
-  box/               # the git repo — a real box initialized with bbx init, boxRoot itself
-    _content/inbox/  # pre-seeded test data
-    _config/         # connector configs, schedules, etc.
-    ...
-```
-The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and haven't been migrated — `getBoxShape` is strict and rejects any marker without `shapeVersion: 3`, so these scenarios need `bbx migrate` run against them (or recreating) rather than being a supported second shape.
-
-**Steps to create:**
-
-1. **Create the directory and initialize a box:**
-   ```bash
-   mkdir -p ~/src/boxes/scenarios/my-scenario/box
-   cd ~/src/boxes/scenarios/my-scenario/box
-   git init
-   bbx init .
-   ```
-
-2. **Seed the box with test data.** Put cards in `_content/inbox/`, configure connectors in `_config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
-
-3. **Write `scenario.yaml`** with steps. Each step runs a shell command (usually a `bbx` command) and validates the result. See the format description above.
-
-4. **Write `stubs.yaml`** if your scenario involves HTTP (connector syncs, article fetches). Freeze time with `time:` to make timestamps deterministic. Put response files in `stubs/`.
-
-5. **Write `setup.md`** describing what the scenario tests, what stubs are used, and what the expected outcome is. This is for humans, not the runner.
-
-6. **Test it:**
-   ```bash
-   bbx scenario run my-scenario --dry-run   # verify steps parse correctly
-   bbx scenario run my-scenario             # run for real
-   ```
-
-**Design principles for scenarios:**
-
-- **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `tick-basic` tests scheduled-script behavior only.
-- **Seed the minimal data needed.** The `intake-basic` box has just 2 memos in inbox — enough to verify the behavior, not so much that agent processing is slow or unpredictable.
-- **Use `--skip-*` flags** on `bbx wakeup` to isolate phases when you don't need the full wakeup cycle.
-- **Use checkpoints** on steps that are expensive (agent runs) to tag the resulting commit for manual inspection later. Scenarios always run from the beginning, so a checkpoint doesn't let you skip re-running earlier steps.
-- **Prefer `script:` validations** for structural checks (files exist, XML contains expected content). Use `prompt:` validations only for things that require judgment (quality of generated text, correct interpretation of ambiguous input).
-- **`prompt:` validations cost money.** Each one invokes a Claude agent with up to 5 turns / $0.50. Use them sparingly.
-
-### Managing Scenarios
-
-**Inspecting a failed run:** The test branch `test/<name>/<timestamp>` is preserved after the run. Check it out to see the state at failure:
-```bash
-cd ~/src/boxes/scenarios/my-scenario/box
-git branch                        # list test branches
-git checkout test/my-scenario/... # inspect the failed state
-git checkout main                 # return to clean state
-```
-
-**Cleaning up old test branches:**
-```bash
-git branch | grep 'test/' | xargs git branch -D
-```
-
-**Updating a scenario's test data:** Edit files in the box on `main`, commit, then re-run. The runner always starts from a clean `main`.
-
-**Scenarios are git repos** — you can use standard git operations. The box inside each scenario is a real box; `bbx` commands work normally when you `cd` into it.
-
 ## 3. Knowledge Audits
 
 **Location:** Tests in `src/dev/knowledge-audits.yaml`, runner in `src/dev/knowledge-audit.ts`, reports in `src/dev/reports/`
@@ -677,11 +524,11 @@ rules, and issue-triage boundaries. The
 | Does the app still boot and work at all? | Smoke tier (`bin/smoke` — runs automatically at `/finish` for a code change) |
 | Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); walked and kept true weekly, not a gate) |
 | Is every state of this component reachable and right? | Dev harness route (`/dev/…`, real components over injected fakes) |
-| Is this realistically discoverable/usable end-to-end, through the real UI? | Field test (`bbx field-test run <scenario>` — expensive, weekly/manual, never a gate) |
+| Is this realistically discoverable/usable end-to-end, through the real UI? | Field test (`bbx engine field-test run <scenario>` — expensive, weekly/manual, never a gate) |
 
 **Overlap:** Some things could be tested at multiple levels. Prefer the lowest level that catches the bug:
 - A template generating bad XML → unit test (fast, deterministic)
-- An agent not using `<chat-response>` tags → scenario test (needs agent behavior)
+- An agent not using `<chat-response>` tags → field test (needs agent behavior)
 - An agent not knowing about a command → knowledge audit (tests documentation)
 
 ## Adding New Tests
@@ -691,9 +538,6 @@ Create `test/<name>.doctest.md`. Write prose explaining the behavior, with fence
 
 ### New traditional test
 Create `test/<name>.test.ts`, import from `tap`. Use for route integration tests, meta-tests, or anything needing complex setup that doesn't read well as documentation.
-
-### New scenario
-Create `~/src/boxes/scenarios/<name>/` with `scenario.yaml` and optionally `stubs.yaml` + `stubs/` directory. Test with `bbx scenario run <name> --dry-run` first.
 
 ### New knowledge audit
 Add entries to `src/dev/knowledge-audits.yaml`. Run with `--filter <id>` to test individually.

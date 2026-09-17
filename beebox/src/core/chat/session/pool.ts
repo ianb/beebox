@@ -8,6 +8,8 @@
  * so sessions can be resumed after server restarts.
  */
 
+import { acquireBoxWork, withBoxWork, BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import type { ChatBackend } from "../../../services/claude-chat.js";
 import { makeLog } from "./log.js";
 import { getPublicUrl } from "../../../lib/public-url.js";
 import * as fs from "node:fs/promises";
@@ -76,7 +78,7 @@ export class ChatSessionPool {
   /** chatDescription per thread, needed when schedule fires without a user message */
   private threadDescriptions: Map<string, string> = new Map();
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, private readonly options?: { backend: ChatBackend }) {
     this.boxRoot = boxRoot;
   }
 
@@ -85,6 +87,10 @@ export class ChatSessionPool {
    * Returns the collected <chat-response> texts.
    */
   async send(opts: SendOptions): Promise<SendResult> {
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "chat pool send" }, () => this.sendAdmitted(opts));
+  }
+
+  private async sendAdmitted(opts: SendOptions): Promise<SendResult> {
     const { threadRef, message, chatDescription, onResponse, deliverResponse } = opts;
     const store = await this.loadStore();
 
@@ -94,6 +100,7 @@ export class ChatSessionPool {
     }
     this.threadDescriptions.set(threadRef, chatDescription);
 
+    const waited = this.active?.isBusy() ?? false;
     // If there's an active session for a different thread, park it
     if (this.active && this.active.getThreadRef() !== threadRef) {
       await this.parkActive(store);
@@ -105,6 +112,12 @@ export class ChatSessionPool {
       await this.waitForIdle(this.active);
     }
 
+    // Waiting requests must not start another turn through an old admission.
+    if (waited) {
+      const nextTurn = await acquireBoxWork(this.boxRoot, { reason: "chat pool next turn", inherited: null });
+      await nextTurn.release();
+    }
+
     // Activate session for this thread if not already active
     if (!this.active || this.active.getThreadRef() !== threadRef) {
       this.active = await this.createSession(store, { threadRef, chatDescription });
@@ -112,6 +125,7 @@ export class ChatSessionPool {
 
     const session = this.active;
     const responses: string[] = [];
+    const deliveries: Promise<void>[] = [];
 
     const handleResponse = (text: string) => {
       responses.push(text);
@@ -121,15 +135,16 @@ export class ChatSessionPool {
       // a broken delivery path doesn't disappear silently.
       const delivery = onResponse?.(text);
       if (delivery) {
-        void delivery.catch((err: unknown) => {
+        deliveries.push(delivery.catch((err: unknown) => {
           console.error("[chat-session-pool] onResponse delivery failed:", err);
-        });
+        }));
       }
     };
     session.on("chat-response", handleResponse);
 
     try {
       await session.send(message);
+      await Promise.all(deliveries);
 
       // Update store after successful turn
       const record = store[threadRef];
@@ -141,6 +156,7 @@ export class ChatSessionPool {
 
       return { responses, success: true };
     } catch (err) {
+      if (err instanceof BoxMaintenanceError) throw err;
       log("error", `Send failed for ${threadRef}: ${err}`);
       // Reset session on failure — next message starts fresh
       this.active.stop();
@@ -187,6 +203,7 @@ export class ChatSessionPool {
 
     const session = new ChatThreadSession({
       boxRoot: this.boxRoot,
+      ...(this.options ? { backend: this.options.backend } : {}),
       threadRef,
       chatDescription,
       sessionId,
@@ -250,11 +267,7 @@ export class ChatSessionPool {
 
     manager = new ChatScheduleManager(this.boxRoot, {
       schedulesFile,
-      onFire: ({ schedule }) => {
-        this.handleScheduleFire(threadRef, schedule).catch((err) => {
-          log("schedule-error", `Failed to fire schedule for ${threadRef}: ${err}`);
-        });
-      },
+      onFire: ({ schedule }) => this.handleScheduleFire(threadRef, schedule),
     });
     this.scheduleManagers.set(threadRef, manager);
     return manager;

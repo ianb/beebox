@@ -148,13 +148,13 @@ Two independent things happen — don't conflate them:
 **1. The card type works immediately.** Loading, validation, and rendering pick
 up a new or edited schema on the next \`bbx\` command automatically, and the running
 web server hot-reloads schema files on save too. You do **not** need to run
-anything to "register" a schema — that was never what \`bbx init\` did.
+anything to "register" a schema — that was never what \`bbx engine init\` did.
 
 **2. Regenerate the agent-facing docs from \`instructions\`** — this is what
-\`bbx init\` is for:
+\`bbx engine init\` is for:
 
 \`\`\`bash
-bbx init .
+bbx engine init .
 \`\`\`
 
 This regenerates, from each schema's \`instructions\`:
@@ -224,6 +224,7 @@ tricks/
   scripts/
     CLAUDE.md         <- This file
     clean-inbox/
+      secrets.json     <- optional declared credentials for this trick
       index.ts        <- bbx trick clean-inbox
     summarize/
       index.ts        <- bbx trick summarize
@@ -237,6 +238,7 @@ Tricks are standalone TypeScript programs. Environment variables provide context
 
 - \`BBX_BOX_ROOT\` -- absolute path to the box root
 - \`BBX_TRICK_NAME\` -- the trick name (e.g. "clean-inbox"), useful for usage/help output
+- declared secrets are injected only into this trick's child process environment
 - \`process.argv.slice(2)\` -- extra arguments after the trick name
 
 \`\`\`typescript
@@ -254,6 +256,16 @@ console.log("Done!");
 \`\`\`
 
 The \`export const description\` line is parsed (not executed) by \`bbx trick\` for the listing.
+
+If the trick needs a credential, add a \`secrets.json\` beside \`index.ts\`:
+
+\`\`\`json
+[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]
+\`\`\`
+
+The boxholder must supply and grant the secret. \`bbx trick <name>\` resolves
+declared secrets at launch and injects them only into that trick process. Never
+write a resolved value to a file, argument, or log.
 
 ## Running
 
@@ -393,7 +405,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
  * `_config/_template-updates/` when the boxholder has customized it (prior
  * stock hashes come from the ledger so a box on any shipped version overwrites
  * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
- * a fresh `bbx init` is what lets `bbx upgrade` (Track E) roll out guide
+ * a fresh `bbx engine init` is what lets `bbx upgrade` (Track E) roll out guide
  * updates later without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {

@@ -9,6 +9,28 @@ discovered-by: Ian
 discovered-in: main session — "The scroll is still quite bad"
 ---
 
+## 2026-09-15 — boxholder re-assessment
+
+"It's okay, but still has issues." A downgrade from the "still quite bad" this
+was filed on, but not resolved. The boxholder could not recall the specific
+symptoms from memory, which is the useful finding: **this needs capture at the
+moment it happens, not recollection afterwards.** `discuss` removed — the
+discussion cannot produce what is missing.
+
+What would move it: one `/scrolldebug` trace taken while the misbehaviour is on
+screen (`field-probe` skill), plus which surface it was — phone web, iOS app
+webview, or desktop. Until then, do not launch a session on this; six patches
+and one rewrite were each declared done against desktop evidence, and a seventh
+guess is worth less than one trace.
+
+One correction to the device claim below. "Physical-iPhone momentum,
+rubber-band, keyboard transitions, and delayed-image completion remain open"
+conflates two categories. Touch momentum and rubber-band physics genuinely need
+hardware. **Keyboard open/close and `visualViewport` resizes do not** — Xcode
+and the simulators are installed here and taps can be driven programmatically,
+so that half is untested rather than untestable. Separate them before the next
+attempt.
+
 ## 2026-09-04 follow-up — still open
 
 `ee3a07157` fixes the reproduced send, composer-resize, and intra-message

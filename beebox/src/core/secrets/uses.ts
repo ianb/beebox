@@ -46,6 +46,9 @@ import { mutateSecretStore } from "./store.js";
  * has no built-in reasons rather than a guessed one.
  */
 const builtinUses: Record<string, string[]> = {
+  glm: [
+    "agent turns on GLM models — chat, reactor jobs, and procedure steps (the Claude engine via Z.ai's endpoint)",
+  ],
   mistral: [
     "audio transcription (Voxtral — recordings and live chat dictation)",
     "Mistral API calls from box views, through the server-side adapter",

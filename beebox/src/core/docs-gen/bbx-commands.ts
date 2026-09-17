@@ -10,6 +10,7 @@ import { BOX_PACKAGE_DOCS } from "./shared.js";
 import { z } from "zod";
 import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
+import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
 
 /**
  * Lead-in prose + `bbx create` section for the bbx command reference.
@@ -49,7 +50,7 @@ function bbxCommandsIntro(): string[] {
     '  memo="The capture session is ready to archive" prompt="Archive it?"',
     "",
     "# Create a scheduled script",
-    'bbx create _config/schedules/check.scheduled-script.card runs="bbx wakeup" cron="0 6 * * *"',
+    'bbx create _config/schedules/check.scheduled-script.card runs="bbx engine wakeup" cron="0 6 * * *"',
     "```",
     "",
     "### Available Templates",
@@ -199,6 +200,7 @@ export function generateBbxCommands(): string {
     ...bbxCommandsTemplates(),
     ...bbxCommandsCore(),
     ...bbxCommandsScheduling(),
+    ...bbxCommandsConnectors(),
   ];
   return lines.join("\n");
 }

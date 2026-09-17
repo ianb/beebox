@@ -62,7 +62,7 @@ function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; 
     <li className="workstream-row">
       <div className="workstream-row-main">
         <Link to="/$name" params={{ name: row.name }} className="workstream-name">
-          <span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}
+          {row.name}
         </Link>
         <span className="workstream-description">{row.session.description ?? "No description"}</span>
         <span className="schedule-facts">

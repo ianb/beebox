@@ -2,7 +2,8 @@
  * Machine-local cross-process file lock primitive.
  *
  * This is the canonical lock for the project. All cross-process locks
- * (wakeup mutex in cli/lib/lock.ts, scheduled-script + lock-group locks
+ * (the wakeup cycle lock in cli/commands/wakeup-cycle-lock.ts,
+ * scheduled-script + lock-group locks
  * in core/schedule/state.ts, reactor mutex in core/reactor/engine.ts, the
  * mobile device-store revoke in core/mobile/pairing.ts, the box git-index
  * lock in git-lock.ts, ...) sit on top of it. Don't add a new lock surface
@@ -403,6 +404,22 @@ export async function acquireLock(
   }
   heldReleases.set(lockPath, release);
   return holder;
+}
+
+/**
+ * Rewrite the diagnostic sidecar of a lock this process holds, keeping the
+ * original `acquiredAt`. A no-op for a lock we do not hold: the sidecar is
+ * someone else's (or nobody's) to write. Diagnostics only — exclusion never
+ * reads it.
+ */
+export async function updateLockMetadata(
+  target: LockTarget,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const lockPath = lockRef(target).lockPath;
+  if (!heldReleases.has(lockPath)) return;
+  const current = await readHolder(lockPath);
+  await writeSidecar(lockPath, { ...(current ?? makeHolder({})), metadata });
 }
 
 /**

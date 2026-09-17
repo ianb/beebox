@@ -5,7 +5,7 @@ The model picker and mutation boundary share one engine-indexed registry.
 ```ts setup
 import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
-import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
+import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
 import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 JSON.stringify(chatModelOptions("claude").map((option) => option.label))
-=> ["Default (Opus)","Fable 5.1","Opus 5","Sonnet 5","Haiku 4.5"]
+=> ["Default (Opus)","Fable 5.1","Opus 5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
 
 JSON.stringify(chatModelOptions("codex"))
 => [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
@@ -75,9 +75,9 @@ const ENGINES: AgentEngine[] = ["claude", "codex"];
 /** Does every model this engine offers reverse to a tier selecting that same model? */
 function tiersRoundTrip(engine: AgentEngine): boolean {
   return PROCEDURE_MODEL_NAMES.every((name) => {
-    const model = resolveProcedureModel(engine, name);
+    const model = resolveProcedureModel({ engine, model: name });
     const tier = modelTier(model);
-    return tier !== null && resolveProcedureModel(engine, tier) === model;
+    return tier !== null && resolveProcedureModel({ engine, model: tier }) === model;
   });
 }
 ```
@@ -97,6 +97,9 @@ An engine that offers the pinned model runs it exactly; one that does not gets
 the same tier instead of nothing. A retired id is carried forward before the
 registry check, so it resolves rather than reading as "no policy".
 
+`null` here means the box pinned nothing — this translates a pin, it does not
+invent one.
+
 ```ts
 JSON.stringify([
   resolveBoxModelForEngine("claude", "claude-sonnet-5"),
@@ -107,6 +110,28 @@ JSON.stringify([
 ])
 => ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5",null,null]
 ```
+
+What an unpinned box actually RUNS is one level up. `boxDefaultModel` answers
+with the `strong` tier — Opus on Claude, Sol on Codex — because deferring to
+whatever the harness picks left the box with no default it could name: the chat
+UI could not say what a follower would run, and the model dial had nothing to
+compare against, so it stayed blank on every unpinned box. A pin that names no
+known model still reads as no policy; a box saying something unreadable is not a
+box saying nothing.
+
+```ts
+JSON.stringify([
+  boxDefaultModel("claude", null),
+  boxDefaultModel("codex", null),
+  boxDefaultModel("claude", "claude-sonnet-5"),
+  boxDefaultModel("claude", "not-a-model"),
+])
+=> ["claude-opus-5","gpt-5.6-sol","claude-sonnet-5",null]
+```
+
+The small-pass slot is deliberately NOT that default — chat review, retro and
+triage stay on the `efficient` tier when their slot is unset, which is why the
+policy default lives above the translation rather than inside it.
 
 A chat's own pick wins; a chat that follows takes the box pin; a pick belonging
 to the other engine falls through to the pin rather than to nothing.
@@ -119,7 +144,7 @@ JSON.stringify([
   resolveEffectiveModel({ engine: "claude", pinned: null }, { kind: "follow" }),
   resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "gpt-5.6-sol" }),
 ])
-=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"},{"model":"claude-sonnet-5","source":"default"}]
+=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-opus-5","source":"default"},{"model":"claude-sonnet-5","source":"default"}]
 ```
 
 What a *running* chat reports is the model its subprocess started with, whatever
@@ -174,10 +199,10 @@ verbatim. **Nothing here can produce a name an engine does not know.**
 
 ```ts
 JSON.stringify([
-  resolveSmallModelForEngine("claude", null),
-  resolveSmallModelForEngine("codex", null),
-  resolveSmallModelForEngine("codex", "claude-sonnet-5"),
-  resolveSmallModelForEngine("claude", "claude-fable-5-1"),
+  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: null, boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "codex", pinned: "claude-sonnet-5", boxDefault: null }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: "claude-fable-5-1", boxDefault: null }),
 ])
 => ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5-1"]
 ```

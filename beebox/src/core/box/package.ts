@@ -1,11 +1,11 @@
 /**
  * Package-root scaffolding for shapeVersion 3 boxes (the one-root layout —
- * `docs/implemented-plans/one-root-box-layout.md`). `bbx init` on a path with no
+ * `docs/implemented-plans/one-root-box-layout.md`). `bbx engine init` on a path with no
  * existing box detects a fresh init and scaffolds the npm-package half
  * (`package.json`, `tsconfig.json`, `src/`) directly at the box root; the
  * operational half (the marker, the underscore areas, `.gitignore`) is
  * `initBox` in `./index.js`, run on the SAME directory right after. An
- * existing box is left in place — `bbx init` re-runs its provisioning
+ * existing box is left in place — `bbx engine init` re-runs its provisioning
  * without moving anything.
  */
 
@@ -27,7 +27,7 @@ const FrontendPackageJsonSchema = z.object({
 export type BoxInitMode = "fresh" | "update";
 
 /**
- * Thrown when a fresh `bbx init` would overwrite a package.json it didn't
+ * Thrown when a fresh `bbx engine init` would overwrite a package.json it didn't
  * create — the target directory already has one, so scaffolding blindly
  * risks clobbering an unrelated package.
  */
@@ -39,7 +39,7 @@ export class BoxPackageConflictError extends Error {
 }
 
 /**
- * The dependency spec `bbx init` writes for `beebox` itself when
+ * The dependency spec `bbx engine init` writes for `beebox` itself when
  * `BBX_INIT_BBX_BOX_SPEC` doesn't override it (release/install tools
  * pin a tarball via that env var — e.g. the smoke tests' `file:<tarball>`).
  *
@@ -83,7 +83,7 @@ export interface BoxTarget {
 }
 
 /**
- * Decide what `bbx init <path>` is looking at: an existing box (marker at
+ * Decide what `bbx engine init <path>` is looking at: an existing box (marker at
  * the target itself) or nothing yet.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
@@ -142,7 +142,7 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * Scaffold the npm-package half of a fresh box: `package.json`,
  * `tsconfig.json`, `src/`. Idempotent in the sense that every write is a
  * plain overwrite, but it's only ever called for a genuinely fresh init (see
- * `detectBoxTarget`) — an existing box root is never touched by `bbx init`.
+ * `detectBoxTarget`) — an existing box root is never touched by `bbx engine init`.
  *
  * Deliberately does NOT run `pnpm install` — the `beebox` dependency
  * isn't resolvable through a real registry/tarball channel yet (Track F).
@@ -165,7 +165,7 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * ignore rules).
  * @param options.symlinkBeeBox - Whether to symlink
  *   `node_modules/beebox` at the running engine's `PACKAGE_ROOT`.
- *   Production `bbx init` wants it (native schema/view resolution); cheap
+ *   Production `bbx engine init` wants it (native schema/view resolution); cheap
  *   fixtures that only read/write cards don't, and skip it. Defaults to true.
  * @throws BoxPackageConflictError if `boxRoot` already has a `package.json`
  */
@@ -180,8 +180,8 @@ export async function scaffoldPackageRoot(
   if (await pathExists(packageJsonPath)) {
     throw new BoxPackageConflictError(
       `Cannot initialize a beebox package at ${boxRoot}: it already has a ` +
-        "package.json. Fresh `bbx init` scaffolds a new coding-session package there and " +
-        "won't overwrite an existing one — remove it first, or run `bbx init` on the " +
+        "package.json. Fresh `bbx engine init` scaffolds a new coding-session package there and " +
+        "won't overwrite an existing one — remove it first, or run `bbx engine init` on the " +
         "directory only after confirming it's meant to become a box package."
     );
   }
@@ -211,7 +211,7 @@ export async function scaffoldPackageRoot(
     // typescript + the type packages the base tsconfig's `lib` needs
     // (`ES2023, DOM`) to typecheck box code (schemas and views) — pinned to
     // the same ranges this engine itself develops against, so `pnpm exec tsc`
-    // in the box behaves the same as it does here. `bbx init` writes these
+    // in the box behaves the same as it does here. `bbx engine init` writes these
     // once at scaffold time; nothing keeps them in sync afterward (a stale
     // box devDependency is the box owner's `bbx upgrade` to fix, same as any
     // other dependency drift).
@@ -263,12 +263,12 @@ export interface ScaffoldedBox {
 /**
  * Build a valid shapeVersion-3 box at `target`: the npm-package half
  * (`scaffoldPackageRoot`) then the operational half (`initBox`), both on the
- * SAME root. This is the single composition that `bbx init` (fresh), the
+ * SAME root. This is the single composition that `bbx engine init` (fresh), the
  * `init` doctest, and every test fixture (`makeTmpBox`, `test-server`)
  * delegate to, so a valid box is produced exactly one way.
  *
- * Does NOT initialize git or run `bbx init`'s card installers — callers that
- * need those add them on top (production `bbx init` inits git at the root
+ * Does NOT initialize git or run `bbx engine init`'s card installers — callers that
+ * need those add them on top (production `bbx engine init` inits git at the root
  * and runs the installers; fixtures skip both).
  *
  * @param target - The box root to create.

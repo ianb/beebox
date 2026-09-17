@@ -2,7 +2,7 @@
 title: "lint:changed's content-keyed eslint cache goes stale for type-aware rules that depend on another file"
 workstream: add-files-inline
 area: tooling
-priority: normal
+priority: backlog
 labels: [lint, tooling, pre-commit]
 filed-by: agent
 discovered-by: agent

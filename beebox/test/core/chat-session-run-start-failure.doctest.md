@@ -21,7 +21,7 @@ import { tick } from "../helpers/chat-session-spawner-helpers.js";
 ## The failure propagates, and the session goes back to idle
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
@@ -49,7 +49,7 @@ The point of resetting to `idle`: the very next message works, with no restart
 and no operator intervention.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
@@ -74,7 +74,7 @@ A lock left held would make `bbx tick` defer commits indefinitely against a run
 that never started.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 

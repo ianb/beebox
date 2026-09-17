@@ -33,18 +33,45 @@ export interface RunSummary {
   readonly uploaded: number;
   readonly duplicate: number;
   readonly rejected: number;
+  /**
+   * The subset of `rejected` the server refused in *this* run's PUT, as
+   * opposed to the ones the `check` endpoint reported from a previous run.
+   *
+   * A rejected file is left in place on purpose and the server remembers its
+   * hash, so `rejected` stays at 1 on every sweep from then on. This counter
+   * is the one run that actually learns the file was refused, which is what
+   * `notify.ts` needs to report a rejection once instead of every 15 minutes.
+   *
+   * "Newly" is judged against the pre-PUT check state, not against the PUT
+   * outcome alone: `--retry-rejected` re-PUTs a rejection the server already
+   * remembers, and a settle retry re-walks the whole folder in the same sweep,
+   * so a PUT-time refusal is not by itself evidence that anything was learned.
+   */
+  readonly rejectedOnUpload: number;
   readonly skippedUnsettled: number;
   readonly skippedIdentityChanged: number;
   readonly errors: number;
+  /**
+   * The contract version this box reported, or `undefined` if it reported none
+   * (a box predating the field) or if the sweep never reached the server —
+   * a folder with nothing settled in it makes no request at all.
+   *
+   * An observation rather than a count, which is why it rides the summary: the
+   * sweep is the only thing that talks to the box, and `cli.ts` is where the
+   * comparison belongs.
+   */
+  readonly contractVersion: number | undefined;
 }
 
 interface Counters {
   uploaded: number;
   duplicate: number;
   rejected: number;
+  rejectedOnUpload: number;
   skippedUnsettled: number;
   skippedIdentityChanged: number;
   errors: number;
+  contractVersion: number | undefined;
 }
 
 interface Candidate {
@@ -61,9 +88,11 @@ export async function runTarget(target: TargetConfig, options: RunOptions): Prom
     uploaded: 0,
     duplicate: 0,
     rejected: 0,
+    rejectedOnUpload: 0,
     skippedUnsettled: 0,
     skippedIdentityChanged: 0,
     errors: 0,
+    contractVersion: undefined,
   };
 
   const candidates = await collectCandidates(target.folder, counters);
@@ -71,7 +100,9 @@ export async function runTarget(target: TargetConfig, options: RunOptions): Prom
     return { ...counters };
   }
 
-  const checkStates = await checkAllHashes(connection, candidates.map((c) => c.hash));
+  const checked = await checkAllHashes(connection, candidates.map((c) => c.hash));
+  const checkStates = checked.states;
+  counters.contractVersion = checked.contractVersion;
 
   const ctx: ProcessContext = {
     connection,
@@ -114,16 +145,21 @@ async function collectCandidates(folder: string, counters: Counters): Promise<Ca
 async function checkAllHashes(
   connection: ServerConnection,
   hashes: readonly string[],
-): Promise<Map<string, CheckResult>> {
+): Promise<{ states: Map<string, CheckResult>; contractVersion: number | undefined }> {
   const unique = Array.from(new Set(hashes));
   const states = new Map<string, CheckResult>();
+  // Every batch goes to the same box, so the version is whatever the last
+  // response said — they cannot disagree unless the box was redeployed
+  // mid-sweep, in which case the newest answer is the right one.
+  let contractVersion: number | undefined;
   for (const batch of chunk(unique, CHECK_BATCH_LIMIT)) {
-    const batchStates = await checkHashes(connection, batch);
-    for (const [hash, result] of batchStates) {
+    const response = await checkHashes(connection, batch);
+    for (const [hash, result] of response.states) {
       states.set(hash, result);
     }
+    contractVersion = response.contractVersion ?? contractVersion;
   }
-  return states;
+  return { states, contractVersion };
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -194,6 +230,11 @@ async function resolveConfirmation(
     case "rejected":
       console.log(`rejected ${candidate.filePath}: ${result.reason}`);
       ctx.counters.rejected += 1;
+      // Newly learned only if the server did not already know. Under
+      // `--retry-rejected` a remembered rejection is re-PUT and refused again,
+      // which is the same fact a second time — and a settle retry re-walks the
+      // folder, so counting it here would report one file as two.
+      if (state !== "rejected") ctx.counters.rejectedOnUpload += 1;
       return undefined;
     case "hash-mismatch":
       console.error(`error ${candidate.filePath}: hash mismatch on upload, will retry next run`);

@@ -2,18 +2,22 @@
  * The app bar's session chip — chat fiddling, named by its object
  * (docs/plans/top-nav-ia.md Track C2). Reshaped from the chat header's `⋯`
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
- * panel-swap idiom), but the face is the session's own name, because an
- * unlabeled `⋯` stops working once every other menu face names its object.
+ * panel-swap idiom).
+ *
+ * Sliders plus a persistent "Chat" label identify chat properties even when
+ * the conversation title is hidden. The model dial compares against the box
+ * default; its attached star marks a different harness.
  *
  * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
  * switch menu moves between landmarks and resumes each one's newest chat, so
  * it can't reach a sibling session in the landmark you're already in. Finding
  * *a session* is a chat concern; finding *a place* is the pill's.
  *
- * Face, following the bar's one-flexible-member rule: the session label
- * (truncated) from `sm:` up, a sliders icon below it — the chip is the third
- * thing to give way as the viewport narrows, after the box prefix and the
- * folder half's label.
+ * Face, following the bar's one-flexible-member rule: "Chat" and caret always,
+ * with the model/harness indicator alongside and the properties glyph from sm:;
+ * the session label (truncated) from `sm:` up — the chip is the third thing to
+ * give way as the viewport narrows, after the box prefix and the folder half's
+ * label. Same composition as the pill's here-half, which is the point.
  *
  * `React.memo` is load-bearing, not decoration: this chip is portaled into
  * the bar from the chat's tree, which re-renders on every streaming token
@@ -31,18 +35,41 @@ import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
 import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
-import { modelDrift } from "./model-drift";
+import { modelDrift, engineDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
-/** Three sliders — "settings for this thing", the phone-width face. */
-function SlidersIcon() {
+/** Chat properties; the adjacent "Chat" label supplies the subject. */
+function ChatSettingsIcon() {
   return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M16 5v4M10 10v4M18 15v4" />
+    <svg className="hidden sm:block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 7h4m4 0h10M3 17h10m4 0h4" />
+      <circle cx="9" cy="7" r="2" />
+      <circle cx="15" cy="17" r="2" />
+    </svg>
+  );
+}
+
+/**
+ * One instrument: below/at/above the box default, with an attached star for
+ * another harness. Unknown tier leaves the dial absent, never implying "same";
+ * a known harness difference remains visible independently.
+ */
+function ModelGaugeIcon({ drift, offEngine }: { drift: "above" | "below" | "same" | null; offEngine: boolean }) {
+  const needle = drift === "below" ? "M12 17 6.8 12.2" : drift === "above" ? "M12 17 17.2 12.2" : "M12 17V9.8";
+  return (
+    <svg className={drift === null ? "w-3 h-4 shrink-0" : "w-5 h-4 shrink-0"} viewBox={drift === null ? "17 0 13 24" : "0 0 30 24"} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {drift === null ? null : (
+        <g transform="translate(0 -1.5)">
+          <path d="M3 18a9 9 0 0 1 18 0M4.5 12l1.3.7M12 7v1.5M19.5 12l-1.3.7" />
+          <path d={needle} />
+          <circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none" />
+        </g>
+      )}
+      {offEngine ? <path d="m23 1 1.2 3.8L28 6l-3.8 1.2L23 11l-1.2-3.8L18 6l3.8-1.2Z" fill="currentColor" stroke="none" /> : null}
     </svg>
   );
 }
@@ -235,16 +262,22 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
     : chatModelOptions(agentEngine).find((o) => o.model === modelInForce)?.label ?? "Unavailable";
-  const drift = modelDrift({ model: modelInForce, boxDefault });
-  // Editorial title or nothing: `label` is the husk's `title` (null until
-  // the nightly chat review or a hand edit names the session). With no real
-  // title the face is the sliders icon at every width — never a fabricated
-  // name (boxholder call, 2026-08-03).
+  // `modelInForce` is null for a chat that FOLLOWS the box default — that is
+  // what makes the label read "Default (Opus)" rather than naming the model —
+  // so the drift comparison resolves it first. Without this the gauge was blank
+  // for the most common case there is, which is most of why the old mark looked
+  // unreliable. While status is still loading both are null and the comparison
+  // correctly declines to answer.
+  const drift = modelDrift({ model: modelInForce ?? boxDefault, boxDefault });
+  const offEngine = engineDrift({ engine: agentEngine, boxEngine });
+  // Keep the editorial title when available; the persistent "Chat" label
+  // identifies the menu even without a title or at narrow widths.
   const titled = label !== null && label !== "";
-  // The mark is decoration; the meaning is in the name, so a screen reader
-  // hears "below the box default" rather than a triangle.
-  const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : "below"} the box default`;
-  const accessibleName = `${titled ? `Chat: ${label}` : "Chat menu"} · ${currentModelLabel}${driftPhrase}`;
+  // The marks are decoration; the meaning is in the name, so a screen reader
+  // hears "below the box default" rather than a description of a dial.
+  const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : drift === "below" ? "below" : "at"} the box default`;
+  const enginePhrase = offEngine ? `, on ${agentEngine ?? "another harness"} rather than the box's ${boxEngine ?? "own"}` : "";
+  const accessibleName = `${titled ? `Chat: ${label}` : "Chat menu"} · ${currentModelLabel}${driftPhrase}${enginePhrase}`;
 
   return (
     <>
@@ -268,20 +301,11 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             aria-label={accessibleName}
             {...ariaProps}
           >
-            <span className={titled ? "sm:hidden" : ""}>
-              <SlidersIcon />
-            </span>
-            {drift === null ? null : (
-              <span aria-hidden="true" className="text-[0.65rem] leading-none opacity-90">{drift === "above" ? "▲" : "▼"}</span>
-            )}
-            {titled ? (
-              <>
-                <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
-                <span className="hidden sm:flex">
-                  <CaretIcon />
-                </span>
-              </>
-            ) : null}
+            <ChatSettingsIcon />
+            <span className="shrink-0 font-medium">Chat</span>
+            {drift === null && !offEngine ? null : <ModelGaugeIcon drift={drift} offEngine={offEngine} />}
+            {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
+            <CaretIcon />
           </button>
         )}
       >

@@ -6,6 +6,11 @@ issues: []
 ---
 # Courseware Phase 1 — the course: cards, rules, and the authoring skill
 
+> **⚠ One stale citation** (full-embrace-annex, 2026-09-14): the reference
+> below to `asset-manifest-scan.ts:90` points at a deleted file. Asset manifests
+> are gone; git-annex is the only asset scheme. The courseware content is
+> unaffected. Current model: [`assets.md`](../assets.md).
+
 This plan introduces a "courseware" card family centered on one container — a
 **course** — that an agent builds *with* a learner through a
 pedagogically-grounded process. A course binds a few components: a **concept-map**

@@ -2,9 +2,10 @@ import { stat } from "node:fs/promises";
 import type { BigIntStats } from "node:fs";
 
 export const DEV_BUNDLE_RELOAD_EXIT_CODE = 75;
+export const DEV_BUNDLE_RELOAD_REQUEST = "reload-request";
+export const DEV_BUNDLE_RELOAD_NOW = "reload-now";
+export const DEV_BUNDLE_RELOAD_ABORTED = "reload-aborted";
 
-let draining = false;
-let activeMutations = 0;
 let ignoredIdentity: string | undefined;
 
 function identity(info: BigIntStats): string {
@@ -25,10 +26,6 @@ export async function devBundleWasReplaced(): Promise<boolean> {
   }
 }
 
-export function beginDevBundleDrain(): void {
-  draining = true;
-}
-
 export async function abandonDevBundleDrain(): Promise<void> {
   // TODO(env-migration): Read the launcher's current artifact path at the drain boundary.
   const bundlePath = process.env.BBX_DEV_BUNDLE_PATH;
@@ -39,23 +36,4 @@ export async function abandonDevBundleDrain(): Promise<void> {
       // A later complete artifact will differ and may start a fresh drain.
     }
   }
-  draining = false;
-}
-
-export function isDevBundleDraining(): boolean {
-  return draining;
-}
-
-export function trackMutationStart(): () => void {
-  activeMutations += 1;
-  let finished = false;
-  return () => {
-    if (finished) return;
-    finished = true;
-    activeMutations -= 1;
-  };
-}
-
-export function hasActiveMutations(): boolean {
-  return activeMutations > 0;
 }

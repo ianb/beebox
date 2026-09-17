@@ -47,7 +47,7 @@ export function HistoryBrowser({
   const filterInput = useMemo(() => {
     const hasAny =
       filter.connectors.length > 0 ||
-      filter.workflows.length > 0 ||
+      filter.triggers.length > 0 ||
       filter.touchpoint ||
       filter.feedback ||
       filter.session !== null ||
@@ -55,7 +55,7 @@ export function HistoryBrowser({
     if (!hasAny) return;
     return {
       ...(filter.connectors.length > 0 ? { connectors: filter.connectors } : {}),
-      ...(filter.workflows.length > 0 ? { workflows: filter.workflows } : {}),
+      ...(filter.triggers.length > 0 ? { triggers: filter.triggers } : {}),
       ...(filter.touchpoint ? { touchpoint: true } : {}),
       ...(filter.feedback ? { feedback: true } : {}),
       ...(filter.session !== null ? { session: filter.session } : {}),
@@ -121,12 +121,12 @@ export function HistoryBrowser({
     [filter, onFilterChange]
   );
 
-  const handleFilterWorkflow = useCallback(
-    (workflow: string) => {
-      if (filter.workflows.includes(workflow)) return;
+  const handleFilterTrigger = useCallback(
+    (triggerId: string) => {
+      if (filter.triggers.includes(triggerId)) return;
       onFilterChange({
         ...filter,
-        workflows: [...filter.workflows, workflow],
+        triggers: [...filter.triggers, triggerId],
       });
     },
     [filter, onFilterChange]
@@ -166,7 +166,7 @@ export function HistoryBrowser({
             onBack={() => onSelectedHashChange?.(null)}
             onFilterSession={handleFilterSession}
             onFilterConnector={handleFilterConnector}
-            onFilterWorkflow={handleFilterWorkflow}
+            onFilterTrigger={handleFilterTrigger}
             idPrefix={idPrefix}
           /></Suspense>
         ) : (

@@ -24,6 +24,23 @@
 #   bin/land <branch>        # land a specific branch
 #   bin/land --dry-run [..]  # preflight + report, merge nothing
 #   bin/land --list          # show every merge-ready branch and exit
+#   bin/land --allow-dirty-main [..]
+#                            # land even though the main checkout has
+#                            # uncommitted changes — only when those changes
+#                            # touch no path the merge touches
+#
+# `--allow-dirty-main` exists because the main checkout is also where issue
+# maintenance and doc close-outs get done, so it is routinely mid-edit while a
+# worktree is ready to land, and that edit is usually someone else's to commit.
+# It is not a blanket override. It permits exactly what git itself tolerates:
+# unstaged modifications and untracked files on paths the merge does not touch.
+# It still refuses on
+#   - any overlap between a dirty path and a path the merge changes;
+#   - any STAGED change (index ahead of HEAD), because git's merge refuses
+#     whenever an index entry disagrees with HEAD for a path it walks, even one
+#     whose content the merge would leave alone — a staged rename of an
+#     untouched file is enough. Without this check the flag would promise a
+#     landing and then hand back git's own refusal.
 #
 # Call it bare from a worktree; don't build the branch name with `$(…)`, which
 # an isolated session refuses as "too complex to verify".
@@ -34,6 +51,7 @@ set -euo pipefail
 
 DRY_RUN=0
 LIST_ONLY=0
+ALLOW_DIRTY_MAIN=0
 BRANCH=""
 
 die() { printf 'land: %s\n' "$*" >&2; exit 1; }
@@ -42,6 +60,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --list)    LIST_ONLY=1 ;;
+    --allow-dirty-main) ALLOW_DIRTY_MAIN=1 ;;
     # Print the header comment block, however long it grows: every line after
     # the shebang until the first non-comment. A fixed line range silently
     # truncates the help the moment the header is edited.
@@ -113,10 +132,41 @@ CURRENT="$(g rev-parse --abbrev-ref HEAD)"
 [ "$CURRENT" = "main" ] || die "main checkout is on '$CURRENT', not main — landing would mis-target. Switch it to main first.
     main checkout: $MONO"
 
+MAIN_DIRTY=0
 if [ -n "$(g status --porcelain)" ]; then
-  die "main checkout ($MONO) has uncommitted changes; refusing to merge into a dirty tree.
-$(g status --short | sed 's/^/    /')"
+  if [ "$ALLOW_DIRTY_MAIN" = 0 ]; then
+    die "main checkout ($MONO) has uncommitted changes; refusing to merge into a dirty tree.
+$(g status --short | sed 's/^/    /')
+    Someone is working there. Wait for them, or — if their changes touch nothing
+    this merge touches — re-run with --allow-dirty-main, which checks exactly that."
+  fi
+  MAIN_DIRTY=1
 fi
+
+# Staged changes are the ones git will not merge around — see the header.
+if [ "$MAIN_DIRTY" = 1 ] && ! g diff --cached --quiet; then
+  die "main checkout ($MONO) has STAGED changes; --allow-dirty-main cannot cover those.
+$(g diff --cached --name-status | sed 's/^/    /')
+    git refuses to merge whenever the index disagrees with HEAD for a path it
+    walks, even one this merge would not change. Commit or unstage that work
+    first — it belongs to whoever staged it."
+fi
+
+# Every path the dirty main checkout has an opinion about. `-z` so a path with
+# a space or non-ASCII character arrives verbatim instead of git-quoted, which
+# a `--porcelain` parse would have had to guess at. Both halves of a rename or
+# copy count: the merge must touch neither the old nor the new name.
+dirty_paths() {
+  local entry status path
+  while IFS= read -r -d '' entry; do
+    status="${entry:0:2}"
+    path="${entry:3}"
+    printf '%s\n' "$path"
+    case "$status" in
+      R*|C*|*R|*C) IFS= read -r -d '' path && printf '%s\n' "$path" ;;
+    esac
+  done < <(g status --porcelain -z)
+}
 
 # Default, when run from inside a worktree, to that worktree's own branch —
 # which is always the branch you mean. This is what keeps the common call a
@@ -166,6 +216,22 @@ fi
 # worktree, and main must remain untouched when this refuses.
 (cd "$LAND_SOURCE_ROOT" && node --import tsx bin/doc-lifecycle-check.ts --repo "$MONO" --tree "$BRANCH") ||
   die "$BRANCH has document lifecycle errors; main was not changed"
+
+# The dirty main checkout is only tolerable if this merge leaves those paths
+# alone. `--no-renames` so a renamed file is listed under both names, and both
+# sides are sorted for `comm`.
+if [ "$MAIN_DIRTY" = 1 ]; then
+  overlap="$(comm -12 \
+    <(dirty_paths | sort -u) \
+    <(g diff --no-renames --name-only main "$BRANCH" | sort -u))"
+  if [ -n "$overlap" ]; then
+    die "main checkout ($MONO) has uncommitted changes to paths this merge also changes:
+$(printf '%s\n' "$overlap" | sed 's/^/    /')
+    Merging would collide with work in progress. Commit or stash it first."
+  fi
+  echo "land: main checkout is dirty, but no dirty path is touched by this merge:"
+  dirty_paths | sort -u | sed 's/^/    /'
+fi
 
 AHEAD="$(g rev-list --count main.."$BRANCH")"
 

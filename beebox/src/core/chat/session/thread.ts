@@ -8,19 +8,19 @@
  */
 
 import { EventEmitter } from "node:events";
+import { withBoxWork } from "../../../lib/box-maintenance.js";
+import { withChatRunAdmission } from "./run-lock.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env.js";
-import {
-  createChatBackend,
-  type ChatBackend,
-  type ChatBackendRun,
-} from "../../../services/claude-chat.js";
+import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat.js";
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
+import { resolveSessionModel } from "./model.js";
+import { glmChatAdditions } from "../../glm-key.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
-import { resolveChatEngine } from "./engine.js";
+import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
@@ -98,13 +98,25 @@ COMMIT DISCIPLINE:
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
 }
 
+const liveThreads = new Set<ChatThreadSession>();
+
+export function chatThreadsAreIdle(boxRoot: string): boolean {
+  return [...liveThreads].every((session) => session.boxRoot !== boxRoot || !session.isBusy());
+}
+
+export function quiesceChatThreads(boxRoot: string): void {
+  for (const session of liveThreads) {
+    if (session.boxRoot === boxRoot && !session.isBusy()) session.park();
+  }
+}
+
 export class ChatThreadSession extends EventEmitter {
   /** Run lifecycle — replaces the old run/busy pair. Never enters `stopping`:
    *  a thread session has no queue to protect, so stop/park close straight
    *  through to `idle`. */
   private state: ChatLifecycle = IDLE;
   private sessionId: string | null;
-  private boxRoot: string;
+  readonly boxRoot: string;
   private threadRef: string;
   private chatDescription: string;
   private sessionViewBaseUrl: string | undefined;
@@ -135,10 +147,29 @@ export class ChatThreadSession extends EventEmitter {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
 
+    await withChatRunAdmission({ boxRoot: this.boxRoot, reason: `thread run ${this.getThreadRef()}` }, async (work) => {
+    // A stored id the box has no record of is not resumable: nothing says which
+    // engine wrote it, and no transcript exists in either store, so resuming it
+    // would ask a guessed engine to continue a conversation it never had. Start
+    // fresh instead of failing — a thread is automation, and stranding it is
+    // worse than losing the thread's earlier context. The new id is adopted from
+    // the SDK's first message below and emitted on `session`, so the thread's
+    // owner relearns it.
+    if (this.sessionId !== null
+        && (await resolveRecordedChatEngine(this.boxRoot, { sessionId: this.sessionId })) === null) {
+      log("start", `No record of session ${this.sessionId}; starting a fresh session instead of resuming it`);
+      this.sessionId = null;
+    }
+
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
     const engine = await resolveChatEngine(this.boxRoot, { sessionId: this.sessionId });
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return;
+    // Box default model as THIS thread's recorded engine can run it — never
+    // the box's current engine, so a Codex thread gains no GLM env after an
+    // engine switch; and the model rides into backend.start, or the child
+    // would point at Z.ai while requesting the harness default.
+    const threadModel = (await resolveSessionModel(this.boxRoot, { engine, explicit: null })).model;
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine, model: threadModel ?? undefined, boxRoot: this.boxRoot }))) return false;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
@@ -161,6 +192,7 @@ export class ChatThreadSession extends EventEmitter {
       // BBX_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { BBX_CHAT_SESSION_ID: this.sessionId } : {}),
     });
+    await glmChatAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
@@ -169,11 +201,21 @@ export class ChatThreadSession extends EventEmitter {
       cwd: this.boxRoot,
       systemPrompt,
       resumeSessionId: this.sessionId ?? undefined,
+      model: threadModel ?? undefined,
       env,
     });
     this.state = nextLifecycle(this.state, { phase: "ready", run });
 
-    void this.consumeMessages(run);
+    liveThreads.add(this);
+    void this.consumeMessages(run).finally(async () => {
+      liveThreads.delete(this);
+      await work.release();
+    });
+    return true;
+    }).catch((error: unknown) => {
+      if (this.liveRun() === null) this.state = IDLE;
+      throw error;
+    });
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -310,6 +352,10 @@ export class ChatThreadSession extends EventEmitter {
    * Returns a promise that resolves when the agent finishes its turn.
    */
   async send(message: string): Promise<void> {
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "thread send" }, () => this.sendAdmitted(message));
+  }
+
+  private async sendAdmitted(message: string): Promise<void> {
     if (this.isBusy()) {
       throw new SessionBusyError();
     }
@@ -379,10 +425,6 @@ export class ChatThreadSession extends EventEmitter {
 
   getThreadRef(): string {
     return this.threadRef;
-  }
-
-  isRunning(): boolean {
-    return this.liveRun() !== null;
   }
 
   isBusy(): boolean {

@@ -1,108 +1,176 @@
-/**
- * Report local boxes that have drifted behind the shipped migrations.
- *
- * Prod converges on every deploy: `beebox/deploy/deploy.sh` walks
- * `/home/beebox/boxes/*` and runs `bbx migrate --sweep` per box in the at-rest
- * window. Nothing does that for the developer's local boxes, so they sit at
- * whatever migration level they were last hand-migrated to. One was found 12
- * migrations and 6 days behind, discovered only because a card the boxholder
- * expected was missing.
- *
- * **This reports; it does not apply.** A local box is routinely dirty — the
- * developer is working in it — and `--sweep` skips a dirty box silently, which
- * would turn "behind" into "behind and quiet". Applying data migrations under
- * someone's uncommitted work is also a bigger promise than a drift report
- * needs to make. The alert names the one command that fixes each box.
- *
- * Which boxes: the `BOXES=` line in `beebox/.env`, the same list the dev router
- * reads (`workstreams-app/src/router/router-real-effects.ts`). Deliberately not
- * a second source of truth about where boxes live. A worktree's `.env` has no
- * `BOXES=` line (`bin/lib/worktree-create.sh` strips it), so this reports on
- * the developer's real boxes and never on a worktree's cloned box.
- */
-
+/** Hourly convergence uses the box CLI's shared admission, recovery and repair. */
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-
 import { execa } from "execa";
+import { z } from "zod";
+import { execChild } from "../../bin/lib/schedules-exec.js";
+import { localTargets, optionalText } from "./targets.js";
+import { framedCommand, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
-import { computePending, readManifest } from "../../beebox/src/core/migration-run.js";
-import { getStatus } from "../../beebox/src/lib/git.js";
+class ConvergenceScheduleError extends Error {
+  constructor(opts: { reason: "state" | "checkout" }) {
+    super(opts.reason === "state" ? "Scheduled convergence requires SCHEDULE_STATE_DIR" : "Box convergence must run from the main checkout on main");
+    this.name = "ConvergenceScheduleError";
+  }
+}
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
 const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
-// `bin/schedules alert` needs the run it belongs to. Outside a tick there is no
-// run to attach to, so a hand-invocation prints the report rather than failing.
-const scheduled = (process.env["SCHEDULE_RUN_ID"] ?? "") !== "";
+const scheduled = Boolean(process.env["SCHEDULE_RUN_ID"]);
+const BOX_TIMEOUT_MS = 25 * 60_000; // ten-minute drain plus fifteen-minute execution
+const SSH_TIMEOUT_MS = 26 * 60_000;
+const deadline = Date.now() + 4 * 60 * 60_000 - 30_000;
+const findings: string[] = [];
+const env: NodeJS.ProcessEnv = { ...process.env, NODE_DISABLE_COMPILE_CACHE: "1" };
+delete env.NODE_COMPILE_CACHE;
+delete env.BBX_BOX_WORK; // A periodic pass is independent work, never a descendant.
+const ssh = path.join(REPO_ROOT, "beebox/deploy/prod-ssh");
 
-/** Expand a leading `~` — `BOXES=` is written the way a person types a path. */
-function expandHome(entry: string): string {
-  return entry.startsWith("~/") ? path.join(os.homedir(), entry.slice(2)) : entry;
+async function git(args: string[]): Promise<string> {
+  return (await execa("git", ["-C", REPO_ROOT, ...args], { timeout: 30_000 })).stdout.trim();
 }
 
-async function boxPaths(): Promise<string[]> {
-  let text: string;
-  try {
-    text = await fs.readFile(path.join(REPO_ROOT, "beebox", ".env"), "utf8");
-  } catch (error) {
-    if (errnoCode(error) !== "ENOENT") throw error;
-    return []; // No .env: nothing local is configured, so nothing to report.
+/** Returns the ssh diagnostic when production could not be reached, else null. */
+async function inspectOrApply(root: string, where: "local" | "prod"): Promise<string | null> {
+  if (deadline - Date.now() < SSH_TIMEOUT_MS) {
+    findings.push(`${where} ${root}: unchecked; whole-run time budget exhausted`);
+    return null;
   }
-  const line = text.split("\n").find((l) => l.startsWith("BOXES="));
-  if (!line) return [];
-  return line.slice("BOXES=".length).trim().split(/\s+/u).filter(Boolean).map(expandHome);
+  // `migrate` lives under `bbx engine` (beebox/src/cli/surface-data.ts): it acts
+  // on a box's installation, not its content, so it is not the agent's verb.
+  const args = dryRun
+    ? ["engine", "migrate", "--status", "--json"]
+    : ["engine", "migrate", "--sweep", "--repair", "--yield", "--json"];
+  // Direct entrypoints avoid the CLI launcher's rebuild and compile-cache writes
+  // during dry-run. Production always uses this box's installed engine registry.
+  const command = where === "local"
+    ? [process.execPath, "--import", import.meta.resolve("tsx"), path.join(REPO_ROOT, "beebox/src/cli/index.ts"), ...args].map(shellQuote).join(" ")
+    : ["node", path.join(root, "node_modules/beebox/dist/cli.mjs"), ...args].map(shellQuote).join(" ");
+  const script = framedCommand(command);
+  const remote = `set -a; source /home/beebox/.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd ${shellQuote(root)} || exit; timeout --kill-after=5s 1500s bash -c ${shellQuote(script)}`;
+  const outcome = await execChild(where === "local"
+    ? { file: "bash", args: ["-c", script] }
+    : { file: ssh, args: [`sudo -u beebox -H bash -lc ${shellQuote(remote)}`] }, {
+    cwd: where === "local" ? root : REPO_ROOT, env,
+    timeoutMs: where === "local" ? BOX_TIMEOUT_MS : SSH_TIMEOUT_MS,
+    input: null, logFile: null,
+  });
+  const unreachable = where === "prod" ? sshUnreachable(outcome.exitCode, outcome.output) : null;
+  if (unreachable !== null) return unreachable;
+  const detail = outcome.timedOut ? "Timed out; migration remains incomplete" : resultDetail(outcome.output, outcome.exitCode);
+  if (detail !== null) findings.push(`${where} ${root}: ${detail}`);
+  return null;
 }
 
-interface Drift {
-  readonly box: string;
-  readonly pending: string[];
-  readonly dirty: boolean;
-}
-
-async function inspect(boxRoot: string): Promise<Drift | null> {
-  const manifest = await readManifest(boxRoot);
-  // A manifest-less box predates `bbx migrate` and needs a human decision
-  // (`bbx migrate --mark-all-applied` or a real migration), which is not this
-  // job's call to make — and not drift in the sense being reported.
-  if (manifest === null) return null;
-  const pending = computePending(manifest).map((m) => m.name);
-  if (pending.length === 0) return null;
-  const status = await getStatus(boxRoot).catch(() => null);
-  return { box: path.basename(boxRoot), pending, dirty: status === null || !status.clean };
-}
-
-const drifted: Drift[] = [];
-for (const boxRoot of await boxPaths()) {
-  try {
-    const drift = await inspect(boxRoot);
-    if (drift) drifted.push(drift);
-  } catch (error) {
-    // One unreadable box must not hide the others. Report it as drift of
-    // unknown size rather than swallowing it.
-    drifted.push({ box: path.basename(boxRoot), pending: [`(unreadable: ${errnoCode(error) ?? "error"})`], dirty: false });
+class ProdRegistryReadError extends Error {
+  constructor(readonly exitCode: number | null, readonly stderr: string) {
+    super("Production registry read failed");
+    this.name = "ProdRegistryReadError";
+  }
+  override toString(): string {
+    return `${this.name}: ${this.message} (exit ${String(this.exitCode)}): ${this.stderr.slice(-1500)}`;
   }
 }
 
-if (drifted.length === 0) process.exit(0);
-
-const message = [
-  `${String(drifted.length)} local box(es) behind the shipped migrations.`,
-  "",
-  ...drifted.flatMap((d) => [
-    `**${d.box}** — ${String(d.pending.length)} pending${d.dirty ? ", working tree dirty" : ""}`,
-    `  ${d.pending.slice(0, 8).join(", ")}${d.pending.length > 8 ? `, +${String(d.pending.length - 8)} more` : ""}`,
-    d.dirty
-      ? "  A dirty box cannot be swept — commit or stash first, then `bbx migrate --apply`."
-      : "  Fix with `bbx migrate --apply` in that box.",
-  ]),
-].join("\n");
-
-if (dryRun || !scheduled) {
-  process.stdout.write(`[box-convergence] ${dryRun ? "would report" : "report"} ${String(drifted.length)} drifted box(es)\n${message}\n`);
-} else {
-  await execa(path.join(REPO_ROOT, "bin", "schedules"), [
-    "alert", "--priority", "normal", "--title", `${String(drifted.length)} local box(es) behind on migrations`, "--message", message,
-  ], { stdout: "inherit", stderr: "inherit" });
+class ProdUnreachableError extends Error {
+  constructor(readonly line: string) {
+    super("Production server unreachable");
+    this.name = "ProdUnreachableError";
+  }
 }
+
+async function prodTargets(): Promise<string[]> {
+  const script = `const fs = require('node:fs'); const path = require('node:path');
+const file = '/home/beebox/.config/beebox/hub.json';
+const config = JSON.parse(fs.readFileSync(file, 'utf8'));
+if (!config.boxes || Array.isArray(config.boxes) || typeof config.boxes !== 'object') throw Error('Invalid hub registry');
+const roots = Object.values(config.boxes).map(entry => {
+  if (typeof entry.path !== 'string' || !entry.path) throw Error('Invalid hub box path');
+  return fs.realpathSync(path.resolve(path.dirname(file), entry.path));
+});
+process.stdout.write(JSON.stringify([...new Set(roots)]));`;
+  const result = await execa(ssh, [`sudo -u beebox -H node -e ${shellQuote(script)}`], {
+    timeout: 30_000, env, reject: false,
+  });
+  const unreachable = sshUnreachable(result.exitCode ?? null, result.stderr);
+  if (unreachable !== null) throw new ProdUnreachableError(unreachable);
+  if (result.failed) throw new ProdRegistryReadError(result.exitCode ?? null, result.stderr);
+  return z.array(z.string().min(1)).parse(JSON.parse(result.stdout));
+}
+
+/** Offline is routine on a laptop: note it, and alert only once it has lasted a day. */
+async function trackReachability(unreachable: string | null): Promise<void> {
+  const stateDir = process.env["SCHEDULE_STATE_DIR"];
+  if (dryRun || !scheduled || !stateDir) {
+    if (unreachable !== null) process.stdout.write(`[box-convergence] production unreachable; skipped: ${unreachable}\n`);
+    return;
+  }
+  const file = path.join(stateDir, "prod-unreachable.json");
+  if (unreachable === null) {
+    await fs.rm(file, { force: true });
+    return;
+  }
+  const text = await optionalText(file);
+  const since = text === null ? Date.now() : z.object({ since: z.number() }).parse(JSON.parse(text)).since;
+  if (text === null) await fs.writeFile(file, JSON.stringify({ since }));
+  process.stdout.write(`[box-convergence] production unreachable since ${new Date(since).toISOString()}: ${unreachable}\n`);
+  const detail = unreachableDetail(since, { now: Date.now(), line: unreachable });
+  if (detail !== null) findings.push(detail);
+}
+
+async function report(): Promise<void> {
+  const message = findings.join("\n");
+  if (dryRun || !scheduled) {
+    if (message) process.stdout.write(`[box-convergence] ${dryRun ? "status only" : "report"}\n${message}\n`);
+    return;
+  }
+  const stateDir = process.env["SCHEDULE_STATE_DIR"];
+  if (!stateDir) throw new ConvergenceScheduleError({ reason: "state" });
+  const baseline = path.join(stateDir, "last-report.json");
+  const oldText = await optionalText(baseline);
+  const old = oldText === null ? null : z.object({ message: z.string(), reportedAt: z.number() }).parse(JSON.parse(oldText));
+  if (message && (old?.message !== message || Date.now() - old.reportedAt >= 24 * 60 * 60_000)) {
+    await execa(path.join(REPO_ROOT, "bin/schedules"), ["alert", "--priority", "important",
+      "--title", "Box convergence needs attention", "--message", message], { stdout: "inherit", stderr: "inherit" });
+    await fs.writeFile(baseline, JSON.stringify({ message, reportedAt: Date.now() }));
+  } else if (!message && old?.message) {
+    await fs.writeFile(baseline, JSON.stringify({ message: "", reportedAt: Date.now() }));
+  }
+}
+
+async function main(): Promise<void> {
+  const mainRoot = path.dirname(await git(["rev-parse", "--path-format=absolute", "--git-common-dir"]));
+  if (await fs.realpath(mainRoot) !== await fs.realpath(REPO_ROOT) || await git(["branch", "--show-current"]) !== "main") {
+    if (!dryRun) throw new ConvergenceScheduleError({ reason: "checkout" });
+    process.stdout.write("[box-convergence] status only: a real run would refuse this worktree; no boxes contacted\n");
+    return;
+  }
+  try {
+    const inventory = await git(["worktree", "list", "--porcelain", "-z"]);
+    const worktrees = inventory.split("\0").filter((line) => line.startsWith("worktree ")).map((line) => line.slice(9));
+    const targets = await localTargets({ mainRoot, worktrees, home: os.homedir(),
+      clonesRoot: path.join(os.homedir(), "src/box-worktrees"),
+      configDir: path.join(process.env.BBX_STATE_DIR ?? path.join(os.homedir(), ".cache/beebox"), "hub-configs") });
+    for (const detail of targets.unreadable) findings.push(`Local box unreadable: ${detail}`);
+    for (const root of targets.excluded) findings.push(`local ${root}: excluded; owned by a worktree`);
+    for (const root of targets.eligible) {
+      try { await inspectOrApply(root, "local"); }
+      catch (error) { findings.push(`local ${root}: ${String(error)}`); }
+    }
+  } catch (error) { findings.push(`Local coverage unavailable: ${String(error)}`); }
+  let unreachable: string | null = null;
+  try {
+    for (const root of await prodTargets()) {
+      try { unreachable = await inspectOrApply(root, "prod"); }
+      catch (error) { findings.push(`prod ${root}: ${String(error)}`); }
+      if (unreachable !== null) break;
+    }
+  } catch (error) {
+    if (error instanceof ProdUnreachableError) unreachable = error.line;
+    else findings.push(`Production coverage unavailable: ${String(error)}`);
+  }
+  await trackReachability(unreachable);
+  await report();
+}
+await main();

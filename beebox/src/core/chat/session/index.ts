@@ -1,3 +1,4 @@
+import { acquireBoxWork } from "../../../lib/box-maintenance.js";
 /**
  * ChatSession — Manages a long-lived SDK chat run for interactive chat.
  *
@@ -16,37 +17,22 @@ import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "./load-history.js";
 import { createCoinedRunState, type CoinedRunState } from "./coined-run.js";
-import {
-  createChatBackend,
-  type ChatBackend,
-  type ChatBackendRun,
-  type ChatBackendStartOptions,
-} from "../../../services/claude-chat.js";
+import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBackendStartOptions } from "../../../services/claude-chat.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "./prompts.js";
 import {
-  accumulateAssistantText,
-  buildContentBlocks,
-  warnErroredTurn,
-  type ChatImage,
-  type ChatMessage,
-  type ChatMessageContent,
-  type ChatSendInput,
-  type TaskEvent,
+  accumulateAssistantText, buildContentBlocks, warnErroredTurn,
+  type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type TaskEvent,
 } from "./messages.js";
 import { createTurnDurabilityGate } from "./transcript-sync.js";
 import { recordTurnMarkerForSession } from "../turn-marker.js";
 import {
-  captureAssignedSessionId,
-  combineQueuedInputs,
-  deleteSessionFile,
-  loadCurrentModel,
-  loadSessionId,
-  saveCurrentModel,
+  captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
+  loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "./state.js";
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "./model.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
-import { createRunLockHolder } from "./run-lock.js";
+import { createRunLockHolder, withChatRunAdmission } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
@@ -72,6 +58,7 @@ export class ChatSession extends EventEmitter {
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
+  private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
   private modelFile: string | null;
@@ -172,16 +159,19 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
+    return withChatRunAdmission({ boxRoot: this.boxRoot, reason: `chat run ${this.sessionId ?? "new"}` }, async (work) => {
     // A coined session stops being "not created yet" the moment its transcript
     // exists — from this run or an earlier one — because the harness rejects a
     // session id it has already written (see reserve.ts).
     await this.coined.refresh({ boxRoot: this.boxRoot, sessionId: this.sessionId, contextDir: this.options.contextDir ?? null });
 
-    // Preflight login before transitioning or locking; fakes skip this.
+    // Resolve the model first: the preflight is provider-aware (a GLM model
+    // checks the store key, not the Claude login), and openChatRun injects
+    // the GLM provider env from it. Fakes skip the preflight.
     const preview = await this.buildBackendStartOptions();
-    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return;
     // Cold start is the only place the box default is read.
     this.resolvedModel = (await resolveSessionModel(this.boxRoot, { engine: preview.engine ?? "claude", explicit: this.explicitModel })).model;
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine, model: this.resolvedModel ?? undefined, boxRoot: this.boxRoot }))) return false;
     this.transition({ phase: "starting" });
 
     // `openChatRun` either returns a live run or unwinds (lock released,
@@ -205,7 +195,11 @@ export class ChatSession extends EventEmitter {
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
-    void this.consumeMessages(run);
+    void this.consumeMessages(run).finally(() => work.release()).catch((error: unknown) => {
+      console.error("[ChatSession] Releasing run admission failed:", error);
+    });
+    return true;
+    });
   }
 
   /**
@@ -296,17 +290,9 @@ export class ChatSession extends EventEmitter {
    * offsets to prevent `[imageN]` token collisions).
    */
   private drainQueue(): void {
-    if (this.messageQueue.length === 0) return;
-    const queued = this.messageQueue.splice(0);
-    log("drain", `Sending ${queued.length} queued message(s)`);
-    // Nothing is awaiting this send, so a rejected run start (an FD-exhausted
-    // spawn, say) would surface as an unhandled rejection and take the server
-    // down. Report it on the session instead; the queued text is already spliced
-    // out and is not re-queued, since a failing start would just fail again.
-    void this.send(combineQueuedInputs(queued)).catch((e: unknown) => {
-      log("drain", `Draining queued message(s) failed: ${errorMessage(e)}`);
-      this.emit("error", e instanceof Error ? e : new Error(String(e)));
-    });
+    drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
+      send: (input) => this.send(input, { independent: true }),
+      onError: (error) => { this.emit("error", error); } });
   }
 
   /**
@@ -317,7 +303,13 @@ export class ChatSession extends EventEmitter {
    * carrying the text plus any image attachments referenced by `[imageN]`
    * tokens in the text.
    */
-  async send(message: string | ChatSendInput): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
+    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
+    try { return await work.run(() => this.sendAdmitted(message)); }
+    finally { await work.release(); }
+  }
+
+  private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
     if (this.isBusy()) {
       log("send", "Rejected — busy");
       return false;
@@ -364,6 +356,15 @@ export class ChatSession extends EventEmitter {
     }
     return true;
     } finally { this.preparingTurn = false; }
+  }
+
+  /** Close an idle subprocess for maintenance without discarding its queued input. */
+  pauseForMaintenance(): void { this.maintenancePaused = true;
+    if (!this.isBusy()) this.restart();
+  }
+
+  resumeAfterMaintenance(): void { this.maintenancePaused = false;
+    this.drainQueue();
   }
 
   /** Interrupt the current turn. */

@@ -33,7 +33,7 @@ A chat with no choice of its own follows the box; one with a choice keeps it.
 ```ts
 const box = await makeTmpBox();
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
-=> {"model":null,"source":"none"}
+=> {"model":"claude-opus-5","source":"default"}
 
 await pin(box.root, { agentModel: "claude-sonnet-5" });
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))

@@ -10,6 +10,7 @@
 
 # shellcheck source=launch-headless.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/glm-provider.sh"
 
 launch_session_build() {
   local model_arg="" rc_arg="" model_line="" resume_arg=""
@@ -20,8 +21,22 @@ launch_session_build() {
     LS_MODEL="gpt-5.6-sol"
   fi
 
+  # A `glm-*` model routes the SAME claude agent at Z.ai's Anthropic-compatible
+  # endpoint. `--model` is not passed: Claude Code asks by tier name, and the
+  # tier variables in the env block carry the choice instead.
+  local glm_env=""
+  if [ "$LS_AGENT" = "claude" ] && glm_is_model "${LS_MODEL:-}"; then
+    local glm_key
+    if ! glm_key=$(glm_read_key "$LS_MONO"); then
+      echo "launch-session: $LS_MODEL needs GLM_API_KEY in beebox/.env; Terminal was not opened" >&2
+      return 1
+    fi
+    glm_env="$(glm_env_block "$LS_MODEL" "$glm_key")
+"
+  fi
+
   if [ "$LS_AGENT" = "claude" ]; then
-    [ -n "$LS_MODEL" ] && model_arg="--model $LS_MODEL"
+    [ -n "$LS_MODEL" ] && [ -z "$glm_env" ] && model_arg="--model $LS_MODEL"
     [ "$LS_REMOTE_CONTROL" = "1" ] && rc_arg="--remote-control $LS_WORKSTREAM"
     # Continuing a conversation instead of starting one. The id is interpolated
     # into a generated script unquoted, and `--resume` takes an OPTIONAL value —
@@ -38,7 +53,7 @@ launch_session_build() {
 #!/usr/bin/env bash
 set -euo pipefail
 printf '\033]0;%s\007' "$LS_SESSION_NAME"
-cd "$LS_MONO"
+${glm_env}cd "$LS_MONO"
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_pending=1
 launch_on_exit() {
@@ -64,14 +79,13 @@ if [ -n "${LS_ISSUE:-}" ]; then
 fi
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
-  --arg emoji "$LS_EMOJI" \
   --arg agent "claude" \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" merge-base main HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
-    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+    '{branch:\$branch, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
 cd "\$wt_path"
@@ -129,14 +143,13 @@ if [ -n "${LS_ISSUE:-}" ]; then
 fi
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
-  --arg emoji "$LS_EMOJI" \
   --arg agent "codex" \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
-    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+    '{branch:\$branch, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
@@ -144,6 +157,14 @@ for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   skill_name=\$(basename "\$(dirname "\$claude_skill")")
   if [ ! -L "\$wt_path/.agents/skills/\$skill_name" ] || [ ! -f "\$wt_path/.agents/skills/\$skill_name/SKILL.md" ]; then
     echo "launch-worktree-session: missing Codex mirror for skill \$skill_name — refusing to launch codex without repo skills" >&2
+    exit 1
+  fi
+done
+for claude_agent in "\$wt_path"/.claude/agents/*.md; do
+  [ -f "\$claude_agent" ] || continue
+  agent_name=\$(basename "\$claude_agent" .md)
+  if [ ! -f "\$wt_path/.codex/agents/\$agent_name.toml" ]; then
+    echo "launch-worktree-session: missing Codex mirror for agent \$agent_name — refusing to launch codex without its pinned model" >&2
     exit 1
   fi
 done
@@ -202,13 +223,6 @@ EOF
   chmod +x "$LS_LAUNCHER"
 }
 
-launch_session_default_emoji() {
-  local name="$1" emoji_idx
-  local palette=(🐛 🔍 🧪 📋 🚀 🧹 🔧 📦 🌱 🎯 🧭 🔒 📊 🎨 🪄 🧩 🔭 🧵 📮 🌊 🔥 🎁 🍀 🦉)
-  emoji_idx=$(( $(printf '%s' "$name" | cksum | cut -d' ' -f1) % ${#palette[@]} ))
-  printf '%s\n' "${palette[$emoji_idx]}"
-}
-
 launch_session_open() {
   local launch_intent
   # Record intent before asking Terminal to start a shell. The generated script
@@ -221,12 +235,10 @@ launch_session_open() {
   esac
   launch_intent=$(jq -cn \
     --arg branch "worktree-$LS_WORKSTREAM" \
-    --arg emoji "${LS_EMOJI:-}" \
     --arg agent "$LS_AGENT" \
     --arg model "${LS_MODEL:-}" \
     --arg description "$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
     '{branch:$branch,agent:$agent}
-     + if $emoji == "" then {} else {emoji:$emoji} end
      + if $model == "" then {} else {model:$model} end
      + if $description == "" then {} else {description:$description} end')
   if ! session_registry_begin_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "$launch_intent"; then

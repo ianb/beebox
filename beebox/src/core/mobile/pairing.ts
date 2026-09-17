@@ -178,7 +178,7 @@ async function resolveMobileTokenIdentity(
   boxRoot: string,
   token: string | undefined,
 ): Promise<MobileBearerIdentity | null> {
-  const device = await deviceStore.verify(boxRoot, token);
+  const device = await deviceStore.verify(boxRoot, { token });
   if (!device) return null;
   return { deviceId: device.id, createdBy: device.createdBy };
 }

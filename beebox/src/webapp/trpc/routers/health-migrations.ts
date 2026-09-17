@@ -7,21 +7,12 @@
  */
 
 import { computePending, readManifest } from "../../../core/migration-run.js";
+import { migrationQuestions } from "../../../core/migration-repair.js";
+import { resolveGitDir } from "../../../lib/git-lock.js";
+import { boxMaintenanceStatus } from "../../../lib/box-maintenance.js";
 import type { HealthCheck } from "./health.js";
 
-/**
- * Pending box migrations.
- *
- * The deploy sweep (`core/migration-sweep.ts`) applies these automatically, but
- * it skips a box whose tree is dirty and stops at an agent-driven procedure
- * migration — both of which leave the box behind the shipped code with only a
- * line in a deploy log nobody re-reads. Surfacing it here is what makes that
- * state something the boxholder can see rather than something that has to be
- * remembered.
- *
- * A warning, not an error: a box a migration behind still serves correctly; it
- * is the *drift* that needs attention, not the box.
- */
+/** Pending conversions and unresolved repair decisions share the runner's readers. */
 export async function pendingMigrationsCheck(boxRoot: string): Promise<HealthCheck> {
   const applied = await readManifest(boxRoot);
   if (applied === null) {
@@ -33,13 +24,19 @@ export async function pendingMigrationsCheck(boxRoot: string): Promise<HealthChe
     };
   }
   const pending = computePending(applied);
+  const questions = await migrationQuestions(boxRoot);
+  const hasGit = await resolveGitDir(boxRoot) !== null;
+  const maintenance = hasGit ? await boxMaintenanceStatus(boxRoot) : null;
+  const detail = [
+    ...(!hasGit ? ["Git repository missing; migration recovery unavailable"] : []),
+    ...(pending.length > 0 ? [`${String(pending.length)} pending migration(s): ${pending.map((m) => m.name).join(", ")}`] : []),
+    ...(questions.length > 0 ? [`Repair questions: ${questions.join(", ")}`] : []),
+    ...(maintenance ? [`Admission closed: ${maintenance.reason} (${maintenance.phase})`] : []),
+  ];
   return {
     name: "box-migrations",
-    ok: pending.length === 0,
-    message:
-      pending.length === 0
-        ? "box migrations are up to date"
-        : `${String(pending.length)} pending migration(s): ${pending.map((m) => m.name).join(", ")}. The deploy sweep skips a box with a dirty tree; commit or stash, or run \`bbx migrate --apply\`.`,
+    ok: detail.length === 0,
+    message: detail.length > 0 ? `${detail.join(". ")}. Run \`bbx migrate --apply --repair\` to retry; dirty edits are preserved in Git recovery.` : "box migrations are up to date",
     severity: "warning",
   };
 }

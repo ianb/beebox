@@ -1,0 +1,84 @@
+---
+title: "History shows no trigger for procedure and trick commits, and its Workflow filter only matches pre-rename runs"
+workstream: history-trigger-trailers
+area: beebox
+filed-by: agent
+discovered-in: worktree-user-stories-refresh — user-story catalog verification
+priority: normal
+resolution: implemented
+---
+
+**Closed by `55eb699f4` (feat(history): one triggered-by axis over every trigger trailer),
+with a follow-up fix in `7ba8be1b1`.** New `beebox/src/shared/commit-trailers.ts` owns the
+trailer vocabulary end to end: readers in `CommitTimeline.tsx`/`CommitDetail-commit.tsx`
+now badge `Procedure`/`Step`/`Run-By` via `commitTriggers`/`commitStep`, `stripTrailers`
+no longer leaks them into the body, and the facet/grep axis (`lib/git-log.ts`
+`collectTrailerFacets`, `webapp/trpc/routers/history.ts` `buildGreps`) is keyed on the new
+kind-prefixed trigger ids rather than the retired `Workflow:` key — `Workflow:` folds into
+the `procedure` kind so pre-rename history still answers the filter. The user-story catalog
+recheck this issue asked for ran and cleared. One divergence from what the issue implies:
+writers (`Procedure:`/`Step:`/`Run-By:` trailer emission) were already correct and untouched;
+only the readers/facets/grep were behind. `Run-By` remains untested against real data — zero
+commits carry it in any local box, so that path is covered by fixture only.
+
+**What is wrong.** The history UI reads only two trigger conventions, and one of them is the retired name.
+
+- `CommitTimeline.tsx` (CommitRow, ~line 157) puts a badge and aria-label on a row from `trailers.Phase` and `trailers["Triggered-By"]` only. `CommitDetail-commit.tsx` adds `Session`, `Workflow` and the connector keys (`Pulled-By`/`Created-By`/`Fetched-By`/`Pushed-By`/`Sent-By`).
+- Procedure runs do not write `Triggered-By`. They write `Procedure: <name>` and `Step: <id>` (`core/procedure/engine.ts:163`, `core/procedure/engine-step.ts:152,184,272`, `core/procedure/engine-phase.ts:185`, `core/procedure/engine-orchestrate.ts:104`). Tricks write `Run-By: trick/<name>` (`cli/commands/trick.ts:42`). A grep over `beebox/src/frontend/src` finds no reader for `Procedure`, `Step` or `Run-By`.
+- The filter axis that would cover procedures is keyed on `Workflow:` — `getTrailerFacets` in `lib/git-log.ts:230` collects only that key, `webapp/trpc/routers/history.ts:42` greps `^Workflow: `, and `HistoryFilterBar.tsx:72` labels the control "Workflow". Nothing in `src` writes a `Workflow:` trailer any more; it is the name procedures had before the rename.
+
+**User-visible consequence.** In the timeline, a procedure or trick commit looks like a hand edit — no trigger badge, nothing in the aria-label — which is the exact distinction the History page exists to make. The Workflow filter is populated from history old enough to predate the rename, so it lists stale run names and silently cannot select any procedure run made since; a boxholder who wants "show me what that procedure run changed" has no filter for it. In the detail pane the procedure trailers appear only as leftover text in the commit body, because `stripTrailers` (`CommitDetail-commit.tsx:33`) strips `Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed` and not `Procedure`/`Step`/`Run-By`.
+
+**Files involved.**
+- Readers: `beebox/src/frontend/src/components/history/CommitTimeline.tsx`, `CommitDetail-commit.tsx`, `HistoryFilterBar.tsx`, `history-filter.ts`, `HistoryBrowser.tsx`, `HistoryViewCard.tsx`
+- Server/facets: `beebox/src/lib/git-log.ts` (`getTrailerFacets`), `beebox/src/webapp/trpc/routers/history.ts` (`buildGreps`)
+- Writers: `beebox/src/core/procedure/engine.ts`, `engine-step.ts`, `engine-phase.ts`, `engine-orchestrate.ts`, `beebox/src/cli/commands/trick.ts`, `tick-helpers.ts`, `wakeup-steps.ts`, `beebox/src/connectors/*`
+
+**How this was established.** Grepped every trailer writer in `beebox/src` and every trailer reader in `beebox/src/frontend/src`. Then counted trailers in the worktree's test box (`~/src/box-worktrees/user-stories-refresh/test1`): `git log --format='%(trailers:only,unfold)'` yields 1857 `Triggered-By`, 104 `Workflow`, 54 `Procedure`, 97 `Step`, 0 `Run-By`; every `Workflow:` commit has a `[workflow] …` subject (pre-rename) while current runs subject as `[procedure] …` and carry `Procedure:`. An independent browser pass over `/history` in the same box confirmed the working half (rows badged "triggered by bbx wakeup", session chip filtering to a run) and noted that rows without a `Triggered-By` — including procedure commits — show no badge at all.
+
+## Still true 2026-09-13 (survey, no code change)
+
+Re-checked every claim against current `main`, since the issue is three weeks old:
+
+- Readers: `CommitTimeline.tsx:158` and `CommitDetail-commit.tsx:105` still read
+  `Triggered-By` only; `CommitDetail-commit.tsx:33` still strips
+  `Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed`. A grep for
+  `Procedure`, `Step` or `Run-By` as trailer keys across `src/frontend/src`
+  returns nothing (the one `"Procedure"` hit is an unrelated Gmail-filter label).
+- Facet axis: still keyed `Workflow` in all three places —
+  `lib/git-log.ts:230`, `webapp/trpc/routers/history.ts:43`, and the control's
+  label in `HistoryFilterBar.tsx:75`.
+- Writers: still `Procedure:`/`Step:` (`engine.ts:175`,
+  `engine-step.ts:178`, `engine-phase.ts:233`, `engine-orchestrate.ts:132`) and
+  `Run-By: trick/<name>` (`cli/commands/trick.ts:42`). A grep for anything
+  writing a `Workflow:` trailer in `src/core`, `src/cli` or `src/connectors`
+  returns nothing, so that filter can still only match pre-rename history.
+
+`bin/issues similar --all` finds no live sibling: its nearest neighbours are
+closed issues from the same 2026-08-21 audit, whose fixes do not touch trailers.
+
+## Updating the user-story catalog
+
+This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+actually do, where every claim is checked against the source.
+
+**When you fix this, re-check that story so the catalog stops being wrong.** It is a
+short agent run over just the affected stories, not the full regeneration:
+
+```
+pnpm --dir beebox build:workflows   # the .mjs is generated
+
+Workflow({scriptPath: "beebox/dist/workflows/recheck.workflow.mjs",
+          args: {root: "<repo root>", date: "2026-08-21",
+                 ids: ["browse/see-which-changes-the-box-made-on-its-own-and"]}})
+
+pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts 2026-08-21
+pnpm exec tsx beebox/user-stories/pipeline/render.ts \
+  > beebox/user-stories/catalog/2026-08-21.md
+```
+
+The recheck is adversarial by design: it will not mark the story accurate just because
+this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
+before you call the fix done. Details in
+[the pipeline README](../../../beebox/user-stories/README.md).

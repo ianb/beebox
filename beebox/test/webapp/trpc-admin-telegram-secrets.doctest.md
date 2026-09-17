@@ -49,7 +49,7 @@ function caller(boxRoot) {
 ```ts
 const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
 process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const slug = await boxSlug(box.root);
 
 const setup = await caller(box.root).admin.telegramSetup({ botToken: "111111:placeholder-bot-token" });

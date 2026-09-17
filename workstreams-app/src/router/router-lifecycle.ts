@@ -141,10 +141,53 @@ export interface StoppingLifecycle {
 }
 
 /** `failed` — startup failed; stays in the map so the error page + retry work.
- *  `ensureRunning` won't auto-restart it; the retry endpoint clears it. */
+ *  The retry endpoint always clears it; `ensureRunning` additionally restarts it
+ *  on its own for a bounded number of `waitForHttp` failures (see
+ *  `retryDecision`). */
 export interface FailedLifecycle {
   readonly phase: "failed";
   readonly lastError: CapturedError;
+  /** Automatic restarts already spent on this worktree name. Copied from
+   *  `CoreState.retryAttempts`, which is the authority — a handle is
+   *  per-generation and a retry destroys the generation, so a count stored only
+   *  here would reset on the very event it is meant to bound. */
+  readonly attempts: number;
+  /** When an automatic restart becomes allowed, or `null` when this failure is
+   *  terminal: the wrong phase to retry, or the attempt budget spent. */
+  readonly retryAfter: number | null;
+}
+
+/** How many automatic restarts a load-induced startup failure gets before the
+ *  worktree parks for good. Nothing retries forever; a stranded terminal state
+ *  must stay visible. */
+export const MAX_AUTO_RETRIES = 3;
+
+/** Backoff before each automatic restart, indexed by attempts already spent. */
+export const RETRY_BACKOFF_MS = [2_000, 8_000, 30_000] as const;
+
+/**
+ * Whether a parked failure earns another automatic start, and when.
+ *
+ * ONLY `waitForHttp` retries. That is the phase a loaded machine produces — the
+ * router asked for a page and nothing answered in time — and `failStart` already
+ * recorded it. Every other phase is a statement about the worktree rather than
+ * about the host: `childExit` means a child died (a bad config, a syntax error,
+ * a stolen port), `spawn` and `pidStore.write` mean the start never got off the
+ * ground. Restarting those in a loop is exactly what `ensureRunning`'s parking
+ * comment was written to prevent — "a broken worktree should *look* broken".
+ *
+ * Pure, so the decision is unit-tested directly instead of through a start.
+ */
+export function retryDecision(input: {
+  phase: string;
+  attempts: number;
+  now: number;
+}): { retryAfter: number | null } {
+  const { phase, attempts, now } = input;
+  if (phase !== "waitForHttp") return { retryAfter: null };
+  const backoff = RETRY_BACKOFF_MS[attempts];
+  if (backoff === undefined) return { retryAfter: null };
+  return { retryAfter: now + backoff };
 }
 
 export type WorktreeLifecycle =

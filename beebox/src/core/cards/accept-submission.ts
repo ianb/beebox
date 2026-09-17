@@ -27,6 +27,7 @@ import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.j
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { parseCardText } from "../card-io.js";
 import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../cards/index.js";
+import { assertAnnexBox } from "../annex/assert-annex-box.js";
 
 export interface AcceptSubmissionInput {
   boxRoot: string;
@@ -91,6 +92,11 @@ async function removeTempDir(tempDir: string): Promise<void> {
 
 export async function acceptSubmission(input: AcceptSubmissionInput): Promise<AcceptSubmissionResult> {
   const { boxRoot, cardRel, tempDir, fileNames, manifest, eventBus, now } = input;
+  // The silent case. This path stages `[cardRel, batchDirRel]` — a DIRECTORY
+  // pathspec, which `git add` silently skips the ignored contents of, so on a
+  // box whose `.gitignore` hides assets the bytes were written, nothing was
+  // staged, and the call returned success.
+  await assertAnnexBox(boxRoot, "card submission");
   // Fail closed on a path that leaves the box, follows a symlink out of it,
   // or does not name a card: the client chose `cardRel`, and everything
   // below trusts it as a box path. Same fence as the file-write routes.

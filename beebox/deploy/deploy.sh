@@ -67,6 +67,7 @@ notify() {  # $1=title  $2=message
 deploy_exit() {
   local rc=$?
   trap - EXIT
+  if [[ -n "${REMOTE_SCRIPT:-}" ]]; then rm -f "$REMOTE_SCRIPT"; fi
   local held="${LOCK_HELD:-}"
   if [ -n "$held" ]; then
     rm -rf "${LOCK_FILE:-}"
@@ -391,11 +392,16 @@ echo "Building frontend..."
 echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
 (cd "$CHECKOUT/beebox" && node scripts/build-cli.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
-# the same way dist/ does. Any bbx activity on the server would rewrite it,
+# the same way dist/ does. Any bbx engine activity on the server would rewrite it,
 # but the per-box docs refresh below skips a dirty box, so build it here
 # rather than rely on that.
 echo "Building package reference docs (box-docs/)..."
 (cd "$CHECKOUT/beebox" && node --import tsx scripts/build-box-docs.ts)
+
+# Upload separately; activation below runs only after fleet admission drains.
+STAGE_DIR="${INSTALL_DIR}.deploy-stage"
+# shellcheck disable=SC2029
+ssh "$SSH_TARGET" "mkdir -p '$STAGE_DIR'"
 
 RSYNC_OPTS=(-az --delete
   # rsync runs as root over ssh, and -a preserves the sender's (local dev
@@ -427,7 +433,7 @@ RSYNC_OPTS=(-az --delete
   --exclude 'deploy/target.env'
   --exclude 'deploy/server-ip'
   --exclude 'deploy/.deploy-logs'
-  # pub-worker is a Cloudflare Worker deployed via `bbx pub setup` (wrangler), NOT
+  # pub-worker is a Cloudflare Worker deployed via `bbx engine pub setup` (wrangler), NOT
   # run on the box server. Excluding its dir makes it an absent workspace member
   # on prod, so the root `pnpm install --frozen-lockfile` skips its heavy CF
   # toolchain (workerd, wrangler) — same "partial workspace installs fine" path
@@ -449,7 +455,7 @@ for repo in personal-vibe-check agent-doctest beebox; do
     continue
   fi
   echo "Syncing $repo..."
-  rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$INSTALL_DIR/$repo/"
+  rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$STAGE_DIR/$repo/"
 done
 
 # Sync the workspace root itself, FROM THE BUILD CHECKOUT. With workspace deps,
@@ -463,8 +469,8 @@ rsync -az --no-owner --no-group \
   "$CHECKOUT/pnpm-workspace.yaml" \
   "$CHECKOUT/.npmrc" \
   "$CHECKOUT/pnpm-lock.yaml" \
-  "$SSH_TARGET:$INSTALL_DIR/"
-rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$INSTALL_DIR/patches/"
+  "$SSH_TARGET:$STAGE_DIR/"
+rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$STAGE_DIR/patches/"
 
 # --no-owner/--no-group above leave everything owned by root (the ssh
 # connection user) rather than the sender's uid — still wrong for `beebox`,
@@ -474,11 +480,37 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$INST
 echo "Fixing ownership..."
 # INSTALL_DIR must expand locally before the remote command runs.
 # shellcheck disable=SC2029
-ssh "$SSH_TARGET" "chown -R beebox:beebox $INSTALL_DIR"
+ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR"
+
+if [[ "$SKIP_RESTART" == true ]]; then
+  echo "Deploy staged at $STAGE_DIR; --skip-restart leaves the running installation unchanged."
+  exit 0
+fi
+
+# Collect the existing remote phases into one trusted script. The maintenance
+# controller remains alive on the server through activation, restart and health.
+REMOTE_SCRIPT=$(mktemp)
+queue_remote() {
+  local input="$1"; shift
+  printf '%q ' "$@" >> "$REMOTE_SCRIPT"
+  if [[ "$input" == stdin ]]; then
+    {
+      printf "<<'BBX_DEPLOY_BODY'\n"
+      cat
+      printf '\nBBX_DEPLOY_BODY\n'
+    } >> "$REMOTE_SCRIPT"
+  else
+    printf '\n' >> "$REMOTE_SCRIPT"
+  fi
+}
+printf 'set -euo pipefail\n' > "$REMOTE_SCRIPT"
+queue_remote command systemctl stop beebox-hub beebox-scheduler
+queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
+queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
-ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
+queue_remote stdin bash -s <<'REMOTE'
   set -e
   # Bootstrap pnpm on demand. corepack ships with Node 24; this is idempotent
   # and a no-op if pnpm is already on PATH.
@@ -523,7 +555,7 @@ ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
   # patch-package still runs via the root postinstall to patch eslint-config-agent.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
-  # The install competes for RAM with every running box's `bbx serve` +
+  # The install competes for RAM with every running box's `bbx engine serve` +
   # claude-agent-sdk subprocess on this single small server, and the kernel
   # OOM-kills it (exit 137) under a transient contention spike rather than a
   # permanent regression — a short backoff usually clears it. Retry only on
@@ -572,7 +604,7 @@ ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
-# package.json. `bbx init`/`box-packageify` scaffold a package.json declaring
+# package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
 # react/react-dom/typescript direct deps (view-metadata compilation needs a
 # real, box-owned react — see src/webapp/views/compiler.ts and
 # src/core/box/package.ts) but deliberately don't install them (Track F of
@@ -584,7 +616,7 @@ REMOTE
 # change independently — an agent `pnpm add`s a view dependency, or a fresh
 # `box-packageify` runs — between deploys.
 echo "Reconciling box package installs..."
-ssh "$SSH_TARGET" bash -s <<'REMOTE'
+queue_remote stdin bash -s <<'REMOTE'
   set -e
   for box in /home/beebox/boxes/*/; do
     pj="$box/package.json"
@@ -622,7 +654,7 @@ REMOTE
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
 echo "Pruning deploy package caches..."
-ssh "$SSH_TARGET" bash -s <<'CACHECLEAN'
+queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
 pnpm store prune
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune'
@@ -653,12 +685,12 @@ process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 ')
 # INSTALL_DIR is the locally configured remote deployment path.
 # shellcheck disable=SC2029
-ssh "$SSH_TARGET" "cat > $INSTALL_DIR/beebox/deploy-info.json" <<< "$DEPLOY_INFO"
+queue_remote stdin bash -c "cat > $INSTALL_DIR/beebox/deploy-info.json" <<< "$DEPLOY_INFO"
 
 # Append to deploy history (keep last 20 entries)
 # INSTALL_DIR is intentionally interpolated locally; remote variables are escaped below.
 # shellcheck disable=SC2087
-ssh "$SSH_TARGET" bash -s <<HISTEOF
+queue_remote stdin bash -s <<HISTEOF
   HIST_FILE="$INSTALL_DIR/beebox/deploy-history.json"
   if [[ -f "\$HIST_FILE" ]]; then
     # Prepend new entry, keep last 20
@@ -684,91 +716,20 @@ HISTEOF
 # gets command-not-found instead of the migration message.
 # INSTALL_DIR is the locally configured remote deployment path.
 # shellcheck disable=SC2029
-ssh "$SSH_TARGET" "ln -sf $INSTALL_DIR/beebox/bin/cb /usr/local/bin/cb"
+queue_remote command ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
-  # Give an active chat turn / running script a bounded chance to finish before
-  # we restart, so a deploy doesn't kill active work — and specifically doesn't
-  # interrupt a `git commit`, which is how a box ends up with a
-  # `.git/index.lock` nothing owns (`src/lib/git-stale-lock.ts`).
-  #
-  # Installed from the tree we just synced rather than trusted to be on the
-  # server already. It used to exist only as a heredoc in setup-server.sh, so a
-  # server provisioned before it was added had NO copy and every deploy skipped
-  # the wait entirely — silently, because the skip was best-effort.
-  # INSTALL_DIR is the locally configured remote deployment path.
-  # shellcheck disable=SC2029
-  ssh "$SSH_TARGET" "install -m 0755 $INSTALL_DIR/beebox/deploy/server-bin/bbx-wait-quiet /usr/local/bin/bbx-wait-quiet"
-
-  echo "Waiting for boxes to be at rest (best-effort)..."
-  ssh "$SSH_TARGET" /usr/local/bin/bbx-wait-quiet
-
-  # Converge each box onto the code that just shipped, in the at-rest window —
-  # after bbx-wait-quiet, before the restart brings box children back up. A box
-  # whose migrations are current prints nothing; anything else prints one line
-  # and the deploy continues. This never fails the deploy: a box that needs a
-  # human (dirty tree, agent-driven migration, hard failure) is a box to look
-  # at, not a reason to abandon a shipped release. Two steps per box, in order:
-  # `bbx migrate --sweep` (data shape) then `bbx docs refresh` (generated
-  # guidance). They own their own policy — see src/core/migration-sweep.ts and
-  # src/core/docs-refresh.ts.
-  echo "Converging boxes (migrations, generated docs)..."
-  ssh "$SSH_TARGET" bash -s <<'REMOTE'
+  echo "Converging boxes under maintenance..."
+  queue_remote stdin bash -s <<'REMOTE'
     for boxdir in /home/beebox/boxes/*/; do
-      name=$(basename "$boxdir")
-      # v3 (one-root) boxes carry the shape marker directly at their root —
-      # no nested content/ operational root to find. A box still on the
-      # retired v2 layout (marker under content/.beebox/box.json instead)
-      # gets a LOUD skip so its absence from this convergence step is
-      # visible, not silently missed — `bbx migrate` treats a manifest-less
-      # box as a human decision, and we don't attempt that migration here.
-      if [[ -f "${boxdir}.beebox/box.json" ]]; then
-        box="$boxdir"
-      elif [[ -f "${boxdir}content/.beebox/box.json" ]]; then
-        echo "  $name: still v2-shaped (content/ subdir) — needs bbx migrate, skipped"
-        continue
-      else
-        echo "  $name: no .beebox/box.json found (root or content/) — not a box, skipped"
-        continue
-      fi
-      # The path is passed as an ARGUMENT to `bash -lc`, never interpolated into
-      # the shell source it runs: a box directory name containing a quote would
-      # otherwise break — or escape — that string.
-      # `timeout` sits directly around `bbx`, inside the login shell, because
-      # this runs BEFORE the restart and health verification: a migrator that
-      # hangs would wedge the whole deploy in the at-rest window rather than
-      # just failing one box.
-      out=$(sudo -u beebox -H bash -lc \
-              'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx migrate --sweep' \
-              bbx-sweep "$box" 2>&1)
-      code=$?
-      [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — migrations left pending, retried next deploy"
-      [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
-
-      # Converge the box's GENERATED guidance the same way — agent docs, card
-      # rules, managed skills. Regeneration is otherwise activity-gated (a
-      # reactor cycle or a chat session start runs it), so a box nobody talks
-      # to keeps the previous engine's docs indefinitely. Runs after the sweep
-      # so it sees the tree the sweep left committed. Same shape as above:
-      # cache-gated (silent when current), skips a dirty box, never fails the
-      # deploy. Policy: src/core/docs-refresh.ts.
-      #
-      # Deliberately NOT gated on the sweep's exit code. Generated docs describe
-      # the engine that just shipped, and any chat or wakeup on that box would
-      # regenerate them anyway — so withholding the refresh from a box that
-      # needs a human for its migrations buys nothing and leaves that box on
-      # older guidance than every box someone happens to talk to.
-      out=$(sudo -u beebox -H bash -lc \
-              'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx docs refresh' \
-              bbx-docs-refresh "$box" 2>&1)
-      code=$?
-      [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — generated docs left stale, retried next deploy"
-      [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
+      [[ -e "$boxdir/.git" ]] || continue
+      # sudo normally drops this environment. Pass only the explicit fleet
+      # permits into the trusted nested migration command; no repair agents run.
+      sudo -u beebox -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
+        'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
+        bbx-sweep "$boxdir" || echo "  $boxdir: convergence requires recovery; box stays closed" >&2
     done
-    # Always succeed: `set -euo pipefail` in the outer script would otherwise
-    # abandon a shipped release because one box wants a human.
-    exit 0
 REMOTE
 
   # Reconfirm the systemd drop-ins before restarting.
@@ -784,21 +745,27 @@ REMOTE
   # daemon-reload only when something actually changed, so an unchanged deploy
   # stays quiet. The restart below then picks up whatever was reloaded.
   echo "Reconfirming systemd drop-ins..."
-  ssh "$SSH_TARGET" bash -s "$INSTALL_DIR" <<'REMOTE'
+  queue_remote stdin bash -s "$INSTALL_DIR" <<'REMOTE'
 set -euo pipefail
 install_dir="$1"
 changed=0
+# `all/` goes to every unit; `<unit>/` only to that one. The per-unit split
+# exists because ExecStart overrides are necessarily unit-specific — the hub and
+# the scheduler run different commands — and the old flat layout copied every
+# .conf into both.
 for unit in beebox-hub beebox-scheduler; do
   dir="/etc/systemd/system/$unit.service.d"
   mkdir -p "$dir"
-  for src in "$install_dir"/beebox/deploy/systemd/*.conf; do
-    [[ -e "$src" ]] || continue
-    dest="$dir/$(basename "$src")"
-    if ! cmp -s "$src" "$dest"; then
-      install -m 0644 "$src" "$dest"
-      echo "  $unit: installed $(basename "$src")"
-      changed=1
-    fi
+  for srcdir in "$install_dir/beebox/deploy/systemd/all" "$install_dir/beebox/deploy/systemd/$unit"; do
+    for src in "$srcdir"/*.conf; do
+      [[ -e "$src" ]] || continue
+      dest="$dir/$(basename "$src")"
+      if ! cmp -s "$src" "$dest"; then
+        install -m 0644 "$src" "$dest"
+        echo "  $unit: installed $(basename "$src")"
+        changed=1
+      fi
+    done
   done
 done
 if [[ $changed -eq 1 ]]; then
@@ -808,7 +775,7 @@ fi
 REMOTE
 
   echo "Restarting services..."
-  ssh "$SSH_TARGET" 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
+  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
@@ -833,7 +800,7 @@ REMOTE
   # wild. Catch a
   # "declared but not installed on this older box" gap at deploy, not at first use.
   echo "Verifying required external tools..."
-  ssh "$SSH_TARGET" bash -s <<'TOOLCHECK'
+  queue_remote stdin bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
     for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex fclones codex; do
@@ -856,7 +823,7 @@ REMOTE
 TOOLCHECK
 
   echo "Verifying hub health + box canary..."
-  ssh "$SSH_TARGET" bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
+  queue_remote stdin bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
     set -euo pipefail
     install_dir="$1"
     KEY=$(grep -E '^BBX_DIAG_API_KEY=' /home/beebox/.env 2>/dev/null | cut -d= -f2- || true)
@@ -948,6 +915,57 @@ TOOLCHECK
     echo "  SPA fallback OK: frontend build present ($(wc -c < "$spa_index") bytes)"
 HEALTHCHECK
 fi
+
+# The staged bundle supplies the controller even on the first gated deploy.
+# Existing dependencies are read-only until activation begins under the gate.
+rsync -az "$REMOTE_SCRIPT" "$SSH_TARGET:$STAGE_DIR/.activate-deploy.sh"
+rm -f "$REMOTE_SCRIPT"
+ssh -A "$SSH_TARGET" bash -s "$STAGE_DIR" "$INSTALL_DIR" <<'CONTROL'
+set -euo pipefail
+stage_dir="$1"
+install_dir="$2"
+# A new gate cannot observe work admitted by an older engine. The first
+# rollout therefore requires a deliberate quiet/stop of the legacy units;
+# an advisory activity probe alone cannot establish exclusion.
+# Either spelling counts: the verb moved to `bbx engine maintenance` when the
+# CLI split into the agent surface and everything else, so an engine installed
+# before that split answers the bare form and one installed after answers the
+# namespaced form. The question here is only "does the installed engine have a
+# maintenance gate at all" — asking with one spelling would read every deploy
+# after the split as a first rollout and demand the units be stopped by hand.
+installed_cli="$install_dir/beebox/dist/cli.mjs"
+has_maintenance_gate() {
+  timeout 30 node "$installed_cli" engine maintenance --help >/dev/null 2>&1 ||
+    timeout 30 node "$installed_cli" maintenance --help >/dev/null 2>&1
+}
+if [[ -d "$install_dir/beebox" ]] && ! has_maintenance_gate; then
+  for unit in beebox-hub beebox-scheduler; do
+    state=$(systemctl show "$unit" --property=ActiveState --value)
+    group=$(systemctl show "$unit" --property=ControlGroup --value)
+    if [[ "$state" != inactive && "$state" != failed ]] || \
+       [[ -n "$group" && ( ! -r "/sys/fs/cgroup$group/cgroup.events" || $(cat "/sys/fs/cgroup$group/cgroup.events") == *"populated 1"* ) ]]; then
+      echo "First maintenance rollout: $unit or its child processes are still active." >&2
+      echo "Let existing box work finish, stop beebox-hub and beebox-scheduler, verify their control groups are empty, then retry this deploy. Uploaded artifacts remain staged." >&2
+      exit 1
+    fi
+  done
+fi
+if [[ ! -e "$stage_dir/node_modules" ]]; then
+  if [[ -d "$install_dir/node_modules" ]]; then
+    ln -s "$install_dir/node_modules" "$stage_dir/node_modules"
+  else
+    (cd "$stage_dir" && HUSKY=0 CI=true pnpm install --frozen-lockfile)
+  fi
+fi
+boxes=()
+for box in /home/beebox/boxes/*/; do
+  [[ -e "$box/.git" ]] && boxes+=(--box "$box")
+done
+set -a
+source /home/beebox/.env
+set +a
+node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh"
+CONTROL
 
 echo "Deploy complete."
 # Truthful "what is actually live" marker, written ONLY here — past the upload,

@@ -43,8 +43,13 @@ Request body (JSON): `{ "hashes": ["<sha256>", …] }` — batch, ≤500 entries
 Response `200` (JSON):
 
 ```json
-{ "states": { "<sha256>": { "state": "unknown" }, "<sha256>": { "state": "rejected", "reason": "…" } } }
+{ "contractVersion": 1,
+  "states": { "<sha256>": { "state": "unknown" }, "<sha256>": { "state": "rejected", "reason": "…" } } }
 ```
+
+`contractVersion` is the box's own contract version (see "Client identity").
+It is a sibling of `states`, and a client that does not know about it ignores
+it.
 
 Per-hash `state`:
 
@@ -82,6 +87,9 @@ Headers:
 |---|---|---|
 | `X-Upload-Filename` | yes | original filename (basename only; server sanitizes) |
 | `X-Scan-Profile` | no | free-text scanner profile name (≤200 chars), recorded as provenance |
+| `X-Scan-Contract` | no | the client's contract version (integer) — see "Client identity" |
+| `X-Scan-Client-Build` | no | the client's build revision, or `source` for a checkout |
+| `X-Scan-Client-Built-At` | no | ISO 8601 time the client bundle was built |
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
@@ -138,8 +146,117 @@ if identity changed. Disposition only after `accepted`/`duplicate` on PUT or
 `pending`/`imported` from check. `rejected` files are never moved or
 deleted.
 
+## Client identity
+
+The uploader is a stand-alone package that never updates itself: a copied
+`dist/scan-uploader.mjs` sits at whatever revision it was built from until
+somebody copies a new one over it. So it volunteers who it is, and the box
+reports an uploader that has fallen behind.
+
+**`SCAN_CONTRACT_VERSION`** is one monotonic integer, spelled once on each side
+(`beebox/src/core/scan/contract-version.ts`,
+`scan-uploader/src/contract-version.ts`). The client sends it as
+`X-Scan-Contract`; the box returns its own as `contractVersion` on the check
+response; the client compares them every sweep and reports which side is
+behind.
+
+### When to bump `SCAN_CONTRACT_VERSION`
+
+**The test: would a client built before this change now do the wrong thing, or
+fail to do a right thing, even though it still parses every response?** If yes,
+bump. The version exists for exactly the changes that do *not* announce
+themselves — a client that can no longer parse the wire already throws a
+protocol error and needs no version to make that visible.
+
+Bump for:
+
+| Change | Why it is a bump |
+|---|---|
+| A client obligation changes — the settle window, the identity snapshot, restat-before-disposition, or which responses permit a disposition | These live only in the client. An old client applies the old rule to a real scan, and the rule decides whether the only copy of a file is moved to the Trash. |
+| A check `state` is added, removed, or changes what it means for the client | An unknown state throws, so *adding* one is loud — but redefining an existing one is silent. Treat the whole vocabulary as versioned. |
+| A response status stops meaning what the client branches on (e.g. `422 hash-mismatch` becoming non-retryable) | The client's switch still compiles and now does the wrong thing. |
+| A limit or requirement gets stricter than a client built before the change **can comply with** — lowering the 500-hash batch cap below what it chunks to, or the 50 MB file cap below what it will send | The old client keeps sending what used to be legal and every such request now fails. |
+| Hash algorithm, hash encoding, or a route's path shape | Silent mismatch, not a parse error. |
+
+Do **not** bump for:
+
+| Change | Why it is not |
+|---|---|
+| A new optional request header, or a new response field an older client ignores | Additive in both directions; `contractVersion` itself shipped this way. |
+| Anything server-internal the client cannot observe — quarantine layout, promote debounce or GC timing, question-card wording, the upload ledger's shape | The client's behaviour is unchanged, and a bump here trains people to ignore bumps. |
+| Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
+| Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
+| A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
+| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
+
+The row above is the one to read carefully, because it is where a plausible
+reading goes wrong: the question is never "does this touch a limit or a header
+the contract mentions", it is **"can a client built before this change still do
+the right thing"**. Go and read the client's handling before deciding.
+
+**When it is genuinely unclear, bump.** The cost of a needless bump is one
+spurious "out of date" line telling someone to re-copy a file they could have
+kept. The cost of a missed bump is a stale client reported as current, which is
+worse than having no version at all, because it answers the question wrongly
+rather than not at all. Nothing can test that a human bumped this, so the bump
+is part of the change discipline below rather than a separate obligation.
+
+Mechanically, a bump is: `+1` to **both** constants in the same change (they
+are two spellings of one number, never per-side versions), this document, and
+the route doctests. Bumping does not refuse anything — an old client keeps
+uploading and starts being reported. And never bump the build stamp: it is a
+build artifact, not a hand-maintained number.
+
+### Adding something the client must now send
+
+A bump reports; it never refuses. But a change that makes the server **require**
+something new — a new mandatory header, a stricter body shape — refuses on its
+own, and every copied bundle in the field fails until somebody walks to that
+machine and copies a new file over. Nothing here auto-updates. So a bump is not
+sufficient for this shape of change, and the ordering is part of the change:
+
+1. Ship the server side **accepting but not requiring** it, and the client side
+   sending it. Verify-if-present; a missing value stays legal.
+2. Wait until every uploader has actually been re-copied. The box can tell you:
+   the `scan-uploaders` health check reports each uploader's build, so "have
+   they all been updated" is a question with an answer rather than a guess.
+3. Only then make it mandatory — and bump again, because *that* is the change
+   that alters what a correct client must do.
+
+Collapsing this into one step is the mistake, and it fails in the field rather
+than in a test: the doctests exercise a current client against a current box,
+which is the one pairing that cannot show the breakage.
+
+**The build stamp** (`X-Scan-Client-Build`, `X-Scan-Client-Built-At`) answers a
+different question: not "does this client still speak the protocol" but "how
+old is it". A client can be current on the contract and still be missing
+features. A checkout sends `source`, because it runs current source on every
+sweep and cannot drift; only a copied bundle can. The box records both on the
+scan token's record and compares the build time against its own deploy time —
+two timestamps from the same monorepo, which is ordered in a way comparing git
+revisions could not be.
+
+All three request headers ride **both** routes (the table above lists them
+under PUT, but the check request sends them too), so a box that only ever sees
+uploads still learns what is talking to it.
+
+**Neither is a credential and neither gates anything.** The box never refuses
+an old client: a contract change that genuinely breaks a client already fails
+loudly at parse (an unknown `state` or an unexpected status is a protocol
+error), and refusing a client that still works would strand scans on the
+laptop with nothing to show for it. A box reporting no `contractVersion`, and a
+client sending no identity headers, both mean "no opinion" — never "drifted".
+Every one of these fields is additive over a parser that ignores unknown keys
+and unknown headers, in both directions, so no flag day is needed.
+
+Note the prefix: these must **not** be named `x-bbx-*`. The hub deletes every
+client-supplied header in that namespace before it reaches a box (its spoof
+wall), so such a header would silently never arrive.
+
 ## Change discipline
 
 Any change to routes, headers, states, statuses, limits, or hashing updates
 this doc, both breadcrumbed implementations, and the route doctests in the
-same change.
+same change. A change that alters the client obligations, the state vocabulary,
+or a route's shape also bumps `SCAN_CONTRACT_VERSION` on both sides (see
+"Client identity") — that bump is part of this same change, not a follow-up.

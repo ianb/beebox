@@ -5,39 +5,33 @@
  * `MIGRATIONS` list in `src/core/migrations.ts`. Runs any pending
  * migrations in order, appending a manifest entry after each success.
  *
- * No auto-commit: the migrators leave their changes (plus the manifest
- * update) in the working tree. The user reviews and commits, normally
- * with `git commit -m "Apply migration X"`.
+ * Manual and unattended application share the recovery-backed core runner.
  */
 
+import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
-import { Command } from "commander";
-import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
-import { detectBoxTarget } from "../../core/box/package.js";
+import { runMigrationProcess } from "../../core/migration-process.js";
+import { Command, Option } from "commander";
+import { findBoxRoot, NotInBoxError, getBoxDir } from "../../lib/paths.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,
-  isProcedureMigration,
   type Migration,
   type ManifestEntry,
 } from "../../core/migrations.js";
+import { installProcedures, installGuides } from "../../core/box/index.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getStatus, stageAll, commit } from "../../lib/git.js";
-import { errorMessage } from "../../lib/error-guards.js";
 import {
   appendManifestEntry,
   computePending,
   readManifest,
-  runMigrationScript,
   writeManifest,
 } from "../../core/migration-run.js";
+import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
-import { INCONCLUSIVE_EXIT_CODE } from "../../shared/inconclusive.js";
 import { assertNever } from "../../lib/invariant.js";
-import { findV2Box, runBootstrap } from "./migrate-bootstrap.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");
@@ -96,24 +90,11 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
   if (!hasGate) throw new ProcedureGateError(args.procedure);
 }
 
-/** Fully provision the box (`bbx init`) before migrating. */
-function runInit(boxRoot: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(BBX_BIN, ["init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
-    child.on("error", reject);
-    child.on("close", (code) => resolve(code ?? 1));
-  });
-}
-
 /** Run an agent-applied (procedure) migration by delegating to `bbx procedure run`. */
-function runProcedure(args: { procedure: string; boxRoot: string }): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(BBX_BIN, ["procedure", "run", args.procedure], {
-      cwd: args.boxRoot,
-      stdio: "inherit",
-    });
-    child.on("error", reject);
-    child.on("close", (code) => resolve(code ?? 1));
+function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined }): Promise<number> {
+  return runMigrationProcess({
+    file: BBX_BIN, args: ["procedure", "run", args.procedure], cwd: args.boxRoot,
+    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal,
   });
 }
 
@@ -139,6 +120,11 @@ interface MigrateOptions {
   markAllApplied?: boolean;
   markApplied?: string;
   sweep?: boolean;
+  json?: boolean;
+  repair?: boolean;
+  withinMaintenance?: boolean;
+  prepare?: boolean;
+  yield?: boolean;
 }
 
 /**
@@ -146,20 +132,46 @@ interface MigrateOptions {
  *
  * Quiet on the ordinary path — a box with nothing pending prints nothing, since
  * this runs across every box on every deploy and routine success is noise. The
- * exit code distinguishes "a human needs to look" (non-zero) from "converged or
- * legitimately nothing to do" (zero), so `deploy.sh` can report without failing
- * the deploy over one box.
+ * exit code distinguishes blocked maintenance (non-zero) from a box ready to
+ * serve (zero). An applied migration with an open question still serves; JSON
+ * status and the warning retain that human follow-up.
  */
-async function runSweep(boxRoot: string): Promise<number> {
-  const result: SweepResult = await sweepMigrations({ boxRoot });
+async function runSweep(boxRoot: string, options: MigrateOptions): Promise<number> {
+  const result: SweepResult = await sweepMigrations({
+    boxRoot,
+    refresh: true,
+    json: options.json,
+    repair: options.repair ?? options.apply,
+    withinMaintenance: options.withinMaintenance,
+    prepare: options.prepare,
+    yield: options.yield,
+    runProcedure: options.apply ? async (procedure, signal) => {
+      await installProcedures(boxRoot);
+      await installGuides(boxRoot);
+      await assertProcedureHasGate({ procedure, boxRoot });
+      return runProcedure({ procedure, boxRoot, json: options.json, signal });
+    } : undefined,
+  });
+  if (options.json) {
+    console.log(JSON.stringify(result));
+    return ["current", "applied", "attention", "deferred"].includes(result.status) ? 0 : 1;
+  }
   switch (result.status) {
+    case "attention":
+      reportApplied(result.applied);
+      console.warn(`Migration questions need attention: ${result.questions.join(", ")}`);
+      return 0;
     case "current":
+      return 0;
+    case "deferred":
+      console.log(`Deferred: the box is in use (${describeWorkHolders(result.holders)}); the next scheduled pass retries.`);
       return 0;
     case "no-manifest":
       console.warn(`No migration manifest at ${MANIFEST_PATH}; not migrating. Seed it with \`bbx migrate --mark-all-applied\` after confirming the box is up to date.`);
       return 1;
-    case "skipped-dirty":
-      console.warn(`Working tree is not clean; skipped ${String(result.pending.length)} pending migration(s): ${result.pending.join(", ")}. Commit or stash, and the next deploy will apply them.`);
+    case "deferred-repair":
+      reportApplied(result.applied);
+      console.warn(`Migration "${result.failed}" needs repair; later migrations remain pending. Recover input from ${result.recoveryRef}.`);
       return 1;
     case "needs-procedure":
       reportApplied(result.applied);
@@ -209,33 +221,17 @@ async function handleMarkApplied(boxRoot: string, name: string): Promise<void> {
 }
 
 /**
- * Resolve the box's top-level directory, or run (and fully handle) the v2
- * bootstrap conversion and return `null` when this turns out to be a v2 box.
- * Split out of the action purely to keep its complexity down.
+ * Resolve the box's top-level directory.
+ *
+ * This used to branch: a v2 box kept its marker nested at `content/`, where
+ * `findBoxRoot` does not look, so a miss here meant "maybe v2" and ran the
+ * bootstrap conversion. The v2 population is empty and that conversion is
+ * deleted, so a miss is now simply a miss.
  */
-async function resolveTopPathOrBootstrap(options: MigrateOptions): Promise<string | null> {
-  let topPath: string;
-  try {
-    topPath = await requireBoxRoot();
-  } catch (e) {
-    // No marker found walking up from cwd at all — the common case for a v2
-    // box invoked from its package root (the marker is nested at content/,
-    // which findBoxRoot doesn't look inside). Try the v2 probe before giving up.
-    const v2Box = await findV2Box(null);
-    if (v2Box === null) throw e;
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-
-  // requireBoxRoot found A marker, but it may be the nested v2 one (e.g.
-  // invoked from inside content/ itself) — the normal manifest-driven flow
-  // below can't read a v2 box's manifest, so check for that case here.
-  const v2Box = await findV2Box(topPath);
-  if (v2Box !== null) {
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-  return topPath;
+async function resolveTopPath(): Promise<string> {
+  const found = await findBoxRoot(process.cwd());
+  if (!found) throw new NotInBoxError();
+  return found;
 }
 
 export const migrateCommand = new Command("migrate")
@@ -244,7 +240,12 @@ export const migrateCommand = new Command("migrate")
   .option("--status", "Show applied + pending lists (default when no flag given)")
   .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `bbx init`.")
   .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
-  .option("--sweep", "Unattended mode, for `deploy.sh`: apply pending SCRIPT migrations and commit each one. Skips a dirty box, stops at a procedure-kind migration, prints nothing when the box is already current. Exits non-zero only when something needs a human.")
+  .option("--sweep", "Apply and commit pending scripts with Git recovery; defer agent work")
+  .addOption(new Option("--within-maintenance", "Join the calling maintenance transaction").hideHelp())
+  .addOption(new Option("--prepare", "Declare startup readiness after final convergence").hideHelp())
+  .option("--repair", "Allow one bounded agent repair after migration failure")
+  .option("--yield", "Defer instead of draining when the box has live work (scheduled passes)")
+  .option("--json", "Report the application result as JSON")
   .action(async (options: MigrateOptions) => {
     // `topPath` is the stable top-level directory `requireBoxRoot` found —
     // it never moves. `boxRoot` (the operational root) is re-resolved from it
@@ -253,17 +254,25 @@ export const migrateCommand = new Command("migrate")
     // re-resolution stays as a safety net even though no current migration
     // moves the operational root. A v2 box is fully handled (and reported)
     // inside the resolver, which returns null for that case.
-    const topPath = await resolveTopPathOrBootstrap(options);
-    if (topPath === null) return;
+    if (options.status && options.json) {
+      const root = await findBoxRoot(process.cwd());
+      if (!root) throw new NotInBoxError();
+      const manifest = await readManifest(root);
+      console.log(JSON.stringify({ status: "status", manifest: manifest !== null,
+        pending: manifest === null ? [] : computePending(manifest).map((migration) => migration.name),
+        questions: await migrationQuestions(root) }));
+      return;
+    }
+    const boxRoot = await resolveTopPath();
 
-    let boxRoot = topPath;
-
-    if (options.sweep === true) {
-      process.exit(await runSweep(boxRoot));
+    if (options.sweep === true || (options.apply === true && options.status !== true)) {
+      process.exitCode = await runSweep(boxRoot, options);
+      return;
     }
 
     if (options.markApplied !== undefined) {
-      await handleMarkApplied(boxRoot, options.markApplied);
+      const name = options.markApplied;
+      await withBoxWork({ boxRoot, reason: "mark applied" }, () => handleMarkApplied(boxRoot, name));
       return;
     }
 
@@ -280,7 +289,7 @@ export const migrateCommand = new Command("migrate")
         name: m.name,
         "applied-at": now,
       }));
-      await writeManifest(boxRoot, entries);
+      await withBoxWork({ boxRoot, reason: "mark all applied" }, () => writeManifest(boxRoot, entries));
       console.log(`Wrote ${String(entries.length)} entries to ${MANIFEST_PATH} (no migrations actually ran).`);
       return;
     }
@@ -299,108 +308,4 @@ export const migrateCommand = new Command("migrate")
       return;
     }
 
-    if (pending.length === 0) {
-      console.log("Nothing to do — manifest is up to date.");
-      return;
-    }
-
-    // Require a clean tree before migrating. `bbx init` (below) commits its
-    // provisioning output so the queue starts clean, and several migrators
-    // (e.g. `attachments`) refuse to run against a dirty tree. Checking up
-    // front means init's commit captures exactly what init produced — not any
-    // of the user's uncommitted work — and keeps the migration's own changes
-    // reviewable rather than tangled with pre-existing edits.
-    const startStatus = await getStatus(boxRoot);
-    if (!startStatus.clean) {
-      console.error("Working tree is not clean. Commit or stash your changes before migrating.");
-      process.exit(1);
-    }
-
-    // Fully provision the box before migrating. A migration can depend on any
-    // provisioned state — a procedure-kind migration needs its procedure card in
-    // _config/procedures/, but updated rules, guides, schemas, or briefing may
-    // matter too — and running one against a partially-updated box risks the
-    // silent-inconsistency class this whole discipline guards against. `bbx init`
-    // is the canonical, complete provisioning (idempotent — a current box is a
-    // near-no-op). Its template-sync commit is its own; the migration's data
-    // changes still land uncommitted for review.
-    console.log("Provisioning the box (bbx init) before migrating…\n");
-    const initCode = await runInit(boxRoot);
-    if (initCode !== 0) {
-      console.error(`\nbbx init failed (exit ${String(initCode)}); not migrating. Fix provisioning first.`);
-      process.exit(1);
-    }
-    console.log("");
-
-    // Commit init's provisioning output so the queue starts from a clean tree.
-    // The tree was clean before init (checked above), so this commits exactly
-    // what init produced. The migrations' own data changes still land
-    // uncommitted afterward, for review.
-    const afterInit = await getStatus(boxRoot);
-    if (!afterInit.clean) {
-      await stageAll(boxRoot);
-      await commit(boxRoot, { message: "bbx init provisioning (before migration)" });
-      console.log("Committed provisioning changes.\n");
-    }
-
-    console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
-    // Exit-code convention shared by the harness and every migrator: 2 means
-    // the migration ran but some individual cards couldn't be converted (left
-    // unchanged) — a soft, per-card failure; 1 (or any other non-zero) means a
-    // hard/precondition failure that should stop the sweep. A single malformed
-    // card in a large box must not halt the whole migration, so a soft failure
-    // records the migration as applied and continues; the unconverted cards are
-    // printed above and surfaced by `bbx validate` for manual cleanup.
-    const softFailures: string[] = [];
-    for (const m of pending) {
-      let code: number;
-      if (isProcedureMigration(m)) {
-        console.log(`=== ${m.name} (procedure: ${m.procedure}) ===`);
-        try {
-          await assertProcedureHasGate({ procedure: m.procedure, boxRoot });
-        } catch (e) {
-          console.error(`\n${errorMessage(e)}`);
-          process.exit(1);
-        }
-        code = await runProcedure({ procedure: m.procedure, boxRoot });
-      } else {
-        console.log(`=== ${m.name} (${m.script}) ===`);
-        code = await runMigrationScript({ script: m.script, boxRoot });
-      }
-      // A procedure migration whose work ran but whose review reached no
-      // verdict is neither applied nor failed. Recording it as applied would
-      // retire the migration on an unread check, so the manifest is left
-      // alone and the sweep stops — nothing after it can assume this one
-      // landed. Re-run once the run card's review question is answered.
-      if (code === INCONCLUSIVE_EXIT_CODE) {
-        console.error(
-          `\nMigration "${m.name}" ran but its check reached no verdict (exit ${String(code)}). The work completed and is committed; nothing judged it. Manifest NOT updated for this entry, and subsequent migrations were not run — read the run card under _bookkeeping/procedure/runs/, then re-run \`bbx migrate\`.`,
-        );
-        process.exit(code);
-      }
-      if (code !== 0 && code !== 2) {
-        console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
-        process.exit(code);
-      }
-      // Re-derive the operational root from the stable top-level path before
-      // touching the manifest, so the entry (and any FURTHER migration in this
-      // same pass) targets the box's current location. A no-op today (no
-      // migration moves the box), but retained as a safety net — the retired
-      // `box-packageify` migration used to relocate legacy → v2 here.
-      boxRoot = (await detectBoxTarget(topPath)).boxRoot;
-      await appendManifestEntry(boxRoot, { name: m.name, "applied-at": new Date().toISOString() });
-      if (code === 2) {
-        softFailures.push(m.name);
-        console.log(`⚠ ${m.name} applied with per-card failures (see above); continuing.\n`);
-      } else {
-        console.log(`✓ ${m.name} applied and recorded.\n`);
-      }
-    }
-    if (softFailures.length > 0) {
-      console.log(
-        `All pending migrations ran. ${String(softFailures.length)} had per-card failures (some cards left unconverted): ${softFailures.join(", ")}.\nRun \`bbx validate\` to see the affected cards.`,
-      );
-    } else {
-      console.log("All pending migrations applied.");
-    }
   });

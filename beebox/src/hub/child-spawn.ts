@@ -8,9 +8,12 @@
  * duplicated here.
  */
 
+import getPorts from "get-port";
+import { acquireBoxStartup } from "../lib/box-maintenance.js";
+import { buildChildEnv } from "./child-env.js";
 import * as path from "node:path";
 import { execa, type ResultPromise } from "execa";
-import { type BoxShape } from "../lib/box-shape.js";
+import { type BoxShape, getBoxShape, requireBoxRoot } from "../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { fileExists } from "../lib/file-exists.js";
 import { waitForHttp } from "./child-process-utils.js";
@@ -38,9 +41,11 @@ export function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
   return execa(params.bbxBinary, params.args, {
     cwd: params.cwd,
     env: params.env,
+    extendEnv: false,
     stdio: ["ignore", "pipe", "pipe"],
     detached: true,
     cleanup: true,
+    ipc: true,
   }) as ChildProc;
 }
 
@@ -53,7 +58,12 @@ export type CheckReadyFn = (params: { port: number; label: string }) => Promise<
 const READY_TIMEOUT_MS = 30_000;
 
 export function defaultCheckReady(params: { port: number; label: string }): Promise<void> {
-  return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
+  const key = process.env.BBX_DIAG_API_KEY;
+  return waitForHttp({
+    port: params.port, reqPath: key ? "/healthz" : "/api/build-info",
+    timeoutMs: READY_TIMEOUT_MS, label: params.label,
+    ...(key ? { headers: { authorization: `Bearer ${key}` } } : {}),
+  });
 }
 
 /** The box's own installed `bbx` when present, else the running engine's own
@@ -62,4 +72,20 @@ export async function resolveBbxBinary(shape: BoxShape): Promise<string> {
   const ownBin = path.join(shape.boxRoot, "node_modules", ".bin", "bbx");
   if (await fileExists(ownBin)) return ownBin;
   return path.join(PACKAGE_ROOT, "bin", "bbx");
+}
+
+/** Admit resolution before spawning; the child independently admits startup. */
+export async function spawnBoxChild(args: {
+  root: string; slug: string; hubSecret: string; spawn: SpawnChildFn;
+}): Promise<{ child: ChildProc; port: number; boxRoot: string }> {
+  const startup = await acquireBoxStartup(args.root);
+  let boxRoot: string;
+  try { boxRoot = await startup.run(() => requireBoxRoot(args.root)); }
+  finally { await startup.release(); }
+  const shape = await getBoxShape(boxRoot);
+  const bbxBinary = await resolveBbxBinary(shape);
+  const port = await getPorts();
+  const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { BBX_BIN: bbxBinary, BBX_HUB_SECRET: args.hubSecret } });
+  const child = args.spawn({ bbxBinary, args: ["engine", "serve", boxRoot, "--slug", args.slug, "--port", String(port)], cwd: shape.boxRoot, env });
+  return { child, port, boxRoot };
 }

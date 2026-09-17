@@ -1,5 +1,11 @@
 # Git-annex conversion report — 2026-08-01
 
+> **⚠ Also superseded on the scheme itself** (full-embrace-annex, 2026-09-14).
+> Beyond the runbook warning below: this report describes converting boxes
+> *from* the manifest scheme, and that scheme is now deleted along with
+> `bbx attachments to-annex`. No box can be in the pre-conversion state this
+> report addresses. Current model: [`../assets.md`](../assets.md).
+
 > **Historical only. Do not run this cutover procedure as a current runbook.**
 > This report preserves evidence and commands recorded during the 2026-07-31
 > and 2026-08-01 conversion. It has not been revalidated against the present

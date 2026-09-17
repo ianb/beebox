@@ -6,6 +6,13 @@ issues: []
 ---
 # Bulk file upload
 
+> **⚠ Its asset-manifest half is retired** (full-embrace-annex, 2026-09-14).
+> `bulk-upload/prepare.ts` no longer writes a `manifest.json` or reads one back,
+> so the manifest-on-disk boundary, the corrupt-manifest handling, and the
+> `docs/asset-manifests.md` reference below all describe code that is gone. The
+> batch now stages its blobs and git-annex records their hashes. The rest of the
+> upload design is live. Current model: [`assets.md`](../assets.md).
+
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the
 bytes into a durable landing spot; the **chat agent** does the actual filing,

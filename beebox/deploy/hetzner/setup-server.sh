@@ -5,7 +5,7 @@
 # container flow in docs/docker-install.md.
 #
 # KNOWN GAP: this still generates the pre-hub `beebox-serve` unit (one process
-# serving every box) rather than `bbx hub` plus per-box units. The live server
+# serving every box) rather than `bbx engine hub` plus per-box units. The live server
 # was switched to the hub by hand; a fresh run of this needs those steps
 # repeated. deploy/README.md has the detail. It also never re-runs on deploy,
 # so nginx and unit changes here reach a live server only on a re-provision
@@ -30,7 +30,7 @@ apt-get update -qq
 # qpdf is the scan-upload PDF structure validator (src/core/scan/validate.ts).
 # Without it the scan routes refuse PDFs with a 503 rather than quarantine
 # unvalidated bytes, so it is a hard requirement, not a nice-to-have.
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg
+apt-get install -y -qq git git-lfs git-annex curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg
 
 # fclones — duplicate-file finder the box agent may reach for (reports groups
 # of byte-identical files; never deletes unless told). Not in Ubuntu's apt;
@@ -194,7 +194,7 @@ echo "Creating test box at $BOX_DIR..."
 su - "$BBX_USER" -c "mkdir -p '$BOX_DIR'"
 cd "$BOX_DIR"
 if [[ ! -f .beebox/box.json ]]; then
-  su - "$BBX_USER" -c "cd '$BOX_DIR' && git init && bbx init . && git add -A && git commit -m 'Initial box setup'"
+  su - "$BBX_USER" -c "cd '$BOX_DIR' && git init && bbx engine init . && git add -A && git commit -m 'Initial box setup'"
 fi
 
 # ── Environment file ────────────────────────────────────────────────
@@ -210,8 +210,8 @@ PUBLIC_URL=https://box.example.com
 PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 # Connector credentials do NOT go here. They live in the machine secret store:
-#   bbx secrets set <name>      (mistral, deepgram, openai, openai-thinking, gemini, ...)
-#   bbx secrets grant <box> <name>
+#   bbx engine secrets set <name>      (mistral, deepgram, openai, openai-thinking, gemini, ...)
+#   bbx engine secrets grant <box> <name>
 # See docs/secrets.md.
 
 # Optional — Google sign-in for the fleet login surface. This pair IS env
@@ -251,7 +251,7 @@ After=network.target
 Type=simple
 User=$BBX_USER
 Group=$BBX_USER
-ExecStart=/usr/local/bin/bbx hub
+ExecStart=/usr/local/bin/bbx engine hub
 WorkingDirectory=$BBX_HOME
 EnvironmentFile=$BBX_HOME/.env
 KillMode=mixed
@@ -267,7 +267,7 @@ EOF
 # Register all existing boxes in the manifest used by both serve and
 # scheduler. Idempotent — re-runs are safe.
 for box in $BOX_DIRS; do
-  su - "$BBX_USER" -c "bbx boxes add '$box'" 2>/dev/null || true
+  su - "$BBX_USER" -c "bbx engine boxes add '$box'" 2>/dev/null || true
 done
 
 cat > /etc/systemd/system/beebox-scheduler.service <<EOF
@@ -279,7 +279,7 @@ After=network.target
 Type=simple
 User=$BBX_USER
 Group=$BBX_USER
-ExecStart=/usr/local/bin/bbx scheduler start
+ExecStart=/usr/local/bin/bbx engine scheduler start
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$BBX_HOME/.env
 KillMode=mixed

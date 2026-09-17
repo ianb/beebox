@@ -4,7 +4,7 @@
  * Git is the state engine - a change hasn't "happened" until it's committed.
  *
  * The log-history/facet sub-feature lives in `git-log.ts`, trailer parsing +
- * the trailer-key vocabulary in `git-trailers.ts`, and shared error/retry
+ * the trailer-key vocabulary in `shared/commit-trailers.ts`, and shared error/retry
  * internals in `git-internal.ts`. This file re-exports the public surface of
  * those siblings so callers keep importing everything from "lib/git".
  *
@@ -24,6 +24,7 @@
  * need one.
  */
 
+import { boxWorkEnvironment } from "./box-maintenance.js";
 import { simpleGit, CleanOptions } from "simple-git";
 
 import {
@@ -41,13 +42,8 @@ import { inspectIndexLock, recoverStaleIndexLock } from "./git-stale-lock.js";
 import { sleep } from "./sleep.js";
 import { errorMessage } from "./error-guards.js";
 import type { GitLogFormat } from "./git-internal.js";
-import { parseTrailers } from "./git-trailers.js";
+import { parseTrailers } from "../shared/commit-trailers.js";
 
-export {
-  CONNECTOR_TRAILER_KEYS,
-  TOUCHPOINT_TRAILER_KEYS,
-  FEEDBACK_TRAILER_KEYS,
-} from "./git-trailers.js";
 export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
@@ -303,13 +299,25 @@ export async function stageAll(boxRoot: string): Promise<void> {
  * @param options - Commit options
  * @returns The commit hash
  */
+/** Preserve hooks/tooling while excluding the override keys blocked by simple-git's parseEnv policy. */
+function commitEnvironment(): NodeJS.ProcessEnv {
+  const blocked = new Set([
+    "editor", "visual", "git_askpass", "git_config_global", "git_config_system",
+    "git_config_count", "git_config", "git_editor", "git_exec_path", "git_external_diff",
+    "git_pager", "git_proxy_command", "git_template_dir", "git_sequence_editor",
+    "git_ssh", "git_ssh_command", "pager", "prefix", "ssh_askpass",
+  ]);
+  return Object.fromEntries(Object.entries({ ...process.env, ...boxWorkEnvironment() })
+    .filter(([key]) => !blocked.has(key.toLowerCase()) && !/^git_config_(key|value)_/i.test(key)));
+}
+
 export async function commit(
   boxRoot: string,
   options: GitCommitOptions
 ): Promise<string> {
   const message = buildCommitMessage(options);
 
-  const git = simpleGit(boxRoot);
+  const git = simpleGit(boxRoot).env(commitEnvironment());
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
   return commitAndReadHead(boxRoot, () => git.commit(message, commitArgs));
@@ -333,7 +341,7 @@ export async function commitPaths(
   }
 
   const message = buildCommitMessage(options);
-  const git = simpleGit(boxRoot);
+  const git = simpleGit(boxRoot).env(commitEnvironment());
   const commitArgs = ["commit", "-m", message];
   if (options.amend) {
     commitArgs.push("--amend");

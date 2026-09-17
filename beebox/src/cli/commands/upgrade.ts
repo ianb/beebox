@@ -33,7 +33,8 @@ import { isRecord } from "../../lib/is-record.js";
 import * as path from "node:path";
 import { Command } from "commander";
 import { runCollectedChild } from "../../lib/run-child.js";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot, NotInBoxError } from "../../lib/paths.js";
+import { acquireBoxMaintenance, boxWorkEnvironment, type BoxMaintenance } from "../../lib/box-maintenance.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -119,7 +120,7 @@ export interface RunCommandResult {
 export type CommandRunner = (args: RunCommandArgs) => Promise<RunCommandResult>;
 
 function defaultRunner(): CommandRunner {
-  return ({ command, args, cwd }) => runCollectedChild({ command, args, cwd });
+  return ({ command, args, cwd }) => runCollectedChild({ command, args, cwd, env: { ...process.env, ...boxWorkEnvironment() } });
 }
 
 /** A `--to` value that names a file rather than a semver range: an explicit
@@ -238,7 +239,21 @@ export interface UpgradeResult {
  */
 export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): Promise<UpgradeResult> {
   const runCommand = deps?.runCommand ?? defaultRunner();
-  const boxRoot = await requireBoxRoot(deps?.startPath);
+  const boxRoot = await findBoxRoot(deps?.startPath ?? process.cwd());
+  if (!boxRoot) throw new NotInBoxError();
+  const maintenance = await acquireBoxMaintenance(boxRoot, { reason: "engine upgrade" });
+  try {
+    const result = await maintenance.run(() => upgradeUnderMaintenance(options, { boxRoot, runCommand, maintenance }));
+    await maintenance.complete();
+    return result;
+  } finally { await maintenance.release(); }
+}
+
+async function upgradeUnderMaintenance(
+  options: UpgradeOptions,
+  deps: { boxRoot: string; runCommand: CommandRunner; maintenance: BoxMaintenance },
+): Promise<UpgradeResult> {
+  const { boxRoot, runCommand, maintenance } = deps;
   await getBoxShape(boxRoot);
 
   // Step 0: preflight (fail-closed, nothing mutated yet — so no revert path
@@ -260,6 +275,7 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
 
   try {
     // Step 2: bump the dependency + pnpm install (old engine still fine here).
+    await maintenance.beginChanges();
     await bumpBeeBoxDependency({ boxRoot, spec: options.to });
     const install = await runCommand({ label: UPGRADE_STEPS.pnpmInstall, command: "pnpm", args: ["install"], cwd: boxRoot });
     if (install.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.pnpmInstall, install.output);
@@ -269,7 +285,7 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
     const newBbxBin = path.join(boxRoot, "node_modules/.bin/bbx");
 
     // Step 3: data migrations.
-    const migrate = await runCommand({ label: UPGRADE_STEPS.bbxMigrate, command: newBbxBin, args: ["migrate", "--apply"], cwd: boxRoot });
+    const migrate = await runCommand({ label: UPGRADE_STEPS.bbxMigrate, command: newBbxBin, args: ["engine", "migrate", "--apply", "--within-maintenance"], cwd: boxRoot });
     if (migrate.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.bbxMigrate, migrate.output);
 
     // Step 4+5: template sync + regen tail (`bbx init`'s update path covers
@@ -277,7 +293,7 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
     // may have already run `bbx init` internally when migrations were
     // pending: when NOTHING was pending, migrate returns early without
     // touching templates at all, so this step must not be skipped.
-    const init = await runCommand({ label: UPGRADE_STEPS.bbxInit, command: newBbxBin, args: ["init", boxRoot], cwd: boxRoot });
+    const init = await runCommand({ label: UPGRADE_STEPS.bbxInit, command: newBbxBin, args: ["engine", "init", boxRoot], cwd: boxRoot });
     if (init.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.bbxInit, init.output);
 
     // Step 6: typecheck the box's own src/ under the new engine's base tsconfig.

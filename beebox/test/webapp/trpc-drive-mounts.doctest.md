@@ -18,6 +18,7 @@ import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../
 // Importing the connector registers the docs/sheets handlers — that is what
 // makes a Doc or Sheet child syncable rather than pointer-only.
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js";
+import { getLog } from "../../src/lib/git.js";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const SHEET_MIME = "application/vnd.google-apps.spreadsheet";
@@ -60,8 +61,9 @@ function recipesDrive() {
   });
 }
 
-function caller(boxRoot, drive) {
+function caller(boxRoot, drive, actor) {
   const ctx = {
+    actor: actor ?? "user",
     boxRoot,
     boxSlug: "test",
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
@@ -71,6 +73,12 @@ function caller(boxRoot, drive) {
     isOwner: true,
   };
   return appRouter.createCaller(ctx);
+}
+
+/** The `Triggered-By` trailer on the box's most recent commit, or "none". */
+async function lastTrigger(boxRoot) {
+  const entry = (await getLog(boxRoot, 1))[0];
+  return entry?.trailers?.["Triggered-By"] ?? "none";
 }
 
 /** The tRPC error code a call fails with, or "none" when it succeeds. */
@@ -184,6 +192,49 @@ await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", 
 await box.cleanup();
 ```
 
+## A mount records which credential asked for it
+
+The context knows how the request authenticated, so the commit says so. Without
+this, a mount an agent made in chat and one the boxholder made on the settings
+page are the same anonymous commit, and "who mounted this" has no answer
+(`docs/plans/agent-capability-delegation.md`).
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const agent = caller(box.root, recipesDrive(), "agent");
+
+await agent.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
+await lastTrigger(box.root)
+=> agent
+```
+
+A pointer written from the settings page is the same commit shape with the other
+actor — one mechanism, not a second record.
+
+```ts continue
+await caller(box.root, recipesDrive(), "user").drive.link({
+  url: "https://drive.google.com/file/d/deck-9/view",
+  path: "_content/notes/Kickoff",
+});
+await lastTrigger(box.root)
+=> user
+```
+
+Unmounting is a trash commit, which carries its own `Trashed-By` trailer — the
+actor joins it rather than replacing it, so one commit answers both "what
+happened" and "who asked".
+
+```ts continue
+await agent.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
+await lastTrigger(box.root)
+=> agent
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## unmount stops the mirror and leaves every child in place
 
 Unmounting is `bbx rm` on the mount card. The card lands in `_bookkeeping/trash/` (where
@@ -276,6 +327,117 @@ const rooted = await c.drive.mount({
 });
 rooted.cardPath
 => _content/drive/recipes/Recipes.gfolder.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## inspect answers "what is this, and do we already have it"
+
+The verification step the 2026-09-14 incident lacked. It writes nothing, so an
+agent can run it before a mount to check the id resolves and after one to
+confirm what landed. `claimedBy` is the part a bare Drive lookup cannot answer:
+whether a card in this box already speaks for the item.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const c = caller(box.root, recipesDrive());
+
+const folder = await c.drive.inspect({ url: "https://drive.google.com/drive/folders/folder-1" });
+JSON.stringify({ name: folder.name, mimeType: folder.mimeType, cardType: folder.cardType, claimedBy: folder.claimedBy })
+=> {"name":"Recipes","mimeType":"application/vnd.google-apps.folder","cardType":null,"claimedBy":[]}
+```
+
+A Sheet names the card type a sync would write, and the handler's own preview
+comes through — which is how the CLI can print tabs without a second call.
+
+```ts continue
+const sheet = await c.drive.inspect({ url: "https://drive.google.com/file/d/sheet-1/view" });
+JSON.stringify({
+  id: sheet.id,
+  cardType: sheet.cardType,
+  owner: sheet.owner,
+  webViewLink: sheet.webViewLink,
+  tabs: Array.isArray(sheet.details?.tabs) ? sheet.details.tabs.length : null,
+})
+=> {"id":"sheet-1","cardType":"gsheet","owner":"test@example.com","webViewLink":"https://drive.google.com/file/d/sheet-1/view","tabs":1}
+```
+
+Once the folder is mirrored, the same inspect names the card that claims it —
+so "is this already mounted?" stops being a guess.
+
+```ts continue
+await c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
+JSON.stringify((await c.drive.inspect({ url: "https://drive.google.com/file/d/sheet-1/view" })).claimedBy)
+=> ["_content/drive/recipes/Budget_2026.gsheet.card"]
+```
+
+An unreadable input is the caller's mistake, not a Drive outage.
+
+```ts continue
+await refusal(c.drive.inspect({ url: "https://example.com/nope" }))
+=> BAD_REQUEST: Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## add syncs one Doc or Sheet two-way
+
+The file verb. It writes the card, pulls once, records the file in the
+connector's transient state, and commits — the same span `bbx drive add` ran
+in-process, now reachable by a caller that holds no credential.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const c = caller(box.root, recipesDrive());
+
+const added = await c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "_content/budget" });
+JSON.stringify({ cardPath: added.cardPath, name: added.name, cardType: added.cardType })
+=> {"cardPath":"_content/budget.gsheet.card","name":"Budget 2026","cardType":"gsheet"}
+```
+
+```ts continue
+(await box.list()).split("\n").includes("_content/budget.gsheet.card")
+=> true
+```
+
+A second card for one Drive id is refused: transient state is keyed by id while
+attachments are per-card, so two cards are two working copies that overwrite
+each other upstream.
+
+```ts continue
+await refusal(c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "_content/budget-again" }))
+=> BAD_REQUEST: Drive item sheet-1 is already claimed by: _content/budget.gsheet.card — trash or move that card to put it somewhere else
+```
+
+A type nothing syncs two-way names the verb that would work instead, and a path
+that climbs out of the box is refused before anything is written.
+
+```ts continue
+await refusal(c.drive.add({ url: "https://drive.google.com/file/d/pdf-1/view", path: "_content/scan" }))
+=> BAD_REQUEST: Scan.pdf is a application/pdf, which nothing syncs two-way — use `bbx drive link` to point at it, or `bbx drive mount` if it is a folder
+
+await refusal(c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "../outside" }))
+=> BAD_REQUEST: The card path must be a path inside the box: ../outside
+```
+
+## list browses Drive without writing anything
+
+```ts continue
+JSON.stringify((await c.drive.list({ folder: "https://drive.google.com/drive/folders/folder-1" })).map((f) => f.name).toSorted())
+=> ["Budget 2026","Scan.pdf"]
+```
+
+An unreadable folder id is a BAD_REQUEST like every other bad input, not a 500.
+
+```ts continue
+await code(c.drive.list({ folder: "https://example.com/nope" }))
+=> BAD_REQUEST
 ```
 
 ```ts cleanup

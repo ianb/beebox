@@ -14,9 +14,11 @@ import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { requireGitAnnex } from "../../core/annex/require-git-annex.js";
+import { annexNewBox } from "../../core/annex/annex-new-box.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
-import { createGitAnnexService } from "../../services/git-annex.js";
+import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -30,20 +32,27 @@ import { errorMessage } from "../../lib/error-guards.js";
  * changed instead.
  */
 async function announceAndInitGit(
-  { boxRoot, options }: {
+  { boxRoot, annex, options }: {
     boxRoot: string;
-    options: { skipGit?: boolean; branch: string };
+    annex: GitAnnexService;
+    options: { branch: string };
   }
 ): Promise<void> {
   console.log(`Initialized Bee Box at ${boxRoot}`);
 
-  if (!options.skipGit) {
-    const alreadyRepo = await isRepo(boxRoot);
-    if (!alreadyRepo) {
-      await initRepo(boxRoot, options.branch);
-    }
-    console.log("Git repository initialized with initial commit.");
+  const alreadyRepo = await isRepo(boxRoot);
+  if (!alreadyRepo) {
+    await initRepo(boxRoot, options.branch);
   }
+  console.log("Git repository initialized with initial commit.");
+
+  // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore` from
+  // an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot` calls it
+  // before there is a `.git` — so on a fresh init the probe can only ever read
+  // false and the box would be written manifest-scheme no matter what. The
+  // repository has to exist first, so this step re-writes the `.gitignore` the
+  // probe got wrong.
+  await annexNewBox(annex, boxRoot);
 
   console.log("\nDirectory structure created:");
   console.log("  package.json, tsconfig.json, src/   - Box code (schemas, views, tricks)");
@@ -58,7 +67,6 @@ async function announceAndInitGit(
 }
 
 export interface InitOptions {
-  skipGit?: boolean;
   branch: string;
   docidDebug?: boolean;
 }
@@ -69,6 +77,13 @@ export interface InitOptions {
  * process.exit(1)-on-error wrapper below.
  */
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+  // Refuse before anything reaches disk. A box is annex-shaped from its first
+  // commit, so without the binary the box this call would create is one that
+  // cannot be committed to at all. This is the last moment at which nothing
+  // has to be undone.
+  const annex = createGitAnnexService();
+  await requireGitAnnex(annex);
+
   // Detects what's already at `targetPath`: an existing box (marker at the
   // target itself) or nothing yet. A fresh init always scaffolds the
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
@@ -83,9 +98,20 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // below). An existing box just re-runs `initBox` in place.
   if (isFresh) {
     await scaffoldBoxRoot(boxRoot, { deps: true });
-    await announceAndInitGit({ boxRoot, options });
+    await announceAndInitGit({ boxRoot, annex, options });
   } else {
     await initBox(boxRoot, { skipGit: true, branch: options.branch });
+    // A re-init annexes too, and this is not optional. `initBox` rewrote the
+    // box `.gitignore` with the un-ignore block unconditionally — there is only
+    // one block now — so on a box whose annex was never initialized, skipping
+    // this would leave assets VISIBLE to `git add` with no annex filter to
+    // claim them, and the next commit would put raw asset bytes into history.
+    // The pre-commit guard would not catch most of them: it only reports blobs
+    // over 1 MB (`core/annex/unlisted-binaries.ts`).
+    //
+    // Idempotent, so the ordinary case — a box that is already annexed —
+    // re-applies the same config and changes nothing.
+    await annexNewBox(annex, boxRoot);
   }
 
   // What CHANGED, gathered rather than printed as it happens. A fresh init
@@ -199,7 +225,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // reported but do not abort init, since the rest of the setup is still worth
   // doing and `bbx health` gates on them.
   const boxShape = await getBoxShape(boxRoot);
-  const annexResult = await runAnnexDoctor(createGitAnnexService(), {
+  const annexResult = await runAnnexDoctor(annex, {
     repoRoot: boxShape.boxRoot,
     boxRoot,
   });
@@ -254,7 +280,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // rules, docs, etc.) on fresh init, at the box root — that's the git
   // root. Re-inits never hit this; the boxholder commits their own review
   // of what `bbx init` changed.
-  if (isFresh && !options.skipGit) {
+  if (isFresh) {
     await stageAll(boxRoot);
     await commit(boxRoot, {
       message: "Initialize Bee Box",
@@ -267,15 +293,14 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   if (isFresh) {
     // Point at the thing to open, not at another CLI command: the box is a web
     // app, and a fresh box's chat now opens with suggested questions to start
-    // from. `bbx serve` prints the box's URL on startup.
-    console.log(`\nNext: run 'bbx serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
+    // from. `bbx engine serve` prints the box's URL on startup.
+    console.log(`\nNext: run 'bbx engine serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
   }
 }
 
 export const initCommand = new Command("init")
   .description("Initialize or update a Bee Box")
   .argument("[path]", "Path to initialize", ".")
-  .option("--skip-git", "Skip git initialization")
   .option("-b, --branch <name>", "Initial branch name", "main")
   .option("--docid-debug", "Add DOCID markers to generated docs (persists until --no-docid-debug)")
   // Declared explicitly: commander does not derive `--no-x` from `--x`, so the

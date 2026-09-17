@@ -1,3 +1,4 @@
+import { acquireBoxWork, BoxMaintenanceError } from "../../lib/box-maintenance.js";
 /**
  * ChatScheduleManager — manages timed schedules created by the chat agent.
  *
@@ -40,21 +41,9 @@ const chatScheduleSchema = z.object({
 export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
 
 const liveManagers = new Set<ChatScheduleManager>();
-let developmentDrainPaused = false;
-
-export function pauseChatSchedulesForDevReload(): void {
-  developmentDrainPaused = true;
-  for (const manager of liveManagers) manager.pauseForDevReload();
-}
-
-export function resumeChatSchedulesAfterAbortedDevReload(): void {
-  developmentDrainPaused = false;
-  for (const manager of liveManagers) manager.resumeAfterAbortedDevReload();
-}
-
-export function allChatScheduleDeliveriesAreIdle(): boolean {
-  return [...liveManagers].every((manager) => !manager.hasInFlightDeliveries());
-}
+export function pauseBoxChatSchedules(boxRoot: string): void { for (const manager of liveManagers) if (manager.boxRoot === boxRoot) manager.pauseForMaintenance(); }
+export function resumeBoxChatSchedules(boxRoot: string): void { for (const manager of liveManagers) if (manager.boxRoot === boxRoot) manager.resumeAfterMaintenance(); }
+export function boxChatScheduleDeliveriesAreIdle(boxRoot: string): boolean { return [...liveManagers].filter((manager) => manager.boxRoot === boxRoot).every((manager) => !manager.hasInFlightDeliveries()); }
 
 export interface DetachedSchedulesReceipt {
   sessionId: string;
@@ -143,12 +132,13 @@ export function loadChatSchedules({ boxRoot, schedulesFile }: { boxRoot: string;
 }
 
 export class ChatScheduleManager {
-  private boxRoot: string;
+  readonly boxRoot: string;
   private schedulesFile: string;
   private schedules: Map<string, ChatSchedule> = new Map();
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private onFire: ScheduleCallback;
   private idCounter = 0;
+  private maintenancePaused = false;
   private readonly blockedSessionIds = new Set<string>();
   private readonly generations = new Map<string, number>();
   private readonly inFlight = new Map<string, Promise<void>>();
@@ -159,7 +149,7 @@ export class ChatScheduleManager {
     this.onFire = onFire;
     this.loadFromDisk();
     liveManagers.add(this);
-    if (!developmentDrainPaused) this.rearmAll();
+    if (!this.maintenancePaused) this.rearmAll();
   }
 
   addSchedule(opts: {
@@ -174,6 +164,7 @@ export class ChatScheduleManager {
     if (opts.sessionId !== undefined && this.blockedSessionIds.has(opts.sessionId)) {
       throw new ScheduleForDeletingSessionError(opts.sessionId);
     }
+    liveManagers.add(this);
     const id = `sch_${Date.now()}_${this.idCounter++}`;
     const now = new Date();
     const firesAt = new Date(now.getTime() + opts.durationMs);
@@ -190,7 +181,7 @@ export class ChatScheduleManager {
     };
 
     this.schedules.set(id, schedule);
-    if (!developmentDrainPaused) this.armTimer(schedule);
+    this.armTimer(schedule);
     this.saveToDisk();
 
     log(`Scheduled "${schedule.label}" to fire at ${schedule.firesAt} (in ${Math.round(opts.durationMs / 1000)}s)`);
@@ -258,12 +249,15 @@ export class ChatScheduleManager {
     return this.inFlight.size > 0;
   }
 
-  pauseForDevReload(): void {
-    this.stopAll();
+  pauseForMaintenance(): void {
+    this.maintenancePaused = true;
+    for (const id of this.timers.keys()) this.clearTimer(id);
   }
 
-  resumeAfterAbortedDevReload(): void {
-    this.rearmAll();
+  resumeAfterMaintenance(): void {
+    if (!this.maintenancePaused) return;
+    this.maintenancePaused = false;
+    for (const schedule of this.schedules.values()) this.armTimer(schedule);
   }
 
   /**
@@ -286,12 +280,14 @@ export class ChatScheduleManager {
   }
 
   stopAll(): void {
+    liveManagers.delete(this);
     for (const id of this.timers.keys()) {
       this.clearTimer(id);
     }
   }
 
   private armTimer(schedule: ChatSchedule): void {
+    if (this.maintenancePaused || this.timers.has(schedule.id) || this.inFlight.has(schedule.id)) return;
     const delay = new Date(schedule.firesAt).getTime() - Date.now();
     if (delay <= 0) {
       // Already past — fire immediately
@@ -310,14 +306,23 @@ export class ChatScheduleManager {
   }
 
   private startFire(schedule: ChatSchedule): void {
+    if (this.maintenancePaused || this.inFlight.has(schedule.id)) return;
     const delivery = this.fireSchedule(schedule);
     this.inFlight.set(schedule.id, delivery);
     void delivery.finally(() => {
       if (this.inFlight.get(schedule.id) === delivery) this.inFlight.delete(schedule.id);
-    });
+    }).catch((error: unknown) => console.error("[ChatSchedules] Delivery failed:", error));
   }
 
   private async fireSchedule(schedule: ChatSchedule): Promise<void> {
+    // Timers are new root work even when armed under startup/agent context.
+    let work;
+    try { work = await acquireBoxWork(this.boxRoot, { reason: `chat schedule ${schedule.id}`, inherited: null }); }
+    catch (error) {
+      if (error instanceof BoxMaintenanceError) { this.pauseForMaintenance(); return; }
+      throw error;
+    }
+    try { await work.run(async () => {
     log(`Firing schedule "${schedule.label}"`);
     this.timers.delete(schedule.id);
     const generation = (this.generations.get(schedule.id) ?? 0) + 1;
@@ -327,6 +332,11 @@ export class ChatScheduleManager {
         await this.onFire({ schedule });
       }
     } catch (error) {
+      if (error instanceof BoxMaintenanceError) {
+        this.generations.set(schedule.id, generation + 1);
+        this.pauseForMaintenance();
+        return;
+      }
       console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, error);
     } finally {
       // A detach/restore advances the generation. Its late callback must not
@@ -336,6 +346,8 @@ export class ChatScheduleManager {
         this.saveToDisk();
       }
     }
+      });
+    } finally { await work.release(); }
   }
 
   private clearTimer(id: string): void {
@@ -347,29 +359,17 @@ export class ChatScheduleManager {
   }
 
   private rearmAll(): void {
+    if (this.maintenancePaused) return;
     const now = Date.now();
-    const expired: string[] = [];
-
     for (const [id, schedule] of this.schedules) {
-      const fireTime = new Date(schedule.firesAt).getTime();
-      if (fireTime <= now) {
-        // Fire immediately — missed during downtime
-        expired.push(id);
-      } else {
-        this.armTimer(schedule);
-      }
-    }
-
-    // Fire expired schedules after a short delay to let the system settle
-    if (expired.length > 0) {
-      setTimeout(() => {
-        for (const id of expired) {
-          const schedule = this.schedules.get(id);
-          if (schedule) {
-            this.startFire(schedule);
-          }
-        }
+      if (new Date(schedule.firesAt).getTime() > now) { this.armTimer(schedule); continue; }
+      // Preserve startup settling time, but make these timers cancellable too.
+      const timer = setTimeout(() => {
+        this.timers.delete(id);
+        if (this.schedules.has(id)) this.startFire(schedule);
       }, 2000);
+      timer.unref();
+      this.timers.set(id, timer);
     }
   }
 

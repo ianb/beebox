@@ -7,7 +7,7 @@ import { simpleGit } from "simple-git";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
 import { isTrashedCard } from "../lib/paths.js";
-import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, isSystemCardMigration, isSystemCardType, systemCardLocationError, type SystemCardMigration, type SystemCardType } from "../shared/system-card-paths.js";
+import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION, isSystemCardMigration, isSystemCardType, systemCardLocationError, type SystemCardMigration, type SystemCardType } from "../shared/system-card-paths.js";
 import { DashboardSchema } from "../schemas/dashboard.js";
 import { SettingsSchema } from "../schemas/settings.js";
 import { BrowseSchema } from "../schemas/browse.js";
@@ -16,6 +16,7 @@ import { LandmarksSchema } from "../schemas/landmarks.js";
 import { HistorySchema } from "../schemas/history.js";
 import { InventorySchema } from "../schemas/inventory.js";
 import { AdminSchema } from "../schemas/admin.js";
+import { SearchSchema } from "../schemas/search.js";
 import { parseCardText, typeFromFilename } from "./card-io.js";
 import { glob } from "glob";
 import { MANIFEST_PATH } from "./migrations.js";
@@ -27,7 +28,7 @@ export class SystemCardInvariantError extends Error {
   }
 }
 
-const schemas = new Map([DashboardSchema, SettingsSchema, BrowseSchema, QuestionsSchema, LandmarksSchema, HistorySchema, InventorySchema, AdminSchema].map((schema) => [schema.type, schema]));
+const schemas = new Map([DashboardSchema, SettingsSchema, BrowseSchema, QuestionsSchema, LandmarksSchema, HistorySchema, InventorySchema, AdminSchema, SearchSchema].map((schema) => [schema.type, schema]));
 
 async function readOptional(file: string): Promise<string | null> {
   try { return await fs.readFile(file, "utf8"); }
@@ -49,14 +50,20 @@ function cohortPaths(migration: SystemCardMigration): string[] {
 }
 
 function repairMigrationForPath(relativePath: string): SystemCardMigration {
-  return cohortPaths(SYSTEM_CARD_MIGRATION).includes(relativePath) ? SYSTEM_CARD_MIGRATION : REMAINING_SYSTEM_CARD_MIGRATION;
+  if (cohortPaths(SYSTEM_CARD_MIGRATION).includes(relativePath)) return SYSTEM_CARD_MIGRATION;
+  if (cohortPaths(SEARCH_SYSTEM_CARD_MIGRATION).includes(relativePath)) return SEARCH_SYSTEM_CARD_MIGRATION;
+  return REMAINING_SYSTEM_CARD_MIGRATION;
 }
 
 function contentError(relativePath: string, content: string): string | null {
   const type = typeFromFilename(relativePath);
   if (type === undefined || !isSystemCardType(type)) return null;
-  const location = systemCardLocationError(type, relativePath);
-  if (location !== null) return location;
+  // Search is a copyable authored card. Its seeded path is required by the
+  // cohort, but other *.search.card files are valid search instruments.
+  if (type !== "search") {
+    const location = systemCardLocationError(type, relativePath);
+    if (location !== null) return location;
+  }
   try { parseCardText(content, { source: relativePath, schemas, type }); return null; }
   catch (error) { return `Invalid required system card ${relativePath}: ${errorMessage(error)}`; }
 }

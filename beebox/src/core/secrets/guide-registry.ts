@@ -35,6 +35,20 @@ export interface SecretGuide {
 }
 
 const guides: Record<string, SecretGuide> = {
+  glm: {
+    title: "Z.ai (GLM) API key",
+    what:
+      "A Z.ai key for GLM models, which run on the box's Claude agent through Z.ai's Anthropic-compatible " +
+      "endpoint. Selecting a GLM model in a chat, or pinning one as the box default, spends this key. " +
+      "Z.ai's coding-plan policy inspects request content and flags assistant-style use — using it means " +
+      "accepting that posture for this box's content.",
+    obtainUrl: "https://z.ai/manage-api-key/apikey-list",
+    obtainSteps: [
+      "Sign in at z.ai with the account holding your Z.ai plan",
+      "Open API Keys and copy the key",
+      "Paste it below",
+    ],
+  },
   openrouter: {
     title: "OpenRouter API key",
     what:

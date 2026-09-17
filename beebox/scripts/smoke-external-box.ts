@@ -11,10 +11,10 @@
  * `node_modules`, nothing but the released tarball. This is deliberately the
  * SAME sequence a stranger's README would document — see the printed
  * "Stranger sequence" block at the end, which is the authoritative source for
- * what that doc should say (chicken-and-egg: `bbx init` needs a `bbx` binary,
- * but a `bbx` binary needs a `package.json` `bbx init` hasn't written yet —
+ * what that doc should say (chicken-and-egg: `bbx engine init` needs a `bbx` binary,
+ * but a `bbx` binary needs a `package.json` `bbx engine init` hasn't written yet —
  * `pnpm dlx` breaks the cycle by running the tarball's `bbx` from a disposable
- * install, then a real `pnpm install` resolves the dependency `bbx init`
+ * install, then a real `pnpm install` resolves the dependency `bbx engine init`
  * wrote and replaces the dev-convenience `node_modules/beebox` symlink
  * `scaffoldPackageRoot` created — see that function's doc in
  * `src/core/box/package.ts`).
@@ -197,9 +197,9 @@ async function waitForStatus(args: WaitForStatusArgs): Promise<Response> {
 
 async function scaffold(args: { tarball: string; boxDir: string }): Promise<void> {
   // Step 1: scaffold via a disposable `pnpm dlx` install of the tarball —
-  // this is the ONLY way to get a `bbx` binary before `bbx init` has written a
+  // this is the ONLY way to get a `bbx` binary before `bbx engine init` has written a
   // package.json for a real install to resolve against.
-  await step("pnpm dlx <tarball> bbx init . (scaffold)", {
+  await step("pnpm dlx <tarball> bbx engine init . (scaffold)", {
     file: "pnpm",
     args: [
       "dlx",
@@ -215,7 +215,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
   });
 
   // Step 2: the real install — resolves the `file:<tarball>` dependency
-  // `bbx init` wrote and replaces the scaffold's dev-convenience symlink.
+  // `bbx engine init` wrote and replaces the scaffold's dev-convenience symlink.
   await step("pnpm install (real, replaces the scaffold symlink)", {
     file: "pnpm",
     args: ["install"],
@@ -294,16 +294,16 @@ async function validate(boxDir: string): Promise<void> {
   });
 }
 
-/** Boot `bbx serve`, hit `/healthz` and the box's own health check, then
+/** Boot `bbx engine serve`, hit `/healthz` and the box's own health check, then
  *  SIGTERM and confirm a clean shutdown. */
-const SERVE_STEP_LABEL = "bbx serve";
-const SERVE_SHUTDOWN_STEP_LABEL = "bbx serve shutdown";
+const SERVE_STEP_LABEL = "bbx engine serve";
+const SERVE_SHUTDOWN_STEP_LABEL = "bbx engine serve shutdown";
 
 async function serveAndProbe(args: { boxDir: string; port: number }): Promise<void> {
   const diagKey = "smoke-test-diag-key";
   const bbxServe: Subprocess = execa(
     "node_modules/.bin/bbx",
-    // No directory arg needed: `bbx serve` with no positional dirs defaults
+    // No directory arg needed: `bbx engine serve` with no positional dirs defaults
     // to the current directory, and a v3 box's root IS its operational root.
     ["serve", "--port", String(args.port)],
     { cwd: args.boxDir, env: { ...strangerEnv(), BBX_DIAG_API_KEY: diagKey }, extendEnv: false, reject: false, all: true }
@@ -343,7 +343,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
     }
     const ms = Number(process.hrtime.bigint() - t0) / 1e6;
     process.stderr.write(
-      `[smoke] ok: bbx serve — /healthz 200, /${slug}/api/trpc/health.check 200 (status: ` +
+      `[smoke] ok: bbx engine serve — /healthz 200, /${slug}/api/trpc/health.check 200 (status: ` +
         boxStatus + ") (" + (ms / 1000).toFixed(1) + "s)\n"
     );
 
@@ -356,7 +356,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
           "\n" + (serveResult.all ?? "")
       );
     }
-    process.stderr.write("[smoke] ok: bbx serve — clean SIGTERM shutdown\n");
+    process.stderr.write("[smoke] ok: bbx engine serve — clean SIGTERM shutdown\n");
   } finally {
     if (bbxServe.exitCode === null) bbxServe.kill("SIGKILL");
   }
@@ -383,9 +383,9 @@ async function main(): Promise<void> {
     process.stderr.write(
       "\n[smoke] Stranger sequence (what a README should say):\n" +
         "  mkdir my-box && cd my-box\n" +
-        "  pnpm dlx --package=<beebox tarball URL> bbx init .\n" +
+        "  pnpm dlx --package=<beebox tarball URL> bbx engine init .\n" +
         "  pnpm install\n" +
-        "  pnpm exec bbx serve\n\n"
+        "  pnpm exec bbx engine serve\n\n"
     );
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });

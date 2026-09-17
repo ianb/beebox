@@ -15,6 +15,8 @@ import type { EngineUnavailability } from "./engine-unavailability.js";
  * by the command that uses the agent.
  */
 export interface AgentInvokeOptions {
+  /** Cancellation of this invocation, including its harness subprocess. */
+  signal?: AbortSignal | undefined;
   boxRoot: string;
   /** System prompt — provided on first invoke, omitted on resume. */
   systemPrompt?: string;

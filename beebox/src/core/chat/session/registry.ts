@@ -32,8 +32,7 @@ import { pinEntry, pinSessionObject } from "./registry-pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
 import { stopChatSessionsAndWait } from "./registry-shutdown.js";
 
-export { SessionDeletingError } from "./deletion-state.js";
-export type { ChatSessionRegistryOptions } from "./registry-options.js";
+export { SessionDeletingError } from "./deletion-state.js"; export type { ChatSessionRegistryOptions } from "./registry-options.js";
 
 const DEFAULT_MAX_LIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -60,7 +59,7 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private lastUse: number;
   /** True once `prewarm()` has been requested, so the sweep re-warms later. */
-  private prewarmRequested = false;
+  private prewarmRequested = false; private readonly maintenance = { paused: false };
   /**
    * Tracks pre-id "new" sessions whose Claude assignment hasn't arrived yet.
    * Once `onSessionIdAssigned` fires, they're moved into `entries` under
@@ -112,7 +111,7 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private noteActivity(): void {
     this.lastUse = this.now();
-    if (this.prewarmRequested && this.backend.hasWarm?.() === false) void this.prewarm();
+    if (!this.maintenance.paused && this.prewarmRequested && this.backend.hasWarm?.() === false) void this.prewarm();
   }
 
   /**
@@ -120,14 +119,13 @@ export class ChatSessionRegistry extends EventEmitter {
    * the next "new chat" send doesn't pay spawn + initialize latency.
    */
   async prewarm(): Promise<void> {
-    this.prewarmRequested = true;
+    if (this.maintenance.paused) return; this.prewarmRequested = true;
     this.lastUse = this.now();
-    await prewarmBackend({
-      boxRoot: this.boxRoot,
-      backend: this.backend,
-      baseOptions: this.buildSessionOptions(null),
-    });
+    await prewarmBackend({ boxRoot: this.boxRoot, backend: this.backend, baseOptions: this.buildSessionOptions(null) });
+    this.closeWarmIfPaused();
   }
+
+  private closeWarmIfPaused(): void { if (this.maintenance.paused) this.backend.closeWarm?.(); }
 
   /**
    * Accept a client-coined chat id so the chat becomes addressable before its
@@ -469,6 +467,12 @@ export class ChatSessionRegistry extends EventEmitter {
       this.backend.closeWarm();
     }
   }
+
+  /** Preserve entries/queued input while closing idle SDK runs for maintenance. */
+  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); this.backend.closeWarm?.();
+    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(); }
+
+  resumeAfterMaintenance(): void { this.maintenance.paused = false; for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.resumeAfterMaintenance(); this.startCleanup(); }
 
   /** Tear down all entries AND the backend's warm slot (a subprocess too).
    *  Call on server shutdown. */

@@ -6,6 +6,8 @@
  * atomic commit (see `question-transition.ts`).
  */
 
+import { acquireBoxWork, BoxMaintenanceError } from "../../lib/box-maintenance.js";
+import { answerFencedMigrationQuestion } from "../migration-answer.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
@@ -304,6 +306,27 @@ async function executeAnswer(
       selectedId: resolved?.selectedId,
     },
   };
+}
+
+/** HTTP and CLI defer answer admission here so a fenced recovery can respond. */
+export async function answerWithAdmission(opts: { ctx: CommandContext; args: Record<string, unknown>; onAnswered?: () => void }): Promise<CommandResult> {
+  const { ctx, args } = opts;
+  let work;
+  try { work = await acquireBoxWork(ctx.boxRoot, { reason: "answer" }); }
+  catch (error) {
+    if (!(error instanceof BoxMaintenanceError)) throw error;
+    const parsed = parseCommandArgs(args, AnswerArgsSchema);
+    if (parsed.question) {
+      const recovery = await answerFencedMigrationQuestion({ boxRoot: ctx.boxRoot, question: parsed.question, answer: parsed.answer, via: parsed.via ?? "cli" });
+      if (recovery) return recovery;
+    }
+    throw error;
+  }
+  try { return await work.run(async () => {
+    const result = await executeAnswer(ctx, args);
+    if (result.success) opts.onAnswered?.();
+    return result;
+  }); } finally { await work.release(); }
 }
 
 registerCommand({

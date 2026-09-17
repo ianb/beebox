@@ -9,6 +9,7 @@ import { Markdown } from "./Markdown.js";
 import { Button, Pill } from "./ui.js";
 import { trpc } from "../trpc.js";
 import { issueCategoryId } from "../lib/issue-category-nav.js";
+import { issueProvenance } from "../../shared/issue-provenance.js";
 import type { Issue, IssueChange, NextAction, Priority, Visibility } from "../types.js";
 
 export interface IssueFilters {
@@ -118,10 +119,24 @@ function IssueRow({ issue, selected, change, rowRef, onSelect, onChange }: { iss
   return <li className={selected ? "selected" : ""} ref={rowRef}><div className="issue-title-row"><button type="button" className="issue-title" onClick={onSelect}>{issue.frontmatter.title}</button><CopyIssuePath issue={issue} /></div><span className="issue-meta">{issueDate(issue)} · {issue.slug.replace(/^\d{4}-\d{2}-\d{2}-?/, "")}</span><div className="issue-actions-row"><IssueTags issue={issue} /><div className="issue-edit-controls"><PriorityControls value={priority} onChange={(value) => onChange(editedChange(issue, { priority: value, nextAction }))} /><NextActionSelect value={nextAction} onChange={(value) => onChange(editedChange(issue, { priority, nextAction: value }))} /></div></div></li>;
 }
 
+/**
+ * Where the issue was noticed, in full.
+ *
+ * The pill shows only the place, because the context clause is a sentence — and
+ * it is the best thing in the queue: the symptom in the boxholder's own words,
+ * or what a review was doing when it surfaced this. It had nowhere to appear
+ * before, so 139 of those sentences existed only in the files.
+ */
+function IssueProvenanceLine({ issue }: { issue: Issue }) {
+  const provenance = issueProvenance(issue.frontmatter.discoveredIn);
+  if (provenance?.context == null) return null;
+  return <p className="issue-provenance">Noticed in {provenance.source}: {provenance.context}</p>;
+}
+
 function LoadedIssueDetail({ issue, onBack }: { issue: Issue; onBack: () => void }) {
   const detail = trpc.issues.detail.useQuery({ relPath: issue.relPath, visibility: issue.visibility });
   const value = detail.data ?? issue;
-  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2 className="issue-detail-title">{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><Markdown source={value.body} /></article> : <p className="muted">No issue details found.</p>}<IssueRelated issue={issue} /></aside>;
+  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2 className="issue-detail-title">{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /><IssueProvenanceLine issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><Markdown source={value.body} /></article> : <p className="muted">No issue details found.</p>}<IssueRelated issue={issue} /></aside>;
 }
 
 /**

@@ -7,10 +7,10 @@
 
 import { mkdir, rename, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { spawn } from "node:child_process";
 
 import { errorMessage, isErrnoException } from "./error-guards.js";
 import { TrashError } from "./errors.js";
+import { escapeAppleScriptString, runCommand } from "./run-command.js";
 import type { Disposition } from "./config.js";
 
 export async function applyDisposition(filePath: string, disposition: Disposition): Promise<void> {
@@ -74,25 +74,4 @@ async function trashViaFinder(filePath: string): Promise<void> {
   if (result.code !== 0) {
     throw new TrashError(filePath, `osascript exited with code ${String(result.code)}`);
   }
-}
-
-function escapeAppleScriptString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
-interface CommandOutcome {
-  readonly code: number | null;
-  readonly error?: NodeJS.ErrnoException;
-}
-
-function runCommand(command: string, args: readonly string[]): Promise<CommandOutcome> {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: "ignore" });
-    child.on("error", (error) => {
-      resolve({ code: null, error });
-    });
-    child.on("close", (code) => {
-      resolve({ code });
-    });
-  });
 }

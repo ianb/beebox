@@ -205,11 +205,11 @@ Agent prompts in procedures should:
 
 ## System Procedures and Migration
 
-Procedure cards in \`_config/procedures/\` are installed by \`bbx init\` from built-in templates. If you edit a system procedure, your changes are preserved:
+Procedure cards in \`_config/procedures/\` are installed by \`bbx engine init\` from built-in templates. If you edit a system procedure, your changes are preserved:
 
-- **\`bbx init\` on a fresh box**: Templates are copied directly.
-- **\`bbx init\` on an existing box (unchanged procedures)**: Templates are updated in place.
-- **\`bbx init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
+- **\`bbx engine init\` on a fresh box**: Templates are copied directly.
+- **\`bbx engine init\` on an existing box (unchanged procedures)**: Templates are updated in place.
+- **\`bbx engine init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
 
 To check for updates:
 \`\`\`bash
@@ -218,7 +218,7 @@ ls _config/_template-updates/procedures/
 diff _config/procedures/process-pages.procedure.card _config/_template-updates/procedures/process-pages.procedure.card
 \`\`\`
 
-After merging, delete the file under \`_config/_template-updates/procedures/\`. The next \`bbx init\` will see your merged version as the current copy.
+After merging, delete the file under \`_config/_template-updates/procedures/\`. The next \`bbx engine init\` will see your merged version as the current copy.
 
 ## Git History
 

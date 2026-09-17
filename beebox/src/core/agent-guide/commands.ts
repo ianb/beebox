@@ -23,6 +23,12 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
   without interrupting your task — so reach for it reflexively the moment
   something is off. Good feedback is specific about *what* was confusing and
   *why*.
+- \`bbx force-wakeup [--connector <name>]\` — runs a real wakeup on the server
+  right now, either the whole cycle or just one connector, and reports what each
+  connector created, updated, or skipped and why. Reach for it after mounting a
+  Drive folder or changing connector configuration, and whenever the boxholder
+  asks "did it sync?" — it is the only way to get that answer now rather than at
+  the next scheduled cycle.
 - \`bbx search "<query>"\` — full-text search over the box's cards; prefer it over
   \`grep\` for finding cards by content (details in the box-search section).
 - \`bbx calendar [timespan]\` — upcoming calendar events (default 7d; also
@@ -60,11 +66,21 @@ procedure run):
 **System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
 appear here so you recognize them in \`git log\` and health output):
 
+- \`bbx engine wakeup\` — the cycle itself (connectors, jobs, scripts, push). It
+  lives under \`bbx engine\` because it only works with the server's credentials:
+  run from your shell it would sync nothing and report that as "nothing new".
+  \`bbx force-wakeup\` above is your way to trigger a real one.
 - \`bbx reactor\` — process pending jobs in \`_bookkeeping/jobs/\`.
 - \`bbx finalize\` — flush outbound cards in \`_bookkeeping/output/\`.
-- \`bbx health\` — scheduled-task health (failing / overdue / blocked /
-  inconclusive tasks + scheduler liveness). \`inconclusive\` means the last run
-  did its work but its check never reached a verdict — unknown, not broken; do
-  not redo the work on that basis.
+
+\`bbx health\` is not in that list — it is yours to run: scheduled-task health
+(failing / overdue / blocked / inconclusive tasks + scheduler liveness).
+\`inconclusive\` means the last run did its work but its check never reached a
+verdict — unknown, not broken; do not redo the work on that basis.
+
+Anything under \`bbx engine\` is an operator or machine command — starting
+servers, editing the machine's box list, authorizing Google. You will not need
+them, and several refuse an agent session outright. If you find yourself
+reaching for one, that is a thing to ask the boxholder for.
 `;
 }

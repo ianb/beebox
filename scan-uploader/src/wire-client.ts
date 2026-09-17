@@ -11,6 +11,8 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { basename } from "node:path";
 
+import { buildStamp } from "./build-stamp.js";
+import { SCAN_CONTRACT_VERSION } from "./contract-version.js";
 import { errorMessage } from "./error-guards.js";
 import { ProtocolError, TransportError } from "./errors.js";
 import { isRecord } from "./is-record.js";
@@ -32,15 +34,52 @@ export interface CheckResult {
 /** Per-hash entries accepted by one `checkHashes` call. The server caps this at 500. */
 export const CHECK_BATCH_LIMIT = 500;
 
+export interface CheckResponse {
+  readonly states: Map<string, CheckResult>;
+  /** The box's contract version — `undefined` from a box predating the field,
+   * which is every box until it deploys. `contract-version.ts` turns this into
+   * a verdict; absent means "no opinion", never "drifted". */
+  readonly contractVersion: number | undefined;
+}
+
+/**
+ * Who this client is, on every request: the contract it speaks, the revision it
+ * was built from, and when. One-way and optional — the box records them and may
+ * report that an uploader is old, but never refuses on them, so a box that
+ * ignores these headers behaves exactly as before.
+ *
+ * Deliberately NOT the `x-bbx-` prefix: the hub deletes every client-supplied
+ * header in that namespace before it reaches a box (its spoof wall), so a
+ * header named that way would silently never arrive.
+ *
+ * WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+ */
+function identityHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "x-scan-contract": String(SCAN_CONTRACT_VERSION),
+  };
+  const stamp = buildStamp();
+  if (stamp.mode === "bundle") {
+    headers["x-scan-client-build"] = stamp.revision;
+    headers["x-scan-client-built-at"] = stamp.builtAt;
+  } else {
+    // A checkout tracks current source and cannot drift, so naming the mode is
+    // the honest answer where a build date would be a fiction.
+    headers["x-scan-client-build"] = "source";
+  }
+  return headers;
+}
+
 // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 export async function checkHashes(
   connection: ServerConnection,
   hashes: readonly string[],
-): Promise<Map<string, CheckResult>> {
+): Promise<CheckResponse> {
   const url = checkUrl(connection);
   const response = await sendRequest(url, {
     method: "POST",
     headers: {
+      ...identityHeaders(),
       "content-type": "application/json",
       authorization: `Bearer ${connection.token}`,
     },
@@ -54,11 +93,23 @@ export async function checkHashes(
   if (!isRecord(body) || !isRecord(body.states)) {
     throw new ProtocolError(url, "check response missing a states object");
   }
-  const result = new Map<string, CheckResult>();
+  const states = new Map<string, CheckResult>();
   for (const [hash, value] of Object.entries(body.states)) {
-    result.set(hash, parseCheckResult(url, value));
+    states.set(hash, parseCheckResult(url, value));
   }
-  return result;
+  return { states, contractVersion: parseContractVersion(body.contractVersion) };
+}
+
+/** Exported for the doctest: a box answering with a non-number is a case worth
+ * asserting directly, and faking it over real HTTP would mean lying about the
+ * fake's own typed contract.
+ *
+ * A non-integer or negative value is treated as absent rather than thrown on:
+ * an unreadable version is exactly as informative as no version, and refusing
+ * to sweep over a diagnostic field would be the wrong trade. */
+export function parseContractVersion(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return undefined;
+  return value;
 }
 
 /** The resolved outcome of a PUT, after any rate-limit retries have been absorbed. */
@@ -83,6 +134,7 @@ export async function putFile(
   const response = await sendRequest(url, {
     method: "PUT",
     headers: {
+      ...identityHeaders(),
       "content-type": "application/octet-stream",
       "content-length": String(stats.size),
       "x-upload-filename": basename(params.filePath),

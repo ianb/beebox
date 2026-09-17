@@ -6,6 +6,8 @@ box-scoped subprocess spawn site runs to get `BBX_BOX_NAME` and
 
 ```ts setup
 import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env.js";
+import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
+import { spawnProfile } from "../../src/lib/spawn-profile.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import * as fs from "node:fs/promises";
@@ -166,6 +168,43 @@ print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL ?? "(unset)"}`);
 =>
 BBX_BOX_NAME: (unset)
 BBX_SERVER_URL: (unset)
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## buildScriptEnv — disk registration crosses a process boundary
+
+The server writes the registration after binding. A fresh CLI process has no
+ambient map, but it can read the machine-owned registration:
+
+```ts
+const box = await makeTmpBox();
+await writeServeEndpoint(box.root, { pid: 123, publicUrl: "http://127.0.0.1:60157/ephemeral-box" });
+const env = await buildScriptEnv(box.root);
+print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
+print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
+print(`file: ${(await fs.readFile(serveEndpointPath(box.root), "utf8")).trim()}`);
+=>
+BBX_BOX_NAME: ephemeral-box
+BBX_SERVER_URL: http://127.0.0.1:60157
+file: {"pid":123,"publicUrl":"http://127.0.0.1:60157/ephemeral-box"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+Malformed disk state is ignored rather than becoming a guessed endpoint:
+
+```ts
+const box = await makeTmpBox();
+await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
+await fs.writeFile(serveEndpointPath(box.root), "not-json");
+const env = await buildScriptEnv(box.root);
+print(env.BBX_SERVER_URL ?? "(unset)");
+=> (unset)
 ```
 
 ```ts cleanup
@@ -357,6 +396,55 @@ mistral: (unset)
 google client secret: (unset)
 hub secret: (unset)
 random: (unset)
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The spawn-profile marker
+
+Each profile stamps `BBX_SPAWN_PROFILE`, so a credentialed `bbx` verb branches
+on who spawned it rather than on what it can happen to read. The marker is set,
+never inherited: a `tooling` parent's value does not reach an agent child, which
+is the whole point (`docs/plans/agent-capability-delegation.md`).
+
+```ts
+const box = await makeTmpBox();
+process.env.BBX_SPAWN_PROFILE = "tooling";
+const agentEnv = await buildScriptEnv(box.root);
+const toolingEnv = await buildToolingScriptEnv(box.root);
+delete process.env.BBX_SPAWN_PROFILE;
+JSON.stringify({ agent: agentEnv.BBX_SPAWN_PROFILE, tooling: toolingEnv.BBX_SPAWN_PROFILE })
+=> {"agent":"agent","tooling":"tooling"}
+```
+
+`spawnProfile()` reads it back, and anything it does not recognize — a typo, an
+unset variable, a shell that was never given one — is `unset`, which callers
+treat exactly like `agent`. Fail-closed: the only value that unlocks in-process
+credential use is the one spelled `tooling`.
+
+```ts continue
+const readBack = (value: string | undefined) => {
+  const saved = process.env.BBX_SPAWN_PROFILE;
+  if (value === undefined) delete process.env.BBX_SPAWN_PROFILE;
+  else process.env.BBX_SPAWN_PROFILE = value;
+  try { return spawnProfile(); }
+  finally {
+    if (saved === undefined) delete process.env.BBX_SPAWN_PROFILE;
+    else process.env.BBX_SPAWN_PROFILE = saved;
+  }
+};
+JSON.stringify(["agent", "tooling", "Tooling", "", undefined].map(readBack))
+=> ["agent","tooling","unset","unset","unset"]
+```
+
+A caller that means it can still override the marker through `additions` — the
+same escape hatch every other derived name has.
+
+```ts continue
+(await buildScriptEnv(box.root, { BBX_SPAWN_PROFILE: "tooling" })).BBX_SPAWN_PROFILE
+=> tooling
 ```
 
 ```ts cleanup

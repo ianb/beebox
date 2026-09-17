@@ -91,7 +91,7 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
     throw new FieldBoxExistsError(target);
   }
 
-  const result = await execa(bbxBinary(), ["init", target], {
+  const result = await execa(bbxBinary(), ["engine", "init", target], {
     cwd: runDir,
     reject: false,
     all: true,

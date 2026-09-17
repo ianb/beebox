@@ -1,20 +1,31 @@
 # Voice chip face
 
-`VoiceChipFace` (`components/chat/VoiceChip.tsx`) is the presentational half
-of the header's voice chip — renderable standalone, without the `Dropdown` or
-router context the full `VoiceChip` needs. It's a split pill: a mic icon for
-narration (input, dimmed when off) and a speaker icon for mute (output,
-slashed when muted), divided by a thin vertical rule, plus a transient
-"transcribing…" text label for HQ transcription (the readable text
-`NarrationStatusBadge` used to show, preserved by design — see
-docs/implemented-plans/chat-header-chips.md). `voiceChipLabel`
-(`components/chat/voice-chip-label.ts`) builds the chip's accessible name from
-the same three-flag state, independent of React.
+`VoiceChipFace` (`components/chat/VoiceChip.tsx`) is the presentational half of
+the app bar's voice chip — renderable standalone, without the `Dropdown` or
+router context the full `VoiceChip` needs.
+
+One drawing shares a single bot between two **orthogonal** facts:
+
+- **Who holds the floor** (the arrows) — taking turns, or you narrating while
+  the box listens. Podcast, the box holding the floor, is the third value of the
+  same axis and is not built.
+- **How the box answers** (marks beside the bot) — aloud, or in writing.
+
+Both are shown because neither implies the other: in narration the box is silent
+by default but may still speak by exception — when asked, or when the boxholder
+is hands-busy (`NARRATION_OVERLAY`) — and answering in text removes that
+exception, so a genuine question arrives as a callout instead.
+
+This replaced a microphone dimmed to 40% when narration was off. A mic cannot
+carry the distinction (voice input uses the mic in both modes), and the deeper
+reason is that narration is a *relationship*: it changes what the box does as
+much as what you do, and no single-participant picture shows a relationship
+(`issues/closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`).
 
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { VoiceChipFace } from "../../src/frontend/src/components/chat/VoiceChip.js";
+import { VoiceChipFace, voiceChipDiarizationEnabled } from "../../src/frontend/src/components/chat/VoiceChip.js";
 import { voiceChipLabel } from "../../src/frontend/src/components/chat/voice-chip-label.js";
 
 globalThis.React = React;
@@ -22,111 +33,117 @@ globalThis.React = React;
 function renderFace(state) {
   return renderToStaticMarkup(React.createElement(VoiceChipFace, state));
 }
+
+/** The floor glyph's flow path — the arrow between the two marks. */
+const TURNS = "M12 5h8l-2-2M20 11h-8l2 2";
+const YOU_HOLD_FLOOR = "M12 8h8m-3-3 3 3-3 3";
+/** The speaker segment: sound waves when aloud, written lines when in text. */
+const ALOUD = "M39 6a3 3 0 0 1 0 4";
+const IN_TEXT = "M37 4h11M37 8h8M37 12h11";
 ```
 
-## Default state: unmuted, narration off, nothing transcribing
+## Taking turns, answering aloud
 
 ```ts
-const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false });
-face.includes('data-voice-muted="false"')
-=> true
-
-face.includes('data-voice-narration="false"')
-=> true
-
-// Narration off dims the mic segment — the dimming wrapper directly
-// contains the mic SVG (its path starts with the mic-capsule arc), so this
-// pins the structure, not just the presence of an opacity class somewhere.
-face.includes('<span class="opacity-40"><svg')
-=> true
-
-face.includes("M12 15a3 3 0 0 0 3-3V6")
-=> true
-
-// The two segments are separated by a thin vertical rule element.
-face.includes('<span aria-hidden="true" class="w-px h-4 bg-white/20">')
-=> true
-
-// The speaker segment renders the unmuted shape (sound waves), not the
-// muted slash.
-face.includes("M15.54 8.46a5 5 0 0 1 0 7.07")
-=> true
-
-face.includes("transcribing…")
-=> false
-
-voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: false })
-=> Voice
+const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
+JSON.stringify([face.includes(TURNS), face.includes(YOU_HOLD_FLOOR), face.includes(ALOUD), face.includes(IN_TEXT)])
+=> [true,false,true,false]
 ```
 
-## Muted
+Nothing is conveyed by dimming any more — the old face wrapped the mic in an
+`opacity-40` span to mean "narration off", which is a brightness difference with
+nothing to compare it against.
 
-```ts
-const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false });
-face.includes('data-voice-muted="true"')
-=> true
-
-// Muted renders the slashed speaker shape instead of the sound waves.
-face.includes("M17 9l4 6m0-6-4 6")
-=> true
-
-face.includes("M15.54 8.46a5 5 0 0 1 0 7.07")
-=> false
-
-voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false })
-=> Voice — muted
-```
-
-## Narration on brightens the mic segment (no dimming)
-
-```ts
-const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false });
-face.includes('data-voice-narration="true"')
-=> true
-
-// Narration on means the mic is at full brightness, not dimmed — the mic
-// SVG is still there, but no longer inside a dimming wrapper.
+```ts continue
 face.includes("opacity-40")
 => false
-
-face.includes("M12 15a3 3 0 0 0 3-3V6")
-=> true
-
-voiceChipLabel({ muted: false, narrationEnabled: true, hqInFlight: false })
-=> Voice — narration on
 ```
 
-## Muted and narration on combine in the accessible name
-
-```ts
-voiceChipLabel({ muted: true, narrationEnabled: true, hqInFlight: false })
-=> Voice — muted, narration on
+```ts continue
+JSON.stringify([face.includes('data-voice-muted="false"'), face.includes('data-voice-narration="false"'), face.includes("transcribing…")])
+=> [true,true,false]
 ```
 
-## HQ transcription in flight shows the readable "transcribing…" label
+## The box answers in writing
+
+Written lines, not a slashed speaker: a slash says *suppressed*, and that is not
+what happens — the box still answers, in text.
 
 ```ts
-const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true });
+const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
+JSON.stringify([face.includes(IN_TEXT), face.includes(ALOUD), face.includes('data-voice-muted="true"')])
+=> [true,false,true]
+```
+
+## You hold the floor
+
+```ts
+const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false });
+JSON.stringify([face.includes(YOU_HOLD_FLOOR), face.includes(TURNS), face.includes('data-voice-narration="true"')])
+=> [true,false,true]
+```
+
+## The two axes combine, and the name says both in words
+
+The glyphs carry it with participants, arrows, and output marks; the accessible name says it outright,
+because a relationship and a channel do not survive being read as a list of
+toggle names.
+
+```ts
+JSON.stringify([
+  voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false }),
+  voiceChipLabel({ muted: true, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false }),
+])
+=> ["Voice — taking turns, answers aloud","Voice — taking turns, answers in text","Voice — you are narrating, it listens, answers aloud","Voice — you are narrating, it listens, answers in text"]
+```
+
+## HQ transcription in flight keeps its readable label
+
+```ts
+const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
 face.includes("transcribing…")
 => true
 
-voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true })
-=> Voice — transcribing
+voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false })
+=> Voice — taking turns, answers aloud, transcribing
 ```
 
-## Every flag on at once
+## Diarization changes people, not the floor or answer channel
+
+A diarized HQ service only applies when HQ dictation or narration is enabled.
+Narration automatically requests HQ; merely selecting a diarized HQ service
+while both modes are off does not enable speaker labels.
 
 ```ts
-const face = renderFace({ muted: true, narrationEnabled: true, hqInFlight: true });
-face.includes('data-voice-muted="true"')
-=> true
+JSON.stringify(["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null].map(hqService =>
+  [
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: false }),
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: true, narrationEnabled: false }),
+    voiceChipDiarizationEnabled({ hqService, hqDictationEnabled: false, narrationEnabled: true }),
+  ]
+))
+=> [[false,true,true],[false,true,true],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false],[false,false,false]]
+```
 
-face.includes('data-voice-narration="true"')
-=> true
+The group works with both arrow states and both channels. Each face still has
+exactly one bot and one SVG; only the human head count changes.
 
-face.includes("transcribing…")
-=> true
+```ts
+const combinations = [false, true].flatMap(diarizationEnabled => [false, true].flatMap(narrationEnabled => [false, true].map(muted => {
+  const face = renderFace({ muted, narrationEnabled, diarizationEnabled, hqInFlight: false });
+  return [
+    (face.match(/<svg /g) ?? []).length,
+    (face.match(/<rect /g) ?? []).length,
+    (face.match(/r="2.2"/g) ?? []).length,
+    face.includes(narrationEnabled ? YOU_HOLD_FLOOR : TURNS),
+    face.includes(muted ? IN_TEXT : ALOUD),
+  ];
+})));
+JSON.stringify(combinations)
+=> [[1,1,1,true,true],[1,1,1,true,true],[1,1,1,true,true],[1,1,1,true,true],[1,1,2,true,true],[1,1,2,true,true],[1,1,2,true,true],[1,1,2,true,true]]
 
-voiceChipLabel({ muted: true, narrationEnabled: true, hqInFlight: true })
-=> Voice — muted, narration on, transcribing
+voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: true })
+=> Voice — taking turns, answers in text, speaker labels on
 ```

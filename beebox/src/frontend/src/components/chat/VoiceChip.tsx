@@ -14,6 +14,7 @@
  * context the full chip needs.
  */
 
+import type { HqTranscriptionService } from "@shared/transcription-services";
 import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
@@ -28,43 +29,47 @@ import {
 import { useVoiceCapabilities } from "./VoiceChip-capabilities";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
-import { SpeakerIcon, MicIcon, HqIcon } from "./VoiceChip-icons";
+import { ConversationIcon, SpeakerIcon, FloorIcon, HqIcon } from "./VoiceChip-icons";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
 type VoiceChipPanel = "root" | "voice";
 
+/** Narration enables the HQ pass even when the separate HQ switch is off. */
+export function voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled, hqService }: {
+  hqDictationEnabled: boolean;
+  narrationEnabled: boolean;
+  hqService: HqTranscriptionService | null;
+}): boolean {
+  return (hqDictationEnabled || narrationEnabled)
+    && (hqService === "voxtral-diarized" || hqService === "mai-diarized");
+}
+
 export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
   hqInFlight: boolean;
+  diarizationEnabled?: boolean;
   /** A voice notice is waiting in the menu (see `VoiceNotices.tsx`). */
   alert?: boolean;
 }
 
 /**
- * Presentational chip face: a split pill with two segments — a mic icon for
- * narration (input, dimmed when off) and a speaker icon for mute (output,
- * slashed when muted) — divided by a thin vertical rule, plus a transient
- * "transcribing…" label while HQ transcription is in flight (the readable
- * text `NarrationStatusBadge` used to show, preserved here). Renderable
- * standalone (no Dropdown/router context), so the doctest exercises it
- * directly. The whole pill is one tap target (wired up by the caller); the
- * two icons are not separately actionable.
+ * One continuous drawing carries two independent facts: who holds the floor
+ * and how the bot answers. Diarization replaces the human with a group without
+ * changing either fact. The whole chip remains one menu trigger.
  */
-export function VoiceChipFace({ muted, narrationEnabled, hqInFlight, alert }: VoiceChipFaceState) {
+export function VoiceChipFace(props: VoiceChipFaceState) {
+  const { muted, narrationEnabled, hqInFlight, alert, diarizationEnabled = false } = props;
   return (
     <span
       className="inline-flex items-center gap-1.5"
       data-voice-muted={muted}
       data-voice-narration={narrationEnabled}
+      data-voice-diarization={diarizationEnabled}
     >
-      <span className={narrationEnabled ? "opacity-100" : "opacity-40"}>
-        <MicIcon />
-      </span>
-      <span aria-hidden="true" className="w-px h-4 bg-white/20" />
-      <SpeakerIcon muted={muted} />
+      <ConversationIcon floor={narrationEnabled ? "person" : "shared"} muted={muted} diarizationEnabled={diarizationEnabled} />
       {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
       {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
     </span>
@@ -73,6 +78,7 @@ export function VoiceChipFace({ muted, narrationEnabled, hqInFlight, alert }: Vo
 
 interface VoiceChipBodyProps {
   panel: VoiceChipPanel;
+  narrationDiarizationEnabled: boolean;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
@@ -99,7 +105,7 @@ interface VoiceChipBodyProps {
  */
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
-    panel, muted, onToggleMute, narrationEnabled, onToggleNarration,
+    panel, muted, onToggleMute, narrationEnabled, onToggleNarration, narrationDiarizationEnabled,
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
@@ -110,17 +116,16 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
       return (
         <>
           <VoiceNoticeList />
-          <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
+          <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<span className="inline-flex w-[34px] justify-center"><SpeakerIcon muted={muted} /></span>}>
             {muted ? "✓ " : ""}Mute
           </MenuItem>
           <MenuItem
             id="bbx-voice-narration"
             onClick={onToggleNarration}
-            icon={
-              <span className={narrationEnabled ? undefined : "opacity-40"}>
-                <MicIcon />
-              </span>
-            }
+            // The row's icon is the mode it SWITCHES TO, so the menu previews
+            // the glyph the chip will wear — not the mode you are in, which the
+            // chip already shows.
+            icon={<FloorIcon floor={narrationEnabled ? "shared" : "person"} diarizationEnabled={narrationDiarizationEnabled} />}
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
@@ -128,7 +133,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             enabled={hqDictationEnabled}
             onToggle={onToggleHqDictation}
             defaults={hqDefaults}
-            icon={<HqIcon />}
+            icon={<span className="inline-flex w-[34px] justify-center"><HqIcon /></span>}
           />
           <MenuDivider />
           <MenuItem id="bbx-voice-settings" onClick={onOpenVoice} keepOpen>
@@ -269,7 +274,8 @@ export const VoiceChip = memo(function VoiceChip({
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
   const alert = useVoiceNotices().length > 0;
-  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight }) + (alert ? " — voice notice" : "");
+  const diarizationEnabled = voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled, hqService: currentHqService });
+  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight, diarizationEnabled }) + (alert ? " — voice notice" : "");
 
   return (
     <Dropdown
@@ -286,17 +292,18 @@ export const VoiceChip = memo(function VoiceChip({
           data-bbx-reveal
           data-bbx-does="opens the voice menu — mute, narration mode, transcription services"
           onClick={toggle}
-          className="min-h-[40px] px-3 flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={label}
           aria-label={label}
           {...ariaProps}
         >
-          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} />
+          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} diarizationEnabled={diarizationEnabled} />
         </button>
       )}
     >
       <VoiceChipBody
         panel={panel}
+        narrationDiarizationEnabled={voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled: !narrationEnabled, hqService: currentHqService })}
         muted={muted}
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}

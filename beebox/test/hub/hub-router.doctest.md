@@ -39,6 +39,7 @@ const HUB_SECRET = "test-hub-secret-for-router-doctest";
 const DIAG_KEY = "test-diag-key-for-router-doctest";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
+const BROWSE_KEY = "test-browse-key-for-router-doctest";
 
 /** A minimal fake "box": echoes back method/url/headers as JSON for plain
  *  HTTP, and completes a bare-bones WebSocket handshake (no framing) for
@@ -180,6 +181,35 @@ const spoofed = await fetch(`${hub.base}/test1/browse/some-card`, {
 const spoofedBody = await spoofed.json();
 JSON.stringify(spoofedBody.headers)
 => {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
+```
+
+## The browse key reaches hub-mode children through the trusted auth contract
+
+The machine-wide dev browse key authenticates at the hub. It must continue as
+the hub's explicit `auth: off` decision when the child is hub-mode; treating it
+as per-box mobile auth would skip those headers and make the child reject the
+request.
+
+```ts continue
+process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
+const browseHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
+  openAccess: false,
+});
+const browseResponse = await fetch(`${browseHub.base}/test1/api/health`, {
+  headers: { cookie: `bbx_browse_key=${BROWSE_KEY}` },
+});
+browseResponse.status
+=> 200
+
+const browseBody = await browseResponse.json();
+JSON.stringify(browseBody.headers)
+=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
+```
+
+```ts continue
+for (const socket of browseHub.sockets) socket.destroy();
+await new Promise((resolve) => browseHub.server.close(resolve));
+delete process.env.BBX_BROWSE_API_KEY;
 ```
 
 ## A webhook path is proxied unauthenticated, carrying only the hub secret

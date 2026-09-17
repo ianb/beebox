@@ -13,7 +13,15 @@ import type { HealthCheck } from "./health.js";
 /**
  * The git-annex conditions `bbx doctor annex` cannot repair.
  *
- * Only those two: the rest are repairable, and are repaired by `bbx init` and
+ * `initialized` and `gitignore-assets` are here because the doctor cannot fix
+ * either one: annexing a box is a sequence (`core/annex/annex-new-box.ts`),
+ * not a single call, and un-ignoring has to stay ordered after the config.
+ * `initialized` also SHORT-CIRCUITS the doctor, so without it in this list a
+ * box that fails it would project no annex checks at all — `content-present`
+ * is never reached — and health would call that box healthy. Between them they
+ * are the two states in which asset bytes reach neither git nor the annex.
+ *
+ * The rest are repairable, and are repaired by `bbx init` and
  * by the `annex-config` migration the deploy sweep applies — so surfacing them
  * here would mostly report problems that are already fixed. (An earlier version
  * of this comment claimed `bbx serve` repairs them too. It does not, and that
@@ -31,7 +39,7 @@ export async function annexHealthChecks(args: { repoRoot: string; boxRoot: strin
     options: { check: true },
   });
   const out: HealthCheck[] = [];
-  for (const id of ["binary", "content-present"]) {
+  for (const id of ["binary", "initialized", "gitignore-assets", "content-present"]) {
     const check = result.checks.find((c) => c.id === id);
     // Absent when the run short-circuited on a missing binary, which the
     // "binary" check itself already reports.
