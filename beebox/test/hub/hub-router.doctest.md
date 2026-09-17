@@ -732,6 +732,16 @@ const reopened = await fetch(`${closedHub.base}/closed/api/x`);
 JSON.stringify({ status: reopened.status, error: (await reopened.json()).error })
 => {"status":503,"error":"box_unavailable"}
 
+// Pairing redemption passes the auth wall unauthenticated and learns nothing about the owner.
+const unauthed = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }], openAccess: false });
+const sealed = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+const redeem = await fetch(`${unauthed.base}/closed/api/pairing/redeem`, { method: "POST" });
+JSON.stringify({ status: redeem.status, body: await redeem.json() })
+=> {"status":503,"body":{"error":"box_unavailable","message":"Box closed is not running"}}
+
+await sealed.complete();
+unauthed.server.close();
+for (const socket of unauthed.sockets) socket.destroy();
 const latchedResponse = await fetch(`${closedHub.base}/broken/api/x`);
 JSON.stringify({ status: latchedResponse.status, body: await latchedResponse.json() })
 => {"status":503,"body":{"error":"box_unavailable","message":"Box broken is not running: child exited with code 1"}}

@@ -11,7 +11,7 @@ import { once } from "node:events";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance.js";
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 ```
@@ -136,6 +136,42 @@ await boxMaintenanceStatus(box.root)
 ```ts cleanup
 child.kill();
 await box.cleanup();
+```
+
+## A handle that lost its lock cannot touch the new owner's closure
+
+A sleep past the lock's stale window lets another owner take the box. When the
+old handle resumes, its phase writes and completion are refused, and its
+release leaves the new owner's record alone.
+
+```ts
+const stolenBox = await makeTmpBox({ git: true });
+const ownerLock = join(stolenBox.root, ".git/bbx-maintenance/owner.lock");
+const sleeper = await acquireBoxMaintenance(stolenBox.root, { reason: "sleeper" });
+await sleeper.beginChanges();
+await forceAcquireLock(ownerLock, { id: "thief", reason: "thief" });
+await sleeper.held()
+=> false
+
+await sleeper.beginChanges()
+=> throws BoxMaintenanceError
+
+await sleeper.complete()
+=> throws BoxMaintenanceError
+
+(await boxMaintenanceStatus(stolenBox.root)).owner.reason
+=> thief
+
+// Releasing the old handle leaves the record for the live owner to finish.
+await sleeper.release();
+(await boxMaintenanceStatus(stolenBox.root)).phase
+=> exclusive
+```
+
+```ts cleanup
+await releaseLock(ownerLock);
+await sleeper.release();
+await stolenBox.cleanup();
 ```
 
 ## Drain waits for lease publication, even with no published readers

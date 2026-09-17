@@ -278,9 +278,15 @@ export async function closeBoxMaintenance(
   let released = false;
   const drainMs = opts.drainMs ?? 600_000;
   let since = new Date().toISOString();
-  const writePhase = (phase: Phase["phase"]): Promise<void> => writeFileAtomic(join(directory, "phase.json"), {
-    content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
-  });
+  const ownsLock = async (): Promise<boolean> => (await inspectLock(leasePath(permit)))?.metadata.id === permit.id;
+  // A handle whose lock was reclaimed (a sleep past the stale window) must not
+  // publish over, or clear, the closure of the owner that replaced it.
+  const writePhase = async (phase: Phase["phase"]): Promise<void> => {
+    if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });
+    await writeFileAtomic(join(directory, "phase.json"), {
+      content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
+    });
+  };
   const release = async (): Promise<void> => {
     if (released) return;
     released = true;
@@ -291,7 +297,7 @@ export async function closeBoxMaintenance(
         const phase = await readPhase(directory);
         changing = phase !== null && phase.phase !== "draining";
       }
-      if (completed || !changing) await rm(join(directory, "phase.json"), { force: true });
+      if ((completed || !changing) && await ownsLock()) await rm(join(directory, "phase.json"), { force: true });
     }
     finally { await releaseLock(leasePath(permit)); }
   };
@@ -304,7 +310,7 @@ export async function closeBoxMaintenance(
     await writePhase(changing ? "exclusive" : "draining");
     return {
       run: (fn) => context.run(permit, fn), release,
-      async held() { return !released && (await inspectLock(leasePath(permit)))?.metadata.id === permit.id; },
+      async held() { return !released && ownsLock(); },
       async drain() {
         const deadline = Date.now() + drainMs;
         for (;;) {
@@ -317,16 +323,11 @@ export async function closeBoxMaintenance(
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       },
-      async prepare() {
-        if (released) throw new BoxMaintenanceError({ reason: "expired" });
-        await writePhase("ready"); changing = true;
-      },
-      async beginChanges() {
-        if (released) throw new BoxMaintenanceError({ reason: "expired" });
-        await writePhase("exclusive"); changing = true;
-      },
+      async prepare() { await writePhase("ready"); changing = true; },
+      async beginChanges() { await writePhase("exclusive"); changing = true; },
       async complete() {
         await withAdmission(directory, async () => {
+          if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });
           invariant((await scanLocks(join(directory, "work"), { suffix: ".lock", profile: "default" })).size === 0, "Maintenance children must finish before reopening");
           completed = true;
           await release();

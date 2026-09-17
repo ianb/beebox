@@ -267,7 +267,8 @@ None.
 | Deploy fails midway; boxes reopen on a half-activated engine | Existing supervisor crash-loop doctests | Supervisor marks the box unhealthy; Track 2 reports `box_unavailable` with `lastError` | Clear |
 | A delegated `join` child writes a phase after its parent died | Existing: `join` validates the parent permit against the live lock (`box-maintenance.ts:246-249`) | Throws `expired` | Clear |
 | Old engine reads a record with `since` | Schema is `z.object` without `.strict()`; unknown keys are dropped | n/a | n/a |
-| Hub 503 body leaks a path or pid to an unauthenticated client | Planned hub doctest | The branch sits after the auth gate (`hub-server.ts:490-493`) | n/a |
+| Hub 503 body leaks a pid to an unauthenticated client | `test/hub/hub-router.doctest.md` (pairing redeem) | Pairing redemption passes the wall unauthenticated; it gets the generic `box_unavailable` body | n/a |
+| A handle whose lock was reclaimed publishes over, or clears, the replacing owner's closure | `test/lib/box-maintenance.doctest.md` (stolen lock) | Root phase writes, `complete()`, and the release-time record removal require the owner lock's id to match | Refused with `expired` |
 
 ## Agent-flow / user-flow edge cases
 

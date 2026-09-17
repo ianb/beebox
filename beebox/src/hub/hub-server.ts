@@ -517,7 +517,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     } catch (e) {
       return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
     }
-    if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints });
+    // Pairing redemption passed the wall unauthenticated; it gets no owner detail.
+    if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints, detailed: perBoxAuthed || decision.authorized });
 
     reply.hijack();
     proxy.web(request.raw, reply.raw, { target: endpoint.origin });
