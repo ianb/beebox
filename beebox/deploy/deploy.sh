@@ -587,7 +587,10 @@ if ! cmp -s "$src" "$site"; then
   [[ -f "$site" ]] && cp -p "$site" "$site.prev"
   install -m 0644 "$src" "$site"
   ln -sf "$site" /etc/nginx/sites-enabled/beebox
-  if ! nginx -t -q; then
+  # Absolute path: this runs after `source /home/beebox/.env` (the CONTROL
+  # block), whose PATH omits /usr/sbin. A bare `nginx` is "command not found",
+  # which is how the first deploy of this block failed.
+  if ! /usr/sbin/nginx -t -q; then
     [[ -f "$site.prev" ]] && cp -p "$site.prev" "$site"
     echo "  FAILED: the repo nginx site file does not pass nginx -t; restored the previous file." >&2
     exit 1
