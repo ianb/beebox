@@ -233,7 +233,7 @@ privileged merely because its launcher holds the maintenance capability.
 
 The maintenance phase records owner attempt/generation and progress, with
 liveness owned by its held file lock. **Amended 2026-09-17 by
-[box-maintenance-no-wedge.md](box-maintenance-no-wedge.md):** a phase record
+[box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
 closes the box only while its owner lock is held. Owner death, a failed
 attempt, or an abandoned deploy leaves the record as unfinished maintenance,
 which refuses nothing; the next completed attempt clears it. The original

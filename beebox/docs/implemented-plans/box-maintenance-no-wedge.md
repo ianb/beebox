@@ -1,6 +1,6 @@
 ---
 title: "A box closure cannot outlive its maintenance owner"
-status: active
+status: implemented
 workstream: box-maintenance-no-wedge
 issues: []
 ---
@@ -11,7 +11,7 @@ reload changes it. On 2026-09-16 that closure outlived the process that made it,
 and four local boxes refused every request until repaired by hand. This plan
 makes the refusal end when the owning process ends, so no maintenance outcome
 can leave a box unusable. It amends
-[migration-reliability.md](migration-reliability.md), which chose to keep a box
+[migration-reliability.md](../plans/migration-reliability.md), which chose to keep a box
 closed after an uncertain failure.
 
 **Issues addressed:** none filed. Searched `issues/` and `private-issues/` for
