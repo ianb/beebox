@@ -3,7 +3,7 @@ title: "Reliable box maintenance and migration with Git recovery"
 status: partial
 workstream: migration-reliability
 issues:
-  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
+  - ../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Reliable box maintenance and migration with Git recovery
 
@@ -13,7 +13,7 @@ repair, and existing questions and alerts for decisions that need a person.
 Migration, deployment, and reload share one boundary: close admission to new
 work, drain accepted work, perform maintenance, verify readiness, then reopen.
 
-**Issues addressed:** [Local boxes never converge](../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
+**Issues addressed:** [Local boxes never converge](../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
 Related but not closed by this plan: [parked template resolution](../../../issues/features/2026-08-24-parked-template-resolution-path.md),
 [template recurrence](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md),
 [incorrect shipped procedure templates](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
@@ -309,7 +309,7 @@ into the shared module and wire ordinary work owners before using it for mutatio
 and `--sweep`. Both accept dirty input. Keep status and explicit manifest repair
 commands, and keep v2 bootstrap separate. Manual mode may execute registered
 procedure migrations. **Amended 2026-09-17 by
-[procedure-migration-convergence.md](procedure-migration-convergence.md):**
+[procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
 unattended `--repair` mode runs them too, one run per human answer; the
 original "reports them as requiring attention" left every box waiting for a
 person and is withdrawn.

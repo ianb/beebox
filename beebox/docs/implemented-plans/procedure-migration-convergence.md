@@ -1,9 +1,9 @@
 ---
 title: "Procedure migrations converge unattended"
-status: draft
+status: implemented
 workstream: box-maintenance-no-wedge
 issues:
-  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
+  - ../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Procedure migrations converge unattended
 
@@ -12,7 +12,7 @@ A procedure migration is applied by an agent, not a script. Today only a hand-ru
 This plan makes the hourly convergence schedule run procedure migrations, bounds
 a failed run to one durable question, and lets a deploy mark a box ready when a
 procedure is still pending. It amends
-[migration-reliability.md](migration-reliability.md), which chose to report
+[migration-reliability.md](../plans/migration-reliability.md), which chose to report
 procedures as attention items in unattended mode.
 
 **Issues addressed:**
