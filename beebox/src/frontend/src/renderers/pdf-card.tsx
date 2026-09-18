@@ -11,6 +11,7 @@
 import { useParams } from "@tanstack/react-router";
 import { PdfCardView } from "../components/PdfCardView";
 import { PdfFrame } from "../components/PdfFrame";
+import { useVersionedFileUrl } from "../hooks/useVersionedFileUrl";
 import { Text } from "../components/ui/Text";
 import { apiFileUrl, resolveRelativePath } from "../lib/view-url";
 import {
@@ -27,6 +28,8 @@ function OriginalDocumentView({ data, mode }: RendererProps) {
   // `attach/source.pdf` resolves into this card's own attach scope; a ref that
   // escapes the box root resolves to null and lands in the notice below.
   const originalPath = originalRef === null ? null : resolveRelativePath(data.path, originalRef);
+  const rawUrl = originalPath !== null && boxSlug !== undefined ? apiFileUrl(boxSlug, originalPath) : "";
+  const src = useVersionedFileUrl(rawUrl, { path: originalPath ?? data.path, enabled: originalPath !== null && boxSlug !== undefined });
   if (originalPath === null || boxSlug === undefined) {
     return (
       <Text as="p" tone="subtle" className="p-4">
@@ -35,9 +38,10 @@ function OriginalDocumentView({ data, mode }: RendererProps) {
     );
   }
   const name = originalPath.split("/").pop() ?? originalPath;
+  if (src === null) return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
   return (
     <PdfFrame
-      src={apiFileUrl(boxSlug, originalPath)}
+      src={src}
       title={name}
       downloadName={name}
       mode={mode ?? "page"}
