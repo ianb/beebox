@@ -1,13 +1,23 @@
 ---
 title: "Nothing migrates local boxes — only prod converges, so a dev box silently falls behind until someone notices a missing card"
-workstream: migration-reliability
+workstream: box-maintenance-no-wedge
 area: beebox
 priority: important
 labels: [migrations, boxes, dev-environment]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a local box was missing its interface cards; "I guess it should [happen automatically]"
+resolution: implemented
 ---
+
+Resolved by the `migration-reliability` hourly `box-convergence` schedule
+(reads the `BOXES=` list, applies `--sweep --repair --yield`, skips dirty boxes
+visibly) plus `worktree-box-maintenance-no-wedge`'s
+[procedure-migration-convergence.md](../../../beebox/docs/implemented-plans/procedure-migration-convergence.md),
+which makes that hourly pass also run procedure (agent-applied) migrations
+under a one-run-per-human-answer bound. Local boxes converge within the hour
+of a migration landing on `main`; no local box needs a hand-run
+`bbx migrate --apply`.
 
 A local box was found with **12 pending migrations**, its manifest last touched
 2026-09-05, and no `_config/interface/` directory at all — so neither

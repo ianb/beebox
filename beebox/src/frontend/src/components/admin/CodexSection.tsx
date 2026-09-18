@@ -50,10 +50,10 @@ export function CodexSection() {
         {polling && verificationUrl && userCode ? (
           <Card background="info">
             <Stack gap="sm">
-              <Text size="sm">Open the Codex sign-in page, then enter this one-time code:</Text>
-              <Text size="xl" weight="bold" mono>{userCode}</Text>
-              <ExternalLink id="bbx-admin-codex-login-link" href={verificationUrl}>Open Codex Login</ExternalLink>
-              <Text size="xs" tone="muted">This page updates automatically after authentication completes.</Text>
+              <Text as="p" size="sm">Open the Codex sign-in page, then enter this one-time code:</Text>
+              <Text as="div" size="xl" weight="bold" mono>{userCode}</Text>
+              <div><ExternalLink id="bbx-admin-codex-login-link" href={verificationUrl}>Open Codex Login</ExternalLink></div>
+              <Text as="p" size="xs" tone="muted">This page updates automatically after authentication completes.</Text>
             </Stack>
           </Card>
         ) : null}

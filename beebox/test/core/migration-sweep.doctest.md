@@ -141,6 +141,61 @@ JSON.stringify({
 await box.cleanup();
 ```
 
+## An unattended pass runs a procedure once per human answer
+
+With a runner, the `--repair` pass applies procedure migrations itself. A run
+that fails writes one question and stops; the next passes run nothing while it
+is unanswered. Answering it authorizes exactly one more run. Every pass reports
+`failed` with the question, so the schedule keeps naming it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: ["trick-secret-runtime"] });
+await box.commitAll("procedure pending");
+let runs = 0;
+let exit = 1;
+const runProcedure = async (procedure, { onOutput }) => { runs += 1; onOutput(`${procedure} attempt ${String(runs)} failed\n`); return exit; };
+const first = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
+const questionText = await box.read(first.question);
+JSON.stringify({ status: first.status, runs, question: first.question, carriesOutput: questionText.includes("trick-secret-runtime attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/trick-secret-runtime/repair-started") })
+=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","carriesOutput":true,"receipt":""}
+
+const second = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
+const record = await boxMaintenanceStatus(box.root);
+JSON.stringify({ status: second.status, runs, question: second.question, record: record.phase, owner: record.owner })
+=> {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","record":"exclusive","owner":null}
+
+await box.write(first.question, questionText.replace("status: pending", "status: answered\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z"));
+await box.commitAll("answer");
+exit = 0;
+const third = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
+JSON.stringify({ status: third.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime") })
+=> {"status":"applied","runs":2,"recorded":true}
+```
+
+A run that never finished (killed by the execution timeout) leaves its receipt.
+The next pass writes the question instead of running again, naming the
+unfinished attempt's own snapshot, and a person's `--apply` still runs the
+procedure directly:
+
+```ts continue
+await box.write(MANIFEST_PATH, (await box.read(MANIFEST_PATH)).split("\n").filter((line) => !line.includes("trick-secret-runtime")).join("\n"));
+await box.commitAll("pending again");
+const unfinished = git(box, "rev-parse", "HEAD");
+git(box, "update-ref", "refs/bbx/migrations/trick-secret-runtime/repair-started", unfinished);
+const stale = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
+JSON.stringify({ status: stale.status, runs, question: stale.question, namesReceipt: (await box.read(stale.question)).includes(`Recovery: ${unfinished}`) })
+=> {"status":"failed","runs":2,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card","namesReceipt":true}
+
+const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
+JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime"), open: manual.questions })
+=> {"status":"attention","runs":3,"recorded":true,"open":["_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A scheduled pass yields to a box in use
 
 `--yield` is the hourly schedule's mode. An idle chat run holds a lease until
@@ -311,9 +366,11 @@ await box.cleanup();
 
 ## A joined blocker revokes readiness and leaves deployment closed
 
-A missing manifest or pending procedure is not permission to activate new code,
-even if an earlier nested operation prepared readiness. The outer controller
-retains the closed phase after its owner releases.
+A missing manifest is not permission to activate new code, even if an earlier
+nested operation prepared readiness. The outer controller retains the closed
+phase after its owner releases. A pending procedure is different: the box is
+consistent and the next unattended pass applies it, so deployment marks it
+ready.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -340,7 +397,7 @@ await owner.prepare();
 const result = await owner.run(() => sweepMigrations({ boxRoot: box.root, withinMaintenance: true }));
 await owner.release();
 JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.root)).phase })
-=> {"status":"needs-procedure","phase":"exclusive"}
+=> {"status":"needs-procedure","phase":"ready"}
 ```
 
 ```ts cleanup
