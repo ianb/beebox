@@ -4481,6 +4481,14 @@ test1:
       peak: 47924
       added: 0
       turns: 2
+  host-package-install:
+    - date: 2026-09-18T03:20:34.532Z
+      boxCommit: 8ba62dbe6e9374894024aef42530eabbcac1a84e
+      repoCommit: 4573b0cddffcf8ee6e40dc41175c4e1966128261
+      initial: 50037
+      peak: 50037
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -44,6 +44,7 @@ import { fieldTestCommand } from "./commands/field-test.js";
 import { tickCommand } from "./commands/tick.js";
 import { scheduledCommand } from "./commands/scheduled.js";
 import { healthCommand } from "./commands/health.js";
+import { hostCommand } from "./commands/host.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { activityCommand } from "./commands/activity.js";
 import { trickCommand } from "./commands/trick.js";
@@ -108,6 +109,7 @@ const ALL: readonly Command[] = [
   tickCommand,
   scheduledCommand,
   healthCommand,
+  hostCommand,
   doctorCommand,
   activityCommand,
   trickCommand,

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-18T03:40:30Z
-Total documents: 383
+Generated: 2026-09-18T03:50:18Z
+Total documents: 384
 
 ## Issues
 
@@ -591,7 +591,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 589 lines
+Title: "Deploy" | 604 lines
 
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -599,6 +599,7 @@ Referenced by:
 - docs/adding-a-box.md:151 (link) — [`deploy/README.md`](../deploy/README.md).
 - docs/guides.md:46 (link) — | Deployment | [deploy/README.md](../deploy/README.md) |
 - docs/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
+- docs/implemented-plans/box-host-packages.md:54 (mention) — `deploy/README.md` note): ~120 lines. No generated output. Well under the
 - docs/implemented-plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/implemented-plans/hub-healthz-box-aggregation.md:314 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
@@ -614,7 +615,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:754 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
-- docs/security-report.md:248 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:249 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server-operations.md:3 (link) — Reference for the running beebox server (production at `box.example.com`). For initial provisioning scripts see [`deploy
 - user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:57 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -633,6 +634,7 @@ References:
 - → docs/health-checks.md (link)
 - → deploy/CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
+- → docs/implemented-plans/box-host-packages.md (mention)
 - → docs/secrets.md (link)
 
 ### docker/
@@ -1260,6 +1262,7 @@ Referenced by:
 - docs/implemented-plans/bbx-agent-surface.md:74 (mention) — (`beebox/docs/engineering-principles.md:87`). This is the principle the plan
 - docs/implemented-plans/box-git-lock.md:41 (mention) — - `docs/engineering-principles.md` **§4 Resilient AND never silent — and never
 - docs/implemented-plans/box-growth-health-checks.md:70 (mention) — disk boundary. `docs/engineering-principles.md:39-47` says: *"Disk reads,
+- docs/implemented-plans/box-host-packages.md:73 (mention) — - **Principle 3, validate at boundaries** (`docs/engineering-principles.md:37`).
 - docs/implemented-plans/box-maintenance-no-wedge.md:61 (mention) — (`docs/engineering-principles.md:49`): the box degrades to "open with
 - docs/implemented-plans/box-root-paths.md:25 (mention) — - `docs/engineering-principles.md` — #3 validate-at-boundaries (refs are
 - docs/implemented-plans/browser-task-card.md:63 (mention) — degradation is not"* allowed, `beebox/docs/engineering-principles.md:51`).
@@ -2131,7 +2134,7 @@ Title: "Secrets: the machine-level store" | 551 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
-- deploy/README.md:480 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
+- deploy/README.md:495 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
 - docs/adding-a-box.md:112 (link) — one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:206 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
@@ -2154,7 +2157,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 226 lines | current reference
+Title: "Security overview" | 230 lines | current reference
 
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -2188,10 +2191,11 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 449 lines | current reference
+Title: "Security report — structured version" | 458 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
+- docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/security-overview.md:18 (link) — [`security-report.md`](security-report.md).
@@ -2221,6 +2225,7 @@ References:
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/closed/features/2026-07-20-schedules-off-by-default.md (link)
 - → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → docs/implemented-plans/box-host-packages.md (mention)
 - → ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md (link)
 - → deploy/README.md (mention)
 - → ../issues/decisions/2026-08-07-server-backup-story.md (link)
@@ -2997,12 +3002,27 @@ References:
 - → docs/health-checks.md (mention)
 - → docs/box-layout.md (mention)
 
+#### docs/implemented-plans/box-host-packages.md
+
+Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
+
+Referenced by:
+- deploy/README.md:350 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- docs/security-report.md:247 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+
+References:
+- → ../issues/features/2026-09-16-box-installs-distro-packages.md (frontmatter)
+- → deploy/README.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/security-report.md (mention)
+
 #### docs/implemented-plans/box-maintenance-no-wedge.md
 
 Title: "A box closure cannot outlive its maintenance owner" | 342 lines | shipped history | implemented
 
 Referenced by:
 - docs/plans/migration-reliability.md:236 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
+- ../issues/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:9 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
 
 References:
 - → docs/plans/migration-reliability.md (link)

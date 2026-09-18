@@ -7,8 +7,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-suite-verdicts — consolidating the 08-24/08-25 load-flake filings
 priority: important
-activate-on: 2026-09-18
-category: bugs
 ---
 
 Three filings (2026-08-24 ×2, 2026-08-25, now closed as superseded by this one)

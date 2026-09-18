@@ -718,6 +718,26 @@ HISTEOF
 # shellcheck disable=SC2029
 queue_remote command ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
 
+# Box package installs: the root wrapper and the one sudoers entry that lets the
+# box user run it (docs/plans/box-host-packages.md). The wrapper's bytes come
+# from the build checkout through stdin, never from $INSTALL_DIR: the box user
+# owns that tree, and rsync's size+mtime check can keep an edited file, which
+# this step would then install as root. visudo validates the entry before it
+# goes live; a bad entry fails the deploy rather than breaking sudo.
+queue_remote stdin install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/bbx-host-apt \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-host-apt"
+queue_remote stdin bash -s <<'SUDOERS'
+  set -euo pipefail
+  tmp=$(mktemp)
+  trap 'rm -f "$tmp"' EXIT
+  echo 'beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > "$tmp"
+  # Absolute path: this runs after `source /home/beebox/.env` (deploy.sh's
+  # CONTROL block), whose PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
+  # omits /usr/sbin, so a bare `visudo` fails with "command not found".
+  /usr/sbin/visudo -cqf "$tmp"
+  install -o root -g root -m 0440 "$tmp" /etc/sudoers.d/beebox-host-apt
+SUDOERS
+
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
   echo "Converging boxes under maintenance..."

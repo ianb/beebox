@@ -231,19 +231,20 @@ wakeup cycle or routine use without a per-action confirmation.
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
-| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
+| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user, plus root package installs through the §5 wrapper (distro-only, service-free). This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
 | Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
-| Process model | `bbx hub` (systemd, dedicated non-root `callback` user) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
+| Process model | `bbx hub` (systemd, dedicated non-root `beebox` user, `setup-server.sh:19`) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
 | Bind defaults | `bbx serve` → `localhost` (`serve.ts:99`); hub → `127.0.0.1` (`hub-config.ts:104`); no `0.0.0.0` anywhere in `src/` | mitigated | med | local | Control is default-loopback + nginx as the only public listener. Residual: operator-overridable — nothing in code *refuses* a non-loopback bind. (No recorded decision that this is fine, so it is not marked `accepted`.) |
 | TLS — public path | Cloudflare-proxied, SSL mode "Flexible": **edge→origin is plain HTTP** (nginx :80 → 127.0.0.1) | gap | high | public (passive on-path) | [cloudflare-flexible-ssl-origin-plaintext](../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md) |
 | TLS — Tailscale path | Terminated by `tailscale serve` (LE certs), tailnet-only | ok | — | — |
 | Tailscale exposure gate | `tailscale-target.ts`, `tailscale-setup.ts:100-160` | mitigated | — | — | Refuses to expose a target that can't prove an auth-enforcing posture (`/auth/me` probe, anonymous-401 check); funnel never invoked, detected funnel = hard failure |
 | Cross-box env isolation | Hub child-env allowlist (§2) | mitigated | — | — | |
+| Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host-apt`); NOPASSWD sudoers entry for the `beebox` user, that one path only; `deploy.sh` installs both from the build checkout via stdin, never from the box-user-owned `/opt/beebox`, and `visudo -c` checks the entry. The Docker image carries the same wrapper for `node`. | accepted | high | local (any box agent) | The wrapper is the whole boundary: re-execs under an empty environment with `bash -p`; exact package names only (apt's regex fallback blocked); a private apt config reads only the distro's deb822 sources file (the legacy `sources.list` is ignored), so third-party sources are invisible; refuses any upgrade or removal; installs only the inspected `name=version` set with `--no-download`; refuses packages that ship system units (including under `/etc/systemd/system`), init scripts, root cron jobs, D-Bus system services, systemd generators, sudoers/polkit rules, or setuid/setgid files. Every attempt is logged to `/var/log/beebox/host-apt.log`. Residual: distro maintainer scripts run as root, a `postinst` `setcap` is not detected, and installs are host-wide (every box sees them). Boxholder decision 2026-09-17 (sudo wrapper, distro only, refuse services); `docs/plans/box-host-packages.md`. Regression: `deploy/server-bin/bbx-host-apt.smoke.sh` (Docker, Ubuntu 24.04 + Debian bookworm). |
 | Secrets on the server | `/home/beebox/.env`, 0600 (`setup-server.sh:186`) | ok | — | — | |
 | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require manual application; documented in `deploy/README.md` but not decided-acceptable — [deploy-infra-drift-setup-server-not-rerun](../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md) |
 | Backups | No first-class mechanism; box git remotes optional; annex `numcopies: 1`, no annex remote | gap | med | — | [server-backup-story](../../issues/decisions/2026-08-07-server-backup-story.md) |
@@ -439,6 +440,14 @@ Every `accepted` item, with its rationale:
    the posture for now — a per-box boundary is tracked in
    [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
    the network channel is tested to zero and re-swept weekly. (§7b)
+
+13. **Box agents install distro packages as root** — through one validating
+   sudo wrapper: distro sources only, additive only, no services, root jobs,
+   privilege grants or setuid files. Distro maintainer scripts still run as
+   root for a package an LLM chose, a `postinst` `setcap` goes undetected,
+   and the install is host-wide. Accepted 2026-09-17 on the boxholder's
+   judgment that distro packages are safe, over asking the boxholder for
+   each install. (§5)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being
