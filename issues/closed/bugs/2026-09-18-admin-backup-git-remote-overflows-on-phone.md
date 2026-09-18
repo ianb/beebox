@@ -1,12 +1,18 @@
 ---
 title: "Admin Backup card: the git remote path overflows the card at phone width"
-workstream: unattached
+workstream: ui-stack-roles
 area: beebox
 labels: [ui, frontend]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-ui-stack-roles — mobile screenshot of /admin during the Stack visual pass
+resolution: implemented
 ---
+
+Closed by `acfe58687`: added `min-w-0 break-words` to the value span in
+`BackupSection.tsx`'s local `Row` helper, matching the narrow fix suggested
+below. Verified at 390px width: the value's right edge matches the row's
+right edge and the row no longer overflows.
 
 At 390px width, the "Git remote" value in the Backup card runs past the
 card's right edge. The remote is a long unbroken path (a local filesystem
