@@ -101,7 +101,9 @@ export async function raiseAlert(deps: RunnerDeps, input: AlertInput): Promise<A
       filingFailedSince: null,
       filingError: null,
     }
-    : { ...standing, ...fresh, occurrences: standing.occurrences + 1 };
+    // An fyi is listed in one digest and closed at the next; a repeat carries
+    // new words, so it goes back to unlisted rather than closing unseen.
+    : { ...standing, ...fresh, occurrences: standing.occurrences + 1, digestedAt: input.priority === "fyi" ? null : standing.digestedAt };
   await writeAlert(deps.storeRoot, alert);
   const announce = input.priority === "important" && standing?.priority !== "important";
   if (announce) {

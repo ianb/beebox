@@ -43,8 +43,9 @@ function plural(count: number, noun: string): string {
 /**
  * What one digest says and does. Every open `important` is listed (it stays
  * urgent until closed); `normal` alerts raised or updated since the last
- * digest; each `fyi` exactly once. Filing outcomes and cleared conditions whose
- * issue is still open ride along as lines of the message.
+ * digest; each `fyi` exactly once. Each new filing, conditions that could not
+ * be filed, and cleared conditions whose issue is still open ride along as
+ * lines of the message.
  */
 export function digestPlan(alerts: readonly Alert[], input: { now: Date; lastDigestAt: string | null }): DigestPlan {
   const since = input.lastDigestAt === null ? Number.NEGATIVE_INFINITY : Date.parse(input.lastDigestAt);
@@ -54,7 +55,8 @@ export function digestPlan(alerts: readonly Alert[], input: { now: Date; lastDig
   const normal = open.filter((alert) => alert.priority === "normal" && Date.parse(alert.lastSeenAt) > since);
   const fyi = open.filter((alert) => alert.priority === "fyi" && alert.digestedAt === null);
   const closing = open.filter((alert) => alert.priority === "fyi" && alert.digestedAt !== null);
-  const filed = open.filter((alert) => alert.issue !== null);
+  // Filing clears `digestedAt`, so a filing is announced in one digest.
+  const filed = open.filter((alert) => alert.issue !== null && alert.digestedAt === null);
   const unfiled = open.filter((alert) =>
     alert.issue === null && alert.filingFailedSince !== null && nowMs - Date.parse(alert.filingFailedSince) >= FILING_RETRY_MS);
   const cleared = alerts.filter((alert) =>
@@ -74,7 +76,7 @@ export function digestPlan(alerts: readonly Alert[], input: { now: Date; lastDig
   const popup = counts.length === 0 && lines.length === 0
     ? null
     : { title: `Schedules: ${counts.length === 0 ? "nothing new" : counts.join(" · ")}`, message: lines.length === 0 ? "Open the alerts page to review." : lines.join(" · ") };
-  return { popup, listed: [...important, ...normal, ...fyi], closing };
+  return { popup, listed: [...new Set([...important, ...normal, ...fyi, ...filed])], closing };
 }
 
 /** Run the digest when it is due; called by the tick under its lock. */

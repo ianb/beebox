@@ -186,3 +186,40 @@ JSON.stringify({
 })
 => {"committed":["bugs/2026-09-26-schedule-full-suite-red-unattributed.md","bugs/2026-09-26-schedule-full-suite-unconverged.md"],"filed":"private-issues/bugs/2026-09-26-schedule-full-suite-unconverged.md","failedSince":true,"error":"still not mounted","secondRound":["timeout"]}
 ```
+
+A filing is announced in one digest, not every day while the condition stays
+open. Filing clears `digestedAt`; the digest that lists it sets it again.
+
+```ts continue
+const filedOnce = [
+  digestPlan(records, { now: new Date(now + DAY), lastDigestAt: new Date(now).toISOString() }).popup?.message,
+];
+const afterFiled = records.map((a) => (a.issue !== null ? { ...a, digestedAt: new Date(now + DAY).toISOString() } : a));
+filedOnce.push(digestPlan(afterFiled, { now: new Date(now + 2 * DAY), lastDigestAt: new Date(now + DAY).toISOString() }).popup?.message);
+JSON.stringify(filedOnce.map((message) => message?.includes("filed as issues") ?? false))
+=> [true,false]
+```
+
+## A repeated fyi is listed again, not closed unseen
+
+An fyi condition raised again after a digest listed it carries new words, so
+it goes back to unlisted: the next digest shows it instead of closing it.
+
+```ts continue
+const { raiseAlert } = await import("../../../bin/lib/schedules-alerts.js");
+const raiseFlakes = () => raiseAlert(deps, {
+  workstream: "full-suite", runId: null, title: "flaky", message: "m", details: null, priority: "fyi", condition: "flakes",
+});
+clock = local(21, 3);
+await raiseFlakes();
+clock = local(21, 9, 5);
+await digestIfDue(deps);
+clock = local(21, 15);
+const repeated = await raiseFlakes();
+clock = local(22, 9, 5);
+await digestIfDue(deps);
+const flakes = (await readAllAlerts(storeRoot)).find((a) => a.id === repeated.id);
+JSON.stringify([repeated.digestedAt, flakes?.state])
+=> [null,"open"]
+```
+

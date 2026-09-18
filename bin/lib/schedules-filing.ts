@@ -85,9 +85,10 @@ class IssueCommitError extends Error {
   }
 }
 
-/** The real `CommitIssue`: the file is new, so writing it needs no lock; the
- *  git add and commit run under the private-issues mutation lock, with a
- *  bounded wait so a held lock fails this run rather than hanging it. */
+/** The real `CommitIssue`: writing, adding, and committing run as one step
+ *  under the private-issues mutation lock, with a bounded wait so a held lock
+ *  fails this run rather than hanging it. A failure unstages and removes the
+ *  file inside the same lock, so the private index is never left dirty. */
 export function privateIssuesCommitter(repoRoot: string): CommitIssue {
   const root = path.join(repoRoot, "private-issues");
   return async (issue) => {
@@ -97,16 +98,17 @@ export function privateIssuesCommitter(repoRoot: string): CommitIssue {
       if (errnoCode(e) === "ENOENT") throw new PrivateIssuesUnavailableError(root);
       throw e;
     }
-    await fs.writeFile(path.join(root, issue.relPath), issue.text, { flag: "wx" });
-    const script = 'git -C "$1" add -- "$2" && git -C "$1" commit -q -m "$3" -- "$2"';
+    // noclobber: an existing file is a collision, never overwritten.
+    const script = [
+      'set -C; cat > "$1/$2" || exit 1',
+      'if git -C "$1" add -- "$2" && git -C "$1" commit -q -m "$3" -- "$2"; then exit 0; fi',
+      'git -C "$1" reset -q -- "$2"; rm -f "$1/$2"; exit 1',
+    ].join("\n");
     const committed = await execa(path.join(repoRoot, "bin", "private-issues"), [
       "with-lock", repoRoot, "sh", "-c", script, "file-standing", root, issue.relPath,
       `File standing schedule condition: ${path.basename(issue.relPath, ".md")}`,
-    ], { reject: false, all: true, env: { PRIVATE_ISSUES_LOCK_MAX_TRIES: "60" } });
-    if (committed.exitCode !== 0) {
-      await fs.rm(path.join(root, issue.relPath), { force: true });
-      throw new IssueCommitError(committed.all);
-    }
+    ], { reject: false, all: true, input: issue.text, env: { PRIVATE_ISSUES_LOCK_MAX_TRIES: "60" } });
+    if (committed.exitCode !== 0) throw new IssueCommitError(committed.all);
   };
 }
 
@@ -126,7 +128,9 @@ export async function fileStanding(
     const issue = renderStandingIssue(alert, at.slice(0, 10));
     try {
       await input.commitIssue(issue);
-      const filed = { ...alert, issue: path.join("private-issues", issue.relPath), filingFailedSince: null, filingError: null };
+      const filed = {
+        ...alert, issue: path.join("private-issues", issue.relPath), filingFailedSince: null, filingError: null, digestedAt: null,
+      };
       await writeAlert(storeRoot, filed);
       outcome.filed.push(filed);
     } catch (e) {
