@@ -8,6 +8,7 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
@@ -162,11 +163,11 @@ export function ScanUploaderSection() {
         </Row>
 
         {createMutation.error ? (
-          <Text size="sm" tone="danger">
+          <ErrorText>
             {createMutation.error.data?.code === "CONFLICT"
               ? `A token named "${name}" already exists — choose another name.`
               : createMutation.error.message}
-          </Text>
+          </ErrorText>
         ) : null}
 
         {minted ? (
@@ -184,9 +185,9 @@ export function ScanUploaderSection() {
               <Button id="bbx-settings-scan-hide-token" onClick={() => setMinted(null)}>Done — hide token</Button>
             </Row>
             {copyError ? (
-              <Text size="sm" tone="danger">
+              <ErrorText>
                 Copy failed — select the token text manually.
-              </Text>
+              </ErrorText>
             ) : null}
             <Stack gap="xs">
               <Hint>Paste-ready setup command:</Hint>
@@ -203,7 +204,7 @@ export function ScanUploaderSection() {
           {listQuery.isLoading ? (
             <Hint>Loading uploaders...</Hint>
           ) : listQuery.error ? (
-            <Text size="sm" tone="danger">{listQuery.error.message}</Text>
+            <ErrorText>{listQuery.error.message}</ErrorText>
           ) : listQuery.data && listQuery.data.length > 0 ? (
             <div className="divide-y divide-warm-100">
               {listQuery.data.map((uploader) => (

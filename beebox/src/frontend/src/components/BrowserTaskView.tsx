@@ -18,6 +18,7 @@ import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
@@ -142,7 +143,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 function SchemaCard({ attach }: { attach: AttachState | null }) {
   let content;
   if (attach === null) content = <Text as="p" tone="subtle">Loading…</Text>;
-  else if (attach.schemaText === null) content = <Text as="p" tone="danger">Missing: put a JSON Schema for one record at attach/schema.json.</Text>;
+  else if (attach.schemaText === null) content = <ErrorText>Missing: put a JSON Schema for one record at attach/schema.json.</ErrorText>;
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;
   return (
@@ -150,7 +151,7 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
       <Card padding="sm" border="none">
         <Stack gap="sm">
           {content}
-          {problem !== null ? <Text as="p" tone="danger" size="sm">{problem}</Text> : null}
+          {problem !== null ? <ErrorText>{problem}</ErrorText> : null}
         </Stack>
       </Card>
     </Accordion>

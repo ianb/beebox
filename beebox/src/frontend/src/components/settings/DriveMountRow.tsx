@@ -24,6 +24,7 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { bbxSource } from "../../lib/source-tag";
 
@@ -174,7 +175,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       </Hint>
 
       {mount.error === null ? null : (
-        <Text size="sm" tone="danger">{mount.error}</Text>
+        <ErrorText>{mount.error}</ErrorText>
       )}
 
       <Row gap="sm" align="center" wrap>

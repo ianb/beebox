@@ -22,6 +22,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Heading } from "../ui/Heading";
 import type { RouterOutput } from "../../lib/trpc";
 
@@ -127,7 +128,7 @@ function ConfirmForm({ question, onAnswered }: { question: QuestionInfo; onAnswe
         placeholder="Add context for your answer..."
         rows={2}
       />
-      {error !== null ? <Text as="div" tone="danger" size="sm">{error}</Text> : null}
+      {error !== null ? <ErrorText>{error}</ErrorText> : null}
       <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
         <Button
           type="button"

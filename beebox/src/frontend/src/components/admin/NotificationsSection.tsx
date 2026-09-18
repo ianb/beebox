@@ -15,6 +15,7 @@ import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
@@ -168,7 +169,7 @@ export function NotificationsSection() {
 
         {error ? (
           <div className="p-3 bg-danger-50 border border-danger-100 rounded">
-            <Text size="sm" tone="danger">{error}</Text>
+            <ErrorText>{error}</ErrorText>
           </div>
         ) : null}
       </Stack>

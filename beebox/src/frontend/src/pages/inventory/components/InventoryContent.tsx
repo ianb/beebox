@@ -6,6 +6,7 @@ import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { TabBar } from "../../../components/ui/TabBar";
 import { Text } from "../../../components/ui/Text";
+import { ErrorText } from "../../../components/ui/ErrorText";
 import { Hint } from "../../../components/ui/Hint";
 import { Heading } from "../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
@@ -61,8 +62,8 @@ function RepositorySummary({ data }: { data: Inventory }) {
           <InventoryStatistic value={formatBytes(repository.gitDiskBytes)} label="of that, Git storage" />
           <InventoryStatistic value={repository.annexed ? repository.annexQueryAvailable ? `${annexedPercent}%` : "Unavailable" : "Not enabled"} label="logical content annexed" />
         </Row>
-        {repository.complete ? null : <Text as="p" tone="danger" size="sm">Repository footprint is a lower bound because some paths could not be read.</Text>}
-        {repository.annexed && !repository.annexQueryAvailable ? <Text as="p" tone="danger" size="sm">Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</Text> : null}
+        {repository.complete ? null : <ErrorText>Repository footprint is a lower bound because some paths could not be read.</ErrorText>}
+        {repository.annexed && !repository.annexQueryAvailable ? <ErrorText>Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</ErrorText> : null}
         {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Hint>This repository is not using Git-annex.</Hint>}
       </Stack>
     </Card>
@@ -116,8 +117,8 @@ function InventorySummary({ data, linkStatus }: { data: Inventory; linkStatus: L
   return (
     <Card as="section" aria-label="Storage summary">
       <Stack gap="md">
-        {data.complete ? null : <Text as="p" tone="danger" size="sm">This scan is partial because {data.skippedPaths.toLocaleString()} filesystem path(s) could not be read. Totals are lower bounds.</Text>}
-        {data.linkStatusComplete ? null : <Text as="p" tone="danger" size="sm">Incoming-reference detection is partial. Linked contains confirmed matches; Unlinked may include cards whose referrers could not be read.</Text>}
+        {data.complete ? null : <ErrorText>This scan is partial because {data.skippedPaths.toLocaleString()} filesystem path(s) could not be read. Totals are lower bounds.</ErrorText>}
+        {data.linkStatusComplete ? null : <ErrorText>Incoming-reference detection is partial. Linked contains confirmed matches; Unlinked may include cards whose referrers could not be read.</ErrorText>}
         <Text as="div" size="xs" tone="muted" uppercase>{linkStatus === "all" ? "Whole box" : "Whole-box totals"}</Text>
         <Row gap="lg" wrap>
           <InventoryStatistic value={data.totals.files.toLocaleString()} label="physical files" />

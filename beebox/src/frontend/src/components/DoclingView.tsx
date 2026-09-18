@@ -25,6 +25,7 @@ import { ExternalLink } from "./ui/ExternalLink";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 import { Hint } from "./ui/Hint";
 import { Heading } from "./ui/Heading";
 
@@ -128,9 +129,9 @@ export function DoclingView({ data }: RendererProps) {
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="p" tone="danger">
+        <ErrorText>
           Could not read {basename}: {error?.message ?? "no content"}
-        </Text>
+        </ErrorText>
         <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );

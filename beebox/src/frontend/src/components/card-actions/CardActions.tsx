@@ -9,6 +9,7 @@ import { Button } from "../ui/Button";
 import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
@@ -105,8 +106,8 @@ export function CardActions({ target, onTrashed, vertical }: {
           <h2 id="trash-card-title" className="text-lg font-semibold text-warm-900">Move this card to Trash?</h2>
           <Text as="p" size="sm" tone="subtle" className="mt-2">The card remains recoverable from box Trash and git history.</Text>
           {refs.isLoading ? <Hint className="mt-4">Checking links…</Hint> : null}
-          {refs.error ? <Text as="p" size="sm" tone="danger" className="mt-4">Could not check links: {refs.error.message}</Text> : null}
-          {refs.data?.errors.length ? <Text as="p" size="sm" tone="danger" className="mt-4">Some files could not be checked. The list of links may be incomplete.</Text> : null}
+          {refs.error ? <ErrorText className="mt-4">Could not check links: {refs.error.message}</ErrorText> : null}
+          {refs.data?.errors.length ? <ErrorText className="mt-4">Some files could not be checked. The list of links may be incomplete.</ErrorText> : null}
           {referrers.length > 0 ? (
             <section className="mt-4">
               <Heading level={3}>{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Heading>
@@ -116,7 +117,7 @@ export function CardActions({ target, onTrashed, vertical }: {
               </ul>
             </section>
           ) : null}
-          {trash.error ? <Text as="p" size="sm" tone="danger" className="mt-4">{trash.error.message}</Text> : null}
+          {trash.error ? <ErrorText className="mt-4">{trash.error.message}</ErrorText> : null}
           <div className="mt-5 flex justify-end gap-2">
             <Button intent="secondary" onClick={() => setConfirming(false)} disabled={trash.isPending}>Cancel</Button>
             <Button intent="destructive" onClick={doTrash} loading={trash.isPending} disabled={refs.isLoading || refs.isError} loadingLabel="Moving…">Move to Trash</Button>

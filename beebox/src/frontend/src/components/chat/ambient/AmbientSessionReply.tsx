@@ -5,6 +5,7 @@ import { getQueryKey } from "@trpc/react-query";
 import { bbxSource } from "../../../lib/source-tag";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
+import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { Accordion } from "../../ui/Accordion";
 import { CalloutStack } from "../CalloutBlock";
@@ -73,7 +74,7 @@ export function AmbientSessionReply(props: Props) {
       <Accordion title={<Text size="sm">{session.label} · {label}</Text>}>
         <div aria-busy={loading}>
           {Boolean(loading) && <Hint>Loading conversation activity…</Hint>}
-          {Boolean(error) && <Text tone="danger" size="sm">Could not refresh conversation: {error?.message}</Text>}
+          {Boolean(error) && <ErrorText>Could not refresh conversation: {error?.message}</ErrorText>}
           {!loading && !error && !history.data?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}

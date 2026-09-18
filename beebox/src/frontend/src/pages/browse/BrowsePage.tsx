@@ -16,7 +16,7 @@ import { trpc } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
 import { Column } from "../../components/ui/Column";
-import { Text } from "../../components/ui/Text";
+import { ErrorText } from "../../components/ui/ErrorText";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { RequestError } from "../../lib/errors";
 import type { BrowseMissingKind, BrowseState } from "../../lib/browse-card-state";
@@ -133,7 +133,7 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
 
   return (
     <Column className="h-full">
-      {deleteError ? <Text as="div" size="sm" tone="danger" className="p-3">{deleteError}</Text> : null}
+      {deleteError ? <ErrorText className="p-3">{deleteError}</ErrorText> : null}
       <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} fill idPrefix="bbx-browse-sidebar">
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />

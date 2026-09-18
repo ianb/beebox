@@ -9,6 +9,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
@@ -33,9 +34,9 @@ function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
   if (status === "ready") return null;
   return (
     <div role="alert">
-      <Text as="p" size="sm" tone="danger">
+      <ErrorText>
         The local password store is unavailable. Password-account details and resets cannot be loaded.
-      </Text>
+      </ErrorText>
     </div>
   );
 }
@@ -225,7 +226,7 @@ export function AllowedEmailsSection() {
 
         {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
 
-        {queryError || mutationError ? <Text size="sm" tone="danger">{queryError ?? mutationError}</Text> : null}
+        {queryError || mutationError ? <ErrorText>{queryError ?? mutationError}</ErrorText> : null}
       </Stack>
     </Card>
   );

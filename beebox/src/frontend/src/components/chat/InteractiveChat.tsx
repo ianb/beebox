@@ -44,7 +44,7 @@ import { captureModeForRequest } from "../../lib/capture-intent";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
-import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
   return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
@@ -298,7 +298,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       conversationKey={logicalConversation}
       sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
       transcriptVisible={transcriptVisible}
-      ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><Text size="sm" tone="danger">{recoveryNotice}</Text></div>}</>} failedRegion={failedRegion}
+      ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><ErrorText>{recoveryNotice}</ErrorText></div>}</>} failedRegion={failedRegion}
       tabs={tabs}
       model={model}
       mute={mute}

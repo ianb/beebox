@@ -45,6 +45,7 @@ import { AttachedComments } from "./AttachedComments";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 import { Hint } from "./ui/Hint";
 import { Heading } from "./ui/Heading";
 import { FriendlyDate } from "./ui/FriendlyDate";
@@ -218,7 +219,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
           <div className="h-24 bg-warm-100 rounded animate-pulse" aria-busy="true" aria-label="Loading page renders" />
         ) : null}
         {pagesError ? (
-          <Text size="sm" tone="danger">Could not list page renders: {pagesError.message}</Text>
+          <ErrorText>Could not list page renders: {pagesError.message}</ErrorText>
         ) : null}
         <PdfPageStrip pages={pages} activePage={activePage} />
         {showMissingPageRendersNotice ? (

@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
@@ -101,7 +102,7 @@ export function SecretsSection() {
             message once, and keep both when they genuinely differ. */}
         {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
           .map((message) => (
-            <div key={message} role="alert"><Text size="sm" tone="danger">{message}</Text></div>
+            <div key={message} role="alert"><ErrorText>{message}</ErrorText></div>
           ))}
       </Stack>
     </Card>

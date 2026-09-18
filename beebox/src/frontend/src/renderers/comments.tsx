@@ -12,6 +12,7 @@ import { apiRawFileUrl, getApiBase } from "../api";
 import { CommentsThread, parseComments } from "../components/CommentsThread";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { ErrorText } from "../components/ui/ErrorText";
 import { Heading } from "../components/ui/Heading";
 import { RequestError } from "../lib/errors";
 import { registerFileType, type RendererProps } from "./index";
@@ -37,7 +38,7 @@ function CommentsRenderer({ data }: RendererProps) {
   }
   if (error) {
     const message = error instanceof Error ? error.message : "error";
-    return <Text as="div" tone="danger" className="p-4">Couldn’t load {basename}: {message}</Text>;
+    return <ErrorText className="p-4">Couldn’t load {basename}: {message}</ErrorText>;
   }
 
   return (

@@ -5,6 +5,7 @@ import { Card } from "../ui/Card";
 import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
@@ -131,13 +132,13 @@ export function AgentEngineSection() {
         {/* The server saves the config and commits it separately; a failed
             commit was previously reported and then dropped on the floor here. */}
         {update.data?.commitWarning ? (
-          <div role="alert"><Text size="sm" tone="danger">{update.data.commitWarning}</Text></div>
+          <div role="alert"><ErrorText>{update.data.commitWarning}</ErrorText></div>
         ) : null}
         {config.error ? (
-          <div role="alert"><Text size="sm" tone="danger">{config.error.message}</Text></div>
+          <div role="alert"><ErrorText>{config.error.message}</ErrorText></div>
         ) : null}
         {update.error ? (
-          <div role="alert"><Text size="sm" tone="danger">{update.error.message}</Text></div>
+          <div role="alert"><ErrorText>{update.error.message}</ErrorText></div>
         ) : null}
       </Stack>
     </Card>

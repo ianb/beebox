@@ -16,6 +16,7 @@ import { JsonView } from "../components/ui/JsonView";
 import { Stack } from "../components/ui/Stack";
 import { Row } from "../components/ui/Row";
 import { Text } from "../components/ui/Text";
+import { ErrorText } from "../components/ui/ErrorText";
 import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
@@ -84,7 +85,7 @@ function JsonRenderer({ data }: RendererProps) {
   }
   if (metaError || meta === undefined) {
     const message = metaError instanceof Error ? metaError.message : "unknown error";
-    return <Text as="div" tone="danger" className="p-4">Couldn’t read {basename}: {message}</Text>;
+    return <ErrorText className="p-4">Couldn’t read {basename}: {message}</ErrorText>;
   }
 
   // Large + not yet requested: show metadata and let the user opt in.
@@ -113,13 +114,13 @@ function JsonRenderer({ data }: RendererProps) {
   }
   if (bodyError) {
     const message = bodyError instanceof Error ? bodyError.message : "error";
-    return <Text as="div" tone="danger" className="p-4">Failed to load {basename}: {message}</Text>;
+    return <ErrorText className="p-4">Failed to load {basename}: {message}</ErrorText>;
   }
   if (!parsed.ok) {
     // Not valid JSON — show the parse error and the raw text so it's still useful.
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="div" tone="danger" size="sm">Not valid JSON: {parsed.error}</Text>
+        <ErrorText>Not valid JSON: {parsed.error}</ErrorText>
         <Pre size="xs">{text}</Pre>
       </Stack>
     );

@@ -2,6 +2,7 @@ import { trpc } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { legacyHistoryState } from "../history/history-card-state";
@@ -21,7 +22,7 @@ export function MissingCardState({ path, onClose }: { path: string; onClose?: ((
             : "No card or git history exists at this path. Check the path or close this view."}
       </Text>
       <Text as="p" size="sm" mono breakAll tone="muted">{path}</Text>
-      {history.error ? <Text as="p" size="sm" tone="danger">History could not be checked: {history.error.message}</Text> : null}
+      {history.error ? <ErrorText>History could not be checked: {history.error.message}</ErrorText> : null}
       <div className="flex flex-wrap items-center gap-3">
         {existed ? <Button intent="secondary" onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>See history for this path</Button> : null}
         {onClose ? <Button intent="secondary" onClick={onClose}>Close this view</Button> : null}

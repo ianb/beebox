@@ -8,6 +8,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 
@@ -146,7 +147,7 @@ export function CompanionPairingSection() {
         </Row>
 
         {createMutation.error ? (
-          <Text size="sm" tone="danger">{createMutation.error.message}</Text>
+          <ErrorText>{createMutation.error.message}</ErrorText>
         ) : null}
 
         {ticket ? (
@@ -168,7 +169,7 @@ export function CompanionPairingSection() {
           {devicesQuery.isLoading ? (
             <Hint>Loading devices...</Hint>
           ) : devicesQuery.error ? (
-            <Text size="sm" tone="danger">Devices could not be loaded. {devicesQuery.error.message}</Text>
+            <ErrorText>Devices could not be loaded. {devicesQuery.error.message}</ErrorText>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (
             <>
               <div className="divide-y divide-warm-100">

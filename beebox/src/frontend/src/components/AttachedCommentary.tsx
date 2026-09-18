@@ -10,6 +10,7 @@ import { attachDirFor } from "@shared/attach-path";
 import { trpc } from "../lib/trpc";
 import { Markdown } from "./Markdown";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 export type JumpToQuote = (quoteText: string) => Promise<boolean>;
@@ -29,7 +30,7 @@ function CommentaryRemarks({
     return <Text as="div" tone="subtle" className="italic">Loading commentary…</Text>;
   }
   if (error !== null) {
-    return <Text as="div" tone="danger">Couldn’t load commentary.</Text>;
+    return <ErrorText>Couldn’t load commentary.</ErrorText>;
   }
   const body = data?.body;
   if (body === undefined || body.trim() === "") {

@@ -6,6 +6,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { CheckboxField, TextField } from "../ui/fields";
@@ -17,7 +18,7 @@ function InviteError({ message }: { message: string }) {
   return (
     <div role="alert">
       <Stack gap="xs">
-        <Text as="p" size="sm" tone="danger">{message}</Text>
+        <ErrorText>{message}</ErrorText>
         {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx engine auth create-user</Text> : null}
       </Stack>
     </div>

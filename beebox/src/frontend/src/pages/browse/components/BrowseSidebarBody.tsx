@@ -10,6 +10,7 @@ import { Button } from "../../../components/ui/Button";
 import { Column } from "../../../components/ui/Column";
 import { Row } from "../../../components/ui/Row";
 import { Text } from "../../../components/ui/Text";
+import { ErrorText } from "../../../components/ui/ErrorText";
 import { Toggle } from "../../../components/ui/Toggle";
 import { BrowseSidebarList } from "./BrowseSidebarList";
 import { BrowseLandmarkHeader } from "./BrowseLandmarkHeader";
@@ -48,7 +49,7 @@ export function BrowseSidebarBody(props: Props) {
           <BrowseLandmarkHeader landmark={landmark} boxSlug={boxSlug} onNavigate={onLinkNavigate} />
         ) : landmarkError ? (
           <Column gap="xs" className="border-b border-warm-200 p-4">
-            <Text as="div" size="sm" tone="danger">Could not load this folder&rsquo;s landmark.</Text>
+            <ErrorText>Could not load this folder&rsquo;s landmark.</ErrorText>
             <Button size="sm" intent="secondary" onClick={onLandmarkRetry}>Try again</Button>
           </Column>
         ) : null}
@@ -80,7 +81,7 @@ export function BrowseSidebarBody(props: Props) {
 
   return (
     <Column gap="sm" className="p-4">
-      <Text as="div" size="sm" tone="danger">Could not load this folder.</Text>
+      <ErrorText>Could not load this folder.</ErrorText>
       <Text as="div" size="xs" tone="subtle">
         {error instanceof Error ? error.message : "The server did not answer."}
       </Text>

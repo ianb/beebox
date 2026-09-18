@@ -18,6 +18,7 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { ErrorText } from "../components/ui/ErrorText";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import { isDoclingPath } from "../lib/docling";
 import type { RendererProps } from "./index";
@@ -49,7 +50,7 @@ function DoclingRawView({ data }: RendererProps) {
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="p" tone="danger">Could not read {basename}: {error?.message ?? "no content"}</Text>
+        <ErrorText>Could not read {basename}: {error?.message ?? "no content"}</ErrorText>
         <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );

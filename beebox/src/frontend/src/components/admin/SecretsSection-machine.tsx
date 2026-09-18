@@ -17,6 +17,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { SecretUsesBlock } from "./SecretsSection-uses";
 
@@ -79,7 +80,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
             <Button intent="destructive" onClick={() => setConfirming(true)}>Remove from machine</Button>
           )}
         </Row>
-        {remove.error ? <div role="alert"><Text size="sm" tone="danger">{remove.error.message}</Text></div> : null}
+        {remove.error ? <div role="alert"><ErrorText>{remove.error.message}</ErrorText></div> : null}
       </Stack>
     </Card>
   );

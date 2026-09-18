@@ -15,6 +15,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { SecretValueForm } from "./SecretsSection-forms";
@@ -86,8 +87,8 @@ function GrantedRow({
         </Row>
         {/* Left open after a save — the verification verdict renders inside it. */}
         {rotating ? <SecretValueForm fixedName={secret.name} hints={hints} onSaved={refresh} /> : null}
-        {setAccess.error ? <div role="alert"><Text size="sm" tone="danger">{setAccess.error.message}</Text></div> : null}
-        {revoke.error ? <div role="alert"><Text size="sm" tone="danger">{revoke.error.message}</Text></div> : null}
+        {setAccess.error ? <div role="alert"><ErrorText>{setAccess.error.message}</ErrorText></div> : null}
+        {revoke.error ? <div role="alert"><ErrorText>{revoke.error.message}</ErrorText></div> : null}
       </Stack>
     </Card>
   );
