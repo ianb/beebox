@@ -1,12 +1,19 @@
 ---
 title: "Stack silently does not stack, and the UI primitives push presentation onto every call site"
-workstream: unattached
+workstream: ui-stack-roles
 area: beebox
 labels: [ui, frontend]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — after a Codex admin block rendered as one run-together paragraph
+resolution: implemented
 ---
+
+Closed 2026-09-18: implemented in `8548c0f44` (Stack as a flex column),
+`76a019b0e` (Heading/Hint/ErrorText/StatusMessage role components), and
+`cd57a8411` (fold Column into Stack) —
+`beebox/docs/implemented-plans/stack-and-text-roles.md`, all three sequenced
+steps. No divergence from what the issue proposed.
 
 A review of `beebox/src/frontend/src/components/ui/` prompted by a layout bug
 (`b0bd513c8`): the Codex device-code block's prompt, code, link and note all

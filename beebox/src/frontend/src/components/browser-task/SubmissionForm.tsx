@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { InlineAction } from "../ui/InlineAction";
 
 export const MANIFEST_FILE = "records.json";
@@ -125,7 +126,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
     <Card padding="md">
       <Stack gap="sm">
         <Text as="h3" weight="semibold">Submit a batch</Text>
-        {disabledReason !== null ? <Text as="p" tone="danger">{disabledReason}</Text> : null}
+        {disabledReason !== null ? <ErrorText>{disabledReason}</ErrorText> : null}
         <label className="block">
           <Text as="span" size="sm">Add files (a {MANIFEST_FILE} plus the files it names; add in several rounds if needed)</Text>
           <input
@@ -164,7 +165,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
         ) : null}
         {upload.phase === "refused" ? (
           <Stack gap="xs">
-            <Text as="p" tone="danger">Refused: {upload.message}</Text>
+            <ErrorText>Refused: {upload.message}</ErrorText>
             <IssueList heading="Server reported" issues={upload.issues} />
           </Stack>
         ) : null}

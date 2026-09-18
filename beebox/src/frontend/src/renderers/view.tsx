@@ -20,6 +20,7 @@ import { QuestionsList } from "../components/questions/QuestionsList";
 import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
 import { registerFileType, type RendererProps } from "./index";
 
 /**
@@ -53,9 +54,9 @@ function ViewCard(props: RendererProps) {
         <Text as="div" size="sm" weight="medium" tone="emphasis">
           {data.path} names an unknown view {name === "" ? "(none)" : `"${name}"`}
         </Text>
-        <Text as="div" size="sm" tone="muted">
+        <Hint>
           Valid views: {NAMED_VIEW_NAMES.join(", ")}
-        </Text>
+        </Hint>
       </Card>
     );
   }

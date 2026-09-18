@@ -17,6 +17,7 @@ import { Card } from "../../components/ui/Card";
 import { Row } from "../../components/ui/Row";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
+import { ErrorText } from "../../components/ui/ErrorText";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/fields";
 import { withBase } from "../../api";
@@ -186,7 +187,7 @@ function SetupFields({
       />
       {error !== null ? (
         <div role="alert">
-          <Text as="p" tone="danger" size="sm">{error}</Text>
+          <ErrorText>{error}</ErrorText>
         </div>
       ) : null}
       <Button id="bbx-setup-submit" type="submit" intent="primary" fullWidth loading={submitting}>

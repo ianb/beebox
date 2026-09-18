@@ -11,6 +11,7 @@ import { trpc, type RouterOutput } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Accordion } from "../components/ui/Accordion";
 import { Text } from "../components/ui/Text";
+import { ErrorText } from "../components/ui/ErrorText";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Badge } from "../components/ui/Badge";
@@ -193,7 +194,7 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   const { data: browse, isLoading, error } = useDirectoryListing(dirPath);
 
   if (isLoading) return <div className="p-4"><Text tone="subtle">Loading...</Text></div>;
-  if (error) return <div className="p-4"><Text tone="danger">Error: {error.message}</Text></div>;
+  if (error) return <div className="p-4"><ErrorText>Error: {error.message}</ErrorText></div>;
   if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
 
   return (

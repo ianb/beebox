@@ -45,6 +45,9 @@ import { AttachedComments } from "./AttachedComments";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { Hint } from "./ui/Hint";
+import { Heading } from "./ui/Heading";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { Button } from "./ui/Button";
 
@@ -61,7 +64,7 @@ function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFie
   const { title, author, pages, format, captured, source, description, originalName } = fields;
   return (
     <Stack gap="sm">
-      <Text as="h2" size="lg" weight="bold">{title ?? fallbackName}</Text>
+      <Heading level={2}>{title ?? fallbackName}</Heading>
       <Row gap="md" wrap>
         {author !== null ? <MetaItem label="Author">{author}</MetaItem> : null}
         {pages !== null ? <MetaItem label="Pages">{pages}</MetaItem> : null}
@@ -216,13 +219,13 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
           <div className="h-24 bg-warm-100 rounded animate-pulse" aria-busy="true" aria-label="Loading page renders" />
         ) : null}
         {pagesError ? (
-          <Text size="sm" tone="danger">Could not list page renders: {pagesError.message}</Text>
+          <ErrorText>Could not list page renders: {pagesError.message}</ErrorText>
         ) : null}
         <PdfPageStrip pages={pages} activePage={activePage} />
         {showMissingPageRendersNotice ? (
-          <Text size="sm" tone="muted">
+          <Hint>
             {fields.pages} page{fields.pages === 1 ? "" : "s"} expected but not found in the attach scope.
-          </Text>
+          </Hint>
         ) : null}
 
         {hasBody ? (

@@ -7,6 +7,8 @@ import { isRecord } from "@shared/is-record";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
+import { Heading } from "../components/ui/Heading";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { ExternalLink } from "../components/ui/ExternalLink";
@@ -110,7 +112,7 @@ function SheetView({ data }: RendererProps) {
       {/* Header */}
       <Row justify="between" align="start">
         <div>
-          <Text as="h2" size="lg" weight="semibold">{sheet.title}</Text>
+          <Heading level={2}>{sheet.title}</Heading>
           {sheet.modified ? (
             <Text as="p" size="xs" tone="muted">
               Last synced: {new Date(sheet.modified).toLocaleString()}
@@ -132,7 +134,7 @@ function SheetView({ data }: RendererProps) {
 
       {/* Table */}
       {loading ? (
-        <Text size="sm" tone="muted">Loading spreadsheet data...</Text>
+        <Hint>Loading spreadsheet data...</Hint>
       ) : (
         <SheetTable rows={currentRows} />
       )}

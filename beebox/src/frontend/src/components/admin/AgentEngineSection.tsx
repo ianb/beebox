@@ -5,6 +5,9 @@ import { Card } from "../ui/Card";
 import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
 import { AGENT_ENGINES } from "@shared/agent-models.js";
 
@@ -47,7 +50,7 @@ export function AgentEngineSection() {
   if (config.isLoading) {
     return (
       <Card as="section" aria-label="Agent engine" shadow aria-busy>
-        <Text size="sm" tone="muted">Loading agent engine…</Text>
+        <Hint>Loading agent engine…</Hint>
       </Card>
     );
   }
@@ -64,12 +67,12 @@ export function AgentEngineSection() {
       <Stack gap="md">
         <Stack gap="xs">
           <div id="agent-engine-heading">
-            <Text as="h2" size="lg" weight="semibold">Agent engine and model</Text>
+            <Heading level={2}>Agent engine and model</Heading>
           </div>
-          <Text size="sm" tone="muted">
+          <Hint>
             Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine
             keep using it; legacy chats default to Claude.
-          </Text>
+          </Hint>
         </Stack>
 
         {config.data ? (
@@ -88,10 +91,10 @@ export function AgentEngineSection() {
             />
             <Stack gap="xs">
               <Text size="sm" weight="semibold">Available engines</Text>
-              <Text size="sm" tone="muted">
+              <Hint>
                 Which harnesses a new chat may choose. Turn off an engine this box has no
                 account for, so nobody starts a chat that cannot run.
-              </Text>
+              </Hint>
               {AGENT_ENGINES.map((candidate) => (
                 <CheckboxField
                   key={candidate}
@@ -121,7 +124,7 @@ export function AgentEngineSection() {
         ) : null}
 
         {update.isPending ? (
-          <div role="status"><Text size="sm" tone="muted">Saving…</Text></div>
+          <div role="status"><Hint>Saving…</Hint></div>
         ) : null}
         {update.isSuccess ? (
           <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>
@@ -129,13 +132,13 @@ export function AgentEngineSection() {
         {/* The server saves the config and commits it separately; a failed
             commit was previously reported and then dropped on the floor here. */}
         {update.data?.commitWarning ? (
-          <div role="alert"><Text size="sm" tone="danger">{update.data.commitWarning}</Text></div>
+          <div role="alert"><ErrorText>{update.data.commitWarning}</ErrorText></div>
         ) : null}
         {config.error ? (
-          <div role="alert"><Text size="sm" tone="danger">{config.error.message}</Text></div>
+          <div role="alert"><ErrorText>{config.error.message}</ErrorText></div>
         ) : null}
         {update.error ? (
-          <div role="alert"><Text size="sm" tone="danger">{update.error.message}</Text></div>
+          <div role="alert"><ErrorText>{update.error.message}</ErrorText></div>
         ) : null}
       </Stack>
     </Card>

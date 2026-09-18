@@ -15,6 +15,8 @@
 import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
@@ -22,7 +24,7 @@ import { DriveScheduleLine } from "./DriveScheduleLine";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
+    <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Drive</h2>
       {children}
     </div>
@@ -84,7 +86,7 @@ export function DriveSection() {
 
       <Stack gap="md">
         {data.mounts.length === 0 ? (
-          <Text size="sm" tone="muted">No folders are mirrored yet.</Text>
+          <Hint>No folders are mirrored yet.</Hint>
         ) : (
           <Stack gap="sm">
             {data.mounts.map((mount) => (
@@ -98,7 +100,7 @@ export function DriveSection() {
 
         {legacyFolders.length === 0 ? null : (
           <Stack gap="xs">
-            <Text as="h3" size="sm" weight="semibold">Folder mounts awaiting conversion</Text>
+            <Heading level={3}>Folder mounts awaiting conversion</Heading>
             {legacyFolders.map((folder) => (
               <Text key={folder.driveFolderId} size="sm" tone="muted">{folder.localPath}</Text>
             ))}

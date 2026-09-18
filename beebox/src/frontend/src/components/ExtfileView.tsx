@@ -13,6 +13,7 @@
 
 import { useCallback, useRef } from "react";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { type RendererProps } from "../renderers";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
@@ -50,18 +51,18 @@ function ExtfileLiveFile({
   return (
     <div>
       {stale ? (
-        <Text as="div" size="sm" tone="danger" className="mb-2 rounded-md border border-danger-dark/30 bg-danger-light/40 px-3 py-1.5">
+        <ErrorText className="mb-2 rounded-md border border-danger-dark/30 bg-danger-light/40 px-3 py-1.5">
           ⚠ Stale — the file changed since the card was last stamped. Run{" "}
           <code className="font-mono">bbx extfile sync</code> to refresh.
-        </Text>
+        </ErrorText>
       ) : null}
       {isLoading ? (
         <Text as="div" tone="subtle" className="p-2 italic">Loading file…</Text>
       ) : error !== null ? (
-        <Text as="div" tone="danger" className="p-2">
+        <ErrorText className="p-2">
           Couldn’t load the file. It may be missing, outside the allowed roots, or
           external rendering may be disabled (it is available in dev only).
-        </Text>
+        </ErrorText>
       ) : binary ? (
         <Text as="div" tone="subtle" className="p-2 italic">
           Preview unavailable for this file type — the pointer’s metadata and any
@@ -118,7 +119,7 @@ export function ExtfileView({ data, onNavigate }: RendererProps) {
           <ExtfileLiveFile href={href} storedVersion={storedVersion} onNavigate={onNavigate} />
         </div>
       ) : (
-        <Text as="div" tone="danger">This extfile card has no <code className="font-mono">href</code>.</Text>
+        <ErrorText>This extfile card has no <code className="font-mono">href</code>.</ErrorText>
       )}
     </div>
   );
