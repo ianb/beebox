@@ -298,3 +298,26 @@ the tours run clean and the before/after screenshots show no unintended
 change besides the fixed run-together text, full-width controls restored to
 natural width, and the chosen heading weight and error size. No data
 migration. No knowledge audits. The plan ships in one piece through `/finish`.
+
+## Implementation record
+
+- **Size.** About 1,020 changed source lines (586 added, 431 deleted) and
+  about 400 lines of docs and tests, against the 1,400 estimate.
+- **Track 1.** The static audit (`scratch/stack-audit.ts`) could not see
+  margins set inside child components. A DOM scan of the rendered pages
+  (margined or stretched children of visible flex-column-with-gap elements)
+  found four settings cards with their own `mt-6`, which `space-y` had
+  overridden. They were removed. After the fix, the scan reports nothing on
+  admin, settings, questions, landmarks, dashboard, inventory, history, and
+  browse. 13 Stacks with adjacent inline children were all intended as
+  separate lines (latent run-together bugs, now fixed).
+- **Track 2.** 44 headings, 67 hints, 74 errors, 17 status messages, and
+  3 muted pane failures converted to `ErrorText`. Cross-model review found
+  two hints in a flex action row (`ChatHuskView.tsx`); they were restored to
+  `Text`. The admin page's group headings (`AdminPage.tsx` `ScopeHeading`,
+  xl bold) stay `Text`: they are one level above the card headings, and
+  `Heading` has no larger look.
+- **Track 3.** 16 `Column` sites became `Stack gap="none"`; `Column.tsx`
+  was deleted.
+- **Pre-existing, filed:**
+  `issues/bugs/2026-09-18-admin-backup-git-remote-overflows-on-phone.md`.
