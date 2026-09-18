@@ -1,12 +1,19 @@
 ---
 title: "A regenerated PDF keeps showing its old contents; even a hard reload does not help"
-workstream: unattached
+workstream: pdf-stale-bytes
+resolution: implemented
 area: beebox
 labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder, after a box agent regenerated a PDF in place during a chat session
 ---
+
+Closing note: Resolved by commits `868268398` and `771e82b95`: PDF viewer URLs
+now use a fresh ETag on mount/reopen, the `<object>` remounts when that URL
+changes, and both the normal PDF renderer and extracted-document Original
+surface use the versioned URL. This intentionally does not add live updates
+for an already-open card, focus/reconnect refetching, or image-surface changes.
 
 A box agent regenerated a PDF at the same path, in a card's attach scope. The
 app kept showing the previous version. Nothing cleared it — not opening the
