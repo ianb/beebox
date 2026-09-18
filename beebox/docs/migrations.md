@@ -37,9 +37,16 @@ manifest error.
 
 `--apply` and `--sweep` both preserve dirty input and commit each successful
 migration with its manifest entry. Their distinction is agent authority:
-`--apply` permits repair and registered procedure migrations; `--sweep` permits
-only deterministic scripts unless `--repair` is explicit. A procedure migration
-still requires `--apply` and its machine validation gate. The mark-applied
+`--apply` runs repair and registered procedure migrations directly; `--sweep`
+runs only deterministic scripts unless `--repair` is explicit, which adds
+bounded agent repair and procedure migrations under a one-run-per-answer bound
+(a failed run writes one `Migration_<name>-N` question and nothing runs again
+until it is answered). The hourly convergence schedule passes `--repair`, so a
+procedure migration that lands is applied on every idle box at its next hourly
+pass without anyone running it by hand; a busy box defers, and a failure or an
+unanswered question is reported. A procedure still needs its machine
+validation gate.
+The mark-applied
 commands only edit the manifest, leave that edit uncommitted for review, and
 never establish that the conversion actually happened.
 
@@ -134,11 +141,13 @@ record, the pending migration, and its question stay reported (the
 a later attempt completes. A pre-change drain timeout releases the unchanged box
 without forcing active work to stop.
 
-A standalone pass that finds a missing manifest or a procedure prerequisite
-before changing anything releases its gate. Under deployment those same unmet
-prerequisites keep the box closed for the rest of the deployment, including
-when a previous nested operation had already declared it ready. They do not
-authorize activating newer code; the box reopens when the controller exits.
+A standalone pass that finds a missing manifest before changing anything
+releases its gate. Under deployment a missing manifest keeps the box closed for
+the rest of the deployment, including when a previous nested operation had
+already declared it ready; the box reopens when the controller exits. A pending
+procedure migration is different: the box is consistent, so both passes release
+it as ready, the deployment logs the pending procedure, and the next hourly
+`--repair` pass applies it.
 
 Before an attempt commits its output it confirms it still holds the owner lock.
 A lock lost to a system sleep longer than the lock's stale window, or to a

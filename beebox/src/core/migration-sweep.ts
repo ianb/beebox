@@ -1,7 +1,7 @@
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
-import { repairMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
+import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
@@ -68,9 +68,12 @@ interface SweepOptions {
   signal?: AbortSignal | undefined;
   boxRoot: string;
   refresh?: boolean;
-  runProcedure?: ((procedure: string, signal?: AbortSignal) => Promise<number>) | undefined;
+  /** Runs an agent-applied migration; `onOutput` receives its output for the failure question. */
+  runProcedure?: ((procedure: string, run: { signal?: AbortSignal | undefined; onOutput: (text: string) => void }) => Promise<number>) | undefined;
   json?: boolean | undefined;
   repair?: boolean | undefined;
+  /** An unattended pass runs a procedure migration once per human answer; a manual pass runs it directly. */
+  unattended?: boolean | undefined;
   withinMaintenance?: boolean | undefined;
   prepare?: boolean | undefined;
   /** A scheduled pass yields to live work instead of draining it. */
@@ -134,18 +137,15 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
     });
     signal.throwIfAborted();
     timer.stop();
-    if (result.status === "attention" || result.status === "applied" || result.status === "current") {
+    // A pending procedure is consistent: every script before it is committed
+    // and the next unattended pass applies it. It serves, under deployment too.
+    if (["attention", "applied", "current", "needs-procedure"].includes(result.status)) {
       if (opts.withinMaintenance && opts.prepare) await maintenance.prepare();
       await maintenance.complete();
     } else if (opts.withinMaintenance) {
-      // An outer activation must not interpret an unmet prerequisite as ready.
+      // An outer activation must not interpret a missing manifest or a failed
+      // migration as ready.
       await maintenance.beginChanges();
-    } else if (result.status === "needs-procedure") {
-      // The sweep stops before the procedure starts, and every script it
-      // applied is committed, so the box is consistent. Without this, an
-      // applied script left the phase "exclusive" and the box refused every
-      // request until repaired by hand.
-      await maintenance.complete();
     }
     return result;
   } finally {
@@ -211,8 +211,16 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
   const convert = async (): Promise<number> => {
     let code: number;
     if (isProcedureMigration(migration)) {
-      invariant(opts.runProcedure !== undefined, "Procedure callback required");
-      code = await opts.runProcedure(migration.procedure, opts.signal);
+      const { runProcedure } = opts;
+      invariant(runProcedure !== undefined, "Procedure callback required");
+      const runOnce = (): Promise<number> => runProcedure(migration.procedure, { signal: opts.signal, onOutput: (text) => { failure = (failure + text).slice(-32000); } });
+      if (opts.unattended) {
+        // One run per human answer, never an hourly agent.
+        repaired = await runProcedureMigration({ signal: opts.signal, boxRoot, name: migration.name, recoveryRef: recovery.ref, run: runOnce, output: () => failure });
+        code = repaired.code;
+      } else {
+        code = await runOnce();
+      }
     } else {
       code = await run();
     }

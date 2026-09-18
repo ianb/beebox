@@ -3,7 +3,7 @@ title: "Reliable box maintenance and migration with Git recovery"
 status: partial
 workstream: migration-reliability
 issues:
-  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
+  - ../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Reliable box maintenance and migration with Git recovery
 
@@ -13,7 +13,7 @@ repair, and existing questions and alerts for decisions that need a person.
 Migration, deployment, and reload share one boundary: close admission to new
 work, drain accepted work, perform maintenance, verify readiness, then reopen.
 
-**Issues addressed:** [Local boxes never converge](../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
+**Issues addressed:** [Local boxes never converge](../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
 Related but not closed by this plan: [parked template resolution](../../../issues/features/2026-08-24-parked-template-resolution-path.md),
 [template recurrence](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md),
 [incorrect shipped procedure templates](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
@@ -308,7 +308,11 @@ into the shared module and wire ordinary work owners before using it for mutatio
 **What and why.** Move script application into one core path used by `--apply`
 and `--sweep`. Both accept dirty input. Keep status and explicit manifest repair
 commands, and keep v2 bootstrap separate. Manual mode may execute registered
-procedure migrations; unattended mode reports them as requiring attention.
+procedure migrations. **Amended 2026-09-17 by
+[procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
+unattended `--repair` mode runs them too, one run per human answer; the
+original "reports them as requiring attention" left every box waiting for a
+person and is withdrawn.
 
 **Direction.** Retain `sweepMigrations` as the core owner while replacing its
 policy, rather than layering a second orchestrator over it. Its typed result
@@ -520,7 +524,9 @@ malformed JSON is unknown/failure, never an empty successful fleet. Emit one
 important alert for unresolved failures, human decisions, or unavailable coverage;
 use existing schedule state to avoid repeating identical detail every hour.
 Busy alone is deferred, but continued pending work is reported on the daily
-cadence even if it is always busy. A fully current result is silent; partial
+cadence even if it is always busy. After the 2026-09-17 amendment a pending
+procedure is applied rather than reported; the daily report names only a
+procedure whose failure question is unanswered. A fully current result is silent; partial
 conversion and outstanding questions remain attention items even with no pending registry entries. Schedule run
 records prove the check occurred.
 
