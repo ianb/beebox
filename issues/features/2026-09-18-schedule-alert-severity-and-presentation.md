@@ -1,6 +1,6 @@
 ---
 title: "Schedule alerts have no severity: a notification and a failure look the same"
-workstream: unattached
+workstream: schedule-alert-signal
 area: router
 labels: [schedules]
 filed-by: agent

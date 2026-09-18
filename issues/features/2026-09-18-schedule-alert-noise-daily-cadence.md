@@ -1,6 +1,6 @@
 ---
 title: "Schedule alerts arrive whenever a condition changes; the boxholder wants a daily cadence"
-workstream: unattached
+workstream: schedule-alert-signal
 area: router
 labels: [schedules]
 filed-by: agent
