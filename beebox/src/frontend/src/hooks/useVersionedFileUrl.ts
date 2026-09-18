@@ -21,9 +21,10 @@ export function useVersionedFileUrl(url: string, { path, enabled }: { path: stri
     },
     staleTime: 0,
     refetchOnMount: "always",
-    // File-change updates are a separate decision; focus should not silently
-    // turn this remounting behavior into a live-update policy.
+    // File-change updates are a separate decision; focus/reconnect should not
+    // silently turn this remounting behavior into a live-update policy.
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (!isEnabled) return null;
