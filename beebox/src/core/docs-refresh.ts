@@ -55,7 +55,6 @@ async function refreshSnapshot(boxRoot: string) {
 export async function refreshGeneratedDocs(opts: {
   boxRoot: string;
   withinMaintenance?: boolean;
-  recover?: boolean;
 }): Promise<DocsRefreshResult> {
   const shape = await getBoxShape(opts.boxRoot);
   await ensureEngineDocs();
@@ -68,7 +67,6 @@ export async function refreshGeneratedDocs(opts: {
   const maintenance = await acquireBoxMaintenance(shape.boxRoot, {
     reason: "docs refresh",
     join: opts.withinMaintenance === true,
-    recover: opts.recover === true,
   });
   try {
     const result = await maintenance.run(

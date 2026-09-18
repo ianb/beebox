@@ -2,7 +2,8 @@
 
 A real child holds admitted work. Closing stops another root operation while
 allowing a retained descendant to finish; maintenance starts only after both
-release. A failed mutation remains fenced until explicit recovery.
+release. A failed mutation leaves a record of unfinished maintenance, and the
+box reopens the moment its owner is gone: a closure cannot outlive its owner.
 
 ```ts setup
 import { spawn } from "node:child_process";
@@ -10,7 +11,7 @@ import { once } from "node:events";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { acquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance.js";
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 ```
@@ -39,20 +40,34 @@ await descendant.release();
 const maintenance = await pending;
 await maintenance.beginChanges();
 await maintenance.release();
-(await boxMaintenanceStatus(box.root)).phase
-=> exclusive
+const record = await boxMaintenanceStatus(box.root);
+`${record.phase} owner=${String(record.owner)} since=${typeof record.since}`
+=> exclusive owner=null since=string
+
+// Unfinished maintenance refuses nothing once its owner is gone.
+const reopened = await acquireBoxWork(box.root, { reason: "test" });
+await reopened.release();
+
+// The next attempt closes the box again, keeps the record's start time, and
+// clears the record when it completes.
+const recovery = await acquireBoxMaintenance(box.root, { reason: "recover" });
+const retried = await boxMaintenanceStatus(box.root);
+`${retried.reason} owner=${retried.owner.reason} carried=${String(retried.since === record.since)}`
+=> recover owner=recover carried=true
 
 await acquireBoxWork(box.root, { reason: "test" })
 => throws BoxMaintenanceError
 
-await acquireBoxMaintenance(box.root, { reason: "not recovery" })
-=> throws BoxMaintenanceError
+await recovery.held()
+=> true
 
-const recovery = await acquireBoxMaintenance(box.root, { reason: "recover", recover: true });
 await recovery.beginChanges();
 await recovery.complete();
 await boxMaintenanceStatus(box.root)
 => null
+
+await recovery.held()
+=> false
 
 const work = await acquireBoxWork(box.root, { reason: "test" });
 await acquireBoxMaintenance(box.root, { reason: "timeout", drainMs: 0 })
@@ -94,11 +109,12 @@ await replacement.complete()
 
 await startup.release();
 await replacement.release();
-await acquireBoxStartup(box.root)
-=> throws BoxMaintenanceError
+// The replacement's owner is gone, so startup is ordinary again.
+const restarted = await acquireBoxStartup(box.root);
+await restarted.release();
 
-// Recovery republishes the new owner's id, allowing its delegated refresh.
-const resumed = await acquireBoxMaintenance(box.root, { reason: "resume", recover: true });
+// A new owner republishes its id, allowing its delegated refresh.
+const resumed = await acquireBoxMaintenance(box.root, { reason: "resume" });
 const joined = await resumed.run(() => acquireBoxMaintenance(box.root, { reason: "docs", join: true }));
 await joined.prepare();
 await joined.release();
@@ -120,6 +136,42 @@ await boxMaintenanceStatus(box.root)
 ```ts cleanup
 child.kill();
 await box.cleanup();
+```
+
+## A handle that lost its lock cannot touch the new owner's closure
+
+A sleep past the lock's stale window lets another owner take the box. When the
+old handle resumes, its phase writes and completion are refused, and its
+release leaves the new owner's record alone.
+
+```ts
+const stolenBox = await makeTmpBox({ git: true });
+const ownerLock = join(stolenBox.root, ".git/bbx-maintenance/owner.lock");
+const sleeper = await acquireBoxMaintenance(stolenBox.root, { reason: "sleeper" });
+await sleeper.beginChanges();
+await forceAcquireLock(ownerLock, { id: "thief", reason: "thief" });
+await sleeper.held()
+=> false
+
+await sleeper.beginChanges()
+=> throws BoxMaintenanceError
+
+await sleeper.complete()
+=> throws BoxMaintenanceError
+
+(await boxMaintenanceStatus(stolenBox.root)).owner.reason
+=> thief
+
+// Releasing the old handle leaves the record for the live owner to finish.
+await sleeper.release();
+(await boxMaintenanceStatus(stolenBox.root)).phase
+=> exclusive
+```
+
+```ts cleanup
+await releaseLock(ownerLock);
+await sleeper.release();
+await stolenBox.cleanup();
 ```
 
 ## Drain waits for lease publication, even with no published readers
@@ -151,10 +203,11 @@ await barrier.release();
 await barrierBox.cleanup();
 ```
 
-## A failed delegate keeps its controller closed
+## A failed delegate leaves its controller's record behind
 
 The outer handle only entered draining. Its delegate began mutation and failed;
-releasing the controller must honor the persisted exclusive phase.
+releasing the controller must keep the persisted exclusive record, which the
+next completed attempt clears.
 
 ```ts
 const delegatedBox = await makeTmpBox({ git: true });
@@ -166,10 +219,9 @@ await controller.release();
 (await boxMaintenanceStatus(delegatedBox.root)).phase
 => exclusive
 
-await acquireBoxWork(delegatedBox.root, { reason: "test", inherited: null })
-=> throws BoxMaintenanceError
-
-const repair = await acquireBoxMaintenance(delegatedBox.root, { reason: "recover delegate", recover: true });
+const admitted = await acquireBoxWork(delegatedBox.root, { reason: "test", inherited: null });
+await admitted.release();
+const repair = await acquireBoxMaintenance(delegatedBox.root, { reason: "recover delegate" });
 await repair.complete();
 await boxMaintenanceStatus(delegatedBox.root)
 => null
@@ -180,10 +232,11 @@ await controller.release();
 await delegatedBox.cleanup();
 ```
 
-## A surviving delegate blocks recovery after its owner exits
+## A surviving delegate blocks a new owner after its own exits
 
 Joined work has its own retained lease. Replacing the controller cannot assume
-that work stopped, and expired handles cannot publish phases for the new owner.
+that work stopped, and expired handles cannot publish phases for the new owner
+nor prove they still hold the box.
 
 ```ts
 const orphanBox = await makeTmpBox({ git: true });
@@ -191,13 +244,16 @@ const oldOwner = await acquireBoxMaintenance(orphanBox.root, { reason: "old owne
 const orphan = await oldOwner.run(() => acquireBoxMaintenance(orphanBox.root, { reason: "surviving delegate", join: true }));
 await orphan.beginChanges();
 await oldOwner.release();
-const newOwner = await closeBoxMaintenance(orphanBox.root, { reason: "new owner", recover: true });
+const newOwner = await closeBoxMaintenance(orphanBox.root, { reason: "new owner" });
 const recoveredDrain = newOwner.drain().then(() => true);
 await Promise.race([recoveredDrain, new Promise((resolve) => setTimeout(() => resolve(false), 100))])
 => false
 
 await orphan.prepare()
 => throws BoxMaintenanceError
+
+await orphan.held()
+=> false
 
 await orphan.release();
 await recoveredDrain

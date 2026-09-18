@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
+import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 
 // Pinned rather than "whatever is last": appending a migration would otherwise
@@ -344,6 +345,61 @@ JSON.stringify({ status: result.status, phase: (await boxMaintenanceStatus(box.r
 
 ```ts cleanup
 await owner.release();
+await box.cleanup();
+```
+
+## A failed migration never leaves the box closed
+
+The 2026-09-16 incident: a sweep closed a box, stopped without completing, and
+the box refused every request until repaired by hand. Now the closure ends with
+the owner. The failure leaves a record of unfinished maintenance and its
+recovery ref; ordinary work is admitted, and the next completed sweep clears
+the record.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: [PROBE] });
+await box.commitAll("seed");
+const failed = await sweepMigrations({ boxRoot: box.root, runScript: async () => 1 });
+const record = await boxMaintenanceStatus(box.root);
+JSON.stringify({ status: failed.status, phase: record.phase, owner: record.owner, ref: git(box, "for-each-ref", "--format=%(refname)", failed.recoveryRef) === failed.recoveryRef })
+=> {"status":"failed","phase":"exclusive","owner":null,"ref":true}
+
+const work = await acquireBoxWork(box.root, { reason: "chat run" });
+await work.release();
+(await sweepMigrations({ boxRoot: box.root, runScript: async () => 0 })).status
+=> applied
+
+await boxMaintenanceStatus(box.root)
+=> null
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An owner that lost the box does not commit
+
+A sleep longer than the lock's stale window, or a deploy controller that died
+under a joined sweep, leaves the script running without exclusion. The sweep
+notices before committing: the output stays under its recovery ref, the
+manifest is untouched, and no repair agent is spent on a lock nobody can win
+back. Stealing the owner lock stands in for the stale window.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: [PROBE] });
+await box.commitAll("seed");
+const ownerLock = join(git(box, "rev-parse", "--absolute-git-dir"), "bbx-maintenance/owner.lock");
+let repairs = 0;
+const lost = await sweepMigrations({ boxRoot: box.root, repair: true,
+  repairAgent: { invokeStructured: async () => { repairs += 1; return { success: true, data: { status: "fixed" } }; } },
+  runScript: async () => { await forceAcquireLock(ownerLock, { id: "thief" }); await releaseLock(ownerLock); return 0; } });
+JSON.stringify({ status: lost.status, error: lost.error, repairs, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE) })
+=> {"status":"commit-failed","error":"maintenance ownership lost","repairs":0,"recorded":false}
+```
+
+```ts cleanup
 await box.cleanup();
 ```
 

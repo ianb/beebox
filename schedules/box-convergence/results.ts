@@ -64,6 +64,23 @@ export function unreachableDetail(since: number, opts: { now: number; line: stri
   return elapsed < UNREACHABLE_REPORT_MS ? null : `Production unreachable for ${String(Math.round(elapsed / 3_600_000))}h: ${opts.line}`;
 }
 
+/** The same findings alert once a day; between alerts they still go to the run log. */
+const REPEAT_ALERT_MS = 24 * 60 * 60_000;
+
+export interface LastReport { message: string; reportedAt: number }
+
+/**
+ * What a run does with its findings. The 2026-09-16 incident's second run
+ * repeated the first run's message, so it was deduped into an empty log and a
+ * clean outcome while every box was unusable: findings always reach the log.
+ */
+export function reportDecision(message: string, opts: { old: LastReport | null; now: number }): { alert: boolean; log: string | null } {
+  if (!message) return { alert: false, log: null };
+  const repeated = opts.old?.message === message && opts.now - opts.old.reportedAt < REPEAT_ALERT_MS;
+  if (!repeated) return { alert: true, log: `[box-convergence] report\n${message}` };
+  return { alert: false, log: `[box-convergence] unchanged since ${new Date(opts.old?.reportedAt ?? opts.now).toISOString()}; alert suppressed\n${message}` };
+}
+
 /** Shell arguments are data, including paths read from the remote registry. */
 export function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;

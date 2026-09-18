@@ -24,6 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { acquireBoxMaintenance } from "../../src/lib/box-maintenance.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
@@ -704,4 +705,51 @@ for (const socket of hub.sockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hub.server.close(resolve));
 await new Promise((resolve) => box.server.close(resolve));
+```
+
+## A configured box that cannot be served answers 503 with the reason
+
+A known slug with no endpoint is never a 404 (the 2026-09-16 incident's only
+symptom). While a maintenance owner holds the box, the body names the reason
+and the owner; otherwise it carries the provider's last word on the box.
+
+```ts
+const closedBox = await makeTmpBox({ git: true });
+const provider = {
+  get: () => undefined, slugs: () => ["closed", "broken"],
+  unavailable: (slug) => (slug === "broken" ? "child exited with code 1" : undefined),
+};
+const closedHub = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }, { slug: "broken", boxRoot: "/nonexistent/broken" }] });
+const owner = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
+const closedBody = await closedResponse.json();
+JSON.stringify({ status: closedResponse.status, retryAfter: closedResponse.headers.get("retry-after"), error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
+=> {"status":503,"retryAfter":"600","error":"box_closed","reason":"migration","ownerIsThisProcess":true}
+
+await owner.beginChanges();
+await owner.release();
+const reopened = await fetch(`${closedHub.base}/closed/api/x`);
+JSON.stringify({ status: reopened.status, error: (await reopened.json()).error })
+=> {"status":503,"error":"box_unavailable"}
+
+// Pairing redemption passes the auth wall unauthenticated and learns nothing about the owner.
+const unauthed = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }], openAccess: false });
+const sealed = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+const redeem = await fetch(`${unauthed.base}/closed/api/pairing/redeem`, { method: "POST" });
+JSON.stringify({ status: redeem.status, body: await redeem.json() })
+=> {"status":503,"body":{"error":"box_unavailable","message":"Box closed is not running"}}
+
+await sealed.complete();
+unauthed.server.close();
+for (const socket of unauthed.sockets) socket.destroy();
+const latchedResponse = await fetch(`${closedHub.base}/broken/api/x`);
+JSON.stringify({ status: latchedResponse.status, body: await latchedResponse.json() })
+=> {"status":503,"body":{"error":"box_unavailable","message":"Box broken is not running: child exited with code 1"}}
+```
+
+```ts cleanup
+await owner.release();
+closedHub.server.close();
+for (const socket of closedHub.sockets) socket.destroy();
+await closedBox.cleanup();
 ```

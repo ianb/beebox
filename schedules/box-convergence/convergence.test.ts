@@ -5,10 +5,22 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 import { execChild } from "../../bin/lib/schedules-exec.js";
-import { resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { reportDecision, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 import { configuredBoxes, localTargets, registryPaths } from "./targets.js";
 
 const report = (value: unknown): string => RESULT_PREFIX + JSON.stringify(value);
+
+test("repeated findings are logged even while their alert is suppressed", () => {
+  const now = Date.parse("2026-09-17T00:00:00Z");
+  const old = { message: "local /box: failed; exit 1", reportedAt: now - 60 * 60_000 };
+  assert.deepEqual(reportDecision("", { old, now }), { alert: false, log: null });
+  const repeated = reportDecision(old.message, { old, now });
+  assert.equal(repeated.alert, false);
+  assert.match(repeated.log ?? "", /unchanged since 2026-09-16T23:00:00.000Z; alert suppressed\nlocal \/box: failed; exit 1/u);
+  assert.equal(reportDecision("something else", { old, now }).alert, true);
+  assert.equal(reportDecision(old.message, { old, now: now + 24 * 60 * 60_000 }).alert, true);
+  assert.equal(reportDecision(old.message, { old: null, now }).alert, true);
+});
 test("JSON outcomes preserve questions and refuse unknown or failed coverage", () => {
   assert.equal(resultDetail(report({ status: "current" }), 0), null);
   assert.equal(resultDetail(report({ status: "applied", applied: [] }), 0), null);

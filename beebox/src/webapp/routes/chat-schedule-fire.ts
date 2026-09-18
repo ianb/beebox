@@ -19,7 +19,7 @@
  * that instead closes/errors without a result counts as a failed delivery too.
  */
 
-import { BoxMaintenanceError } from "../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import type { ChatSession } from "../../core/chat/session/index.js";
 import type { ChatMessageResult } from "../../core/chat/session/messages.js";
 import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";

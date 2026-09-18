@@ -8,7 +8,8 @@
  * so sessions can be resumed after server restarts.
  */
 
-import { acquireBoxWork, withBoxWork, BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork, withBoxWork } from "../../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import type { ChatBackend } from "../../../services/claude-chat.js";
 import { makeLog } from "./log.js";
 import { getPublicUrl } from "../../../lib/public-url.js";

@@ -1,8 +1,9 @@
-# Answers during migration recovery
+# Answers after a failed migration
 
-The real HTTP and CLI boundaries record a pending migration's human answer
-without starting a generic agent or opening admission. The bounded repair reads
-that answer on its next attempt. Other question writes remain refused.
+A failed migration leaves its question and a record of unfinished maintenance.
+Once the owner is gone the box is open, so the boxholder answers through the
+ordinary HTTP and CLI paths; the answer's follow-up job and the next bounded
+repair both read it. While an owner holds the box, answers are refused.
 
 ```ts setup
 import { execFile } from "node:child_process";
@@ -35,19 +36,20 @@ const question = (await repairMigration(repairOptions)).question;
 await finishMigrationRepair(boxRoot, "attachments");
 const held = await acquireBoxMaintenance(boxRoot, { reason: "failed migration" });
 await held.beginChanges();
+const denied = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: question, answer: "Keep both versions" } });
+denied.statusCode
+=> 503
+
 await held.release();
 const response = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: question, answer: "Keep both versions" } });
 response.statusCode
 => 200
 
-JSON.stringify({ answered: (await readFile(join(boxRoot, question), "utf8")).includes("Keep both versions"), phase: (await boxMaintenanceStatus(boxRoot)).phase, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length })
-=> {"answered":true,"phase":"exclusive","agents":1,"jobs":0}
+const record = await boxMaintenanceStatus(boxRoot);
+JSON.stringify({ answered: (await readFile(join(boxRoot, question), "utf8")).includes("Keep both versions"), phase: record.phase, owner: record.owner, agents: invocations, jobs: (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length })
+=> {"answered":true,"phase":"exclusive","owner":null,"agents":1,"jobs":1}
 
-const denied = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: "_bookkeeping/questions/Ordinary.question.card", answer: "yes" } });
-denied.statusCode
-=> 503
-
-const owner = await acquireBoxMaintenance(boxRoot, { reason: "retry", recover: true });
+const owner = await acquireBoxMaintenance(boxRoot, { reason: "retry" });
 await owner.run(() => repairMigration({ ...repairOptions, retry: async () => 0 }));
 agentPrompt.includes("Previous answered question") && agentPrompt.includes("Keep both versions")
 => true
@@ -59,14 +61,16 @@ await exec(process.execPath, ["--import", import.meta.resolve("tsx"), join(PACKA
 (await readFile(join(boxRoot, cliQuestion), "utf8")).includes("Use the preserved copy")
 => true
 
-// Already-applied partial questions need their ordinary follow-up, after reopen.
-await writeFile(join(boxRoot, "_config/migrations.jsonl"), JSON.stringify({ name: "attachments", "applied-at": "2026-09-14T00:00:00Z" }) + "\n");
-const applied = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: cliQuestion, answer: "must wait" } });
-JSON.stringify({ status: applied.statusCode, waitsForReopen: applied.payload.includes("already applied") })
-=> {"status":400,"waitsForReopen":true}
+// An answered question stays answered; the record clears when an attempt completes.
+const again = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: cliQuestion, answer: "second thoughts" } });
+again.statusCode
+=> 400
 
-const open = await acquireBoxMaintenance(boxRoot, { reason: "done", recover: true });
+const open = await acquireBoxMaintenance(boxRoot, { reason: "done" });
 await open.complete();
+await boxMaintenanceStatus(boxRoot)
+=> null
+
 const ordinary = "_bookkeeping/questions/Ordinary.question.card";
 await writeFile(join(boxRoot, ordinary), createTextQuestionTemplate({ memo: "Question", askedAt: "2026-09-14T00:00:00Z", prompt: "Proceed?", directive: "Process answer" }));
 const accepted = await acquireBoxWork(boxRoot, { reason: "test" });
@@ -76,7 +80,7 @@ normal.statusCode
 => 200
 
 (await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")).length
-=> 1
+=> 3
 
 await accepted.release();
 await drain.drain();
