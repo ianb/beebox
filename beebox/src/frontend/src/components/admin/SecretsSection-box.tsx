@@ -15,6 +15,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { SecretValueForm } from "./SecretsSection-forms";
 import { SecretUsesBlock } from "./SecretsSection-uses";
@@ -55,7 +56,7 @@ function GrantedRow({
           {secret.hasValue ? <VerificationBadge secret={secret} /> : <Badge tone="warning">no value yet</Badge>}
           {secret.shareable === false ? <Badge tone="neutral">single-box</Badge> : null}
         </Row>
-        {secret.note === undefined ? null : <Text size="sm" tone="muted">{secret.note}</Text>}
+        {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
         <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">
           {secret.lastUsed === undefined ? "Never used by this box" : `Last used ${new Date(secret.lastUsed).toLocaleString()}`}
@@ -95,12 +96,12 @@ function GrantedRow({
 export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; hints: FormatHints | undefined; refresh: () => void }) {
   return (
     <Stack gap="md">
-      <Text as="p" size="sm" tone="muted">
+      <Hint>
         Box <Text mono>{status.slug}</Text> can resolve {status.granted.length} secret
         {status.granted.length === 1 ? "" : "s"}.
-      </Text>
+      </Hint>
       {status.granted.length === 0 ? (
-        <Text size="sm" tone="muted">Nothing is granted to this box yet.</Text>
+        <Hint>Nothing is granted to this box yet.</Hint>
       ) : (
         <Stack gap="sm">
           {status.granted.map((secret) => (
@@ -112,9 +113,9 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
       {status.declaredHere.length === 0 ? null : (
         <Stack gap="xs">
           <Heading level={3}>Requested by this box's agent</Heading>
-          <Text size="sm" tone="muted">
+          <Hint>
             Declared slots waiting on a value and a grant — the agent named what it needs and can do nothing more.
-          </Text>
+          </Hint>
           {status.declaredHere.map((slot) => (
             <DeclaredRow key={slot.name} slot={slot} hints={hints} refresh={refresh} />
           ))}
@@ -124,9 +125,9 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
       {status.danglingGrants.length === 0 ? null : (
         <Stack gap="xs">
           <Heading level={3}>Stale grants</Heading>
-          <Text size="sm" tone="muted">
+          <Hint>
             These grants name secrets that no longer exist. Re-add the secret, or revoke the grant.
-          </Text>
+          </Hint>
           {status.danglingGrants.map((name) => (
             <DanglingRow key={name} name={name} slug={status.slug} refresh={refresh} />
           ))}

@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 
 type SystemThemeScope =
@@ -116,7 +117,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
       ]);
     },
   });
-  if (query.isLoading) return <div aria-busy="true"><Text size="sm" tone="muted">Loading system themes…</Text></div>;
+  if (query.isLoading) return <div aria-busy="true"><Hint>Loading system themes…</Hint></div>;
   if (query.error || !query.data) {
     return <Stack gap="sm"><Text size="sm" tone="danger">Could not load system themes: {query.error?.message ?? "No settings were returned."}</Text>
       <Button size="sm" intent="ghost" className="self-start" onClick={() => void query.refetch()}>Retry</Button></Stack>;
@@ -145,7 +146,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
     {problemState.displayed !== null ? <Text as="p" size="sm" tone="danger">{problemState.displayed}</Text> : null}
     <ConfigProblems scope={input.scope} problems={query.data.configProblems} />
     {!query.data.canEditCardThemes ? <Text size="xs" tone="muted">Only the box owner can change this setting.</Text> : null}
-    {mutation.isPending ? <div role="status"><Text size="sm" tone="muted">Saving system theme…</Text></div> : null}
+    {mutation.isPending ? <div role="status"><Hint>Saving system theme…</Hint></div> : null}
     {mutation.data?.commitWarning ? <div role="status"><Text size="sm" tone="danger">{mutation.data.commitWarning}</Text></div> : null}
     {mutation.error ? <Stack gap="xs"><Text size="sm" tone="danger">Could not save system theme: {mutation.error.message}</Text>
       <Button size="sm" intent="ghost" className="self-start" onClick={() => select(lastChoice)}>Retry</Button></Stack> : null}
@@ -155,7 +156,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
 export function BoxSystemThemePicker({ boxKey }: { boxKey: string }) {
   return <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
     <Heading level={2}>System theme</Heading>
-    <Text as="p" size="sm" tone="muted">Choose the toolbar and workspace surface for this box.</Text>
+    <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <PickerBody input={{ scope: "box", boxKey }} />
   </Stack></Card>;
 }

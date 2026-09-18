@@ -8,6 +8,7 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
@@ -76,18 +77,18 @@ function InstallInstructions() {
         First-time setup on a new machine
       </summary>
       <Stack gap="xs" className="mt-2">
-        <Text size="sm" tone="muted">
+        <Hint>
           On the machine connected to the scanner, one time:
-        </Text>
+        </Hint>
         <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
           {"git clone <repo>\n" + "pnpm install --filter scan-uploader...  # from the repo root"}
         </code>
-        <Text size="sm" tone="muted">
+        <Hint>
           Then mint a token below and run the configure command it shows (from the repo root —
           bin/scan-uploader runs the CLI straight from source, so a checkout always stays current).
           No checkout on that machine? Build once elsewhere (pnpm --filter scan-uploader build),
           copy the resulting scan-uploader/dist/scan-uploader.mjs, and run it there with plain node.
-        </Text>
+        </Hint>
       </Stack>
     </details>
   );
@@ -134,9 +135,9 @@ export function ScanUploaderSection() {
           <Heading level={2}>
             Scan uploaders
           </Heading>
-          <Text size="sm" tone="muted">
+          <Hint>
             Mint a token for a machine running the scan uploader, then paste it into `configure`.
-          </Text>
+          </Hint>
         </Stack>
 
         <Row gap="sm" wrap align="end">
@@ -170,9 +171,9 @@ export function ScanUploaderSection() {
 
         {minted ? (
           <Stack gap="sm">
-            <Text size="sm" tone="muted">
+            <Hint>
               This token is shown once — copy it now. It won't be shown again.
-            </Text>
+            </Hint>
             <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
               {minted.token}
             </code>
@@ -188,11 +189,11 @@ export function ScanUploaderSection() {
               </Text>
             ) : null}
             <Stack gap="xs">
-              <Text size="sm" tone="muted">Paste-ready setup command:</Text>
+              <Hint>Paste-ready setup command:</Hint>
               <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
                 {configureCommand(minted.name)}
               </code>
-              <Text size="sm" tone="muted">then paste the token when prompted</Text>
+              <Hint>then paste the token when prompted</Hint>
             </Stack>
           </Stack>
         ) : null}
@@ -200,7 +201,7 @@ export function ScanUploaderSection() {
         <Stack gap="xs">
           <Heading level={3}>Uploaders</Heading>
           {listQuery.isLoading ? (
-            <Text size="sm" tone="muted">Loading uploaders...</Text>
+            <Hint>Loading uploaders...</Hint>
           ) : listQuery.error ? (
             <Text size="sm" tone="danger">{listQuery.error.message}</Text>
           ) : listQuery.data && listQuery.data.length > 0 ? (
@@ -210,7 +211,7 @@ export function ScanUploaderSection() {
               ))}
             </div>
           ) : (
-            <Text size="sm" tone="muted">No uploaders yet.</Text>
+            <Hint>No uploaders yet.</Hint>
           )}
         </Stack>
 

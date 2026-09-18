@@ -13,7 +13,7 @@ import { trpc } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
@@ -52,10 +52,10 @@ export function MountFolderForm() {
   return (
     <Stack gap="sm">
       <Heading level={3}>Mirror a folder</Heading>
-      <Text size="sm" tone="muted">
+      <Hint>
         Docs and Sheets in the folder become synced cards in that directory;
         everything else becomes a pointer.
-      </Text>
+      </Hint>
       <Row gap="md" align="end" wrap>
         <TextField
           id="bbx-settings-drive-mount-url"
@@ -86,7 +86,7 @@ export function MountFolderForm() {
         </Button>
       </Row>
       <MutationError message={mountMutation.error?.message ?? null} />
-      {mounted === null ? null : <Text size="sm" tone="muted">{mounted}</Text>}
+      {mounted === null ? null : <Hint>{mounted}</Hint>}
     </Stack>
   );
 }
@@ -117,11 +117,11 @@ export function AddPointerForm() {
   return (
     <Stack gap="sm">
       <Heading level={3}>Add a pointer</Heading>
-      <Text size="sm" tone="muted">
+      <Hint>
         A card that records what a Drive item is and where it lives. Nothing is
         copied — good for a PDF, a Slides deck, or a folder you don&apos;t want
         mirrored.
-      </Text>
+      </Hint>
       <Row gap="md" align="end" wrap>
         <TextField
           id="bbx-settings-drive-link-url"
@@ -152,7 +152,7 @@ export function AddPointerForm() {
         </Button>
       </Row>
       <MutationError message={linkMutation.error?.message ?? null} />
-      {linked === null ? null : <Text size="sm" tone="muted">{linked}</Text>}
+      {linked === null ? null : <Hint>{linked}</Hint>}
     </Stack>
   );
 }

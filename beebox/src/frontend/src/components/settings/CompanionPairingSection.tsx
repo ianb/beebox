@@ -8,6 +8,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
@@ -122,9 +123,9 @@ export function CompanionPairingSection() {
           <Heading level={2}>
             iOS Companion
           </Heading>
-          <Text size="sm" tone="muted">
+          <Hint>
             Pair the native app with this box using a short-lived QR code.
-          </Text>
+          </Hint>
         </Stack>
 
         <Row gap="sm" wrap>
@@ -165,7 +166,7 @@ export function CompanionPairingSection() {
         <Stack gap="xs">
           <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
           {devicesQuery.isLoading ? (
-            <Text size="sm" tone="muted">Loading devices...</Text>
+            <Hint>Loading devices...</Hint>
           ) : devicesQuery.error ? (
             <Text size="sm" tone="danger">Devices could not be loaded. {devicesQuery.error.message}</Text>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (
@@ -182,11 +183,11 @@ export function CompanionPairingSection() {
               ) : null}
             </>
           ) : (
-            <Text size="sm" tone="muted">
+            <Hint>
               {devicesQuery.data?.scope === "own"
                 ? "You have not paired a device with this box."
                 : "No devices paired yet."}
-            </Text>
+            </Hint>
           )}
         </Stack>
       </Stack>

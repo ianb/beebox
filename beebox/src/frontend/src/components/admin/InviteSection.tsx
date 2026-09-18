@@ -6,6 +6,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { CheckboxField, TextField } from "../ui/fields";
 
@@ -60,9 +61,9 @@ export function InviteSection() {
         <Stack gap="md">
           <Stack gap="xs">
             <Heading level={2}>Create invite link</Heading>
-            <Text size="sm" tone="muted">
+            <Hint>
               The link creates one member account for this box and expires after 15 minutes.
-            </Text>
+            </Hint>
           </Stack>
           <CheckboxField
             id="bbx-admin-invite-open"

@@ -9,6 +9,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
@@ -51,7 +52,7 @@ function AllowedUserRows(options: {
   if (options.emails.length === 0) {
     return (
       <Card background="warm" border="subtle" padding="sm">
-        <Text size="sm" tone="muted">Owner-only — no additional users can access this box.</Text>
+        <Hint>Owner-only — no additional users can access this box.</Hint>
       </Card>
     );
   }
@@ -118,7 +119,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 function LoadingAllowedUsers() {
   return (
     <Card as="section" aria-label="Allowed users" shadow>
-      <Text size="sm" tone="muted">Loading allowed users…</Text>
+      <Hint>Loading allowed users…</Hint>
     </Card>
   );
 }
@@ -155,9 +156,9 @@ export function AllowedEmailsSection() {
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>Allowed Users</Heading>
-          <Text size="sm" tone="muted">
+          <Hint>
             Email addresses that can access this box. Leave empty to keep the box owner-only.
-          </Text>
+          </Hint>
         </Stack>
 
         {configQuery.data?.ownerEmail ? (

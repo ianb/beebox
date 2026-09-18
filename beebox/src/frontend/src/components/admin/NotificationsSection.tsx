@@ -15,6 +15,7 @@ import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
@@ -132,15 +133,15 @@ export function NotificationsSection() {
     <div className="bg-white rounded-lg shadow p-6">
       <Heading level={2}>Notifications</Heading>
       <Stack gap="sm" className="mt-2">
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           Get a push notification on this device when the box needs you — health alerts and
           questions waiting for an answer.
-        </Text>
+        </Hint>
 
         {support === null ? null : support.kind === "unsupported" ? (
-          <Text as="p" size="sm" tone="muted">
+          <Hint>
             This browser doesn&apos;t support web push notifications.
-          </Text>
+          </Hint>
         ) : support.kind === "needs-install" ? (
           <Text as="p" size="sm">
             On iPhone or iPad, add this app to your Home Screen first: tap the Share button,

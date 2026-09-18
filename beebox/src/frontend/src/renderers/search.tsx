@@ -3,6 +3,7 @@ import { registerFileType, type RendererProps } from "./index";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { TextField } from "../components/ui/fields";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
 import { Badge } from "../components/ui/Badge";
 import { Row } from "../components/ui/Row";
 import { Column } from "../components/ui/Column";
@@ -39,7 +40,7 @@ function SearchCardBody(props: RendererProps) {
     <Row className="mt-2"><Badge tone="neutral">{state.paths.length > 0 ? `paths: ${state.paths.join(", ")}` : "all paths"}</Badge><Badge tone="neutral">{state.types.length > 0 ? `types: ${state.types.join(", ")}` : "all types"}</Badge></Row>
     {result.isLoading ? <Text tone="muted" className="py-6">Searching…</Text> : null}
     {result.error ? <Text tone="danger" className="py-6">Could not search: {result.error.message}</Text> : null}
-    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Text size="sm" tone="muted" className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Text> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
+    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Hint className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Hint> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
   </Column>;
 }
 

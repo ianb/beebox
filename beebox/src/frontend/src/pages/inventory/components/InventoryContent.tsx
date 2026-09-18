@@ -6,6 +6,7 @@ import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { TabBar } from "../../../components/ui/TabBar";
 import { Text } from "../../../components/ui/Text";
+import { Hint } from "../../../components/ui/Hint";
 import { Heading } from "../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryTreemap } from "./InventoryTreemap";
@@ -62,7 +63,7 @@ function RepositorySummary({ data }: { data: Inventory }) {
         </Row>
         {repository.complete ? null : <Text as="p" tone="danger" size="sm">Repository footprint is a lower bound because some paths could not be read.</Text>}
         {repository.annexed && !repository.annexQueryAvailable ? <Text as="p" tone="danger" size="sm">Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</Text> : null}
-        {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Text as="p" tone="muted" size="sm">This repository is not using Git-annex.</Text>}
+        {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Hint>This repository is not using Git-annex.</Hint>}
       </Stack>
     </Card>
   );
@@ -132,7 +133,7 @@ function InventoryStatistic({ value, label }: { value: string; label: string }) 
   return (
     <Stack gap="none">
       <Text as="div" size="2xl" weight="bold">{value}</Text>
-      <Text as="div" size="sm" tone="muted">{label}</Text>
+      <Hint>{label}</Hint>
     </Stack>
   );
 }

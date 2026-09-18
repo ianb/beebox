@@ -19,6 +19,7 @@ import { InviteSection } from "../components/admin/InviteSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
 
 export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { arrival: AdminArrivalState; arrivalReceipt: string; onArrivalConsumed: () => void }) {
   return (
@@ -46,5 +47,5 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { 
 }
 
 function ScopeHeading({ title, description }: { title: string; description: string }) {
-  return <Stack gap="xs"><Text as="h2" size="xl" weight="bold">{title}</Text><Text as="p" tone="muted" size="sm">{description}</Text></Stack>;
+  return <Stack gap="xs"><Text as="h2" size="xl" weight="bold">{title}</Text><Hint>{description}</Hint></Stack>;
 }

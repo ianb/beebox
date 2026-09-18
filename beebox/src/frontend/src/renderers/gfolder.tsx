@@ -24,6 +24,7 @@ import { FriendlyDate } from "../components/ui/FriendlyDate";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
 import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "./directory";
@@ -86,12 +87,12 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}
       </Row>
-      <Text size="sm" tone="muted">
+      <Hint>
         mirrors into {dirOf(path) === "" ? "the box root" : dirOf(path)}
         {problemSummary(frontmatter) === null ? null : <>{" · "}{problemSummary(frontmatter)}</>}
         {lastSync === null ? null : <>{" · last sync "}<FriendlyDate iso={lastSync} /></>}
         {driveId === null ? null : <>{" · "}<Text size="xs" mono tone="muted">{driveId}</Text></>}
-      </Text>
+      </Hint>
       {error === null ? null : <Text size="sm" tone="danger">{error}</Text>}
     </Stack>
   );

@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
@@ -35,7 +36,7 @@ export function PasswordSection() {
       <Card as="section" aria-label="Password" shadow>
         <Stack gap="xs">
           <Heading level={2}>Password</Heading>
-          <Text size="sm" tone="muted">This account signs in with Google; no local password is set.</Text>
+          <Hint>This account signs in with Google; no local password is set.</Hint>
         </Stack>
       </Card>
     );
@@ -84,7 +85,7 @@ export function PasswordSection() {
         <Stack gap="md">
           <Stack gap="xs">
             <Heading level={2}>Change password</Heading>
-            <Text size="sm" tone="muted">Confirm your current password before choosing a new one.</Text>
+            <Hint>Confirm your current password before choosing a new one.</Hint>
           </Stack>
           <TextField id="bbx-settings-password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
           <TextField id="bbx-settings-password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />

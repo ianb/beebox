@@ -5,6 +5,7 @@ import { getQueryKey } from "@trpc/react-query";
 import { bbxSource } from "../../../lib/source-tag";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
+import { Hint } from "../../ui/Hint";
 import { Accordion } from "../../ui/Accordion";
 import { CalloutStack } from "../CalloutBlock";
 import { AckBadgeCluster } from "../ack-badge";
@@ -71,10 +72,10 @@ export function AmbientSessionReply(props: Props) {
     <section aria-label={`${session.label} conversation activity`} {...bbxSource("session", session.sessionId)} className="p-2">
       <Accordion title={<Text size="sm">{session.label} · {label}</Text>}>
         <div aria-busy={loading}>
-          {Boolean(loading) && <Text tone="muted" size="sm">Loading conversation activity…</Text>}
+          {Boolean(loading) && <Hint>Loading conversation activity…</Hint>}
           {Boolean(error) && <Text tone="danger" size="sm">Could not refresh conversation: {error?.message}</Text>}
-          {!loading && !error && !history.data?.entries.length && <Text tone="muted" size="sm">Conversation history is unavailable.</Text>}
-          {Boolean(reply.earlier) && <Text tone="muted" size="sm">Earlier responses in conversation</Text>}
+          {!loading && !error && !history.data?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
+          {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}
           {<AckBadgeCluster acks={reply.acks} onZoomView={({ target }) => props.onInspectCard(target)} />}
           <div className="flex gap-2 flex-wrap mt-2">

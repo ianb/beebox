@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
-import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import {
   declineViaPopup,
@@ -111,10 +111,10 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
         <Heading level={2}>
           The agent wants to see this screen
         </Heading>
-        <Text as="p" size="sm" tone="muted" className="mt-2">
+        <Hint className="mt-2">
           Sharing sends a one-time screenshot of what you see now to the agent. You pick exactly what to
           share in the next browser dialog.
-        </Text>
+        </Hint>
         <Row gap="sm" justify="end" className="mt-5">
           <Button id="bbx-screenshot-consent-decline" intent="secondary" onClick={decline}>
             Decline

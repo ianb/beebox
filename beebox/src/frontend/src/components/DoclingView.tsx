@@ -25,6 +25,7 @@ import { ExternalLink } from "./ui/ExternalLink";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Hint } from "./ui/Hint";
 import { Heading } from "./ui/Heading";
 
 /** `figure-001.avif`, `figure-002.avif`, … — the renders of `pictures[]`, in order. */
@@ -88,10 +89,10 @@ function DoclingHeader({
         {document.originMimetype === null ? null : <MetaItem label="Type">{document.originMimetype}</MetaItem>}
       </Row>
       {document.unrecognized > 0 ? (
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           {document.unrecognized} item{document.unrecognized === 1 ? "" : "s"} in this document
           use a shape this viewer doesn&rsquo;t recognize and are not shown.
-        </Text>
+        </Hint>
       ) : null}
     </Stack>
   );

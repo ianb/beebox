@@ -20,6 +20,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { TextField } from "../ui/fields";
 import { GuidePanel, postSaveMessage, type SecretGuideEntry } from "./SecretsSection-guide";
 
@@ -238,7 +239,7 @@ export function SecretValueForm({
               knownNames={(guides ?? []).map((candidate) => candidate.key)}
             />
           ) : (
-            <Text size="sm" tone="muted">For <Text mono>{fixedName}</Text></Text>
+            <Hint>For <Text mono>{fixedName}</Text></Hint>
           )}
           <ValueField id={ids?.value} entry={entry} value={value} onChange={setValue} />
           {fixedName === null ? (

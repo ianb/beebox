@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { BoxSecretsView } from "./SecretsSection-box";
@@ -46,7 +47,7 @@ export function SecretsSection() {
   if (status.isLoading) {
     return (
       <Card as="section" aria-label="Secrets" shadow aria-busy>
-        <Text size="sm" tone="muted">Loading secrets…</Text>
+        <Hint>Loading secrets…</Hint>
       </Card>
     );
   }
@@ -61,10 +62,10 @@ export function SecretsSection() {
           <div id="secrets-heading">
             <Heading level={2}>Secrets</Heading>
           </div>
-          <Text size="sm" tone="muted">
+          <Hint>
             API keys live in one store outside every box, and each box holds a grant to the ones it may use.
             Values are never shown here — saving one replaces it.
-          </Text>
+          </Hint>
         </Stack>
 
         <Row gap="sm" wrap>

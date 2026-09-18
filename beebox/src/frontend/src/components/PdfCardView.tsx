@@ -45,6 +45,7 @@ import { AttachedComments } from "./AttachedComments";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Hint } from "./ui/Hint";
 import { Heading } from "./ui/Heading";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { Button } from "./ui/Button";
@@ -221,9 +222,9 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
         ) : null}
         <PdfPageStrip pages={pages} activePage={activePage} />
         {showMissingPageRendersNotice ? (
-          <Text size="sm" tone="muted">
+          <Hint>
             {fields.pages} page{fields.pages === 1 ? "" : "s"} expected but not found in the attach scope.
-          </Text>
+          </Hint>
         ) : null}
 
         {hasBody ? (

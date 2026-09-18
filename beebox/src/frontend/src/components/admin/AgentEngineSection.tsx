@@ -5,6 +5,7 @@ import { Card } from "../ui/Card";
 import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
 import { AGENT_ENGINES } from "@shared/agent-models.js";
@@ -48,7 +49,7 @@ export function AgentEngineSection() {
   if (config.isLoading) {
     return (
       <Card as="section" aria-label="Agent engine" shadow aria-busy>
-        <Text size="sm" tone="muted">Loading agent engine…</Text>
+        <Hint>Loading agent engine…</Hint>
       </Card>
     );
   }
@@ -67,10 +68,10 @@ export function AgentEngineSection() {
           <div id="agent-engine-heading">
             <Heading level={2}>Agent engine and model</Heading>
           </div>
-          <Text size="sm" tone="muted">
+          <Hint>
             Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine
             keep using it; legacy chats default to Claude.
-          </Text>
+          </Hint>
         </Stack>
 
         {config.data ? (
@@ -89,10 +90,10 @@ export function AgentEngineSection() {
             />
             <Stack gap="xs">
               <Text size="sm" weight="semibold">Available engines</Text>
-              <Text size="sm" tone="muted">
+              <Hint>
                 Which harnesses a new chat may choose. Turn off an engine this box has no
                 account for, so nobody starts a chat that cannot run.
-              </Text>
+              </Hint>
               {AGENT_ENGINES.map((candidate) => (
                 <CheckboxField
                   key={candidate}
@@ -122,7 +123,7 @@ export function AgentEngineSection() {
         ) : null}
 
         {update.isPending ? (
-          <div role="status"><Text size="sm" tone="muted">Saving…</Text></div>
+          <div role="status"><Hint>Saving…</Hint></div>
         ) : null}
         {update.isSuccess ? (
           <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>

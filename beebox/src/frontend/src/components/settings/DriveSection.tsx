@@ -15,6 +15,7 @@
 import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
@@ -85,7 +86,7 @@ export function DriveSection() {
 
       <Stack gap="md">
         {data.mounts.length === 0 ? (
-          <Text size="sm" tone="muted">No folders are mirrored yet.</Text>
+          <Hint>No folders are mirrored yet.</Hint>
         ) : (
           <Stack gap="sm">
             {data.mounts.map((mount) => (
