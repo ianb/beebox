@@ -59,11 +59,44 @@ notify() {  # $1=title  $2=message
   [ -n "${BBX_DEPLOY_NOTIFY:-}" ] || return 0
   $BBX_DEPLOY_NOTIFY "$1" "$2" >/dev/null 2>&1 || true
 }
+# shellcheck source=beebox/deploy/deploy-outcome.sh
+. "$SCRIPT_DIR/deploy-outcome.sh"
+
+# One JSON line per deploy that took the lock, so "are deploys getting slower"
+# has an answer: start, end, outcome, and the downtime window the server
+# measured (null when the run never reached activation). Written from the exit
+# trap and from the success path; a SIGKILLed run writes nothing, which
+# `.last-deployed-sha` below already makes visible.
+DEPLOY_RECORD="$SCRIPT_DIR/.deploy-logs/deploys.jsonl"
+DEPLOY_STARTED_AT=""
+CONTROL_LOG=""
+record_deploy() {  # $1=outcome  $2=exit code
+  [ -n "$DEPLOY_STARTED_AT" ] || return 0
+  local down=""
+  if [ -n "$CONTROL_LOG" ] && [ -f "$CONTROL_LOG" ]; then
+    down="$(sed -n 's/^Deploy window: down \([0-9][0-9]*\)s .*/\1/p' "$CONTROL_LOG" | tail -n 1)"
+    rm -f "$CONTROL_LOG"
+  fi
+  mkdir -p "$(dirname "$DEPLOY_RECORD")"
+  printf '{"startedAt":"%s","endedAt":"%s","sha":"%s","outcome":"%s","exit":%d,"downSeconds":%s}\n' \
+    "$DEPLOY_STARTED_AT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${SHA:-}" "$1" "$2" "${down:-null}" \
+    >> "$DEPLOY_RECORD" || true
+}
+
+# Progress lines carry a UTC time, so a slow step can be located in the log.
+step() {
+  echo "[$(date -u +%H:%M:%SZ)] $*"
+}
+
 # The trap also releases the deploy lock (LOCK_HELD is set only after the lock
 # is actually taken, further below). If a held deploy fails after a newer request was
 # recorded, it still hands off to that request: otherwise the non-blocking lock
 # loser has already exited successfully and nobody remains to deploy the newest
 # ref. The failed attempt remains explicit before the chained attempt begins.
+#
+# An interrupt is recorded by the signal traps below, not inferred from the exit
+# code (see deploy-outcome.sh).
+INTERRUPTED_BY=""
 deploy_exit() {
   local rc=$?
   trap - EXIT
@@ -77,22 +110,32 @@ deploy_exit() {
     return
   fi
 
-  if [ "$rc" -ge 128 ]; then
-    local sig=$((rc - 128))
-    echo "Deploy interrupted (signal $sig) — not a failure; the next landing's deploy covers this ref."
-    notify "⏸ beebox deploy interrupted" "signal $sig — the next landing redeploys; see $LOG_HINT"
-  else
-    echo "Deploy failed (exit $rc)"
-    notify "❌ beebox deploy FAILED" "exit $rc — see $LOG_HINT"
-  fi
+  local outcome
+  outcome="$(deploy_outcome "$rc" "$INTERRUPTED_BY")"
+  if [ -n "$held" ]; then record_deploy "$outcome" "$rc"; fi
+  case "$outcome" in
+    interrupted)
+      echo "Deploy interrupted (SIG$INTERRUPTED_BY) — not a failure; the next landing's deploy covers this ref."
+      notify "⏸ beebox deploy interrupted" "SIG$INTERRUPTED_BY — the next landing redeploys; see $LOG_HINT"
+      ;;
+    unreachable)
+      echo "Deploy failed (exit 255: the server could not be reached over ssh)"
+      notify "❌ beebox deploy FAILED" "server unreachable over ssh — see $LOG_HINT"
+      ;;
+    *)
+      echo "Deploy failed (exit $rc)"
+      notify "❌ beebox deploy FAILED" "exit $rc — see $LOG_HINT"
+      ;;
+  esac
 
   local newer=""
   if [ -n "$held" ] && [ -n "${REQUESTED_FILE:-}" ] && [ -n "${SHA:-}" ]; then
     newer="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
   fi
-  # Signal-style exits mean an operator or supervisor deliberately stopped the
-  # run. Do not turn Ctrl-C/SIGTERM into a fresh full deploy behind their back.
-  if [ "$rc" -lt 128 ] && [ -n "$newer" ] && [ "$newer" != "$SHA" ]; then
+  # An interrupt means an operator or supervisor deliberately stopped the run.
+  # Do not turn Ctrl-C/SIGTERM into a fresh full deploy behind their back.
+  # Every other failure, including an unreachable server, hands off.
+  if [ "$outcome" != interrupted ] && [ -n "$newer" ] && [ "$newer" != "$SHA" ]; then
     echo "Deploy superseded by $newer — chaining after failed attempt."
     if [ -t 1 ]; then
       "$0" --ref "$newer" --chained || true
@@ -102,7 +145,14 @@ deploy_exit() {
   fi
   exit "$rc"
 }
+on_signal() {  # $1=signal name  $2=signal number
+  INTERRUPTED_BY="$1"
+  exit $((128 + $2))
+}
 trap deploy_exit EXIT
+trap 'on_signal INT 2' INT
+trap 'on_signal TERM 15' TERM
+trap 'on_signal HUP 1' HUP
 
 # The deploy target lives in a gitignored deploy/target.env, and its presence is
 # what makes this machine one that deploys at all. Absent, this is not a
@@ -254,6 +304,7 @@ if ! take_deploy_lock "$LOCK_FILE"; then
   exit 0
 fi
 LOCK_HELD=1
+DEPLOY_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # Deploy the latest REQUESTED sha, not necessarily our own. For a chained run
 # this is the main mechanism (pick up whatever is requested right now); for a
 # normal run it catches the race where we won the lock against an invocation
@@ -265,13 +316,13 @@ if [[ -n "$REQUESTED" && "$REQUESTED" != "$SHA" ]]; then
   RAW_REF="$REQUESTED"
 fi
 
-echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
+step "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
 # First reclaim deploy-owned caches so a previous accumulation cannot lock out
 # the cleanup that repairs it. Best-effort here: the hard post-install prune
 # below is authoritative, while this recovery pass may be running on a full
 # filesystem with partially broken tools.
-echo "Pruning deploy package caches before disk gate..."
+step "Pruning deploy package caches before disk gate..."
 ssh "$SSH_TARGET" bash -s <<'PREFLIGHTCLEAN'
 pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune' \
@@ -285,7 +336,7 @@ PREFLIGHTCLEAN
 # Refuse to make a low-disk incident worse. This runs before either local or
 # remote installs. The 15%-free entry gate stays meaningful across differently
 # sized hosts; its 3 GiB floor preserves minimum package/temp/write headroom.
-echo "Checking server disk headroom..."
+step "Checking server disk headroom..."
 ssh "$SSH_TARGET" bash -s <<'DISKCHECK'
 set -euo pipefail
 read -r total_kib free_kib < <(df -Pk / | awk 'NR == 2 { print $2, $4 }')
@@ -322,7 +373,7 @@ DISKCHECK
 # See issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
 CHECKOUT_FRESH=false
 if [ ! -d "$CHECKOUT/.git" ] || ! checkout_belongs_to_repo; then
-  echo "Creating build clone at $CHECKOUT (shared object store)..."
+  step "Creating build clone at $CHECKOUT (shared object store)..."
   rm -rf "$CHECKOUT"
   git clone --shared --quiet --no-checkout "$MAIN_ROOT" "$CHECKOUT"
   CHECKOUT_FRESH=true
@@ -357,7 +408,7 @@ else
   NEED_CLEAN_INSTALL=true
 fi
 if [[ "$NEED_CLEAN_INSTALL" == true ]]; then
-  echo "Lockfile/patches changed (or first install) — wiping checkout node_modules for a clean reinstall..."
+  step "Lockfile/patches changed (or first install) — wiping checkout node_modules for a clean reinstall..."
   rm -rf "$CHECKOUT/node_modules" \
          "$CHECKOUT/personal-vibe-check/node_modules" \
          "$CHECKOUT/agent-doctest/node_modules" \
@@ -370,7 +421,7 @@ fi
 # the frontend/cards package against stale modules and fails — this has bitten the
 # auto-deploy repeatedly. Frozen so it's deterministic and never rewrites the
 # lockfile; a no-op when already in sync. HUSKY=0 skips the hook install.
-echo "Reconciling build-checkout deps..."
+step "Reconciling build-checkout deps..."
 (cd "$CHECKOUT" && HUSKY=0 pnpm install --frozen-lockfile --silent)
 
 # Record the sha we just installed against, so the next deploy can decide whether
@@ -379,7 +430,7 @@ echo "$SHA" > "$META_FILE"
 
 # Build frontend from the checkout (always — no skip). Vite empties its outDir,
 # but the git clean above already removed any stale dist as well.
-echo "Building frontend..."
+step "Building frontend..."
 (cd "$CHECKOUT/beebox/src/frontend" && pnpm --silent build)
 
 # Build the CLI bundle from the checkout before syncing. dist/ is rsynced (not
@@ -389,14 +440,18 @@ echo "Building frontend..."
 # the card-primitive layer, emitted by build-cli.ts alongside dist/cli.mjs). If
 # that file is missing or stale on the server, every box-local schema fails to
 # load. Building here keeps dist/ in lockstep with the source we rsync.
-echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
+step "Building CLI bundle (dist/cli.mjs + dist/cards)..."
 (cd "$CHECKOUT/beebox" && node scripts/build-cli.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
 # the same way dist/ does. Any bbx engine activity on the server would rewrite it,
 # but the per-box docs refresh below skips a dirty box, so build it here
 # rather than rely on that.
-echo "Building package reference docs (box-docs/)..."
+step "Building package reference docs (box-docs/)..."
 (cd "$CHECKOUT/beebox" && node --import tsx scripts/build-box-docs.ts)
+# The page nginx serves while the services are stopped. The server fills in the
+# start time when the window opens (deploy/server-bin/bbx-deploy-window).
+step "Building deploy page (dist/deploy-page.html)..."
+(cd "$CHECKOUT/beebox" && node scripts/build-deploy-page.ts)
 
 # Upload separately; activation below runs only after fleet admission drains.
 STAGE_DIR="${INSTALL_DIR}.deploy-stage"
@@ -454,7 +509,7 @@ for repo in personal-vibe-check agent-doctest beebox; do
     echo "  $repo: not found at $local_path, skipping"
     continue
   fi
-  echo "Syncing $repo..."
+  step "Syncing $repo..."
   rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$STAGE_DIR/$repo/"
 done
 
@@ -463,7 +518,7 @@ done
 # manifest + .npmrc + patches drive one reproducible `pnpm install
 # --frozen-lockfile` from there (below). These are individual files, so no
 # --delete (it would nuke the synced subdirs).
-echo "Syncing workspace root..."
+step "Syncing workspace root..."
 rsync -az --no-owner --no-group \
   "$CHECKOUT/package.json" \
   "$CHECKOUT/pnpm-workspace.yaml" \
@@ -477,7 +532,7 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$STAG
 # whose `pnpm install` (this box and every box's) needs to own the files it
 # might chmod. One pass over the whole tree after every sync is simpler and
 # more robust than trying to get every rsync invocation's ownership right.
-echo "Fixing ownership..."
+step "Fixing ownership..."
 # INSTALL_DIR must expand locally before the remote command runs.
 # shellcheck disable=SC2029
 ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR"
@@ -503,13 +558,69 @@ queue_remote() {
     printf '\n' >> "$REMOTE_SCRIPT"
   fi
 }
+# A queued phase announces itself on the server when it RUNS, with the server's
+# UTC time; a laptop-side echo here would print at queue time, minutes early.
+queue_step() {
+  # shellcheck disable=SC2016 # expanded by the remote bash, at run time, on purpose
+  queue_remote command bash -c 'echo "[$(date -u +%H:%M:%SZ)] $0"' "$1"
+}
 printf 'set -euo pipefail\n' > "$REMOTE_SCRIPT"
+
+# The nginx site file is repo-owned (deploy/nginx/beebox.conf), like the systemd
+# drop-ins below: setup-server.sh writes it only at provisioning, so without
+# this a change to it never reaches a running server. Installed before anything
+# stops, so a file that fails `nginx -t` fails the deploy with the site still
+# up, and so this deploy's own window already gets the page.
+queue_step "Installing nginx site file and deploy-window helper..."
+queue_remote stdin bash -s "$STAGE_DIR" <<'REMOTE'
+set -euo pipefail
+stage_dir="$1"
+install -m 0755 "$stage_dir/beebox/deploy/server-bin/bbx-deploy-window" /usr/local/sbin/bbx-deploy-window
+src="$stage_dir/beebox/deploy/nginx/beebox.conf"
+site=/etc/nginx/sites-available/beebox
+if ! cmp -s "$src" "$site"; then
+  if [[ -f "$site" && ! -e "$site.pre-deploy-owned" ]]; then
+    # One-time copy of the hand-maintained file this deploy takes over.
+    cp -p "$site" "$site.pre-deploy-owned"
+    echo "  nginx: kept the previous hand-maintained site file as $site.pre-deploy-owned"
+  fi
+  [[ -f "$site" ]] && cp -p "$site" "$site.prev"
+  install -m 0644 "$src" "$site"
+  ln -sf "$site" /etc/nginx/sites-enabled/beebox
+  # Absolute path: this runs after `source /home/beebox/.env` (the CONTROL
+  # block), whose PATH omits /usr/sbin. A bare `nginx` is "command not found",
+  # which is how the first deploy of this block failed.
+  if ! /usr/sbin/nginx -t -q; then
+    [[ -f "$site.prev" ]] && cp -p "$site.prev" "$site"
+    echo "  FAILED: the repo nginx site file does not pass nginx -t; restored the previous file." >&2
+    exit 1
+  fi
+  systemctl reload nginx
+  echo "  nginx: installed the repo site file and reloaded"
+fi
+REMOTE
+
+# The downtime window: the page goes up before the stop and comes down when
+# this script exits, however it exits. A signal becomes an ordinary exit so the
+# EXIT trap runs. This is the server's own trap, so a laptop-side failure cannot
+# strand the page. PIPE is the one that matters there: when the laptop's ssh
+# drops, this script's output pipe closes and its next write raises SIGPIPE,
+# whose default action would skip the EXIT trap.
+cat >> "$REMOTE_SCRIPT" <<'WINDOW'
+trap 'rc=$?; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 141' PIPE
+trap 'exit 143' TERM
+WINDOW
+queue_remote command /usr/local/sbin/bbx-deploy-window open "$STAGE_DIR/beebox/dist/deploy-page.html"
+queue_remote command /usr/local/sbin/bbx-deploy-window down
 queue_remote command systemctl stop beebox-hub beebox-scheduler
 queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
 queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
-echo "Checking dependencies..."
+queue_step "Checking dependencies..."
 queue_remote stdin bash -s <<'REMOTE'
   set -e
   # Bootstrap pnpm on demand. corepack ships with Node 24; this is idempotent
@@ -615,7 +726,7 @@ REMOTE
 # Runs after every deploy (not just once) because a box's package.json can
 # change independently — an agent `pnpm add`s a view dependency, or a fresh
 # `box-packageify` runs — between deploys.
-echo "Reconciling box package installs..."
+queue_step "Reconciling box package installs..."
 queue_remote stdin bash -s <<'REMOTE'
   set -e
   for box in /home/beebox/boxes/*/; do
@@ -653,7 +764,7 @@ REMOTE
 # later install in the same deploy still needs. Start Bee Box-user cleanup in
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
-echo "Pruning deploy package caches..."
+queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
 pnpm store prune
@@ -670,7 +781,7 @@ CACHECLEAN
 # expansion in the node script body. Hash + subject are read from the BUILD
 # CHECKOUT at the resolved sha, so the recorded hash is exactly what shipped;
 # requestedRef records the raw ref so a rollback is recognizable in history.
-echo "Writing deploy info..."
+queue_step "Writing deploy info..."
 DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 BEEBOX_HASH=$(git -C "$CHECKOUT" rev-parse --short "$SHA")
 BEEBOX_SUBJECT=$(git -C "$CHECKOUT" log -1 --format=%s "$SHA")
@@ -740,7 +851,7 @@ SUDOERS
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
-  echo "Converging boxes under maintenance..."
+  queue_step "Converging boxes under maintenance..."
   queue_remote stdin bash -s <<'REMOTE'
     for boxdir in /home/beebox/boxes/*/; do
       [[ -e "$boxdir/.git" ]] || continue
@@ -764,7 +875,7 @@ REMOTE
   #
   # daemon-reload only when something actually changed, so an unchanged deploy
   # stays quiet. The restart below then picks up whatever was reloaded.
-  echo "Reconfirming systemd drop-ins..."
+  queue_step "Reconfirming systemd drop-ins..."
   queue_remote stdin bash -s "$INSTALL_DIR" <<'REMOTE'
 set -euo pipefail
 install_dir="$1"
@@ -794,7 +905,7 @@ if [[ $changed -eq 1 ]]; then
 fi
 REMOTE
 
-  echo "Restarting services..."
+  queue_step "Restarting services..."
   queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
 
   # Verify the deploy at two depths, on the server (localhost + local key):
@@ -819,7 +930,7 @@ REMOTE
   # assets; fclones → duplicate-file reports) until someone hits it in the
   # wild. Catch a
   # "declared but not installed on this older box" gap at deploy, not at first use.
-  echo "Verifying required external tools..."
+  queue_step "Verifying required external tools..."
   queue_remote stdin bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
@@ -842,7 +953,7 @@ REMOTE
     echo "  Required tools present."
 TOOLCHECK
 
-  echo "Verifying hub health + box canary..."
+  queue_step "Verifying hub health + box canary..."
   queue_remote stdin bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
     set -euo pipefail
     install_dir="$1"
@@ -940,7 +1051,10 @@ fi
 # Existing dependencies are read-only until activation begins under the gate.
 rsync -az "$REMOTE_SCRIPT" "$SSH_TARGET:$STAGE_DIR/.activate-deploy.sh"
 rm -f "$REMOTE_SCRIPT"
-ssh -A "$SSH_TARGET" bash -s "$STAGE_DIR" "$INSTALL_DIR" <<'CONTROL'
+# The control output is also kept so record_deploy can read the measured
+# downtime from bbx-deploy-window's "Deploy window: down <n>s" line.
+CONTROL_LOG=$(mktemp)
+ssh -A "$SSH_TARGET" bash -s "$STAGE_DIR" "$INSTALL_DIR" <<'CONTROL' | tee "$CONTROL_LOG"
 set -euo pipefail
 stage_dir="$1"
 install_dir="$2"
@@ -987,7 +1101,8 @@ set +a
 node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh"
 CONTROL
 
-echo "Deploy complete."
+step "Deploy complete."
+record_deploy ok 0
 # Truthful "what is actually live" marker, written ONLY here — past the upload,
 # the restart, and the health verification. Nothing else in this script is a
 # safe proxy: `.deploy-last-sha` is written right after `pnpm install` (it is a

@@ -368,35 +368,9 @@ systemctl start beebox-hub beebox-scheduler claude-update.timer
 
 # ── Nginx reverse proxy ────────────────────────────────────────────
 echo "Configuring nginx..."
-cat > /etc/nginx/sites-available/beebox <<'EOF'
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    client_max_body_size 50m;
-
-    location / {
-        proxy_pass http://127.0.0.1:3210;
-        proxy_http_version 1.1;
-        # The tRPC client uses httpBatchStreamLink: the server writes each
-        # procedure's result as a JSONL line the moment it resolves, so a fast
-        # query renders without waiting for a slow batch-mate. nginx buffers
-        # proxied responses by default, which would re-couple the batch by
-        # holding every line until the response completed. There is only this
-        # one location (everything is proxied to the hub), so the whole app
-        # opts out; responses here are dynamic API/HTML, never large static
-        # files where buffering would earn its keep.
-        proxy_buffering off;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
-    }
-}
-EOF
+# The site file is repo-owned; deploy.sh reinstalls it on every deploy, so a
+# change reaches existing servers too. See deploy/nginx/beebox.conf.
+install -m 0644 "$INSTALL_DIR/beebox/deploy/nginx/beebox.conf" /etc/nginx/sites-available/beebox
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/beebox /etc/nginx/sites-enabled/beebox
