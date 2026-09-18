@@ -1,6 +1,6 @@
 ---
 title: "A regenerated PDF keeps showing its old contents; even a hard reload does not help"
-workstream: unattached
+workstream: pdf-stale-bytes
 area: beebox
 labels: [ui, chat]
 filed-by: agent
