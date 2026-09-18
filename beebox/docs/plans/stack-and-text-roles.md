@@ -144,7 +144,7 @@ non-first child's own `mt-*` today; under `gap` that `mt-*` starts to apply.
 
   | Component | Props | Renders |
   |---|---|---|
-  | `Heading` | `level: 2 \| 3`, `children`, `className?`, `id?` | `h2`: `text-lg font-semibold text-warm-900`; `h3`: `text-sm font-semibold text-warm-900` |
+  | `Heading` | `level: 2 \| 3`, `children`, `className?` | `h2`: `text-lg font-semibold text-warm-900`; `h3`: `text-sm font-semibold text-warm-900` |
   | `Hint` | `children`, `className?` | `<p class="text-sm text-warm-500">` |
   | `ErrorText` | `children`, `className?` | `<p class="text-sm text-danger-dark">` |
   | `StatusMessage` | `children`, `className?` | `<div role="status" class="p-8 text-warm-600">` |
