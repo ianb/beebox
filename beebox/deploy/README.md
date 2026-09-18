@@ -347,7 +347,7 @@ service-free packages from the distro sources. `deploy.sh` installs the
 wrapper and the sudoers entry on every deploy, so `setup-server.sh` needs no
 copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
 box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
-`docs/plans/box-host-packages.md`. After changing the wrapper, run
+`docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 `server-bin/bbx-host-apt.smoke.sh`.
 
 ## Systemd units

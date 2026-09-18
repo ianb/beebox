@@ -1,9 +1,9 @@
 ---
 title: "Box agents install distro packages on their host"
-status: draft
+status: implemented
 workstream: box-host-packages
 issues:
-  - ../../../issues/features/2026-09-16-box-installs-distro-packages.md
+  - ../../../issues/closed/features/2026-09-16-box-installs-distro-packages.md
 ---
 # Box agents install distro packages on their host
 

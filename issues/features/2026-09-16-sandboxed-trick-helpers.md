@@ -41,5 +41,5 @@ On the production host `unshare` is available; `bwrap` and `firejail` are
 not installed. Target: the scratch directory writable, the box read-only or
 absent, no network unless the trick asks for it.
 
-Related: [distro packages](2026-09-16-box-installs-distro-packages.md),
+Related: [distro packages](../closed/features/2026-09-16-box-installs-distro-packages.md),
 [Python libraries](2026-09-16-box-python-library-path-and-policy.md).
