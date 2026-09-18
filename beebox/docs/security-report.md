@@ -3,7 +3,7 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
 date: 2026-09-16
 model: gpt-5
-reviewed-by: DRAFT — unreviewed
+reviewed-by: Ian
 ---
 
 # Security report — structured version
@@ -13,6 +13,13 @@ is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root).
+
+**Scoped amendment (2026-09-17):** Added box package installs (§5 row, §8
+item 13, and the §4 blast-radius clause) for `worktree-box-host-packages`,
+fixed the §5 process-model user, and recorded the `files.kind`
+transport-auth and cross-box tests. Targeted, not a full refresh; the
+`generated-at-rev` anchor is unchanged. Ian reviewed this amendment and the
+2026-09-09/09-14/09-16 amendments below on 2026-09-17.
 
 **Scoped amendment (2026-09-14):** This draft adds migration-maintenance
 accounting against `23e37c44c6438f9f5832baa1fd2437144b5b89a8` plus the
@@ -116,7 +123,7 @@ Notable abilities, and the items that are more than routine:
 | Surface | Abilities | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
-| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; its direct caller does not test transport authentication. |
+| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; `test/webapp/auth-required.doctest.md` covers the transport wall (401 without a credential, 200 with one), and `test/webapp/cross-box-probe.doctest.md` covers a sibling box's path (`BAD_REQUEST`). |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
