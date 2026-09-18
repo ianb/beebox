@@ -25,6 +25,9 @@ import { ExternalLink } from "./ui/ExternalLink";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { Hint } from "./ui/Hint";
+import { Heading } from "./ui/Heading";
 
 /** `figure-001.avif`, `figure-002.avif`, … — the renders of `pictures[]`, in order. */
 const FIGURE_RENDER_RE = /^figure-(\d{3})\.avif$/;
@@ -76,9 +79,9 @@ function DoclingHeader({
 }) {
   return (
     <Stack gap="sm">
-      <Text as="h2" size="lg" weight="bold">
+      <Heading level={2}>
         {document.originFilename ?? document.name ?? "Docling extraction"}
-      </Text>
+      </Heading>
       <Row gap="md" wrap>
         {document.schemaName === null ? null : <MetaItem label="Schema">{document.schemaName}</MetaItem>}
         {document.version === null ? null : <MetaItem label="Version">{document.version}</MetaItem>}
@@ -87,10 +90,10 @@ function DoclingHeader({
         {document.originMimetype === null ? null : <MetaItem label="Type">{document.originMimetype}</MetaItem>}
       </Row>
       {document.unrecognized > 0 ? (
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           {document.unrecognized} item{document.unrecognized === 1 ? "" : "s"} in this document
           use a shape this viewer doesn&rsquo;t recognize and are not shown.
-        </Text>
+        </Hint>
       ) : null}
     </Stack>
   );
@@ -109,7 +112,7 @@ export function DoclingView({ data }: RendererProps) {
         <Text as="p" tone="subtle">
           This browser can&rsquo;t decompress <code>.gz</code> files in the page.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download</ExternalLink>
       </Stack>
     );
   }
@@ -126,10 +129,10 @@ export function DoclingView({ data }: RendererProps) {
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="p" tone="danger">
+        <ErrorText>
           Could not read {basename}: {error?.message ?? "no content"}
-        </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        </ErrorText>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }

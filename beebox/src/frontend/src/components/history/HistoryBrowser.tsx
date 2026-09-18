@@ -11,8 +11,9 @@ import { Sidebar } from "../Sidebar";
 import { CommitTimeline } from "./CommitTimeline";
 import { HistoryFilterBar, type HistoryFilterState } from "./HistoryFilterBar";
 import { Row } from "../ui/Row";
-import { Column } from "../ui/Column";
+import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { EMPTY_FILTER } from "./history-filter";
 import { historySelectionMissing, resolveHistorySelection } from "./history-selection";
 
@@ -137,7 +138,7 @@ export function HistoryBrowser({
   return (
     <Row gap="none" align="stretch" className="h-full">
       <Sidebar title="Commits" headingLevel="h2" subtitle={`${commits.length} loaded`} detailSelected={hasDetail} idPrefix={`${idPrefix}-sidebar`}>
-        {filterBar && facetsQuery.isError ? <div className="px-3 py-2"><Text size="sm" tone="danger">History filters could not be loaded. <button id={`${idPrefix}-facets-retry`} type="button" className="underline" onClick={() => void facetsQuery.refetch()}>Retry</button></Text></div> : null}
+        {filterBar && facetsQuery.isError ? <div className="px-3 py-2"><ErrorText>History filters could not be loaded. <button id={`${idPrefix}-facets-retry`} type="button" className="underline" onClick={() => void facetsQuery.refetch()}>Retry</button></ErrorText></div> : null}
         {filterBar ? (
           <HistoryFilterBar
             filter={filter}
@@ -145,7 +146,7 @@ export function HistoryBrowser({
             onChange={onFilterChange} idPrefix={`${idPrefix}-filter`}
           />
         ) : null}
-        {!hasDetail && (isError || deepLinkMissing) ? <div className="px-3 py-2 md:hidden"><Text size="sm" tone="danger">{isError ? <>History could not be loaded: {error.message} <button id={`${idPrefix}-list-retry-mobile`} type="button" className="underline" onClick={() => void refetch()}>Retry</button></> : `No commit in this box's history starts with ${selectedHash}.`}</Text></div> : null}
+        {!hasDetail && (isError || deepLinkMissing) ? <div className="px-3 py-2 md:hidden"><ErrorText>{isError ? <>History could not be loaded: {error.message} <button id={`${idPrefix}-list-retry-mobile`} type="button" className="underline" onClick={() => void refetch()}>Retry</button></> : `No commit in this box's history starts with ${selectedHash}.`}</ErrorText></div> : null}
         <CommitTimeline
           commits={commits}
           selectedHash={selectedCommit?.hash || null}
@@ -159,7 +160,7 @@ export function HistoryBrowser({
         />
       </Sidebar>
 
-      <Column overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
+      <Stack gap="none" overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
         {selectedCommit ? (
           <Suspense fallback={<Row justify="center" align="center" className="h-full"><Text tone="muted">Loading commit…</Text></Row>}><CommitDetail
             commit={selectedCommit}
@@ -181,7 +182,7 @@ export function HistoryBrowser({
             </Text>
           </Row>
         )}
-      </Column>
+      </Stack>
     </Row>
   );
 }

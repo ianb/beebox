@@ -12,6 +12,7 @@ import { Pre } from "../../../components/ui/Pre";
 import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { Text } from "../../../components/ui/Text";
+import { Hint } from "../../../components/ui/Hint";
 import type { RunSummary } from "./chat-scroll-runner";
 import { SCENARIOS } from "./chat-scroll-scenarios";
 
@@ -71,7 +72,7 @@ export function HarnessReadout({ scroller, atBottom, unseen, summary }: ReadoutP
         <Badge tone={atBottom ? "success" : "neutral"}>atBottom {String(atBottom)}</Badge>
         <Badge tone={unseen ? "warning" : "neutral"}>hasUnseenContent {String(unseen)}</Badge>
       </Row>
-      {summary ? <SummaryPanel summary={summary} /> : <Text size="sm" tone="muted">No run yet.</Text>}
+      {summary ? <SummaryPanel summary={summary} /> : <Hint>No run yet.</Hint>}
     </Stack>
   );
 }
@@ -97,7 +98,7 @@ export function HarnessLog({ entries }: { entries: LogEntry[] }) {
     <Stack gap="xs">
       <Text as="h2" size="sm" weight="bold" uppercase>Event log ({entries.length} events, last {tail.length})</Text>
       {tail.length === 0 ? (
-        <Text size="sm" tone="muted">Empty — run a scenario or scroll the frame.</Text>
+        <Hint>Empty — run a scenario or scroll the frame.</Hint>
       ) : (
         <Pre boxed scroll="lg" size="xs">{tail.map(formatEntry).join("\n")}</Pre>
       )}

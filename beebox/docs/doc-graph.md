@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-18T22:54:43Z
-Total documents: 387
+Generated: 2026-09-18T23:08:55Z
+Total documents: 388
 
 ## Issues
 
@@ -493,7 +493,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 201 lines
+Title: "Frontend Conventions" | 204 lines
 
 Referenced by:
 - CLAUDE.md:40 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
@@ -511,6 +511,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:290 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:43 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:109 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
+- docs/implemented-plans/stack-and-text-roles.md:39 (mention) — | Docs (`beebox/frontend.md`) | ~30, reported separately |
 - docs/implemented-plans/top-nav-ia.md:117 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:69 (mention) — - `beebox/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/CLAUDE.md`, `code-style.md`, `frontend.md`), which are the most
@@ -519,7 +520,7 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:59 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
-- frontend.md:186 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- frontend.md:189 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/bbx-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`beebox/frontend.md`**;
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:72 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
@@ -5076,6 +5077,19 @@ Referenced by:
 References:
 - → docs/implemented-plans/slopo-codehealth-adoption.md (mention)
 - → docs/implemented-plans/rest-to-trpc-consolidation.md (mention)
+
+#### docs/implemented-plans/stack-and-text-roles.md
+
+Title: "Stack stacks by construction; role components replace recurring Text props" | 324 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-02-admin-available-engines-label-runs-into-description.md:14 (mention) — (`beebox/docs/implemented-plans/stack-and-text-roles.md`, Track 1 — `Stack`
+- ../issues/closed/code-quality/2026-09-18-stack-and-the-presentational-ui-layer.md:15 (mention) — `beebox/docs/implemented-plans/stack-and-text-roles.md`, all three sequenced
+
+References:
+- → ../issues/closed/code-quality/2026-09-18-stack-and-the-presentational-ui-layer.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-02-admin-available-engines-label-runs-into-description.md (frontmatter)
+- → frontend.md (mention)
 
 #### docs/implemented-plans/state-management-comparison.md
 

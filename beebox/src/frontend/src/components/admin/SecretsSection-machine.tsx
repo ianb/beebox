@@ -17,6 +17,8 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
 import { SecretUsesBlock } from "./SecretsSection-uses";
 
 type MachineView = RouterOutput["secrets"]["machineView"];
@@ -51,7 +53,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
           {secret.verified?.status === "ok" ? <Badge tone="success">verified</Badge> : null}
           {secret.shareable === false ? <Badge tone="neutral">single-box{secret.owningBox === undefined ? "" : `: ${secret.owningBox}`}</Badge> : null}
         </Row>
-        {secret.note === undefined ? null : <Text size="sm" tone="muted">{secret.note}</Text>}
+        {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
         <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">{grantSummary(secret)}</Text>
         <Text size="xs" tone="muted">
@@ -78,7 +80,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
             <Button intent="destructive" onClick={() => setConfirming(true)}>Remove from machine</Button>
           )}
         </Row>
-        {remove.error ? <div role="alert"><Text size="sm" tone="danger">{remove.error.message}</Text></div> : null}
+        {remove.error ? <div role="alert"><ErrorText>{remove.error.message}</ErrorText></div> : null}
       </Stack>
     </Card>
   );
@@ -87,12 +89,12 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
 export function MachineSecretsView({ machine, refresh }: { machine: MachineView; refresh: () => void }) {
   return (
     <Stack gap="md">
-      <Text size="sm" tone="muted">
+      <Hint>
         Every secret on this machine, and which boxes hold a grant. Removing one leaves any grant naming it
         as a stale grant on that box, which its own view then reports.
-      </Text>
+      </Hint>
       {machine.secrets.length === 0 ? (
-        <Text size="sm" tone="muted">The machine store is empty.</Text>
+        <Hint>The machine store is empty.</Hint>
       ) : (
         <Stack gap="sm">
           {machine.secrets.map((secret) => (

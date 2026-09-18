@@ -18,6 +18,8 @@ import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
 import { bbxSource } from "../lib/source-tag";
@@ -119,7 +121,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
         <SubmissionForm cardPath={data.path} validate={validate} disabledReason={disabledReason} onAccepted={() => void reload()} />
 
-        <Accordion title={<Text as="h2" size="lg" weight="bold">Prompt</Text>} defaultOpen={false}>
+        <Accordion title={<Heading level={2}>Prompt</Heading>} defaultOpen={false}>
           <Stack gap="sm">
             {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
             {limit !== null ? <Text as="p" size="sm">Bound: {limit}</Text> : null}
@@ -141,15 +143,15 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 function SchemaCard({ attach }: { attach: AttachState | null }) {
   let content;
   if (attach === null) content = <Text as="p" tone="subtle">Loading…</Text>;
-  else if (attach.schemaText === null) content = <Text as="p" tone="danger">Missing: put a JSON Schema for one record at attach/schema.json.</Text>;
+  else if (attach.schemaText === null) content = <ErrorText>Missing: put a JSON Schema for one record at attach/schema.json.</ErrorText>;
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;
   return (
-    <Accordion title={<Text as="h2" size="lg" weight="bold">Record schema</Text>} defaultOpen={false}>
+    <Accordion title={<Heading level={2}>Record schema</Heading>} defaultOpen={false}>
       <Card padding="sm" border="none">
         <Stack gap="sm">
           {content}
-          {problem !== null ? <Text as="p" tone="danger" size="sm">{problem}</Text> : null}
+          {problem !== null ? <ErrorText>{problem}</ErrorText> : null}
         </Stack>
       </Card>
     </Accordion>
