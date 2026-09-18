@@ -16,7 +16,7 @@ import { access } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 
 import { alertIdFor, type Alert, type Priority } from "./schedules.js";
-import { ensureScheduleDir, writeAlert } from "./schedules-store.js";
+import { ensureScheduleDir, readAlerts, writeAlert } from "./schedules-store.js";
 
 /** Everything the runner touches that a test wants to hold still. */
 export interface RunnerDeps {
@@ -53,40 +53,66 @@ export interface AlertInput {
   message: string;
   details: string | null;
   priority: Priority;
+  /** A standing condition's name; null for a one-off. */
+  condition: string | null;
 }
 
+/** The page every alert link opens; the digest links here without an id. */
+export const ALERTS_PAGE_URL = "http://localhost:3210/workstreams/alerts";
+
 /**
- * Write the record, then deliver. The record is the truth; the macOS
- * notification is one best-effort delivery of it, and a machine without
- * `osascript` (or with notifications off) still gets the alert.
+ * Write the record, then deliver. The record is the truth; the popup is one
+ * best-effort delivery of it, and only `important` gets one — everything
+ * else waits for the daily digest.
+ *
+ * A condition already open for this schedule is updated in place (latest
+ * words, one more occurrence) rather than recorded again. It pops up only
+ * when the update raises it to `important`: a condition that was already
+ * important was already announced.
  */
 export async function raiseAlert(deps: RunnerDeps, input: AlertInput): Promise<Alert> {
-  const at = deps.now();
-  const alert: Alert = {
-    id: alertIdFor(at, randomBytes(2).toString("hex")),
-    workstream: input.workstream,
+  const at = deps.now().toISOString();
+  await ensureScheduleDir(deps.storeRoot, input.workstream);
+  const standing = input.condition === null
+    ? undefined
+    : (await readAlerts(deps.storeRoot, input.workstream))
+      .find((alert) => alert.state === "open" && alert.condition === input.condition);
+  const fresh = {
     runId: input.runId,
     title: input.title,
     message: input.message,
     details: input.details,
     priority: input.priority,
-    createdAt: at.toISOString(),
-    state: "open",
-    acknowledgedAt: null,
+    lastSeenAt: at,
   };
-  await ensureScheduleDir(deps.storeRoot, input.workstream);
+  const alert: Alert = standing === undefined
+    ? {
+      id: alertIdFor(deps.now(), randomBytes(2).toString("hex")),
+      workstream: input.workstream,
+      ...fresh,
+      createdAt: at,
+      state: "open",
+      acknowledgedAt: null,
+      closedBy: null,
+      condition: input.condition,
+      occurrences: 1,
+      digestedAt: null,
+      issue: null,
+      filingFailedSince: null,
+      filingError: null,
+    }
+    : { ...standing, ...fresh, occurrences: standing.occurrences + 1 };
   await writeAlert(deps.storeRoot, alert);
-  await deps.notify({
-    title: `${input.workstream}: ${input.title}`,
-    message: input.message,
-    group: `schedule-${alert.id}`,
-    destination: scheduleAlertUrl(alert),
-  });
+  const announce = input.priority === "important" && standing?.priority !== "important";
+  if (announce) {
+    await deps.notify({
+      title: `important · ${input.workstream}: ${input.title}`,
+      message: input.message,
+      group: `schedule-${alert.id}`,
+      destination: `${ALERTS_PAGE_URL}?alert=${encodeURIComponent(alert.id)}`,
+    });
+  }
   return alert;
-}
-
-function scheduleAlertUrl(alert: Pick<Alert, "id" | "workstream">): string {
-  return `http://localhost:3210/workstreams/alerts/${encodeURIComponent(alert.workstream)}?alert=${encodeURIComponent(alert.id)}`;
 }
 
 /** Best-effort macOS notification. Absent notification tools are not an error:

@@ -16,6 +16,8 @@
  *   done [--run <id>]             "finished, nothing to say"
  *   alerts --json                 the alert records, for the browser
  *   ack <alert-id>                stop showing an alert
+ *   resolve [--condition <c>]…    "these conditions cleared" (called BY `run`)
+ *   migrate-alerts                rewrite pre-condition alert records
  *   lint [--json]                 every schedule, checked without running it
  *   install | uninstall           the launchd tick
  *
@@ -63,6 +65,8 @@ import {
   commandAlerts,
   commandDone,
   commandHandoff,
+  commandMigrateAlerts,
+  commandResolve,
 } from "./lib/schedules-cli-report.js";
 
 /** `run <name>` naming a schedule the loader refuses. */
@@ -86,13 +90,22 @@ const USAGE = `usage: bin/schedules <command>
   handoff --title <t> --body @file|-
                                   Called by a \`run\` script: there is work.
   alert --title <t> --message <m> [--details @file|-]
-        [--priority important|normal|backlog|fyi] [--workstream <n>] [--run <id>]
-                                  The report. Writes a record, then notifies.
+        [--priority important|normal|fyi] [--condition <c>]
+        [--workstream <n>] [--run <id>]
+                                  The report. important pops up now; normal
+                                  and fyi wait for the daily digest. A
+                                  --condition already open is updated, not
+                                  repeated.
   done [--run <id>]               Finished with nothing to say.
   alerts --json [--workstream <n>]
                                   Read-only: every open alert plus the ones
                                   acknowledged in the last 14 days.
   ack <alert-id>                  Acknowledge an alert.
+  resolve [--condition <c>]… | [--except <c>]…
+                                  Close this schedule's open conditions (all,
+                                  only these, or all but these).
+  migrate-alerts                  Rewrite alert records from before conditions
+                                  (the tick also does this).
   lint [--json]                   Check every schedule without running it:
                                   schema, shebangs, the dry-run and reporting
                                   contracts, shellcheck, eslint.
@@ -295,6 +308,8 @@ async function dispatch(): Promise<number> {
   if (command === "done") return commandDone(context, args);
   if (command === "alerts") return commandAlerts(context, args);
   if (command === "ack") return commandAck(context, args);
+  if (command === "resolve") return commandResolve(context, args);
+  if (command === "migrate-alerts") return commandMigrateAlerts(context);
   if (command === "lint") return commandLint(context, args);
   if (command === "install") return installTick({ repoRoot: context.repoRoot });
   if (command === "uninstall") return uninstallTick();

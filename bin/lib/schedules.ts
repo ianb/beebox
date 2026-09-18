@@ -299,8 +299,21 @@ export const storeStateSchema = z.strictObject({
 });
 export type StoreState = z.infer<typeof storeStateSchema>;
 
-export const prioritySchema = z.enum(["important", "normal", "backlog", "fyi"]);
+/**
+ * What an alert's level does, which is all it means:
+ *   important — a person should act today: a popup now, and in the digest.
+ *   normal    — wrong, suspect, or waiting on a decision, but it can wait a
+ *               day: the daily digest only; open until closed.
+ *   fyi       — it happened, no action: one digest, then it closes itself.
+ * The page groups by it and the popup names it, so both say the same thing.
+ */
+export const prioritySchema = z.enum(["important", "normal", "fyi"]);
 export type Priority = z.infer<typeof prioritySchema>;
+
+/** Who closed an alert: a person (`ack`), the digest (an fyi it has shown),
+ *  or the schedule (`resolve`: the condition cleared). */
+export const closedBySchema = z.enum(["person", "digest", "schedule"]);
+export type ClosedBy = z.infer<typeof closedBySchema>;
 
 export const alertSchema = z.strictObject({
   id: z.string(),
@@ -311,8 +324,26 @@ export const alertSchema = z.strictObject({
   details: z.string().nullable(),
   priority: prioritySchema,
   createdAt: z.string(),
+  /** Two values on purpose: a reader built before `closedBy` existed (the
+   *  router's non-strict schema) keeps parsing every record. */
   state: z.enum(["open", "acknowledged"]),
   acknowledgedAt: z.string().nullable(),
+  closedBy: closedBySchema.nullable(),
+  /** The schedule's name for a standing condition. Raising the same one again
+   *  updates the open record instead of adding another; null = a one-off. */
+  condition: z.string().min(1).nullable(),
+  lastSeenAt: z.string(),
+  /** Times raised while open, the first included. */
+  occurrences: z.number().int().positive(),
+  /** When a digest listed it. An fyi closes at the digest after that one. */
+  digestedAt: z.string().nullable(),
+  /** Repo-relative path of the issue a long-standing condition was filed as.
+   *  A filed alert stays open: the condition has not cleared. */
+  issue: z.string().nullable(),
+  /** First failed filing attempt and the latest reason; filing stops trying
+   *  a week after the first failure. */
+  filingFailedSince: z.string().nullable(),
+  filingError: z.string().nullable(),
 });
 export type Alert = z.infer<typeof alertSchema>;
 
