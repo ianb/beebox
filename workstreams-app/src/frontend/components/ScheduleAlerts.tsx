@@ -54,7 +54,7 @@ function AlertBody({ alert, showSchedule }: { alert: ScheduleAlert; showSchedule
       </div>
       {alert.condition !== null && alert.occurrences > 1 ? (
         <p className="muted schedule-alert-standing">
-          seen {alert.occurrences} times since {friendlyTimestamp(alert.createdAt)}, last {friendlyTimestamp(alert.lastSeenAt)}
+          seen {alert.occurrences} times, last {friendlyTimestamp(alert.lastSeenAt)}
         </p>
       ) : null}
       {alert.issue !== null ? <FiledIssue path={alert.issue} /> : null}

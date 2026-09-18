@@ -248,7 +248,7 @@ const order = ["Important", "Normal", "FYI"].map((word) => grouped.indexOf(`<h3>
 JSON.stringify({
   ordered: order.every((at, i) => at >= 0 && (i === 0 || at > (order[i - 1] ?? 0))),
   scheduleNamed: grouped.includes('class="schedule-alert-schedule">sdk-update<'),
-  standing: grouped.includes("seen 9 times since"),
+  standing: grouped.includes("seen 9 times, last"),
   filed: grouped.includes('href="/workstreams/issues?issue=bugs%2F2026-09-25-schedule-box-convergence-unconverged.md&amp;issueVisibility=private"'),
   importantTone: grouped.includes('class="pill pill-danger">important<'),
 })
