@@ -1,10 +1,10 @@
 ---
 title: "Stack stacks by construction; role components replace recurring Text props"
-status: draft
+status: implemented
 workstream: ui-stack-roles
 issues:
-  - ../../../issues/code-quality/2026-09-18-stack-and-the-presentational-ui-layer.md
-  - ../../../issues/bugs/2026-09-02-admin-available-engines-label-runs-into-description.md
+  - ../../../issues/closed/code-quality/2026-09-18-stack-and-the-presentational-ui-layer.md
+  - ../../../issues/closed/bugs/2026-09-02-admin-available-engines-label-runs-into-description.md
 ---
 # Stack stacks by construction; role components replace recurring Text props
 

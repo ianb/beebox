@@ -1,13 +1,21 @@
 ---
 title: "Admin: the \"Available engines\" label runs into its description with no break"
-workstream: tour-check
+workstream: ui-stack-roles
 area: beebox
 labels: [tours]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check, nav-pages tour, admin checkpoint
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-09-18: implemented in `8548c0f44`
+(`beebox/docs/implemented-plans/stack-and-text-roles.md`, Track 1 — `Stack`
+is now a flex column with `gap-*`, not `space-y-*`, so inline children no
+longer run together). Verified before/after on `/admin`
+(http://127.0.0.1:3230/ui-stack-roles/stack-as-a-flex-column-before-and-after/?token=pSq975ozWUt59Ga8bl0_gcA2h7fzOlBvU4COAsb-yu4).
+No divergence from what the issue proposed.
 
 On `/admin`, in the "Agent engine and model" card, the label and the
 description below it render as one run-on line:
