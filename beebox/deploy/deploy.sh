@@ -566,38 +566,19 @@ queue_step() {
 }
 printf 'set -euo pipefail\n' > "$REMOTE_SCRIPT"
 
-# The nginx site file is repo-owned (deploy/nginx/beebox.conf), like the systemd
+# The nginx site is repo-owned (deploy/nginx/beebox.conf), like the systemd
 # drop-ins below: setup-server.sh writes it only at provisioning, so without
-# this a change to it never reaches a running server. Installed before anything
-# stops, so a file that fails `nginx -t` fails the deploy with the site still
-# up, and so this deploy's own window already gets the page.
+# this a change to it never reaches a running server. bbx-nginx-site makes it
+# the only enabled site and runs `nginx -t` every time. It runs before anything
+# stops, so a configuration that fails the test fails the deploy with the site
+# still up, and this deploy's own window already gets the page.
 queue_step "Installing nginx site file and deploy-window helper..."
 queue_remote stdin bash -s "$STAGE_DIR" <<'REMOTE'
 set -euo pipefail
 stage_dir="$1"
 install -m 0755 "$stage_dir/beebox/deploy/server-bin/bbx-deploy-window" /usr/local/sbin/bbx-deploy-window
-src="$stage_dir/beebox/deploy/nginx/beebox.conf"
-site=/etc/nginx/sites-available/beebox
-if ! cmp -s "$src" "$site"; then
-  if [[ -f "$site" && ! -e "$site.pre-deploy-owned" ]]; then
-    # One-time copy of the hand-maintained file this deploy takes over.
-    cp -p "$site" "$site.pre-deploy-owned"
-    echo "  nginx: kept the previous hand-maintained site file as $site.pre-deploy-owned"
-  fi
-  [[ -f "$site" ]] && cp -p "$site" "$site.prev"
-  install -m 0644 "$src" "$site"
-  ln -sf "$site" /etc/nginx/sites-enabled/beebox
-  # Absolute path: this runs after `source /home/beebox/.env` (the CONTROL
-  # block), whose PATH omits /usr/sbin. A bare `nginx` is "command not found",
-  # which is how the first deploy of this block failed.
-  if ! /usr/sbin/nginx -t -q; then
-    [[ -f "$site.prev" ]] && cp -p "$site.prev" "$site"
-    echo "  FAILED: the repo nginx site file does not pass nginx -t; restored the previous file." >&2
-    exit 1
-  fi
-  systemctl reload nginx
-  echo "  nginx: installed the repo site file and reloaded"
-fi
+install -m 0755 "$stage_dir/beebox/deploy/server-bin/bbx-nginx-site" /usr/local/sbin/bbx-nginx-site
+/usr/local/sbin/bbx-nginx-site install "$stage_dir/beebox/deploy/nginx/beebox.conf"
 REMOTE
 
 # The downtime window: the page goes up before the stop and comes down when
