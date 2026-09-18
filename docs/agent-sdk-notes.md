@@ -32,20 +32,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.272`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.273`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.274` (SDK), `2.1.274` (Claude Code), `0.154.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.277` (SDK), `2.1.277` (Claude Code), `0.155.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.272` was taken this turn as the newest settled
-  version, carrying `0.3.271` with it as the pairing required. `0.3.273` was
-  12 minutes short of the window when the updater ran, so it waits a day.
-  Pending: `0.3.273` (settles 2026-09-17T18:09Z) and `0.3.274` (~19h, settles
-  2026-09-18T22:38Z). No Codex release since `0.154.0`.
+- **Current recommendation:** `0.3.273` was taken this turn as the newest settled
+  version. Next in line: `0.3.274` (settles 2026-09-18T22:38Z), then
+  **`0.3.275` and `0.3.276` as a pair** — 2.1.276 exists only to repair a 2.1.275
+  regression where every request fails with a 400 when `ANTHROPIC_BASE_URL`
+  points at a proxy or gateway, and beebox's `BBX_LOG_PROMPTS=1` path points it
+  at a local proxy — then `0.3.277`. Codex `0.155.0` (~19h) settles
+  2026-09-19T23:19Z.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -66,7 +68,93 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.274 / Claude Code 2.1.274 — pending (published 2026-09-16T22:38Z, ~19h at this turn)
+### Codex 0.155.0 — pending (published 2026-09-17T23:19Z, ~19h at this turn)
+
+`@openai/codex-sdk` `0.155.0` published in lockstep. No removals or renamed
+entry points this time, so nothing on beebox's plugin path
+(`codex plugin … --json`) or its SDK session is at risk; the deploy gate will
+confirm at bump time. Worth knowing: accepted prompts are now saved even when
+compaction fails before a turn starts (a correctness fix for Codex chats that
+compact), switching accounts now invalidates the previous identity's cached
+model catalogs and remote-control state, and WSL sandbox escapes were closed —
+Windows-only. New surface: experimental `/voice`, live reasoning summaries,
+Touch ID for MCP requests, configurable daemon update schedules.
+- **Action:** Settled path; takeable 2026-09-20 with the deploy gate.
+- **Sources:** [Codex rust-v0.155.0](https://github.com/openai/codex/releases/tag/rust-v0.155.0)
+
+### 0.3.277 / Claude Code 2.1.277 — pending (published 2026-09-18T16:22Z, ~2h at this turn)
+
+- **SDK, checked and clear:** a resumed or forked session's `total_cost_usd`,
+  `modelUsage` and `get_usage` totals now continue from the earlier turns
+  instead of restarting at zero (`maxBudgetUsd` semantics unchanged). beebox
+  forwards `total_cost_usd` in the chat result (`messages.ts`), but nothing in
+  the frontend or webapp reads it, so there is no per-result sum to start
+  double-counting. Also additive: `pasted_content` on `SDKUserMessage`,
+  `builtin` on `SlashCommand`, `userSettings` as an `updateSettings()` source.
+- **2.1.277, relevant:**
+  - *"Fixed `claude -p` and Agent SDK sessions that could hang with no result
+    after an internal error; they now report the error and exit with code 1."*
+    A hung SDK run with no result is a stuck box agent or chat turn.
+  - *"Fixed conversations failing every request with 'text content blocks must
+    be non-empty' when an earlier assistant turn held an empty text block beside
+    other content, including after `--resume`."* The seventh permanent-wedge fix
+    this ledger has tracked, and the second with this exact message (2.1.251 was
+    the thinking-only variant).
+  - *"Fixed messages typed while Claude is still working sometimes being ignored
+    by the model."* The steering behavior the probe gates on; worth watching
+    when this reaches the pin.
+  - The first turn of SDK and headless sessions no longer waits on the
+    per-directory CLAUDE.md lookup.
+  - Subagent results now reach the main agent under a header marking them as
+    subagent output, so a subagent's text cannot pass as the session's own
+    instructions.
+- **2.1.277, checked and clear:**
+  - **The TaskOutput tool is removed**; Claude reads a background task's output
+    file with Read instead. beebox's only related code, `isTaskOutputPathForBox`
+    (`transcript-paths.ts`, used by an API route in `webapp/routes/api.ts`),
+    checks task-output *file paths* and does not depend on the tool.
+  - **AGENTS.md is now read when a project has no CLAUDE.md.** In boxes,
+    `AGENTS.md` is always a symlink to the authored sibling `CLAUDE.md`
+    (`agent-instruction-files.ts`, `agent-context-mirrors.ts`), so the fallback
+    never triggers, and would read the same content if it did.
+- **Action:** Settled path; takeable 2026-09-20.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03277), [Claude Code 2.1.277](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21277)
+
+### 0.3.276 / Claude Code 2.1.276 — pending (published 2026-09-18T01:40Z, ~17h at this turn)
+
+- **Upstream:** a single fix — *"Fixed every request failing with
+  `400 … Input tag 'advisor_20260301'` when `ANTHROPIC_BASE_URL` points at a
+  proxy or gateway (2.1.275 regression)."*
+- **Beebox applicability:** it repairs `0.3.275`, and beebox has the shape it
+  broke: with `BBX_LOG_PROMPTS=1`, `src/core/agent/run.ts` points
+  `ANTHROPIC_BASE_URL` at the local prompt-logger proxy. Pinning `0.3.275`
+  alone would fail every request on that path. The third hotfix pair in two
+  weeks, published 5h17m after the release it repairs.
+- **Action:** Settled path, **paired with `0.3.275`**; both takeable 2026-09-20.
+- **Sources:** [Claude Code 2.1.276](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21276)
+
+### 0.3.275 / Claude Code 2.1.275 — pending (published 2026-09-17T20:23Z, ~22h at this turn; NOT to be taken without 0.3.276)
+
+- **SDK:** fixes to `getSessionMessages()` and `forkSession()` (beebox calls
+  neither), and a deferred tool's result being emitted with internal keys such
+  as `toolUseResult` instead of `tool_use_result` when the tool re-runs at the
+  start of a resumed turn.
+- **2.1.275, relevant:** `--resume`, resumed background agents and the transcript
+  view no longer fail on a session whose saved history holds a malformed
+  task-reminder or @-file attachment entry, or a malformed message or content
+  block — the resume-robustness family again. `--forward-subagent-text` and SDK
+  output no longer drop the messages of subagents spawned by a `context: fork`
+  skill. Sandboxed Bash on Linux no longer reports exit 0 for failed commands
+  under zsh. Grep, Glob and @-file suggestions no longer hang or run out of
+  memory over the 20MB output cap.
+- **Harness:** skills and plugins enabled on the claude.ai account now sync to
+  terminal sessions signed in with it (opt out with `syncClaudeAiSkills: false` /
+  `syncClaudeAiPlugins: false`), and a send-now key interrupts the current turn
+  to deliver queued messages.
+- **Action:** Settled path, **only together with `0.3.276`** — see above.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03275), [Claude Code 2.1.275](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21275)
+
+### 0.3.274 / Claude Code 2.1.274 — pending (published 2026-09-16T22:38Z, ~44h at 2026-09-18; settles 2026-09-18T22:38Z)
 
 - **Probed, not reproduced — a watch item:** *"Changed queued background-task
   completions to share one model call: each still gets its own `result`, all but
@@ -110,7 +198,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-09-19.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03274), [Claude Code 2.1.274](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21274)
 
-### 0.3.273 / Claude Code 2.1.273 — pending (published 2026-09-15T18:09Z, 12 minutes short of the window at 2026-09-17)
+### 0.3.273 / Claude Code 2.1.273 — APPLIED 2026-09-18 (published 2026-09-15T18:09Z)
 
 - **Amends the `0.3.268` entry — a second deny-rule revert.** *"Reverted a
   2.1.268 change that checked Read and Edit deny rules on Bash lines the
@@ -156,7 +244,9 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   folder, such as a new worktree."* That file does not exist in this worktree,
   is excluded via `.git/info/exclude` (`**/.claude/scheduled_tasks.json`) so git
   never carries it, and `bin/lib/worktree-create.sh` copies no `.claude/` state.
-- **Action:** Settled path; takeable 2026-09-17 at the earliest.
+- **Action:** Applied 2026-09-18 on the settled path (~72h old).
+  `pnpm -C beebox test`: **10,651 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03273), [Claude Code 2.1.273](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21273)
 
 ### 0.3.272 / Claude Code 2.1.272 — APPLIED 2026-09-17 with 0.3.271, nothing to assess (published 2026-09-14T23:34Z)
