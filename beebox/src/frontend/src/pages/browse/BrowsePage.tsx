@@ -15,7 +15,7 @@ import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
-import { Column } from "../../components/ui/Column";
+import { Stack } from "../../components/ui/Stack";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { RequestError } from "../../lib/errors";
@@ -132,10 +132,10 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
   }, []);
 
   return (
-    <Column className="h-full">
+    <Stack gap="none" className="h-full">
       {deleteError ? <ErrorText className="p-3">{deleteError}</ErrorText> : null}
       <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} fill idPrefix="bbx-browse-sidebar">
-        <Column>
+        <Stack gap="none">
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />
           <BrowseSidebarBody
             data={data}
@@ -153,7 +153,7 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
             landmarkError={landmarkQuery.error}
             onLandmarkRetry={() => { void landmarkQuery.refetch(); }}
           />
-        </Column>
+        </Stack>
       </Sidebar>
 
       {contextMenu !== null ? (
@@ -165,6 +165,6 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
           onDelete={handleDelete}
         />
       ) : null}
-    </Column>
+    </Stack>
   );
 }

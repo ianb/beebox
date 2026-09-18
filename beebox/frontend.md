@@ -144,9 +144,8 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Text>` — typography primitive for text no role above covers. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 
 **Layout containers**
-- `<Stack>` — vertical flex column with `gap: none/xs/sm/md/lg` (default `md`). Children stretch to the full width; an inline-level child (a `Button`, a `Badge`) that should keep its natural width takes `className="self-start"`. A child's own margin adds to the gap, so space children with `gap`, not margins.
+- `<Stack>` — vertical flex column with `gap: none/xs/sm/md/lg` (default `md`). Children stretch to the full width; an inline-level child (a `Button`, a `Badge`) that should keep its natural width takes `className="self-start"`. A child's own margin adds to the gap, so space children with `gap`, not margins. Also the page-level scroll container: `overflow` (visible/hidden/auto/scroll), `focusable` (keyboard-scrollable; set it with `overflow="auto"`), `align` (start/center/end/stretch), and `hideOnMobile` (`hidden sm:flex`, for the detail pane of a two-pane layout).
 - `<Row>` — horizontal flex with gap/align/justify/wrap.
-- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align). Takes `overflow` (visible/hidden/auto/scroll) so it can serve as a page-level scroll container. `hideOnMobile` makes it `hidden sm:flex` — typical for the detail pane in a two-pane layout.
 - `<Card>` — bordered box with padding/background/shadow/rounding props. `muted` dims the card to indicate inactive/archived content.
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 

@@ -11,7 +11,7 @@ import { Sidebar } from "../Sidebar";
 import { CommitTimeline } from "./CommitTimeline";
 import { HistoryFilterBar, type HistoryFilterState } from "./HistoryFilterBar";
 import { Row } from "../ui/Row";
-import { Column } from "../ui/Column";
+import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { EMPTY_FILTER } from "./history-filter";
@@ -160,7 +160,7 @@ export function HistoryBrowser({
         />
       </Sidebar>
 
-      <Column overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
+      <Stack gap="none" overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
         {selectedCommit ? (
           <Suspense fallback={<Row justify="center" align="center" className="h-full"><Text tone="muted">Loading commit…</Text></Row>}><CommitDetail
             commit={selectedCommit}
@@ -182,7 +182,7 @@ export function HistoryBrowser({
             </Text>
           </Row>
         )}
-      </Column>
+      </Stack>
     </Row>
   );
 }

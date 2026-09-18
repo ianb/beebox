@@ -8,7 +8,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useBoxes } from "../hooks/useBoxes";
-import { Column } from "../components/ui/Column";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
@@ -53,7 +52,7 @@ export function BoxRedirect() {
   if (boxes.length === 0 && authRequired) {
     return (
       <CenteredScreen>
-        <Column align="center" className="max-w-sm w-full">
+        <Stack gap="none" align="center" className="max-w-sm w-full">
           <Text as="h1" size="2xl" weight="bold" tone="emphasis" center className="mb-4">
             Bee Box
           </Text>
@@ -61,7 +60,7 @@ export function BoxRedirect() {
             Sign in to access your boxes.
           </Text>
           <SignInLink returnTo={window.location.pathname} />
-        </Column>
+        </Stack>
       </CenteredScreen>
     );
   }
@@ -72,7 +71,7 @@ export function BoxRedirect() {
 
   return (
     <CenteredScreen>
-      <Column className="max-w-md w-full">
+      <Stack gap="none" className="max-w-md w-full">
         <Text as="h1" size="2xl" weight="bold" tone="emphasis" center className="mb-6">
           Bee Box
         </Text>
@@ -81,7 +80,7 @@ export function BoxRedirect() {
             <BoxActionsTile key={box.slug} box={box} />
           ))}
         </Stack>
-      </Column>
+      </Stack>
     </CenteredScreen>
   );
 }

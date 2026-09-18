@@ -14,7 +14,6 @@ import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings } from "../components/dashboard/HealthWarnings";
 import { OpsLinks } from "../components/dashboard/OpsLinks";
-import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
@@ -92,13 +91,13 @@ export function DashboardPage() {
   }
 
   return (
-    <Column overflow="hidden" className="h-full">
+    <Stack gap="none" overflow="hidden" className="h-full">
       <HeaderStrip
         status={status}
         connected={connected}
       />
 
-      <Column overflow="auto" focusable className="flex-1">
+      <Stack gap="none" overflow="auto" focusable className="flex-1">
         <Stack gap="lg" className="w-full min-w-0 max-w-4xl mx-auto py-4 px-4">
           <OpsLinks />
 
@@ -135,9 +134,9 @@ export function DashboardPage() {
             error={activityError}
           />
         </Stack>
-      </Column>
+      </Stack>
 
       <SystemInfo status={status} version={healthQuery.data?.version ?? null} />
-    </Column>
+    </Stack>
   );
 }

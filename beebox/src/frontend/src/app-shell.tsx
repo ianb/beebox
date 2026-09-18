@@ -20,7 +20,6 @@ import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
-import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
 import { StatusMessage } from "./components/ui/StatusMessage";
@@ -107,7 +106,7 @@ export function ProductLayout() {
     <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />
         <DocumentPlace />
-        <Column className="h-app">
+        <Stack gap="none" className="h-app">
           <AppNav
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
@@ -119,14 +118,14 @@ export function ProductLayout() {
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
           <QuickSearchOverlay />
-        </Column>
+        </Stack>
     </BoxShellProviders>
   );
 }
 
 /** Dev fixtures deliberately run without product navigation or conversation runtime. */
 export function DevHarnessLayout() {
-  return <Column className="h-app"><main className="flex-1 min-h-0"><Column overflow="auto" className="h-full"><Outlet /></Column></main></Column>;
+  return <Stack gap="none" className="h-app"><main className="flex-1 min-h-0"><Stack gap="none" overflow="auto" className="h-full"><Outlet /></Stack></main></Stack>;
 }
 
 /** Providers retain their children identity when a chat publishes chrome. */

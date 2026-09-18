@@ -16,14 +16,13 @@ import { NotificationsSection } from "../components/admin/NotificationsSection";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { BackupSection } from "../components/admin/BackupSection";
 import { InviteSection } from "../components/admin/InviteSection";
-import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { Hint } from "../components/ui/Hint";
 
 export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { arrival: AdminArrivalState; arrivalReceipt: string; onArrivalConsumed: () => void }) {
   return (
-    <Column overflow="auto" focusable className="h-full">
+    <Stack gap="none" overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4 w-full">
         <Stack gap="lg">
           <ScopeHeading title="This box" description="Configuration and services whose behavior belongs to the current box." />
@@ -42,7 +41,7 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { 
           <TailscaleSection />
         </Stack>
       </Stack>
-    </Column>
+    </Stack>
   );
 }
 

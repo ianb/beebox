@@ -41,6 +41,19 @@ html(h(Stack, { as: "ul" }, h("li", null, "a")))
 => <ul class="flex flex-col gap-3"><li>a</li></ul>
 ```
 
+`Stack` also serves as a page-level scroll container (it absorbed `Column`).
+A focusable scrolling stack takes `tabIndex` so the keyboard can scroll it,
+and a clipping stack is `relative` so an `sr-only` descendant cannot stretch
+the document:
+
+```ts
+html(h(Stack, { gap: "none", overflow: "auto", focusable: true }, "x"))
+=> <div class="flex flex-col overflow-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" tabindex="0">x</div>
+
+html(h(Stack, { gap: "none", hideOnMobile: true, align: "center" }, "x"))
+=> <div class="flex-col items-center hidden sm:flex">x</div>
+```
+
 ## Heading renders a real heading; the level decides the look
 
 ```ts

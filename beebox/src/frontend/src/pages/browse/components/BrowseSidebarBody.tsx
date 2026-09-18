@@ -7,7 +7,7 @@
  * a cold profile sat at "Loading..." indefinitely with no way forward.
  */
 import { Button } from "../../../components/ui/Button";
-import { Column } from "../../../components/ui/Column";
+import { Stack } from "../../../components/ui/Stack";
 import { Row } from "../../../components/ui/Row";
 import { Text } from "../../../components/ui/Text";
 import { StatusMessage } from "../../../components/ui/StatusMessage";
@@ -49,10 +49,10 @@ export function BrowseSidebarBody(props: Props) {
         {landmark ? (
           <BrowseLandmarkHeader landmark={landmark} boxSlug={boxSlug} onNavigate={onLinkNavigate} />
         ) : landmarkError ? (
-          <Column gap="xs" className="border-b border-warm-200 p-4">
+          <Stack gap="xs" className="border-b border-warm-200 p-4">
             <ErrorText>Could not load this folder&rsquo;s landmark.</ErrorText>
             <Button size="sm" intent="secondary" onClick={onLandmarkRetry}>Try again</Button>
-          </Column>
+          </Stack>
         ) : null}
         <Row gap="xs" align="center" justify="end" className="px-4 py-1.5 border-b border-warm-200">
           <Text as="span" size="xs" tone="muted">Compact</Text>
@@ -81,12 +81,12 @@ export function BrowseSidebarBody(props: Props) {
   if (!isError) return null;
 
   return (
-    <Column gap="sm" className="p-4">
+    <Stack gap="sm" className="p-4">
       <ErrorText>Could not load this folder.</ErrorText>
       <Text as="div" size="xs" tone="subtle">
         {error instanceof Error ? error.message : "The server did not answer."}
       </Text>
       <Button id="bbx-browse-retry" size="sm" intent="secondary" onClick={onRetry}>Try again</Button>
-    </Column>
+    </Stack>
   );
 }
