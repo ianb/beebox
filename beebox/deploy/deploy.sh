@@ -731,7 +731,10 @@ queue_remote stdin bash -s <<'SUDOERS'
   tmp=$(mktemp)
   trap 'rm -f "$tmp"' EXIT
   echo 'beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > "$tmp"
-  visudo -cqf "$tmp"
+  # Absolute path: this runs after `source /home/beebox/.env` (deploy.sh's
+  # CONTROL block), whose PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
+  # omits /usr/sbin, so a bare `visudo` fails with "command not found".
+  /usr/sbin/visudo -cqf "$tmp"
   install -o root -g root -m 0440 "$tmp" /etc/sudoers.d/beebox-host-apt
 SUDOERS
 
