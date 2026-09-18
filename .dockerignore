@@ -15,6 +15,9 @@
 dist
 beebox/dist
 beebox/dist-release
+# Generated package docs; the release build writes them fresh, and a copied-in
+# directory from a lower image layer cannot be renamed (EXDEV on overlayfs).
+beebox/box-docs
 beebox/src/frontend/dist
 
 # Boxes of any kind must never enter the image (they carry a box's own
