@@ -74,22 +74,34 @@ export type BootstrapOutcome =
  *  page from the wrong process cannot flood a response or the log. */
 const MAX_REASON_BYTES = 200;
 
+/**
+ * The box's own words for a refusal or an outage. A pairing refusal carries one
+ * sentence in `error`; the hub's box-unavailable 503 carries a code in `error`
+ * and the sentence in `message` (`beebox/src/hub/box-unavailable.ts`), so the
+ * sentence wins when both are present. Empty when the body said nothing.
+ */
 async function readReason(response: Response): Promise<string> {
   const text = await response.text().catch(() => "");
   const trimmed = text.trim().slice(0, MAX_REASON_BYTES);
-  if (trimmed === "") return `box returned ${String(response.status)}`;
+  if (trimmed === "") return "";
   try {
     const parsed: unknown = JSON.parse(trimmed);
     // `in` narrows the property to `unknown` without a cast — the same shape
     // `errnoCode` uses in router-effects.ts.
-    if (typeof parsed === "object" && parsed !== null && "error" in parsed) {
-      const reason = parsed.error;
-      if (typeof reason === "string") return reason;
+    if (typeof parsed === "object" && parsed !== null) {
+      if ("message" in parsed && typeof parsed.message === "string") return parsed.message;
+      if ("error" in parsed && typeof parsed.error === "string") return parsed.error;
     }
   } catch (_e) {
     /* not JSON — the raw text is the best answer available */
   }
   return trimmed;
+}
+
+/** `box returned <status>`, plus the box's own sentence when it gave one. */
+async function describeStatus(response: Response): Promise<string> {
+  const reason = await readReason(response);
+  return `box returned ${String(response.status)}${reason === "" ? "" : `: ${reason}`}`;
 }
 
 /**
@@ -126,10 +138,13 @@ export async function bootstrapMobileSessionCookie(opts: {
   }
 
   if (response.status === 401 || response.status === 403) {
-    return { ok: false, kind: "rejected", status: response.status, reason: await readReason(response) };
+    const reason = await readReason(response);
+    return { ok: false, kind: "rejected", status: response.status, reason: reason === "" ? `box returned ${String(response.status)}` : reason };
   }
   if (response.status !== 204) {
-    return { ok: false, kind: "transient", detail: `box returned ${String(response.status)}` };
+    // A closed or unstartable box says why (`box_closed`, `box_unavailable`);
+    // the device sees that sentence instead of a bare status.
+    return { ok: false, kind: "transient", detail: await describeStatus(response) };
   }
 
   const setCookie = response.headers.get("set-cookie") ?? undefined;

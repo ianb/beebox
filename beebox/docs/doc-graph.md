@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-18T20:15:01Z
-Total documents: 385
+Generated: 2026-09-18T22:54:43Z
+Total documents: 387
 
 ## Issues
 
@@ -277,6 +277,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md:30 (mention) — them). The box's CLAUDE.md already `@`-includes the agent guide by path
 - ../issues/docs-and-chores/2026-08-12-work-summary-for-the-boxholder.md:62 (mention) — - **Root `CLAUDE.md`** — a general expectation on every agent, at the cost of
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:42 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, CLAUDE.md files,
+- ../issues/docs-and-chores/2026-09-18-move-to-agents-md-only.md:20 (mention) — after install. The documented workaround for those is to keep a `CLAUDE.md`
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:11 (mention) — - Custom subagents don't inherit CLAUDE.md or `.claude/rules/` (only built-in subagents do)
 - ../issues/exploration/2026-05-19-subagent-strategy.md:28 (mention) — Connected concern: subagents in beebox don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03-04-cl
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `bbx re
@@ -584,6 +585,7 @@ Title: "Deploy" | 63 lines
 
 Referenced by:
 - deploy/README.md:103 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
+- docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/CLAUDE.md`'s poll matches —
 
 References:
 - → docs/docker-install.md (mention)
@@ -591,7 +593,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 604 lines
+Title: "Deploy" | 624 lines
 
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -601,6 +603,7 @@ Referenced by:
 - docs/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
 - docs/implemented-plans/box-host-packages.md:54 (mention) — `deploy/README.md` note): ~120 lines. No generated output. Well under the
 - docs/implemented-plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
+- docs/implemented-plans/deploy-maintenance-page.md:83 (mention) — (`deploy/hetzner/setup-server.sh:368-397`). `deploy/README.md:147-148`:
 - docs/implemented-plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/implemented-plans/hub-healthz-box-aggregation.md:314 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/local-password-auth.md:535 (mention) — `deploy/README.md:196-217` env template gains `BBX_AUTH_FILE` (default is
@@ -615,7 +618,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
-- docs/security-report.md:249 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:256 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server-operations.md:3 (link) — Reference for the running beebox server (production at `box.example.com`). For initial provisioning scripts see [`deploy
 - user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:57 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -1120,7 +1123,7 @@ Referenced by:
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:228 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:235 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -2135,7 +2138,7 @@ Title: "Secrets: the machine-level store" | 551 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
-- deploy/README.md:495 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
+- deploy/README.md:515 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
 - docs/adding-a-box.md:112 (link) — one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:206 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
@@ -2146,7 +2149,7 @@ Referenced by:
 - docs/implemented-plans/secret-trick-runtime-delivery.md:172 (mention) — Update `beebox/docs/secrets.md` to retain the HTTP route only as a low-level
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
-- docs/security-report.md:152 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:159 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/technologies.md:32 (link) — documented in [secrets.md](secrets.md).
 - docs/telegram-setup.md:39 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
 - docs/testing.md:207 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
@@ -2192,7 +2195,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 458 lines | current reference
+Title: "Security report — structured version" | 465 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
@@ -3008,8 +3011,8 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- deploy/README.md:350 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
-- docs/security-report.md:247 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- deploy/README.md:370 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- docs/security-report.md:254 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
 References:
@@ -3024,7 +3027,7 @@ Title: "A box closure cannot outlive its maintenance owner" | 342 lines | shippe
 
 Referenced by:
 - docs/plans/migration-reliability.md:236 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
-- ../issues/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:9 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
+- ../issues/closed/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:30 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
 
 References:
 - → docs/plans/migration-reliability.md (link)
@@ -3107,7 +3110,7 @@ Title: "Boxes as Packages v2 — beebox as a library" | 720 lines | shipped hist
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- deploy/README.md:143 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- deploy/README.md:159 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](implemented-plans/boxes-as-packages-v2.md)
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
@@ -3641,6 +3644,27 @@ References:
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/deploy-maintenance-page.md
+
+Title: "Deploy maintenance page and deploy timing record" | 323 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track D). Signals
+- ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track C). The
+- ../issues/closed/features/2026-09-18-deploy-maintenance-page.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, tracks A-C).
+
+References:
+- → ../issues/closed/features/2026-09-18-deploy-maintenance-page.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md (frontmatter)
+- → ../issues/closed/features/2026-09-18-deploy-maintenance-page.md (link)
+- → ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md (link)
+- → ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md (link)
+- → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → ../issues/closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md (link)
+- → deploy/README.md (mention)
+- → deploy/CLAUDE.md (mention)
 
 #### docs/implemented-plans/design-md-retired-sections.md
 
@@ -4829,13 +4853,28 @@ Referenced by:
 References:
 - → docs/implemented-plans/scanner-ingest.md (mention)
 
+#### docs/implemented-plans/schedule-alert-signal.md
+
+Title: "Schedule alerts: priority decides delivery, one daily digest, conditions that close" | 550 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
+- ../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
+- ../issues/features/2026-09-18-deploy-notifications-bypass-alert-priorities.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/schedule-alert-signal.md)). The deploy path
+
+References:
+- → ../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md (frontmatter)
+- → ../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md (frontmatter)
+- → ../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md (link)
+- → ../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md (link)
+
 #### docs/implemented-plans/scheduled-workstreams.md
 
 Title: "Scheduled workstreams" | 731 lines | shipped history | implemented
 
 Referenced by:
 - docs/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
-- ../bin/docs/schedules.md:62 (mention) — Background: `beebox/docs/implemented-plans/scheduled-workstreams.md`.
+- ../bin/docs/schedules.md:79 (mention) — Background: `beebox/docs/implemented-plans/scheduled-workstreams.md`.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-25-sdk-update-in-a-worktree.md:41 (mention) — The problems, from the review of `scheduled-workstreams.md`:
@@ -4866,7 +4905,7 @@ Referenced by:
 - docs/implemented-plans/secret-entry-guidance.md:53 (mention) — (`docs/implemented-plans/secret-custody.md:439-444`): *"Guidance: the capture
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:168 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:175 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data

@@ -40,6 +40,7 @@ import {
   writeRunExit,
 } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
+import { resolveConditions } from "./schedules-alert-lifecycle.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 import { alertIfBailed, startWorkstream } from "./schedules-workstream.js";
 import { errnoCode } from "../../beebox/src/lib/error-guards.js";
@@ -160,6 +161,7 @@ async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: strin
       message: `${reclaimed.name} run ${reclaimed.runId} handed off "${handoff.title}" and was killed before it could start or record a session.`,
       details: handoff.body,
       priority: "important",
+      condition: null,
     });
     return;
   }
@@ -290,8 +292,13 @@ export async function runSchedule(
         message: failure.message,
         details: tail === "" ? null : `Last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${tail}\n\`\`\``,
         priority: "important",
+        condition: RUN_FAILED_CONDITION,
       });
       alertId = alert.id;
+    } else {
+      await resolveConditions(deps.storeRoot, {
+        workstream: schedule.name, conditions: [RUN_FAILED_CONDITION], except: [], at: deps.now().toISOString(),
+      });
     }
     if (willLaunch) {
       const session = await startWorkstream(deps, { schedule, runId, outcome, handoff, previous });
@@ -304,6 +311,10 @@ export async function runSchedule(
 }
 
 
+
+/** A failing `run` is one standing condition, not one alert per hourly
+ *  failure; the next run that does not fail resolves it. */
+const RUN_FAILED_CONDITION = "run-failed";
 
 /** Used by `logs`: the run log's contents, or null when there is none. */
 export async function readRunLog(storeRoot: string, run: { name: string; runId: string }): Promise<string | null> {

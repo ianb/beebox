@@ -14,5 +14,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["eslint.config.ts", "scripts/build-cli.ts"]
+  "include": ["eslint.config.ts", "scripts/build-cli.ts", "scripts/build-deploy-page.ts"]
 }

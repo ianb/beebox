@@ -6,11 +6,11 @@ import { execa } from "execa";
 import { z } from "zod";
 import { execChild } from "../../bin/lib/schedules-exec.js";
 import { localTargets, optionalText } from "./targets.js";
-import { framedCommand, reportDecision, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { framedCommand, reportPlan, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 
 class ConvergenceScheduleError extends Error {
-  constructor(opts: { reason: "state" | "checkout" }) {
-    super(opts.reason === "state" ? "Scheduled convergence requires SCHEDULE_STATE_DIR" : "Box convergence must run from the main checkout on main");
+  constructor() {
+    super("Box convergence must run from the main checkout on main");
     this.name = "ConvergenceScheduleError";
   }
 }
@@ -99,52 +99,47 @@ process.stdout.write(JSON.stringify([...new Set(roots)]));`;
   return z.array(z.string().min(1)).parse(JSON.parse(result.stdout));
 }
 
-/** Offline is routine on a laptop: note it, and alert only once it has lasted a day. */
-async function trackReachability(unreachable: string | null): Promise<void> {
+/** Offline is routine on a laptop: note it, and report it only once it has
+ *  lasted a day. Returns that report, or null. */
+async function trackReachability(unreachable: string | null): Promise<string | null> {
   const stateDir = process.env["SCHEDULE_STATE_DIR"];
   if (dryRun || !scheduled || !stateDir) {
     if (unreachable !== null) process.stdout.write(`[box-convergence] production unreachable; skipped: ${unreachable}\n`);
-    return;
+    return null;
   }
   const file = path.join(stateDir, "prod-unreachable.json");
   if (unreachable === null) {
     await fs.rm(file, { force: true });
-    return;
+    return null;
   }
   const text = await optionalText(file);
   const since = text === null ? Date.now() : z.object({ since: z.number() }).parse(JSON.parse(text)).since;
   if (text === null) await fs.writeFile(file, JSON.stringify({ since }));
   process.stdout.write(`[box-convergence] production unreachable since ${new Date(since).toISOString()}: ${unreachable}\n`);
-  const detail = unreachableDetail(since, { now: Date.now(), line: unreachable });
-  if (detail !== null) findings.push(detail);
+  return unreachableDetail(since, { now: Date.now(), line: unreachable });
 }
 
-async function report(): Promise<void> {
-  const message = findings.join("\n");
-  if (dryRun || !scheduled) {
-    if (message) process.stdout.write(`[box-convergence] ${dryRun ? "status only" : "report"}\n${message}\n`);
-    return;
+/** Findings always reach the run log — the 2026-09-16 incident's second run
+ *  was deduped into an empty log while every box was unusable. The alerts are
+ *  standing conditions the store updates in place, so no repeat state lives
+ *  here. */
+async function report(input: { unreachableDetail: string | null; prodChecked: boolean }): Promise<void> {
+  const plan = reportPlan({ findings, ...input });
+  const logged = plan.alerts.map((alert) => alert.message).join("\n");
+  if (logged) process.stdout.write(`[box-convergence] ${dryRun ? "status only" : "report"}\n${logged}\n`);
+  if (dryRun || !scheduled) return;
+  const cli = path.join(REPO_ROOT, "bin/schedules");
+  for (const alert of plan.alerts) {
+    await execa(cli, ["alert", "--priority", "normal", "--condition", alert.condition,
+      "--title", alert.title, "--message", alert.message], { stdout: "inherit", stderr: "inherit" });
   }
-  const stateDir = process.env["SCHEDULE_STATE_DIR"];
-  if (!stateDir) throw new ConvergenceScheduleError({ reason: "state" });
-  const baseline = path.join(stateDir, "last-report.json");
-  const oldText = await optionalText(baseline);
-  const old = oldText === null ? null : z.object({ message: z.string(), reportedAt: z.number() }).parse(JSON.parse(oldText));
-  const decision = reportDecision(message, { old, now: Date.now() });
-  if (decision.log !== null) process.stdout.write(`${decision.log}\n`);
-  if (decision.alert) {
-    await execa(path.join(REPO_ROOT, "bin/schedules"), ["alert", "--priority", "important",
-      "--title", "Box convergence needs attention", "--message", message], { stdout: "inherit", stderr: "inherit" });
-    await fs.writeFile(baseline, JSON.stringify({ message, reportedAt: Date.now() }));
-  } else if (!message && old?.message) {
-    await fs.writeFile(baseline, JSON.stringify({ message: "", reportedAt: Date.now() }));
-  }
+  await execa(cli, ["resolve", ...plan.keep.flatMap((condition) => ["--except", condition])], { stdout: "inherit", stderr: "inherit" });
 }
 
 async function main(): Promise<void> {
   const mainRoot = path.dirname(await git(["rev-parse", "--path-format=absolute", "--git-common-dir"]));
   if (await fs.realpath(mainRoot) !== await fs.realpath(REPO_ROOT) || await git(["branch", "--show-current"]) !== "main") {
-    if (!dryRun) throw new ConvergenceScheduleError({ reason: "checkout" });
+    if (!dryRun) throw new ConvergenceScheduleError();
     process.stdout.write("[box-convergence] status only: a real run would refuse this worktree; no boxes contacted\n");
     return;
   }
@@ -172,7 +167,6 @@ async function main(): Promise<void> {
     if (error instanceof ProdUnreachableError) unreachable = error.line;
     else findings.push(`Production coverage unavailable: ${String(error)}`);
   }
-  await trackReachability(unreachable);
-  await report();
+  await report({ unreachableDetail: await trackReachability(unreachable), prodChecked: unreachable === null });
 }
 await main();

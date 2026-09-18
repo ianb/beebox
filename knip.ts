@@ -79,7 +79,12 @@ const config: KnipConfig = {
       ],
     },
     "beebox/src/frontend": {
-      entry: ["src/components/view-widgets/node-entry.tsx"],
+      entry: [
+        "src/components/view-widgets/node-entry.tsx",
+        // Bundled on its own into the deploy page by
+        // beebox/scripts/build-deploy-page.ts, which names it by path.
+        "src/deploy-page/deploy-page.ts",
+      ],
       project: ["src/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and

@@ -726,6 +726,11 @@ const closedBody = await closedResponse.json();
 JSON.stringify({ status: closedResponse.status, retryAfter: closedResponse.headers.get("retry-after"), error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
 => {"status":503,"retryAfter":"600","error":"box_closed","reason":"migration","ownerIsThisProcess":true}
 
+// A page navigation (a browser, the iOS web view) gets the sentence as text.
+const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
+JSON.stringify({ status: page.status, type: page.headers.get("content-type"), text: (await page.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in 600 seconds.\n"}
+
 await owner.beginChanges();
 await owner.release();
 const reopened = await fetch(`${closedHub.base}/closed/api/x`);

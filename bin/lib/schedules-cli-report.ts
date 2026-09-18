@@ -21,14 +21,16 @@ import {
   writeHandoff,
   writeResult,
 } from "./schedules-store.js";
+import { closeAlert, migrateAlerts, resolveConditions, selectResolved } from "./schedules-alert-lifecycle.js";
+import { fileStanding, privateIssuesCommitter, standingToFile } from "./schedules-filing.js";
 import { raiseAlert } from "./schedules-alerts.js";
 import { DRY_RUN_HANDOFF_MARKER } from "./schedules-runner.js";
-import { envOr, flags, isDryRun, readValue, runnerDeps, type Context } from "./schedules-cli-context.js";
+import { envOr, flagValues, flags, isDryRun, readValue, runnerDeps, type Context } from "./schedules-cli-context.js";
 
 /** `--priority` must name one of the four levels. */
 class UnknownPriorityError extends Error {
   constructor(readonly raw: string) {
-    super(`--priority must be important|normal|backlog|fyi, got '${raw}'`);
+    super(`--priority must be important|normal|fyi, got '${raw}'`);
     this.name = "UnknownPriorityError";
   }
 }
@@ -106,10 +108,16 @@ export async function commandAlert(context: Context, args: string[]): Promise<nu
     process.stderr.write("schedules alert: needs SCHEDULE_NAME/SCHEDULE_RUN_ID (or --workstream/--run)\n");
     return 2;
   }
+  const condition = options.get("condition");
+  if (condition === "") {
+    process.stderr.write("schedules alert: --condition needs a name\n");
+    return 2;
+  }
   const rawDetails = options.get("details");
   const details = rawDetails === undefined || rawDetails === "" ? null : await readValue(rawDetails);
   if (isDryRun()) {
-    process.stdout.write(`[schedules] would alert (${parsePriority(options.get("priority"))}): ${title}\n${message}\n`);
+    const standing = condition === undefined ? "" : ` [condition ${condition}]`;
+    process.stdout.write(`[schedules] would alert (${parsePriority(options.get("priority"))})${standing}: ${title}\n${message}\n`);
     return 0;
   }
   await ensureStoreRoot(context.storeRoot);
@@ -120,6 +128,7 @@ export async function commandAlert(context: Context, args: string[]): Promise<nu
     message,
     details,
     priority: parsePriority(options.get("priority")),
+    condition: condition ?? null,
   });
   await writeResult(context.storeRoot, { name, runId, kind: "alert", alertId: alert.id, at: new Date().toISOString() });
   process.stdout.write(`${alert.id}\n`);
@@ -180,6 +189,59 @@ export async function commandAck(context: Context, args: string[]): Promise<numb
     process.stdout.write(`${id} was already acknowledged.\n`);
     return 0;
   }
-  await writeAlert(context.storeRoot, { ...alert, state: "acknowledged", acknowledgedAt: new Date().toISOString() });
+  await writeAlert(context.storeRoot, closeAlert(alert, { closedBy: "person", at: new Date().toISOString() }));
+  return 0;
+}
+
+/**
+ * `resolve [--condition <c>]… [--except <c>]…` — the schedule says conditions
+ * cleared. Not a run result: the run still ends with `alert` or `done`.
+ */
+export async function commandResolve(context: Context, args: string[]): Promise<number> {
+  const workstream = resolveWorkstream(flags(args));
+  if (workstream === null) {
+    process.stderr.write("schedules resolve: needs SCHEDULE_NAME (or --workstream)\n");
+    return 2;
+  }
+  const conditions = flagValues(args, "condition");
+  const except = flagValues(args, "except");
+  if ([...conditions, ...except].includes("")) {
+    process.stderr.write("schedules resolve: --condition and --except need a name\n");
+    return 2;
+  }
+  if (conditions.length > 0 && except.length > 0) {
+    process.stderr.write("schedules resolve: use --condition or --except, not both\n");
+    return 2;
+  }
+  const selection = { conditions, except };
+  if (isDryRun()) {
+    const closing = selectResolved(await readAlerts(context.storeRoot, workstream), selection);
+    process.stdout.write(`[schedules] would resolve: ${closing.map((alert) => alert.condition ?? "").join(", ") || "nothing"}\n`);
+    return 0;
+  }
+  await resolveConditions(context.storeRoot, { workstream, ...selection, at: new Date().toISOString() });
+  return 0;
+}
+
+/** `file-standing` — run daily by `schedules/alert-filing/`. Exits 0 when a
+ *  filing fails: the failure is recorded on the alert and the digest reports
+ *  it once retries run out, so a daily run-failed alert would only repeat it. */
+export async function commandFileStanding(context: Context): Promise<number> {
+  const now = new Date();
+  if (isDryRun()) {
+    const due = standingToFile(await readAllAlerts(context.storeRoot), now.getTime());
+    process.stdout.write(`[schedules] would file: ${due.map((alert) => `${alert.workstream}/${alert.condition ?? ""}`).join(", ") || "nothing"}\n`);
+    return 0;
+  }
+  const outcome = await fileStanding(context.storeRoot, { now, commitIssue: privateIssuesCommitter(context.repoRoot) });
+  for (const alert of outcome.filed) process.stdout.write(`filed ${alert.workstream}/${alert.condition ?? ""} as ${alert.issue ?? ""}\n`);
+  for (const alert of outcome.failed) process.stdout.write(`could not file ${alert.workstream}/${alert.condition ?? ""}: ${alert.filingError ?? ""}\n`);
+  return 0;
+}
+
+/** `migrate-alerts` — the tick runs this itself; the verb is for the landing. */
+export async function commandMigrateAlerts(context: Context): Promise<number> {
+  const migrated = await migrateAlerts(context.storeRoot, new Date().toISOString());
+  process.stdout.write(`${String(migrated)} alert record(s) migrated.\n`);
   return 0;
 }

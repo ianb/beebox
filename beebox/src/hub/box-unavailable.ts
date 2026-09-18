@@ -20,14 +20,24 @@ interface UnavailableBox {
 
 const DEFAULT_RETRY_AFTER_S = 60;
 
-/** A configured box that cannot be served says why; only an unconfigured path is a 404. */
-export async function replyNoEndpoint(reply: FastifyReply, args: { slug: string | null; reqPath: string; boxRoot: string | undefined; endpoints: EndpointProvider; detailed: boolean }): Promise<FastifyReply> {
+/**
+ * A configured box that cannot be served says why; only an unconfigured path
+ * is a 404. A page navigation (a browser tab, the iOS companion's web view,
+ * which renders whatever body it gets) receives the sentence as plain text;
+ * an API client receives the JSON body.
+ */
+export async function replyNoEndpoint(reply: FastifyReply, args: { slug: string | null; reqPath: string; accept: string | undefined; boxRoot: string | undefined; endpoints: EndpointProvider; detailed: boolean }): Promise<FastifyReply> {
   if (args.slug === null || !args.endpoints.slugs().includes(args.slug)) {
     return reply.status(404).send({ error: "not_found", message: `No running box for ${JSON.stringify(args.reqPath)}` });
   }
-  if (!args.detailed) return reply.status(503).header("retry-after", String(DEFAULT_RETRY_AFTER_S)).send({ error: "box_unavailable", message: `Box ${args.slug} is not running` });
-  const unavailable = await describeUnavailableBox({ slug: args.slug, boxRoot: args.boxRoot, endpoints: args.endpoints });
-  return reply.status(unavailable.status).header("retry-after", String(unavailable.retryAfter)).send(unavailable.body);
+  const unavailable: UnavailableBox = args.detailed
+    ? await describeUnavailableBox({ slug: args.slug, boxRoot: args.boxRoot, endpoints: args.endpoints })
+    : { status: 503, retryAfter: DEFAULT_RETRY_AFTER_S, body: { error: "box_unavailable", message: `Box ${args.slug} is not running` } };
+  reply.status(unavailable.status).header("retry-after", String(unavailable.retryAfter));
+  if (args.accept?.includes("text/html")) {
+    return reply.type("text/plain; charset=utf-8").send(`${unavailable.body.message}\nRetry in ${String(unavailable.retryAfter)} seconds.\n`);
+  }
+  return reply.send(unavailable.body);
 }
 
 /** A live maintenance owner closes the box; anything else is the supervisor's last word on it. */

@@ -145,12 +145,24 @@ test("a 404 is transient, not a bad token — it means the wrong process is on t
   // a box can be handed a port another process already holds. Retrying
   // re-resolves the generation, so this must not tell the device to re-pair.
   const port = await boxReplying(t, { status: 404, body: "Cannot POST /test1/api/pairing/session" });
-  assert.deepEqual(await ask(port), { ok: false, kind: "transient", detail: "box returned 404" });
+  assert.deepEqual(await ask(port), { ok: false, kind: "transient", detail: "box returned 404: Cannot POST /test1/api/pairing/session" });
 });
 
 test("a 5xx is transient", async (t) => {
   const port = await boxReplying(t, { status: 503 });
   assert.deepEqual(await ask(port), { ok: false, kind: "transient", detail: "box returned 503" });
+});
+
+test("the hub's box-closed 503 carries the box's own sentence to the device", async (t) => {
+  // beebox/src/hub/box-unavailable.ts: `error` is a code, `message` the sentence.
+  const port = await boxReplying(t, {
+    status: 503,
+    body: JSON.stringify({ error: "box_closed", reason: "migration", message: "Box test1 is closed for migration (pid 42, since 2026-09-16T22:37:00Z); it reopens when that process finishes or exits" }),
+  });
+  assert.deepEqual(await ask(port), {
+    ok: false, kind: "transient",
+    detail: "box returned 503: Box test1 is closed for migration (pid 42, since 2026-09-16T22:37:00Z); it reopens when that process finishes or exits",
+  });
 });
 
 test("a dead port is transient — the kill/restart race the retry loop exists for", async () => {
