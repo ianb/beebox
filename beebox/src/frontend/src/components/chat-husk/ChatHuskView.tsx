@@ -76,15 +76,15 @@ export function ChatHuskView({ data }: RendererProps) {
         ) : null}
         <div className="flex flex-wrap gap-2">
           {availability.data === undefined ? (
-            <Hint>
+            <Text as="span" size="sm" tone="muted">
               Checking local transcript…
-            </Hint>
+            </Text>
           ) : availability.data.kind === "unavailable" ? (
-            <Hint>
+            <Text as="span" size="sm" tone="muted">
               {availability.data.reason === "deletion-in-progress"
                 ? "Deletion in progress"
                 : transcriptStateLabel(availability.data.transcript)}
-            </Hint>
+            </Text>
           ) : (
             <Link
               to={href(`/${boxSlug}/chat`)}
