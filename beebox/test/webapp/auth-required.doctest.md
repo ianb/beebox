@@ -142,6 +142,12 @@ const resubRequired = await authServer.rootRequest({ method: "POST", url: "/api/
 resubRequired.statusCode
 => 401
 
+// `files.kind` is a `publicProcedure`: the transport wall, not the procedure, is its auth.
+const kindUrl = `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`;
+const kindRequired = await authServer.request({ method: "GET", url: kindUrl });
+kindRequired.statusCode
+=> 401
+
 await authServer.cleanup();
 ```
 
@@ -212,12 +218,19 @@ wall and reaches an authenticated procedure, and nothing owner-gated.
 const plain = await makeTestServer({ openAccess: false });
 
 const authedCall = await plain.request({ method: "GET", url: "/api/trpc/inventory.summary", headers: browseHeaders });
+const kindCall = await plain.request({
+  method: "GET",
+  url: `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`,
+  headers: browseHeaders,
+});
 const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
 print(`authedProcedure: ${authedCall.statusCode}`);
+print(`files.kind with a credential: ${kindCall.statusCode} ${kindCall.body.result?.data?.kind}`);
 print(`ownerProcedure: ${ownerCall.statusCode} ${ownerCall.body.error.data.code}`);
 =>
 authedProcedure: 200
+files.kind with a credential: 200 directory
 ownerProcedure: 403 FORBIDDEN
 ```
 

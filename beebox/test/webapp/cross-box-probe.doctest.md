@@ -267,6 +267,19 @@ print(`files.summarize leaks beta's card: ${leaked}`);
 files.summarize leaks beta's card: false
 ```
 
+### `files.kind`
+
+Answers only file, directory or missing, but "missing" versus "file" for a
+sibling's path would still reveal that box's layout. The namespace guard
+rejects the path before any `stat`.
+
+```ts continue
+const kindProbe = await attempt(() => caller.files.kind({ path: relToBetaMarker }));
+print(`files.kind on beta's card: ${kindProbe.ok ? kindProbe.value.kind : kindProbe.code}`);
+=>
+files.kind on beta's card: BAD_REQUEST
+```
+
 ## 4. `chatControl.reserveSession`, `chat.newFeatures`, `chat.openers` — the Deliverable 1 fix
 
 ```ts continue

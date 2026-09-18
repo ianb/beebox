@@ -15,7 +15,7 @@ import { cardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { engineDocs, ensurePackageDocs, engineDocFilenames } from "../../src/core/docs-gen/package-docs.js";
+import { engineDocs, ensurePackageDocs, engineDocFilenames, replaceDirContents } from "../../src/core/docs-gen/package-docs.js";
 import { BOX_PACKAGE_DOCS } from "../../src/core/docs-gen/shared.js";
 import { cardSchemas } from "../../src/schemas/registry.js";
 
@@ -128,6 +128,39 @@ results.map((r) => r.status).join(",")
 => box-docs
 
 await rm(sharedRoot, { recursive: true, force: true });
+```
+
+## Where the directory cannot be renamed, its contents are replaced in place
+
+In a container, the engine's `box-docs/` comes from an image layer, and
+overlayfs refuses to rename such a directory (EXDEV). `swapIn` then falls back
+to `replaceDirContents`: stale files go, new ones arrive, the fingerprint is
+written last, and the temp directory is removed.
+
+```ts
+const layerRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-exdev-"));
+const live = join(layerRoot, "box-docs");
+const incoming = join(layerRoot, ".box-docs-new");
+await mkdir(live);
+await mkdir(incoming);
+await writeFile(join(live, "stale.md"), "old");
+await writeFile(join(live, "README.md"), "old index");
+await writeFile(join(live, ".hash"), "old\n");
+await writeFile(join(incoming, "README.md"), "new index");
+await writeFile(join(incoming, "card-memo.md"), "memo");
+await writeFile(join(incoming, ".hash"), "new\n");
+await replaceDirContents({ from: incoming, to: live });
+
+(await readdir(live)).sort().join(",")
+=> .hash,README.md,card-memo.md
+
+[await readFile(join(live, "README.md"), "utf-8"), (await readFile(join(live, ".hash"), "utf-8")).trim()].join(" ")
+=> new index new
+
+(await readdir(layerRoot)).join(",")
+=> box-docs
+
+await rm(layerRoot, { recursive: true, force: true });
 ```
 
 ## The box writer prunes old engine docs first, so a shadowing box-local doc survives
