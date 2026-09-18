@@ -91,6 +91,12 @@ Authored docs (agent guide line, security report rows, knowledge audit entry,
   the box user owns (`deploy/deploy.sh:509`:
   *`queue_remote command chown -R beebox:beebox "$INSTALL_DIR"`*). Root would
   then execute code the box user can write.
+- **Cross-model review, 2026-09-17** (Codex gpt-5.5) found three gaps in the
+  first draft, now fixed in Track 1: the sources rule contradicted decision 2
+  by allowing NodeSource; "service" missed cron, D-Bus system activation,
+  setuid files and sudoers/polkit rules; and the install was not bound to the
+  inspected versions. Two proposals were declined, each with a reason in its
+  section: a health warning on macOS, and making the Docker sync manual.
 - **Principle 8, one way to do each thing** (`:95`). Python libraries keep
   their `uv` path (related issue). The agent guide says that distro packages
   are for system tools, not Python imports.
@@ -197,30 +203,57 @@ Steps, in order:
 1. Parse argv strictly. `<slug>` matches `^[a-z0-9][a-z0-9-]{0,63}$` and is
    logged as caller-claimed, because the box user is shared. From 1 to 10
    packages, each matching `^[a-z0-9][a-z0-9+.-]{1,63}$`. Anything else exits 64.
-2. Reset the environment: `exec env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin
-   LANG=C.UTF-8 DEBIAN_FRONTEND=noninteractive`, `umask 022`. Take
-   `flock /run/bbx-host-apt.lock` so two boxes cannot interleave.
-3. `apt-get update -qq` with `-o DPkg::Lock::Timeout=300` (every apt call uses
-   this option, because unattended-upgrades may hold the lock).
+2. Reset the process state before anything else. On first entry the script
+   re-executes itself as
+   `exec /usr/bin/env -i BBX_HOST_APT_CLEAN=1 PATH=/usr/sbin:/usr/bin:/sbin:/bin
+   LANG=C.UTF-8 DEBIAN_FRONTEND=noninteractive /bin/bash --noprofile --norc
+   /usr/local/sbin/bbx-host-apt "$@"`. The path is fixed, not `$0`. After the
+   re-exec: `set -euf -o pipefail`, `IFS=$' \t\n'`, `umask 022`, `cd /`. Take
+   `flock /run/bbx-host-apt.lock` so two boxes cannot interleave. (sudo's
+   `env_reset` already drops most variables; the re-exec does not depend on
+   the sudoers defaults.)
+3. **Distro sources only.** Every apt call gets one private configuration,
+   so no third-party source (NodeSource, `setup-server.sh:55`) can supply a
+   package:
+   `-o Dir::Etc::sourcelist=/etc/apt/sources.list`
+   `-o Dir::Etc::sourceparts=/var/lib/bbx-host-apt/sources.list.d`
+   `-o Dir::State::Lists=/var/lib/bbx-host-apt/lists`
+   `-o Dir::Cache::archives=/var/cache/bbx-host-apt/archives`
+   `-o DPkg::Lock::Timeout=300`. The wrapper fills the private sources
+   directory with copies of only the distro files
+   (`/etc/apt/sources.list.d/ubuntu.sources` or `debian.sources`). The legacy
+   `/etc/apt/sources.list` counts as distro. Keyrings stay the host's. All
+   private directories are root-owned 0755 (the archive 0700), created by
+   deploy, and checked by the wrapper with `stat` (owner root, not a symlink).
+   Then `apt-get update -qq` fills the private lists. The host's own apt lists
+   and sources are not touched.
 4. Each name must be an exact package (the regex guard above). Names already
    installed (`dpkg-query -W -f='${db:Status-Abbrev}'` = `ii `) are reported
    and dropped. If none remain, exit 0.
 5. Simulate `apt-get -s install --no-install-recommends --no-remove -- <names>`.
    Refuse when any `Inst <pkg> [<oldver>]` line shows an upgrade, or any `Remv`
-   line appears. The `Inst` lines give the new-package set.
-6. Clear the private archive `/var/cache/bbx-host-apt/archives`, then
-   `--download-only` into it with `-o Dir::Cache::archives=…`.
-7. For each downloaded `.deb`, list its files with `dpkg-deb -c`. Refuse when
-   any file matches
-   `^\./(usr/)?lib/systemd/system/[^/]+\.(service|socket|timer|path)$` or
-   `^\./etc/init\.d/[^/]+$`. The message names the package and the file.
-8. Install with `--no-download --no-install-recommends --no-remove` from the
-   same private archive. If the apt lists changed after step 5, apt needs an
-   archive that was not inspected, and `--no-download` makes it fail. That is
-   safe.
+   line appears. The `Inst` lines give the new set as exact `name=version`
+   pairs.
+6. Clear the private archive, then `--download-only` the exact
+   `name=version` set into it.
+7. For each downloaded `.deb`, list its files with `dpkg-deb -c`. Refuse, naming
+   the package and the file, when any entry is:
+   - a system unit: `(usr/)?lib/systemd/system/*.{service,socket,timer,path}`;
+   - an init script: `etc/init.d/*`;
+   - a root cron job: `etc/cron.d/*`, `etc/cron.{hourly,daily,weekly,monthly}/*`;
+   - D-Bus system activation: `usr/share/dbus-1/system-services/*`;
+   - a systemd generator: `(usr/)?lib/systemd/system-generators/*`;
+   - a privilege grant: `etc/sudoers.d/*`, `etc/polkit-1/*`,
+     `usr/share/polkit-1/rules.d/*`;
+   - a setuid or setgid file (mode column contains `s` or `S`).
+   Not covered, and recorded as residual risk: capabilities that a `postinst`
+   sets with `setcap`, udev rules, tmpfiles rules, systemd user units.
+8. Re-simulate the exact `name=version` set with `--no-download`. The new set
+   must equal the inspected set. Then install that set with `--no-download
+   --no-install-recommends --no-remove`. Every package comes from the inspected
+   files at the inspected version; any drift fails the install.
 9. Append one JSON line to `/var/log/beebox/host-apt.log` (root:root 0644):
-   time, `SUDO_USER`, claimed box, requested names, new-package set, outcome,
-   reason.
+   time, `SUDO_USER`, claimed box, requested names, new set, outcome, reason.
 
 Exit codes: `0` installed or already present; `2` refused by policy, with the
 reason on stderr; `1` apt or system error. Output is plain text for the CLI to
@@ -244,6 +277,10 @@ relay.
 - A caller-set `APT_CONFIG` has no effect.
 - An install that needs an upgrade is refused. Set this up by pinning an older
   version of a dependency first.
+- A package from a local third-party `file:` repository in
+  `/etc/apt/sources.list.d/` → exit 2, not a package in the distro sources.
+- A distro package that ships a setuid or setgid file → exit 2. The concrete
+  package is chosen while writing the test.
 
 ### Track 2 — Deploy installs the wrapper and sudoers entry
 
@@ -305,8 +342,9 @@ the packages with no trace.
   absent manifest → no check row. With `dpkg-query` available, missing packages
   → `warning`: *"Recorded host packages not installed: glabels. Run `bbx host
   sync`."* Without `dpkg-query` (macOS) → `ok`, with the message that recorded
-  packages cannot be checked on this host. That avoids a permanent warning on a
-  dev laptop. A manifest that does not parse → `warning` with the parse error.
+  packages cannot be checked on this host, and the message lists them. A
+  warning there could never clear: the backend is unsupported and package
+  names are not command names, so no check could prove the tool is present. A manifest that does not parse → `warning` with the parse error.
 
 **Vocabulary lock-ins.** `bbx host install`, `bbx host sync`, `--why`,
 `_config/host-packages.json`, fields `why` and `added`. Exit 3 = unsupported
@@ -331,7 +369,10 @@ primitives common to both. The smoke test also runs against
 `debian:bookworm-slim`. The entrypoint convergence step runs
 `bbx host sync --box "$BOX_ROOT"`. On failure it prints a warning and the
 container keeps serving, and health shows the gap. Blocking startup on an apt
-mirror outage would take the box down for a missing optional tool.
+mirror outage would take the box down for a missing optional tool. The sync
+is automatic because container recreation is routine (every image upgrade),
+and the wrapper applies the same policy whether the agent or the entrypoint
+calls it.
 
 **Vocabulary lock-ins.** None new.
 
@@ -353,7 +394,10 @@ surface.
   and you ask the boxholder. Python libraries are not host packages."*
 - A knowledge-audit entry, below.
 - `docs/security-report.md` (via the `security-report` skill): a privilege row
-  for the sudo wrapper in the §5 process-model table, and a §8 entry. The
+  for the sudo wrapper in the §5 process-model table, and a §8 entry. Fix the
+  stale §5 row while there: it names a `callback` user
+  (`security-report.md:241`), but provisioning uses `beebox`
+  (`setup-server.sh:19`). The
   residual risk is root execution of distro maintainer scripts for any
   service-free distro package, chosen by an LLM, host-wide.
 
@@ -387,8 +431,9 @@ larger project. It is not a reason to wait.
 **Considered and dropped:**
 - An exception for masked init scripts (`x11-common`): a false refusal only
   routes back to the boxholder.
-- Restricting apt to the distro sources file only, with a private lists
-  directory: see *Open design questions*.
+- Refusing udev rules, tmpfiles rules and systemd user units: many plain
+  libraries ship udev rules, and user units never run for a service account
+  with no login session. Recorded as residual risk in step 7.
 - A deploy step that syncs every box's manifest: that couples deploys to box
   content, which the issue's *deploy list* section rejects.
 
@@ -405,10 +450,13 @@ settled by the experiment under *Prior art*.
 | Name with `.`/`+` becomes an apt regex and installs something else | smoke + doctest | exact-match guard (T1 step 4) | clear |
 | Box user edits `/opt/beebox/.../bbx-host-apt`, and deploy installs it as root | manual deploy check | installed from the deploying checkout's stdin (T2) | n/a (prevented) |
 | Package closure contains a daemon (postfix, openssh-server) | smoke | step 7 refusal | clear, names the unit file |
+| New package adds a setuid binary, sudoers/polkit rule, root cron job, or D-Bus system service | smoke (setuid case) | step 7 refusal | clear |
+| `postinst` grants a file capability with `setcap` | none | none; residual risk in the security report | silent, accepted: distro-vetted, and rare |
+| A third-party source (NodeSource) supplies the package | smoke (extra source in the image) | private sources dir (step 3) | n/a (prevented) |
 | Harmless package refused (oneshot unit, masked init script) | smoke (x11-common case on bare base) | refusal message says to ask the boxholder | clear; accepted |
 | Install would upgrade a shared library that other boxes use | smoke | step 5 refusal | clear |
 | Install would remove a package | smoke | `--no-remove` + step 5 | clear |
-| Apt lists change between inspection and install | none (race) | `--no-download` fails the install | clear (apt error, exit 1) |
+| Apt lists change between inspection and install | none (race) | exact `name=version` set + re-simulation + `--no-download` (step 8) | clear (exit 1) |
 | Two boxes install at once | none | `flock` + apt lock timeout | clear |
 | unattended-upgrades holds the dpkg lock for minutes | none | `DPkg::Lock::Timeout=300`, then exit 1 | clear |
 | Live server's unit sets `NoNewPrivileges`, so sudo fails | read-only check before ship | CLI names the cause | clear |
@@ -464,13 +512,6 @@ No critical gap: every row is tested, handled, or clear.
 
 ## Open design questions
 
-- **Third-party sources that are already configured.** `setup-server.sh:55`
-  adds NodeSource. The wrapper uses the host's configured sources, so
-  "distro only" really means "sources the boxholder configured". NodeSource
-  ships only `nodejs`, which is already installed. Lean: accept, and state it in
-  the security report. The strict option is a private
-  `Dir::State::Lists` + `Dir::Etc::sourcelist` limited to the distro file.
-  It costs about 30 lines and a second `apt-get update` per install.
 - **Does the manifest belong in `_config/box.json`?** Lean: no. A separate
   file keeps a field-level schema out of the box config, and hand edits to it
   cannot break box loading.
