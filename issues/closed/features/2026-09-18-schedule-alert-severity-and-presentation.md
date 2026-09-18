@@ -6,7 +6,17 @@ labels: [schedules]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder reading two alerts side by side
+resolution: implemented
 ---
+
+Resolved by `worktree-schedule-alert-signal`
+[schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
+mainly `f680b798e` (record shape and `--condition`) and `cdd3a710b` (grouped
+`/alerts` page). Priority keeps one field (`important | normal | fyi`,
+`backlog` removed) rather than adding a second warning/error/notify axis —
+the boxholder's later decision recorded in the plan collapses the two axes
+into one, with delivery and page presentation matching.
+
 
 `bin/schedules alert` takes `--priority important|normal|backlog|fyi`
 (`bin/lib/schedules.ts:302`). That vocabulary is the issue queue's, and it
@@ -47,7 +57,7 @@ The renderer handles Markdown, but most schedules write plain lines. The
 deferred-issues message is one example: a bare filename, no link, no structure.
 Compare `full-suite`, which writes bold labels and a bullet list and reads
 well. This is a per-schedule authoring fix plus, probably, a line in
-[bbx-authoring-schedules](../../.claude/skills/bbx-authoring-schedules/SKILL.md)
+[bbx-authoring-schedules](../../../.claude/skills/bbx-authoring-schedules/SKILL.md)
 saying the message is Markdown and what a good one looks like. An activated
 issue should link to the issue.
 

@@ -10,7 +10,7 @@ discovered-in: worktree-schedule-alert-signal — surveying notification channel
 
 Schedule alerts now follow one rule: only `important` pops up, and `normal`
 and `fyi` wait for a daily digest
-([plan](../../beebox/docs/plans/schedule-alert-signal.md)). The deploy path
+([plan](../../beebox/docs/implemented-plans/schedule-alert-signal.md)). The deploy path
 does not. `beebox/deploy/deploy.sh:57` `notify()` calls `BBX_DEPLOY_NOTIFY`
 directly, with no durable record, for three outcomes:
 

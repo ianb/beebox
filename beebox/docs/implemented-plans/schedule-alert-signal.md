@@ -1,10 +1,10 @@
 ---
 title: "Schedule alerts: priority decides delivery, one daily digest, conditions that close"
-status: draft
+status: implemented
 workstream: schedule-alert-signal
 issues:
-  - ../../../issues/features/2026-09-18-schedule-alert-severity-and-presentation.md
-  - ../../../issues/features/2026-09-18-schedule-alert-noise-daily-cadence.md
+  - ../../../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md
+  - ../../../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md
 ---
 # Schedule alerts: priority decides delivery, one daily digest, conditions that close
 
@@ -23,8 +23,8 @@ deal with schedules once a day instead of continuously. Concrete situations:
   notification, with a link, not in the same form as a failure.
 
 **Issues addressed:**
-[severity and presentation](../../../issues/features/2026-09-18-schedule-alert-severity-and-presentation.md),
-[daily cadence](../../../issues/features/2026-09-18-schedule-alert-noise-daily-cadence.md).
+[severity and presentation](../../../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md),
+[daily cadence](../../../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md).
 A queue search for `alert`, `notification` and `schedule` found no duplicates.
 Related but separate: the deploy notification path (see *NOT in scope*).
 

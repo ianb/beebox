@@ -6,7 +6,17 @@ labels: [schedules]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder wants a once-a-day cadence, not continuous alerts
+resolution: implemented
 ---
+
+Resolved by `worktree-schedule-alert-signal`
+[schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
+mainly `7c46d0967` (daily digest, fyi auto-close, 7-day filing) and
+`f680b798e` (conditions/`resolve` replacing full-suite's and
+box-convergence's private suppression copies). Only `important` alerts pop up
+immediately; `normal` and `fyi` wait for the once-daily digest at 09:00
+local. No divergence from the issue's proposal.
+
 
 The boxholder does not want to handle schedule alerts continuously. Once a day
 is the wanted cadence, with an exception for something that genuinely cannot
