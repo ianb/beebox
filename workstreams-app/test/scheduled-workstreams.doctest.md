@@ -230,7 +230,7 @@ alert's schedule. A standing condition says how long it has stood, and a
 filed one names its issue.
 
 ```ts
-const grouped = renderToStaticMarkup(createElement(ScheduleAlertList, {
+const grouped = render(createElement(ScheduleAlertList, {
   alerts: [
     alert({ id: "20260918-020500-0001", priority: "fyi", workstream: "sdk-update", title: "Pin at 0.3.273" }),
     alert({ id: "20260918-020500-0002", priority: "important", workstream: "full-suite", title: "red after a landing" }),
@@ -249,7 +249,7 @@ JSON.stringify({
   ordered: order.every((at, i) => at >= 0 && (i === 0 || at > (order[i - 1] ?? 0))),
   scheduleNamed: grouped.includes('class="schedule-alert-schedule">sdk-update<'),
   standing: grouped.includes("seen 9 times since"),
-  filed: grouped.includes("<code>private-issues/bugs/2026-09-25-schedule-box-convergence-unconverged.md</code>"),
+  filed: grouped.includes('href="/workstreams/issues?issue=bugs%2F2026-09-25-schedule-box-convergence-unconverged.md&amp;issueVisibility=private"'),
   importantTone: grouped.includes('class="pill pill-danger">important<'),
 })
 => {"ordered":true,"scheduleNamed":true,"standing":true,"filed":true,"importantTone":true}

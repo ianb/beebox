@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Button, Pill } from "./ui.js";
 import { Markdown } from "./Markdown.js";
 import { useEffect, useRef } from "react";
@@ -25,6 +26,22 @@ const CLOSED_BY_TEXT = {
   schedule: "condition cleared",
 } as const;
 
+const PRIVATE_ISSUES_PREFIX = "private-issues/";
+
+/** A standing condition's issue, opened in the issue browser. Filing writes
+ *  only under `private-issues/` (bin/lib/schedules-filing.ts). */
+function FiledIssue({ path }: { path: string }) {
+  const relPath = path.startsWith(PRIVATE_ISSUES_PREFIX) ? path.slice(PRIVATE_ISSUES_PREFIX.length) : null;
+  return (
+    <p className="schedule-alert-standing">
+      Filed as{" "}
+      {relPath === null
+        ? <code>{path}</code>
+        : <Link to="/issues" search={{ issue: relPath, issueVisibility: "private" }}><code>{path}</code></Link>}
+    </p>
+  );
+}
+
 function AlertBody({ alert, showSchedule }: { alert: ScheduleAlert; showSchedule: boolean }) {
   return (
     <div className="schedule-alert-body">
@@ -40,7 +57,7 @@ function AlertBody({ alert, showSchedule }: { alert: ScheduleAlert; showSchedule
           seen {alert.occurrences} times since {friendlyTimestamp(alert.createdAt)}, last {friendlyTimestamp(alert.lastSeenAt)}
         </p>
       ) : null}
-      {alert.issue !== null ? <p className="schedule-alert-standing">Filed as <code>{alert.issue}</code></p> : null}
+      {alert.issue !== null ? <FiledIssue path={alert.issue} /> : null}
       {alert.issue === null && alert.filingError !== null ? (
         <p className="action-error schedule-alert-standing">Could not file this as an issue: {alert.filingError}</p>
       ) : null}

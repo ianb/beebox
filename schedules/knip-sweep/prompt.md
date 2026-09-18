@@ -73,13 +73,14 @@ The message must say **what you removed, what you left and why, and what
 happened to the branch** — how many commits, whether the suite is green, and
 whether it landed or is waiting and why.
 
-- **normal** — the usual sweep: things were removed and it landed (or `bin/land`
-  refused and the branch is ready).
-- **important** — you found something alarming (a whole subsystem unreachable,
-  a test suite that no longer covers what you deleted), or the suite is red and
-  you stopped.
-- **fyi** — you removed nothing; every new finding was a legitimate entry point
-  or work in progress.
+- **fyi** — the usual sweep: things were removed and it landed, or you removed
+  nothing because every new finding was a legitimate entry point or work in
+  progress.
+- **normal** — the branch is waiting on a person: `bin/land` refused, or the
+  suite is red and you stopped.
+- **important** — you found something alarming that should be looked at today:
+  a whole subsystem unreachable, or a test suite that no longer covers what
+  you deleted.
 
 Use `bin/schedules done` only if the branch is exactly as you found it and there
 is nothing to say.

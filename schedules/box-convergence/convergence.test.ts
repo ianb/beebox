@@ -5,21 +5,26 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 import { execChild } from "../../bin/lib/schedules-exec.js";
-import { reportDecision, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { reportPlan, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 import { configuredBoxes, localTargets, registryPaths } from "./targets.js";
 
 const report = (value: unknown): string => RESULT_PREFIX + JSON.stringify(value);
 
-test("repeated findings are logged even while their alert is suppressed", () => {
-  const now = Date.parse("2026-09-17T00:00:00Z");
-  const old = { message: "local /box: failed; exit 1", reportedAt: now - 60 * 60_000 };
-  assert.deepEqual(reportDecision("", { old, now }), { alert: false, log: null });
-  const repeated = reportDecision(old.message, { old, now });
-  assert.equal(repeated.alert, false);
-  assert.match(repeated.log ?? "", /unchanged since 2026-09-16T23:00:00.000Z; alert suppressed\nlocal \/box: failed; exit 1/u);
-  assert.equal(reportDecision("something else", { old, now }).alert, true);
-  assert.equal(reportDecision(old.message, { old, now: now + 24 * 60 * 60_000 }).alert, true);
-  assert.equal(reportDecision(old.message, { old: null, now }).alert, true);
+test("findings are one standing condition whatever boxes they name", () => {
+  const first = reportPlan({ findings: ["local /a: needs-procedure"], unreachableDetail: null, prodChecked: true });
+  const second = reportPlan({ findings: ["local /a: needs-procedure", "prod /b: needs-procedure"], unreachableDetail: null, prodChecked: true });
+  assert.deepEqual(first.alerts.map((alert) => alert.condition), ["unconverged"]);
+  assert.deepEqual(second.alerts.map((alert) => alert.condition), ["unconverged"]);
+  assert.equal(second.alerts[0]?.message, "- local /a: needs-procedure\n- prod /b: needs-procedure");
+  assert.deepEqual(first.keep, ["unconverged"]);
+});
+test("a clean run resolves everything, but not when production went unchecked", () => {
+  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true }), { alerts: [], keep: [] });
+  const offline = reportPlan({ findings: [], unreachableDetail: null, prodChecked: false });
+  assert.deepEqual(offline, { alerts: [], keep: ["unconverged"] });
+  const longOffline = reportPlan({ findings: [], unreachableDetail: "Production unreachable for 25h: line", prodChecked: false });
+  assert.deepEqual(longOffline.alerts.map((alert) => alert.condition), ["prod-unreachable"]);
+  assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged"]);
 });
 test("JSON outcomes preserve questions and refuse unknown or failed coverage", () => {
   assert.equal(resultDetail(report({ status: "current" }), 0), null);

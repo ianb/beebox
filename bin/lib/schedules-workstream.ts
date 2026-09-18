@@ -24,6 +24,7 @@ import { execa } from "execa";
 import { z } from "zod";
 
 import {
+  PRIORITY_GUIDE,
   type Handoff,
   type LoadedSchedule,
   type Outcome,
@@ -79,7 +80,7 @@ function briefingFor(input: { name: string; runId: string; handoff: Handoff | nu
       "Finish by filing your report — a run whose session ends without one is recorded as bailed:",
       "",
       `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<one short paragraph>" \\`,
-      "        [--details @<file>] [--priority important|normal|fyi]",
+      `        [--details @<file>] [--priority important|normal|fyi]\n\n${PRIORITY_GUIDE}`,
       "",
       "or, when there is nothing worth saying:",
       "",

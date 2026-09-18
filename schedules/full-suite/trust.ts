@@ -9,9 +9,9 @@
  * healthy confirms or clears them. The slowdown is measured against the
  * ledger's per-file duration history, which this schedule already writes.
  *
- * Also here: the repeat-suppression arithmetic for alerts, because the same
- * load events saturated the alert store (42 open alerts, the identical
- * baseline-red raised eight hourly runs in a row).
+ * Also here: the condition key each alert raises under, because the same load
+ * events saturated the alert store (42 open alerts, the identical baseline-red
+ * raised eight hourly runs in a row).
  */
 
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
@@ -136,28 +136,21 @@ export function runIsUntrusted(slowdown: { factor: number | null }): boolean {
   return slowdown.factor !== null && slowdown.factor >= SLOWDOWN_UNTRUSTED;
 }
 
-// ─── repeating alerts ─────────────────────────────────────────────────────
+// ─── alert conditions ─────────────────────────────────────────────────────
+
+/** What the run found, as `bin/schedules` sees it. */
+export type AlertKind = "deferred" | "environment" | "flakes" | "red-unattributed" | "red-blamed";
 
 /**
- * The same condition re-raised inside this window is suppressed. One alert a
- * day per unchanged condition is the record; the run log has the rest.
+ * The condition key an alert raises under. It names the standing condition,
+ * never its details: the failing file set changes run to run and goes in the
+ * message, so one bad stretch stays one alert that updates. Red blamed on
+ * landings is keyed by those landings, because a new culprit is new news and
+ * should pop up on its own.
  */
-export const ALERT_REPEAT_MS = 24 * 60 * 60 * 1000;
-
-/** What makes two alerts "the same condition": the kind and the file set. */
-export function alertFingerprint(input: { kind: string; files: readonly string[] }): string {
-  return `${input.kind}:${[...input.files].toSorted().join(",")}`;
-}
-
-export function shouldSuppressAlert(input: {
-  previous: { fingerprint: string; raisedAt: string } | null;
-  fingerprint: string;
-  now: Date;
-  repeatMs?: number;
-}): boolean {
-  if (input.previous === null || input.previous.fingerprint !== input.fingerprint) return false;
-  const elapsed = input.now.getTime() - Date.parse(input.previous.raisedAt);
-  return elapsed >= 0 && elapsed < (input.repeatMs ?? ALERT_REPEAT_MS);
+export function alertCondition(input: { kind: AlertKind; culprits: readonly string[] }): string {
+  if (input.kind !== "red-blamed") return input.kind;
+  return `red:${input.culprits.map((commit) => commit.slice(0, 8)).toSorted().join("+")}`;
 }
 
 /** The alert body for a run too slowed to yield verdicts. */

@@ -318,6 +318,15 @@ export type DigestState = z.infer<typeof digestStateSchema>;
 export const prioritySchema = z.enum(["important", "normal", "fyi"]);
 export type Priority = z.infer<typeof prioritySchema>;
 
+/** The same definitions for an agent writing a report: part of every
+ *  scheduled session's briefing. */
+export const PRIORITY_GUIDE = [
+  "The priority decides delivery. `important` pops up now: use it only when a person",
+  "should act today. `normal` waits for the daily digest and stays open until closed.",
+  "`fyi` appears in one digest and then closes itself. The message is Markdown: lead",
+  "with the finding, list the items, and name files and issues by path.",
+].join("\n");
+
 /** Who closed an alert: a person (`ack`), the digest (an fyi it has shown),
  *  or the schedule (`resolve`: the condition cleared). */
 export const closedBySchema = z.enum(["person", "digest", "schedule"]);

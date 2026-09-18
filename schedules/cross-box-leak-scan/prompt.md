@@ -30,7 +30,7 @@ Decide one of three things:
 - **False positive.** The sweep's regex over-matched. Say concretely why the
   line isn't the leak shape it looks like. Report at `fyi`.
 - **Real but accepted.** Same-user file readability is the documented
-  env-level posture; box paths and slugs are not confidential. `backlog`, with
+  env-level posture; box paths and slugs are not confidential. `fyi`, with
   the reason. Never mark something accepted just because a fix is hard — that
   is a real leak you're deferring, not an accepted one.
 
@@ -50,7 +50,7 @@ human should update given what you found.
 ## Finishing
 
 End with `bin/schedules alert --title "<one line>" --message "<paragraph>"
---priority <important|normal|fyi|backlog>` or `bin/schedules done` if nothing
+--priority <important|normal|fyi>` or `bin/schedules done` if nothing
 needed doing. Say what you fixed, what you filed, what you called a false
 positive and why, and the branch's state (commits, suite status, ready to
 land or not).

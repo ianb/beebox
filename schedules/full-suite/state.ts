@@ -110,36 +110,3 @@ export function nextPendingAfterUntrusted(input: {
   }
   return next;
 }
-
-// ─── the last alert raised ────────────────────────────────────────────────
-
-export interface LastAlert {
-  fingerprint: string;
-  raisedAt: string;
-}
-
-function isLastAlert(value: unknown): value is LastAlert {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "fingerprint" in value &&
-    typeof value.fingerprint === "string" &&
-    "raisedAt" in value &&
-    typeof value.raisedAt === "string"
-  );
-}
-
-export async function readLastAlert(): Promise<LastAlert | null> {
-  const parsed = await readJson("last-alert.json");
-  if (parsed === null) return null;
-  if (!isLastAlert(parsed)) refuse("last-alert.json is not a { fingerprint, raisedAt } record");
-  return parsed;
-}
-
-export async function writeLastAlert(alert: LastAlert | null): Promise<void> {
-  if (alert === null) {
-    await fs.rm(statePath("last-alert.json"), { force: true });
-    return;
-  }
-  await writeJson("last-alert.json", alert);
-}
