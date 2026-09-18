@@ -151,10 +151,18 @@ function parseNativeImage(value: unknown): ChatImageAttachment | null {
     typeof value.id !== "number"
     || typeof value.mimeType !== "string"
     || typeof value.dataBase64 !== "string"
+    // `path`: the uploaded original's box path (contract §4.1). Optional — an
+    // older build never sends it — but when present it must be a string.
+    || (value.path !== undefined && typeof value.path !== "string")
   ) {
     return null;
   }
-  return { id: value.id, mimeType: value.mimeType, dataBase64: value.dataBase64 };
+  return {
+    id: value.id,
+    mimeType: value.mimeType,
+    dataBase64: value.dataBase64,
+    ...(value.path === undefined ? {} : { path: value.path }),
+  };
 }
 
 function parseNativeFile(value: unknown): Required<EmissionFile> | null {

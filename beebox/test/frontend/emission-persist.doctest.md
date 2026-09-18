@@ -14,6 +14,9 @@ import {
   commitPersistedEmission,
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
+  restoredImageOriginal,
+  RESTORED_ORIGINAL_LOST,
+  RESTORED_ORIGINAL_SWEPT,
   partitionFiles,
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
@@ -142,7 +145,7 @@ loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text
 ## Oversized images are dropped from persistence, not from memory
 
 ```ts
-const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET }] };
+const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
 const { payload, imagesDropped } = serializePersistedEmission(big, { updatedAt: 1 });
 imagesDropped
 => true
@@ -225,4 +228,56 @@ const files = [uploaded(1, "_tmp/alive.pdf"), uploaded(2, "_tmp/swept.pdf")];
 const { live, dead } = partitionFiles(files, new Set(["_tmp/alive.pdf"]));
 live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2
+```
+
+## An image's original comes back landed, or failed — never resumable
+
+The `File` behind an upload dies with the page, so a persisted `uploading` or
+`failed` original — and a draft from before originals were kept, which has no
+state at all — restores as `failed`, silently: the message just lists no file
+for that image. A landed path survives when the restore-time existence check
+still finds it, and is `failed` with its own message when the sweep took it,
+so a swept path is never listed as a usable file.
+
+```ts
+const present = new Set(["_tmp/a.png"]);
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }, { existingPaths: present }))
+=> {"status":"uploaded","path":"_tmp/a.png"}
+
+restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present }).message === RESTORED_ORIGINAL_SWEPT
+=> true
+
+// A same-tab restore (a rejected send handed back) skips the check.
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.png" }, { existingPaths: null }))
+=> {"status":"uploaded","path":"_tmp/just-now.png"}
+
+JSON.stringify([
+  restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }).status,
+  restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
+  restoredImageOriginal(undefined, { existingPaths: present }).message === RESTORED_ORIGINAL_LOST,
+])
+=> ["failed","failed",true]
+```
+
+The state itself rides through persistence with the image, so a landed path
+is still there after a reload.
+
+```ts
+const withOriginal = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
+const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
+JSON.stringify(parsePersistedEmission(payload)?.images[0]?.original)
+=> {"status":"uploaded","path":"_tmp/a.png"}
+```
+
+The draft's upload batch persists with it, so attachments added after a
+reload join the same `_tmp/chat/<batch>/` directory; a draft saved before
+batches existed simply has none.
+
+```ts
+const batched = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
+parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch
+=> m1abcd-x9y8z7w6
+
+parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload)?.uploadBatch
+=> undefined
 ```

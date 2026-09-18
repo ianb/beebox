@@ -1,13 +1,24 @@
 ---
 title: "An uploaded chat image is visible but unusable: the agent sees the pixels and has no file"
-workstream: unattached
+workstream: chat-image-files
 area: beebox
 priority: important
 labels: [chat, images]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — the boxholder wants images to be both seen and usable
+resolution: implemented
 ---
+
+Closed 2026-09-16: implemented on `worktree-chat-image-files`, landed on
+`main` as part of this finish. The web composer now uploads each inline
+image's original alongside
+the reduced inline copy, into `_tmp/chat/<batch>/`, and lists it in the
+message's `<attachments>` block as `[image#N]: <path>`; the iOS native
+composer does the same. See
+`beebox/docs/implemented-plans/chat-image-files.md` for the design and the
+tracks that delivered it. Related but not resolved here:
+`../bugs/2026-09-05-codex-image-viewing-tool-unsupported.md`.
 
 Images uploaded into chat arrive base64-inline, so the agent sees them with no
 tool call at all — which is the good half. The bad half is that there is no

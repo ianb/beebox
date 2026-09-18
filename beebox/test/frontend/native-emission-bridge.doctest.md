@@ -93,3 +93,28 @@ const unknown = parseNativeEmissionDetail({ version: 9, id: "future-1" });
 JSON.stringify(unknown.ok ? null : { id: unknown.emissionId, reason: unknown.reason })
 => {"id":"future-1","reason":"Unsupported native emission version: 9"}
 ```
+
+## An image entry may carry the uploaded original's `path`
+
+The native composer uploads each inline image's original and sends its box
+path on the image entry (contract §4.1). Optional — an older build never
+sends it — but when present it must be a string; anything else is a
+malformed image and rejects the payload like any other V2 shape error.
+
+```ts
+const withPath = nativeEmissionFromDetail({
+  version: 2, id: "ios-img-path", origin: "typed", text: "receipt [image#1]", diarized: false,
+  images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }],
+  files: [], selections: [],
+});
+JSON.stringify(withPath?.images)
+=> [{"id":1,"mimeType":"image/jpeg","dataBase64":"abc","path":"_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg"}]
+
+const badPath = parseNativeEmissionDetail({
+  version: 2, id: "ios-img-bad-path", origin: "typed", text: "x", diarized: false,
+  images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: 7 }],
+  files: [], selections: [],
+});
+JSON.stringify(badPath)
+=> {"ok":false,"emissionId":"ios-img-bad-path","reason":"Invalid native emission V2: malformed image, file, or selection"}
+```

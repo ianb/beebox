@@ -1,0 +1,45 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-v2-image-path",
+    "origin": "typed",
+    "text": "File this receipt [image#1]",
+    "diarized": false,
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/jpeg",
+        "dataBase64": "aW1hZ2U=",
+        "path": "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg"
+      },
+      {
+        "id": 2,
+        "mimeType": "image/png",
+        "dataBase64": "cGl4"
+      }
+    ],
+    "files": [],
+    "selections": []
+  },
+  "expected": {
+    "id": "ios-v2-image-path",
+    "origin": "typed",
+    "text": "File this receipt [image#1]",
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/jpeg",
+        "dataBase64": "aW1hZ2U=",
+        "path": "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg"
+      },
+      {
+        "id": 2,
+        "mimeType": "image/png",
+        "dataBase64": "cGl4"
+      }
+    ],
+    "files": [],
+    "selections": [],
+    "diarized": false
+  }
+}
