@@ -1,11 +1,11 @@
 ---
 title: "Deploy maintenance page and deploy timing record"
-status: active
+status: implemented
 workstream: deploy-maintenance-page
 issues:
-  - ../../../issues/features/2026-09-18-deploy-maintenance-page.md
-  - ../../../issues/code-quality/2026-09-18-deploy-timing-record.md
-  - ../../../issues/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md
+  - ../../../issues/closed/features/2026-09-18-deploy-maintenance-page.md
+  - ../../../issues/closed/code-quality/2026-09-18-deploy-timing-record.md
+  - ../../../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md
 ---
 # Deploy maintenance page and deploy timing record
 
@@ -17,9 +17,9 @@ deploy timings so that estimate is real, and fixes the deploy's misreading of
 ssh failures as signals so the recorded outcome is true.
 
 **Issues addressed:**
-[deploy maintenance page](../../../issues/features/2026-09-18-deploy-maintenance-page.md),
-[deploy timing record](../../../issues/code-quality/2026-09-18-deploy-timing-record.md),
-[ssh failure read as a signal](../../../issues/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md).
+[deploy maintenance page](../../../issues/closed/features/2026-09-18-deploy-maintenance-page.md),
+[deploy timing record](../../../issues/closed/code-quality/2026-09-18-deploy-timing-record.md),
+[ssh failure read as a signal](../../../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md).
 Searched the queue for `502`, `maintenance page`, `nginx`, `deploy timing`.
 Related but not addressed:
 [Cloudflare Flexible SSL](../../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md)

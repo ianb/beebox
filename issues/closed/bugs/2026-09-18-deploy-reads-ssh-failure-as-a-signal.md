@@ -6,7 +6,15 @@ labels: [deploy]
 filed-by: agent
 discovered-by: agent
 discovered-in: main — investigating why a merge was on main but not in production
+resolution: implemented
 ---
+
+Closed 2026-09-18: implemented in `a94ba467b`
+(`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track D). Signals
+are now recorded by a trap (`INT`/`TERM`/`HUP` set `INTERRUPTED_BY`), and
+`deploy_exit` branches on that variable rather than `rc >= 128`
+(`beebox/deploy/deploy-outcome.sh`). An ssh exit of 255 with no signal now
+classifies as `unreachable`/failed, not `interrupted`.
 
 `deploy_exit` in `beebox/deploy/deploy.sh:79-97` treats any exit code of 128
 or higher as a signal:

@@ -6,7 +6,15 @@ labels: [deploy]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asked whether deploys have been taking longer
+resolution: implemented
 ---
+
+Closed 2026-09-18: implemented in `a94ba467b`
+(`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track C). The
+laptop now appends one JSON line per deploy
+(`{startedAt, endedAt, sha, outcome, exit, downSeconds}`) to
+`beebox/deploy/.deploy-logs/deploys.jsonl`, and the server records each window
+(`opened`, `down`, `closed`, `outcome`) to `/var/lib/beebox-deploy/windows.tsv`.
 
 The boxholder asked whether deploys have been getting slower and more
 frequent. Answering it meant inferring each deploy's duration from the log

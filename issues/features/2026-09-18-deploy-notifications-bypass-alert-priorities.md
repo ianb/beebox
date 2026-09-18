@@ -32,4 +32,4 @@ Options, smallest first:
    store, or a generic "alert source" beside schedules), so success is `fyi`
    and failure is `important`.
 
-Related: [deploy reads an ssh failure as a signal](../bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md).
+Related: [deploy reads an ssh failure as a signal](../closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md).

@@ -6,7 +6,13 @@ labels: [deploy]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder hit a deploy window and could not tell an outage from a restart
+resolution: implemented
 ---
+
+Closed 2026-09-18: implemented in `a94ba467b`
+(`beebox/docs/implemented-plans/deploy-maintenance-page.md`, tracks A-C).
+nginx now serves a 503 deploy page while services are stopped, with a start
+time and a "typically takes about N minutes" estimate from recorded windows.
 
 While a deploy runs, nginx answers every request with its default 502 page.
 Nothing says whether the site is restarting or broken, so the boxholder cannot
