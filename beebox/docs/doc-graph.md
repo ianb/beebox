@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-18T22:12:56Z
-Total documents: 386
+Generated: 2026-09-18T22:54:43Z
+Total documents: 387
 
 ## Issues
 
@@ -585,6 +585,7 @@ Title: "Deploy" | 63 lines
 
 Referenced by:
 - deploy/README.md:103 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
+- docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/CLAUDE.md`'s poll matches —
 
 References:
 - → docs/docker-install.md (mention)
@@ -592,7 +593,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 604 lines
+Title: "Deploy" | 624 lines
 
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -602,6 +603,7 @@ Referenced by:
 - docs/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
 - docs/implemented-plans/box-host-packages.md:54 (mention) — `deploy/README.md` note): ~120 lines. No generated output. Well under the
 - docs/implemented-plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
+- docs/implemented-plans/deploy-maintenance-page.md:83 (mention) — (`deploy/hetzner/setup-server.sh:368-397`). `deploy/README.md:147-148`:
 - docs/implemented-plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/implemented-plans/hub-healthz-box-aggregation.md:314 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/local-password-auth.md:535 (mention) — `deploy/README.md:196-217` env template gains `BBX_AUTH_FILE` (default is
@@ -2136,7 +2138,7 @@ Title: "Secrets: the machine-level store" | 551 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
-- deploy/README.md:495 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
+- deploy/README.md:515 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
 - docs/adding-a-box.md:112 (link) — one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:206 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
@@ -3009,7 +3011,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- deploy/README.md:350 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- deploy/README.md:370 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - docs/security-report.md:254 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3025,7 +3027,7 @@ Title: "A box closure cannot outlive its maintenance owner" | 342 lines | shippe
 
 Referenced by:
 - docs/plans/migration-reliability.md:236 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
-- ../issues/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:9 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
+- ../issues/closed/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:30 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
 
 References:
 - → docs/plans/migration-reliability.md (link)
@@ -3108,7 +3110,7 @@ Title: "Boxes as Packages v2 — beebox as a library" | 720 lines | shipped hist
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- deploy/README.md:143 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- deploy/README.md:159 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](implemented-plans/boxes-as-packages-v2.md)
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
@@ -3642,6 +3644,27 @@ References:
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/deploy-maintenance-page.md
+
+Title: "Deploy maintenance page and deploy timing record" | 323 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track D). Signals
+- ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, track C). The
+- ../issues/closed/features/2026-09-18-deploy-maintenance-page.md:13 (mention) — (`beebox/docs/implemented-plans/deploy-maintenance-page.md`, tracks A-C).
+
+References:
+- → ../issues/closed/features/2026-09-18-deploy-maintenance-page.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md (frontmatter)
+- → ../issues/closed/features/2026-09-18-deploy-maintenance-page.md (link)
+- → ../issues/closed/code-quality/2026-09-18-deploy-timing-record.md (link)
+- → ../issues/closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md (link)
+- → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → ../issues/closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md (link)
+- → deploy/README.md (mention)
+- → deploy/CLAUDE.md (mention)
 
 #### docs/implemented-plans/design-md-retired-sections.md
 
