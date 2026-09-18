@@ -163,11 +163,13 @@ until this script catches up.
 **This script does not run on deploy.** `deploy.sh` never invokes it, so a
 change to the systemd units here reaches a live server only on a re-provision
 or by hand. The nginx site file is the exception: it lives in
-`nginx/beebox.conf`, and every deploy installs it, runs `nginx -t`, and reloads
-nginx when it changed (a failing file is restored and fails the deploy before
-anything stops). Edit it there, never on the server. The first deploy that
-installed it kept the hand-maintained file as
-`/etc/nginx/sites-available/beebox.pre-deploy-owned`.
+`nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
+makes it the only enabled site, runs `nginx -t` whether or not anything
+changed, and reloads nginx when it did. A configuration that fails the test is
+restored and fails the deploy before anything stops. Edit the file in the repo,
+never on the server. Any other enabled site is moved to
+`/etc/nginx/pre-deploy-owned/` with a timestamp; that is where production's
+hand-made `callback` site went.
 
 ### `add-box.sh` — Add a box to the server
 
@@ -353,6 +355,7 @@ tracked files.
 /etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper
 /var/log/beebox/host-apt.log # One JSON line per box install attempt
 /usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
+/usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
 /run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
 /var/lib/beebox-deploy/windows.tsv  # One line per deploy window: opened, down, closed, outcome
 /etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
