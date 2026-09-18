@@ -81,3 +81,56 @@ Open the pages that fit what you know about the person. If they want to read
 or change the code, also read https://beebox.run/llms-dev.txt, the
 contributor entry point. When a page does not cover something, say that the
 documentation does not say, rather than guessing.
+
+## Themes
+
+Ten ideas run through Bee Box, and most pages carry one. Following a theme is
+often a better way to explore this documentation than reading in order: pick
+the ones that bear on what the person is asking and open the pages named.
+
+- **A coding agent is the engine.** Claude Code or Codex does the work, on the
+  subscription the person already has, and the engine that hosts it is kept
+  separate so a different agent can be swapped in later.
+  ([why not just a chatbot](03-why-not-just-a-chatbot.md),
+  [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md))
+- **A knowledge base you own, wiki-like.** What goes in accumulates as
+  documents that link to each other and are meant to be browsed, by the person
+  and by the agent, rather than a transcript something searches.
+  ([what you can use it for](02-what-you-can-use-it-for.md),
+  [enriched markdown](concepts/enriched-markdown.md),
+  [it keeps itself coherent](capabilities/integrity.md))
+- **The filesystem is all the state.** There is no hidden database beside the
+  files: the box is a directory, and what is in it is what the system knows.
+  ([how it works](07-how-it-works.md), [box layout](contracts/box-layout.md))
+- **Everything in git, and the history answers "why".** Not only
+  recoverability: you can look back at how a card, a decision, or the box
+  itself came to be. ([how it works](07-how-it-works.md),
+  [durability and provenance](design/durability-and-provenance.md))
+- **Your words, kept distinct from the agent's.** What the person said is kept
+  as they said it; what the agent inferred is marked as the agent's.
+  ([provenance](capabilities/provenance.md),
+  [enriched markdown](concepts/enriched-markdown.md))
+- **Typed, with room for language.** A recipe is stored as a recipe, a person
+  as a person, and there is always an overflow, so nothing is lost for not
+  fitting a type yet. ([dump it in now, shape it later](capabilities/shape-it-later.md),
+  [cards](concepts/cards.md), [representation](design/representation.md))
+- **It extends itself.** How a kind of card is displayed, what kinds exist,
+  what runs on a schedule: the agent can build those inside the box, and read
+  them to understand how the box works.
+  ([making it yours](13-making-it-yours.md), [views](capabilities/views.md),
+  [procedures](capabilities/procedures.md))
+- **Expressive capture.** A way in suited to each kind of thing, and the
+  distinctive ones are long-form voice and mixed voice-and-camera.
+  ([voice](capabilities/voice.md), [phone capture](capabilities/phone-capture.md),
+  [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
+- **It asks instead of guessing.** Lacking confidence or authority the agent
+  writes a question and waits; the answer becomes a rule it reads next time.
+  ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
+  [how the box is taught](design/teaching.md))
+- **Open, so it can be understood.** Source-available for the same reason the
+  history is readable, and the process the agents work from is in the
+  repository too. ([status and maturity](11-status-and-maturity.md),
+  [how development happens](dev/development-process.md))
+
+Each theme is also where the honest limits live: the pages named say where a
+theme is thinner than it sounds, and those caveats are not decoration.
