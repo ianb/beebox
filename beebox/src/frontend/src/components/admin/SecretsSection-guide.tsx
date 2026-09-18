@@ -14,6 +14,7 @@ import { Card } from "../ui/Card";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 
 export type SecretGuideEntry = RouterOutput["secrets"]["guides"][number];
 type SecretVerified = RouterOutput["secrets"]["setValue"]["verified"];
@@ -33,7 +34,7 @@ export function GuidePanel({ guide }: { guide: SecretGuideEntry }) {
   return (
     <Card background="warm" border="subtle" padding="sm">
       <Stack gap="sm">
-        <Text as="h3" size="sm" weight="semibold">{guide.title}</Text>
+        <Heading level={3}>{guide.title}</Heading>
         <Text as="p" size="sm" tone="subtle">{guide.what}</Text>
         {guide.uses.length === 0 ? null : (
           <Stack gap="xs">

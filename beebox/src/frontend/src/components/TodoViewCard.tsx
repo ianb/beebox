@@ -23,6 +23,7 @@ import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 import { Stack } from "./ui/Stack";
 import { Row } from "./ui/Row";
 import { Badge } from "./ui/Badge";
@@ -151,7 +152,7 @@ export function TodoViewCard({ data }: RendererProps) {
       <Card padding="md">
         <Stack gap="md">
           <Stack gap="none">
-            <Text as="h2" size="lg" weight="bold">{title}</Text>
+            <Heading level={2}>{title}</Heading>
             {/* The box-wide plate's `**` is the default mental model — showing
                 a bare glob under the heading reads as broken markdown to
                 anyone unfamiliar with glob syntax (a field-test operator

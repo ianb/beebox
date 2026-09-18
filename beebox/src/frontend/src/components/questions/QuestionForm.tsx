@@ -22,6 +22,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import type { RouterOutput } from "../../lib/trpc";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
@@ -48,9 +49,9 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
   const hasLearning = question.learning?.proposal !== undefined;
   return (
     <>
-      <Text as="h2" size="lg" weight="bold" className="mb-2">
+      <Heading level={2} className="mb-2">
         {question.name}
-      </Text>
+      </Heading>
       <Text as="p" className="mb-2">
         {question.prompt}
       </Text>

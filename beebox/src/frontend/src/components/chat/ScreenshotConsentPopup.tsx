@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import {
   declineViaPopup,
   shareViaPopup,
@@ -107,9 +108,9 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
       aria-label="Screenshot request"
     >
       <div ref={cardRef} className="w-full max-w-sm rounded-2xl bg-warm-50 border border-warm-200 p-6 shadow-lg">
-        <Text as="h2" size="lg" weight="semibold">
+        <Heading level={2}>
           The agent wants to see this screen
-        </Text>
+        </Heading>
         <Text as="p" size="sm" tone="muted" className="mt-2">
           Sharing sends a one-time screenshot of what you see now to the agent. You pick exactly what to
           share in the next browser dialog.

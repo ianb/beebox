@@ -16,6 +16,7 @@ import { trpc } from "../lib/trpc";
 import { QuestionForm } from "./questions/QuestionForm";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
 import { bbxSource } from "../lib/source-tag";
@@ -52,7 +53,7 @@ export function QuestionCardView({ data }: RendererProps) {
     <div className="p-4 max-w-2xl mx-auto">
       <Card padding="md" {...bbxSource("card", data.path)}>
         <Stack gap="sm">
-          <Text as="h2" size="lg" weight="bold">{question.name}</Text>
+          <Heading level={2}>{question.name}</Heading>
           <Text as="p">{question.prompt}</Text>
           {renderQuestionAnswer(question)}
           {question.learning?.proposal !== undefined ? (

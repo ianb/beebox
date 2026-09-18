@@ -14,6 +14,7 @@ import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
 function MutationError({ message }: { message: string | null }) {
@@ -50,7 +51,7 @@ export function MountFolderForm() {
 
   return (
     <Stack gap="sm">
-      <Text as="h3" size="sm" weight="semibold">Mirror a folder</Text>
+      <Heading level={3}>Mirror a folder</Heading>
       <Text size="sm" tone="muted">
         Docs and Sheets in the folder become synced cards in that directory;
         everything else becomes a pointer.
@@ -115,7 +116,7 @@ export function AddPointerForm() {
 
   return (
     <Stack gap="sm">
-      <Text as="h3" size="sm" weight="semibold">Add a pointer</Text>
+      <Heading level={3}>Add a pointer</Heading>
       <Text size="sm" tone="muted">
         A card that records what a Drive item is and where it lives. Nothing is
         copied — good for a PDF, a Slides deck, or a folder you don&apos;t want

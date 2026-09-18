@@ -18,6 +18,7 @@ import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
 import { bbxSource } from "../lib/source-tag";
@@ -119,7 +120,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
         <SubmissionForm cardPath={data.path} validate={validate} disabledReason={disabledReason} onAccepted={() => void reload()} />
 
-        <Accordion title={<Text as="h2" size="lg" weight="bold">Prompt</Text>} defaultOpen={false}>
+        <Accordion title={<Heading level={2}>Prompt</Heading>} defaultOpen={false}>
           <Stack gap="sm">
             {source !== null ? <Text as="p" size="sm">Start at <ExternalLink href={source}>{source}</ExternalLink></Text> : null}
             {limit !== null ? <Text as="p" size="sm">Bound: {limit}</Text> : null}
@@ -145,7 +146,7 @@ function SchemaCard({ attach }: { attach: AttachState | null }) {
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;
   return (
-    <Accordion title={<Text as="h2" size="lg" weight="bold">Record schema</Text>} defaultOpen={false}>
+    <Accordion title={<Heading level={2}>Record schema</Heading>} defaultOpen={false}>
       <Card padding="sm" border="none">
         <Stack gap="sm">
           {content}

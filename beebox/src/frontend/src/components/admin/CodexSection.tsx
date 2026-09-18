@@ -7,6 +7,7 @@ import { ExternalLink } from "../ui/ExternalLink";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 
 function CodexStatusSummary({ loading, status }: { loading: boolean; status: CodexStatus | null }) {
   if (loading) return <Text size="sm" tone="muted">Checking status…</Text>;
@@ -38,7 +39,7 @@ export function CodexSection() {
     <Card shadow>
       <Stack gap="md">
         <Row gap="sm" align="center">
-          <Text as="h2" size="lg" weight="semibold">Codex</Text>
+          <Heading level={2}>Codex</Heading>
           <Badge tone="neutral" size="sm">System-wide</Badge>
         </Row>
         <Text size="sm" tone="subtle">

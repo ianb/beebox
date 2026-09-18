@@ -12,6 +12,7 @@ import { apiRawFileUrl, getApiBase } from "../api";
 import { CommentsThread, parseComments } from "../components/CommentsThread";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Heading } from "../components/ui/Heading";
 import { RequestError } from "../lib/errors";
 import { registerFileType, type RendererProps } from "./index";
 
@@ -41,7 +42,7 @@ function CommentsRenderer({ data }: RendererProps) {
 
   return (
     <Stack gap="md" className="p-4 max-w-3xl">
-      <Text as="h2" size="lg" weight="semibold">Comments</Text>
+      <Heading level={2}>Comments</Heading>
       <CommentsThread comments={comments ?? []} />
     </Stack>
   );

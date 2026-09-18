@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 
 type SystemThemeScope =
   | { scope: "box"; boxKey: string }
@@ -153,7 +154,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
 
 export function BoxSystemThemePicker({ boxKey }: { boxKey: string }) {
   return <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
-    <Text as="h2" size="lg" weight="semibold">System theme</Text>
+    <Heading level={2}>System theme</Heading>
     <Text as="p" size="sm" tone="muted">Choose the toolbar and workspace surface for this box.</Text>
     <PickerBody input={{ scope: "box", boxKey }} />
   </Stack></Card>;

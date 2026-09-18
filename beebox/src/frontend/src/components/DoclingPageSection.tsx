@@ -14,6 +14,7 @@ import { Image } from "./ui/Image";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 
 /** Sibling renders this page section can link to, resolved by the container. */
 export interface PageSectionAssets {
@@ -104,9 +105,9 @@ export function DoclingPageSection({ page, items, assets }: DoclingPageSectionPr
   return (
     <section aria-label={page === null ? "Items with no page" : `Page ${String(page)}`}>
       <Row gap="sm" align="center" className="pb-2">
-        <Text as="h3" size="sm" weight="bold">
+        <Heading level={3}>
           {page === null ? "No page recorded" : `Page ${String(page)}`}
-        </Text>
+        </Heading>
         <Badge tone="neutral" size="sm">{items.length} item{items.length === 1 ? "" : "s"}</Badge>
       </Row>
       <Row gap="md" align="start" wrap>

@@ -6,6 +6,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { CheckboxField, TextField } from "../ui/fields";
 
 const LOCAL_OWNER_REQUIRED =
@@ -58,7 +59,7 @@ export function InviteSection() {
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
           <Stack gap="xs">
-            <Text as="h2" size="lg" weight="semibold">Create invite link</Text>
+            <Heading level={2}>Create invite link</Heading>
             <Text size="sm" tone="muted">
               The link creates one member account for this box and expires after 15 minutes.
             </Text>

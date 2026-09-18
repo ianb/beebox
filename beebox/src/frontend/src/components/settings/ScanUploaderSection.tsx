@@ -8,6 +8,7 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
 type UploaderToken = RouterOutput["scanTokens"]["list"][number];
@@ -130,9 +131,9 @@ export function ScanUploaderSection() {
     <Card as="section" aria-label="Scan uploaders" shadow>
       <Stack gap="md">
         <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">
+          <Heading level={2}>
             Scan uploaders
-          </Text>
+          </Heading>
           <Text size="sm" tone="muted">
             Mint a token for a machine running the scan uploader, then paste it into `configure`.
           </Text>
@@ -197,7 +198,7 @@ export function ScanUploaderSection() {
         ) : null}
 
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">Uploaders</Text>
+          <Heading level={3}>Uploaders</Heading>
           {listQuery.isLoading ? (
             <Text size="sm" tone="muted">Loading uploaders...</Text>
           ) : listQuery.error ? (

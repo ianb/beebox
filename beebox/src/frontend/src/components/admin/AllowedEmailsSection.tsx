@@ -9,6 +9,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
 type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
@@ -153,7 +154,7 @@ export function AllowedEmailsSection() {
     <Card as="section" aria-label="Allowed users" shadow>
       <Stack gap="md">
         <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">Allowed Users</Text>
+          <Heading level={2}>Allowed Users</Heading>
           <Text size="sm" tone="muted">
             Email addresses that can access this box. Leave empty to keep the box owner-only.
           </Text>

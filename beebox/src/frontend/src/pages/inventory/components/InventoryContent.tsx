@@ -6,6 +6,7 @@ import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { TabBar } from "../../../components/ui/TabBar";
 import { Text } from "../../../components/ui/Text";
+import { Heading } from "../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryTreemap } from "./InventoryTreemap";
 
@@ -53,7 +54,7 @@ function RepositorySummary({ data }: { data: Inventory }) {
   return (
     <Card as="section" aria-label="Git repository summary">
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">Git storage</Text>
+        <Heading level={2}>Git storage</Heading>
         <Row gap="lg" wrap>
           <InventoryStatistic value={formatBytes(repository.checkoutDiskBytes)} label="repository footprint" />
           <InventoryStatistic value={formatBytes(repository.gitDiskBytes)} label="of that, Git storage" />
@@ -104,7 +105,7 @@ function StorageRow({ label, columns }: { label: string; columns: Array<{ files:
 function InventoryEmpty() {
   return (
     <Card>
-      <Text as="h2" size="lg" weight="semibold">No content files found</Text>
+      <Heading level={2}>No content files found</Heading>
       <Text as="p" tone="muted" className="mt-1">The scan excludes runtime and dependency directories.</Text>
     </Card>
   );
@@ -148,7 +149,7 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
   return (
     <Card as="section" aria-label="Storage area view">
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">Area view</Text>
+        <Heading level={2}>Area view</Heading>
         <TabBar value={linkStatus} onChange={setLinkStatus} idPrefix="bbx-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
         <Row justify="between" align="end" wrap>
           <TabBar value={projection} onChange={setProjection} idPrefix="bbx-inventory-projection" label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
@@ -164,7 +165,7 @@ function InventoryDataTable({ items, linkStatus, projection }: { items: Inventor
   return (
     <Card as="section" aria-label={`${projection} storage table`}>
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">{linkStatus === "all" ? "All content" : `${linkStatus === "linked" ? "Linked" : "Unlinked"} cards`} — {projection === "grouped" ? "grouped" : "direct files"}</Text>
+        <Heading level={2}>{linkStatus === "all" ? "All content" : `${linkStatus === "linked" ? "Linked" : "Unlinked"} cards`} — {projection === "grouped" ? "grouped" : "direct files"}</Heading>
         {items.length === 0 ? <Text as="p" tone="muted">No matching cards.</Text> : <InventoryTable items={items} />}
       </Stack>
     </Card>
@@ -175,7 +176,7 @@ function InventoryRules({ data }: { data: Inventory }) {
   return (
     <Card background="warm" as="section" aria-label="Counting rules">
       <Stack gap="sm">
-        <Text as="h2" size="lg" weight="semibold">What the numbers mean</Text>
+        <Heading level={2}>What the numbers mean</Heading>
         <Text as="p" size="sm"><Text weight="semibold">Grouped:</Text> each <Text mono>Name.type.card</Text> and its sibling <Text mono>Name.attach/</Text> directory count as one item of that card type. Loose files remain grouped by extension.</Text>
         <Text as="p" size="sm"><Text weight="semibold">Direct:</Text> every regular file and symlink counts separately by card type or final extension. Symlink sizes follow their targets when available; dangling links use the link size.</Text>
         <Text as="p" size="sm"><Text weight="semibold">Linked:</Text> a card has at least one detected incoming reference from another card, authored Markdown file, or box view, using the same recognized ref forms as <Text mono>bbx mv</Text>. References to its attachments count; self-references do not. Tooling/generated Markdown and temporary cards are not referrers. Loose files and orphan attachment directories appear only under All.</Text>

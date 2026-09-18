@@ -15,6 +15,7 @@
 import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
@@ -98,7 +99,7 @@ export function DriveSection() {
 
         {legacyFolders.length === 0 ? null : (
           <Stack gap="xs">
-            <Text as="h3" size="sm" weight="semibold">Folder mounts awaiting conversion</Text>
+            <Heading level={3}>Folder mounts awaiting conversion</Heading>
             {legacyFolders.map((folder) => (
               <Text key={folder.driveFolderId} size="sm" tone="muted">{folder.localPath}</Text>
             ))}

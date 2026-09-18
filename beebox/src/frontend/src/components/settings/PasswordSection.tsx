@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
 type FieldErrors = Partial<Record<"current" | "next" | "confirm", string>>;
@@ -33,7 +34,7 @@ export function PasswordSection() {
     return (
       <Card as="section" aria-label="Password" shadow>
         <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">Password</Text>
+          <Heading level={2}>Password</Heading>
           <Text size="sm" tone="muted">This account signs in with Google; no local password is set.</Text>
         </Stack>
       </Card>
@@ -82,7 +83,7 @@ export function PasswordSection() {
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
           <Stack gap="xs">
-            <Text as="h2" size="lg" weight="semibold">Change password</Text>
+            <Heading level={2}>Change password</Heading>
             <Text size="sm" tone="muted">Confirm your current password before choosing a new one.</Text>
           </Stack>
           <TextField id="bbx-settings-password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />

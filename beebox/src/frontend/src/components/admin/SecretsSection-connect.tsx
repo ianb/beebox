@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { SecretValueForm, type SecretValueFormIds } from "./SecretsSection-forms";
 import type { SecretGuideEntry } from "./SecretsSection-guide";
 import type { RouterOutput } from "../../lib/trpc";
@@ -53,7 +53,7 @@ export function ConnectServiceSection({
 
   return (
     <Stack gap="sm">
-      <Text as="h3" size="sm" weight="semibold">Connect a service</Text>
+      <Heading level={3}>Connect a service</Heading>
       <Row gap="sm" wrap>
         {connectable.map((guide) => (
           <Button

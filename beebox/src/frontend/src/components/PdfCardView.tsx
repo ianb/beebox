@@ -45,6 +45,7 @@ import { AttachedComments } from "./AttachedComments";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { Button } from "./ui/Button";
 
@@ -61,7 +62,7 @@ function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFie
   const { title, author, pages, format, captured, source, description, originalName } = fields;
   return (
     <Stack gap="sm">
-      <Text as="h2" size="lg" weight="bold">{title ?? fallbackName}</Text>
+      <Heading level={2}>{title ?? fallbackName}</Heading>
       <Row gap="md" wrap>
         {author !== null ? <MetaItem label="Author">{author}</MetaItem> : null}
         {pages !== null ? <MetaItem label="Pages">{pages}</MetaItem> : null}

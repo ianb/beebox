@@ -15,6 +15,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { SecretValueForm } from "./SecretsSection-forms";
 import { SecretUsesBlock } from "./SecretsSection-uses";
 
@@ -110,7 +111,7 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
 
       {status.declaredHere.length === 0 ? null : (
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">Requested by this box's agent</Text>
+          <Heading level={3}>Requested by this box's agent</Heading>
           <Text size="sm" tone="muted">
             Declared slots waiting on a value and a grant — the agent named what it needs and can do nothing more.
           </Text>
@@ -122,7 +123,7 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
 
       {status.danglingGrants.length === 0 ? null : (
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">Stale grants</Text>
+          <Heading level={3}>Stale grants</Heading>
           <Text size="sm" tone="muted">
             These grants name secrets that no longer exist. Re-add the secret, or revoke the grant.
           </Text>

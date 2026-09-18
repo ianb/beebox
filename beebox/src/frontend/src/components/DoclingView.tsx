@@ -25,6 +25,7 @@ import { ExternalLink } from "./ui/ExternalLink";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { Heading } from "./ui/Heading";
 
 /** `figure-001.avif`, `figure-002.avif`, … — the renders of `pictures[]`, in order. */
 const FIGURE_RENDER_RE = /^figure-(\d{3})\.avif$/;
@@ -76,9 +77,9 @@ function DoclingHeader({
 }) {
   return (
     <Stack gap="sm">
-      <Text as="h2" size="lg" weight="bold">
+      <Heading level={2}>
         {document.originFilename ?? document.name ?? "Docling extraction"}
-      </Text>
+      </Heading>
       <Row gap="md" wrap>
         {document.schemaName === null ? null : <MetaItem label="Schema">{document.schemaName}</MetaItem>}
         {document.version === null ? null : <MetaItem label="Version">{document.version}</MetaItem>}

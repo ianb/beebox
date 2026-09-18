@@ -15,6 +15,7 @@ import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
 
@@ -129,7 +130,7 @@ export function NotificationsSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <Text as="h2" size="lg" weight="semibold">Notifications</Text>
+      <Heading level={2}>Notifications</Heading>
       <Stack gap="sm" className="mt-2">
         <Text as="p" size="sm" tone="muted">
           Get a push notification on this device when the box needs you — health alerts and

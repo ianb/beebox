@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { BoxSecretsView } from "./SecretsSection-box";
 import { ConnectServiceSection } from "./SecretsSection-connect";
@@ -58,7 +59,7 @@ export function SecretsSection() {
       <Stack gap="md">
         <Stack gap="xs">
           <div id="secrets-heading">
-            <Text as="h2" size="lg" weight="semibold">Secrets</Text>
+            <Heading level={2}>Secrets</Heading>
           </div>
           <Text size="sm" tone="muted">
             API keys live in one store outside every box, and each box holds a grant to the ones it may use.

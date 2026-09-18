@@ -9,6 +9,7 @@ import { Button } from "../ui/Button";
 import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { legacyHistoryState } from "../history/history-card-state";
@@ -107,7 +108,7 @@ export function CardActions({ target, onTrashed, vertical }: {
           {refs.data?.errors.length ? <Text as="p" size="sm" tone="danger" className="mt-4">Some files could not be checked. The list of links may be incomplete.</Text> : null}
           {referrers.length > 0 ? (
             <section className="mt-4">
-              <Text as="h3" size="sm" weight="semibold">{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Text>
+              <Heading level={3}>{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Heading>
               <Text as="p" size="sm" tone="subtle" className="mt-1">Those links will stop working. They are not changed automatically.</Text>
               <ul className="mt-2 list-disc pl-5 text-sm text-warm-700">
                 {referrers.map((referrer) => <li key={referrer.path}>{referrer.path} ({referrer.refs})</li>)}

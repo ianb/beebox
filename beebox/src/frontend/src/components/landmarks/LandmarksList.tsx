@@ -22,6 +22,7 @@ import type { RouterOutput } from "../../lib/trpc";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { LandmarkSection } from "./LandmarkSection";
 import { LandmarkSessions } from "./LandmarkSessions";
 
@@ -124,7 +125,7 @@ export function LandmarksList() {
             <div className="flex items-center gap-3">
               <span className="text-4xl leading-none flex-shrink-0" aria-hidden>💬</span>
               <Stack gap="xs">
-                <Text as="h2" size="lg" weight="bold">Other chats</Text>
+                <Heading level={2}>Other chats</Heading>
                 <Text as="span" size="xs" tone="muted">
                   Chats whose directory has no landmark
                 </Text>

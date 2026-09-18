@@ -24,6 +24,7 @@ import { FriendlyDate } from "../components/ui/FriendlyDate";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "./directory";
 import { registerFileType, type RendererProps } from "./index";
@@ -77,7 +78,7 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
-        <Text as="h2" size="lg" weight="semibold">{name ?? "Drive folder"}</Text>
+        <Heading level={2}>{name ?? "Drive folder"}</Heading>
         {status === "error" ? <Badge tone="danger">error</Badge> : null}
         {status === "ok" ? <Badge tone="success">mirrored</Badge> : null}
         {status === null ? <Badge tone="neutral">never synced</Badge> : null}

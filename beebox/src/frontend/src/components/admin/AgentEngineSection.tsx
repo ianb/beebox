@@ -5,6 +5,7 @@ import { Card } from "../ui/Card";
 import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
 import { AGENT_ENGINES } from "@shared/agent-models.js";
 
@@ -64,7 +65,7 @@ export function AgentEngineSection() {
       <Stack gap="md">
         <Stack gap="xs">
           <div id="agent-engine-heading">
-            <Text as="h2" size="lg" weight="semibold">Agent engine and model</Text>
+            <Heading level={2}>Agent engine and model</Heading>
           </div>
           <Text size="sm" tone="muted">
             Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine
