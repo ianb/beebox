@@ -22,7 +22,7 @@ import { DriveScheduleLine } from "./DriveScheduleLine";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
+    <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Drive</h2>
       {children}
     </div>

@@ -50,7 +50,7 @@ function DoclingRawView({ data }: RendererProps) {
     return (
       <Stack gap="sm" className="p-4">
         <Text as="p" tone="danger">Could not read {basename}: {error?.message ?? "no content"}</Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }
@@ -65,7 +65,7 @@ function DoclingRawView({ data }: RendererProps) {
           This extraction is {String(Math.round(loaded.text.length / 1024))} KB of JSON —
           too much to show at once. The Structure view reads it; the raw file downloads here.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }
@@ -79,7 +79,7 @@ function DoclingRawView({ data }: RendererProps) {
           This extraction is {String(Math.round(pretty.length / 1024))} KB of JSON — too
           much to show at once. The Structure view reads it; the raw file downloads here.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }

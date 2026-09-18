@@ -61,7 +61,7 @@ export function GuidePanel({ guide }: { guide: SecretGuideEntry }) {
             ))}
           </ol>
           {linkedStep === -1 ? (
-            <ExternalLink href={guide.obtainUrl} variant="inline">{guide.obtainUrl}</ExternalLink>
+            <ExternalLink href={guide.obtainUrl} variant="inline" className="self-start">{guide.obtainUrl}</ExternalLink>
           ) : null}
         </Stack>
       </Stack>

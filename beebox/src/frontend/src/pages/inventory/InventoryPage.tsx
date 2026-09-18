@@ -38,7 +38,7 @@ export function InventoryCardBody({ viewState, onViewStateChange }: { viewState:
     <Column overflow="auto" className="h-full">
       <Stack gap="lg" className="w-full max-w-5xl mx-auto py-6 px-4">
         <InventoryHeader refreshing={refreshing} refresh={refresh} refreshError={refreshError} />
-        {parsed.ok ? null : <Stack gap="xs"><Text as="p" tone="danger">{parsed.error}</Text><Button intent="secondary" size="sm" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
+        {parsed.ok ? null : <Stack gap="xs"><Text as="p" tone="danger">{parsed.error}</Text><Button intent="secondary" size="sm" className="self-start" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
         {inventory.isLoading ? (
           <InventoryLoading />
         ) : inventory.error !== null ? (

@@ -87,7 +87,7 @@ export function InviteSection() {
             error={emailError}
             autoComplete="email"
           />
-          <Button id="bbx-admin-invite-create" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
+          <Button id="bbx-admin-invite-create" className="self-start" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
             Create invite link
           </Button>
           {createInvite.error ? <InviteError message={createInvite.error.message} /> : null}

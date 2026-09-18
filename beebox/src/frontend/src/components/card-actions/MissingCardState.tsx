@@ -22,7 +22,7 @@ export function MissingCardState({ path, onClose }: { path: string; onClose?: ((
       </Text>
       <Text as="p" size="sm" mono breakAll tone="muted">{path}</Text>
       {history.error ? <Text as="p" size="sm" tone="danger">History could not be checked: {history.error.message}</Text> : null}
-      <div className="flex flex-wrap items-center gap-3 mt-2">
+      <div className="flex flex-wrap items-center gap-3">
         {existed ? <Button intent="secondary" onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>See history for this path</Button> : null}
         {onClose ? <Button intent="secondary" onClick={onClose}>Close this view</Button> : null}
       </div>

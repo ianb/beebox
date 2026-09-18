@@ -127,7 +127,7 @@ export function ScanUploaderSection() {
   };
 
   return (
-    <Card as="section" aria-label="Scan uploaders" shadow className="mt-6">
+    <Card as="section" aria-label="Scan uploaders" shadow>
       <Stack gap="md">
         <Stack gap="xs">
           <Text as="h2" size="lg" weight="semibold">

@@ -115,7 +115,7 @@ export function CompanionPairingSection() {
   };
 
   return (
-    <Card as="section" aria-label="iOS companion pairing" shadow className="mt-6">
+    <Card as="section" aria-label="iOS companion pairing" shadow>
       <Stack gap="md">
         <Stack gap="xs">
           <Text as="h2" size="lg" weight="semibold">

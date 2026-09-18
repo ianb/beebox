@@ -63,7 +63,7 @@ export function QuestionCardView({ data }: RendererProps) {
               <Text as="div" size="sm">{question.learning.proposal}</Text>
             </Card>
           ) : null}
-          <StatusBadge status={question.status ?? "answered"} size="sm" />
+          <StatusBadge status={question.status ?? "answered"} size="sm" className="self-start" />
         </Stack>
       </Card>
     </div>

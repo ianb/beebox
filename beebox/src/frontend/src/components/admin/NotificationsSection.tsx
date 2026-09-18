@@ -149,7 +149,7 @@ export function NotificationsSection() {
         ) : endpoint ? (
           <Row gap="sm" align="center">
             <Text as="p" size="sm">Notifications are on for this device.</Text>
-            <Button id="bbx-admin-notifications-disable" intent="secondary" onClick={disable} loading={busy} loadingLabel="Disabling…">
+            <Button id="bbx-admin-notifications-disable" className="self-start" intent="secondary" onClick={disable} loading={busy} loadingLabel="Disabling…">
               Disable
             </Button>
           </Row>
@@ -159,7 +159,7 @@ export function NotificationsSection() {
             settings, then reload.
           </Text>
         ) : (
-          <Button id="bbx-admin-notifications-enable" intent="primary" onClick={enable} loading={busy} loadingLabel="Enabling…">
+          <Button id="bbx-admin-notifications-enable" className="self-start" intent="primary" onClick={enable} loading={busy} loadingLabel="Enabling…">
             Enable notifications
           </Button>
         )}

@@ -1,6 +1,6 @@
 ---
 title: "Stack silently does not stack, and the UI primitives push presentation onto every call site"
-workstream: unattached
+workstream: ui-stack-roles
 area: beebox
 labels: [ui, frontend]
 filed-by: agent

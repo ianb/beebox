@@ -101,6 +101,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
         </Text>
         <Button
           id="bbx-admin-reset-link-copy"
+          className="self-start"
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}

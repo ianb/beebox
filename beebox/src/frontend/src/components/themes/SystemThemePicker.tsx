@@ -118,7 +118,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
   if (query.isLoading) return <div aria-busy="true"><Text size="sm" tone="muted">Loading system themes…</Text></div>;
   if (query.error || !query.data) {
     return <Stack gap="sm"><Text size="sm" tone="danger">Could not load system themes: {query.error?.message ?? "No settings were returned."}</Text>
-      <Button size="sm" intent="ghost" onClick={() => void query.refetch()}>Retry</Button></Stack>;
+      <Button size="sm" intent="ghost" className="self-start" onClick={() => void query.refetch()}>Retry</Button></Stack>;
   }
   const systemTheme = query.data.systemTheme;
   const explicit = input.scope === "box" ? systemTheme.boxExplicitTheme : systemTheme.landmark?.explicitTheme ?? null;
@@ -147,7 +147,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
     {mutation.isPending ? <div role="status"><Text size="sm" tone="muted">Saving system theme…</Text></div> : null}
     {mutation.data?.commitWarning ? <div role="status"><Text size="sm" tone="danger">{mutation.data.commitWarning}</Text></div> : null}
     {mutation.error ? <Stack gap="xs"><Text size="sm" tone="danger">Could not save system theme: {mutation.error.message}</Text>
-      <Button size="sm" intent="ghost" onClick={() => select(lastChoice)}>Retry</Button></Stack> : null}
+      <Button size="sm" intent="ghost" className="self-start" onClick={() => select(lastChoice)}>Retry</Button></Stack> : null}
   </Stack>;
 }
 

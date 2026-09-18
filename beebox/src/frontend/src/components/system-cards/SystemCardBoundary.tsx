@@ -14,6 +14,6 @@ export function SystemCardBoundary({ path, type, children }: { path: string; typ
   if (!error) return children;
   return <Card padding="md" border="subtle"><Stack gap="sm">
     <Text as="p" tone="danger">{error}</Text>
-    <TextLink to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS[type]}`)}>Open canonical {type}</TextLink>
+    <TextLink className="self-start" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS[type]}`)}>Open canonical {type}</TextLink>
   </Stack></Card>;
 }

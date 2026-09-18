@@ -92,7 +92,7 @@ export function BoxValidationLayout() {
 }
 
 function BoxValidationError() {
-  return <Stack gap="sm" className="max-w-md mx-auto mt-12 p-4"><Text as="h1" size="xl" weight="bold" tone="danger">Could not load boxes</Text><Text as="p" tone="subtle">The box list could not be checked.</Text><Button id="bbx-box-validation-reload" intent="primary" onClick={() => window.location.reload()}>Try again</Button></Stack>;
+  return <Stack gap="sm" className="max-w-md mx-auto mt-12 p-4"><Text as="h1" size="xl" weight="bold" tone="danger">Could not load boxes</Text><Text as="p" tone="subtle">The box list could not be checked.</Text><Button id="bbx-box-validation-reload" className="self-start" intent="primary" onClick={() => window.location.reload()}>Try again</Button></Stack>;
 }
 
 /** Product chrome and runtime, mounted only after the box is validated. */

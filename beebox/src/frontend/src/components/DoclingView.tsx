@@ -109,7 +109,7 @@ export function DoclingView({ data }: RendererProps) {
         <Text as="p" tone="subtle">
           This browser can&rsquo;t decompress <code>.gz</code> files in the page.
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download</ExternalLink>
       </Stack>
     );
   }
@@ -129,7 +129,7 @@ export function DoclingView({ data }: RendererProps) {
         <Text as="p" tone="danger">
           Could not read {basename}: {error?.message ?? "no content"}
         </Text>
-        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+        <ExternalLink href={downloadUrl} variant="button" download={basename} className="self-start">Download the file</ExternalLink>
       </Stack>
     );
   }

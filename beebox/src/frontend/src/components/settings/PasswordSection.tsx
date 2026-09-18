@@ -88,7 +88,7 @@ export function PasswordSection() {
           <TextField id="bbx-settings-password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
           <TextField id="bbx-settings-password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />
           <TextField id="bbx-settings-password-confirm" label="Confirm new password" type="password" value={confirmPassword} onChange={setConfirmPassword} error={errors.confirm} autoComplete="new-password" required />
-          <Button id="bbx-settings-password-submit" type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
+          <Button id="bbx-settings-password-submit" className="self-start" type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
           {message ? <div role="status"><Text size="sm" tone="strong">{message}</Text></div> : null}
         </Stack>
       </form>

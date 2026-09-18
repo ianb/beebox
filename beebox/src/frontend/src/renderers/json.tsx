@@ -98,7 +98,7 @@ function JsonRenderer({ data }: RendererProps) {
           <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>
         </Stack>
         <Text as="div" tone="subtle" size="sm">This file is large and isn’t loaded automatically.</Text>
-        <Row gap="sm" className="mt-2">
+        <Row gap="sm">
           <Button intent="primary" size="sm" onClick={() => setLoadRequested(true)}>
             Load JSON ({formatBytes(meta.size)})
           </Button>

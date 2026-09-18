@@ -32,7 +32,7 @@ function answeredCard(q: QuestionInfo) {
           {q.prompt ?? q.name}
         </Text>
         {renderQuestionAnswer(q, { size: "sm", tone: "default" })}
-        <StatusBadge status={q.status ?? "answered"} size="sm" />
+        <StatusBadge status={q.status ?? "answered"} size="sm" className="self-start" />
       </Stack>
     </Card>
   );
@@ -41,7 +41,7 @@ function answeredCard(q: QuestionInfo) {
 function demotedCard(q: QuestionInfo, onAnswered: () => void) {
   return (
     <Stack key={q.path} gap="xs">
-      <StatusBadge status={q.status ?? "expired"} size="sm" />
+      <StatusBadge status={q.status ?? "expired"} size="sm" className="self-start" />
       <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered} />
     </Stack>
   );
@@ -63,7 +63,7 @@ function invalidCard(q: QuestionInfo, boxSlug: string | undefined) {
           Invalid question card
         </Text>
         {boxSlug !== undefined ? (
-          <Link to={href(`/${boxSlug}/browse/${q.relativePath}`)}>
+          <Link to={href(`/${boxSlug}/browse/${q.relativePath}`)} className="self-start">
             <Text as="span" size="sm" tone="emphasis">{label}</Text>
           </Link>
         ) : (
