@@ -514,6 +514,28 @@ skill is invisible to knowledge audits.
 Each numbered item is one or a few commits in the worktree. The plan ships in
 one piece through `/finish` when the boxholder asks.
 
+## Implementation notes (2026-09-18)
+
+Where the implementation went past or differed from the tracks above:
+
+- **A failing `run` is a condition.** The runner raises it as `run-failed` and
+  resolves it on the next run that does not fail, so three "run timed out"
+  alerts become one record with a count.
+- **`docling-update`** reports `newer-release` as a condition and resolves it
+  once the pin catches up; before, it raised a new `normal` alert every day.
+- **Priority retunes beyond Track D's list:** `smoke-review` and `tour-check`
+  no longer use `important` (nothing a weekly review finds needs today);
+  landed routine work in `knip-sweep`, `agent-docs-refresh`, and
+  `supplemental-lint` is `fyi`; a branch waiting on a person is `normal`.
+- **The definitions live once**, as `PRIORITY_GUIDE` beside `prioritySchema`
+  in `bin/lib/schedules.ts`, and every session briefing includes it.
+- **The tick runs `migrate-alerts` on every tick**, not only when a legacy
+  record exists: it is an idempotent directory scan, and one call site is
+  simpler than a detection step.
+- **Leftover state files** `full-suite/last-alert.json` and
+  `box-convergence/last-report.json` in the store are no longer read; delete
+  them at landing.
+
 ## Rollout shape
 
 Done when the tests in *What will hold this* pass, `bin/schedules lint` is
@@ -521,6 +543,7 @@ clean, and a dry run of each converted schedule prints the expected
 `would alert (<priority>)` lines.
 
 Migration: scripted and atomic per record. After the merge, the landing agent
-runs `bin/schedules migrate-alerts` once. The tick also runs it at start if
+runs `bin/schedules migrate-alerts` once and deletes the two leftover state
+files named above. The tick also runs it at start if
 any legacy record remains, so a forgotten step is repaired within 15 minutes.
 Every open alert becomes acknowledged, per the boxholder's decision.
