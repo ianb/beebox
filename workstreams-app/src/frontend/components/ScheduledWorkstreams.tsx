@@ -105,6 +105,7 @@ export function ScheduledSection({ rows, issues, now }: { rows: Workstream[]; is
         <span className={heartbeat.stale ? "schedule-heartbeat schedule-heartbeat-stale" : "schedule-heartbeat"}>
           {heartbeat.text}
         </span>
+        <Link to="/alerts" className="schedule-all-alerts">all alerts</Link>
       </h2>
       <ul>
         {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} now={now} />)}

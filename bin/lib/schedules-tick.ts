@@ -13,12 +13,13 @@ import {
   acquireLock,
   ensureStoreRoot,
   lockStaleAfterMs,
-  readAlerts,
   readScheduleState,
   releaseLock,
   updateStoreState,
 } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
+import { migrateAlerts, resolveConditions } from "./schedules-alert-lifecycle.js";
+import { digestIfDue } from "./schedules-digest.js";
 import { isDue, runSchedule, type RunReport } from "./schedules-runner.js";
 
 export interface TickResult {
@@ -28,28 +29,18 @@ export interface TickResult {
   heartbeatError: string | null;
 }
 
-/** The title every "this schedule cannot run" alert carries. It is also the
- *  latch: a tick raises one only when no OPEN alert with this title exists for
- *  the schedule, so a schedule left broken for a month is one record rather
- *  than one every fifteen minutes — and acknowledging it re-arms the alarm for
- *  a break that is still not fixed. */
+/** The title every "this schedule cannot run" alert carries. */
 export const INVALID_SCHEDULE_ALERT_TITLE = "schedule cannot run";
+
+/** The condition it raises under: a schedule left broken for a month is one
+ *  record with a count rather than one every fifteen minutes, and the tick
+ *  resolves it once the schedule loads again. Acknowledging it re-arms the
+ *  alarm for a break that is still not fixed. */
+const INVALID_SCHEDULE_CONDITION = "invalid-schedule";
 
 /** An invalid schedule is silent otherwise: it never runs, so no run can fail
  *  and no run can report. The alert IS the notice. */
 async function alertInvalidSchedule(deps: RunnerDeps, entry: InvalidSchedule): Promise<void> {
-  // A latch that cannot be read is not a reason to stay quiet, and not a reason
-  // to abandon the rest of the tick: an unreadable alert record means raise the
-  // alert anyway. A duplicate record is a nuisance; a swallowed one is the
-  // failure this whole design exists to prevent.
-  let latched = false;
-  try {
-    const alerts = await readAlerts(deps.storeRoot, entry.name);
-    latched = alerts.some((alert) => alert.state === "open" && alert.title === INVALID_SCHEDULE_ALERT_TITLE);
-  } catch (e) {
-    process.stderr.write(`schedules: cannot read ${entry.name}'s alerts (${e instanceof Error ? e.message : String(e)}); alerting anyway\n`);
-  }
-  if (latched) return;
   const problems = entry.issues.map((issue) => `- \`${issue.path}\`: ${issue.message}`).join("\n");
   await raiseAlert(deps, {
     workstream: entry.name,
@@ -58,6 +49,7 @@ async function alertInvalidSchedule(deps: RunnerDeps, entry: InvalidSchedule): P
     message: `${entry.name} is skipped every tick: ${entry.issues.length === 1 ? "1 problem" : `${String(entry.issues.length)} problems`} in schedules/${entry.name}/. Fix it and run \`bin/schedules lint\`.`,
     details: problems,
     priority: "important",
+    condition: INVALID_SCHEDULE_CONDITION,
   });
 }
 
@@ -128,6 +120,28 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
+  // Records from before conditions are rewritten before anything reads them:
+  // every reader below is strict on the new shape. Idempotent, so this is a
+  // directory scan on every tick after the first.
+  try {
+    const migrated = await migrateAlerts(deps.storeRoot, startedAt.toISOString());
+    if (migrated > 0) process.stdout.write(`schedules: migrated ${String(migrated)} alert record(s) to the condition shape\n`);
+  } catch (e) {
+    await releaseLock(deps.storeRoot, TICK_LOCK_NAME);
+    const message = e instanceof Error ? e.message : String(e);
+    await notifyStoreFailure(deps, `alert migration failed: ${message}`);
+    return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
+  }
+
+  // Before any schedule: they run serially, one can take hours, and the digest
+  // is due at a time of day. A digest that fails is logged and the schedules
+  // still run; the next tick tries again because the stamp did not move.
+  try {
+    await digestIfDue(deps);
+  } catch (e) {
+    process.stderr.write(`schedules: digest failed: ${e instanceof Error ? e.message : String(e)}\n`);
+  }
+
   const reports: RunReport[] = [];
   const invalid: ScheduleEntry[] = [];
   try {
@@ -138,6 +152,9 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
         await alertInvalidSchedule(deps, entry);
         continue;
       }
+      await resolveConditions(deps.storeRoot, {
+        workstream: entry.name, conditions: [INVALID_SCHEDULE_CONDITION], except: [], at: deps.now().toISOString(),
+      });
       const state = await readScheduleState(deps.storeRoot, entry.name);
       if (!isDue({ config: entry.config, state }, deps.now().getTime())) continue;
       reports.push(await runSchedule(deps, { schedule: entry, dryRun: false }));

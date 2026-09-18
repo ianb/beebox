@@ -57,7 +57,7 @@ export function runnerDeps(context: Context): RunnerDeps {
 
 // ─── Argument reading ─────────────────────────────────────────────────────
 
-const VALUE_FLAGS = new Set(["title", "message", "details", "body", "priority", "workstream", "run"]);
+const VALUE_FLAGS = new Set(["title", "message", "details", "body", "priority", "workstream", "run", "condition", "except"]);
 
 /** `--flag value`, values consumed unconditionally: a message of "-- no" is
  *  the author's words, not a flag (the bin/comments rule). */
@@ -72,6 +72,18 @@ export function flags(args: string[]): Map<string, string> {
     i += 1;
   }
   return found;
+}
+
+/** Every value of a flag that may repeat (`--except a --except b`); `flags`
+ *  keeps only the last. Same consumption rule: the value is taken as given. */
+export function flagValues(args: string[], name: string): string[] {
+  const values: string[] = [];
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] !== `--${name}`) continue;
+    values.push(args[i + 1] ?? "");
+    i += 1;
+  }
+  return values;
 }
 
 async function readStdin(): Promise<string> {
