@@ -126,14 +126,18 @@ const pinned = pinnedVersion();
 const latest = await latestRelease();
 if (latest === null) process.exit(0);
 
-if (compareVersions(latest.version, pinned) <= 0) {
-  // `resolve` honors SCHEDULE_DRY_RUN itself.
+/** Nothing actionable: the pin is current, or the newer release has not
+ *  settled. An open alert about an older release is stale either way.
+ *  `resolve` honors SCHEDULE_DRY_RUN itself. */
+async function resolveAndExit(): Promise<never> {
   await execa(path.join(REPO_ROOT, "bin", "schedules"), ["resolve", "--condition", NEWER_RELEASE_CONDITION], { stdio: "inherit" });
   process.exit(0);
 }
 
+if (compareVersions(latest.version, pinned) <= 0) await resolveAndExit();
+
 const ageDays = (Date.now() - latest.uploadedAt.getTime()) / 86_400_000;
-if (ageDays <= SETTLING_DAYS) process.exit(0);
+if (ageDays <= SETTLING_DAYS) await resolveAndExit();
 
 await alert({
   title: `docling ${latest.version} is available (pinned: ${pinned})`,
