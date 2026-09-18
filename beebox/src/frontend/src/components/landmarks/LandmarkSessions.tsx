@@ -14,6 +14,7 @@ import { href, toSearch } from "../../lib/routing";
 import { SessionRow, type SessionRowItem } from "../session-pickers/SessionRow";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { ChevronIcon } from "./ChevronIcon";
 
 export function LandmarkSessions({
@@ -38,7 +39,7 @@ export function LandmarkSessions({
       ))}
 
       {bucket.sessions.length === 0 && !hasOlder ? (
-        <Text as="div" size="sm" tone="muted">No chats here yet.</Text>
+        <Hint>No chats here yet.</Hint>
       ) : null}
 
       {hasOlder ? (

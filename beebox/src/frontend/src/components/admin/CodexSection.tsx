@@ -7,17 +7,19 @@ import { ExternalLink } from "../ui/ExternalLink";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Heading } from "../ui/Heading";
 
 function CodexStatusSummary({ loading, status }: { loading: boolean; status: CodexStatus | null }) {
   if (loading) return <Text size="sm" tone="muted">Checking status…</Text>;
   if (status?.kind === "logged-in") return <Row><Badge tone="success">Authenticated</Badge></Row>;
   if (status?.kind === "inconclusive") {
-    return <Stack gap="sm"><Row><Badge tone="warning">Status unknown</Badge></Row><Text size="sm" tone="danger">{status.detail}</Text></Stack>;
+    return <Stack gap="sm"><Row><Badge tone="warning">Status unknown</Badge></Row><ErrorText>{status.detail}</ErrorText></Stack>;
   }
   return (
     <Stack gap="sm">
       <Row><Badge tone={status?.kind === "unavailable" ? "danger" : "neutral"}>Not authenticated</Badge></Row>
-      {status !== null && "detail" in status && status.detail ? <Text size="sm" tone="danger">{status.detail}</Text> : null}
+      {status !== null && "detail" in status && status.detail ? <ErrorText>{status.detail}</ErrorText> : null}
     </Stack>
   );
 }
@@ -38,7 +40,7 @@ export function CodexSection() {
     <Card shadow>
       <Stack gap="md">
         <Row gap="sm" align="center">
-          <Text as="h2" size="lg" weight="semibold">Codex</Text>
+          <Heading level={2}>Codex</Heading>
           <Badge tone="neutral" size="sm">System-wide</Badge>
         </Row>
         <Text size="sm" tone="subtle">
@@ -58,7 +60,7 @@ export function CodexSection() {
           </Card>
         ) : null}
 
-        {error ? <Text size="sm" tone="danger">{error}</Text> : null}
+        {error ? <ErrorText>{error}</ErrorText> : null}
 
         <Row gap="sm" wrap>
           {!loggedIn && !statusUnknown && !polling ? (

@@ -2,6 +2,7 @@ import { Button } from "../../../components/ui/Button";
 import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { Text } from "../../../components/ui/Text";
+import { ErrorText } from "../../../components/ui/ErrorText";
 
 interface InventoryHeaderProps {
   refreshing: boolean;
@@ -16,7 +17,7 @@ export function InventoryHeader({ refreshing, refresh, refreshError }: Inventory
         <InventoryTitle />
         <Button id="bbx-inventory-refresh" intent="secondary" size="sm" onClick={refresh} loading={refreshing} loadingLabel="Scanning…">Refresh scan</Button>
       </Row>
-      {refreshError === null ? null : <Text as="p" tone="danger" size="sm">Refresh failed: {refreshError}</Text>}
+      {refreshError === null ? null : <ErrorText>Refresh failed: {refreshError}</ErrorText>}
     </Stack>
   );
 }

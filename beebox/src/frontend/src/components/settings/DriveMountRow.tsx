@@ -24,6 +24,8 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
 import { bbxSource } from "../../lib/source-tag";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
@@ -161,7 +163,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
         {mount.status === null ? <Badge tone="neutral">never synced</Badge> : null}
       </Row>
 
-      <Text size="sm" tone="muted">
+      <Hint>
         mirrors into {mount.dir === "" ? "the box root" : mount.dir} · {childSummary(mount.children)}
         {problemSummary(mount.problems) === null ? null : <>{" · "}{problemSummary(mount.problems)}</>}
         {mount.lastSync === null ? null : (
@@ -170,10 +172,10 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
             <FriendlyDate iso={mount.lastSync} />
           </>
         )}
-      </Text>
+      </Hint>
 
       {mount.error === null ? null : (
-        <Text size="sm" tone="danger">{mount.error}</Text>
+        <ErrorText>{mount.error}</ErrorText>
       )}
 
       <Row gap="sm" align="center" wrap>

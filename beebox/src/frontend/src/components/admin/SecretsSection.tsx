@@ -23,6 +23,9 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { BoxSecretsView } from "./SecretsSection-box";
 import { ConnectServiceSection } from "./SecretsSection-connect";
@@ -45,7 +48,7 @@ export function SecretsSection() {
   if (status.isLoading) {
     return (
       <Card as="section" aria-label="Secrets" shadow aria-busy>
-        <Text size="sm" tone="muted">Loading secrets…</Text>
+        <Hint>Loading secrets…</Hint>
       </Card>
     );
   }
@@ -58,12 +61,12 @@ export function SecretsSection() {
       <Stack gap="md">
         <Stack gap="xs">
           <div id="secrets-heading">
-            <Text as="h2" size="lg" weight="semibold">Secrets</Text>
+            <Heading level={2}>Secrets</Heading>
           </div>
-          <Text size="sm" tone="muted">
+          <Hint>
             API keys live in one store outside every box, and each box holds a grant to the ones it may use.
             Values are never shown here — saving one replaces it.
-          </Text>
+          </Hint>
         </Stack>
 
         <Row gap="sm" wrap>
@@ -99,7 +102,7 @@ export function SecretsSection() {
             message once, and keep both when they genuinely differ. */}
         {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
           .map((message) => (
-            <div key={message} role="alert"><Text size="sm" tone="danger">{message}</Text></div>
+            <div key={message} role="alert"><ErrorText>{message}</ErrorText></div>
           ))}
       </Stack>
     </Card>

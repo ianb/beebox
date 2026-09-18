@@ -8,6 +8,9 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
 type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
@@ -115,15 +118,15 @@ export function CompanionPairingSection() {
   };
 
   return (
-    <Card as="section" aria-label="iOS companion pairing" shadow className="mt-6">
+    <Card as="section" aria-label="iOS companion pairing" shadow>
       <Stack gap="md">
         <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">
+          <Heading level={2}>
             iOS Companion
-          </Text>
-          <Text size="sm" tone="muted">
+          </Heading>
+          <Hint>
             Pair the native app with this box using a short-lived QR code.
-          </Text>
+          </Hint>
         </Stack>
 
         <Row gap="sm" wrap>
@@ -144,7 +147,7 @@ export function CompanionPairingSection() {
         </Row>
 
         {createMutation.error ? (
-          <Text size="sm" tone="danger">{createMutation.error.message}</Text>
+          <ErrorText>{createMutation.error.message}</ErrorText>
         ) : null}
 
         {ticket ? (
@@ -162,11 +165,11 @@ export function CompanionPairingSection() {
         ) : null}
 
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">{deviceHeading(devicesQuery.data?.scope)}</Text>
+          <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
           {devicesQuery.isLoading ? (
-            <Text size="sm" tone="muted">Loading devices...</Text>
+            <Hint>Loading devices...</Hint>
           ) : devicesQuery.error ? (
-            <Text size="sm" tone="danger">Devices could not be loaded. {devicesQuery.error.message}</Text>
+            <ErrorText>Devices could not be loaded. {devicesQuery.error.message}</ErrorText>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (
             <>
               <div className="divide-y divide-warm-100">
@@ -181,11 +184,11 @@ export function CompanionPairingSection() {
               ) : null}
             </>
           ) : (
-            <Text size="sm" tone="muted">
+            <Hint>
               {devicesQuery.data?.scope === "own"
                 ? "You have not paired a device with this box."
                 : "No devices paired yet."}
-            </Text>
+            </Hint>
           )}
         </Stack>
       </Stack>
