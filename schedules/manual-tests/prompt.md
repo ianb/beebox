@@ -41,7 +41,7 @@ End with two things, in this order.
 
 First, your report:
 
-- `bin/schedules alert --title "<one line>" --message "<one short paragraph>"
+- `bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>"
   --priority <priority>` — **important** when the suite exposed a real
   regression, **normal** when you filed or updated an issue for a known-shaped
   failure, **fyi** when the failure was environmental (a service was down, a

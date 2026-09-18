@@ -79,7 +79,7 @@ function briefingFor(input: { name: string; runId: string; handoff: Handoff | nu
       "",
       "Finish by filing your report — a run whose session ends without one is recorded as bailed:",
       "",
-      `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<one short paragraph>" \\`,
+      `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<Markdown: the finding, then a list>" \\`,
       `        [--details @<file>] [--priority important|normal|fyi]\n\n${PRIORITY_GUIDE}`,
       "",
       "or, when there is nothing worth saying:",

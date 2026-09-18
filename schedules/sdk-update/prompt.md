@@ -129,7 +129,7 @@ all.
 
 Every run ends with exactly one of:
 
-- `bin/schedules alert --title "<one line>" --message "<one short paragraph>"
+- `bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>"
   [--details @<file>] --priority <priority>`
 - `bin/schedules done` — reviewed, nothing worth the boxholder's attention
   (a nothing-relevant ledger entry is the durable record; the alert is for

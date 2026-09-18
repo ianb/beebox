@@ -49,7 +49,7 @@ human should update given what you found.
 
 ## Finishing
 
-End with `bin/schedules alert --title "<one line>" --message "<paragraph>"
+End with `bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>"
 --priority <important|normal|fyi>` or `bin/schedules done` if nothing
 needed doing. Say what you fixed, what you filed, what you called a false
 positive and why, and the branch's state (commits, suite status, ready to

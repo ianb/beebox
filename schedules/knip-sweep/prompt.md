@@ -65,7 +65,7 @@ the full suite rather than "probably fine".
 End with:
 
 ```
-bin/schedules alert --title "<one line>" --message "<one short paragraph>" \
+bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>" \
     --priority <important|normal|fyi>
 ```
 

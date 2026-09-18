@@ -77,7 +77,7 @@ A verified refresh lands itself and reaches the site:
 End with:
 
 ```
-bin/schedules alert --title "<one line>" --message "<one short paragraph>" \
+bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>" \
     --priority <important|normal|fyi>
 ```
 
