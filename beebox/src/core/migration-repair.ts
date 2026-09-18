@@ -80,12 +80,15 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     attempt += 1;
   }
   const receipt = `refs/bbx/migrations/${opts.name}/repair-started`;
-  const refs = await exec("git", ["for-each-ref", "--format=%(refname)", receipt], { cwd: opts.boxRoot });
+  // A receipt from an attempt that never finished points at that attempt's snapshot, not this pass's.
+  const refs = await exec("git", ["for-each-ref", "--format=%(objectname)", receipt], { cwd: opts.boxRoot });
+  let recoveryRef = refs.stdout.trim() || opts.recoveryRef;
   let reason = "The previous attempt did not reach a verified committed result. Inspect its Git recovery and partial output before authorizing another attempt.";
   let { failure } = opts;
   let sessionId: string | undefined;
   let code = opts.code;
   if (!refs.stdout.trim()) {
+    recoveryRef = opts.recoveryRef;
     await withBoxGitLock(opts.boxRoot, async () => {
       await exec("git", ["update-ref", receipt, opts.recoveryRef], { cwd: opts.boxRoot });
     });
@@ -100,7 +103,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
   }
   const content = createTextQuestionTemplate({
     memo: `Migration ${opts.name} needs attention`, askedAt: getBoxTimeISO(opts.boxRoot),
-    prompt: `${reason}\nMigration: ${opts.name}\nRecovery: ${opts.recoveryRef}\n${failure}`,
+    prompt: `${reason}\nMigration: ${opts.name}\nRecovery: ${recoveryRef}\n${failure}`,
     directive: opts.directive,
   });
   cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema);

@@ -42,8 +42,10 @@ runs only deterministic scripts unless `--repair` is explicit, which adds
 bounded agent repair and procedure migrations under a one-run-per-answer bound
 (a failed run writes one `Migration_<name>-N` question and nothing runs again
 until it is answered). The hourly convergence schedule passes `--repair`, so a
-procedure migration that lands is applied on every box within the hour without
-anyone running it by hand. A procedure still needs its machine validation gate.
+procedure migration that lands is applied on every idle box at its next hourly
+pass without anyone running it by hand; a busy box defers, and a failure or an
+unanswered question is reported. A procedure still needs its machine
+validation gate.
 The mark-applied
 commands only edit the manifest, leave that edit uncommitted for review, and
 never establish that the conversion actually happened.

@@ -155,12 +155,12 @@ await box.commitAll("procedure pending");
 let runs = 0;
 let exit = 1;
 const runProcedure = async (procedure, { onOutput }) => { runs += 1; onOutput(`${procedure} attempt ${String(runs)} failed\n`); return exit; };
-const first = await sweepMigrations({ boxRoot: box.root, repair: true, runProcedure });
+const first = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 const questionText = await box.read(first.question);
 JSON.stringify({ status: first.status, runs, question: first.question, carriesOutput: questionText.includes("trick-secret-runtime attempt 1 failed"), receipt: git(box, "for-each-ref", "--format=%(refname)", "refs/bbx/migrations/trick-secret-runtime/repair-started") })
 => {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","carriesOutput":true,"receipt":""}
 
-const second = await sweepMigrations({ boxRoot: box.root, repair: true, runProcedure });
+const second = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 const record = await boxMaintenanceStatus(box.root);
 JSON.stringify({ status: second.status, runs, question: second.question, record: record.phase, owner: record.owner })
 => {"status":"failed","runs":1,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-0.question.card","record":"exclusive","owner":null}
@@ -168,9 +168,28 @@ JSON.stringify({ status: second.status, runs, question: second.question, record:
 await box.write(first.question, questionText.replace("status: pending", "status: answered\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z"));
 await box.commitAll("answer");
 exit = 0;
-const third = await sweepMigrations({ boxRoot: box.root, repair: true, runProcedure });
+const third = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
 JSON.stringify({ status: third.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime") })
 => {"status":"applied","runs":2,"recorded":true}
+```
+
+A run that never finished (killed by the execution timeout) leaves its receipt.
+The next pass writes the question instead of running again, naming the
+unfinished attempt's own snapshot, and a person's `--apply` still runs the
+procedure directly:
+
+```ts continue
+await box.write(MANIFEST_PATH, (await box.read(MANIFEST_PATH)).split("\n").filter((line) => !line.includes("trick-secret-runtime")).join("\n"));
+await box.commitAll("pending again");
+const unfinished = git(box, "rev-parse", "HEAD");
+git(box, "update-ref", "refs/bbx/migrations/trick-secret-runtime/repair-started", unfinished);
+const stale = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
+JSON.stringify({ status: stale.status, runs, question: stale.question, namesReceipt: (await box.read(stale.question)).includes(`Recovery: ${unfinished}`) })
+=> {"status":"failed","runs":2,"question":"_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card","namesReceipt":true}
+
+const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
+JSON.stringify({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes("trick-secret-runtime"), open: manual.questions })
+=> {"status":"attention","runs":3,"recorded":true,"open":["_bookkeeping/questions/Migration_trick-secret-runtime-1.question.card"]}
 ```
 
 ```ts cleanup

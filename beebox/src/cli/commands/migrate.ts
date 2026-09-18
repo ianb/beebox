@@ -142,6 +142,9 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
     refresh: true,
     json: options.json,
     repair: options.repair ?? options.apply,
+    // A person running --apply gets the procedure now; the scheduled --repair
+    // pass gets it once per human answer.
+    unattended: !options.apply,
     withinMaintenance: options.withinMaintenance,
     prepare: options.prepare,
     yield: options.yield,

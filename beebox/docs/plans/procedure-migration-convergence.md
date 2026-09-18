@@ -2,7 +2,8 @@
 title: "Procedure migrations converge unattended"
 status: draft
 workstream: box-maintenance-no-wedge
-issues: []
+issues:
+  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Procedure migrations converge unattended
 
@@ -14,8 +15,11 @@ procedure is still pending. It amends
 [migration-reliability.md](migration-reliability.md), which chose to report
 procedures as attention items in unattended mode.
 
-**Issues addressed:** none filed. Searched `issues/` for `procedure migration`,
-`needs-procedure`, `trick-secret-runtime`, and `--apply`; no match.
+**Issues addressed:**
+`issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md`. Its
+open decisions (when a local pass runs, whether it applies, how a skip shows)
+are settled by the hourly schedule from the parent plan plus this plan's
+procedure handling; nothing in it remains manual.
 
 ## Smallest fix and budget
 
@@ -114,7 +118,10 @@ would start every hour after a failure.
 - `migration-sweep.ts` `applyMigration`: for a procedure with `opts.repair`,
   `repaired = await runBoundedAttempt({ ..., attempt: async () => ({ code: await opts.runProcedure(...), reason: "The procedure exited nonzero; its output is above." }) })`.
   Without `opts.repair` (manual `--apply`) the direct run stays.
-- `migrate.ts:148`: `options.apply || options.repair` supplies the runner.
+- `migrate.ts:148`: `options.apply || options.repair` supplies the runner. A
+  new sweep option `unattended` (true unless `--apply`) selects the bound, so a
+  person running `--apply` still gets the procedure run now, even over an
+  unanswered question.
 - `migrate.ts:176-179`: the `needs-procedure` message drops "not run
   unattended" and says the next `--repair` pass applies it.
 
@@ -169,7 +176,7 @@ None.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Procedure exits nonzero | Planned sweep doctest | Question written; no rerun until answered; output under recovery ref | Schedule alert names the question |
-| Procedure process is killed mid-run (timeout, laptop sleep) | Planned: receipt present, no question, next sweep | Receipt found, question written without a run | Same alert |
+| Procedure process is killed mid-run (timeout, laptop sleep) | Planned: receipt present, no question, next sweep | Receipt found, question written without a run, naming the unfinished attempt's snapshot from the receipt | Same alert |
 | Procedure agent edits the manifest | Existing `verifyManifest` in `applyMigration` | Manifest restored; invariant | Loud |
 | Procedure's commit fails | Existing `commit-failed` path; procedures already excluded from commit repair | Manifest and index restored; recovery ref | Reported |
 | Box is in use when the hourly pass arrives | Existing yield deferral | Deferred; next hour | Quiet under a day |

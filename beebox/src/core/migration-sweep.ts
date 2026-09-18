@@ -72,6 +72,8 @@ interface SweepOptions {
   runProcedure?: ((procedure: string, run: { signal?: AbortSignal | undefined; onOutput: (text: string) => void }) => Promise<number>) | undefined;
   json?: boolean | undefined;
   repair?: boolean | undefined;
+  /** An unattended pass runs a procedure migration once per human answer; a manual pass runs it directly. */
+  unattended?: boolean | undefined;
   withinMaintenance?: boolean | undefined;
   prepare?: boolean | undefined;
   /** A scheduled pass yields to live work instead of draining it. */
@@ -212,8 +214,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
       const { runProcedure } = opts;
       invariant(runProcedure !== undefined, "Procedure callback required");
       const runOnce = (): Promise<number> => runProcedure(migration.procedure, { signal: opts.signal, onOutput: (text) => { failure = (failure + text).slice(-32000); } });
-      if (opts.repair) {
-        // Unattended: one run per human answer, never an hourly agent.
+      if (opts.unattended) {
+        // One run per human answer, never an hourly agent.
         repaired = await runProcedureMigration({ signal: opts.signal, boxRoot, name: migration.name, recoveryRef: recovery.ref, run: runOnce, output: () => failure });
         code = repaired.code;
       } else {
