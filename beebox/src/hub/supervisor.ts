@@ -14,7 +14,7 @@
  * (`./endpoints.js`) so `./hub-server.ts` never needs to know that.
  */
 
-import { BoxMaintenanceError } from "../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../lib/box-maintenance-error.js";
 import { installReloadHandler } from "./supervised-reload.js";
 import * as path from "node:path";
 import type { HubConfig, BoxEntry } from "./hub-config.js";
@@ -410,8 +410,11 @@ export class Supervisor implements EndpointProvider {
     return { slug, origin: `http://127.0.0.1:${box.port}` };
   }
 
-  slugs(): string[] {
-    return Array.from(this.boxes.keys());
+  slugs(): string[] { return Array.from(this.boxes.keys()); }
+
+  unavailable(slug: string): string | undefined {
+    const box = this.boxes.get(slug);
+    return !box || box.status === "running" ? undefined : box.lastError ?? `status ${box.status}`;
   }
 
   getStatuses(): BoxRuntimeStatus[] {

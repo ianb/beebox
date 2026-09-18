@@ -12,7 +12,7 @@
 import "./bootstrap.js";
 
 import { installBoxAdmission } from "./lib/box-admission.js";
-import { BoxMaintenanceError } from "../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../lib/box-maintenance-error.js";
 import { loadEnv, cliEnvSchema } from "../lib/env.js";
 import { migrateUserState } from "../lib/state-migration.js";
 import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } from "../lib/state-dir.js";

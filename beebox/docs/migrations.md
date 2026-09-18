@@ -125,22 +125,34 @@ script/procedure process groups get TERM, then bounded KILL, and are awaited
 before ownership releases. Git and docs-generation operations are checked
 between calls and cannot all be interrupted inside a call. The schedule's outer
 25-minute process limit bounds those remaining cases; remote SSH allows 26
-minutes. A timeout is not success. An interrupted mutation leaves the gate
-closed for recovery; lock expiry alone does not reopen it. A pre-change drain
-timeout releases the unchanged box without forcing active work to stop.
+minutes. A timeout is not success. An interrupted mutation leaves a record of
+unfinished maintenance in the gate file, but the record closes the box only
+while the owner's lock is held: a closure cannot outlive its owner, so a
+crashed, killed, or failed attempt never leaves a box refusing requests. The
+record, the pending migration, and its question stay reported (the
+`box-migrations` health check, the hub's 503 while an owner holds the box) until
+a later attempt completes. A pre-change drain timeout releases the unchanged box
+without forcing active work to stop.
 
 A standalone pass that finds a missing manifest or a procedure prerequisite
 before changing anything releases its gate. Under deployment those same unmet
-prerequisites leave the box closed, including when a previous nested operation
-had already declared it ready. They do not authorize activating newer code.
+prerequisites keep the box closed for the rest of the deployment, including
+when a previous nested operation had already declared it ready. They do not
+authorize activating newer code; the box reopens when the controller exits.
+
+Before an attempt commits its output it confirms it still holds the owner lock.
+A lock lost to a system sleep longer than the lock's stale window, or to a
+deployment controller that died under a joined sweep, yields `commit-failed`
+with `maintenance ownership lost`: the output stays uncommitted under its
+recovery ref and no repair agent is spent on it.
 
 ## Automatic convergence and generated guidance
 
 The deployment controller holds affected boxes across activation, migration,
 service replacement, and readiness checks. It runs the shared script-only sweep
-with a separate ten-minute command limit. A failing box remains closed for
-recovery and is reported; a successful process restart alone does not make its
-data current. See [deployment operations](../deploy/README.md).
+with a separate ten-minute command limit. A failing box is reported and stays
+closed only until the controller exits; a successful process restart alone does
+not make its data current. See [deployment operations](../deploy/README.md).
 
 `schedules/box-convergence/` retries hourly and may invoke bounded agent repair.
 It runs only from the main checkout on `main`. Local targets come from that
@@ -524,8 +536,9 @@ removal once the fleet has converged — see
 
 ## Recovery and reversal
 
-Keep an interrupted box closed while inspecting its recorded input and current
-partial output. Find the retained snapshots without changing data:
+An interrupted box serves as soon as its maintenance owner is gone, with the
+partial output uncommitted in its tree. Inspect the recorded input and that
+output before retrying. Find the retained snapshots without changing data:
 
 ```bash
 git for-each-ref --format='%(refname)' refs/bbx/migrations/
@@ -542,22 +555,21 @@ migration also requires reconciling its manifest entry and any later dependent
 changes. A recovery ref is retained locally; it is not a claim that ignored
 state or annex content was independently backed up.
 
-`bbx migrate --sweep --repair` can take over an interrupted maintenance attempt,
-inspect retained repair receipts, and retry pending deterministic work. Answer
-an outstanding question when a human decision is required. Successful verified
-completion reopens admission; deleting the gate file is not a repair.
+`bbx engine migrate --sweep --repair` takes over an interrupted attempt,
+inspects retained repair receipts, and retries pending deterministic work.
+Answer an outstanding question when a human decision is required. Successful
+completion clears the record of unfinished maintenance; deleting the gate file
+by hand only discards that record.
 
-A pending migration's recovery question remains answerable while admission is
-closed, using its question card in the UI or:
+A pending migration's recovery question is answered like any other, from its
+question card in the UI, in chat, or with:
 
 ```bash
 bbx answer _bookkeeping/questions/Migration_<name>-0.question.card "Keep both versions"
-bbx migrate --sweep --repair
+bbx engine migrate --sweep --repair
 ```
 
-The closed-box answer path acquires maintenance ownership, verifies the question's
-retained recovery ref and pending manifest entry, and saves only the answer with
-a Git snapshot. It starts no follow-up agent and leaves the box closed. The next
-repair attempt consumes that answer. Questions about migrations already recorded
-as applied wait until the box reopens, when the ordinary answer flow creates the
-follow-up job to repair the remaining data without replaying the old migration.
+The answer's follow-up job carries the question's directive, which authorizes
+one bounded repair; the next sweep also reads the answer. While a maintenance
+owner holds the box, the answer is refused with the owner's reason and can be
+retried once it exits.

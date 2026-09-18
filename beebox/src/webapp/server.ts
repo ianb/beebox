@@ -412,7 +412,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
         for (const box of boxes) {
           const runtime = getChatRuntime(box.boxRoot);
           if (!runtime) continue;
-          if (await boxMaintenanceStatus(box.boxRoot)) {
+          // Only a live owner pauses chat; a record without one is unfinished maintenance, not closure.
+          if ((await boxMaintenanceStatus(box.boxRoot))?.owner) {
             pauseBoxChatSchedules(box.boxRoot);
             paused.add(box.boxRoot);
             if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && chatThreadsAreIdle(box.boxRoot) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
