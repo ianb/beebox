@@ -46,6 +46,10 @@ RUN mkdir -p /opt/localrepo/pkg/DEBIAN \\
   && dpkg-deb -b /opt/localrepo/pkg /opt/localrepo/bbx-smoke-thirdparty_1.0_all.deb >/dev/null && rm -rf /opt/localrepo/pkg \\
   && cd /opt/localrepo && dpkg-scanpackages . > Packages 2>/dev/null \\
   && echo 'deb [trusted=yes] file:/opt/localrepo ./' > /etc/apt/sources.list.d/smoke-local.list \\
+  && mkdir -p /opt/legacyrepo && cd /opt/legacyrepo \\
+  && sed 's/bbx-smoke-thirdparty/bbx-smoke-legacy/' /opt/localrepo/Packages > Packages \\
+  && cp /opt/localrepo/bbx-smoke-thirdparty_1.0_all.deb . \\
+  && echo 'deb [trusted=yes] file:/opt/legacyrepo ./' >> /etc/apt/sources.list \\
   && apt-get update -qq
 # Hold libxml2 at the release version so libxml2-utils (from -updates) needs an upgrade.
 # Debian's point releases often carry the same libxml2 as its security suite;
@@ -93,6 +97,8 @@ check "setgid package refused" 2 "setuid/setgid" -- as_box install --box smoke -
 check "regex-like name refused" 2 "not a package" -- as_box install --box smoke -- glabel.
 assert "host apt sees the third-party package" bash -c 'apt-cache policy bbx-smoke-thirdparty | grep -q "Candidate: 1.0"'
 check "third-party source hidden" 2 "not a package in this host's distro sources" -- as_box install --box smoke -- bbx-smoke-thirdparty
+assert "host apt sees the legacy-list package" bash -c 'apt-cache policy bbx-smoke-legacy | grep -q "Candidate: 1.0"'
+check "legacy sources.list hidden" 2 "not a package in this host's distro sources" -- as_box install --box smoke -- bbx-smoke-legacy
 if [[ "$(cat /opt/libxml2-release)" == none ]]; then
   echo "SKIP upgrade refused: this base has no newer libxml2 to upgrade to"
 else
@@ -117,6 +123,8 @@ assert "BASH_ENV ignored" test ! -e /pwn-bashenv
 assert "every log line is JSON" python3 -c 'import json,sys; [json.loads(l) for l in open("/var/log/beebox/host-apt.log")]'
 assert "log records the install" grep -q '"outcome":"installed"' /var/log/beebox/host-apt.log
 assert "log records the refusals" grep -q '"outcome":"refused"' /var/log/beebox/host-apt.log
+assert "log records usage errors" grep -q '"outcome":"usage"' /var/log/beebox/host-apt.log
+assert "log never holds rejected argv" bash -c '! grep -q "Pre-Invoke" /var/log/beebox/host-apt.log'
 assert "host sources untouched" test -e /etc/apt/sources.list.d/smoke-local.list
 
 echo "failures: $failures"

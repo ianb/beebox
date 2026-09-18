@@ -209,20 +209,24 @@ Steps, in order:
    LANG=C.UTF-8 DEBIAN_FRONTEND=noninteractive /bin/bash --noprofile --norc
    /usr/local/sbin/bbx-host-apt "$@"`. The path is fixed, not `$0`. After the
    re-exec: `set -euf -o pipefail`, `IFS=$' \t\n'`, `umask 022`, `cd /`. Take
-   `flock /run/bbx-host-apt.lock` so two boxes cannot interleave. (sudo's
+   `flock /run/bbx-host-apt.lock` before touching the private apt state, so
+   two boxes cannot interleave. Usage errors are logged too, without the
+   rejected argv. (sudo's
    `env_reset` already drops most variables; the re-exec does not depend on
    the sudoers defaults.)
 3. **Distro sources only.** Every apt call gets one private configuration,
    so no third-party source (NodeSource, `setup-server.sh:55`) can supply a
    package:
-   `-o Dir::Etc::sourcelist=/etc/apt/sources.list`
+   `-o Dir::Etc::sourcelist=/dev/null`
    `-o Dir::Etc::sourceparts=/var/lib/bbx-host-apt/sources.list.d`
    `-o Dir::State::Lists=/var/lib/bbx-host-apt/lists`
    `-o Dir::Cache::archives=/var/cache/bbx-host-apt/archives`
    `-o DPkg::Lock::Timeout=300`. The wrapper fills the private sources
    directory with copies of only the distro files
-   (`/etc/apt/sources.list.d/ubuntu.sources` or `debian.sources`). The legacy
-   `/etc/apt/sources.list` counts as distro. Keyrings stay the host's. All
+   (`/etc/apt/sources.list.d/ubuntu.sources` or `debian.sources`) and fails
+   when there is none. The legacy `/etc/apt/sources.list` is ignored: it can
+   hold any repository (implementation review, round 2). Keyrings stay the
+   host's. All
    private directories are root-owned 0755 (the archive 0700), created by
    deploy, and checked by the wrapper with `stat` (owner root, not a symlink).
    Then `apt-get update -qq` fills the private lists. The host's own apt lists
@@ -238,7 +242,8 @@ Steps, in order:
    `name=version` set into it.
 7. For each downloaded `.deb`, list its files with `dpkg-deb -c`. Refuse, naming
    the package and the file, when any entry is:
-   - a system unit: `(usr/)?lib/systemd/system/*.{service,socket,timer,path}`;
+   - a system unit: `(usr/)?lib/systemd/system/*.{service,socket,timer,path}`,
+     or anything under `etc/systemd/system/`;
    - an init script: `etc/init.d/*`;
    - a root cron job: `etc/cron.d/*`, `etc/cron.{hourly,daily,weekly,monthly}/*`;
    - D-Bus system activation: `usr/share/dbus-1/system-services/*`;

@@ -57,38 +57,45 @@ umask 022
 cd /
 
 die() { echo "bbx-host-apt: $1" >&2; exit "${2:-1}"; }
-usage() { die "usage: bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]" 64; }
 
 [[ "$EUID" -eq 0 ]] || die "must run as root (through sudo)"
 
-# ── Arguments ────────────────────────────────────────────────────────────
-[[ $# -ge 5 && "$1" == install && "$2" == --box && "$4" == -- ]] || usage
-box="$3"
-shift 4
-[[ "$box" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || usage
-[[ $# -le 10 ]] || die "at most 10 packages per call" 64
-requested=()
-for pkg in "$@"; do
-  [[ "$pkg" =~ ^[a-z0-9][a-z0-9+.-]{1,63}$ ]] || die "not a valid package name: $pkg" 64
-  requested+=("$pkg")
-done
 caller="${BBX_HOST_APT_CALLER:-unknown}"
 [[ "$caller" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || caller=invalid
 
 # ── Log ──────────────────────────────────────────────────────────────────
-# Every logged value is validated above or built here, so none needs escaping
-# beyond the reason text, which is ours.
+# Every attempt gets one line, usage errors included. Only validated values
+# and our own reason text reach it; argv that failed validation is not logged.
 readonly LOG=/var/log/beebox/host-apt.log
 install -d -o root -g root -m 0755 /var/log/beebox
+box=""
+requested=()
 new_set=()
 log() {
   local outcome="$1" reason="$2"
   printf '{"time":"%s","caller":"%s","box":"%s","requested":"%s","new":"%s","outcome":"%s","reason":"%s"}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$caller" "$box" "${requested[*]}" "${new_set[*]:-}" \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$caller" "$box" "${requested[*]:-}" "${new_set[*]:-}" \
     "$outcome" "${reason//\"/\'}" >> "$LOG"
 }
+usage_error() { log usage "$1"; die "$1" 64; }
 refuse() { log refused "$1"; die "refused: $1" 2; }
 fail() { log error "$1"; die "$1" 1; }
+
+# ── Arguments ────────────────────────────────────────────────────────────
+readonly USAGE="usage: bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]"
+[[ $# -ge 5 && "$1" == install && "$2" == --box && "$4" == -- ]] || usage_error "$USAGE"
+[[ "$3" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || usage_error "$USAGE"
+box="$3"
+shift 4
+[[ $# -le 10 ]] || usage_error "at most 10 packages per call"
+for pkg in "$@"; do
+  [[ "$pkg" =~ ^[a-z0-9][a-z0-9+.-]{1,63}$ ]] || usage_error "not a valid package name (not logged)"
+done
+requested=("$@")
+
+# Serialize everything below: the private apt state is shared by all callers.
+exec 9> /run/bbx-host-apt.lock
+flock -w 900 9 || fail "another package install held the lock for 15 minutes"
 
 # ── Private apt configuration: distro sources only ───────────────────────
 # Same ownership as apt's own directories: root-owned, with the `partial/`
@@ -108,6 +115,9 @@ for dir in "$STATE/lists/partial" "$CACHE/archives/partial"; do
   install -d -o "$fetcher" -g root -m 0700 "$dir"
 done
 
+# Only the distro's own deb822 file counts. The legacy one-line
+# /etc/apt/sources.list is ignored: it can hold any repository, and current
+# Ubuntu (24.04+) and Debian (12+) keep their archive in the deb822 file.
 find "$STATE/sources.list.d" -mindepth 1 -delete
 for distro in ubuntu debian; do
   src="/etc/apt/sources.list.d/$distro.sources"
@@ -115,18 +125,17 @@ for distro in ubuntu debian; do
     install -o root -g root -m 0644 "$src" "$STATE/sources.list.d/"
   fi
 done
+[[ -n "$(find "$STATE/sources.list.d" -mindepth 1 -print -quit)" ]] \
+  || fail "no distro sources file (/etc/apt/sources.list.d/ubuntu.sources or debian.sources)"
 
 APT=(
-  -o Dir::Etc::sourcelist=/etc/apt/sources.list
+  -o Dir::Etc::sourcelist=/dev/null
   -o "Dir::Etc::sourceparts=$STATE/sources.list.d"
   -o "Dir::State::Lists=$STATE/lists"
   -o "Dir::Cache::archives=$CACHE/archives"
   -o DPkg::Lock::Timeout=300
 )
 INSTALL_FLAGS=(--no-install-recommends --no-remove)
-
-exec 9> /run/bbx-host-apt.lock
-flock -w 900 9 || fail "another package install held the lock for 15 minutes"
 
 apt-get "${APT[@]}" update -qq || fail "apt-get update failed"
 
@@ -193,7 +202,7 @@ targets=("${pinned[@]}")
 apt-get "${APT[@]}" -qq -y --download-only install "${INSTALL_FLAGS[@]}" -- "${targets[@]}" > /dev/null \
   || fail "download failed"
 
-readonly FORBIDDEN='^\./((usr/)?lib/systemd/system/[^/]+\.(service|socket|timer|path)|etc/init\.d/[^/]+|etc/cron\.(d|hourly|daily|weekly|monthly)/[^/]+|usr/share/dbus-1/system-services/[^/]+|(usr/)?lib/systemd/system-generators/[^/]+|etc/sudoers\.d/[^/]+|etc/polkit-1/.+|usr/share/polkit-1/rules\.d/[^/]+)$'
+readonly FORBIDDEN='^\./((usr/)?lib/systemd/system/[^/]+\.(service|socket|timer|path)|etc/systemd/system/.+|etc/init\.d/[^/]+|etc/cron\.(d|hourly|daily|weekly|monthly)/[^/]+|usr/share/dbus-1/system-services/[^/]+|(usr/)?lib/systemd/system-generators/[^/]+|etc/sudoers\.d/[^/]+|etc/polkit-1/.+|usr/share/polkit-1/rules\.d/[^/]+)$'
 downloaded=()
 while IFS= read -r -d '' deb; do
   name=$(dpkg-deb -f "$deb" Package)
