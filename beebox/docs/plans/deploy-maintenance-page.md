@@ -1,6 +1,6 @@
 ---
 title: "Deploy maintenance page and deploy timing record"
-status: draft
+status: active
 workstream: deploy-maintenance-page
 issues:
   - ../../../issues/features/2026-09-18-deploy-maintenance-page.md
