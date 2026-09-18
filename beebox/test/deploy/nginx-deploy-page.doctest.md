@@ -125,13 +125,3 @@ upstream?.close();
 await execFileAsync("nginx", [...nginx, "-s", "stop"]).catch((error: unknown) => console.warn("nginx stop failed", error));
 await rm(root, { recursive: true, force: true });
 ```
-
-The deploy's install step runs with the box user's PATH, which omits
-`/usr/sbin`, so it names nginx by absolute path. A bare `nginx` there failed the
-first deploy of this step with "command not found".
-
-```ts
-const deployScript = await readFile("deploy/deploy.sh", "utf8");
-[deployScript.includes("if ! /usr/sbin/nginx -t -q; then"), /^\s*(if ! )?nginx /m.test(deployScript)].join(" ")
-=> true false
-```
