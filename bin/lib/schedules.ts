@@ -299,6 +299,14 @@ export const storeStateSchema = z.strictObject({
 });
 export type StoreState = z.infer<typeof storeStateSchema>;
 
+/** `<store>/digest.json` — when the daily digest last went out. Its own file,
+ *  not a `state.json` key: `storeStateSchema` is strict, and a new key there
+ *  would break every older `bin/schedules list` reading the shared store. */
+export const digestStateSchema = z.strictObject({
+  lastDigestAt: z.string(),
+});
+export type DigestState = z.infer<typeof digestStateSchema>;
+
 /**
  * What an alert's level does, which is all it means:
  *   important — a person should act today: a popup now, and in the digest.

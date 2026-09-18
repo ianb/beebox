@@ -19,6 +19,7 @@ import {
 } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { migrateAlerts, resolveConditions } from "./schedules-alert-lifecycle.js";
+import { digestIfDue } from "./schedules-digest.js";
 import { isDue, runSchedule, type RunReport } from "./schedules-runner.js";
 
 export interface TickResult {
@@ -130,6 +131,15 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
     const message = e instanceof Error ? e.message : String(e);
     await notifyStoreFailure(deps, `alert migration failed: ${message}`);
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
+  }
+
+  // Before any schedule: they run serially, one can take hours, and the digest
+  // is due at a time of day. A digest that fails is logged and the schedules
+  // still run; the next tick tries again because the stamp did not move.
+  try {
+    await digestIfDue(deps);
+  } catch (e) {
+    process.stderr.write(`schedules: digest failed: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 
   const reports: RunReport[] = [];

@@ -18,6 +18,7 @@
  *   ack <alert-id>                stop showing an alert
  *   resolve [--condition <c>]…    "these conditions cleared" (called BY `run`)
  *   migrate-alerts                rewrite pre-condition alert records
+ *   file-standing                 file week-old conditions as private issues
  *   lint [--json]                 every schedule, checked without running it
  *   install | uninstall           the launchd tick
  *
@@ -64,6 +65,7 @@ import {
   commandAlert,
   commandAlerts,
   commandDone,
+  commandFileStanding,
   commandHandoff,
   commandMigrateAlerts,
   commandResolve,
@@ -106,6 +108,8 @@ const USAGE = `usage: bin/schedules <command>
                                   only these, or all but these).
   migrate-alerts                  Rewrite alert records from before conditions
                                   (the tick also does this).
+  file-standing                   File conditions open for a week as private
+                                  issues (run by schedules/alert-filing).
   lint [--json]                   Check every schedule without running it:
                                   schema, shebangs, the dry-run and reporting
                                   contracts, shellcheck, eslint.
@@ -310,6 +314,7 @@ async function dispatch(): Promise<number> {
   if (command === "ack") return commandAck(context, args);
   if (command === "resolve") return commandResolve(context, args);
   if (command === "migrate-alerts") return commandMigrateAlerts(context);
+  if (command === "file-standing") return commandFileStanding(context);
   if (command === "lint") return commandLint(context, args);
   if (command === "install") return installTick({ repoRoot: context.repoRoot });
   if (command === "uninstall") return uninstallTick();

@@ -22,6 +22,7 @@ import {
   writeResult,
 } from "./schedules-store.js";
 import { closeAlert, migrateAlerts, resolveConditions, selectResolved } from "./schedules-alert-lifecycle.js";
+import { fileStanding, privateIssuesCommitter, standingToFile } from "./schedules-filing.js";
 import { raiseAlert } from "./schedules-alerts.js";
 import { DRY_RUN_HANDOFF_MARKER } from "./schedules-runner.js";
 import { envOr, flagValues, flags, isDryRun, readValue, runnerDeps, type Context } from "./schedules-cli-context.js";
@@ -219,6 +220,22 @@ export async function commandResolve(context: Context, args: string[]): Promise<
     return 0;
   }
   await resolveConditions(context.storeRoot, { workstream, ...selection, at: new Date().toISOString() });
+  return 0;
+}
+
+/** `file-standing` — run daily by `schedules/alert-filing/`. Exits 0 when a
+ *  filing fails: the failure is recorded on the alert and the digest reports
+ *  it once retries run out, so a daily run-failed alert would only repeat it. */
+export async function commandFileStanding(context: Context): Promise<number> {
+  const now = new Date();
+  if (isDryRun()) {
+    const due = standingToFile(await readAllAlerts(context.storeRoot), now.getTime());
+    process.stdout.write(`[schedules] would file: ${due.map((alert) => `${alert.workstream}/${alert.condition ?? ""}`).join(", ") || "nothing"}\n`);
+    return 0;
+  }
+  const outcome = await fileStanding(context.storeRoot, { now, commitIssue: privateIssuesCommitter(context.repoRoot) });
+  for (const alert of outcome.filed) process.stdout.write(`filed ${alert.workstream}/${alert.condition ?? ""} as ${alert.issue ?? ""}\n`);
+  for (const alert of outcome.failed) process.stdout.write(`could not file ${alert.workstream}/${alert.condition ?? ""}: ${alert.filingError ?? ""}\n`);
   return 0;
 }
 

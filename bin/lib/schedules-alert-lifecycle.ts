@@ -13,6 +13,15 @@ import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 import { alertSchema, type Alert, type ClosedBy } from "./schedules.js";
 import { readAlerts, writeAlert } from "./schedules-store.js";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A condition open this long is filed as an issue (`file-standing`). */
+export const FILE_AFTER_MS = 7 * DAY_MS;
+
+/** Filing retries daily for this long after its first failure, then stops and
+ *  the digest reports it as unfiled — nothing retries forever. */
+export const FILING_RETRY_MS = 7 * DAY_MS;
+
 /** Close an open alert, saying who closed it. */
 export function closeAlert(alert: Alert, input: { closedBy: ClosedBy; at: string }): Alert {
   return { ...alert, state: "acknowledged", acknowledgedAt: input.at, closedBy: input.closedBy };
