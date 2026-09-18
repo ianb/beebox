@@ -1,11 +1,16 @@
 ---
 title: "Docker: `bbx engine init` fails with EXDEV renaming the installed package's box-docs"
-workstream: unattached
+workstream: box-host-packages
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-box-host-packages — running beebox/docker/smoke-docker.sh
+resolution: implemented
 ---
+
+Resolved in `worktree-box-host-packages`: `swapIn` falls back to
+`replaceDirContents` on EXDEV (covered in `test/core/package-docs.doctest.md`),
+and `beebox/docker/smoke-docker.sh` passes end to end.
 
 `beebox/docker/smoke-docker.sh` fails at step 2. In the built image,
 `bbx engine init /data/box` stops with:
