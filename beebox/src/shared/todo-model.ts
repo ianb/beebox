@@ -18,6 +18,29 @@
 import { z } from "zod";
 import { assertNever, invariant } from "./invariant.js";
 
+/**
+ * The conventional `assigned`/`by` value meaning the agent rather than the
+ * boxholder. `assigned` absent means the boxholder owns the todo; this value
+ * means the agent chases it. `by` absent means the boxholder wrote it; this
+ * value means the agent did.
+ */
+export const TODO_AGENT = "agent";
+
+/**
+ * True when a todo is the BOXHOLDER's to act on — `assigned` absent, or
+ * naming anyone but the agent.
+ *
+ * The distinction is load-bearing for anything that competes for the
+ * boxholder's attention: an agent's own follow-up is real work with a real
+ * owner, but it is not on the boxholder's plate, and counting it there taxes
+ * the person for work they were never asked to do. Surfaces built FOR the
+ * agent (`bbx todos --assigned agent`, the review job's brief) deliberately
+ * do not use this filter.
+ */
+export function isBoxholderTodo(todo: { assigned?: string | undefined }): boolean {
+  return todo.assigned !== TODO_AGENT;
+}
+
 /** The closed status vocabulary. Absence on a todo means `"open"`. */
 export const TODO_STATUSES = ["open", "done", "dropped", "parked"] as const;
 

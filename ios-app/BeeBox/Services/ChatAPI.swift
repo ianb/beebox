@@ -236,13 +236,22 @@ struct ChatAPI: Sendable {
         }
     }
 
+    /// `batch` files the upload under one directory per composed message
+    /// (`ComposerUploadBatch`). Nil uploads keep the server's flat behaviour,
+    /// which is what a draft restored from before batches existed gets.
     func uploadFile(
         data: Data,
         filename: String,
         mimeType: String,
+        batch: String?,
         onProgress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> UploadedChatFile {
-        var request = try uploadFileRequest(data: data, filename: filename, mimeType: mimeType)
+        var request = try uploadFileRequest(
+            data: data,
+            filename: filename,
+            mimeType: mimeType,
+            batch: batch
+        )
         guard let body = request.httpBody else {
             throw ChatAPIError.invalidResponse
         }
@@ -295,7 +304,12 @@ struct ChatAPI: Sendable {
         return uploaded
     }
 
-    func uploadFileRequest(data: Data, filename: String, mimeType: String) throws -> URLRequest {
+    func uploadFileRequest(
+        data: Data,
+        filename: String,
+        mimeType: String,
+        batch: String?
+    ) throws -> URLRequest {
         guard data.count <= ChatUploadLimits.maximumFileBytes else {
             throw ChatAPIError.fileTooLarge
         }
@@ -306,6 +320,12 @@ struct ChatAPI: Sendable {
         request.setValue("BeeBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
         applyAuth(to: &request)
         var body = Data()
+        // BEFORE the file part, without exception: the server reads text fields
+        // off the file's own multipart entry, so a field that arrives after the
+        // file is not seen at all.
+        if let batch {
+            body.appendMultipartField(name: "batch", value: batch, boundary: boundary)
+        }
         body.appendMultipartFile(
             name: "file",
             filename: Self.safeMultipartFilename(filename),

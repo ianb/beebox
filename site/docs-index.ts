@@ -122,7 +122,7 @@ function deepEntryRow(base: string, doc: PublishedDoc): string {
 export function renderAgentLlmsTxt(params: LlmsTxtParams): string {
   const { base, readme, spine, directories, installDir, devDir, sitePages } = params;
   const origin = docsOrigin(base);
-  const lines = ["# Bee Box", "", `> ${readme.summary}`, "", readme.preamble, "", "## Start here", ""];
+  const lines = ["# Bee Box", "", `*${readme.summary}*`, "", readme.preamble, "", "## Start here", ""];
   for (const doc of spine) lines.push(deepEntryRow(base, doc));
 
   for (const section of directories.filter((d) => !SHALLOW_DIRS.has(d.dir))) {
@@ -194,7 +194,7 @@ function fileRow(params: { base: string; dirName: string; doc: PublishedDoc }): 
 export function renderEntryLlmsTxt(params: EntryIndexParams): string {
   const { base, title, dirName, readme, startHere, files, also } = params;
   const sorted = sortByFilename(files);
-  const lines = [`# ${title}`, "", `> ${readme.summary}`, "", readme.preamble];
+  const lines = [`# ${title}`, "", `*${readme.summary}*`, "", readme.preamble];
 
   let rest = sorted;
   if (startHere !== undefined && startHere.length > 0) {

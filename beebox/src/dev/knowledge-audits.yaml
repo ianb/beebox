@@ -332,6 +332,28 @@ tests:
       swept, so it is not persistent storage. This is distinct from host /tmp
       and the committed flow-specific tmp-capture/ and tmp-upload/ landing zones.
 
+  - id: chat-image-original-path
+    prompt: >
+      A user pasted a photo of a receipt into chat and asks you to file it
+      with the expense card. You can see the photo in the message. Where do
+      you get the file to attach, and how does it relate to the image you
+      see?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `[image#N]:` line in the message's `<attachments>` block,
+      a path under _tmp/, and that the inline image is a reduced copy while
+      the file is the original; knows a missing line means there is no file.
+    correct_contains: ["_tmp/", "attachments"]
+    correct_matches:
+      - "\\[image#?\\d*\\]"
+    tags: [chat, attachments, temp-files]
+    notes: >
+      The path travels only in the message text, so an agent that looks for
+      a tool or a cache misses it. Failure mode: trying to save the inline
+      image bytes itself (a downscaled copy) instead of using the original
+      under _tmp/. Status 2026-09-16: passed on the worktree test box
+      (3 files read, knows_directly).
+
   # === How Items Enter the Box ===
   #
   # Status (2026-07-03): all 5 still pass after full rerun.
@@ -1409,6 +1431,39 @@ tests:
       mutation subcommand.
     correct_contains: ["bbx todos"]
     tags: [todos, cli]
+
+  # Status (2026-09-17): 2/2 pass on first run (knows_directly, 0 files read /
+  # 0 searches each, 48k ctx) against the "Your own follow-ups" block added to
+  # the always-on agent-guide todos section (src/core/agent-guide/todos.ts).
+
+  - id: todo-agent-own-followup
+    prompt: >
+      While filing something else you notice a card that clearly wants a
+      second pass. It is not this turn's job and the boxholder never asked
+      for it. What do you do with that observation?
+    expected_level: knows_directly
+    watch_for: >
+      Opens a todo for itself — by="agent" assigned="agent" with created —
+      rather than asking permission, raising a question, or dropping the
+      observation. Bonus if it says these do not land on the boxholder's
+      plate, or that it closes its own with done plus see-also evidence.
+    correct_contains_any: ["assigned=\"agent\"", "assigned: agent", "assigned=agent"]
+    correct_matches:
+      - 'by\s*[=:]\s*"?agent'
+    tags: [todos, agent-work]
+
+  - id: todo-agent-own-followup-limits
+    prompt: >
+      You have an assigned="agent" todo you wrote four months ago and have
+      stepped over every time since. May you close it yourself, and how?
+    expected_level: knows_directly
+    watch_for: >
+      Yes — an agent-owned todo is the agent's to resolve: dropped (saying
+      why) when it has decided against it, or done with see-also evidence
+      when finished. Does NOT claim it must ask the boxholder first, which
+      is the rule for the boxholder's own todos.
+    correct_contains_any: ["dropped", "drop"]
+    tags: [todos, agent-work]
 
   - id: todo-annotation-vs-question
     prompt: "You're processing a card and you're not sure whether to create a {% todo %} or a question card. What's the difference?"

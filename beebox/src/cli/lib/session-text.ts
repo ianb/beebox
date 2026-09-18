@@ -48,6 +48,14 @@ export function stripSpeechWrappers(text: string): string {
   // snippet or husk title built from it would read as the document, not the
   // question asked about it.
   out = out.replace(/<user-selection\b[^>]*>[\S\s]*?<\/user-selection>/g, "");
+  // Drop the trailing <attachments> block: `[file#N]: _tmp/…` lines are the
+  // machine half of an attachment, not words the user typed — left in, a
+  // chat's title became "…<attachments> [image#1]: _tmp/2026-…png".
+  out = out.replace(/<attachments>[\S\s]*?<\/attachments>/g, "");
+  // …and the tokens that anchored them: `[file#1]` in a title is the composer's
+  // placemarker, not a word the user typed (either spelling, see
+  // `shared/composer-tokens.ts`).
+  out = out.replace(/\[(?:image|file|selection)#?\d+]/g, "");
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   // Unwrap <unsure>word</unsure> low-confidence marks (Track 4,

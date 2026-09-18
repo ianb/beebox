@@ -4441,6 +4441,14 @@ test1:
       peak: 57900
       added: 10952
       turns: 19
+  chat-image-original-path:
+    - date: 2026-09-16T18:53:52.540Z
+      boxCommit: 85dd7f328089666edc081ea987ab9e6ce436179a
+      repoCommit: 1e4241e17f68f7b65fff9b56d8d7eb8d94d460c9
+      initial: 50971
+      peak: 63283
+      added: 12312
+      turns: 6
   bbx-surface-force-wakeup:
     - date: 2026-09-16T19:44:08.326Z
       boxCommit: fc77dfbe8ba8c44fae0845b7e1ee9a64d3e0c318
@@ -4457,6 +4465,22 @@ test1:
       peak: 53467
       added: 2698
       turns: 4
+  todo-agent-own-followup:
+    - date: 2026-09-17T14:59:08.842Z
+      boxCommit: 9d3e7295d082ce2d5c66096c20be33312dd6ed1e
+      repoCommit: f95249a14561c9397e3783689ea3edb42d85d88c
+      initial: 47989
+      peak: 47989
+      added: 0
+      turns: 1
+  todo-agent-own-followup-limits:
+    - date: 2026-09-17T14:59:08.842Z
+      boxCommit: 9d3e7295d082ce2d5c66096c20be33312dd6ed1e
+      repoCommit: f95249a14561c9397e3783689ea3edb42d85d88c
+      initial: 47924
+      peak: 47924
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -165,6 +165,14 @@ struct NativeComposerView: View {
                 dismissPresentedContentForLock()
             }
         }
+        .onChange(of: draftStore.isReady) { _, isReady in
+            guard isReady else {
+                return
+            }
+            Task {
+                await resumeInterruptedImageOriginals()
+            }
+        }
         .onChange(of: locationShareResult) { _, result in
             guard let result else {
                 return
@@ -1149,12 +1157,7 @@ struct NativeComposerView: View {
     }
 
     private var hasIncompleteImages: Bool {
-        draftStore.draft.images.contains { image in
-            guard case .local = image.state else {
-                return true
-            }
-            return false
-        }
+        draftStore.draft.hasIncompleteImages
     }
 
     private var hasIncompleteFiles: Bool {
@@ -1518,11 +1521,13 @@ struct NativeComposerView: View {
             )
             return
         }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
         do {
             let uploaded = try await ChatAPI(box: box).uploadFile(
                 data: data,
                 filename: file.originalName,
                 mimeType: file.mimetype,
+                batch: batch,
                 onProgress: { progress in
                     Task {
                         await draftStore.setFileProgress(id: file.id, progress: progress, boxID: box.id)
@@ -1607,13 +1612,88 @@ struct NativeComposerView: View {
             )
             return
         }
-        await draftStore.completeImageImport(
+        // The returned image carries `original`; the local value predates it.
+        guard let imported = await draftStore.completeImageImport(
             id: image.id,
             data: encoded.data,
             mimeType: encoded.mimeType,
             fileExtension: encoded.fileExtension,
             boxID: box.id
+        ) else {
+            return
+        }
+        await uploadImageOriginal(imported)
+    }
+
+    /// Start an original's upload again for every image whose bytes survived an
+    /// interrupted one. The request cannot be resumed, but the payload is still
+    /// on disk, so it can be repeated.
+    private func resumeInterruptedImageOriginals() async {
+        for image in draftStore.resumableImageOriginals() {
+            await uploadImageOriginal(image)
+        }
+    }
+
+    /// Upload the image's ORIGINAL bytes so the agent gets a file, mirroring
+    /// `uploadFile(_:)`. A failure here never blocks the send: the inline copy
+    /// is the primary payload and the message simply carries no path.
+    private func uploadImageOriginal(_ image: DraftImage) async {
+        guard let original = image.original else {
+            return
+        }
+        await draftStore.setImageOriginalState(
+            id: image.id,
+            state: .uploading(progress: 0),
+            boxID: box.id
         )
+        guard let data = await draftStore.imageOriginalData(for: image, boxID: box.id) else {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: "The original image data is missing."),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original payload missing imageID=\(image.id)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
+        do {
+            let uploaded = try await ChatAPI(box: box).uploadFile(
+                data: data,
+                filename: original.filename,
+                mimeType: original.mimeType,
+                batch: batch,
+                onProgress: { progress in
+                    Task {
+                        await draftStore.setImageOriginalProgress(
+                            id: image.id,
+                            progress: progress,
+                            boxID: box.id
+                        )
+                    }
+                }
+            )
+            await draftStore.markImageOriginalUploaded(
+                id: image.id,
+                path: uploaded.path,
+                boxID: box.id
+            )
+        } catch {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: error.localizedDescription),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original upload failed imageID=\(image.id) bytes=\(data.count)"
+                    + " mime=\(original.mimeType): \(error.localizedDescription)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+        }
     }
 }
 
@@ -1814,6 +1894,8 @@ private struct DraftImageThumbnail: View {
     }
 
     private var accessibilityStatus: String {
+        // The original's upload is deliberately invisible here: it is a silent
+        // bonus, and a failure costs the message its path, nothing the user acts on.
         switch image.state {
         case .local:
             "Ready"

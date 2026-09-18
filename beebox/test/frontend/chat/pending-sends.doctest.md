@@ -303,3 +303,26 @@ quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test
 removed
 => false
 ```
+
+## An image's original path survives the recovery copy
+
+The recovery envelope is what a rejected send is retried from, so it has to
+carry the uploaded original's `path` or the retry silently goes out with the
+pixels and no file line (the storage schema strips keys it does not name).
+
+```ts
+const data = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => data.get(key) ?? null,
+  setItem: (key: string, value: string) => { data.set(key, value); },
+  removeItem: (key: string) => { data.delete(key); },
+};
+const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "kitchen", contextDir: "_content/kitchen" }, attention: { surface: "card", focusedRef: "_content/house/Report.doc.card", transcript: "hidden" } };
+const withPath: Emission = { id: "img-1", origin: "typed", text: "receipt [image#1]", diarized: false,
+  images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }],
+  files: [], selections: [] };
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).stage(withPath, binding);
+const recovered = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
+recovered.getSnapshot()[0]?.emission.images[0]?.path
+=> _tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg
+```

@@ -27,6 +27,7 @@
 
 import type { EventBus } from "../../event-bus.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { attachmentsBlockStart } from "../../../shared/composer-tokens.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 
@@ -47,7 +48,12 @@ const ACCEPTED_WINDOW_MS = 10 * 60 * 1000;
  */
 const ACCEPTED_SCAN_LIMIT = 50;
 
-/** `[image#N]` composer tokens, either form — see where this is applied. */
+/**
+ * `[image#N]` composer tokens, either form — see where this is applied. Applied
+ * to the body only: the same token inside the trailing `<attachments>` block is
+ * the line naming that image's original file, which the transcript keeps as
+ * text too (`shared/chat-content-blocks.ts`).
+ */
 const IMAGE_TOKEN_RE = /\[image#?\d+]/g;
 
 /**
@@ -185,7 +191,11 @@ export function readAcceptedMessages(
     // bus, so there are no image blocks to make here — but the token has to go
     // the same way, or this text neither compares equal to the other two nor
     // renders without a literal "[image1]" in the bubble.
-    const content = [{ type: "text" as const, text: message.replace(IMAGE_TOKEN_RE, "") }];
+    const bodyEnd = attachmentsBlockStart(message);
+    const content = [{
+      type: "text" as const,
+      text: message.slice(0, bodyEnd).replace(IMAGE_TOKEN_RE, "") + message.slice(bodyEnd),
+    }];
     const user = userIdentity(content, "user");
     const userEmail = userIdentity(content, "user-email");
     accepted.push({
