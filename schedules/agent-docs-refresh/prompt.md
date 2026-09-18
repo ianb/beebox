@@ -77,7 +77,7 @@ A verified refresh lands itself and reaches the site:
 End with:
 
 ```
-bin/schedules alert --title "<one line>" --message "<one short paragraph>" \
+bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>" \
     --priority <important|normal|fyi>
 ```
 
@@ -85,12 +85,12 @@ The message must say **which pages changed and why, what you left for the
 boxholder, and what happened to the branch** (landed and pushed, or waiting
 and why).
 
-- **normal** — pages changed and landed, or `bin/land` refused and the branch
-  is ready.
-- **important** — a page claimed something the code no longer does and you
-  could not determine the truth; the site build is red on `main`; the push
-  failed; or a change needs a framing decision only the boxholder can make.
-- **fyi** — you read the week's changes and no page needed to change.
+- **fyi** — pages changed and landed, or no page needed to change.
+- **normal** — the branch is waiting on a person: `bin/land` refused; a page
+  claimed something the code no longer does and you could not determine the
+  truth; or a change needs a framing decision only the boxholder can make.
+- **important** — the public site is affected today: the site build is red on
+  `main`, or the push failed.
 
 Use `bin/schedules done` only if the branch is exactly as you found it and
 there is nothing to say.

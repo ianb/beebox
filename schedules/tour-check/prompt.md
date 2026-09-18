@@ -36,7 +36,7 @@ For each tour, follow `docs/tours.md` "How an agent reviews with tours":
 If the run itself fails — the browser daemon won't start, `os error 35`, a pass
 that aborts before any checkpoint — **re-run once**. Tours share one Chrome
 window and the daemon flakes under contention. If it still fails, alert
-`important` with "tours could not run" and stop; do not report on artifacts you
+`normal` with "tours could not run" and stop; do not report on artifacts you
 could not produce.
 
 ## Drift or regression — the one judgment
@@ -117,12 +117,14 @@ End with exactly one of:
 
 Priorities:
 
-- `important` — a regression (a miss nothing explains), or the tours could not
-  be run at all.
-- `normal` — you edited tours and/or filed issues. The message lists **each
-  edit with its justification** and **each issue path**, plus whether the branch
-  landed.
-- `fyi` is not used here: either something needs reading or nothing does.
+- `normal` — a regression (a miss nothing explains), the tours could not be run
+  at all, or you filed issues.
+- `fyi` — you edited tours, the branch landed, and you filed nothing.
+- `important` is not used here: a weekly tour walk finds nothing that cannot
+  wait for the daily digest.
+
+Either way the message lists **each edit with its justification** and **each
+issue path**, plus whether the branch landed.
 
 A session that ends with neither `alert` nor `done` is recorded as bailed and
 becomes an `important` alert of its own. The run id is in the briefing's

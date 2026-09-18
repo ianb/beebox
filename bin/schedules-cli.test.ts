@@ -34,7 +34,7 @@ after(cleanupTempDirs);
 
 // ─── Track C: alerts ──────────────────────────────────────────────────────
 
-test("an alert record carries the full shape and defaults to open", async () => {
+test("an important alert record carries the full shape, opens, and pops up", async () => {
   const { schedulesRoot } = await makeSchedule("alertjob", { yaml: BASE_YAML, run: "#!/bin/sh\n" });
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T22:01:02Z") });
   const alert = await raiseAlert(fake.deps, {
@@ -43,7 +43,8 @@ test("an alert record carries the full shape and defaults to open", async () => 
     title: "12 new unused exports",
     message: "knip found twelve.",
     details: "- a\n- b\n",
-    priority: "normal",
+    priority: "important",
+    condition: null,
   });
   assert.equal(alert.state, "open");
   assert.equal(alert.acknowledgedAt, null);
@@ -52,10 +53,10 @@ test("an alert record carries the full shape and defaults to open", async () => 
   const stored = await readAlerts(fake.deps.storeRoot, "alertjob");
   assert.deepEqual(stored, [alert]);
   assert.deepEqual(fake.notifications, [{
-    title: "alertjob: 12 new unused exports",
+    title: "important · alertjob: 12 new unused exports",
     message: "knip found twelve.",
     group: `schedule-${alert.id}`,
-    destination: `http://localhost:3210/workstreams/alerts/alertjob?alert=${alert.id}`,
+    destination: `http://localhost:3210/workstreams/alerts?alert=${alert.id}`,
   }]);
 });
 
@@ -71,6 +72,14 @@ test("acknowledged alerts leave the default view after 14 days; records are kept
     details: null,
     priority: "normal" as const,
     createdAt: new Date(nowMs).toISOString(),
+    closedBy: null,
+    condition: null,
+    lastSeenAt: new Date(nowMs).toISOString(),
+    occurrences: 1,
+    digestedAt: null,
+    issue: null,
+    filingFailedSince: null,
+    filingError: null,
   };
   await fs.mkdir(path.join(fake.deps.storeRoot, "fadejob", "alerts"), { recursive: true });
   await writeAlert(fake.deps.storeRoot, { ...base, id: "a-open", state: "open", acknowledgedAt: null });
@@ -93,7 +102,7 @@ test("alert takes its workstream and run id from the environment, and --run over
   assert.equal(fromEnv.exitCode, 0, fromEnv.stderr);
 
   const overridden = await runCli(
-    ["alert", "--title", "overridden", "--message", "m", "--run", "20260824-999999", "--priority", "backlog"],
+    ["alert", "--title", "overridden", "--message", "m", "--run", "20260824-999999", "--priority", "fyi"],
     { env },
   );
   assert.equal(overridden.exitCode, 0, overridden.stderr);
@@ -103,7 +112,7 @@ test("alert takes its workstream and run id from the environment, and --run over
   const byTitle = new Map(alerts.map((alert) => [alert.title, alert]));
   assert.equal(byTitle.get("from env")?.runId, "20260824-120000");
   assert.equal(byTitle.get("overridden")?.runId, "20260824-999999");
-  assert.equal(byTitle.get("overridden")?.priority, "backlog");
+  assert.equal(byTitle.get("overridden")?.priority, "fyi");
   // `alert` also files the run's result record, so a bailed run is detectable.
   const result = await fs.readFile(path.join(storeRoot, "clijob", "runs", "20260824-120000.result.json"), "utf8");
   assert.match(result, /"kind": "alert"/);
@@ -144,6 +153,7 @@ test("done records a result; ack marks an alert acknowledged", async () => {
   assert.equal(acked.exitCode, 0, acked.stderr);
   const [alert] = await readAlerts(storeRoot, "ackjob");
   assert.equal(alert?.state, "acknowledged");
+  assert.equal(alert?.closedBy, "person");
   assert.ok(alert?.acknowledgedAt !== null);
 });
 

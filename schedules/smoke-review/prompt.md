@@ -22,7 +22,7 @@ what you are authorised to do.
 The briefing's Coverage line gives landings on `main` against smoke runs
 logged. If there were many code landings and few runs, stop there: a gate that
 is not running is a bigger finding than any question about which of its steps
-earns its place, and it is an `important` alert, not an issue to file.
+earns its place, and it is a `normal` alert, not an issue to file.
 
 Expect them not to match exactly. The walk runs pre-merge on a worktree branch,
 docs-only landings are exempt by design, and a landing can carry several
@@ -107,12 +107,12 @@ End with exactly one of:
 
 Priorities for this schedule:
 
-- `important` — the tier itself looks broken or dishonest: a step failing every
+- `normal` — the tier itself looks broken or dishonest (a step failing every
   run, a step that has never run at all across many walks, counts that cannot
-  be true.
-- `normal` — you filed a trim or a gap issue. Name it.
-- `backlog` — a real observation you filed that nobody needs to read this week.
-- `fyi` — something changed worth knowing, nothing to do.
+  be true), or you filed a trim or a gap issue. Name it.
+- `fyi` — something changed worth knowing, or you filed an observation nobody
+  needs to read this week.
+- `important` is not used here: nothing this review finds needs a person today.
 
 A session that ends with neither `alert` nor `done` is recorded as bailed and
 becomes an `important` alert. The run id is in the briefing's trailer.

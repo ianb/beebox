@@ -102,6 +102,10 @@ async function latestRelease(): Promise<PypiLatest | null> {
   return { version, uploadedAt: new Date(uploaded) };
 }
 
+/** The standing condition this schedule reports: one alert that updates daily
+ *  while the pin is behind, resolved once it catches up. */
+const NEWER_RELEASE_CONDITION = "newer-release";
+
 /** The one report this schedule can make. Under `SCHEDULE_DRY_RUN` the alert
  *  is printed instead of recorded — `bin/schedules alert` would swallow it the
  *  same way, but saying it here is what makes a dry run readable. */
@@ -113,7 +117,7 @@ async function alert(report: { title: string; message: string }): Promise<void> 
   }
   await execa(
     path.join(REPO_ROOT, "bin", "schedules"),
-    ["alert", "--priority", "normal", "--title", report.title, "--message", report.message],
+    ["alert", "--priority", "normal", "--condition", NEWER_RELEASE_CONDITION, "--title", report.title, "--message", report.message],
     { stdio: "inherit" },
   );
 }
@@ -122,10 +126,18 @@ const pinned = pinnedVersion();
 const latest = await latestRelease();
 if (latest === null) process.exit(0);
 
-if (compareVersions(latest.version, pinned) <= 0) process.exit(0);
+/** Nothing actionable: the pin is current, or the newer release has not
+ *  settled. An open alert about an older release is stale either way.
+ *  `resolve` honors SCHEDULE_DRY_RUN itself. */
+async function resolveAndExit(): Promise<never> {
+  await execa(path.join(REPO_ROOT, "bin", "schedules"), ["resolve", "--condition", NEWER_RELEASE_CONDITION], { stdio: "inherit" });
+  process.exit(0);
+}
+
+if (compareVersions(latest.version, pinned) <= 0) await resolveAndExit();
 
 const ageDays = (Date.now() - latest.uploadedAt.getTime()) / 86_400_000;
-if (ageDays <= SETTLING_DAYS) process.exit(0);
+if (ageDays <= SETTLING_DAYS) await resolveAndExit();
 
 await alert({
   title: `docling ${latest.version} is available (pinned: ${pinned})`,

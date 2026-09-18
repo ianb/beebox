@@ -25,19 +25,21 @@ import {
   EMPTY_SCHEDULE_STATE,
   SCHEDULES_MARKER,
   alertSchema,
+  digestStateSchema,
   handoffSchema,
   resultSchema,
   runExitSchema,
   scheduleStateSchema,
   storeStateSchema,
   type Alert,
+  type DigestState,
   type Handoff,
   type Result,
   type RunExit,
   type ScheduleState,
   type StoreState,
 } from "./schedules.js";
-import { InvalidStoreRecordError, UnmarkedStoreRootError } from "./schedules-errors.js";
+import { InvalidAlertRecordError, InvalidStoreRecordError, UnmarkedStoreRootError } from "./schedules-errors.js";
 
 
 
@@ -233,6 +235,16 @@ export async function tailLog(logFile: string, count: number): Promise<string> {
   return lines.slice(-count).join("\n");
 }
 
+// ─── Digest ───────────────────────────────────────────────────────────────
+
+export async function readDigestState(root: string): Promise<DigestState | null> {
+  return readJson(path.join(root, "digest.json"), digestStateSchema);
+}
+
+export async function writeDigestState(root: string, state: DigestState): Promise<void> {
+  await writeJson(path.join(root, "digest.json"), state);
+}
+
 // ─── Alerts ───────────────────────────────────────────────────────────────
 
 export async function writeAlert(root: string, record: Alert): Promise<void> {
@@ -250,7 +262,13 @@ export async function readAlerts(root: string, name: string): Promise<Alert[]> {
   }
   const alerts: Alert[] = [];
   for (const entry of entries.filter((file) => file.endsWith(".json")).toSorted()) {
-    const alert = await readJson(path.join(dir, entry), alertSchema);
+    let alert: Alert | null;
+    try {
+      alert = await readJson(path.join(dir, entry), alertSchema);
+    } catch (e) {
+      if (e instanceof InvalidStoreRecordError) throw new InvalidAlertRecordError(e.filePath, e.reasons);
+      throw e;
+    }
     if (alert !== null) alerts.push(alert);
   }
   return alerts;
