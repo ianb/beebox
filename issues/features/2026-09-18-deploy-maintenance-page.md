@@ -1,6 +1,6 @@
 ---
 title: "A deploy blacks the site out with a bare 502; serve a maintenance page instead"
-workstream: unattached
+workstream: deploy-maintenance-page
 area: beebox
 labels: [deploy]
 filed-by: agent

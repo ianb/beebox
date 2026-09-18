@@ -1,6 +1,6 @@
 ---
 title: "A failed deploy reports itself as interrupted and silently drops the queued deploy"
-workstream: unattached
+workstream: deploy-maintenance-page
 area: beebox
 labels: [deploy]
 filed-by: agent

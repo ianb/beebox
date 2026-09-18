@@ -1,6 +1,6 @@
 ---
 title: "Deploys keep no timing record, so \"are deploys getting slower\" is unanswerable"
-workstream: unattached
+workstream: deploy-maintenance-page
 area: beebox
 labels: [deploy]
 filed-by: agent
