@@ -18,6 +18,7 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
 import { ErrorText } from "../components/ui/ErrorText";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import { isDoclingPath } from "../lib/docling";
@@ -46,7 +47,7 @@ function DoclingRawView({ data }: RendererProps) {
   const basename = data.path.split("/").pop() ?? data.path;
   const downloadUrl = apiRawFileUrl(getApiBase(), data.path);
 
-  if (isLoading) return <Text as="div" tone="subtle" className="p-4">Loading extraction…</Text>;
+  if (isLoading) return <StatusMessage className="p-4">Loading extraction…</StatusMessage>;
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">

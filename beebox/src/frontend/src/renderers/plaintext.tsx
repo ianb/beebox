@@ -8,12 +8,12 @@
 
 import { isBinaryPath } from "../lib/binary-files";
 import { Pre } from "../components/ui/Pre";
-import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
 import { registerFileType, type RendererProps } from "./index";
 
 function PlaintextRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
-    return <Text as="div" tone="subtle" className="p-4">No text content available</Text>;
+    return <StatusMessage className="p-4">No text content available</StatusMessage>;
   }
   return (
     <div className="p-4">

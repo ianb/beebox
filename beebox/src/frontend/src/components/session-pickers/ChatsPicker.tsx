@@ -11,6 +11,8 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { StatusMessage } from "../ui/StatusMessage";
 import { ChatsLandmarkCard } from "./ChatsLandmarkCard";
 
 export function ChatsPicker() {
@@ -19,13 +21,13 @@ export function ChatsPicker() {
   const { data, isLoading, error } = trpc.chat.byLandmark.useQuery();
 
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading…</Text>;
+    return <StatusMessage>Loading…</StatusMessage>;
   }
   if (error) {
     return (
-      <Text as="div" tone="subtle" className="p-8">
+      <ErrorText className="p-8">
         Failed to load chats: {error.message}
-      </Text>
+      </ErrorText>
     );
   }
 

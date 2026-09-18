@@ -23,6 +23,7 @@ import { AppBarChromeProvider } from "./components/app-bar-chrome";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
+import { StatusMessage } from "./components/ui/StatusMessage";
 import { Button } from "./components/ui/Button";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { useBoxes } from "./hooks/useBoxes";
@@ -86,7 +87,7 @@ export function BoxValidationLayout() {
 
   useDropBoxScopedCache(boxSlug);
 
-  if (!boxesState.loaded) return <Text as="div" tone="subtle" className="p-8">Loading box...</Text>;
+  if (!boxesState.loaded) return <StatusMessage>Loading box...</StatusMessage>;
   if (boxesState.error) return <BoxValidationError />;
   return boxExists ? <Outlet /> : <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />;
 }

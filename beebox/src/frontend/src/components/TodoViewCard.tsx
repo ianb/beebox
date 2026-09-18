@@ -23,6 +23,8 @@ import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { StatusMessage } from "./ui/StatusMessage";
 import { Heading } from "./ui/Heading";
 import { Stack } from "./ui/Stack";
 import { Row } from "./ui/Row";
@@ -137,10 +139,10 @@ export function TodoViewCard({ data }: RendererProps) {
   });
 
   if (query.isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading todos…</Text>;
+    return <StatusMessage>Loading todos…</StatusMessage>;
   }
   if (query.data === undefined) {
-    return <Text as="div" tone="subtle" className="p-8">Couldn't load todos.</Text>;
+    return <ErrorText className="p-8">Couldn't load todos.</ErrorText>;
   }
 
   const { todos, issues, effectiveGlob } = query.data;

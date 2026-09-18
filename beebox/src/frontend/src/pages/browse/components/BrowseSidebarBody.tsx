@@ -10,6 +10,7 @@ import { Button } from "../../../components/ui/Button";
 import { Column } from "../../../components/ui/Column";
 import { Row } from "../../../components/ui/Row";
 import { Text } from "../../../components/ui/Text";
+import { StatusMessage } from "../../../components/ui/StatusMessage";
 import { ErrorText } from "../../../components/ui/ErrorText";
 import { Toggle } from "../../../components/ui/Toggle";
 import { BrowseSidebarList } from "./BrowseSidebarList";
@@ -76,7 +77,7 @@ export function BrowseSidebarBody(props: Props) {
       </>
     );
   }
-  if (loading) return <Text as="div" size="sm" tone="subtle" className="p-4">Loading...</Text>;
+  if (loading) return <StatusMessage className="p-4">Loading...</StatusMessage>;
   if (!isError) return null;
 
   return (

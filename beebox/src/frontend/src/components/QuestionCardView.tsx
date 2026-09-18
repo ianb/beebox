@@ -16,6 +16,7 @@ import { trpc } from "../lib/trpc";
 import { QuestionForm } from "./questions/QuestionForm";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
+import { StatusMessage } from "./ui/StatusMessage";
 import { Heading } from "./ui/Heading";
 import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
@@ -31,11 +32,11 @@ export function QuestionCardView({ data }: RendererProps) {
   const question = questions?.items.find((q) => q.relativePath === data.path);
 
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
+    return <StatusMessage>Loading...</StatusMessage>;
   }
 
   if (question === undefined) {
-    return <Text as="div" tone="subtle" className="p-8">Question card not found.</Text>;
+    return <StatusMessage>Question card not found.</StatusMessage>;
   }
 
   const onAnswered = () => void utils.status.questions.invalidate();

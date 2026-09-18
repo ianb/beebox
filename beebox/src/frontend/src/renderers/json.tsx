@@ -16,6 +16,7 @@ import { JsonView } from "../components/ui/JsonView";
 import { Stack } from "../components/ui/Stack";
 import { Row } from "../components/ui/Row";
 import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
 import { ErrorText } from "../components/ui/ErrorText";
 import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
@@ -81,7 +82,7 @@ function JsonRenderer({ data }: RendererProps) {
   }, [text]);
 
   if (metaLoading) {
-    return <Text as="div" tone="subtle" className="p-4">Loading file info…</Text>;
+    return <StatusMessage className="p-4">Loading file info…</StatusMessage>;
   }
   if (metaError || meta === undefined) {
     const message = metaError instanceof Error ? metaError.message : "unknown error";
@@ -110,7 +111,7 @@ function JsonRenderer({ data }: RendererProps) {
   }
 
   if (bodyLoading || parsed === null) {
-    return <Text as="div" tone="subtle" className="p-4">Loading JSON…</Text>;
+    return <StatusMessage className="p-4">Loading JSON…</StatusMessage>;
   }
   if (bodyError) {
     const message = bodyError instanceof Error ? bodyError.message : "error";

@@ -12,6 +12,7 @@ import { Column } from "../components/ui/Column";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
 import {
   BoxActionsTile,
   SignInLink,
@@ -46,7 +47,7 @@ export function BoxRedirect() {
   }, [loading, boxes, navigate]);
 
   if (loading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
+    return <StatusMessage>Loading...</StatusMessage>;
   }
 
   if (boxes.length === 0 && authRequired) {
@@ -66,7 +67,7 @@ export function BoxRedirect() {
   }
 
   if (boxes.length === 1) {
-    return <Text as="div" tone="subtle" className="p-8">Redirecting...</Text>;
+    return <StatusMessage>Redirecting...</StatusMessage>;
   }
 
   return (

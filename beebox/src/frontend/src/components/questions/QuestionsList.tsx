@@ -22,6 +22,7 @@ import { bbxSource } from "../../lib/source-tag";
 import { Stack } from "../ui/Stack";
 import { Card } from "../ui/Card";
 import { Text } from "../ui/Text";
+import { StatusMessage } from "../ui/StatusMessage";
 import { StatusBadge } from "../ui/StatusBadge";
 
 function answeredCard(q: QuestionInfo) {
@@ -110,7 +111,7 @@ export function QuestionsList() {
   const archive = [...demoted, ...answered];
 
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
+    return <StatusMessage>Loading...</StatusMessage>;
   }
 
   return (
