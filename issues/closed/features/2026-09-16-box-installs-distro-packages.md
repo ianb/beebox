@@ -1,11 +1,20 @@
 ---
 title: "A box cannot install distro packages; the boxholder must run apt by hand"
-workstream: unattached
+workstream: box-host-packages
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+Resolved by `worktree-box-host-packages`: `bbx host install`/`bbx host sync`,
+the `bbx-host-apt` root wrapper, deploy/Docker install of the wrapper and
+sudoers entry, and the `hostPackagesCheck` health check. See
+`docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
+library policy ([2026-09-16-box-python-library-path-and-policy.md](../../features/2026-09-16-box-python-library-path-and-policy.md))
+and sandboxed trick helpers ([2026-09-16-sandboxed-trick-helpers.md](../../features/2026-09-16-sandboxed-trick-helpers.md)),
+both left open.
 
 A box agent was asked to make label PDFs with gLabels, which is in the distro
 repositories. It was not installed. The box user has no sudo, so the only path
@@ -54,6 +63,6 @@ open question below, with one confirmed case.
 - Self-hosted installs on other distros or macOS need a different backend or
   no support.
 
-Related: [Python libraries for boxes](2026-09-16-box-python-library-path-and-policy.md),
-[sandboxed trick helpers](2026-09-16-sandboxed-trick-helpers.md),
-[installation remaining work](2026-07-19-installation-remaining-work.md).
+Related: [Python libraries for boxes](../../features/2026-09-16-box-python-library-path-and-policy.md),
+[sandboxed trick helpers](../../features/2026-09-16-sandboxed-trick-helpers.md),
+[installation remaining work](../../features/2026-07-19-installation-remaining-work.md).

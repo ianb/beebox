@@ -80,6 +80,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "finalize", audience: "agent", smoke: MUTATES },
   { name: "procedure", audience: "agent", smoke: { run: ["procedure", "list"] } },
   { name: "trick", audience: "agent", smoke: { run: ["trick"] } },
+  { name: "host", audience: "agent", smoke: { skip: "installs system packages as root through sudo" } },
 
   // ---- Reading the box's own state -------------------------------------
   { name: "status", audience: "agent", smoke: { run: ["status"] } },

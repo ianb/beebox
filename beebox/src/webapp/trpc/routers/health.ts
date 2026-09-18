@@ -41,6 +41,8 @@ import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
 import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
 import { templateUpdatesCheck } from "./health-templates.js";
 import { packageDocsCheck } from "./health-package-docs.js";
+import { hostPackagesCheck } from "./health-host-packages.js";
+import { queryInstalledPackages } from "../../../core/host-packages-system.js";
 
 export interface HealthCheck {
   name: string;
@@ -264,6 +266,8 @@ export async function runHealthChecks(
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
   checks.push(await packageDocsCheck(boxRoot));
+  const hostPackages = await hostPackagesCheck(boxRoot, { queryInstalled: queryInstalledPackages });
+  if (hostPackages !== null) checks.push(hostPackages);
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);

@@ -333,7 +333,22 @@ tracked files.
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
+/usr/local/sbin/bbx-host-apt # Root wrapper for box package installs (deploy installs it)
+/etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper
+/var/log/beebox/host-apt.log # One JSON line per box install attempt
 ```
+
+### Box package installs
+
+A box agent installs a distro package with `bbx host install <pkg> --why ...`.
+The command records the need in the box's `_config/host-packages.json`, then
+runs `bbx-host-apt` through sudo. The wrapper installs only additive,
+service-free packages from the distro sources. `deploy.sh` installs the
+wrapper and the sudoers entry on every deploy, so `setup-server.sh` needs no
+copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
+box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
+`docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+`server-bin/bbx-host-apt.smoke.sh`.
 
 ## Systemd units
 

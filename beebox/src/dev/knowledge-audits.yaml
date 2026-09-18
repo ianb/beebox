@@ -161,6 +161,28 @@ tests:
       - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
     tags: [interface-cards]
 
+  # === Host packages (docs/plans/box-host-packages.md) ===
+  # Status (2026-09-17, Claude): 1/1 passed with no reads/searches on the
+  # worktree's test1 clone (a macOS host); the agent also named the unsupported-
+  # host path and a question card for non-chat runs.
+
+  - id: host-package-install
+    prompt: >
+      The boxholder wants label sheets rendered to PDF with gLabels, but
+      `glabels-3-batch` is not installed on this host. How do you get it, what
+      does the box keep as a record, and what do you do if the install is
+      refused or this host cannot install packages? Explain only; do not run
+      tools or change files.
+    expected_level: knows_directly
+    watch_for: >
+      Uses bbx host install glabels with --why, names _config/host-packages.json
+      and committing it, and on refusal or an unsupported host asks the
+      boxholder instead of suggesting sudo apt.
+    correct_contains: ["bbx host install", "--why", "host-packages.json"]
+    correct_matches:
+      - '(?:refus|unsupported|macOS|cannot)[\s\S]{0,250}(?:ask|boxholder)'
+    tags: [host-packages]
+
   # === Browser tasks (docs/plans/browser-task-card.md) ===
 
   - id: browser-task-authoring

@@ -29,4 +29,4 @@ release older than about 30 days; prefer widely used packages; record each
 addition (name, version, reason) in the box for review; ask before anything
 that needs a compiler or system libraries.
 
-Related: [distro packages](2026-09-16-box-installs-distro-packages.md).
+Related: [distro packages](../closed/features/2026-09-16-box-installs-distro-packages.md).

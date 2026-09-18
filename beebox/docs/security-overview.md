@@ -63,8 +63,12 @@ the box directory, and no current call site widens it beyond that — but
 the scope parameter itself is unguarded caller input, and either way it
 is a convention the agent operates within, not a sandbox that contains
 it. Treat "what can the agent do" and "what can beebox do" as the
-same question. On fresh boxes, scheduled agent runs are off by default —
-nothing runs until you turn it on.
+same question. On a server or in the Docker image it can also install
+distro packages as root through one validating wrapper, which allows only
+additive installs from the distro sources and refuses packages that add
+services, root jobs, privilege grants or setuid files; the packages'
+install scripts still run as root. On fresh boxes, scheduled agent runs are
+off by default — nothing runs until you turn it on.
 
 ## Prompt injection — the risk we most want you to understand
 
