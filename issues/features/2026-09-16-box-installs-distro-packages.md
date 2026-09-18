@@ -1,6 +1,6 @@
 ---
 title: "A box cannot install distro packages; the boxholder must run apt by hand"
-workstream: unattached
+workstream: box-host-packages
 area: beebox
 filed-by: agent
 discovered-by: Ian
