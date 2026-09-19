@@ -5,7 +5,20 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+Resolved by `fa5e8d4c1` (refresh-maps: stamp maps that verify; --brief stops
+overwriting the saved brief) and `a8a67c3d7` (refresh-maps: stamp the brief's
+HEAD; ignore the agent's own usage writes). Finalize now stamps a task whose
+MAP.md passes a mechanical coverage check (`beebox/src/core/maps/verify.ts`)
+even when the agent made no change, closing the "correct but never stamped"
+gap identified as the root cause; `--brief` no longer overwrites the saved
+brief; finalize stamps at the brief's own HEAD rather than the HEAD at
+finalize time. The one-time stale-header sweep this issue considered was not
+built — stale headers fail the coverage check and get rewritten (and thus
+stamped) on the next ordinary run instead. See
+`beebox/docs/implemented-plans/refresh-maps-correctness.md`.
 
 The scheduled refresh-maps procedure reports the same directories as
 `action: create` in every `--brief` run. Their MAP.md files exist and cover
