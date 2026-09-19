@@ -12,6 +12,7 @@ rewritten too.
 
 ```ts setup
 import { executeMove } from "../../../src/core/commands/move.js";
+import { extractBodyLinks } from "../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -413,6 +414,29 @@ await box.read("_content/trips/Beach.image.card")
 filename:
   ref: /_content/trips/Beach.attach/photo.jpg
 ---
+```
+
+A move to a path with a space writes inbound markdown links in CommonMark's
+angle-bracket form, since a bare destination ends at the first space.
+`bbx validate` reads that form, and the next move rewrites it again, keeping
+the brackets as it keeps every link's style:
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/cap/Beach.image.card", "---\ntitle: Beach\n---\n");
+await box.write("_content/notes/trip.doc.card", "---\ntitle: Trip\n---\n![b](/_content/cap/Beach.image.card)\n");
+
+await mv(box, { from: "_content/cap/Beach.image.card", to: "_content/cap/Beach walk.image.card" });
+const trip = await box.read("_content/notes/trip.doc.card");
+trip.includes("![b](</_content/cap/Beach walk.image.card>)")
+=> true
+
+JSON.stringify(extractBodyLinks(trip.split("---\n")[2] ?? "").map((l) => l.ref))
+=> ["/_content/cap/Beach walk.image.card"]
+
+await mv(box, { from: "_content/cap/Beach walk.image.card", to: "_content/cap/Walk.image.card" });
+(await box.read("_content/notes/trip.doc.card")).includes("![b](</_content/cap/Walk.image.card>)")
+=> true
 ```
 
 ## Rename in place (same directory)
