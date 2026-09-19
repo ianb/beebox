@@ -262,16 +262,21 @@ class GmailConnector implements Connector {
       const message = `Draft upload failed for ${drafts.errors.length} card${drafts.errors.length === 1 ? "" : "s"}: ${detail}`;
       result.error = result.error === undefined ? message : `${result.error}; ${message}`;
     }
-    if (drafts.updated.length === 0) return;
+    const changed = [...drafts.updated, ...drafts.stranded];
+    if (changed.length === 0) return;
+    const parts = [
+      ...(drafts.updated.length === 0 ? [] : [`Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`]),
+      ...(drafts.stranded.length === 0 ? [] : [`stop retrying ${drafts.stranded.length} failed draft${drafts.stranded.length === 1 ? "" : "s"}`]),
+    ];
     await stageAndCommitPaths(this.boxRoot, {
-      paths: drafts.updated,
-      message: `Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`,
+      paths: changed,
+      message: parts.join("; "),
       trailers: {
         "Pushed-By": "gmail-connector",
         ...(this.triggeredBy === undefined ? {} : { "Triggered-By": this.triggeredBy }),
       },
     });
-    result.updated.push(...drafts.updated);
+    result.updated.push(...changed);
   }
 
   private async syncUnderLock(service: GoogleGmailService): Promise<SyncResult> {

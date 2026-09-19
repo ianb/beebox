@@ -7,11 +7,12 @@ open the draft in Gmail.
 
 ```ts setup
 import { join } from "node:path";
-import { readFile, mkdir } from "node:fs/promises";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
 import { createGmailConnector } from "../../src/connectors/gmail.js";
+import { strandedDraftsHealthChecks } from "../../src/webapp/trpc/routers/health-connectors.js";
 ```
 
 ## A new outbound (no thread) gets uploaded and stamped
@@ -183,10 +184,65 @@ result.success
 result.error?.startsWith("Draft upload failed for 1 card: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card: ")
 => true
 
-// Card stays unstamped so the user can fix the ref and retry on next sync
-const stamped = await readFile(join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card"), "utf-8");
-stamped.includes("gmail-draft-id")
-=> false
+// No draft id. The failure is the card's own, so the reason is written on
+// the card and the connector stops retrying it.
+const cardPath = join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card");
+const stamped = await readFile(cardPath, "utf-8");
+`${stamped.includes("gmail-draft-id")} | ${stamped.includes("gmail-draft-error: in-reply-to ref")}`
+=> false | true
+```
+
+The next sync leaves the stranded card alone: no retry and no error. The
+dashboard lists it instead, until someone fixes the card and deletes the
+`gmail-draft-error` line:
+
+```ts continue
+const again = await connector.sync();
+`${again.error} | ${gmail.drafts.length}`
+=> undefined | 0
+
+const [check] = await strandedDraftsHealthChecks(box.root);
+`${check.name} | ${check.message.startsWith("1 Gmail draft could not be uploaded and is no longer retried: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card")}`
+=> gmail-drafts | true
+
+// Fixing the card: point the ref at nothing (a new thread) and drop the error line.
+await writeFile(cardPath, "---\ntype: email-outbound\nstatus: draft\nto: x@y.com\nsubject: \"Re: missing\"\n---\n...\n");
+await connector.sync();
+`${gmail.drafts.length} | ${(await strandedDraftsHealthChecks(box.root)).length}`
+=> 1 | 0
+```
+
+## A draft Gmail rejects is stranded; a transient failure is retried
+
+Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by retrying.
+A network or auth failure can, so it leaves the card untouched:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("_config/connectors/gmail.json", "{}\n");
+await box.seed(
+  "_content/inbox/email/draft-2026-04-28-a/draft-001.email-outbound.card",
+  "---\ntype: email-outbound\nstatus: draft\nto: not an address\nsubject: Hi\n---\nHello.\n",
+);
+box.commitAll("setup");
+
+const gmail = createFakeGoogleGmail();
+gmail.rejectDrafts = "Invalid To header";
+await createGmailConnector(box.root, gmail).sync();
+const cardPath = join(box.root, "_content/inbox/email/draft-2026-04-28-a/draft-001.email-outbound.card");
+(await readFile(cardPath, "utf-8")).includes("gmail-draft-error: \"Gmail rejected the draft: Invalid To header\"")
+=> true
+
+await box.seed(
+  "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card",
+  "---\ntype: email-outbound\nstatus: draft\nto: bob@example.com\nsubject: Hi\n---\nHello.\n",
+);
+const offline = { ...createFakeGoogleGmail(), createDraft: async () => { throw new Error("socket hang up"); } };
+const result = await createGmailConnector(box.root, offline).sync();
+const other = await readFile(join(box.root, "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card"), "utf-8");
+`${result.error?.includes("socket hang up")} | ${other.includes("gmail-draft-error")}`
+=> true | false
 ```
 
 ## Already-stamped outbounds are skipped

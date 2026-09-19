@@ -39,7 +39,7 @@ import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
 import { templateUpdatesCheck } from "./health-templates.js";
 import { packageDocsCheck } from "./health-package-docs.js";
 import { watchLimitHealthChecks } from "./health-watch-limit.js";
-import { connectorActivityHealthChecks, dismissConnectorEpisodeProcedure } from "./health-connectors.js";
+import { connectorHealthChecks, dismissConnectorEpisodeProcedure } from "./health-connectors.js";
 import { hostPackagesCheck } from "./health-host-packages.js";
 import { queryInstalledPackages } from "../../../core/host-packages-system.js";
 
@@ -238,7 +238,7 @@ export async function runHealthChecks(
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
   checks.push(...watchLimitHealthChecks(boxRoot));
-  checks.push(...(await connectorActivityHealthChecks(boxRoot, { now })));
+  checks.push(...(await connectorHealthChecks(boxRoot, { now })));
 
   // --- Interface card checks ---
 

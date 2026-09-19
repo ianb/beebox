@@ -4489,6 +4489,14 @@ test1:
       peak: 50037
       added: 0
       turns: 1
+  draft-email-stranded:
+    - date: 2026-09-19T12:39:26.538Z
+      boxCommit: 8af582283927a3adaa96afc60ca97f0743e000c0
+      repoCommit: 8dae83f5f09679e0c91aa5ade8219dafbad3abc3
+      initial: 51382
+      peak: 52400
+      added: 1018
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
