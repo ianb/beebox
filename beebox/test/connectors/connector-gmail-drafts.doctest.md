@@ -178,6 +178,11 @@ gmail.drafts.length
 result.success
 => true
 
+// Inbound sync succeeded, but the failed card is named in the error, so the
+// wakeup and finalize output (and the connector activity record) show it.
+result.error?.startsWith("Draft upload failed for 1 card: _content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card: ")
+=> true
+
 // Card stays unstamped so the user can fix the ref and retry on next sync
 const stamped = await readFile(join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card"), "utf-8");
 stamped.includes("gmail-draft-id")
