@@ -22,7 +22,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile } from "../../lib/paths.js";
+import { isCardFile, isMarkdownFile } from "../../lib/paths.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
@@ -46,10 +46,11 @@ const MoveArgsSchema = z.object({
 export type MoveArgs = z.infer<typeof MoveArgsSchema>;
 
 /**
- * Check if a destination path looks like a directory (not a specific card file).
+ * Check if a destination path looks like a directory (not a specific card or
+ * `.md` file).
  */
 function isDirectoryDest(destPath: string): boolean {
-  return destPath.endsWith("/") || !destPath.includes(".card");
+  return destPath.endsWith("/") || (!destPath.includes(".card") && !destPath.endsWith(".md"));
 }
 
 /**
@@ -138,7 +139,7 @@ async function handleDirectorySource({
 }
 
 /**
- * Relocate a single card-file source, recording results or errors in `state`.
+ * Relocate a single card or plain `.md` source, recording results or errors in `state`.
  */
 async function handleCardSource({
   ctx,
@@ -162,9 +163,13 @@ async function handleCardSource({
     destPath = path.join(rawDestPath, path.basename(sourcePath));
   }
 
-  if (!isCardFile(destPath)) {
-    state.errors.push(`Destination must be a .card file: ${destPath}`);
-    ctx.writeLine(`Error: Destination must be a .card file: ${destPath}`);
+  // A move never changes what kind of file it is: a card stays a card and a
+  // plain `.md` stays a plain `.md`.
+  const kind = isCardFile(sourcePath) ? ".card" : ".md";
+  if (!destPath.endsWith(kind)) {
+    const relDest = path.relative(ctx.boxRoot, destPath);
+    state.errors.push(`Destination must be a ${kind} file: ${relDest}`);
+    ctx.writeLine(`Error: Destination must be a ${kind} file: ${relDest}`);
     return;
   }
 
@@ -206,9 +211,9 @@ async function handleSource({
   const sourcePath = resolveBoxRelative(ctx, fromPath);
   const sourceIsDir = await isDirectory(sourcePath);
 
-  if (!isCardFile(sourcePath) && !sourceIsDir) {
-    state.errors.push(`Source must be a .card file or directory: ${fromPath}`);
-    ctx.writeLine(`Error: Source must be a .card file or directory: ${fromPath}`);
+  if (!isCardFile(sourcePath) && !isMarkdownFile(sourcePath) && !sourceIsDir) {
+    state.errors.push(`Source must be a .card file, a .md file, or a directory: ${fromPath}`);
+    ctx.writeLine(`Error: Source must be a .card file, a .md file, or a directory: ${fromPath}`);
     return;
   }
 
@@ -288,7 +293,8 @@ async function executeMoveUnguarded(
   // (round-2 review finding, 2026-09-05).
   for (const fromPath of fromPaths) resolveBoxRelative(ctx, fromPath);
   const rawDestPath = resolveBoxRelative(ctx, moveArgs.to);
-  const destIsDir = isDirectoryDest(rawDestPath);
+  // An existing directory wins, even one whose name ends in `.md`.
+  const destIsDir = (await isDirectory(rawDestPath)) || isDirectoryDest(rawDestPath);
 
   // Multiple sources require a directory destination
   if (fromPaths.length > 1 && !destIsDir) {
@@ -327,11 +333,11 @@ async function executeMoveUnguarded(
 // Register the command
 registerCommand({
   name: "move",
-  description: "Move/rename cards or directories and update all references",
+  description: "Move/rename cards, plain .md files, or directories and update all references",
   args: [
     {
       name: "from",
-      description: "Path(s) to the card(s) or directory to move",
+      description: "Path(s) to the card(s), plain .md file(s), or directory to move",
       required: true,
       type: "string[]",
     },

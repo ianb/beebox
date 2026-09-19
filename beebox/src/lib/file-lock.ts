@@ -156,6 +156,9 @@ import * as path from "node:path";
 import * as lockfile from "proper-lockfile";
 import { errnoCode } from "./error-guards.js";
 import { isRecord } from "./is-record.js";
+// The guard path deliberately does NOT end in the caller's `.lock` suffix, so
+// `scanLocks`'s suffix match enumerates only sidecar files, never guards.
+import { lockGuardPath } from "./lock-guard.js";
 
 /**
  * Diagnostic identity of a lock holder. Written to the sidecar file at the
@@ -248,26 +251,19 @@ class LockForceAcquireFailedError extends Error {
   }
 }
 
-/** The guard-directory path proper-lockfile mkdir-locks for a given lock path.
- *  Deliberately does NOT end in the caller's `.lock` suffix, so `scanLocks`'s
- *  suffix match enumerates only sidecar files, never guard directories. */
-function guardPath(lockPath: string): string {
-  return `${lockPath}.guard`;
-}
-
 function lockOptions(ref: LockRef): lockfile.LockOptions {
   return {
     // Our lock path is not a real resource file (and may not exist), so skip
     // proper-lockfile's realpath resolution, which would ENOENT on it.
     realpath: false,
     stale: staleMs(ref),
-    lockfilePath: guardPath(ref.lockPath),
+    lockfilePath: lockGuardPath(ref.lockPath),
     onCompromised: makeOnCompromised(ref),
   };
 }
 
 function checkOptions(ref: LockRef): lockfile.CheckOptions {
-  return { realpath: false, stale: staleMs(ref), lockfilePath: guardPath(ref.lockPath) };
+  return { realpath: false, stale: staleMs(ref), lockfilePath: lockGuardPath(ref.lockPath) };
 }
 
 /**
@@ -543,7 +539,7 @@ export async function forceAcquireLock(
   const lockPath = lockRef(target).lockPath;
   for (let attempt = 0; attempt < 2; attempt++) {
     // Evict the current holder's guard dir + sidecar outright, then acquire.
-    await fs.rm(guardPath(lockPath), { recursive: true, force: true });
+    await fs.rm(lockGuardPath(lockPath), { recursive: true, force: true });
     await unlinkIgnoringMissing(lockPath);
     try {
       return await acquireLock(target, metadata);

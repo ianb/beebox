@@ -1,11 +1,16 @@
 ---
 title: "bbx mv rejects a plain .md file, but the agent guide says it moves one"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+> **Closed** — `d4594625a` makes `bbx mv` accept a plain `.md` source, with the
+> same inbound-ref and link rewriting as a card move; a `.md` source must move
+> to a `.md` destination (kind check, error names the required extension).
 
 `bbx mv some-note.md dest/` fails with
 `Source must be a .card file or directory`
