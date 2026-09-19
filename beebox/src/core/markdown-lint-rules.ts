@@ -7,7 +7,7 @@ import { invariant } from "../lib/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { matchReferenceDefinitionAt } from "./body-refs.js";
+import { linkTarget, matchReferenceDefinitionAt } from "./body-refs.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
@@ -172,7 +172,7 @@ export function extractInlineLinks(lines: readonly string[]): InlineLink[] {
     let match = INLINE_LINK_RE.exec(line);
     while (match !== null) {
       invariant(match[1] !== undefined, "INLINE_LINK_RE's sole capture group always participates in a match");
-      out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: match[1].trim() });
+      out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: linkTarget(match[1].trim()).target });
       match = INLINE_LINK_RE.exec(line);
     }
     // A continuation-line destination reports on the NEXT line (`lineIndex`

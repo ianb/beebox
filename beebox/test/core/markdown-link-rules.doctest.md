@@ -110,6 +110,26 @@ JSON.stringify(await lintLinks(box.root, doc), null, 2)
 await box.cleanup();
 ```
 
+### A destination with a space uses angle brackets
+
+A bare link destination ends at the first space, so a path with a space is
+written in CommonMark's angle-bracket form. BBX002 checks the path inside
+the brackets:
+
+```ts
+const sbox = await makeTmpBox();
+await mkdir(join(sbox.root, "_content/Beach walk.attach"), { recursive: true });
+await writeFile(join(sbox.root, "_content/Beach walk.attach/p.jpg"), "x");
+const sdoc = join(sbox.root, "_content/trip.md");
+await writeFile(sdoc, "![ok](<Beach walk.attach/p.jpg>) ![broken](<Beach walk.attach/q.jpg>)\n");
+JSON.stringify(await lintLinks(sbox.root, sdoc))
+=> ["BBX002: Broken link: Beach walk.attach/q.jpg"]
+```
+
+```ts continue
+await sbox.cleanup();
+```
+
 ### Suffixes, and `attach/` in a `.md`
 
 A link may carry a `?query` or `#fragment` addressing a location *within* the

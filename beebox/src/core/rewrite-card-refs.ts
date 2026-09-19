@@ -41,7 +41,7 @@
 import * as path from "node:path";
 import { isAttachRef } from "../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
-import { inlineLinkPattern } from "./body-refs.js";
+import { formatLinkDestination, inlineLinkPattern, linkTarget } from "./body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./rewrite-frontmatter-refs.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -73,11 +73,12 @@ function resolveRefToAbs(params: {
     console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
     return null;
   }
+  // A ref that resolves to nothing (it climbs out of the box, or names a path
+  // outside the box namespace, such as a leftover v2 `/store/…`) cannot point
+  // at a moved target, so it is left unchanged without a line of its own:
+  // `bbx validate` already reports it as broken.
   const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
-  if (resolved === null) {
-    console.warn(`rewrite-card-refs: ref "${pathPart}" in ${cardAbsPath} escapes the box; leaving unchanged`);
-    return null;
-  }
+  if (resolved === null) return null;
   return path.resolve(boxRoot, resolved);
 }
 
@@ -211,7 +212,8 @@ function scanBodyText(line: string, wrap: RefTransform): string {
       prefix !== undefined && refPart !== undefined,
       "inline-link regex has two mandatory capture groups",
     );
-    return prefix + wrap(refPart);
+    const { target, angled } = linkTarget(refPart);
+    return prefix + formatLinkDestination(wrap(target), { angled });
   });
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).

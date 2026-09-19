@@ -1,6 +1,6 @@
 ---
 title: "rewrite-card-refs warns \"escapes the box\" for a ref outside the namespace fence, on every rewrite pass"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent

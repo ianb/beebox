@@ -62,7 +62,9 @@ function isGenuinelyExternal(ref: string): boolean {
 /**
  * THE pattern for an inline markdown link/image target in card-ish text:
  * `[text](path)` / `![alt](path)`, capturing the opening `…](` run and the
- * target token separately so a rewriter can splice a replacement in.
+ * target token separately so a rewriter can splice a replacement in. The
+ * token is either bare or CommonMark's angle-bracket form (`<a b.md>`, which
+ * may hold spaces); {@link linkTarget} strips the brackets.
  *
  * A factory rather than a shared `const` because it is `/g` — a module-level
  * global regex carries `lastIndex` between callers, which is a classic
@@ -70,7 +72,26 @@ function isGenuinelyExternal(ref: string): boolean {
  * `extractBodyLinks` (validate side) and `rewrite-card-refs.ts` (`bbx mv`).
  */
 export function inlineLinkPattern(): RegExp {
-  return /(!?\[[^\]]*]\(\s*)([^\s()]+)/g;
+  return /(!?\[[^\]]*]\(\s*)(<[^\n<>]*>|[^\s()]+)/g;
+}
+
+/**
+ * The target a link token names: CommonMark's angle-bracket destination
+ * (`<path with spaces>`) loses its brackets; a bare token is unchanged.
+ */
+export function linkTarget(token: string): { target: string; angled: boolean } {
+  const angled = token.length >= 2 && token.startsWith("<") && token.endsWith(">");
+  return { target: angled ? token.slice(1, -1) : token, angled };
+}
+
+/**
+ * Write a link target back as a destination token. A bare destination ends at
+ * a space or parenthesis, so a target holding one — or one that was already
+ * angled — gets CommonMark's angle-bracket form, which markdown-it (Markdoc's
+ * parser) and {@link inlineLinkPattern} both read.
+ */
+export function formatLinkDestination(target: string, { angled }: { angled: boolean }): string {
+  return angled || /[\s()]/.test(target) ? `<${target}>` : target;
 }
 
 /**
@@ -90,8 +111,9 @@ export function extractBodyLinks(body: string): BodyRef[] {
   if (body === "") return [];
   const out: BodyRef[] = [];
   for (const match of body.matchAll(inlineLinkPattern())) {
-    const ref = match[2];
-    if (ref === undefined || isGenuinelyExternal(ref)) continue;
+    if (match[2] === undefined) continue;
+    const ref = linkTarget(match[2]).target;
+    if (isGenuinelyExternal(ref)) continue;
     out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
   }
   out.push(...extractReferenceDefinitions(body));

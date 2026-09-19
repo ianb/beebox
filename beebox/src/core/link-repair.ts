@@ -20,6 +20,7 @@ import { listBoxMarkdownFiles } from "./list-cards.js";
 import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
+import { formatLinkDestination } from "./body-refs.js";
 
 const INDEX_IGNORE = [
   "**/node_modules/**",
@@ -151,7 +152,8 @@ export async function repairBoxLinks(
     if (replacements.length > 0 && !dryRun) {
       let updated = original;
       for (const { oldUrl, newUrl } of replacements) {
-        updated = updated.split(`](${oldUrl})`).join(`](${newUrl})`);
+        const next = formatLinkDestination(newUrl, { angled: false });
+        updated = updated.split(`](${oldUrl})`).join(`](${next})`).split(`](<${oldUrl}>)`).join(`](<${newUrl}>)`);
       }
       await fs.writeFile(file, updated);
     }

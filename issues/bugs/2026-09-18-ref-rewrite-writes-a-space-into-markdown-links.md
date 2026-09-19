@@ -1,6 +1,6 @@
 ---
 title: "Ref rewriting writes an unescaped space into a markdown link when the new path has one"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent
