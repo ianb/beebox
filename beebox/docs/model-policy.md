@@ -145,3 +145,35 @@ may move between providers freely: transcripts are local, so a conversation
 that starts on GLM can continue on Claude and the reverse. `total_cost_usd`
 on GLM runs tracks first-party pricing tables — treat it as directional and
 read spend from Z.ai's own usage dashboard.
+
+## OpenRouter models
+
+The claude engine can also run models OpenRouter carries (DeepSeek, Kimi,
+Qwen, and others) through OpenRouter's Anthropic-compatible endpoint. They are
+billed per use, so a box never runs one because a key exists. The owner adds
+each model in **Admin → OpenRouter models**, which writes `openrouterModels:
+[{ id, label }]` to `_config/box.json`. The add is checked against OpenRouter's
+public catalog: the id must exist and support tool calling.
+
+- **Where an added model can run:** a chat's model dial, and `agentModel` (the
+  box default). It cannot be the `smallModel`. It has no tier, so a tiered
+  procedure step (`model: strong`) and the cheap structured passes stay on
+  first-party Claude even when the box default is an OpenRouter model.
+- **The gate at every spawn** (`core/provider-env.ts`): the model must be in
+  the added list, and the box must hold a granted `openrouter` key. Either
+  missing fails the run with the fix. Nothing falls back to first-party.
+- **Removal:** refused while the model is the box default. A chat that picked
+  a model explicitly keeps the pick after removal, and its next turn refuses.
+  It does not follow the box default.
+- **Spend:** the admin section shows each model's price per million tokens and
+  the key's own usage figure. That figure covers every use of the key, and
+  OpenRouter updates it a minute or more late. `total_cost_usd` on these runs
+  is priced as Claude and overstates by roughly 5–20×; do not read spend from
+  it.
+- **Data:** Claude Code sends the requests, so the per-request host pin that
+  the optional OpenRouter services use cannot apply. Host choice and data
+  retention follow the OpenRouter account's privacy settings.
+
+Tested through a full agent turn (tools, structured output, resume), 2026-09-19:
+`moonshotai/kimi-k2-0905:exacto`, `deepseek/deepseek-v3.2`, `qwen/qwen3-coder`.
+Other models may fail turns that need tools.

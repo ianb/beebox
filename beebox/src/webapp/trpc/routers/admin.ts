@@ -16,6 +16,7 @@ import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { backupAdminProcedures } from "./admin-backup.js";
+import { openrouterAdminProcedures } from "./admin-openrouter.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
@@ -292,6 +293,7 @@ export const adminRouter = router({
 
   ...googleAdminProcedures,
   ...backupAdminProcedures,
+  ...openrouterAdminProcedures,
 
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();

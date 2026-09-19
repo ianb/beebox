@@ -265,24 +265,27 @@ membership plus key) must also hold at every spawn, not only at the picker.
   - For GLM, it returns `glmEnvAdditions(key)`.
   - For OpenRouter, it first checks that the id is in `loadAddedModels(boxRoot)`,
     then resolves the key and returns `openRouterChatEnv(key, model)`.
-  - Every refusal throws `ProviderSetupError`, one class with a `provider`
-    field and a message naming the fix. `GlmKeyError` folds into it.
+  - Every refusal throws a subclass of `ProviderSetupError`
+    (`core/provider-setup-error.ts`), which has a `provider` field and a
+    message naming the fix. `GlmKeyError` and `OpenRouterSetupError` both
+    extend it.
 - The refusal messages:
   - Removed or unknown model: "This chat uses the OpenRouter model
     `<id>`, which is not added for this box. Add it in Admin → Agent engine
     and model, or pick another model."
   - Missing key: "…needs an OpenRouter key granted to this box. Set it up in
     Admin → Secrets." For GLM, the existing text stays.
-- `openRouterChatEnv(key, model)` is pure, in `core/openrouter.ts`. It
-  returns:
+- `openRouterChatEnv({ key, model })` is pure, in `core/openrouter-chat.ts`.
+  It returns:
   - `ANTHROPIC_BASE_URL=https://openrouter.ai/api` and `ANTHROPIC_AUTH_TOKEN=key`;
   - `ANTHROPIC_API_KEY=""`;
   - each role variable set to `model`, so no background call goes out as a
     `claude-*` id billed through OpenRouter;
   - `API_TIMEOUT_MS`, reusing GLM's rationale.
   Track 1 confirms the exact role variable set.
-- `requireOpenRouterKey(boxRoot, { purpose })` in `core/openrouter.ts` throws
-  a refusal. `getOpenRouterKey` keeps collapsing to null for the optional
+- `openRouterChatAdditions` in `core/openrouter-chat.ts` checks list
+  membership, then resolves the key, and throws `OpenRouterSetupError` for
+  either. `getOpenRouterKey` keeps collapsing to null for the optional
   services.
 - The five sites call `providerEnvAdditions`. The preflight branches in
   `run.ts` and `auth-preflight.ts` become "non-first-party provider → call the
@@ -489,8 +492,10 @@ resolved model id and treat it as opaque. Box config is owner surface.
   - `openRouterChatEnv`'s shape;
   - the unavailability guard;
   - catalog parsing.
-- Planned files: `test/core/provider-env.doctest.md` (it absorbs
-  `glm-key.doctest.md`'s env cases) and `test/core/openrouter-catalog.doctest.md`.
+- Files: `test/core/openrouter-chat-models.doctest.md` (vocabulary, policy,
+  and the spawn seam), `test/core/openrouter-catalog.doctest.md`, and
+  `test/webapp/trpc-admin-openrouter.doctest.md` (the admin procedures).
+  `glm-key.doctest.md` is unchanged.
   Existing `chat-models.doctest.md`, `chat-session-model.doctest.md`, and
   `reactor-model-policy.doctest.md` gain cases for `added`.
 - The catalog fixture is a recorded real response, not a hand-written guess.
