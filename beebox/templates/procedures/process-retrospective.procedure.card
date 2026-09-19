@@ -8,7 +8,7 @@ description: |-
   guide cards — under the evidence model. Authoritative changes (briefing
   corrections, conflicts with user-stated beliefs) become question cards
   instead of direct edits. Every run leaves an audit report in
-  store/reviews/retro/ and commits with a Retro-Run trailer.
+  _content/reviews/retro/ and commits with a Retro-Run trailer.
 
   Integration drains the whole backlog: it judges every pending report's
   observations against the current belief cards in one pass, so a lesson
@@ -38,13 +38,13 @@ steps:
         - |-
           # Phases run under set -e -o pipefail; `|| true` keeps an unmatched
           # glob (ls failing) from aborting instead of falling through.
-          latest=$(ls -t store/reviews/retro/*.md 2>/dev/null | head -1 || true)
+          latest=$(ls -t _content/reviews/retro/*.md 2>/dev/null | head -1 || true)
           echo "Latest report: ${latest:-none}"
           [ -n "$latest" ]
       instructions:
         - |-
           A scan that observed sessions writes a run report under
-          store/reviews/retro/. No report means every qualifying session
+          _content/reviews/retro/. No report means every qualifying session
           failed observation — check the scan output.
       whys:
         - The report is the audit trail; integration keys off it.
@@ -59,7 +59,7 @@ steps:
           # plus the full ledger and the current belief state, and hand it all to
           # the agent at once. Phases run under set -e -o pipefail, so guard every
           # glob with `|| true` to fall through cleanly when a directory is empty.
-          pending=$(grep -Fl '_Pending integration._' store/reviews/retro/*.md 2>/dev/null | sort || true)
+          pending=$(grep -Fl '_Pending integration._' _content/reviews/retro/*.md 2>/dev/null | sort || true)
           if [ -z "$pending" ]; then exit $CHECK_SKIP; fi
 
           echo "=== PENDING REPORTS TO DRAIN (oldest first — integrate ALL of them) ==="
@@ -88,10 +88,10 @@ steps:
           done
 
           echo "=== CURRENT BELIEF STATE — already integrated; STRENGTHEN, never duplicate ==="
-          echo "----- config/main.personality.card -----"
-          cat config/main.personality.card 2>/dev/null || echo "(no personality card)"
+          echo "----- _config/main.personality.card -----"
+          cat _config/main.personality.card 2>/dev/null || echo "(no personality card)"
           echo ""
-          for g in config/*.guide.card; do
+          for g in _config/*.guide.card; do
             [ -e "$g" ] || continue
             echo "----- $g -----"
             cat "$g"
@@ -99,11 +99,11 @@ steps:
           done
 
           echo "=== GUIDE CARD CANDIDATES (resolve each guide-sink observation to one of these) ==="
-          ls config/*.guide.card 2>/dev/null || echo "(no guide cards)"
+          ls _config/*.guide.card 2>/dev/null || echo "(no guide cards)"
           echo ""
 
           echo "=== PRIOR FINALIZED REPORTS — what past runs already did (don't redo) ==="
-          for r in $(grep -FL '_Pending integration._' store/reviews/retro/*.md 2>/dev/null | sort || true); do
+          for r in $(grep -FL '_Pending integration._' _content/reviews/retro/*.md 2>/dev/null | sort || true); do
             echo "----- $r (Actions taken) -----"
             awk '/^## Actions taken/{f=1} f' "$r" 2>/dev/null || true
             echo ""
@@ -137,7 +137,7 @@ steps:
             - The pending reports to drain, oldest first.
             - The full ledger (.beebox/retro/observations.jsonl): recurrence
               for a proposal = the count of DISTINCT sessionIds that share it.
-            - Current belief state: config/main.personality.card and the guide
+            - Current belief state: _config/main.personality.card and the guide
               cards. A lesson already present there is integrated — do not add it
               again.
             - If the precheck warned the ledger is absent, integrate only from the
@@ -201,7 +201,7 @@ steps:
               instruction, escalate to a question card (same learning: {sink:
               briefing, ...} shape as above). If it's thin or one-off, skip it.
               Never edit the briefing body directly.
-            - question: box/questions/<Name>.question.card, following the
+            - question: _bookkeeping/questions/<Name>.question.card, following the
               existing examples in the box; include the evidence quote and the
               proposed change in the memo, set directive: to what the
               follow-up agent should do (add a {% correction %} block to the
@@ -245,7 +245,7 @@ steps:
     validate:
       shells:
         - |-
-          remaining=$(grep -Fl '_Pending integration._' store/reviews/retro/*.md 2>/dev/null || true)
+          remaining=$(grep -Fl '_Pending integration._' _content/reviews/retro/*.md 2>/dev/null || true)
           if [ -n "$remaining" ]; then
             echo "Reports still pending after integration:"
             echo "$remaining"
@@ -284,14 +284,14 @@ steps:
           briefings=()
           while IFS= read -r -d '' b; do
             if grep -q '^openers:' "$b"; then briefings+=("$b"); fi
-          done < <(find . -name briefing.briefing.card -not -path './.beebox/*' -not -path './config/_template-updates/*' -print0 2>/dev/null || true)
+          done < <(find . -name briefing.briefing.card -not -path './.beebox/*' -not -path './_config/_template-updates/*' -print0 2>/dev/null || true)
           if [ ${#briefings[@]} -eq 0 ]; then exit $CHECK_SKIP; fi
 
           MARKER=.beebox/retro/openers-last-run
           if [ -f "$MARKER" ]; then
-            fresh=$(find store/reviews/retro -name '*.md' -newer "$MARKER" -print -quit 2>/dev/null || true)
+            fresh=$(find _content/reviews/retro -name '*.md' -newer "$MARKER" -print -quit 2>/dev/null || true)
           else
-            fresh=$(find store/reviews/retro -name '*.md' -print -quit 2>/dev/null || true)
+            fresh=$(find _content/reviews/retro -name '*.md' -print -quit 2>/dev/null || true)
           fi
           if [ -z "$fresh" ]; then exit $CHECK_SKIP; fi
 
@@ -312,7 +312,7 @@ steps:
             title=$(sed -n 's/^title: *//p' "$c" | head -1)
             dir=$(sed -n 's/^context-dir: *//p' "$c" | head -1)
             echo "  [${dir:-<root>}] ${title:-(untitled)}  -- $c"
-          done < <(ls -t store/chat/web/*.chat.card 2>/dev/null | head -20 || true)
+          done < <(ls -t _content/chat/web/*.chat.card 2>/dev/null | head -20 || true)
           echo ""
       whys:
         - |-

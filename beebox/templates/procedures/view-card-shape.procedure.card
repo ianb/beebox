@@ -46,7 +46,7 @@ steps:
                 actual card of that type to see where each field now lives.
 
             Maintain a checklist file at
-            `config/migration-runs/view-card-shape.checklist.md`. Create it with
+            `_config/migration-runs/view-card-shape.checklist.md`. Create it with
             exactly these items as markdown checkboxes, and change `- [ ]` to
             `- [x]` ONLY when that item is genuinely done, appending a one-line
             note of what you changed and where (cite the file):
@@ -95,7 +95,7 @@ steps:
         - |-
           # Completeness gate: the checklist must exist, have at least one
           # checked box, and have no unchecked boxes left.
-          f="config/migration-runs/view-card-shape.checklist.md"
+          f="_config/migration-runs/view-card-shape.checklist.md"
           test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"
       severity: abort
       instructions:

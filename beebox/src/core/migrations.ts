@@ -179,6 +179,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // point `filename.ref` at `attach/<file>`. Best effort: uncertain cards are
   // reported, not failed; `bbx validate` keeps warning on them.
   { name: "filename-attach-scope", script: "scripts/migrate/filename-attach-scope.ts" },
+  // Remove the retired process-pages procedure (installProcedures never
+  // prunes). Its input, record cards in pages-saved/, has had no writer since
+  // the clerk's Save Page was removed; a copy still reading it is deleted, a
+  // repointed one is parked for review. See the script's module comment.
+  { name: "retire-process-pages", script: "scripts/migrate/retire-process-pages.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
