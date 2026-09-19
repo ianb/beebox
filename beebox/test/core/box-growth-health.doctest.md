@@ -59,6 +59,10 @@ print(`directories: ${measured.counts.directories - baseline.counts.directories}
 print(`files: ${measured.counts.files - baseline.counts.files}`);
 print(`complete: ${measured.complete}`);
 print(`history: ${measured.history.status}`);
+// Disk use: .beebox is measured on its own, never as box content.
+const engineGrew = measured.bytes.status === "available" && baseline.bytes.status === "available"
+  && measured.bytes.engineBytes > baseline.bytes.engineBytes;
+print(`bytes: ${measured.bytes.status} engine-grew: ${engineGrew}`);
 const baselineFiles = new Map(baseline.largestSubtrees.map((item) => [item.path, item.files]));
 const subtreeLabel = (p) => {
   const item = measured.largestSubtrees.find((i) => i.path === p);
@@ -71,6 +75,7 @@ directories: 7
 files: 6
 complete: true
 history: available
+bytes: available engine-grew: true
 _content/drive:connector:2
 _content/inbox/email:connector:1
 
@@ -91,6 +96,7 @@ const base = {
   skippedDirectories: 0,
   counts: { directories: 100, files: 100 },
   history: { status: "available", gitHead: "a", commits: 10, gitObjects: 20, gitBytes: 30 },
+  bytes: { status: "unavailable", error: "not measured" },
   largestSubtrees: [{ path: "_content/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" }],
 };
 const fast = {
@@ -111,6 +117,21 @@ rate-connector-files:_content/inbox/email
 
 print(`${BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour}:${BOX_GROWTH_THRESHOLDS.rateFilesPerHour}:${BOX_GROWTH_THRESHOLDS.rateCommitsPerHour}`);
 => 10:25:10
+```
+
+Disk use warns on rate too, for box content and for `.beebox` separately.
+A measurement without bytes (an old state file, a failed `du`) has no byte
+finding:
+
+```ts continue
+const MB = 1024 * 1024;
+const sized = { ...base, bytes: { status: "available", contentBytes: 400 * MB, engineBytes: 200 * MB } };
+const indexBlewUp = { ...sized, measuredAt: "2026-08-05T13:00:00.000Z", bytes: { status: "available", contentBytes: 402 * MB, engineBytes: 365 * MB } };
+evaluateBoxGrowth({ previous: sized, current: indexBlewUp }).map((f) => `${f.kind}:${Math.round(f.actual / MB)}`).join(",")
+=> rate-engine-bytes:165
+
+evaluateBoxGrowth({ previous: base, current: indexBlewUp }).length
+=> 0
 ```
 
 A box is never warned about for being large. One Gmail account with a few

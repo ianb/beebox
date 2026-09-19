@@ -23,6 +23,21 @@ export const growthHistorySchema = z.discriminatedUnion("status", [
   unavailableHistorySchema,
 ]);
 
+const availableBytesSchema = z.object({
+  status: z.literal("available"),
+  /** Disk use of the box's content: everything but .git, .beebox and node_modules. */
+  contentBytes: z.number().int().nonnegative(),
+  /** Disk use of .beebox (indexes, caches, logs). */
+  engineBytes: z.number().int().nonnegative(),
+});
+
+const unavailableBytesSchema = z.object({
+  status: z.literal("unavailable"),
+  error: z.string(),
+});
+
+const growthBytesSchema = z.discriminatedUnion("status", [availableBytesSchema, unavailableBytesSchema]);
+
 export const subtreeCountsSchema = z.object({
   path: z.string(),
   directories: z.number().int().nonnegative(),
@@ -38,6 +53,8 @@ export const growthMeasurementSchema = z.object({
   filesystemError: z.string().nullable().default(null),
   skippedDirectories: z.number().int().nonnegative().default(0),
   history: growthHistorySchema,
+  /** Measurements written before bytes were measured read as unavailable. */
+  bytes: growthBytesSchema.default({ status: "unavailable", error: "not measured" }),
   largestSubtrees: z.array(subtreeCountsSchema).max(20),
 });
 
@@ -54,6 +71,8 @@ export const growthRateFindingKindSchema = z.enum([
   "rate-commits",
   "rate-connector-directories",
   "rate-connector-files",
+  "rate-content-bytes",
+  "rate-engine-bytes",
 ]);
 
 export const growthRateExpectationSchema = z.object({
@@ -81,6 +100,7 @@ export const boxGrowthStateSchema = z.discriminatedUnion("status", [
 
 export type GrowthCounts = z.infer<typeof growthCountsSchema>;
 export type GrowthHistory = z.infer<typeof growthHistorySchema>;
+export type GrowthBytes = z.infer<typeof growthBytesSchema>;
 export type SubtreeCounts = z.infer<typeof subtreeCountsSchema>;
 export type GrowthMeasurement = z.infer<typeof growthMeasurementSchema>;
 export type BoxGrowthState = z.infer<typeof boxGrowthStateSchema>;

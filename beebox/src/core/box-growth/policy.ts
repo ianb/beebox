@@ -14,6 +14,8 @@ export const BOX_GROWTH_THRESHOLDS = {
   rateCommitsPerHour: 10,
   connectorRateDirectoriesPerHour: 5,
   connectorRateFilesPerHour: 10,
+  rateContentBytesPerHour: 100 * 1024 * 1024,
+  rateEngineBytesPerHour: 100 * 1024 * 1024,
   expectedRateHeadroomMultiplier: 1.5,
   minimumRateIntervalMs: 30 * 60 * 1000,
   maximumRateIntervalMs: 2 * 60 * 60 * 1000,
@@ -70,6 +72,28 @@ function rateIntervalIsUsable(input: {
     previous.skippedDirectories === 0 &&
     current.skippedDirectories === 0
   );
+}
+
+/** Disk-use growth, when both samples measured it. */
+function byteFindings(input: {
+  previous: GrowthMeasurement;
+  current: GrowthMeasurement;
+  intervalMs: number;
+  expectations: GrowthRateExpectation[];
+}): GrowthFinding[] {
+  const { previous, current, intervalMs, expectations } = input;
+  if (previous.bytes.status !== "available" || current.bytes.status !== "available") return [];
+  const findings: GrowthFinding[] = [];
+  const measures = [
+    { kind: "rate-content-bytes", initial: BOX_GROWTH_THRESHOLDS.rateContentBytesPerHour, before: previous.bytes.contentBytes, after: current.bytes.contentBytes },
+    { kind: "rate-engine-bytes", initial: BOX_GROWTH_THRESHOLDS.rateEngineBytesPerHour, before: previous.bytes.engineBytes, after: current.bytes.engineBytes },
+  ] as const;
+  for (const { kind, initial, before, after } of measures) {
+    const actual = rate(after - before, intervalMs);
+    const threshold = rateThreshold({ kind, initial, expectations });
+    if (actual >= threshold) findings.push({ kind, actual, threshold });
+  }
+  return findings;
 }
 
 export function evaluateBoxGrowth(input: {
@@ -147,5 +171,6 @@ export function evaluateBoxGrowth(input: {
       findings.push({ kind: "rate-connector-files", path: subtree.path, actual: subtreeFileRate, threshold: connectorFileThreshold });
     }
   }
+  findings.push(...byteFindings({ previous, current, intervalMs, expectations }));
   return findings;
 }

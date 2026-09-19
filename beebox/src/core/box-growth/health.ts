@@ -251,9 +251,19 @@ function count(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
+function megabytes(bytes: number): string {
+  return `${count(bytes / (1024 * 1024))} MB`;
+}
+
 function describeFinding(finding: GrowthFinding): string {
   if (finding.kind === "rate-commits") {
     return `${count(finding.actual)} commits/hour (limit ${count(finding.threshold)})`;
+  }
+  if (finding.kind === "rate-content-bytes") {
+    return `box content grew by ${megabytes(finding.actual)}/hour (limit ${megabytes(finding.threshold)})`;
+  }
+  if (finding.kind === "rate-engine-bytes") {
+    return `.beebox (engine indexes, caches and logs) grew by ${megabytes(finding.actual)}/hour (limit ${megabytes(finding.threshold)})`;
   }
   const unit = finding.kind.endsWith("directories") ? "directories" : "files";
   const connector = finding.kind.startsWith("rate-connector");

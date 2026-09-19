@@ -80,7 +80,16 @@ rate only:
 
 - hourly rate: at least 10 new directories, 25 new files, or 10 commits;
 - connector subtree rate: at least 5 new directories or 10 new files for a
-  recognized connector-owned path such as `_content/inbox/email`.
+  recognized connector-owned path such as `_content/inbox/email`;
+- disk-use rate: at least 100 MB/hour of box content, or 100 MB/hour of
+  `.beebox`.
+
+Disk use comes from `du -sk` (`core/box-growth/bytes.ts`), which reads the same
+on Linux and macOS. Content is every top-level entry except `.git`, `.beebox`
+and `node_modules`; `.beebox` (indexes, caches, logs) is measured on its own so
+engine data never reads as content growth. Git's own size is in the history
+sample. A measurement taken before bytes were recorded, or whose `du` failed,
+has no disk-use finding.
 
 Rate checks require two complete samples 30–120 minutes apart. A partial scan,
 first measurement, long scheduler outage, or longer measurement gap does not
@@ -215,6 +224,17 @@ dismisses it. A dismissed episode stays dismissed; the next episode is new and
 alerts again. An open quiet episode does not end when its baseline ages out of
 the record. A record that fails its schema shows as a `connector-activity`
 warning and is never reset, which would discard dismissals.
+
+## gmail-drafts (drafts the connector stopped retrying)
+
+A Gmail draft upload that fails because of the card itself — a missing field,
+an `in-reply-to` ref that resolves to nothing, a message Gmail rejects with
+HTTP 400 — is stamped `gmail-draft-error:` on the `email-outbound` card and not
+retried (`connectors/gmail-draft-card.ts`). The `gmail-drafts` warning lists
+those cards until each is fixed and its `gmail-draft-error` line deleted, or
+the card is deleted. Failures that are not the card's fault (an expired grant,
+a network or server error) leave the card alone and are retried every sync;
+the connector-activity `failing` alert covers them.
 
 ## claude-update (nightly Claude Code self-update)
 

@@ -7,6 +7,8 @@ issues:
   - ../../../issues/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md
   - ../../../issues/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md
   - ../../../issues/bugs/2026-08-10-box-growth-warning-cannot-clear.md
+  - ../../../issues/features/2026-09-19-box-growth-measures-no-bytes.md
+  - ../../../issues/bugs/2026-09-19-failing-gmail-draft-retried-forever.md
 ---
 # Connector silence: notice a connector that stopped producing or keeps failing
 
@@ -442,18 +444,35 @@ No critical gaps.
   `email-outbound` card is agent-authored by definition
   (`gmail-drafts.ts:1-4`); there is no inbound triage to do.
 
+## Added after the first review (boxholder, 2026-09-19)
+
+The two follow-ups below were first deferred, then the boxholder asked for
+both in this workstream ("fix both bugs"). The scheduler dismiss race stays
+accepted.
+
+- **Drafts stranded on card problems.** A failure that only an edit can fix
+  (`MissingFieldError`, `UnresolvedInReplyToRefError`, `CardIOError`, and
+  `GmailDraftRejectedError` for an HTTP 400 from `createDraft`) stamps
+  `gmail-draft-error` on the card; the uploader skips stamped cards; the
+  `gmail-drafts` health check lists them. Everything else (auth, 5xx,
+  network) is retried and falls to the `failing` verdict. New agent-facing
+  field, so a `draft-email-stranded` knowledge audit (run, passed).
+- **Disk use in the growth check.** `du -sk` of content (top-level entries
+  but `.git`, `.beebox`, `node_modules`) and of `.beebox` separately
+  (`core/box-growth/bytes.ts`), recorded as `bytes` on each measurement
+  (old measurements read as unavailable). Two rate findings,
+  `rate-content-bytes` and `rate-engine-bytes`, at 100 MB/hour each; no
+  byte level, per the decision that size alone is never a finding.
+
 ## NOT in scope
 
-- **Measuring bytes and `.beebox`** (growth issue part 3). Boxholder decision:
-  follow-up issue
-  [box-growth-measures-no-bytes](../../../issues/features/2026-09-19-box-growth-measures-no-bytes.md). It needs a new measurement dimension and a disk-pressure
+- **Measuring bytes and `.beebox`** (growth issue part 3). Deferred, then
+  added; see *Added after the first review*. It needs a new measurement dimension and a disk-pressure
   policy.
-- **Stranding a draft that fails for days.** A draft whose upload keeps
-  failing is retried every sync. Considered stamping `gmail-draft-error` and
-  stopping after 7 days; not now, because the common cause is an expired grant
-  where retrying is right after reconnecting, and the `failing` verdict
-  already notifies once. Filed as
-  [failing-gmail-draft-retried-forever](../../../issues/bugs/2026-09-19-failing-gmail-draft-retried-forever.md).
+- **Stranding every failing draft after a time limit.** Auth-shaped
+  failures are still retried every sync: after a reconnect, retrying is
+  right, and the `failing` verdict already notifies once. Only card problems
+  are stranded (see *Added after the first review*).
 - **Per-connector declared expectations** (config saying "expect N/day").
   The learned baseline covers the incident with no configuration.
 - **A briefing line or box-agent chat mention.** Boxholder chose push plus
