@@ -34,7 +34,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
-import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { chatModelLabel, type ChatAgentEngine } from "@shared/chat-models.js";
+import { useAddedModels } from "./model-availability-store";
 import { modelDrift, engineDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
@@ -256,12 +257,13 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     onToggleDebugLog,
   } = props;
   const [panel, setPanel] = useState<SessionChipPanel>("root");
+  const addedModels = useAddedModels();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
-    : chatModelOptions(agentEngine).find((o) => o.model === modelInForce)?.label ?? "Unavailable";
+    : chatModelLabel(agentEngine, { model: modelInForce, added: addedModels }) ?? "Unavailable";
   // `modelInForce` is null for a chat that FOLLOWS the box default — that is
   // what makes the label read "Default (Opus)" rather than naming the model —
   // so the drift comparison resolves it first. Without this the gauge was blank

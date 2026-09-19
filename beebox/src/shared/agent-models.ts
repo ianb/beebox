@@ -33,8 +33,8 @@ const LEGACY_TIER: Record<ProcedureModelName, ProcedureModelTier> = {
   fable: "strongest",
 };
 
-/** The provider a concrete model id runs on — GLM ids ride the claude engine. */
-export type ModelProvider = "anthropic" | "glm" | "openai";
+/** The provider a concrete model id runs on — GLM and OpenRouter ids ride the claude engine. */
+export type ModelProvider = "anthropic" | "glm" | "openai" | "openrouter";
 
 /** The column {@link resolveProcedureModel} uses when a call site has no
  * better answer — each engine's own first-party provider. */
@@ -45,10 +45,16 @@ const ENGINE_DEFAULT_PROVIDER: Record<AgentEngine, ModelProvider> = {
 
 /**
  * Which provider a concrete model id runs on. Prefix rules match
- * `MODEL_ID`'s families; unknown ids read as the claude engine's default,
- * whose resolver call sites are engine-scoped.
+ * `MODEL_ID`'s families; an id with a slash is OpenRouter's `author/slug`
+ * shape, which no other family uses. Unknown ids read as the claude engine's
+ * default, whose resolver call sites are engine-scoped.
+ *
+ * `openrouter` has no {@link PROCEDURE_MODELS} column on purpose: an added
+ * model has no tier, so a tiered step on an OpenRouter-defaulted box falls
+ * back to first-party (boxholder, 2026-09-19).
  */
 export function providerOf(model: string): ModelProvider {
+  if (model.includes("/")) return "openrouter";
   if (model.startsWith("glm-")) return "glm";
   if (model.startsWith("gpt-")) return "openai";
   return "anthropic";

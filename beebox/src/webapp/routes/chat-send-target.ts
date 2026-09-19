@@ -5,7 +5,7 @@ import { resolveSessionAvailability } from "../../core/chat/session/availability
 import { isResumableSession } from "../../core/chat/session/recent-landmark.js";
 import { resolveChatTarget, type ChatTargetSpec } from "../../core/chat/session/target.js";
 import type { ChatRoutesContext } from "./chat-context.js";
-import { loadEnabledEngines, type AgentEngine } from "../../core/box/config.js";
+import { loadAddedModels, loadEnabledEngines, type AgentEngine } from "../../core/box/config.js";
 import { isChatModelAllowed } from "../../shared/chat-models.js";
 
 interface ResolveSendArgs {
@@ -50,7 +50,7 @@ async function validatedChoice(
   if (!enabled.includes(engine)) {
     throw new UnavailableChatChoiceError(engine, null);
   }
-  if (args.model !== undefined && !isChatModelAllowed(engine, args.model)) {
+  if (args.model !== undefined && !isChatModelAllowed(engine, { model: args.model, added: await loadAddedModels(boxRoot) })) {
     throw new UnavailableChatChoiceError(engine, args.model);
   }
   return {

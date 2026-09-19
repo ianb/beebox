@@ -8,7 +8,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
-import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
+import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
 import { AGENT_ENGINES } from "@shared/agent-models.js";
 
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
@@ -27,11 +27,11 @@ const ENGINE_OPTIONS = [
 ];
 
 /** The select's rows: "no default", then every model this engine offers. */
-function modelOptions(engine: string, current: string | null) {
+function modelOptions(engine: string, { current, added }: { current: string | null; added: readonly AddedModel[] }) {
   const parsed = parseChatAgentEngine(engine);
   const known = parsed === null
     ? []
-    : chatModelOptions(parsed).flatMap((o) => (o.model === null ? [] : [{ value: o.model, label: o.label }]));
+    : chatModelOptions(parsed, added).flatMap((o) => (o.model === null ? [] : [{ value: o.model, label: o.label }]));
   // A stored value this engine does not offer still has to be selectable, or
   // the select would silently show something the box is not set to.
   const unknown = current !== null && !known.some((o) => o.value === current)
@@ -116,7 +116,7 @@ export function AgentEngineSection() {
               label="Default model"
               helper="New chats and unpinned agent work — wakeups, procedures without an explicit model — use this model. A chat can still pick its own."
               value={model ?? ""}
-              options={modelOptions(engine, model)}
+              options={modelOptions(engine, { current: model, added: config.data.openrouterModels })}
               disabled={update.isPending}
               onChange={(agentModel) => { update.mutate({ agentModel: agentModel === "" ? null : agentModel }); }}
             />

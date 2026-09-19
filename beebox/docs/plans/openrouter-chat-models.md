@@ -527,3 +527,53 @@ Done when:
 - cross-model review has run on the branch.
 
 No data migration. Each box opts in, box by box, by an owner act in admin.
+
+## Track 1 results (2026-09-19)
+
+The spike ran against the boxholder's key (from `beebox/.env`, authorized
+2026-09-19). A local logging proxy sat in `ANTHROPIC_BASE_URL`'s slot and
+recorded every request's `model`. The task was one agent turn: Bash `ls`,
+Read a file, then structured output (`json_schema`), followed by a resume turn
+with no tools. It used the harness plugin and `bypassPermissions`, as
+`run.ts` does. Total spend was about $0.15.
+
+| Model | Tools | Structured output | Resume | Prompt caching |
+|---|---|---|---|---|
+| `deepseek/deepseek-v3.2` | pass | pass | pass | none reported |
+| `moonshotai/kimi-k2-0905` | pass | pass | pass | yes (18k cache-read) |
+| `moonshotai/kimi-k2-0905:exacto` | pass | pass | pass | yes (35k cache-read) |
+| `qwen/qwen3-coder` | pass | pass | pass | partial (1.9k on resume) |
+
+- **(a–c)** Tools, structured output, and resume work on all four ids.
+  DeepSeek V3.2 emits thinking blocks, and they round-trip.
+- **(d)** The id reaches OpenRouter verbatim in `model`, including the
+  `:exacto` suffix.
+- **(e)** No request left under a `claude-*` id, with or without the role
+  variables set. Every `/v1/messages` call carried the chosen id, including
+  the tool-less first call. The run did not exercise subagents or a
+  haiku-role call, so the role variables stay set as a guard. Env set used:
+  - `ANTHROPIC_BASE_URL=https://openrouter.ai/api`;
+  - `ANTHROPIC_AUTH_TOKEN`;
+  - `ANTHROPIC_API_KEY=""`;
+  - `ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL`,
+    `ANTHROPIC_SMALL_FAST_MODEL`, and `CLAUDE_CODE_SUBAGENT_MODEL`, all set
+    to the model;
+  - `API_TIMEOUT_MS`.
+  The CLI also calls `GET /api/hello`, which returns 404 and is harmless.
+  **Critical-gap row: closed by observation.**
+- **(f)** Bad id: HTTP 400, surfaced by the CLI as `API Error: 400
+  deepseek/not-a-model is not a valid model ID`. It costs nothing. Not
+  produced: bad-key and no-credit strings (producing them means changing the
+  key or spending it down).
+- **(g)** `GET /api/v1/key` with the key returns `data.usage` (lifetime
+  dollars), `data.usage_daily`, `usage_weekly`, `usage_monthly`, `data.limit`
+  (null when unset), `limit_remaining`, and `limit_reset`. Usage lagged by
+  at least a minute after the runs. The admin line says the figure is
+  delayed.
+- **(h)** `total_cost_usd` overstates badly. It reported $0.03–$0.49 per turn
+  where OpenRouter's per-request `cost` summed to $0.01–$0.03, about 5–20×.
+  `maxBudgetUsd` would trip early on these models, and `core/usage.ts`
+  records the inflated figure. Same class as GLM. Documented, not corrected.
+
+**Suggestions that ship:** `moonshotai/kimi-k2-0905:exacto` (Kimi K2),
+`deepseek/deepseek-v3.2` (DeepSeek V3.2), `qwen/qwen3-coder` (Qwen3 Coder).

@@ -14,10 +14,11 @@ import {
   getNewChatFeatures,
   setChatFeature,
 } from "../../api";
+import type { ChatStatus } from "../../api-chat";
 import { type ModelMarker } from "./InteractiveChat-helpers";
-import { chatModelOptions, parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
+import { chatModelLabel, parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 import { toastError } from "../ui/toast-store";
-import { setGlmAvailable } from "./glm-availability-store";
+import { setModelAvailability, useAddedModels } from "./model-availability-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
 /**
@@ -45,6 +46,7 @@ export function useChatModelFeatures(opts: {
   // This chat's OWN pick; `null` means it follows the box default. The
   // effective model is `modelInForce` — the two differ for a follower.
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const addedModels = useAddedModels();
   const [modelInForce, setModelInForce] = useState<string | null>(null);
   const [boxDefault, setBoxDefault] = useState<string | null>(null);
   // Which engines a NEW chat may be started on, and the box's own default —
@@ -76,6 +78,17 @@ export function useChatModelFeatures(opts: {
     return () => { current = false; };
   }, [sessionId, contextDir, send]);
 
+  /** Every model-state read lands the same way, whichever path asked. */
+  const applyStatus = useCallback((status: ChatStatus) => {
+    setSelectedModel(status.source === "explicit" ? status.model : null);
+    setModelInForce(status.model);
+    setBoxDefault(status.boxDefault);
+    setAgentEngine(status.engine);
+    setEnabledEngines(status.enabledEngines);
+    setBoxEngine(status.boxEngine);
+    setModelAvailability({ glmAvailable: status.glmAvailable, addedModels: status.addedModels });
+  }, []);
+
   /**
    * Re-read the model state. Called on mount and whenever the model panel
    * opens: the box default can change from another tab or the admin page, and
@@ -86,14 +99,8 @@ export function useChatModelFeatures(opts: {
     const generation = scopeGenerationRef.current;
     const status = await getChatStatus({ sessionId });
     if (generation !== scopeGenerationRef.current) return;
-    setSelectedModel(status.source === "explicit" ? status.model : null);
-    setModelInForce(status.model);
-    setBoxDefault(status.boxDefault);
-    setAgentEngine(status.engine);
-    setEnabledEngines(status.enabledEngines);
-    setBoxEngine(status.boxEngine);
-    setGlmAvailable(status.glmAvailable);
-  }, [sessionId, scopeGenerationRef]);
+    applyStatus(status);
+  }, [sessionId, scopeGenerationRef, applyStatus]);
 
   // For a fresh chat, status reports the box's configured engine and default.
   useEffect(() => {
@@ -102,19 +109,13 @@ export function useChatModelFeatures(opts: {
     getChatStatus({ sessionId })
       .then((status) => {
         if (!current) return;
-        setSelectedModel(status.source === "explicit" ? status.model : null);
-        setModelInForce(status.model);
-        setBoxDefault(status.boxDefault);
-        setAgentEngine(status.engine);
-        setEnabledEngines(status.enabledEngines);
-        setBoxEngine(status.boxEngine);
-        setGlmAvailable(status.glmAvailable);
+        applyStatus(status);
       })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
       });
     return () => { current = false; };
-  }, [sessionId]);
+  }, [sessionId, applyStatus]);
 
   // Chat-feature flags synced via /api/chat/features on mount, then kept
   // fresh through chat-features-changed events on the global SSE stream.
@@ -139,7 +140,7 @@ export function useChatModelFeatures(opts: {
     if (model === selectedModel) return;
     const previous = selectedModel;
     if (agentEngine === null) return;
-    const label = chatModelOptions(agentEngine).find((o) => o.model === model)?.label ?? "default";
+    const label = chatModelLabel(agentEngine, { model, added: addedModels }) ?? "default";
     const markerId = `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const requestId = ++modelRequestIdRef.current;
     setModelMarkers((markers) => [
@@ -170,7 +171,7 @@ export function useChatModelFeatures(opts: {
           setModelInForce(previous ?? boxDefault);
         });
     }
-  }, [selectedModel, boxDefault, groupCount, sessionId, agentEngine, modelRequestIdRef]);
+  }, [selectedModel, boxDefault, groupCount, sessionId, agentEngine, modelRequestIdRef, addedModels]);
 
   /**
    * Pin the box default. Deliberately does not touch this chat: a follower

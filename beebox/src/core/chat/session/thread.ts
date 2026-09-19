@@ -18,7 +18,7 @@ import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { resolveSessionModel } from "./model.js";
-import { glmChatAdditions } from "../../glm-key.js";
+import { providerEnvAdditions } from "../../provider-env.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
@@ -192,7 +192,7 @@ export class ChatThreadSession extends EventEmitter {
       // BBX_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { BBX_CHAT_SESSION_ID: this.sessionId } : {}),
     });
-    await glmChatAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
+    await providerEnvAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
