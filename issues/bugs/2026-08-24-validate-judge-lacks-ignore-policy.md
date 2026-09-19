@@ -1,6 +1,6 @@
 ---
 title: "The validate judge fails refresh-maps for obeying the ignore policy"
-workstream: refresh-maps-throughput
+workstream: refresh-maps-correctness
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox

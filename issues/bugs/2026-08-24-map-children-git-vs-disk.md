@@ -1,6 +1,6 @@
 ---
 title: "refresh-maps derives `children` from git on some paths and disk on others"
-workstream: refresh-maps-throughput
+workstream: refresh-maps-correctness
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox

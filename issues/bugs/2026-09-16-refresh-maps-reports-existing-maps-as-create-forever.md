@@ -1,6 +1,6 @@
 ---
 title: "refresh-maps reports existing MAP.md files as action:create in every run and never stamps them"
-workstream: unattached
+workstream: refresh-maps-correctness
 area: beebox
 filed-by: agent
 discovered-by: agent
