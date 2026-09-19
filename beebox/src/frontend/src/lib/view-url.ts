@@ -110,8 +110,13 @@ export function isExternalUrl(src: string): boolean {
  */
 export function normalizeMarkdownLink(url: string, encode: (url: string) => string): string {
   if (isExternalUrl(url)) return encode(url);
+  // Only the path is decoded: the query and fragment stay as written, and
+  // their readers (`URLSearchParams`) decode them once themselves.
+  const cut = url.search(/[#?]/);
+  const pathPart = cut === -1 ? url : url.slice(0, cut);
+  const suffix = cut === -1 ? "" : url.slice(cut);
   try {
-    return decodeURI(url);
+    return decodeURI(pathPart) + suffix;
   } catch (_e) {
     // A malformed escape (`100%.md`) is not an escape at all: keep the text.
     return url;
