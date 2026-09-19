@@ -81,6 +81,7 @@ const builtinUses: Record<string, string[]> = {
     "the MAI-Transcribe-2 high-quality transcription pass, which is reachable no other way",
     "speech generation for chat, when the box's TTS backend is set to Gemini",
     "OpenRouter API calls from box views, through the server-side adapter",
+    "chat and agent turns on OpenRouter models the owner added in admin (never without that step)",
   ],
   "google-oauth-client-id": [
     "the Google OAuth application's identity — the consent flow and token refresh behind Gmail, Calendar, Drive and Google sign-in",

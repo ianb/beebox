@@ -7,6 +7,7 @@ import type { AdminArrivalState } from "../lib/admin-card-state";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { CodexSection } from "../components/admin/CodexSection";
 import { AgentEngineSection } from "../components/admin/AgentEngineSection";
+import { OpenRouterModelsSection } from "../components/admin/OpenRouterModelsSection";
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection";
 import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
@@ -27,6 +28,7 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { 
         <Stack gap="lg">
           <ScopeHeading title="This box" description="Configuration and services whose behavior belongs to the current box." />
           <AgentEngineSection />
+          <OpenRouterModelsSection />
           <GmailFiltersSection />
           <TelegramSection />
           <BackupSection />

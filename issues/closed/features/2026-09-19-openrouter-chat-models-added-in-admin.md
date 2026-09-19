@@ -1,12 +1,21 @@
 ---
 title: "Let the boxholder add OpenRouter chat models in admin, explicitly, never by default"
-workstream: unattached
+workstream: openrouter-chat-models
 area: beebox
 labels: [models, admin]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asking whether Claude Code and boxes can run other models through OpenRouter
+resolution: implemented
 ---
+
+> **Closed 2026-09-19.** Built per
+> [openrouter-chat-models](../../../beebox/docs/implemented-plans/openrouter-chat-models.md)
+> (boxholder decisions recorded there), commits `651a87137` (gate on the
+> owner's added list), `811daebf0` (admin section, catalog client, docs),
+> `cf6380478` (stop live chats on removal, carry the checked engine), and
+> `04971a529` (drop scheduled-turn/cost figures third-party models cannot
+> honor).
 
 OpenRouter serves an Anthropic-compatible endpoint (its "Anthropic skin"), so a
 box's chat and agent runs could use any model it carries — DeepSeek and others
@@ -25,7 +34,7 @@ pay as you go without that setup."
 services that can run through OpenRouter simply do. There is no base-URL
 setting, and no per-service provider field." That is right for the optional
 services it covers, which cost cents
-([consolidation issue](../closed/exploration/2026-08-31-openrouter-optional-services-consolidation.md)),
+([consolidation issue](../exploration/2026-08-31-openrouter-optional-services-consolidation.md)),
 and the secret guide already says usage is pay-as-you-go
 (`core/secrets/guide-registry.ts:59`).
 

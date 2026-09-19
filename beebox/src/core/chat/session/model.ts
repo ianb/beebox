@@ -12,7 +12,7 @@
  * until it next starts cold, and only then reads the default again.
  */
 
-import { loadBoxModel, type AgentEngine } from "../../box/config.js";
+import { loadAddedModels, loadBoxModel, type AgentEngine } from "../../box/config.js";
 import { resolveEffectiveModel, type ResolvedModel } from "../../model-policy.js";
 
 /** Resolve a chat's effective model from its own choice and the box policy. */
@@ -21,7 +21,7 @@ export async function resolveSessionModel(
   { engine, explicit }: { engine: AgentEngine; explicit: string | null },
 ): Promise<ResolvedModel> {
   return resolveEffectiveModel(
-    { engine, pinned: await loadBoxModel(boxRoot) },
+    { engine, pinned: await loadBoxModel(boxRoot), added: await loadAddedModels(boxRoot) },
     explicit === null ? { kind: "follow" } : { kind: "explicit", model: explicit },
   );
 }
