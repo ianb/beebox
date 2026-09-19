@@ -570,7 +570,7 @@ _content/store/kept/Two.memo.card
 
 ## Errors
 
-A non-card, non-directory source is rejected.
+A source that is not a card, a `.md` file, or a directory is rejected.
 
 ```ts
 const box = await makeTmpBox();
@@ -579,7 +579,17 @@ result.success
 => false
 
 result.error
-=> Source must be a .card file or directory: _content/box/notes.txt
+=> Source must be a .card file, a .md file, or a directory: _content/box/notes.txt
+```
+
+A move keeps the file's kind: a `.md` file cannot become a card.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/notes.md", "# Notes\n");
+const result = await mv(box, { from: "_content/box/notes.md", to: "_content/store/Notes.doc.card" });
+result.error
+=> Destination must be a .md file: _content/store/Notes.doc.card
 ```
 
 Moving multiple cards to a single file destination is rejected.
@@ -628,6 +638,34 @@ const saoirse = await box.read("_content/store/dossiers/saoirse.md");
 
 ```ts continue
 await box.cleanup();
+```
+
+## Moving a plain `.md` file
+
+A plain `.md` file moves like a card. Cards and other `.md` files that link
+to it are rewritten in whichever style they used, and the moved file's own
+relative links are recomputed from its new location. A `.md` file has no
+attach scope, so nothing else moves with it.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/notes/saoirse.md", "# Saoirse\n\nSee [Dana](dana.person.card).\n");
+await box.write("_content/notes/dana.person.card", "---\nname: Dana\n---\n");
+await box.write("_content/index.doc.card", "---\ntitle: Index\n---\n[S](/_content/notes/saoirse.md)\n");
+await box.write("_content/other.md", "[S](notes/saoirse.md)\n");
+
+const result = await mv(box, { from: "_content/notes/saoirse.md", to: "_content/dossiers/" });
+result.success
+=> true
+
+(await box.read("_content/dossiers/saoirse.md")).includes("See [Dana](../notes/dana.person.card).")
+=> true
+
+(await box.read("_content/index.doc.card")).includes("[S](/_content/dossiers/saoirse.md)")
+=> true
+
+await box.read("_content/other.md")
+=> [S](dossiers/saoirse.md)
 ```
 
 ## Directory moves rewrite `.md` dossiers too — inside and outside the move
