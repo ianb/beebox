@@ -498,6 +498,27 @@ rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
+### `filename-attach-scope` (repair — flat media files into attach scopes)
+
+Registered at the end of `MIGRATIONS`. Old capture archives kept media in a
+flat layout: `photo-004.jpg` beside `photo-004-<title>.image.card`, with
+`filename.ref` holding the photo's path instead of `attach/photo-004.jpg`.
+Every `filename.ref` reader accepts only the `attach/` form, so those cards
+showed "Failed to load". For `image`, `audio`, `file` and `pdf` cards the
+migrator moves the file into `<card name>.attach/` and rewrites the card's
+own refs to `attach/<file>`; other cards, `.md` files and views that name
+the file follow the move in their own style.
+
+It is best effort. A card is repaired only when its file is certain: the ref
+resolves to a file in the card's own directory (or is dangling and a file
+with its basename is there — the damage an old `bbx mv` left), the file is
+not a card, no other media card claims it, and the destination is free or
+holds the same bytes. Every other card is printed with a reason and left
+unchanged, and the exit code stays 0. `bbx validate` warns on each remaining
+card, so an agent can finish them. See
+`scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
+`attach/` refs and are skipped.
+
 ### `one-root` (shape migration — v2 two-root → v3 one-root layout)
 
 Registered at the end of `MIGRATIONS`, but unlike every migrator above it,

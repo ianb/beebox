@@ -171,6 +171,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Review existing tricks for credential dependencies and add sibling
   // secrets.json declarations for the standard trick runtime.
   { name: "trick-secret-runtime", procedure: "trick-secret-runtime" },
+  // Move legacy flat-layout media files into their card's attach scope and
+  // point `filename.ref` at `attach/<file>`. Best effort: uncertain cards are
+  // reported, not failed; `bbx validate` keeps warning on them.
+  { name: "filename-attach-scope", script: "scripts/migrate/filename-attach-scope.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
