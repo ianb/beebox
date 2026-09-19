@@ -5,7 +5,17 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: card-self-refs — test-box run of the filename-attach-scope migration
+resolution: implemented
 ---
+
+Resolved by bc11677e2 and 3d7907b48: rewrites now write CommonMark's
+`<path with spaces>` angle-bracket destination when a target has a space or
+parenthesis (`beebox/src/core/body-refs.ts` `linkTarget`/
+`formatLinkDestination`), and every reader/rewriter of inline links
+(`inlineLinkPattern`, BBX002's `markdown-lint-rules.ts`, `canonicalize-refs.ts`,
+`link-repair.ts`) reads that form. The frontend Markdoc parser decodes an
+in-box link's path (not its query/fragment) so a spaced path also renders
+(92399fcd8).
 
 `rewriteReferrerRefs` (`beebox/src/core/rewrite-card-refs.ts`) writes the new
 path into an inline markdown link as-is. When the new path contains a space,
