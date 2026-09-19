@@ -1,11 +1,22 @@
 ---
 title: "The validate judge fails refresh-maps for obeying the ignore policy"
-workstream: refresh-maps-throughput
+workstream: refresh-maps-correctness
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox
 priority: normal
+resolution: implemented
 ---
+
+Resolved by `beeb463bc` (refresh-maps template: drop the review instruction;
+say children is the committed listing). Chosen fix diverges from both shapes
+this issue floated (narrow: pass ignore patterns into the judge's context;
+general: give validate steps a declared-policy mechanism): the boxholder
+instead removed the `validate.instructions` block entirely, since the shell
+check above it already tests the real question ("is the next precheck a
+no-op") and a diff-only judge could not answer it either way. There is no
+longer a review instruction for this step to get wrong. See
+`beebox/docs/implemented-plans/refresh-maps-correctness.md` (decision 2).
 
 `SKELETON_HIDDEN_PATHS` in `precheck-ignore.ts` hides whole subtrees from maps —
 its own doc comment says "the dir itself is excluded from its parent's listing
@@ -31,6 +42,6 @@ procedure's correct behavior is defined by config the judge can't read.
 
 Worth pairing with the question of whether a judge's *inconclusive* result should
 surface as a failed step at all; see
-[refresh-maps max-turns throughput](../closed/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
+[refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
 where 6 of 12 failures were the judge exhausting its own 8-turn budget rather
 than judging anything.

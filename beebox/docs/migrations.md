@@ -498,6 +498,39 @@ rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
+### `v2-refs-to-v3` (repair — v2-layout refs to v3 paths)
+
+Registered just before `filename-attach-scope`. The one-root migration moved
+every file but left some box-absolute refs in v2 form (`/store/archive/…`),
+which the box namespace fence now refuses. For each such ref in a card or
+`.md` file, the migrator maps the path with `mapV2Path` (the table the files
+were moved with) and rewrites the ref only when the mapped target exists and
+lies inside the box namespace. The query and fragment are kept; fenced code
+examples are left alone. Refs whose target is gone stay as they are, and
+`bbx validate` keeps reporting them as broken. See
+`scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
+
+### `filename-attach-scope` (repair — flat media files into attach scopes)
+
+Registered at the end of `MIGRATIONS`. Old capture archives kept media in a
+flat layout: `photo-004.jpg` beside `photo-004-<title>.image.card`, with
+`filename.ref` holding the photo's path instead of `attach/photo-004.jpg`.
+Every `filename.ref` reader accepts only the `attach/` form, so those cards
+showed "Failed to load". For `image`, `audio`, `file` and `pdf` cards the
+migrator moves the file into `<card name>.attach/` and rewrites the card's
+own refs to `attach/<file>`; other cards, `.md` files and views that name
+the file follow the move in their own style.
+
+It is best effort. A card is repaired only when its file is certain: the ref
+resolves to a file in the card's own directory (or is dangling and a file
+with its basename is there — the damage an old `bbx mv` left), the file is
+not a card, no other media card claims it, and the destination is free or
+holds the same bytes. Every other card is printed with a reason and left
+unchanged, and the exit code stays 0. `bbx validate` warns on each remaining
+card, so an agent can finish them. See
+`scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
+`attach/` refs and are skipped.
+
 ### `one-root` (shape migration — v2 two-root → v3 one-root layout)
 
 Registered at the end of `MIGRATIONS`, but unlike every migrator above it,

@@ -1,12 +1,21 @@
 ---
 title: "The smoke walk's card-open step rose from about 5s to about 45s and now fills most of the 120s budget"
-workstream: smoke-review
+workstream: refresh-maps-correctness
 area: monorepo
 labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-16
+resolution: implemented
 ---
+
+Closed 2026-09-19 in `ca2f52c48`: fixed per the "Cause and fix" section
+below — the walk regressed, not the app. Scoped snapshots (`browse/src/act.ts`)
+now drop out-of-scope ids inside the `eval` instead of probing each one with a
+separate `get attr` call, and `bin/smoke`'s card-open step takes its
+failure-evidence full snapshot only on failure. card-open went from ~61s to
+~31s on this worktree's box. The residual ~6.5s-per-checked-click cost (dating
+to 2026-08-23) is documented and deliberately left alone.
 
 The `card-open` step of `bin/smoke` is the only step whose cost changed
 materially. The step still earns its place, so do not remove it. The problem is
@@ -69,3 +78,29 @@ card-open (listing snapshot, folded-row reveal, drill into `_content`, card
 click, render check). If the app is slow, file a bug. If the walk is slow, fix
 the wait. Also consider adding sub-step timing to the log, so that a later
 review can locate this kind of increase without running the walk again.
+
+## Cause and fix (2026-09-19, workstream refresh-maps-correctness)
+
+The walk regressed, not the app. The page has about 200 DOM nodes, and a full
+`snapshot` of it takes about 1.2s. The time went to `bin/browse` calls; each
+`wait` finished in about 0.6s, which is process startup.
+
+- **Scoped snapshots.** `annotatedSnapshot` (`browse/src/act.ts`) collects
+  every `bbx-` id on the page, then makes one `get attr` call per unmatched
+  interactive ref until every id is accounted for. A snapshot scoped with `-s`
+  cannot contain ids outside its scope, so the loop never stopped early. More
+  ids on the page (themed card workspaces, 2026-09-09) made every scoped
+  snapshot slower: the Browse-scoped snapshot took 5–13s. Fix: the scan now
+  drops ids outside the scope in the same `eval`. The Browse snapshot takes
+  1.4s. The ids shown are unchanged (compared before and after on three
+  scopes).
+- **Unconditional full snapshot.** The card-open step took a whole-page
+  snapshot and the URL on every walk, only to fill the error message on
+  failure. That cost about 12s. They are now taken only on failure.
+
+Result on this worktree's box: card-open went from 61s to 31s, and the whole
+walk from 103s to 75s with a cold restart. What remains is the fixed cost of
+the checked click, about 6.5s each and three per walk. A checked click on a
+ref without an id spawns about six `agent-browser` processes (URL, ref id,
+box, viewport, check, click). That design dates from 2026-08-23, before the
+increase, and is left as it is.

@@ -1,11 +1,17 @@
 ---
 title: "bbx mv on a directory does not rewrite absolute refs that cards inside it hold to their own files"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+> **Closed** — `357652325` makes `transformForMovedCard` rewrite a card's own
+> box-absolute ref when its target moved with it, restyling the result
+> absolute. A ref to a target that did not move is left unchanged; relative
+> and `attach/`-relative refs are unaffected.
 
 `bbx mv <dir>` rewrites inbound refs from outside the moved directory. It does
 not rewrite an absolute ref held by a card inside the directory that points

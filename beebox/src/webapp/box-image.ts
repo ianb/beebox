@@ -6,6 +6,7 @@ import { probePointer } from "../lib/asset-content.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
 import { isInBoxNamespace } from "../lib/box-namespace.js";
+import { resolveAttachRef } from "../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../lib/box-namespace-resolve.js";
 
 const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
@@ -47,9 +48,7 @@ async function resolveImageCard(cardAbs: string): Promise<string | null> {
     ref = /<filename\b[^>]*\bref="(attach\/[^"]+)"/.exec(text)?.[1] ?? null;
   }
   if (ref === null) return null;
-  const cardBaseName = path.basename(cardAbs);
-  const stem = cardBaseName.replace(/(\.[^.]+)*\.card$/, "");
-  return path.join(path.dirname(cardAbs), `${stem}.attach`, ref.slice("attach/".length));
+  return resolveAttachRef(cardAbs, ref);
 }
 
 export interface ResolvedBoxImage {

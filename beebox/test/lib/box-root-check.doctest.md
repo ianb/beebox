@@ -6,6 +6,7 @@ two-root shape into one loud `bbx validate` (Track C,
 `docs/implemented-plans/one-root-box-layout.md`).
 
 ```ts setup
+import { mkdir } from "node:fs/promises";
 import { checkBoxRoot } from "../../src/lib/box-root-check.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -42,6 +43,25 @@ strays[0]!.message
 
 ```ts cleanup
 await strayBox.cleanup();
+```
+
+A running reactor holds `.bbx-reactor.lock` plus its guard directory
+`.bbx-reactor.lock.guard/` (`src/lib/file-lock.ts` locks by `mkdir` of the
+guard). Both are legal, so the pre-commit root check does not refuse the
+commit a reactor job makes. The guard rule is derived from listed lock names,
+so an unlisted `.guard` is still a stray:
+
+```ts
+const lockBox = await makeTmpBox();
+await lockBox.write(".bbx-reactor.lock", "{}");
+await mkdir(`${lockBox.root}/.bbx-reactor.lock.guard`);
+await mkdir(`${lockBox.root}/.bbx-other.lock.guard`);
+JSON.stringify((await checkBoxRoot(lockBox.root)).map((s) => s.name))
+=> [".bbx-other.lock.guard"]
+```
+
+```ts cleanup
+await lockBox.cleanup();
 ```
 
 A stray `content/` directory gets a message calling out the specific

@@ -256,11 +256,12 @@ function buildSteps(input: {
       await session.clickRef(ref);
       await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('[data-workspace-card]')).some(node => !node.hidden && node.getAttribute('data-workspace-card') === ${JSON.stringify(expectedPath)})`]);
       await session.waitForReady();
-      const snapshot = await session.snapshot();
-      const url = await session.getUrl();
       const { stdout: detail } = await session.run(["snapshot", "-s", `[data-workspace-card=${JSON.stringify(expectedPath)}] [role="tabpanel"]`]);
       if (!cardViewRendered(detail)) {
-        throw new CardViewMissingError({ name: row.name, url, snapshot });
+        // The whole-page snapshot is failure evidence only. Taken on every
+        // walk it cost ~10s of the two-minute budget: an unscoped snapshot
+        // looks up each unmatched control's id in a separate browser call.
+        throw new CardViewMissingError({ name: row.name, url: await session.getUrl(), snapshot: await session.snapshot() });
       }
     },
   });

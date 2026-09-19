@@ -23,6 +23,7 @@ import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
+import { ImageSchema } from "../../src/schemas/image.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -69,6 +70,7 @@ const ctx: LoadCardContext = {
     ["landmark", LandmarkSchema],
     ["figure", FigureSchema],
     ["chat", ChatSchema],
+    ["image", ImageSchema],
   ]),
 };
 ```
@@ -1139,6 +1141,32 @@ JSON.stringify([figures.totalErrors, figures.totalWarnings])
 
 figures.results[1]!.warnings[0]!.message
 => Broken reference at entry: attach/missing.ts does not exist
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Media cards: `filename.ref` must be in `attach/` form
+
+An `image`, `audio`, `file` or `pdf` card keeps its file in its attach scope,
+and every reader of `filename.ref` accepts only `attach/<file>`. A legacy
+flat-layout ref resolves, so the broken-ref walk is silent; this warning names
+the move that fixes it.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/cap/photo-004.jpg", "JPG");
+await box.write(
+  "_content/cap/photo-004-Beach.image.card",
+  "---\nfilename:\n  ref: /_content/cap/photo-004.jpg\n  captured: 2026-01-02T03:04:05Z\n  source: scan\n---\n",
+);
+const media = await lintCardsDispatch([box.path("_content/cap/photo-004-Beach.image.card")], { boxRoot: box.root, ctx });
+media.results[0]!.warnings.map((w) => w.message)
+=>
+[
+  "filename.ref must point into the card's attach scope: move photo-004.jpg into photo-004-Beach.attach/ and write `ref: attach/photo-004.jpg` (found `/_content/cap/photo-004.jpg`)"
+]
 ```
 
 ```ts cleanup

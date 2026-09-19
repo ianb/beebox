@@ -41,7 +41,7 @@
 import * as path from "node:path";
 import { isAttachRef } from "../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
-import { inlineLinkPattern } from "./body-refs.js";
+import { formatLinkDestination, inlineLinkPattern, linkTarget } from "./body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./rewrite-frontmatter-refs.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -73,11 +73,12 @@ function resolveRefToAbs(params: {
     console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
     return null;
   }
+  // A ref that resolves to nothing (it climbs out of the box, or names a path
+  // outside the box namespace, such as a leftover v2 `/store/…`) cannot point
+  // at a moved target, so it is left unchanged without a line of its own:
+  // `bbx validate` already reports it as broken.
   const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
-  if (resolved === null) {
-    console.warn(`rewrite-card-refs: ref "${pathPart}" in ${cardAbsPath} escapes the box; leaving unchanged`);
-    return null;
-  }
+  if (resolved === null) return null;
   return path.resolve(boxRoot, resolved);
 }
 
@@ -148,10 +149,10 @@ function transformForReferrer(params: {
 /**
  * Build the transform used for the moved card itself: it has relocated, so its
  * *relative* refs to anything that stayed put must be recomputed from the new
- * location. Box-root-absolute refs are unaffected by the move; `attach/` refs
- * are scoped to the card and travel with it, so both are left alone. `remap`
- * relocates the card's own attached files (referenced by full path rather than
- * the `attach/` prefix).
+ * location. `attach/` refs are scoped to the card and travel with it, so they
+ * are left alone. A box-root-absolute ref changes only when `remap` moves its
+ * target — the card's own attached files, or siblings in a moved directory —
+ * and keeps its absolute style.
  */
 function transformForMovedCard(params: {
   boxRoot: string;
@@ -162,8 +163,17 @@ function transformForMovedCard(params: {
   const { boxRoot, oldCardAbs, newCardAbs, remap } = params;
   return (rawRef) => {
     const parsed = parseRef(rawRef);
-    if (parsed.path === "" || parsed.path.startsWith("/") || isAttachRef(parsed.path)) {
+    if (parsed.path === "" || isAttachRef(parsed.path)) {
       return rawRef;
+    }
+    // An absolute ref does not depend on where the card sits, so it changes
+    // only when its target moved too: a card inside a moved directory naming
+    // its own media file, or a card naming a file in its own attach directory.
+    if (parsed.path.startsWith("/")) {
+      const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart: parsed.path });
+      const remapped = abs === null ? null : remap(abs);
+      if (remapped === null) return rawRef;
+      return restyleRef({ boxRoot, cardAbsPath: newCardAbs, newAbs: remapped, wasAbsolute: true, suffix: formatRefSuffix(parsed) });
     }
     const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart: parsed.path });
     if (abs === null) return rawRef;
@@ -202,7 +212,8 @@ function scanBodyText(line: string, wrap: RefTransform): string {
       prefix !== undefined && refPart !== undefined,
       "inline-link regex has two mandatory capture groups",
     );
-    return prefix + wrap(refPart);
+    const { target, angled } = linkTarget(refPart);
+    return prefix + formatLinkDestination(wrap(target), { angled });
   });
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).
