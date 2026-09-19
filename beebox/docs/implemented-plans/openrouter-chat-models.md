@@ -1,9 +1,9 @@
 ---
 title: "OpenRouter chat models, added by the owner in admin"
-status: draft
+status: implemented
 workstream: openrouter-chat-models
 issues:
-  - ../../../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md
+  - ../../../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md
 ---
 # OpenRouter chat models, added by the owner in admin
 
@@ -15,7 +15,7 @@ chat, because these models bill per use and the box must never start spending
 without that act.
 
 **Issues addressed:** resolves
-[2026-09-19-openrouter-chat-models-added-in-admin](../../../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md).
+[2026-09-19-openrouter-chat-models-added-in-admin](../../../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md).
 Partially addresses
 [2026-07-18-provider-endpoint-config](../../../issues/features/2026-07-18-provider-endpoint-config.md)
 (its OpenRouter slice). That issue stays open: API-billed Anthropic and
