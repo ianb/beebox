@@ -6,7 +6,7 @@
  */
 
 /** A box whose watcher ran out of directory watches, and where it stopped. */
-export interface WatchLimitStatus {
+interface WatchLimitStatus {
   maxWatchedDirs: number;
   /** Box-relative directory at which new watches were refused. */
   belowPath: string;

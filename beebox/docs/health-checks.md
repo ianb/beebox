@@ -188,6 +188,34 @@ the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
 
+## connector-activity (a connector that went quiet or keeps failing)
+
+A connector can stop producing while every sync reports success: a filter that
+no longer matches, a permission revoked upstream, a cursor past everything.
+The connector activity record (see [connectors.md](connectors.md#activity-record))
+lets the box notice. `connectors/activity-verdict.ts` holds the rule:
+
+- Only days with at least one sync attempt count. Days with no syncs neither
+  extend nor break a stretch.
+- **failing**: every attempt errored on the latest 2 or more run days.
+- **quiet**: successful syncs brought in no new items for longer than
+  max(2, 2 × the longest such run in the connector's baseline) run days.
+- Only a steady producer can be quiet: history reaching at least 21 days back,
+  and new items on at least 60% of the 28 calendar days before the quiet
+  stretch. A connector that runs a few times a week, or is new, is never
+  watched. The rule errs toward silence: a false alarm on a real box teaches
+  the boxholder to ignore the dashboard.
+
+Each quiet or failing stretch is an **episode**, stored in the activity record.
+The scheduler daemon sends one Telegram/Web Push message per episode, beside the
+task-health and Google-auth alerts (`core/schedule/box-alerts.ts`). The
+dashboard shows a `connector-activity:<name>` warning with a **This is expected**
+button until new items arrive, an ok sync ends the failing stretch, or the owner
+dismisses it. A dismissed episode stays dismissed; the next episode is new and
+alerts again. An open quiet episode does not end when its baseline ages out of
+the record. A record that fails its schema shows as a `connector-activity`
+warning and is never reset, which would discard dismissals.
+
 ## claude-update (nightly Claude Code self-update)
 
 ### Why this exists

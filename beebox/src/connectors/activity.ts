@@ -69,7 +69,6 @@ const activityFileSchema = z.strictObject({
 
 export type ConnectorDay = z.infer<typeof connectorDaySchema>;
 export type ConnectorEpisode = z.infer<typeof episodeSchema>;
-export type ConnectorActivity = z.infer<typeof connectorActivitySchema>;
 export type ActivityFile = z.infer<typeof activityFileSchema>;
 
 const EMPTY_FILE: ActivityFile = { version: 1, connectors: {} };

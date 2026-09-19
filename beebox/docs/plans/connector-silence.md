@@ -297,31 +297,39 @@ for nothing external.
     connector that stays quiet for two months would become `unwatched` and
     delete its own warning.
 
-  Latch, in the same activity file under `alerts: Record<connector, {
-  episode: string /* verdict.kind + ":" + since */; notifiedAt: string |
-  null; dismissedAt: string | null }>`. A new episode key replaces the entry.
-  A healthy or unwatched verdict deletes it.
+  Latch: each connector's entry in the activity file carries `episode: {
+  kind, since, notifiedAt, dismissedAt } | null`. `nextEpisode` keeps it
+  while the same kind and start day continue, replaces it when a new episode
+  starts, and drops it when the verdict is healthy or unwatched.
 
   - `checkConnectorActivityAndAlert(boxRoot, { now, tg, push })` in
     `src/core/schedule/connector-activity-alert.ts`, called from
-    `scheduler.ts` after the Google auth alert in its own try/catch and
-    `writeBoxLog` event `connector-activity-alert`. It sends one
+    the scheduler after the Google auth alert. The three per-tick alerts
+    (task health, Google auth, connector activity) moved from three
+    copy-pasted try/catch blocks in `scheduler.ts` into one table in
+    `core/schedule/box-alerts.ts`, each still isolated and logged under its
+    own event; `runScheduler` had passed its length limit. It sends one
     `notifyBoxholder` per new episode, `name: "connector-activity-alert"`,
     `severity: "alert"`, body naming each connector and its verdict, with the
     dashboard URL.
   - `connectorActivityHealthChecks(boxRoot, { now })` in
     `src/webapp/trpc/routers/health-connectors.ts`: one `warning` per
-    connector with an open, undismissed episode, `actions:
-    ["expect-connector-quiet"]`. No lines otherwise: an "ok" line per
+    connector with an open, undismissed episode, named
+    `connector-activity:<connector>`, `actions:
+    ["dismiss-connector-episode"]`. A damaged record is one
+    `connector-activity` warning. No lines otherwise: an "ok" line per
     connector would be noise on every dashboard.
-  - Owner-only mutation `expectConnectorQuiet({ connector })` sets
-    `dismissedAt` for the current episode. `HealthWarnings.tsx` renders the
+  - Owner-only mutation `health.dismissConnectorEpisode({ check })` takes
+    the check name (the server owns the naming) and sets `dismissedAt` for
+    the current episode; NOT_FOUND when none is open. The action is not
+    named "quiet": it dismisses failing episodes too. `HealthWarnings.tsx` renders the
     button as "This is expected".
   - Message text, quiet: *"gmail has imported nothing new for 4 days (it
     usually imports something every day). Syncs are still succeeding."*
     Failing: *"gmail has failed every run for 2 days: <lastError>"*.
 - **Vocabulary lock-ins.** `ConnectorVerdict` kinds `quiet` and `failing`;
-  action `expect-connector-quiet`; notification name
+  action `dismiss-connector-episode`; check names
+  `connector-activity:<connector>`; notification name
   `connector-activity-alert`.
 - **First chunk.** `connectorVerdict` with its doctest. Every rule above is
   settled.
@@ -347,8 +355,9 @@ for nothing external.
     (a baseline that can never clear) disappears with the level check.
   - The acknowledge action keeps its other job: it rebases `previous` and
     clears `lastNotice` (`actions.ts:31-41`).
-  - `file-watcher.ts`: `reportWatchLimit` also records `{ at, belowPath }` in
-    a module map; export `watchLimitStatus(boxRoot)`. New health check
+  - `file-watcher.ts`: `reportWatchLimit` also records `{ maxWatchedDirs,
+    belowPath }` through `core/box/watch-limit.ts` (a separate module:
+    `file-watcher.ts` was at its length limit). New health check
     `box-watch-limit`: when set, a `warning` *"Live updates are off below
     <path>: the box has more than 1,024 watched directories."* In a process
     with no watcher (`bbx health`), no check is emitted. The watcher starts
