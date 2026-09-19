@@ -27,7 +27,7 @@ import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
-import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
+import { isBoxRootVocabularyName } from "../../lib/box-root-vocabulary.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
@@ -38,9 +38,6 @@ import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
  * (below), independent of whether the root has any strays.
  */
 const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "package-lock.json", "tsconfig.json", "node_modules"]);
-
-/** Every legal box-root entry name — the closed vocabulary, `checkBoxRoot`'s own source of truth. */
-const VOCABULARY_NAMES: ReadonlySet<string> = new Set(BOX_ROOT_VOCABULARY.map((entry) => entry.name));
 
 /**
  * Root-vocabulary tripwire for the hook. Two independent checks on the
@@ -82,7 +79,7 @@ async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<Hoo
     };
   }
 
-  if (VOCABULARY_NAMES.has(firstSegment)) return null;
+  if (isBoxRootVocabularyName(firstSegment)) return null;
 
   const strays = await checkBoxRoot(boxRoot);
   if (strays.length === 0) return null;

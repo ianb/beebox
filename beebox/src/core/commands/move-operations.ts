@@ -16,6 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { CommandContext } from "../command-runner.js";
 import { attachDirFor } from "../../shared/attach-path.js";
+import { isCardFile } from "../../lib/paths.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../list-cards.js";
 import {
   rewriteReferrerRefs,
@@ -324,14 +325,16 @@ function reportMove({
 }
 
 /**
- * Move a single card, returning structured results. See module header and
- * the helper docstrings for the ref-rewrite strategy.
+ * Move a single card or plain `.md` file, returning structured results. See
+ * the module header and the helper docstrings for the ref-rewrite strategy.
  */
 export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const { ctx, sourcePath, destPath } = params;
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, destPath);
 
+  // A plain `.md` file has no attach scope, so nothing under one is remapped.
+  const hasAttachScope = isCardFile(sourcePath);
   const oldAttachAbsDir = attachDirFor(sourcePath);
   const newAttachAbsDir = attachDirFor(destPath);
 
@@ -344,6 +347,7 @@ export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
 
   const remap: Remap = (abs) => {
     if (abs === sourcePath) return destPath;
+    if (!hasAttachScope) return null;
     if (abs === oldAttachAbsDir) return newAttachAbsDir;
     if (abs.startsWith(oldAttachAbsDir + path.sep)) {
       return newAttachAbsDir + abs.slice(oldAttachAbsDir.length);

@@ -10,6 +10,7 @@
  */
 
 import type { BoxRootVocabularyEntry } from "./box-layout-types.js";
+import { lockGuardPath } from "./lock-guard.js";
 
 export type { BoxRootVocabularyEntry } from "./box-layout-types.js";
 
@@ -52,6 +53,9 @@ export const BOX_ROOT_VOCABULARY = [
   // one on a v3 box is correctly still a stray.
   { name: ".bbx-serve.pid", kind: "tooling" },
   { name: ".bbx-maps-state.json", kind: "tooling" },
+  // A lock entry's guard directory (`<name>.guard`, see `lock-guard.ts`) is
+  // legal too, by derivation in `isBoxRootVocabularyName` below. Listing only
+  // the lock made the root check refuse every commit while a reactor ran.
   { name: ".bbx-reactor.lock", kind: "tooling" },
   // The boxholder's maps-precheck ignore patterns (`core/maps/precheck-ignore.ts`
   // reads it at the box root, and the one-root migration rewrites a v2 one
@@ -60,3 +64,13 @@ export const BOX_ROOT_VOCABULARY = [
   // (2026-09-05).
   { name: ".bbx-maps-ignore", kind: "tooling" },
 ] as const satisfies readonly BoxRootVocabularyEntry[];
+
+const VOCABULARY_NAMES: ReadonlySet<string> = new Set([
+  ...BOX_ROOT_VOCABULARY.map((entry): string => entry.name),
+  ...BOX_ROOT_VOCABULARY.filter((entry) => entry.name.endsWith(".lock")).map((entry) => lockGuardPath(entry.name)),
+]);
+
+/** Whether `name` is a legal box-root entry: a vocabulary entry or a listed lock's guard directory. */
+export function isBoxRootVocabularyName(name: string): boolean {
+  return VOCABULARY_NAMES.has(name);
+}

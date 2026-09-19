@@ -171,6 +171,14 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Review existing tricks for credential dependencies and add sibling
   // secrets.json declarations for the standard trick runtime.
   { name: "trick-secret-runtime", procedure: "trick-secret-runtime" },
+  // Rewrite box-absolute refs still in v2 layout (`/store/…`) to the v3 path
+  // the one-root migration moved their target to, when that target exists.
+  // Runs before `filename-attach-scope`, which then sees v3-form refs.
+  { name: "v2-refs-to-v3", script: "scripts/migrate/v2-refs-to-v3.ts" },
+  // Move legacy flat-layout media files into their card's attach scope and
+  // point `filename.ref` at `attach/<file>`. Best effort: uncertain cards are
+  // reported, not failed; `bbx validate` keeps warning on them.
+  { name: "filename-attach-scope", script: "scripts/migrate/filename-attach-scope.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

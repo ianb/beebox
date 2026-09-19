@@ -60,6 +60,7 @@ import {
 } from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
+import { lintFilenameAttachRef } from "./lint-filename-attach.js";
 import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
 import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
@@ -291,6 +292,7 @@ async function lintFrontmatterCard(input: {
   } else if (type === "figure") {
     warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   }
+  warnings.push(...lintFilenameAttachRef({ path, type, fields: parsed.fields }));
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema
   // modules. The generic ref-existence walk above stays here because it needs
