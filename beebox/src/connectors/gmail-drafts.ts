@@ -27,8 +27,9 @@ import { getBoxDir } from "../lib/paths.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 import {
   DRAFT_ERROR_FIELD,
-  isCardProblem,
+  DRAFT_FAILING_SINCE_FIELD,
   MissingFieldError,
+  recordDraftFailure,
   stampDraftCard,
   UnresolvedInReplyToRefError,
 } from "./gmail-draft-card.js";
@@ -47,8 +48,10 @@ interface UploadResult {
   updated: string[];
   /** Per-card errors keyed by card path. */
   errors: Array<{ path: string; error: string }>;
-  /** Card paths stamped `gmail-draft-error`: failed for a reason in the card, no longer retried. */
+  /** Card paths stamped `gmail-draft-error`: no longer retried. */
   stranded: string[];
+  /** Card paths newly stamped `gmail-draft-failing-since`: a retried failure's clock started. */
+  marked: string[];
 }
 
 /**
@@ -58,10 +61,11 @@ interface UploadResult {
 export async function uploadPendingDrafts(opts: {
   boxRoot: string;
   service: GoogleGmailService;
+  now: Date;
 }): Promise<UploadResult> {
-  const result: UploadResult = { updated: [], errors: [], stranded: [] };
+  const result: UploadResult = { updated: [], errors: [], stranded: [], marked: [] };
   const cards = (await findOutboundDrafts(opts.boxRoot)).filter((draft) => draft.error === null);
-  for (const { cardPath } of cards) {
+  for (const { cardPath, failingSince } of cards) {
     try {
       const stamped = await uploadOneDraft({
         boxRoot: opts.boxRoot,
@@ -74,10 +78,9 @@ export async function uploadPendingDrafts(opts: {
     } catch (err) {
       const relPath = path.relative(opts.boxRoot, cardPath);
       result.errors.push({ path: relPath, error: errorMessage(err) });
-      if (isCardProblem(err)) {
-        await stampDraftCard({ cardPath, fields: { [DRAFT_ERROR_FIELD]: errorMessage(err) } });
-        result.stranded.push(relPath);
-      }
+      const outcome = await recordDraftFailure({ cardPath, error: err, now: opts.now, failingSince });
+      if (outcome === "stranded") result.stranded.push(relPath);
+      if (outcome === "marked") result.marked.push(relPath);
     }
   }
   return result;
@@ -94,6 +97,8 @@ interface OutboundDraft {
   cardPath: string;
   /** The stamped `gmail-draft-error`, or null for a draft still to upload. */
   error: string | null;
+  /** The stamped `gmail-draft-failing-since`, or null. */
+  failingSince: string | null;
 }
 
 /**
@@ -142,7 +147,12 @@ async function findOutboundDrafts(boxRoot: string): Promise<OutboundDraft[]> {
         const stamped = typeof fm["gmail-draft-id"] === "string";
         if (status === "draft" && !stamped) {
           const error = fm[DRAFT_ERROR_FIELD];
-          drafts.push({ cardPath, error: typeof error === "string" ? error : null });
+          const failingSince = fm[DRAFT_FAILING_SINCE_FIELD];
+          drafts.push({
+            cardPath,
+            error: typeof error === "string" ? error : null,
+            failingSince: typeof failingSince === "string" ? failingSince : null,
+          });
         }
       } catch (e) {
         // unparseable or unreadable — skip this card, keep scanning the rest
@@ -214,6 +224,7 @@ async function uploadOneDraft(opts: {
   await stampDraftCard({
     cardPath: opts.cardPath,
     fields: { "gmail-draft-id": draft.id, "gmail-draft-url": url },
+    remove: [DRAFT_FAILING_SINCE_FIELD],
   });
   return true;
 }

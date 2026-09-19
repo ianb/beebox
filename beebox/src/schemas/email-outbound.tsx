@@ -47,6 +47,7 @@ export const EmailOutboundSchema = cardSchema("email-outbound", {
     "gmail-draft-id": z.string().optional(),
     "gmail-draft-url": z.string().optional(),
     "gmail-draft-error": z.string().optional(),
+    "gmail-draft-failing-since": z.string().optional(),
     body: body(z.string()),
   },
   instructions: `# Authoring Outbound Emails
@@ -98,7 +99,11 @@ The card's body is the email body. Markdown subset only:
   retrying; the dashboard lists the draft. Fix the card, then delete the
   \`gmail-draft-error:\` line to have it uploaded on the next sync.
   Failures that are not the card's fault (an expired Google grant, a
-  network error) leave the card alone and are retried.
+  network error) are retried: the connector writes when they started to
+  \`gmail-draft-failing-since:\`, and after 7 days of failing gives up the
+  same way, with \`gmail-draft-error:\`. To retry after that, delete the
+  \`gmail-draft-error:\` line. A successful upload removes
+  \`gmail-draft-failing-since:\`.
 - Deleting the card does **not** delete the Gmail draft — once Gmail
   has it, the user owns it.
 

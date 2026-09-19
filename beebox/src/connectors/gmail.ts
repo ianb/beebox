@@ -251,7 +251,7 @@ class GmailConnector implements Connector {
   }
 
   private async uploadDrafts(service: GoogleGmailService, result: SyncResult): Promise<void> {
-    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service });
+    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service, now: getBoxTime(this.boxRoot) });
     if (drafts.errors.length > 0) {
       // Inbound sync still succeeded, so `success` stays true; the error makes
       // the failure reach the wakeup/finalize output and the activity record
@@ -262,11 +262,12 @@ class GmailConnector implements Connector {
       const message = `Draft upload failed for ${drafts.errors.length} card${drafts.errors.length === 1 ? "" : "s"}: ${detail}`;
       result.error = result.error === undefined ? message : `${result.error}; ${message}`;
     }
-    const changed = [...drafts.updated, ...drafts.stranded];
+    const changed = [...drafts.updated, ...drafts.stranded, ...drafts.marked];
     if (changed.length === 0) return;
     const parts = [
       ...(drafts.updated.length === 0 ? [] : [`Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`]),
       ...(drafts.stranded.length === 0 ? [] : [`stop retrying ${drafts.stranded.length} failed draft${drafts.stranded.length === 1 ? "" : "s"}`]),
+      ...(drafts.marked.length === 0 ? [] : [`record ${drafts.marked.length} draft upload failure${drafts.marked.length === 1 ? "" : "s"}`]),
     ];
     await stageAndCommitPaths(this.boxRoot, {
       paths: changed,

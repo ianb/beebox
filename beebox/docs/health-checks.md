@@ -233,8 +233,11 @@ HTTP 400 — is stamped `gmail-draft-error:` on the `email-outbound` card and no
 retried (`connectors/gmail-draft-card.ts`). The `gmail-drafts` warning lists
 those cards until each is fixed and its `gmail-draft-error` line deleted, or
 the card is deleted. Failures that are not the card's fault (an expired grant,
-a network or server error) leave the card alone and are retried every sync;
-the connector-activity `failing` alert covers them.
+a network or server error) are retried every sync, and the connector-activity
+`failing` alert covers them. They are not retried forever: the first one stamps
+`gmail-draft-failing-since:`, and a draft still failing 7 days later is
+stranded with `gmail-draft-error:` like a card problem. A successful upload
+clears the stamp.
 
 ## claude-update (nightly Claude Code self-update)
 

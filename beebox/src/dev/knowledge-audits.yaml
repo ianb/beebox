@@ -2595,7 +2595,8 @@ tests:
     correct_contains: ["email-outbound"]
     tags: [email, drafts]
 
-  # Status (2026-09-19, Claude): draft-email-stranded 1/1 passed; read
+  # Status (2026-09-19, Claude): draft-email-stranded 1/1 passed (rerun after
+  # the 7-day retry limit was added to the instructions); read
   # card-email-outbound.md and named both steps (fix the ref, delete the line).
   - id: draft-email-stranded
     prompt: >

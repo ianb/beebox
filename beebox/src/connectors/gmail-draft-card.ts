@@ -11,6 +11,10 @@
  * someone edits the card, so retrying them every sync is retrying forever. The
  * connector stamps such a card with `gmail-draft-error` instead and stops; the
  * dashboard lists it, and deleting the field (after fixing the card) retries.
+ *
+ * The other kind is retried, but not forever. Its first failure stamps
+ * `gmail-draft-failing-since`; a card still failing a week later is stranded
+ * the same way, with the last error. A successful upload clears the stamp.
  */
 
 import * as fs from "node:fs/promises";
@@ -23,6 +27,12 @@ import { GmailDraftRejectedError } from "../services/google-gmail.js";
 
 /** The frontmatter field that marks a draft the connector has stopped retrying. */
 export const DRAFT_ERROR_FIELD = "gmail-draft-error";
+
+/** When a retried failure started; cleared by a successful upload. */
+export const DRAFT_FAILING_SINCE_FIELD = "gmail-draft-failing-since";
+
+/** How long a draft is retried after its first failure before it is stranded. */
+const DRAFT_RETRY_LIMIT_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class MissingFieldError extends Error {
   constructor(readonly field: string) {
@@ -48,7 +58,7 @@ class StampDraftCardError extends Error {
 }
 
 /** A failure that only an edit to the card can fix, so retrying it is pointless. */
-export function isCardProblem(error: unknown): boolean {
+function isCardProblem(error: unknown): boolean {
   return (
     error instanceof MissingFieldError ||
     error instanceof UnresolvedInReplyToRefError ||
@@ -57,8 +67,12 @@ export function isCardProblem(error: unknown): boolean {
   );
 }
 
-/** Set frontmatter fields on a draft card, keeping the body. */
-export async function stampDraftCard(opts: { cardPath: string; fields: Record<string, string> }): Promise<void> {
+/** Set (and optionally remove) frontmatter fields on a draft card, keeping the body. */
+export async function stampDraftCard(opts: {
+  cardPath: string;
+  fields: Record<string, string>;
+  remove?: readonly string[];
+}): Promise<void> {
   const content = await fs.readFile(opts.cardPath, "utf-8");
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
@@ -73,5 +87,38 @@ export async function stampDraftCard(opts: { cardPath: string; fields: Record<st
   if (!isRecord(fm)) {
     throw new StampDraftCardError(opts.cardPath, `frontmatter in ${opts.cardPath} is not a mapping`);
   }
-  await fs.writeFile(opts.cardPath, renderFrontmatterBlock({ ...fm, ...opts.fields }, split.body));
+  const fields: Record<string, unknown> = { ...fm, ...opts.fields };
+  for (const key of opts.remove ?? []) delete fields[key];
+  await fs.writeFile(opts.cardPath, renderFrontmatterBlock(fields, split.body));
+}
+
+/**
+ * What a failed upload does to the card: `stranded` (stamped
+ * `gmail-draft-error`, no longer retried), `marked` (first retried failure,
+ * stamped `gmail-draft-failing-since`), or `retrying` (unchanged).
+ */
+export async function recordDraftFailure(opts: {
+  cardPath: string;
+  error: unknown;
+  now: Date;
+  /** The card's current `gmail-draft-failing-since`, or null. */
+  failingSince: string | null;
+}): Promise<"stranded" | "marked" | "retrying"> {
+  const { cardPath, error, now, failingSince } = opts;
+  const message = errorMessage(error);
+  const strand = async (reason: string): Promise<"stranded"> => {
+    await stampDraftCard({ cardPath, fields: { [DRAFT_ERROR_FIELD]: reason }, remove: [DRAFT_FAILING_SINCE_FIELD] });
+    return "stranded";
+  };
+  if (isCardProblem(error)) return strand(message);
+  const started = failingSince === null ? Number.NaN : Date.parse(failingSince);
+  // Missing, or hand-edited into something unreadable: the clock starts now.
+  if (Number.isNaN(started)) {
+    await stampDraftCard({ cardPath, fields: { [DRAFT_FAILING_SINCE_FIELD]: now.toISOString() } });
+    return "marked";
+  }
+  if (now.getTime() - started >= DRAFT_RETRY_LIMIT_MS) {
+    return strand(`Upload kept failing for 7 days, since ${failingSince}: ${message}`);
+  }
+  return "retrying";
 }

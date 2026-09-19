@@ -240,9 +240,47 @@ await box.seed(
 );
 const offline = { ...createFakeGoogleGmail(), createDraft: async () => { throw new Error("socket hang up"); } };
 const result = await createGmailConnector(box.root, offline).sync();
-const other = await readFile(join(box.root, "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card"), "utf-8");
-`${result.error?.includes("socket hang up")} | ${other.includes("gmail-draft-error")}`
+const otherPath = join(box.root, "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card");
+const other = await readFile(otherPath, "utf-8");
+`${result.error?.includes("socket hang up")} | ${other.includes("gmail-draft-error")} | ${other.includes("gmail-draft-failing-since:")}`
+=> true | false | true
+```
+
+The first retried failure starts a clock on the card; a later failure inside
+the week leaves the card as it is:
+
+```ts continue
+await createGmailConnector(box.root, offline).sync();
+(await readFile(otherPath, "utf-8")) === other
+=> true
+```
+
+## Retried failures stop after a week
+
+Nothing retries forever. A draft whose upload has failed for 7 days is stranded
+with the last error, like a card problem, and the dashboard lists it:
+
+```ts continue
+const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+await writeFile(otherPath, other.replace(/gmail-draft-failing-since: .*/, `gmail-draft-failing-since: ${eightDaysAgo}`));
+await createGmailConnector(box.root, offline).sync();
+const gaveUp = await readFile(otherPath, "utf-8");
+`${gaveUp.includes("gmail-draft-error: \"Upload kept failing for 7 days")} | ${gaveUp.includes("gmail-draft-failing-since")}`
 => true | false
+
+(await strandedDraftsHealthChecks(box.root))[0].message.includes("draft-2026-04-28-b")
+=> true
+```
+
+Deleting the error line retries it; a successful upload clears the clock:
+
+```ts continue
+await writeFile(otherPath, gaveUp.replace(/gmail-draft-error: .*\n/, "gmail-draft-failing-since: 2026-01-01T00:00:00.000Z\n"));
+const online = createFakeGoogleGmail();
+await createGmailConnector(box.root, online).sync();
+const sent = await readFile(otherPath, "utf-8");
+`${online.drafts.length} | ${sent.includes("gmail-draft-id")} | ${sent.includes("gmail-draft-failing-since")}`
+=> 1 | true | false
 ```
 
 ## Already-stamped outbounds are skipped

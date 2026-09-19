@@ -455,7 +455,11 @@ accepted.
   `GmailDraftRejectedError` for an HTTP 400 from `createDraft`) stamps
   `gmail-draft-error` on the card; the uploader skips stamped cards; the
   `gmail-drafts` health check lists them. Everything else (auth, 5xx,
-  network) is retried and falls to the `failing` verdict. New agent-facing
+  network) is retried and falls to the `failing` verdict, but for at most
+  7 days: the first such failure stamps `gmail-draft-failing-since`, a card
+  still failing a week later is stranded with `gmail-draft-error`, and a
+  successful upload clears the stamp (boxholder, 2026-09-19, after the
+  second cross-model review flagged unbounded retries). New agent-facing
   field, so a `draft-email-stranded` knowledge audit (run, passed).
 - **Disk use in the growth check.** `du -sk` of content (top-level entries
   but `.git`, `.beebox`, `node_modules`) and of `.beebox` separately
@@ -469,10 +473,6 @@ accepted.
 - **Measuring bytes and `.beebox`** (growth issue part 3). Deferred, then
   added; see *Added after the first review*. It needs a new measurement dimension and a disk-pressure
   policy.
-- **Stranding every failing draft after a time limit.** Auth-shaped
-  failures are still retried every sync: after a reconnect, retrying is
-  right, and the `failing` verdict already notifies once. Only card problems
-  are stranded (see *Added after the first review*).
 - **Per-connector declared expectations** (config saying "expect N/day").
   The learned baseline covers the incident with no configuration.
 - **A briefing line or box-agent chat mention.** Boxholder chose push plus
