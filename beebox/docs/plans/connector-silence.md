@@ -70,7 +70,7 @@ while producing nothing stays invisible.
 | A — draft errors, outbound scan skip | ~60 | ~80 |
 | B — connector activity record, one recording sync wrapper | ~150 | ~120 |
 | C — quiet/failing verdict, alert, health check, dismiss | ~320 | ~260 |
-| D — growth: drop fixed levels, baseline fix, watch-limit check | ~140 (about half deletions) | ~120 |
+| D — growth: drop level findings, watch-limit check | ~140 (about half deletions) | ~120 |
 | **Total** | **~670** | **~580** |
 
 Authored docs about 60 lines (`docs/connectors.md`, `docs/health-checks.md`).
@@ -113,12 +113,20 @@ only part of the cluster with no workaround today.
 
 - **Sync result.** `src/connectors/index.ts:57` `SyncResult { success,
   created, updated, skipped?, pushed?, jobs?, procedures?, error? }`. Reuse.
-  `created` is the "new item" count. For Gmail it holds new thread cards
-  (`src/connectors/gmail-threads.ts:243`, *"if (location.isNew)
-  opts.result.created.push(cardRelPath)"*). For Telegram it holds new chats
-  only (`src/connectors/telegram.ts:215`, *"if (result.newThread)
-  created.push(...)"*), so Telegram will rarely qualify as a steady producer.
-  That is acceptable: it means no false alarms for Telegram, not a wrong alarm.
+  `created` alone is **not** the "new item" count. For Gmail it holds new
+  thread cards (`src/connectors/gmail-threads.ts:243`, *"if (location.isNew)
+  opts.result.created.push(cardRelPath)"*) **and** every new message file,
+  including messages added to already-tracked threads (`:233`,
+  *"opts.result.created.push(...written.paths)"*). Those message files live in
+  the thread's `.attach/` scope (`:126`). Counting raw `created` would let
+  replies on tracked threads hide the anchor incident. The plan therefore
+  counts **new items** = `created` paths with no `.attach/` segment, that is,
+  new top-level cards. This uses the card format's attachment-scope rule
+  (`docs/cards-as-markdown.md`), not per-connector knowledge. For Telegram
+  `created` holds new chats only (`src/connectors/telegram.ts:215`, *"if
+  (result.newThread) created.push(...)"*), so Telegram will rarely qualify as
+  a steady producer. That means no false alarms for Telegram, not a wrong
+  alarm.
 - **Four sync call sites.** `src/cli/commands/wakeup-connectors.ts:121`,
   `src/cli/commands/finalize.ts:86`, `src/core/commands/connector-sync.ts:65`,
   `src/cli/commands/drive.ts:86`. Each calls `connector.sync()` directly.
@@ -191,7 +199,11 @@ for nothing external.
   0`, set `result.error` to `Draft upload failed for N card(s): <path>:
   <error>; …` (append to an existing `result.error` with `; `). Wakeup already
   prints `result.error` and counts it (`wakeup-connectors.ts` `reportSyncResult`),
-  and finalize does the same (`finalize.ts:95-97`). In `wakeup-steps.ts`, add
+  and finalize prints and counts it (`finalize.ts:95-97`) but does not set an
+  exit code from the count. That stays unchanged on purpose: a non-zero
+  finalize would make the reactor treat the calling job as failed and retry
+  it, which is the retry-forever shape. The `failing` verdict (Track C) is the
+  surface for a draft that keeps failing. In `wakeup-steps.ts`, add
   `const NEVER_TRIAGED_SUFFIXES = [".email-outbound.card"]` beside
   `EXCLUDED_SUBDIRS`, with a comment pointing at the `gmail-drafts.ts` header.
 - **Vocabulary lock-ins.** None.
@@ -210,9 +222,10 @@ for nothing external.
   ```ts
   // src/connectors/activity.ts
   interface ConnectorDay {
-    runs: number;       // sync() calls that returned
+    runs: number;       // sync() attempts, including ones that threw
     ok: number;         // success && !error && !skipped
-    created: number;
+    newItems: number;   // created paths with no ".attach/" segment
+    created: number;    // raw created count, kept for diagnosis
     updated: number;
     errored: number;    // error set, or sync() threw
     skipped: number;
@@ -250,20 +263,39 @@ for nothing external.
     | { kind: "healthy" | "unwatched" }
     | { kind: "quiet"; since: string /* first quiet day */; quietDays: number; allowedDays: number }
     | { kind: "failing"; since: string /* first all-error day */; lastError: string };
-  export function connectorVerdict(days: Record<string, ConnectorDay>, today: string): ConnectorVerdict;
+  export function connectorVerdict(input: {
+    days: Record<string, ConnectorDay>;
+    today: string;
+    openEpisode: { kind: "quiet" | "failing"; since: string } | null; // from the latch
+  }): ConnectorVerdict;
   ```
 
-  - **failing**: the most recent day with runs and every day since `since`
-    has `errored === runs`, and that stretch spans more than 1 day. Checked
-    first.
-  - **quiet stretch**: consecutive most-recent days where `ok > 0 &&
-    created === 0`. Days with runs but no `ok` run, and days with no runs,
-    neither extend nor break the stretch.
-  - **baseline**: the 28 days before the quiet stretch. Watched only when the
-    connector has ≥ 21 days of history and `created > 0` on ≥ 60% of the
-    baseline days that had an `ok` run.
-  - **quiet** when `quietDays > max(2, 2 × longest zero-created run in the
-    baseline)`.
+  Every count below is over **run days** (days with `runs > 0`). Days with no
+  runs are skipped entirely: they neither extend nor break a stretch and are
+  never counted. A week with the scheduler stopped therefore adds nothing.
+
+  - **failing**: the most recent run days, back to `since`, all have `runs >
+    0 && errored === runs`, and there are at least 2 of them. Checked first.
+  - **quiet stretch**: the most recent consecutive run days with `ok > 0 &&
+    newItems === 0`. A run day with no `ok` run (all errored or skipped) is
+    skipped like a no-run day. `quietDays` is the number of quiet run days,
+    not a calendar span.
+  - **baseline**: the 28 **calendar** days before the first quiet day. Watched
+    only when the connector has run days spanning ≥ 21 calendar days in the
+    record, and `newItems > 0` on ≥ 60% of those 28 calendar days (≥ 17 days).
+    The calendar denominator is deliberate: a connector that runs three times
+    a week can reach at most 12 of 28 and is never watched. A scheduler outage
+    inside the baseline lowers the ratio, which errs toward silence.
+  - **longest gap**: the longest run of consecutive baseline run days with
+    `newItems === 0`.
+  - **quiet** when `quietDays > max(2, 2 × longest gap)`. The anchor incident
+    (new threads every day, then none) alerts on the third quiet run day.
+  - **open episodes do not age out.** When `openEpisode` is `quiet`, the
+    verdict stays `quiet` until a run day with `newItems > 0`, even after the
+    baseline days are pruned from the 60-day record. An open `failing`
+    episode ends at the first run day with an `ok` run. Without this, a
+    connector that stays quiet for two months would become `unwatched` and
+    delete its own warning.
 
   Latch, in the same activity file under `alerts: Record<connector, {
   episode: string /* verdict.kind + ":" + since */; notifiedAt: string |
@@ -296,28 +328,42 @@ for nothing external.
 
 ### Track D — growth: no fixed levels; a check that names the real limit
 
-- **What.** Delete the fixed file and directory thresholds. Keep the level
-  check relative to the accepted baseline (current > 2 × accepted), and make
-  every box have a baseline. Add a watch-limit health check.
+- **What.** Delete the file and directory level findings entirely, fixed and
+  baseline-relative. Rate findings stay. Add a watch-limit health check.
 - **Why.** Issue parts 1, 2 and 4. The level warning fires on any Gmail box
   and cannot clear.
 - **Direction.**
-  - `policy.ts`: remove `absoluteDirectories`, `absoluteFiles` and
-    `absoluteThreshold`. Findings `absolute-directories`/`absolute-files`
-    become `grown-directories`/`grown-files`, threshold `accepted × 2`.
-    Findings are computed on read and never persisted, so the rename needs no
-    migration (`rateExpectations` stores rate kinds only, `actions.ts:52-56`).
-  - `health.ts:202`: a first measurement always sets `acknowledgedAt` and
-    `accepted`. A stored state with `acknowledgedAt: null` is re-baselined to
-    the next measurement, once. This discards a baseline captured
-    mid-anomaly, which is the case the issue describes.
+  - `policy.ts`: remove `absoluteDirectories`, `absoluteFiles`,
+    `acceptedGrowthMultiplier` and `absoluteThreshold`, and the
+    `absolute-directories`/`absolute-files` finding kinds (`model.ts:99-100`)
+    and their prose (`health.ts:269-274`). Findings are computed on read and
+    never persisted, so removing kinds needs no migration
+    (`rateExpectations` stores rate kinds only, `actions.ts:52-56`).
+  - `health.ts:119-124` `isAboveGlobalThreshold` and its use at `:202` go.
+    With no level findings, `acknowledgedAt` and `accepted` have no policy
+    reader. Implementation checks for other readers; if none, both fields
+    leave the schema, and an old state file that still carries them is read
+    with the keys dropped and rewritten at the next measurement. Issue part 2
+    (a baseline that can never clear) disappears with the level check.
+  - The acknowledge action keeps its other job: it rebases `previous` and
+    clears `lastNotice` (`actions.ts:31-41`).
   - `file-watcher.ts`: `reportWatchLimit` also records `{ at, belowPath }` in
     a module map; export `watchLimitStatus(boxRoot)`. New health check
     `box-watch-limit`: when set, a `warning` *"Live updates are off below
     <path>: the box has more than 1,024 watched directories."* In a process
-    with no watcher (`bbx health`), no check is emitted.
-- **Vocabulary lock-ins.** Finding kinds `grown-directories`, `grown-files`;
-  check name `box-watch-limit`.
+    with no watcher (`bbx health`), no check is emitted. The watcher starts
+    on the first `events.subscribe` (`src/webapp/trpc/routers/events.ts:64`),
+    which the dashboard opens, so a health query that races ahead of it shows
+    the warning on the next refetch. Accepted: the limit is hit during the
+    initial walk, seconds after the dashboard opens. The dashboard does not
+    refetch `health.check` on bus events today
+    (`src/frontend/src/pages/DashboardPage.tsx:25-34`), and the server serves
+    a snapshot for up to 60 s (`health-snapshot.ts:141`). So
+    `reportWatchLimit` also emits a `box-watch-limit` bus event, and
+    `DashboardPage` invalidates the health query on it. The snapshot delay of
+    up to 60 s is accepted.
+- **Vocabulary lock-ins.** Check name `box-watch-limit`. Two finding kinds
+  removed.
 - **First chunk.** The policy and baseline change with updated doctests.
 
 ## Could this be simpler?
@@ -359,7 +405,11 @@ None. Every sub-question was settled by the boxholder's decisions above.
 | No notify channel configured | New doctest | Latch not set, dashboard warning still shows | Clear on dashboard |
 | Draft error text contains a long MIME dump | New doctest | Truncate each error to 200 chars in `result.error` | Clear |
 | A connector that errors on every run also has zero `ok` runs, so it is never "quiet" | Verdict doctest | `failing` covers it | Clear |
-| Growth state stored with `acknowledgedAt: null` on an upgraded box | New doctest | Re-baseline once on next measurement | Clear: one `lastNotice` saying the baseline was reset |
+| Growth state file from before the change still carries `accepted`/`acknowledgedAt` | New doctest | Keys dropped on read, rewritten at next measurement | Silent, harmless |
+| Replies on tracked Gmail threads counted as production during a real silence | New verdict doctest (incident shape with nonzero raw `created`) | `newItems` excludes `.attach/` paths | n/a |
+| Scheduler stopped for a week, then resumes with zero new items | New verdict doctest | No-run days are skipped, so only real quiet run days count | n/a |
+| Every sync on a day throws | New `syncConnector` doctest | Thrown attempts count in `runs` and `errored`, so the day is an all-error run day | Clear: `failing` |
+| Quiet episode lasts longer than the 60-day record | New verdict doctest | Open episode persists until new items arrive | Clear: warning stays until the connector produces or is dismissed |
 | Watch limit hit, then the box shrinks | n/a | Status lives for the watcher lifetime, like the existing log line | Warning persists until restart; accepted: the watcher does not re-add dropped watches either |
 
 No critical gaps.
