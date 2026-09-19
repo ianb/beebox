@@ -498,6 +498,18 @@ rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
+### `v2-refs-to-v3` (repair — v2-layout refs to v3 paths)
+
+Registered just before `filename-attach-scope`. The one-root migration moved
+every file but left some box-absolute refs in v2 form (`/store/archive/…`),
+which the box namespace fence now refuses. For each such ref in a card or
+`.md` file, the migrator maps the path with `mapV2Path` (the table the files
+were moved with) and rewrites the ref only when the mapped target exists and
+lies inside the box namespace. The query and fragment are kept; fenced code
+examples are left alone. Refs whose target is gone stay as they are, and
+`bbx validate` keeps reporting them as broken. See
+`scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
+
 ### `filename-attach-scope` (repair — flat media files into attach scopes)
 
 Registered at the end of `MIGRATIONS`. Old capture archives kept media in a

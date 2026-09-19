@@ -239,6 +239,17 @@ deeper directory does not break it.
 - **First chunk:** `scripts/migrate/filename-attach-scope.ts` with
   `classifyFilenameRef` and the doctest for the rule table. No open questions.
 
+### Track F — `v2-refs-to-v3` migration (added at /finish, boxholder request)
+
+- **What:** Rewrite box-absolute refs still in v2 layout (`/store/…`) to the
+  v3 path `mapV2Path` gives, only when that target exists in the box
+  namespace. Cards and `.md` files; fenced examples untouched.
+- **Why:** The test-box run found a stock-procedure-derived card holding
+  `/store/archive/briefs/…`; the boxholder asked, at /finish, to "try to fix
+  v2 refs if they exist". Registered before `filename-attach-scope`, so a
+  v2-form `filename.ref` reaches that migration in v3 form.
+- **Test:** `test/scripts/migrate/migrate-v2-refs-to-v3.doctest.md`.
+
 ## Could this be simpler?
 
 - **Simplest:** loosen the image loader to accept any in-box ref, and skip the
