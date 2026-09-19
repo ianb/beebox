@@ -1,12 +1,21 @@
 ---
 title: "The smoke walk's card-open step rose from about 5s to about 45s and now fills most of the 120s budget"
-workstream: smoke-review
+workstream: refresh-maps-correctness
 area: monorepo
 labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-16
+resolution: implemented
 ---
+
+Closed 2026-09-19 in `ca2f52c48`: fixed per the "Cause and fix" section
+below — the walk regressed, not the app. Scoped snapshots (`browse/src/act.ts`)
+now drop out-of-scope ids inside the `eval` instead of probing each one with a
+separate `get attr` call, and `bin/smoke`'s card-open step takes its
+failure-evidence full snapshot only on failure. card-open went from ~61s to
+~31s on this worktree's box. The residual ~6.5s-per-checked-click cost (dating
+to 2026-08-23) is documented and deliberately left alone.
 
 The `card-open` step of `bin/smoke` is the only step whose cost changed
 materially. The step still earns its place, so do not remove it. The problem is

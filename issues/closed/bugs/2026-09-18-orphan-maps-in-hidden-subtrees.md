@@ -5,7 +5,15 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: refresh-maps-correctness (worktree-refresh-maps-correctness)
+resolution: implemented
 ---
+
+Closed 2026-09-19 in `f3301826d`: `findOrphanMaps`/`pruneOrphanMaps`
+(`beebox/src/core/maps/orphans.ts`) delete an orphan's `MAP.md`, its
+`CLAUDE.md` import line (and the `AGENTS.md` mirror symlink when it points at
+`CLAUDE.md`), and its state entry, as a shell-only `prune` step that runs
+before the agent step and before the ordinary precheck/finalize gate. Chosen
+directly by the boxholder: delete, not report as an anomaly.
 
 `SKELETON_HIDDEN_PATHS` (`beebox/src/core/maps/precheck-ignore.ts`) hides whole
 subtrees from maps: the precheck never produces a task inside them. A MAP.md
