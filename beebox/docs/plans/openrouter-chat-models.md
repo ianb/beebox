@@ -425,8 +425,9 @@ none — the spike is a track with recorded deliverables.
 | Catalog fetch fails at add time | new doctest | add refused with the fetch error | clear |
 | Model passes validation but fails the agent loop (bad tool calls) | spike only | turn fails with OpenRouter/CLI error | clear, not classified — accepted; admin copy warns |
 | Out of OpenRouter credit mid-run | spike records the string | ordinary failure; the new guard stops it parking Claude | clear |
+| Scheduled message fires into a chat whose model was removed | doctest (`chat-schedule-fire`) | turn refused; schedule dropped, no fresh-chat retry (boxholder, 2026-09-19) | logged warning |
 | Claude Code sends a background call as a `claude-*` id | spike (e) | role variables pinned to the model | would be silent spend — the spike must confirm, see gap below |
-| `total_cost_usd` mispriced | spike (h) | key-usage line is the real figure | silent per run — accepted, documented |
+| `total_cost_usd` mispriced | doctest (dropped on third-party results) | omitted; key-usage line is the real figure | clear — no figure rather than a wrong one |
 | Prompt logging on an OpenRouter run | doctest via the generalized branch | logger disabled with a message | clear |
 | Key-usage endpoint shape differs from docs | spike (g) | "Usage unavailable: <reason>" | clear |
 
@@ -577,8 +578,10 @@ with no tools. It used the harness plugin and `bypassPermissions`, as
   delayed.
 - **(h)** `total_cost_usd` overstates badly. It reported $0.03–$0.49 per turn
   where OpenRouter's per-request `cost` summed to $0.01–$0.03, about 5–20×.
-  `maxBudgetUsd` would trip early on these models, and `core/usage.ts`
-  records the inflated figure. Same class as GLM. Documented, not corrected.
+  `maxBudgetUsd` would trip early on these models. `core/usage.ts` records
+  tokens, not this figure. The only carrier is the chat result message, which
+  now omits it for third-party runs (boxholder, 2026-09-19: "we shouldn't
+  misreport it, instead just skip reporting"). GLM gets the same treatment.
 
 **Suggestions that ship:** `moonshotai/kimi-k2-0905:exacto` (Kimi K2),
 `deepseek/deepseek-v3.2` (DeepSeek V3.2), `qwen/qwen3-coder` (Qwen3 Coder).

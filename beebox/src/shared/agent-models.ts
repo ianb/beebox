@@ -61,6 +61,18 @@ export function providerOf(model: string): ModelProvider {
 }
 
 /**
+ * True when a run on this model leaves first-party Anthropic while riding the
+ * claude engine — GLM or an owner-added OpenRouter model. Those runs carry
+ * their own endpoint and key, and the SDK's Claude-priced cost figure is wrong
+ * for them.
+ */
+export function isThirdPartyModel(model: string | null | undefined): model is string {
+  if (model === null || model === undefined) return false;
+  const provider = providerOf(model);
+  return provider === "glm" || provider === "openrouter";
+}
+
+/**
  * Provider-relative policy, not a claim that models on the same row have equal
  * capability. Each engine has one column per provider it can run: claude runs
  * first-party Anthropic or GLM (Z.ai's Anthropic-compatible endpoint), codex

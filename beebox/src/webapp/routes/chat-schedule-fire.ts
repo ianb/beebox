@@ -19,6 +19,7 @@
  * that instead closes/errors without a result counts as a failed delivery too.
  */
 
+import { ProviderSetupError } from "../../core/provider-setup-error.js";
 import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import type { ChatSession } from "../../core/chat/session/index.js";
 import type { ChatMessageResult } from "../../core/chat/session/messages.js";
@@ -57,11 +58,20 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  * ended with `is_error` (the unresumable case), or the run closed/errored
  * before a result — a false is the caller's cue to try a fresh session.
  */
-function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<boolean> {
+/**
+ * How a fired turn ended. `refused` means the chat's model cannot run on this
+ * box — removed in admin, or its provider key is gone — and is not retried
+ * anywhere: scheduled messages are low priority, and sending one to a
+ * different model in a fresh chat would change who answers (boxholder,
+ * 2026-09-19: "if the model is removed the message goes nowhere").
+ */
+type FiredTurnOutcome = "delivered" | "failed" | "refused";
+
+function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<FiredTurnOutcome> {
   const { session, eventBus, firedMessage } = deps;
-  return new Promise<boolean>((resolve, reject) => {
+  return new Promise<FiredTurnOutcome>((resolve, reject) => {
     let settled = false;
-    const finish = (ok: boolean): void => {
+    const finish = (ok: FiredTurnOutcome): void => {
       if (settled) return;
       settled = true;
       session.removeListener("done", onDone);
@@ -87,20 +97,20 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
           // Degraded but recovered: the turn itself already settled; only the
           // tab-refresh broadcast is lost.
           console.warn("[schedule] Post-fire history broadcast failed:", e);
-        }).finally(() => finish(msg.is_error !== true));
+        }).finally(() => finish(msg.is_error === true ? "failed" : "delivered"));
     };
     // A run that closes or errors without a `done` (crash, or a refused resume
     // that never reaches a result) counts as a failed delivery, not a hang.
-    const onFail = (): void => finish(false);
+    const onFail = (error?: unknown): void => finish(error instanceof ProviderSetupError ? "refused" : "failed");
     session.once("done", onDone);
     session.once("close", onFail);
     session.once("error", onFail);
     void session.send(firedMessage).then((sent) => {
-      if (!sent) finish(false);
+      if (!sent) finish("failed");
     }).catch((error: unknown) => {
       if (error instanceof BoxMaintenanceError) reject(error);
       else console.error("[schedule] Send failed:", error);
-      finish(false);
+      finish("failed");
     });
   });
 }
@@ -153,12 +163,16 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
   wireSession(target);
   registry.enforceLiveCap(targetId);
   registry.touch(targetId, { subprocessUse: true });
-  const delivered = await sendFiredTurn({
+  const outcome = await sendFiredTurn({
     session: target,
     eventBus,
     firedMessage,
   });
-  if (delivered) return;
+  if (outcome === "delivered") return;
+  if (outcome === "refused") {
+    console.warn(`[schedule] Session ${targetId}'s model cannot run on this box; dropping schedule "${schedule.label}"`);
+    return;
+  }
   if (registry.deletion.isBlocked(targetId)) return;
 
   // Fresh-session fallback: the target couldn't run its turn (e.g. an
@@ -172,7 +186,7 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
     eventBus,
     firedMessage,
   });
-  if (!retried) {
+  if (retried !== "delivered") {
     console.error(`[schedule] Fresh-session retry also failed for schedule "${schedule.label}"; giving up`);
   }
 }

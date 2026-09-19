@@ -142,8 +142,8 @@ never falls back to first-party.
 Z.ai's coding-plan policy inspects request content and flags assistant-style
 use — choosing GLM for a box accepts that posture for its content. Sessions
 may move between providers freely: transcripts are local, so a conversation
-that starts on GLM can continue on Claude and the reverse. `total_cost_usd`
-on GLM runs tracks first-party pricing tables — treat it as directional and
+that starts on GLM can continue on Claude and the reverse. The SDK prices GLM
+runs with first-party tables, so their chat results carry no `total_cost_usd`;
 read spend from Z.ai's own usage dashboard.
 
 ## OpenRouter models
@@ -163,13 +163,15 @@ public catalog: the id must exist and support tool calling.
   the added list, and the box must hold a granted `openrouter` key. Either
   missing fails the run with the fix. Nothing falls back to first-party.
 - **Removal:** refused while the model is the box default. A chat that picked
-  a model explicitly keeps the pick after removal, and its next turn refuses.
-  It does not follow the box default.
+  a model explicitly keeps the pick after removal, and its next turn refuses,
+  including a turn on an already-running subprocess. It does not follow the
+  box default. A scheduled message for that chat is dropped rather than
+  retried in a fresh chat.
 - **Spend:** the admin section shows each model's price per million tokens and
   the key's own usage figure. That figure covers every use of the key, and
-  OpenRouter updates it a minute or more late. `total_cost_usd` on these runs
-  is priced as Claude and overstates by roughly 5–20×; do not read spend from
-  it.
+  OpenRouter updates it a minute or more late. The SDK's `total_cost_usd`
+  prices these runs as Claude and overstated them roughly 5–20×, so chat
+  results on third-party models (OpenRouter and GLM) carry no cost figure.
 - **Data:** Claude Code sends the requests, so the per-request host pin that
   the optional OpenRouter services use cannot apply. Host choice and data
   retention follow the OpenRouter account's privacy settings.

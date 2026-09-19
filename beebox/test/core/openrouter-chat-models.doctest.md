@@ -10,10 +10,10 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chatModelForEngine, chatModelLabel, chatModelOptions, isChatModelAllowed, isOpenRouterModelId } from "../../src/shared/chat-models.js";
-import { providerOf, resolveProcedureModel } from "../../src/shared/agent-models.js";
+import { isThirdPartyModel, providerOf, resolveProcedureModel } from "../../src/shared/agent-models.js";
 import { resolveEffectiveModel, resolveSmallModelForEngine } from "../../src/core/model-policy.js";
 import { loadAddedModels, loadBoxModel, loadSmallModel } from "../../src/core/box/config.js";
-import { isThirdPartyModel, providerEnvAdditions } from "../../src/core/provider-env.js";
+import { providerEnvAdditions } from "../../src/core/provider-env.js";
 import { openRouterChatEnv, OpenRouterSetupError } from "../../src/core/openrouter-chat.js";
 import { ProviderSetupError } from "../../src/core/provider-setup-error.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
@@ -209,6 +209,23 @@ path refuses both the same way.
 ```ts
 new OpenRouterSetupError("x") instanceof ProviderSetupError
 => true
+```
+
+## No cost figure for third-party runs
+
+The SDK prices every turn as Claude, which overstated OpenRouter spend 5–20×
+in the spike. A wrong number is worse than none, so a third-party run's
+result carries no `total_cost_usd`. First-party runs keep theirs.
+
+```ts
+const { adaptBackendMessage } = await import("../../src/core/chat/session/messages.js");
+const result = {
+  type: "result", subtype: "success", is_error: false, result: "", duration_ms: 1, duration_api_ms: 1,
+  num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, usage: {}, modelUsage: {},
+  permission_denials: [], session_id: "s", uuid: "u",
+};
+JSON.stringify([kimi.id, "glm-5.3", "claude-opus-5"].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
+=> ["none","none",0.25]
 ```
 
 ## A live chat stops on its next turn after removal

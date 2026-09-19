@@ -207,7 +207,7 @@ export class ChatThreadSession extends EventEmitter {
     this.state = nextLifecycle(this.state, { phase: "ready", run });
 
     liveThreads.add(this);
-    void this.consumeMessages(run).finally(async () => {
+    void this.consumeMessages(run, threadModel).finally(async () => {
       liveThreads.delete(this);
       await work.release();
     });
@@ -218,10 +218,10 @@ export class ChatThreadSession extends EventEmitter {
     });
   }
 
-  private consumeMessages(run: ChatBackendRun): Promise<void> {
+  private consumeMessages(run: ChatBackendRun, model: string | null): Promise<void> {
     return pumpChatRun({
       run,
-      adapt: adaptBackendMessage,
+      adapt: (msg) => adaptBackendMessage(msg, { model }),
       onMessage: (msg) => this.handleMessage(msg),
       onError: (err) => {
         log("error", `Run errored: ${err.message}`);

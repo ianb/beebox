@@ -22,7 +22,8 @@ import {
   redactCodexCliDetail,
   type CodexCliService,
 } from "../../services/codex-cli.js";
-import { isThirdPartyModel, providerEnvAdditions } from "../provider-env.js";
+import { providerEnvAdditions } from "../provider-env.js";
+import { isThirdPartyModel } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
 import { invariant } from "../../lib/invariant.js";
 

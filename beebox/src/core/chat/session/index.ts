@@ -221,7 +221,7 @@ export class ChatSession extends EventEmitter {
   private consumeMessages(run: ChatBackendRun): Promise<void> {
     return pumpSessionRun(run, {
       durability: this.durability,
-      boxRoot: this.boxRoot,
+      boxRoot: this.boxRoot, model: this.resolvedModel,
       getSessionId: () => this.sessionId,
       recordTurnMarker: (sessionId) => recordTurnMarkerForSession(this.boxRoot, sessionId),
       handleMessage: (msg) => this.handleMessage(msg),

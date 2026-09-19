@@ -9,17 +9,10 @@
  */
 
 import { assertNever } from "../lib/invariant.js";
-import { providerOf } from "../shared/agent-models.js";
+import { isThirdPartyModel, providerOf } from "../shared/agent-models.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "./glm-key.js";
 import { openRouterChatAdditions } from "./openrouter-chat.js";
 import { ProviderSetupError } from "./provider-setup-error.js";
-
-/** True when a run on this model goes somewhere other than first-party Anthropic via the claude engine. */
-export function isThirdPartyModel(model: string | null | undefined): model is string {
-  if (model === null || model === undefined) return false;
-  const provider = providerOf(model);
-  return provider === "glm" || provider === "openrouter";
-}
 
 /**
  * The env additions for a resolved model, or null when it needs none.
