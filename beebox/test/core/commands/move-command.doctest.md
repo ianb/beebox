@@ -642,7 +642,7 @@ await box.cleanup();
 
 ## Moving a plain `.md` file
 
-A plain `.md` file moves like a card. Cards and other `.md` files that link
+A plain `.md` file moves or renames like a card. Cards and other `.md` files that link
 to it are rewritten in whichever style they used, and the moved file's own
 relative links are recomputed from its new location. A `.md` file has no
 attach scope, so nothing else moves with it.
@@ -666,6 +666,12 @@ result.success
 
 await box.read("_content/other.md")
 => [S](dossiers/saoirse.md)
+
+(await mv(box, { from: "_content/dossiers/saoirse.md", to: "_content/dossiers/saoirse-2026.md" })).success
+=> true
+
+await box.list("_content/dossiers")
+=> _content/dossiers/saoirse-2026.md
 ```
 
 ## Directory moves rewrite `.md` dossiers too — inside and outside the move

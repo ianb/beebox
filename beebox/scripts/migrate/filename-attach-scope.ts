@@ -39,7 +39,7 @@ import {
 import { errorMessage } from "../../src/lib/error-guards.js";
 import { isRecord } from "../../src/lib/is-record.js";
 import { attachDirFor, isAttachRef, resolveAttachRef } from "../../src/shared/attach-path.js";
-import { resolveRefPath } from "../../src/shared/ref-path.js";
+import { isUrlRef, resolveRefPath } from "../../src/shared/ref-path.js";
 
 /** The card types whose schema says `filename.ref` names a file in the attach scope. */
 const MEDIA_CARD = /\.(image|audio|file|pdf)\.card$/;
@@ -51,10 +51,11 @@ export interface MediaCard {
 }
 
 export type Decision =
-  | { kind: "repair"; cardRel: string; ref: string; fromRel: string; toRel: string; newRef: string }
+  | { kind: "repair"; cardRel: string; ref: string; fromRel: string; toRel: string; newRef: string; staleRel?: string }
   | { kind: "ambiguous"; cardRel: string; ref: string; reason: string };
 
-type Target = { fileRel: string } | { reason: string };
+/** `staleRel` is where a dangling ref pointed (route b); other refs to it follow the repair too. */
+type Target = { fileRel: string; staleRel?: string } | { reason: string };
 
 /**
  * Find the file a non-`attach/` ref means, if that is certain. Two routes:
@@ -64,19 +65,21 @@ type Target = { fileRel: string } | { reason: string };
  */
 function locate(card: MediaCard, isFile: (rel: string) => boolean): Target {
   const cardDir = path.posix.dirname(card.cardRel);
+  if (isUrlRef(card.ref)) return { reason: "external-url" };
   const resolved = resolveRefPath({ fromPath: card.cardRel, ref: card.ref, kind: "card" });
   if (resolved === null) return { reason: "escapes-box" };
   if (isFile(resolved)) {
     return path.posix.dirname(resolved) === cardDir ? { fileRel: resolved } : { reason: "outside-card-dir" };
   }
   const sibling = path.posix.join(cardDir, path.posix.basename(resolved));
-  return isFile(sibling) ? { fileRel: sibling } : { reason: "not-found" };
+  return isFile(sibling) ? { fileRel: sibling, staleRel: resolved } : { reason: "not-found" };
 }
 
 /**
  * Decide, for every media card, whether its file can be moved into its attach
  * scope. A card is repaired only when all hold:
- *  1. `filename.ref` does not start with `attach/` (else it is already done);
+ *  1. `filename.ref` does not start with `attach/` (else it is already done)
+ *     and is not a URL;
  *  2. the file is located by route a or b in {@link locate};
  *  3. the file is not itself a card;
  *  4. no other media card's `filename.ref` means the same file.
@@ -122,6 +125,7 @@ export function classifyFilenameRefs(cards: readonly MediaCard[], isFile: (rel: 
       fromRel: target.fileRel,
       toRel: `${attachDirFor(card.cardRel)}/${name}`,
       newRef: `attach/${name}`,
+      ...(target.staleRel === undefined ? {} : { staleRel: target.staleRel }),
     });
   }
   return decisions;
@@ -190,14 +194,19 @@ async function moveIntoScope(boxRoot: string, decision: Extract<Decision, { kind
  * Rewrite refs after the moves. A repaired card's own refs to its file become
  * `attach/<file>` — the resolving ones, plus its `filename.ref` token when it
  * was dangling (route b). Every other ref to a moved file, in any card, `.md`
- * or view, follows the move in its own style.
+ * or view, follows the move in its own style; so does a ref to the stale path
+ * a route-b card pointed at.
  */
 async function rewriteRefs({ boxRoot, repaired, report }: {
   boxRoot: string;
   repaired: ReadonlyArray<Extract<Decision, { kind: "repair" }>>;
   report: Report;
 }): Promise<void> {
-  const byFromAbs = new Map(repaired.map((d) => [path.join(boxRoot, d.fromRel), path.join(boxRoot, d.toRel)]));
+  const byFromAbs = new Map(repaired.flatMap((d) => {
+    const toAbs = path.join(boxRoot, d.toRel);
+    const stale: Array<[string, string]> = d.staleRel === undefined ? [] : [[path.join(boxRoot, d.staleRel), toAbs]];
+    return [[path.join(boxRoot, d.fromRel), toAbs], ...stale];
+  }));
   const remap: Remap = (abs) => byFromAbs.get(abs) ?? null;
   const byCard = new Map(repaired.map((d) => [d.cardRel, d]));
   const referrers = [
@@ -216,7 +225,9 @@ async function rewriteRefs({ boxRoot, repaired, report }: {
         const replacements = new Map<string, string>();
         for (const token of collectCardRefTokens({ text, skipFencedCode: false })) {
           const resolved = resolveRefPath({ fromPath: rel, ref: token, kind: "card" });
-          if (token === own.ref || resolved === own.fromRel) replacements.set(token, own.newRef);
+          if (token === own.ref || resolved === own.fromRel || (resolved !== null && resolved === own.staleRel)) {
+            replacements.set(token, own.newRef);
+          }
         }
         const result = rewriteCardRefTokens({ text, replacements, skipFencedCode: false });
         text = result.text;

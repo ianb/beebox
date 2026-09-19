@@ -92,7 +92,7 @@ top.
 Searched for a current producer of the flat layout: the capture writer
 (`src/core/capture/write-cards.ts:63`, *"const childAttachRel =
 `${this.sessionAttachRelDir}/${opts.childBasename}.attach`;"*) and scan import
-(`scan-import-cards.ts:135`) both write attach scopes. A grep of `src/`,
+(`commands/scan-import-cards.ts:97-101`) both write attach scopes. A grep of `src/`,
 `templates/` for a non-`attach/` `filename.ref` writer found none. The flat
 layout is legacy-only, so a one-time migration is the right shape. Git history
 before 2026-08-30 was rewritten, so the date of the switch is unknown.
@@ -194,7 +194,7 @@ deeper directory does not break it.
 - **Direction — the confidence rule.** Pure function
   `classifyFilenameRef(input) → Decision`, exported for the doctest. A card is
   repaired only when all hold:
-  1. `filename.ref` does not start with `attach/`.
+  1. `filename.ref` does not start with `attach/` and is not a URL.
   2. The target file is found by one of two routes:
      a. the ref resolves in the box (`resolveRefPath`) to an existing regular
         file in the card's own directory; or
@@ -208,8 +208,9 @@ deeper directory does not break it.
      (then the flat copy is removed instead of moved).
 
   Anything else is `ambiguous` with a reason: `outside-card-dir`,
-  `not-found`, `shared-with <other card>`, `destination-differs`, `xml-card`,
-  `escapes-box`. A card's stem is not required to match the file's stem. The
+  `not-found`, `shared-with <other card>`, `destination-differs`,
+  `target-is-card`, `external-url`, `escapes-box`. Cards without frontmatter
+  are listed separately. A card's stem is not required to match the file's stem. The
   worked example in the issue (`photo-004.jpg` beside
   `photo-004-<title>.image.card`) passes, and so does `IMG_1234.jpg` beside
   `Beach.image.card`. Rules 2–4 already establish ownership: the card names
@@ -220,7 +221,9 @@ deeper directory does not break it.
   tokens that resolve to its file become `attach/<file>` (collected with
   `collectCardRefTokens`, replaced with `rewriteCardRefTokens`); every other
   referrer goes through `rewriteReferrerRefs` / `rewriteViewRefs`, which
-  keep each ref's absolute or relative style.
+  keep each ref's absolute or relative style. For route b, the stale path the
+  dangling ref named is remapped too, so other cards holding the same stale
+  ref are repaired with it.
 - **Direction — report and exit:** prints counts, then each ambiguous card
   with its reason. Exits 0 when only ambiguous cards remain; exits 2 only on
   an I/O failure (precedent: `gsheet-rename.ts`, *"if (report.failed.length >

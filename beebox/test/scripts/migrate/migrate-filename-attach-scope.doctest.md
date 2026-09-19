@@ -56,7 +56,7 @@ decide(
 
 Everything uncertain is reported with a reason: a file in another directory, a
 file two cards claim, a file that is nowhere, a ref that is a card, a ref that
-escapes the box. A card already in `attach/` form gets no decision at all, so
+escapes the box, a URL (even when a file with its basename sits beside the card). A card already in `attach/` form gets no decision at all, so
 a second run finds nothing to do; it still counts as a claimant.
 
 ```ts
@@ -68,6 +68,7 @@ decide(
     { cardRel: "_content/cap/D.image.card", ref: "/_content/cap/gone.jpg" },
     { cardRel: "_content/cap/E.file.card", ref: "Other.doc.card" },
     { cardRel: "_content/cap/F.image.card", ref: "../../../outside.jpg" },
+    { cardRel: "_content/cap/U.image.card", ref: "https://example.com/b.jpg" },
     { cardRel: "_content/cap/G.image.card", ref: "attach/g.jpg" },
     { cardRel: "_content/cap/G.attach/H.image.card", ref: "/_content/cap/G.attach/g.jpg" },
   ],
@@ -81,6 +82,7 @@ decide(
   "_content/cap/D.image.card: not-found",
   "_content/cap/E.file.card: target-is-card",
   "_content/cap/F.image.card: escapes-box",
+  "_content/cap/U.image.card: external-url",
   "_content/cap/G.attach/H.image.card: shared-with _content/cap/G.image.card"
 ]
 ```
@@ -101,12 +103,15 @@ await box.write("_content/cap/gone.image.card", "---\nfilename:\n  ref: /_conten
 await box.write("_content/cap/taken.jpg", "NEW");
 await box.write("_content/cap/taken.attach/taken.jpg", "OLD");
 await box.write("_content/cap/taken.image.card", "---\nfilename:\n  ref: taken.jpg\n---\n");
+await box.write("_content/arch/clip-1.m4a", "M4A");
+await box.write("_content/arch/clip-1.audio.card", "---\nfilename:\n  ref: /_content/cap/clip-1.m4a\n---\n");
+await box.write("_content/arch/notes.doc.card", "---\ntitle: Notes\n---\n[clip](/_content/cap/clip-1.m4a)\n");
 
 const dry = await migrateBox(box.root, false);
 [dry.repaired.length, dry.ambiguous.length, await box.read("_content/cap/photo-004.jpg")]
 =>
 [
-  2,
+  3,
   1,
   "JPG4"
 ]
@@ -142,6 +147,17 @@ await box.read("_content/cap/photo-004-Beach.attach/photo-004.jpg")
 
 await box.read("_content/cap/taken.jpg")
 => NEW
+```
+
+A dangling ref repaired by route b takes other cards that held the same stale
+path along:
+
+```ts continue
+(await box.read("_content/arch/clip-1.audio.card")).includes("ref: attach/clip-1.m4a")
+=> true
+
+(await box.read("_content/arch/notes.doc.card")).includes("[clip](/_content/arch/clip-1.attach/clip-1.m4a)")
+=> true
 ```
 
 A second run finds nothing to repair:

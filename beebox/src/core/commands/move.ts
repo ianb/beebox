@@ -46,10 +46,11 @@ const MoveArgsSchema = z.object({
 export type MoveArgs = z.infer<typeof MoveArgsSchema>;
 
 /**
- * Check if a destination path looks like a directory (not a specific card file).
+ * Check if a destination path looks like a directory (not a specific card or
+ * `.md` file).
  */
 function isDirectoryDest(destPath: string): boolean {
-  return destPath.endsWith("/") || !destPath.includes(".card");
+  return destPath.endsWith("/") || (!destPath.includes(".card") && !destPath.endsWith(".md"));
 }
 
 /**
