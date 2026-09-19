@@ -373,6 +373,48 @@ type: doc
 By [Dana](../../../_content/box/people/dana.person.card), see [scan](scan.capture-session.card).
 ```
 
+A card inside the moved directory that names a sibling file by a
+*box-absolute* path — the legacy capture layout, where an image card's
+`filename.ref` is the absolute path of its own photo — follows the move and
+keeps the absolute style. An absolute ref to something that did not move is
+unchanged.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/session/photo-004.jpg", "JPG");
+await box.write(
+  "_content/box/session/photo-004-Beach.image.card",
+  "---\nfilename:\n  ref: /_content/box/session/photo-004.jpg\n---\nSee [Dana](/_content/box/people/dana.person.card).\n",
+);
+await box.write("_content/box/people/dana.person.card", "---\nname: Dana\n---\n");
+
+await mv(box, { from: "_content/box/session", to: "_bookkeeping/archive/session" });
+await box.read("_bookkeeping/archive/session/photo-004-Beach.image.card")
+=>
+---
+filename:
+  ref: /_bookkeeping/archive/session/photo-004.jpg
+---
+See [Dana](/_content/box/people/dana.person.card).
+```
+
+A single card that names a file in its own attach directory by absolute path
+gets the new attach path:
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/Beach.attach/photo.jpg", "JPG");
+await box.write("_content/box/Beach.image.card", "---\nfilename:\n  ref: /_content/box/Beach.attach/photo.jpg\n---\n");
+
+await mv(box, { from: "_content/box/Beach.image.card", to: "_content/trips/Beach.image.card" });
+await box.read("_content/trips/Beach.image.card")
+=>
+---
+filename:
+  ref: /_content/trips/Beach.attach/photo.jpg
+---
+```
+
 ## Rename in place (same directory)
 
 A card can be renamed within its directory; refs follow the new basename and
