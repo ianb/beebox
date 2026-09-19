@@ -6,10 +6,29 @@ description: |-
   keeps that listing accurate as files and directories are added or
   removed. Plain edits to existing files do not trigger updates.
 
-  The precheck exits with CHECK_SKIP when no immediate-children set has
-  changed since the last refresh, so on quiet days this procedure does
-  no work and invokes no agent.
+  A first shell-only step removes MAP.md files from directories that no
+  longer get one (hidden by an ignore pattern, or no longer meeting the
+  map rules), along with their CLAUDE.md imports.
+
+  Each precheck exits CHECK_SKIP when it has nothing to do, so on quiet
+  days this procedure does no work and invokes no agent.
 steps:
+  - id: prune
+    description: Remove MAP.md files from directories that no longer get one
+    precheck:
+      shells:
+        - |-
+          bbx refresh-maps --orphans
+          # Exits CHECK_SKIP_CODE (75) when no directory has an orphan MAP.md,
+          # or when the box is in an unworkable state.
+      whys:
+        - |-
+          A directory hidden by an ignore pattern, or no longer meeting the
+          map rules, never gets a refresh task, but its CLAUDE.md keeps
+          loading the stale MAP.md into agent context.
+    run:
+      shells:
+        - bbx refresh-maps --prune-orphans
   - id: refresh
     description: Identify dirty MAP.md files and rewrite them with current annotated
       listings

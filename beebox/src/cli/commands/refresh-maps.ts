@@ -13,6 +13,18 @@
  *   bbx refresh-maps --brief      Same gating, but stdout is the JSON brief that
  *                                the agent consumes. Does not save it.
  *
+ *   bbx refresh-maps --orphans    List MAP.md files in directories that no
+ *                                longer get one (hidden, or no longer meeting
+ *                                the qualification rules). Exits
+ *                                CHECK_SKIP_CODE (75) when there are none or
+ *                                the box is unworkable.
+ *
+ *   bbx refresh-maps --prune-orphans
+ *                                Delete those MAP.md files, their CLAUDE.md
+ *                                imports, and their state entries. Runs as the
+ *                                procedure's shell-only first step, so a box
+ *                                with only orphans never starts an agent.
+ *
  *   bbx refresh-maps --finalize   Read the persisted brief, ensure per-dir
  *                                CLAUDE.md @-includes, stamp the state file for
  *                                the maps that were actually rewritten. Runs as
@@ -30,6 +42,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { isRecord } from "../../lib/is-record.js";
 import { precheck, type MapBrief, type MapTask } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";
+import { findOrphanMaps, pruneOrphanMaps } from "../../core/maps/orphans.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
@@ -95,6 +108,34 @@ function summarize(brief: MapBrief): string {
 interface RunOptions {
   brief?: boolean;
   finalize?: boolean;
+  orphans?: boolean;
+  pruneOrphans?: boolean;
+}
+
+function orphanList(dirs: readonly string[]): string {
+  return dirs.map((d) => `${d}/MAP.md`).join(", ");
+}
+
+async function runOrphans(boxRoot: string): Promise<void> {
+  const scan = await findOrphanMaps(boxRoot);
+  if (!scan.ok || scan.dirs.length === 0) {
+    console.log(`refresh-maps: ${scan.ok ? "no orphan maps" : scan.skippedReason}`);
+    process.exit(CHECK_SKIP_CODE);
+  }
+  console.log(`refresh-maps: ${scan.dirs.length} orphan map(s): ${orphanList(scan.dirs)}`);
+}
+
+async function runPruneOrphans(boxRoot: string): Promise<void> {
+  const scan = await findOrphanMaps(boxRoot);
+  if (!scan.ok) {
+    // A run shell that exits non-zero fails the step. The precheck already
+    // passed, so this only happens if the box changed in between; leave the
+    // orphans for the next run.
+    console.log(`refresh-maps: not pruning (${scan.skippedReason}).`);
+    return;
+  }
+  await pruneOrphanMaps(boxRoot, scan.dirs);
+  console.log(`refresh-maps: removed ${scan.dirs.length} orphan map(s): ${orphanList(scan.dirs)}`);
 }
 
 async function runFinalize(boxRoot: string): Promise<void> {
@@ -174,11 +215,17 @@ export const refreshMapsCommand = new Command("refresh-maps")
   .description("Refresh the box's MAP.md files")
   .option("--brief", "Output the JSON brief (for agent consumption)")
   .option("--finalize", "Run the post-agent finalize step")
+  .option("--orphans", "List MAP.md files in directories that no longer get one")
+  .option("--prune-orphans", "Delete orphan MAP.md files and their CLAUDE.md imports")
   .action(async (options: RunOptions) => {
     try {
       const boxRoot = await requireBoxRoot();
       if (options.finalize) {
         await runFinalize(boxRoot);
+      } else if (options.orphans) {
+        await runOrphans(boxRoot);
+      } else if (options.pruneOrphans) {
+        await runPruneOrphans(boxRoot);
       } else {
         await runCheck(boxRoot, options);
       }
