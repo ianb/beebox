@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-18T23:08:55Z
-Total documents: 388
+Generated: 2026-09-19T04:14:46Z
+Total documents: 389
 
 ## Issues
 
@@ -34,6 +34,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (340 lines) · shipped history · implemented
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (446 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (379 lines) · implementation review
+- **docs/implemented-plans/refresh-maps-correctness.md** — "refresh-maps: one source of truth, stampable correct maps, no reviewer without a criterion" (385 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (63 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (55 lines) · shipped history · implemented
@@ -162,6 +163,7 @@ Referenced by:
 - docs/implemented-plans/refresh-clerk.md:23 (mention) — - Monorepo `CLAUDE.md` — **"NEVER disable or weaken a lint rule to make code
 - docs/implemented-plans/refresh-maps-convergence.md:79 (link) — - **[`CLAUDE.md`](../../CLAUDE.md)** — don't add features beyond the task;
 - docs/implemented-plans/refresh-maps-convergence.review.md:216 (mention) — **Why it matters:** This fails *silently and universally on v2 boxes* — the only shape that exists per `CLAUDE.md` — whi
+- docs/implemented-plans/refresh-maps-correctness.md:316 (mention) — ever reaches them, and their `CLAUDE.md` still imports them. File an issue.
 - docs/implemented-plans/remove-bbx-render.md:34 (mention) — - **`CLAUDE.md`** — *"Read before writing"* (`CLAUDE.md:101`); *"Leave the repo
 - docs/implemented-plans/remove-cardworks-and-xml.md:422 (mention) — pnpm-workspace entry. Update `beebox/CLAUDE.md`, root `CLAUDE.md`,
 - docs/implemented-plans/remove-cardworks-deletion.md:133 (mention) — CLAUDE.md "refs starting with `attach/` resolve into this scope").
@@ -238,6 +240,7 @@ Referenced by:
 - ../.claude/skills/launch-worktree-session/SKILL.md:157 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 - ../CLAUDE.md:7 (link) — - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — `bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
+- ../issues/bugs/2026-09-18-orphan-maps-in-hidden-subtrees.md:13 (mention) — `CLAUDE.md` keeps loading it into agent context.
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:58 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 - ../issues/closed/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md:25 (mention) — > bracket form is the system's own CLAUDE.md-downgrade serialization of
@@ -548,6 +551,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:79 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
+- docs/implemented-plans/refresh-maps-correctness.md:190 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - user-stories/catalog/2026-08-21.md:2637 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
@@ -594,7 +598,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 624 lines
+Title: "Deploy" | 627 lines
 
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -2139,7 +2143,7 @@ Title: "Secrets: the machine-level store" | 551 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
-- deploy/README.md:515 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
+- deploy/README.md:518 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
 - docs/adding-a-box.md:112 (link) — one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:206 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
@@ -3012,7 +3016,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- deploy/README.md:370 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- deploy/README.md:373 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - docs/security-report.md:254 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -4556,6 +4560,21 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/refresh-maps-correctness.md **[ORPHAN]**
+
+Title: "refresh-maps: one source of truth, stampable correct maps, no reviewer without a criterion" | 385 lines | shipped history | implemented
+
+References:
+- → ../issues/bugs/2026-08-24-map-children-git-vs-disk.md (frontmatter)
+- → ../issues/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md (frontmatter)
+- → ../issues/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md (frontmatter)
+- → ../issues/bugs/2026-08-24-map-children-git-vs-disk.md (link)
+- → ../issues/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md (link)
+- → ../issues/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md (link)
+- → ../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
+- → README.md (mention)
+- → CLAUDE.md (mention)
 
 #### docs/implemented-plans/remove-bbx-render.md
 
