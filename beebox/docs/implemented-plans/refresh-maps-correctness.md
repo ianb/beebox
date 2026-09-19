@@ -1,11 +1,11 @@
 ---
 title: "refresh-maps: one source of truth, stampable correct maps, no reviewer without a criterion"
-status: active
+status: implemented
 workstream: refresh-maps-correctness
 issues:
-  - ../../../issues/bugs/2026-08-24-map-children-git-vs-disk.md
-  - ../../../issues/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md
-  - ../../../issues/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md
+  - ../../../issues/closed/bugs/2026-08-24-map-children-git-vs-disk.md
+  - ../../../issues/closed/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md
+  - ../../../issues/closed/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md
 ---
 # refresh-maps: one source of truth, stampable correct maps, no reviewer without a criterion
 
@@ -17,9 +17,9 @@ the git tree, stamps any map that a mechanical check shows is correct, and
 removes the review instruction.
 
 **Issues addressed:**
-[map-children-git-vs-disk](../../../issues/bugs/2026-08-24-map-children-git-vs-disk.md),
-[validate-judge-lacks-ignore-policy](../../../issues/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md),
-[existing-maps-as-create-forever](../../../issues/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md).
+[map-children-git-vs-disk](../../../issues/closed/bugs/2026-08-24-map-children-git-vs-disk.md),
+[validate-judge-lacks-ignore-policy](../../../issues/closed/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md),
+[existing-maps-as-create-forever](../../../issues/closed/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md).
 Related, not closed:
 [procedure-templates-ship-pre-one-root-paths](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md)
 (this plan fixes the refresh-maps row of its table only; the other two
