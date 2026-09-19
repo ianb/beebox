@@ -1,6 +1,6 @@
 ---
 title: "Nothing notices when a connector that used to produce items stops"
-workstream: box-family-email
+workstream: connector-silence
 area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — a production box went five days without importing mail
