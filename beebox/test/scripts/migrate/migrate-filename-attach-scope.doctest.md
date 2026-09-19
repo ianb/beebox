@@ -160,6 +160,23 @@ path along:
 => true
 ```
 
+Two route-b cards whose refs name the same stale path each get their own
+file, but a third card's link to that stale path is ambiguous, so it is left
+alone:
+
+```ts continue
+await box.write("_content/x/clip.m4a", "X");
+await box.write("_content/x/clip.audio.card", "---\nfilename:\n  ref: /_content/old/clip.m4a\n---\n");
+await box.write("_content/y/clip.m4a", "Y");
+await box.write("_content/y/clip.audio.card", "---\nfilename:\n  ref: /_content/old/clip.m4a\n---\n");
+await box.write("_content/z.doc.card", "---\ntitle: Z\n---\n[c](/_content/old/clip.m4a)\n");
+(await migrateBox(box.root, true)).repaired.length
+=> 2
+
+(await box.read("_content/z.doc.card")).includes("[c](/_content/old/clip.m4a)")
+=> true
+```
+
 A second run finds nothing to repair:
 
 ```ts continue

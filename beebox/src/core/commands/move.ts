@@ -293,7 +293,8 @@ async function executeMoveUnguarded(
   // (round-2 review finding, 2026-09-05).
   for (const fromPath of fromPaths) resolveBoxRelative(ctx, fromPath);
   const rawDestPath = resolveBoxRelative(ctx, moveArgs.to);
-  const destIsDir = isDirectoryDest(rawDestPath);
+  // An existing directory wins, even one whose name ends in `.md`.
+  const destIsDir = (await isDirectory(rawDestPath)) || isDirectoryDest(rawDestPath);
 
   // Multiple sources require a directory destination
   if (fromPaths.length > 1 && !destIsDir) {

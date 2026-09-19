@@ -202,9 +202,15 @@ async function rewriteRefs({ boxRoot, repaired, report }: {
   repaired: ReadonlyArray<Extract<Decision, { kind: "repair" }>>;
   report: Report;
 }): Promise<void> {
+  // A stale path follows a repair only when exactly one repair names it; two
+  // route-b cards sharing one stale path leave other refs to it unresolved.
+  const staleCounts = new Map<string, number>();
+  for (const d of repaired) if (d.staleRel !== undefined) staleCounts.set(d.staleRel, (staleCounts.get(d.staleRel) ?? 0) + 1);
   const byFromAbs = new Map(repaired.flatMap((d) => {
     const toAbs = path.join(boxRoot, d.toRel);
-    const stale: Array<[string, string]> = d.staleRel === undefined ? [] : [[path.join(boxRoot, d.staleRel), toAbs]];
+    const stale: Array<[string, string]> = d.staleRel !== undefined && staleCounts.get(d.staleRel) === 1
+      ? [[path.join(boxRoot, d.staleRel), toAbs]]
+      : [];
     return [[path.join(boxRoot, d.fromRel), toAbs], ...stale];
   }));
   const remap: Remap = (abs) => byFromAbs.get(abs) ?? null;
