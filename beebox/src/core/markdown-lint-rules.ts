@@ -19,8 +19,10 @@ import type { Rule, RuleOnError } from "markdownlint";
 // The fix is always: drop `view:` and reference the plain path.
 const LEGACY_VIEW_RE = /]\(\s*view:[^)]*\)|\[view:[^\]]*]/g;
 
-// Matches inline links: [text](url) — captures the url part.
-const INLINE_LINK_RE = /\[[^\]]*]\(([^)]+)\)/g;
+// Matches inline links: [text](url) — captures the url part, either
+// CommonMark's angle-bracket form (`<a (b).md>`, which may hold spaces and
+// parentheses) or a bare run up to the closing parenthesis.
+const INLINE_LINK_RE = /\[[^\]]*]\((<[^\n<>]*>|[^)]+)\)/g;
 
 export const noLegacyViewLinks: Rule = {
   names: ["BBX001", "no-legacy-view-links"],
