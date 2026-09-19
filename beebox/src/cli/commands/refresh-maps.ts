@@ -11,7 +11,7 @@
  *                                no commits).
  *
  *   bbx refresh-maps --brief      Same gating, but stdout is the JSON brief that
- *                                the agent consumes.
+ *                                the agent consumes. Does not save it.
  *
  *   bbx refresh-maps --finalize   Read the persisted brief, ensure per-dir
  *                                CLAUDE.md @-includes, stamp the state file for
@@ -109,12 +109,26 @@ async function runFinalize(boxRoot: string): Promise<void> {
   }
   const result = await finalize({ boxRoot, tasks });
   await deleteSavedBrief(boxRoot);
-  console.log(`refresh-maps: finalized ${result.applied.length}/${tasks.length} map(s).`);
+  const stamped = result.applied.length + result.verified.length;
+  console.log(`refresh-maps: finalized ${stamped}/${tasks.length} map(s).`);
+  if (result.verified.length > 0) {
+    console.log(
+      `  ${result.verified.length} already correct, stamped without a change: ` +
+        result.verified.map((d) => d || "<root>").join(", "),
+    );
+  }
   if (result.skippedUnchanged.length > 0) {
     console.log(
       `  ${result.skippedUnchanged.length} task(s) left for a later run — MAP.md unchanged: ` +
         result.skippedUnchanged.map((d) => d || "<root>").join(", "),
     );
+  }
+  for (const failure of result.coverageFailures) {
+    const stampedAnyway = result.applied.includes(failure.dir);
+    console.log(
+      `  ${failure.dir || "<root>"}/MAP.md ${stampedAnyway ? "rewritten but " : ""}fails the coverage check:`,
+    );
+    for (const problem of failure.problems) console.log(`    - ${problem}`);
   }
   if (result.skippedMissingMap.length > 0) {
     console.log(
@@ -143,13 +157,17 @@ async function runCheck(boxRoot: string, options: RunOptions): Promise<void> {
     process.exit(CHECK_SKIP_CODE);
   }
 
-  await saveBrief(boxRoot, brief);
-
   if (options.brief) {
+    // Print only. The saved brief is finalize's diff baseline: it must stay
+    // the one the procedure's precheck (the bare command) wrote before the
+    // agent ran. Re-saving it here at a later HEAD — an agent's own `--brief`
+    // after committing, or the validate shell's — empties that window, and a
+    // real rewrite then reads as unchanged and goes unstamped.
     console.log(JSON.stringify(brief, null, 2));
-  } else {
-    console.log(`refresh-maps: ${summarize(brief)}`);
+    return;
   }
+  await saveBrief(boxRoot, brief);
+  console.log(`refresh-maps: ${summarize(brief)}`);
 }
 
 export const refreshMapsCommand = new Command("refresh-maps")

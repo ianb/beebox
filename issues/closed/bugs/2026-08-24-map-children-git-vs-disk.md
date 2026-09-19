@@ -1,11 +1,20 @@
 ---
 title: "refresh-maps derives `children` from git on some paths and disk on others"
-workstream: refresh-maps-throughput
+workstream: refresh-maps-correctness
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox
 priority: normal
+resolution: implemented
 ---
+
+Resolved by `d228c12c8` (refresh-maps: read every listing from the committed
+git tree). Diverges from the issue's proposed fix: instead of storing the
+listing in `.bbx-maps-state.json` and diffing disk-derived listings, every
+listing (`listMappableDirs`, current children, prior children) now reads a
+single `BoxTree` built from one `git ls-tree` per commit
+(`beebox/src/core/maps/precheck-listing.ts`), so all three agree by
+construction. See `beebox/docs/implemented-plans/refresh-maps-correctness.md`.
 
 `listMappableDirs` decides which directories deserve a MAP.md by walking the
 **filesystem** (`readdir`, filtered by the map ignore patterns). But the
@@ -64,5 +73,5 @@ not need a migration script: an entry with no stored listing can be read as
 of one extra full regeneration per directory — affordable, given a whole-box
 refresh measured at 25 turns.
 
-Related: [refresh-maps max-turns throughput](../closed/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
+Related: [refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
 where this surfaced.

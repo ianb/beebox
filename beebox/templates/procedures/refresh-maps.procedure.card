@@ -45,21 +45,23 @@ steps:
               "head": "<commit-hash>",
               "tasks": [
                 {
-                  "map": "inbox/MAP.md",
-                  "dir": "inbox",
+                  "map": "_content/recipes/MAP.md",
+                  "dir": "_content/recipes",
                   "action": "update",
                   "asOf": "<previous-commit>",
                   "head": "<commit-hash>",
-                  "added": ["new.card", "triage/"],
+                  "added": ["new.card", "desserts/"],
                   "deleted": ["old.card"],
-                  "children": ["bar.card", "new.card", "triage/"]
+                  "children": ["bar.card", "new.card", "desserts/"]
                 }
               ]
             }
             ```
 
-            - `action: "create"` — MAP.md is missing. Write a fresh one
-              covering all entries in `children`.
+            - `action: "create"` — MAP.md is missing, or has never been
+              recorded as current. Write one covering `children`. If a
+              MAP.md is already there, rewrite it to the format below,
+              header included; leave it alone only if it already matches.
             - `action: "update"` — MAP.md already exists. Read it, then add
               lines for `added` items and remove lines for `deleted` items.
               Preserve annotations for unchanged entries.
@@ -115,13 +117,17 @@ steps:
               ("Per-property document folders", not "directory of subdirs")
             - Skip filler ("this is a", "contains", "directory of").
 
-            SHELL DIRS — a subdir whose contents are hidden by ignore patterns
-            (e.g. `store/archive/captures/`, whose dated capture sessions are
-            excluded by `store/archive/captures/*`) shows up in the parent's
-            listing but looks empty in the brief's children list. The `ls`
-            above is what reveals it, and these always need an annotation with
-            an honest count: "captures/ — 143 archived voice/photo capture
-            sessions (per-item maps disabled)".
+            `children` lists what the box has committed. If `ls` shows an
+            entry that `children` omits, it is gitignored or hidden by the
+            map ignore policy — leave it out of the MAP.md. Never list a name
+            that is not in `children`.
+
+            SHELL DIRS — a subdir whose own contents are hidden by a
+            `path/*` pattern in `.bbx-maps-ignore` shows up in `children` but
+            has no children of its own in the brief. The `ls` above is what
+            reveals it, and these always need an annotation with an honest
+            count: "sessions/ — 143 archived capture sessions (per-item maps
+            disabled)".
 
             Use `bbx create` or just `Write` to author each MAP.md. Don't
             modify any other files.
@@ -141,8 +147,8 @@ steps:
             )"
             ```
 
-            You do NOT need to finalize — that runs automatically after you
-            finish. If you run out of turns partway, that's fine: every
+            You do NOT need to finalize, and must not run `--finalize`
+            yourself — that runs automatically after you finish. If you run out of turns partway, that's fine: every
             MAP.md you actually rewrote is banked, and the next run picks up
             where you stopped. Do as many as you can, in the order given.
 
@@ -174,18 +180,11 @@ steps:
           fi
 
           echo "All MAP.md files current."
-      instructions:
-        - |-
-          After the agent runs, the next precheck should be a no-op
-          (needsWork=false). Residual tasks are not a failure — an agent
-          that ran out of turns banks what it finished and the next run
-          continues from there. Persistent residual work across several
-          runs is worth inspecting.
       whys:
         - |-
-          Finalize only stamps a MAP.md it can prove was rewritten, so a
-          silently-missed dirty map is left unstamped rather than marked
-          current. This check reports what's outstanding; it does not gate,
+          Finalize only stamps a MAP.md it can prove was rewritten or that
+          passes its coverage check, so a silently-missed dirty map is left
+          unstamped rather than marked current. This check reports what's outstanding; it does not gate,
           because refreshing a large or corrupted box legitimately takes
           more than one run and a red step would never clear.
       severity: warn
