@@ -9,14 +9,11 @@ type CountKind = "directories" | "files";
 const MAX_RETAINED_SUBTREES = 20;
 
 export const BOX_GROWTH_THRESHOLDS = {
-  absoluteDirectories: 250,
-  absoluteFiles: 1_000,
   rateDirectoriesPerHour: 10,
   rateFilesPerHour: 25,
   rateCommitsPerHour: 10,
   connectorRateDirectoriesPerHour: 5,
   connectorRateFilesPerHour: 10,
-  acceptedGrowthMultiplier: 2,
   expectedRateHeadroomMultiplier: 1.5,
   minimumRateIntervalMs: 30 * 60 * 1000,
   maximumRateIntervalMs: 2 * 60 * 60 * 1000,
@@ -24,16 +21,6 @@ export const BOX_GROWTH_THRESHOLDS = {
 
 function rate(delta: number, intervalMs: number): number {
   return delta * (60 * 60 * 1000 / intervalMs);
-}
-
-function absoluteThreshold(input: {
-  global: number;
-  accepted: number;
-  acknowledgedAt: string | null | undefined;
-}): number {
-  const { global, accepted, acknowledgedAt } = input;
-  if (acknowledgedAt === null || acknowledgedAt === undefined) return global;
-  return Math.max(global, Math.ceil(accepted * BOX_GROWTH_THRESHOLDS.acceptedGrowthMultiplier));
 }
 
 function rateThreshold(input: {
@@ -47,10 +34,6 @@ function rateThreshold(input: {
     (item) => item.kind === kind && item.path === (path ?? null),
   );
   return Math.max(initial, expected?.thresholdPerHour ?? 0);
-}
-
-function largestSubtreePath(measurement: GrowthMeasurement, kind: CountKind): string | undefined {
-  return measurement.largestSubtrees.toSorted((a, b) => b[kind] - a[kind]).at(0)?.path;
 }
 
 function fastestGrowingSubtreePath(
@@ -90,43 +73,13 @@ function rateIntervalIsUsable(input: {
 }
 
 export function evaluateBoxGrowth(input: {
-  accepted: GrowthMeasurement;
   previous: GrowthMeasurement;
   current: GrowthMeasurement;
-  acknowledgedAt?: string | null;
   rateExpectations?: GrowthRateExpectation[];
 }): GrowthFinding[] {
-  const { accepted, previous, current, acknowledgedAt } = input;
+  const { previous, current } = input;
   const expectations = input.rateExpectations ?? [];
   const findings: GrowthFinding[] = [];
-  const directoryLimit = absoluteThreshold({
-    global: BOX_GROWTH_THRESHOLDS.absoluteDirectories,
-    accepted: accepted.counts.directories,
-    acknowledgedAt,
-  });
-  const fileLimit = absoluteThreshold({
-    global: BOX_GROWTH_THRESHOLDS.absoluteFiles,
-    accepted: accepted.counts.files,
-    acknowledgedAt,
-  });
-  if (current.counts.directories > directoryLimit) {
-    const subtreePath = largestSubtreePath(current, "directories");
-    findings.push({
-      kind: "absolute-directories",
-      ...(subtreePath === undefined ? {} : { path: subtreePath }),
-      actual: current.counts.directories,
-      threshold: directoryLimit,
-    });
-  }
-  if (current.counts.files > fileLimit) {
-    const subtreePath = largestSubtreePath(current, "files");
-    findings.push({
-      kind: "absolute-files",
-      ...(subtreePath === undefined ? {} : { path: subtreePath }),
-      actual: current.counts.files,
-      threshold: fileLimit,
-    });
-  }
   const intervalMs = Date.parse(current.measuredAt) - Date.parse(previous.measuredAt);
   if (!rateIntervalIsUsable({ previous, current, intervalMs })) return findings;
   const directoryRate = rate(current.counts.directories - previous.counts.directories, intervalMs);

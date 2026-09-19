@@ -18,7 +18,7 @@ import {
   type GrowthMeasurement,
 } from "./model.js";
 import { scanBoxGrowth } from "./scan.js";
-import { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
+import { evaluateBoxGrowth } from "./policy.js";
 
 export { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
 
@@ -116,13 +116,6 @@ export async function measureBoxGrowth(
   return scanBoxGrowth(boxRoot, { now: options.now, maxDurationMs: options.maxDurationMs ?? 10_000 });
 }
 
-function isAboveGlobalThreshold(measurement: GrowthMeasurement): boolean {
-  return (
-    measurement.counts.directories > BOX_GROWTH_THRESHOLDS.absoluteDirectories ||
-    measurement.counts.files > BOX_GROWTH_THRESHOLDS.absoluteFiles
-  );
-}
-
 function persistedAttemptTime(state: BoxGrowthStateRead): number | null {
   if (state.status !== "measured" && state.status !== "unmeasured") return null;
   return state.lastAttemptAt === null ? null : Date.parse(state.lastAttemptAt);
@@ -196,10 +189,8 @@ export async function measureBoxGrowthIfDue(
         : {
             version: 1,
             status: "measured",
-            accepted: measurement,
             previous: measurement,
             current: measurement,
-            acknowledgedAt: isAboveGlobalThreshold(measurement) ? null : measurement.measuredAt,
             lastAttemptAt: measurement.measuredAt,
             lastError: null,
             lastNotice: notice,
@@ -218,13 +209,10 @@ export async function measureBoxGrowthIfDue(
   }
 }
 
-export async function acknowledgeCurrentBoxGrowth(
-  boxRoot: string,
-  options: { now: Date },
-): Promise<BoxGrowthState> {
+export async function acknowledgeCurrentBoxGrowth(boxRoot: string): Promise<BoxGrowthState> {
   return updateState(boxRoot, async (latest) => {
     if (latest.status !== "measured") throw new BoxGrowthAcceptanceError();
-    const state = acknowledgedGrowthState(latest, options.now);
+    const state = acknowledgedGrowthState(latest);
     await writeState(boxRoot, state);
     return state;
   });
@@ -263,15 +251,7 @@ function count(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function describeFinding(finding: GrowthFinding, lowerBound: boolean): string {
-  const actual = `${lowerBound ? "at least " : ""}${count(finding.actual)}`;
-  const pathDetail = finding.path === undefined ? "" : `; largest contributor: ${finding.path}`;
-  if (finding.kind === "absolute-directories") {
-    return `${actual} directories total (limit ${count(finding.threshold)})${pathDetail}`;
-  }
-  if (finding.kind === "absolute-files") {
-    return `${actual} files total (limit ${count(finding.threshold)})${pathDetail}`;
-  }
+function describeFinding(finding: GrowthFinding): string {
   if (finding.kind === "rate-commits") {
     return `${count(finding.actual)} commits/hour (limit ${count(finding.threshold)})`;
   }
@@ -309,7 +289,7 @@ export async function boxGrowthHealthCheck(
         : "Box growth is within accepted limits; Git history measurement is unavailable",
     );
   }
-  const parts = findings.map((finding) => describeFinding(finding, incomplete));
+  const parts = findings.map((finding) => describeFinding(finding));
   if (incomplete) {
     const reason = state.current.filesystemError === null ? "" : ` (${state.current.filesystemError})`;
     parts.push(`filesystem scan incomplete${reason}; counts are lower bounds`);

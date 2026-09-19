@@ -41,6 +41,7 @@ import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
 import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
 import { templateUpdatesCheck } from "./health-templates.js";
 import { packageDocsCheck } from "./health-package-docs.js";
+import { watchLimitHealthChecks } from "./health-watch-limit.js";
 import { hostPackagesCheck } from "./health-host-packages.js";
 import { queryInstalledPackages } from "../../../core/host-packages-system.js";
 
@@ -284,6 +285,7 @@ export async function runHealthChecks(
   );
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
+  checks.push(...watchLimitHealthChecks(boxRoot));
 
   // --- Interface card checks ---
 

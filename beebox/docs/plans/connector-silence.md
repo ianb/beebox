@@ -355,13 +355,11 @@ for nothing external.
     on the first `events.subscribe` (`src/webapp/trpc/routers/events.ts:64`),
     which the dashboard opens, so a health query that races ahead of it shows
     the warning on the next refetch. Accepted: the limit is hit during the
-    initial walk, seconds after the dashboard opens. The dashboard does not
-    refetch `health.check` on bus events today
-    (`src/frontend/src/pages/DashboardPage.tsx:25-34`), and the server serves
-    a snapshot for up to 60 s (`health-snapshot.ts:141`). So
-    `reportWatchLimit` also emits a `box-watch-limit` bus event, and
-    `DashboardPage` invalidates the health query on it. The snapshot delay of
-    up to 60 s is accepted.
+    initial walk, seconds after the dashboard opens. The health query is
+    served from a snapshot refreshed behind the request
+    (`health-snapshot.ts:141`), so even a bus-triggered refetch would show the
+    old snapshot once. Not built: the condition lasts for the watcher's
+    lifetime, so the next dashboard view shows it.
 - **Vocabulary lock-ins.** Check name `box-watch-limit`. Two finding kinds
   removed.
 - **First chunk.** The policy and baseline change with updated doctests.

@@ -65,26 +65,26 @@ The scheduler measures each box at most hourly and stores the latest baseline in
 NUL-delimited type/path pairs so the Node scheduler does not reopen every
 directory or retain every path. The scan counts files and directories
 separately, records the largest subtrees, and samples Git commit/object growth.
-Directories are a first-class signal because very large directory trees can
-exhaust watcher and traversal capacity even when their byte size is modest.
 It counts symlink entries as files but does not follow them, and excludes
 `.git`, `.beebox`, and `node_modules` directories at any depth.
 The filesystem walk has a 10-second budget. If it reaches that deadline or
 encounters a traversal error, the state retains the counts and attribution
-already streamed, marks them as incomplete lower bounds, and warns. Absolute
-limits still apply to those lower bounds; rate checks pause until two complete
-samples are available, so partial traversal does not look like new growth.
+already streamed, marks them as incomplete lower bounds, and warns. Rate checks
+pause until two complete samples are available, so partial traversal does not
+look like new growth.
 
-The dashboard warns on either kind of anomaly:
+Size alone is never a finding. A fixed level (it was 250 directories or 1,000
+files) fired on any box with an email connector and could not clear, which
+taught the boxholder to ignore the dashboard. The dashboard warns on growth
+rate only:
 
-- absolute size: more than 250 directories or 1,000 files;
 - hourly rate: at least 10 new directories, 25 new files, or 10 commits;
 - connector subtree rate: at least 5 new directories or 10 new files for a
   recognized connector-owned path such as `_content/inbox/email`.
 
 Rate checks require two complete samples 30–120 minutes apart. A partial scan,
-first measurement, long scheduler outage, or longer measurement gap still gets
-absolute checks, but that sample does not infer an hourly rate.
+first measurement, long scheduler outage, or longer measurement gap does not
+infer an hourly rate.
 
 The filesystem path is the authoritative source attribution. Git history is a
 supporting signal only: older commits do not consistently carry a `Created-By`
@@ -96,15 +96,21 @@ unavailable; Git failure is appended to a real growth warning when both occur.
 
 The dashboard offers two different owner decisions:
 
-- **Acknowledge this growth** records the current size and comparison baseline.
-  It does not change rate limits. The next absolute-size milestone is the larger
-  of the initial limit or twice the acknowledged size.
+- **Acknowledge this growth** makes the current measurement the comparison
+  baseline and clears any reset notice. It does not change rate limits.
 - **Expect these rates** stores 150% of each currently warning rate as its new
   durable threshold, then performs the same acknowledgement. Box-wide rates
   remain box-wide; connector rates are stored separately by connector path.
 
-Neither action disables monitoring. Expected ongoing growth still crosses and
-warns at later cumulative-size milestones.
+Neither action disables monitoring: a rate above the stored thresholds warns
+again.
+
+The directory count that degrades something is the file watcher's limit
+(`MAX_WATCHED_DIRS`, 1,024). The watcher skips dot-directories and high-churn
+trees, so the growth scan cannot predict it; the watcher records when it runs
+out instead, and the `box-watch-limit` check names the path below which live
+updates are off. Only the server runs a watcher, so `bbx health` never shows
+this check.
 
 If the warning is unexpected, inspect the named subtree before accepting it:
 

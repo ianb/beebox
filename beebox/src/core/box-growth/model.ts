@@ -66,10 +66,8 @@ export const growthRateExpectationSchema = z.object({
 const measuredStateSchema = z.object({
   version: z.literal(1),
   status: z.literal("measured"),
-  accepted: growthMeasurementSchema,
   previous: growthMeasurementSchema,
   current: growthMeasurementSchema,
-  acknowledgedAt: z.iso.datetime().nullable(),
   lastAttemptAt: z.iso.datetime(),
   lastError: z.string().nullable(),
   lastNotice: z.string().nullable().default(null),
@@ -95,10 +93,7 @@ export type BoxGrowthStateRead =
 
 export type GrowthRateFindingKind = z.infer<typeof growthRateFindingKindSchema>;
 
-export type GrowthFindingKind =
-  | "absolute-directories"
-  | "absolute-files"
-  | GrowthRateFindingKind;
+export type GrowthFindingKind = GrowthRateFindingKind;
 
 export interface GrowthFinding {
   kind: GrowthFindingKind;
