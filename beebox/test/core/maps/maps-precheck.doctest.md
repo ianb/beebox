@@ -100,6 +100,27 @@ skipped=(none)
 await box.cleanup();
 ```
 
+The refresh agent's own session appends to the usage session manifest
+before its first tool call. That is not user work either; without this
+exception the agent's `bbx refresh-maps --brief` always returned no tasks:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("a/b/note.md", "x");
+await box.write("a/c.md", "y");
+await box.write("_bookkeeping/usage/session-manifest.jsonl", "{}\n");
+box.commitAll("seed");
+await box.write("_bookkeeping/usage/session-manifest.jsonl", "{}\n{}\n");
+
+const brief = await precheck({ boxRoot: box.root });
+print(`needsWork=${brief.needsWork} skipped=${brief.skippedReason ?? "(none)"}`);
+=> needsWork=true skipped=(none)
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Bootstrap: no MAP.md anywhere yet
 
 A clean box with no MAP.md files and no state — every directory with

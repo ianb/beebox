@@ -199,6 +199,16 @@ check without a change). The CLI prints it. A map that was rewritten but
 fails the check is still stamped, but its problems are printed as a warning.
 This does not gate stamping (see *Open design questions*).
 
+Finalize stamps each task at its brief HEAD (`task.head`), not the HEAD at
+finalize time (see *Agent-flow edge cases*, "Two agents").
+
+The precheck's dirty-tree gate also ignores `_bookkeeping/usage/`. The
+agent's session appends its session manifest there before the agent's first
+tool call, so the agent's `--brief` always saw a dirty tree and returned no
+tasks. The end-to-end run on the test box clone showed this. The gate already
+ignored procedure runs for the same reason; with every listing read from the
+committed tree, ignoring engine-written files cannot change a listing.
+
 `--brief` stops saving: only the bare command (the procedure's precheck
 shell) writes `.beebox/refresh-maps-brief.json`. The validate shell's comment
 becomes true.
@@ -268,6 +278,8 @@ None. No sub-question needs its own design step.
 | Coverage check fails a correct map (bullet format differs) | New: `verify` doctest | The agent rewrites it and the rewrite stamps | Clear (one extra rewrite) |
 | Rewritten map is wrong but is stamped | New: finalize doctest asserts the warning | Warning printed by `--finalize` | Clear in the run log; not gating |
 | `--brief` overwrites the saved brief, emptying finalize's diff window | New: CLI-level doctest | Track B | Silent today |
+| The agent's own session writes `_bookkeeping/usage/session-manifest.jsonl` before its first tool call, so its `--brief` sees a dirty tree and gets no tasks | New: precheck doctest | Precheck ignores engine-written dirs (procedure runs, usage) | Silent today: found in the end-to-end run, the agent reported "no tasks" and stopped |
+| Another writer commits a child between brief and finalize | New: finalize doctest | Stamp `task.head` | Silent before this plan |
 | Very large box: `ls-tree -r` output size | No | One call per commit instead of one per directory | Clear (slow, not wrong) |
 | Template update parks on a box whose copy was edited | Existing template install tests | Existing parking | Silent (known; see related parked-template issue) |
 
@@ -279,11 +291,11 @@ No critical gap: every new silent path has a test.
   Track C item 3.
 - **Stale ref.** A directory is deleted between brief and finalize.
   ADDRESSED: existing `skippedMissingDir` (`finalize.ts:193`).
-- **Two agents.** A chat agent commits while refresh-maps runs. The precheck
-  refuses a dirty tree; finalize verifies against the brief's `children`, so
-  a concurrent add may stamp a map that misses it. That add dirties the
-  directory at the next run because `prev` is the stamped HEAD, and HEAD then
-  contains the add. ADDRESSED by the existing diff.
+- **Two agents.** A chat agent commits a new child while refresh-maps runs.
+  ADDRESSED: finalize stamps the brief's HEAD (`task.head`), not the HEAD at
+  finalize time, so the new child is an addition on the next run. The first
+  draft of this plan claimed the existing diff covered this; it did not,
+  because finalize stamped `getHead()`. Found in cross-model review.
 - **Hand-edit drift.** The boxholder writes a map in a different format.
   ADDRESSED: it fails the check and is rewritten only when a task already
   exists for that directory. A map with no task is not touched.

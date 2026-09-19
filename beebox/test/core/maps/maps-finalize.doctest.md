@@ -357,3 +357,36 @@ applied: store
 ```ts cleanup
 await box.cleanup();
 ```
+
+## Stamps the brief's HEAD, not the HEAD at finalize time
+
+The map was verified against the brief's listing. If another writer commits a
+new child while the agent runs, stamping the later HEAD would hide that child
+from every future diff. Stamping the brief's HEAD leaves it visible as an
+addition on the next run.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/notes/a.md", "a");
+await box.write("store/refs/b.md", "b");
+await box.write("store/MAP.md", "# Map: store\n\n- `notes/`\n- `refs/`\n");
+box.commitAll("seed");
+const briefHead = await getHead(box.root);
+
+await box.write("store/urgent/c.md", "c");
+box.commitAll("another writer adds store/urgent/");
+
+await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "create", head: briefHead, added: [], deleted: [], children: ["notes/", "refs/"] },
+  ],
+});
+const state = await loadMapState(box.root);
+print(`stamped at brief head: ${state.maps["store"]?.asOf === briefHead}`);
+=> stamped at brief head: true
+```
+
+```ts cleanup
+await box.cleanup();
+```

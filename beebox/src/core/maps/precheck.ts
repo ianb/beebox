@@ -81,6 +81,17 @@ export interface MapBrief {
   anomalies: MapAnomaly[];
 }
 
+/**
+ * Directories the engine writes while refresh-maps itself runs, so their
+ * uncommitted changes are not the "uncommitted work" the precheck waits out.
+ * The procedure engine marks the step as running under procedure runs; the
+ * refresh agent's own session appends to the usage session manifest before
+ * its first tool call, so without this the agent's `--brief` always found a
+ * dirty tree and returned no tasks. Excluding them is safe because every
+ * listing reads the committed tree, not the disk.
+ */
+const ENGINE_WRITTEN_DIRS: readonly string[] = [BOX_DIRS.procedureRuns, BOX_DIRS.usage];
+
 export interface PrecheckOptions {
   boxRoot: string;
   /** Override ignore patterns. If unset, uses defaults plus .bbx-maps-ignore. */
@@ -110,19 +121,17 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
   const status = await getStatus(boxRoot);
   // getStatus paths are repo-root-relative; on a v2 box the repo root is the
   // package root, so they carry a `content/` prefix. Strip it back to
-  // box-relative before the `_bookkeeping/procedure/runs/` filter below —
+  // box-relative before the ENGINE_WRITTEN_DIRS filter below —
   // otherwise the filter never matches and refresh-maps bails as
   // `uncommitted_work` inside its own procedure step (the exact case the
   // filter exists to allow).
   const prefix = await gitBoxPrefix(boxRoot);
   const strip = (p: string): string => (prefix !== "" && p.startsWith(prefix) ? p.slice(prefix.length) : p);
-  // Filter out paths inside _bookkeeping/procedure/runs — the procedure
-  // engine intentionally writes uncommitted state there as a "step is
-  // running" signal, so blanket-bailing on uncommitted work would prevent
-  // refresh-maps from running inside its own procedure step.
+  // Paths the engine writes during refresh-maps' own run are not the user's
+  // uncommitted work; see ENGINE_WRITTEN_DIRS.
   const dirtyPaths = [...status.staged, ...status.modified, ...status.untracked]
     .map(strip)
-    .filter((p) => !p.startsWith(`${BOX_DIRS.procedureRuns}/`));
+    .filter((p) => !ENGINE_WRITTEN_DIRS.some((dir) => p.startsWith(`${dir}/`)));
   if (dirtyPaths.length > 0) {
     return { needsWork: false, skippedReason: "uncommitted_work", tasks: [], anomalies: [] };
   }

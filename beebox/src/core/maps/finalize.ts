@@ -17,7 +17,6 @@ import * as fs from "node:fs/promises";
 import { fileExists } from "../../lib/file-exists.js";
 import * as path from "node:path";
 import { simpleGit } from "simple-git";
-import { getHead } from "../../lib/git.js";
 import { loadMapState, saveMapState, type MapState } from "./state.js";
 import type { MapTask } from "./precheck.js";
 import { CLAUDE_MD } from "../agent-instruction-files.js";
@@ -123,20 +122,26 @@ async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Promise<voi
 interface StampStateOptions {
   boxRoot: string;
   tasks: MapTask[];
-  head: string;
 }
 
 /**
- * Update state.maps for completed tasks at the current HEAD, then
+ * Record completed tasks as current at the brief's HEAD (`task.head`), then
  * prune entries whose directories no longer exist on disk.
+ *
+ * The brief's HEAD, not the HEAD at finalize time: the map was written and
+ * verified against the brief's listing. A child committed by another writer
+ * while the agent ran is in the later HEAD but not in that listing; stamping
+ * the later HEAD would hide it from every future diff. MAP.md and the
+ * instruction files the agent's own commit adds are meta files, invisible to
+ * the listing, so stamping the earlier commit does not re-dirty the map.
  */
 async function stampStateForTasks(options: StampStateOptions): Promise<void> {
-  const { boxRoot, tasks, head } = options;
+  const { boxRoot, tasks } = options;
   const state: MapState = await loadMapState(boxRoot);
   const generatedAt = new Date().toISOString();
 
   for (const task of tasks) {
-    state.maps[task.dir] = { asOf: head, generatedAt };
+    state.maps[task.dir] = { asOf: task.head, generatedAt };
   }
 
   for (const key of Object.keys(state.maps)) {
@@ -241,8 +246,7 @@ export async function finalize(options: FinalizeOptions): Promise<FinalizeResult
     appliedTasks.push(task);
   }
 
-  const head = await getHead(boxRoot);
-  await stampStateForTasks({ boxRoot, tasks: appliedTasks, head });
+  await stampStateForTasks({ boxRoot, tasks: appliedTasks });
 
   return result;
 }
