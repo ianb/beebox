@@ -1,6 +1,6 @@
 ---
 title: "Guide cards learn, so their template updates park on every install once a box has learned anything"
-workstream: unattached
+workstream: refresh-maps-correctness
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -13,11 +13,19 @@ from the template permanently, and `installTemplateFile` parks every later
 update under `_config/_template-updates/`. `test1` was in that state on
 2026-09-12.
 
-Options:
+**Decided (boxholder, 2026-09-19): a box agent merges the update.** Not
+`boxOwnedFields` and not install-once — a guide's learned entries and an
+upstream revision can both be right, and reconciling them is judgment. The
+box agent reads the parked copy against the live card and writes the merge.
 
-- Declare the learned fields as `boxOwnedFields`
-  (`src/core/install-template-file.ts` supports them), so upstream changes to
-  the rest of the card still install.
-- Install guide templates only at first install, and never update them.
+That needs a resolution path to exist, which is
+[parked template resolution](../features/2026-08-24-parked-template-resolution-path.md):
+something that shows local, parked and last stock, and records the result so
+the box stops being asked. This issue only records the decision.
 
-This is a decision, not a bug.
+Done by hand on `test1` (2026-09-19) to see the shape: the live
+`intake.guide.card` was the parked copy plus one learned rule, and the live
+`main.personality.card` was ahead of the parked copy on every point —
+learned entries had already answered its `unresolved:` questions. The merge
+was "keep the live card", plus one junk empty `relationships` entry dropped.
+A mechanical rule that preferred either side would have been wrong.

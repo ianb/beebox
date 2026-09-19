@@ -26,3 +26,15 @@ Candidates, roughly in order of cost:
 
 Origin and the measured cost of the missing path:
 [parked updates invisible in health](../closed/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+
+## Two requirements added 2026-09-19
+
+- **Guide cards are merged by a box agent**, per the boxholder's decision in
+  [guide-card template updates](../decisions/2026-09-19-guide-card-template-updates-park-forever.md).
+  Whatever this builds has to let an agent write the merge and record that the
+  box has resolved that version, or every later update re-parks the same copy.
+- **An automated rewrite must record what it wrote.** A migration or rename
+  that edits a template file in place leaves the tracker's hash stale, so the
+  installer reads stale stock as a boxholder edit and parks forever
+  ([tracker keys](../bugs/2026-09-19-template-tracker-keys-not-migrated-to-one-root.md),
+  second part). On `test1` this hit `refresh-maps` and `process-retrospective`.

@@ -1,6 +1,6 @@
 ---
 title: "The one-root migration left template-tracker keys on pre-one-root paths, so every tracked procedure update parks"
-workstream: unattached
+workstream: refresh-maps-correctness
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -30,13 +30,20 @@ directory, so later
 migrations or the rename edited the file without updating the tracker. The
 installer then reads it as a boxholder edit.
 
-Two parts:
+Two parts. The first is fixed by
+`scripts/migrate/rekey-template-versions.ts`: a key whose file exists is kept
+(this protects `src/…` keys, which `mapV2Path` would wrongly send under
+`_content/`), a key whose file is missing is re-keyed when its v3 path exists
+(later `installed-at` wins a collision), and anything else is dropped,
+including keys that escape the box — `test1` carried
+`../src/views/CLAUDE.md`.
 
-1. A migration that renames tracker keys with `mapV2Path`
-   (`src/core/migrations/one-root-mapping.ts`), keeping the newer entry where
-   both keys exist.
-2. A decision on how an automated edit (a migration or rename that rewrote a
-   template file) should update the recorded hash, so it is not read as a
-   human edit later.
+The second part remains open: an automated edit (a migration, or the rename
+that rewrote the CLI command name inside box copies) changes a template's bytes
+without updating the recorded hash, so the installer later reads stale stock
+as a boxholder edit and parks every update. On `test1`, `refresh-maps` and
+`process-retrospective` matched no shipped hash for that reason and were
+force-accepted by hand. Deciding how an automated rewrite should record its
+result is tracked with the rest of the parked-template work.
 
 Related: [parked template resolution](../features/2026-08-24-parked-template-resolution-path.md).
