@@ -1,11 +1,16 @@
 ---
 title: "rewrite-card-refs warns \"escapes the box\" for a ref outside the namespace fence, on every rewrite pass"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: card-self-refs — test-box run of the filename-attach-scope migration
+resolution: implemented
 ---
+
+Resolved by bc11677e2: `resolveRefToAbs` no longer prints a line for a ref
+`resolveRefPath` refuses (`beebox/src/core/rewrite-card-refs.ts`); `bbx
+validate` already reports such refs as broken, per the issue's own suggestion.
 
 `resolveRefToAbs` (`beebox/src/core/rewrite-card-refs.ts:77`) prints
 `ref "…" in <card> escapes the box; leaving unchanged` whenever

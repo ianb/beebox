@@ -55,6 +55,7 @@ import {
 import { assertNever } from "../lib/invariant.js";
 import { isTrashedCard } from "../lib/paths.js";
 import type { ValidationIgnore } from "./validation-ignore.js";
+import { formatLinkDestination } from "./body-refs.js";
 
 export interface CanonicalizeReport {
   /** Card/view refs rewritten to their box-root form, same target as before. */
@@ -289,7 +290,10 @@ function spliceUrl(
   const span = line.slice(link.index, link.index + link.length);
   const at = span.lastIndexOf(link.url);
   if (at === -1) return null;
-  const newSpan = span.slice(0, at) + newUrl + span.slice(at + link.url.length);
+  // Inside `<…>` the brackets stay; a bare destination gains them if needed.
+  const angled = span[at - 1] === "<";
+  const replacement = angled ? newUrl : formatLinkDestination(newUrl, { angled: false });
+  const newSpan = span.slice(0, at) + replacement + span.slice(at + link.url.length);
   return line.slice(0, link.index) + newSpan + line.slice(link.index + link.length);
 }
 
