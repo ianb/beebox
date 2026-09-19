@@ -1,6 +1,6 @@
 ---
 title: "Let the boxholder add OpenRouter chat models in admin, explicitly, never by default"
-workstream: unattached
+workstream: openrouter-chat-models
 area: beebox
 labels: [models, admin]
 filed-by: agent
