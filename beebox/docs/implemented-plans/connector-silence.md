@@ -1,14 +1,14 @@
 ---
 title: "Connector silence: notice a connector that stopped producing or keeps failing"
-status: draft
+status: implemented
 workstream: connector-silence
 issues:
-  - ../../../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md
-  - ../../../issues/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md
-  - ../../../issues/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md
-  - ../../../issues/bugs/2026-08-10-box-growth-warning-cannot-clear.md
-  - ../../../issues/features/2026-09-19-box-growth-measures-no-bytes.md
-  - ../../../issues/bugs/2026-09-19-failing-gmail-draft-retried-forever.md
+  - ../../../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md
+  - ../../../issues/closed/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md
+  - ../../../issues/closed/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md
+  - ../../../issues/closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md
+  - ../../../issues/closed/features/2026-09-19-box-growth-measures-no-bytes.md
+  - ../../../issues/closed/bugs/2026-09-19-failing-gmail-draft-retried-forever.md
 ---
 # Connector silence: notice a connector that stopped producing or keeps failing
 
@@ -31,10 +31,10 @@ the dashboard: the box-growth level warning that cannot clear, and the intake
 job that wakeup opens for an outbound draft every cycle.
 
 **Issues addressed:**
-[connector-that-stopped-producing](../../../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md) (anchor),
-[gmail-draft-upload-errors-are-silent](../../../issues/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md),
-[wakeup-retriages-inbox-item-blocked-on-connector](../../../issues/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md),
-[box-growth-warning-cannot-clear](../../../issues/bugs/2026-08-10-box-growth-warning-cannot-clear.md) (parts 1, 2 and 4; part 3 deferred, see *NOT in scope*).
+[connector-that-stopped-producing](../../../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md) (anchor),
+[gmail-draft-upload-errors-are-silent](../../../issues/closed/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md),
+[wakeup-retriages-inbox-item-blocked-on-connector](../../../issues/closed/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md),
+[box-growth-warning-cannot-clear](../../../issues/closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md) (parts 1, 2 and 4; part 3 deferred, see *NOT in scope*).
 A queue search for `connector`, `growth`, `draft`, `silent`, `quiet` and
 `stale` found no duplicates. Related but separate:
 `issues/features/2026-08-12-stale-web-bundle-detection.md` (a different

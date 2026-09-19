@@ -1,11 +1,17 @@
 ---
 title: "A Gmail draft whose upload keeps failing is retried on every sync with no end"
-workstream: unattached
+workstream: connector-silence
 area: beebox
 labels: [connectors]
 filed-by: agent
 discovered-in: worktree-connector-silence — deferred from the connector-silence plan
+resolution: implemented
 ---
+
+> **Closed** — `ae4d53ae2` strands a draft whose failure is the card's own
+> fault (`gmail-draft-error`, no more retries); `bb45c7827` strands any other
+> failure after 7 days of continuous retries (`gmail-draft-failing-since`).
+> See `beebox/docs/implemented-plans/connector-silence.md`.
 
 `uploadPendingDrafts` (`beebox/src/connectors/gmail-drafts.ts`) uploads every
 `email-outbound` card in `draft` status with no `gmail-draft-id`. A card that

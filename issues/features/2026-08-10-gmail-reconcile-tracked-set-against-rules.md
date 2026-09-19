@@ -59,5 +59,5 @@ the existing manual gesture.
   "N tracked threads match no current rule"? That fits engineering principle 4,
   but it would sit warning indefinitely on a box whose owner has decided to keep
   them, so it needs an acknowledge path. Compare
-  [box-growth-warning-cannot-clear](../bugs/2026-08-10-box-growth-warning-cannot-clear.md),
+  [box-growth-warning-cannot-clear](../closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md),
   which is the failure mode to avoid.

@@ -1,10 +1,16 @@
 ---
 title: "Box growth counts files and directories but never bytes, and skips .beebox"
-workstream: unattached
+workstream: connector-silence
 area: beebox
 filed-by: agent
 discovered-in: worktree-connector-silence — part 3 of the box-growth issue, deferred when its level warnings were removed
+resolution: implemented
 ---
+
+> **Closed** — `03e8b7e59` measures disk use of content and `.beebox`
+> separately via `du -sk`; `8f4019e61` reports when a measurement was skipped.
+> The new byte-rate threshold (100 MB/hour) is an agent-chosen value, not
+> boxholder-set. See `beebox/docs/implemented-plans/connector-silence.md`.
 
 The growth check measures file, directory and commit counts and Git object
 bytes. It never measures content bytes, and the scan prunes `.beebox`

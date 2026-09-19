@@ -6,7 +6,14 @@ filed-by: agent
 discovered-in: worktree-box-family-email — a production box went five days without importing mail
 needs: [design]
 priority: normal
+resolution: implemented
 ---
+
+> **Closed** — `8ffe95ec9` adds a per-connector daily activity record
+> (`syncConnector` at all four sync call sites); `bc939ed3d` adds the
+> quiet/failing verdict and a once-per-episode Telegram/Web Push alert plus a
+> dashboard warning with an owner dismiss. See
+> `beebox/docs/implemented-plans/connector-silence.md`.
 
 > **When something upstream changes and my box quietly stops collecting, I want
 > the box to tell me, so I find out in a day rather than by noticing months of
@@ -20,7 +27,7 @@ commit log looked healthy. It surfaced only because someone compared per-day
 first-message dates across the thread cards by hand.
 
 The specific cause is fixed
-([gmail-connector-silent-when-rules-empty](../closed/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md)).
+([gmail-connector-silent-when-rules-empty](../bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md)).
 The detection gap is not, and it is not Gmail-specific: any connector can stop
 producing for reasons the connector itself considers success — an upstream
 permission revoked, a filter that no longer matches, a cursor that advances past
