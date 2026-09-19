@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-19T04:26:56Z
-Total documents: 390
+Generated: 2026-09-19T17:37:58Z
+Total documents: 391
 
 ## Issues
 
@@ -240,7 +240,6 @@ Referenced by:
 - ../.claude/skills/launch-worktree-session/SKILL.md:157 (mention) — `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 - ../CLAUDE.md:7 (link) — - **Main system:** [beebox/CLAUDE.md](beebox/CLAUDE.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — `bin/generate-agents-md.ts` mirrors tracked `CLAUDE.md`, embeds nearest scoped
-- ../issues/bugs/2026-09-18-orphan-maps-in-hidden-subtrees.md:13 (mention) — `CLAUDE.md` keeps loading it into agent context.
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:58 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 - ../issues/closed/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md:25 (mention) — > bracket form is the system's own CLAUDE.md-downgrade serialization of
@@ -249,6 +248,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:2 (mention) — title: "`AGENTS.md` is missing from the places that special-case `CLAUDE.md` — refresh-maps fails forever on every codex
 - ../issues/closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md:145 (mention) — [AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 - ../issues/closed/bugs/2026-09-14-one-root-migration-cannot-migrate-a-real-v2-box.md:48 (mention) — `AGENTS.md -> CLAUDE.md` appears to be stock — the v2 package root carries the
+- ../issues/closed/bugs/2026-09-18-orphan-maps-in-hidden-subtrees.md:13 (mention) — `CLAUDE.md` import line (and the `AGENTS.md` mirror symlink when it points at
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:15 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:25 (mention) — failure for a loud one. Note `CLAUDE.md` claims "the repo lints itself", which
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:2 (mention) — title: "Small structured-output agent passes load the full box CLAUDE.md + agent guide"
@@ -951,6 +951,7 @@ Referenced by:
 - docs/guides.md:16 (link) — | Card examples | [docs/cards-as-markdown.md](cards-as-markdown.md) (format), [docs/adding-schemas.md](adding-schemas.md
 - docs/implemented-plans/box-root-paths.md:269 (mention) — `docs/cards-as-markdown.md`). Add the link rule to reactor/procedure prompt
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > The living format reference is `docs/cards-as-markdown.md`.
+- docs/implemented-plans/connector-silence.md:127 (mention) — (`docs/cards-as-markdown.md`), not per-connector knowledge. For Telegram
 - docs/implemented-plans/design-md-retired-sections.md:18 (mention) — `../cards-as-markdown.md`. Attachments and transcript-plus-original-audio
 - docs/implemented-plans/docs-reorg.md:110 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
 - docs/implemented-plans/mvp-implementation-guide.md:13 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `bbx tail`
@@ -1089,12 +1090,14 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 106 lines | current reference
+Title: "Connectors" | 135 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
 - docs/guides.md:36 (link) — | Connectors | [docs/connectors.md](connectors.md) |
+- docs/health-checks.md:204 (link) — The connector activity record (see [connectors.md](connectors.md#activity-record))
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
+- docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/health-checks.md`).
 - docs/implemented-plans/docs-reorg.gap-analysis.md:24 (mention) — `docs/connectors.md`. The strongest "confidently wrong, silent data
 - docs/implemented-plans/docs-reorg.md:96 (mention) — 2. `connectors.md` — Google Calendar row says service-injection "Not yet
 - docs/implemented-plans/gmail-explicit-action.md:111 (mention) — `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
@@ -1114,6 +1117,7 @@ References:
 - → docs/calendar.md (link)
 - → docs/gmail-setup.md (link)
 - → docs/google-drive.md (link)
+- → docs/health-checks.md (link)
 - → src/services/CLAUDE.md (mention)
 - → docs/triage.md (mention)
 
@@ -1502,7 +1506,7 @@ Title: "Google Cloud Console Setup" | 171 lines | current reference
 Referenced by:
 - docs/gmail-setup.md:11 (link) — in [google-setup.md](google-setup.md).
 - docs/google-drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
-- docs/health-checks.md:182 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
+- docs/health-checks.md:197 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 - docs/implemented-plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
@@ -1583,13 +1587,15 @@ References:
 
 #### docs/health-checks.md
 
-Title: "Health Checks" | 240 lines | current reference
+Title: "Health Checks" | 297 lines | current reference
 
 Referenced by:
 - deploy/README.md:84 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
 - docs/adding-schemas.md:164 (link) — [`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
+- docs/connectors.md:72 (link) — [health-checks.md](health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 - docs/guides.md:40 (link) — | Deployed-server health-check runbooks | [docs/health-checks.md](health-checks.md) |
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
+- docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/health-checks.md`).
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
 - docs/implemented-plans/docs-reorg.md:178 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
@@ -1611,6 +1617,7 @@ References:
 - → docs/server-operations.md (link)
 - → docs/google-setup.md (link)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
+- → docs/connectors.md (link)
 
 #### docs/image-orientation.md
 
@@ -2447,7 +2454,7 @@ Title: "Triage" | 89 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:154 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
-- docs/connectors.md:103 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:132 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:30 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
@@ -3598,6 +3605,34 @@ Referenced by:
 References:
 - → ../issues/closed/bugs/2026-08-20-concurrent-workstream-launches-race.md (frontmatter)
 
+#### docs/implemented-plans/connector-silence.md
+
+Title: "Connector silence: notice a connector that stopped producing or keeps failing" | 532 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md:16 (mention) — > `beebox/docs/implemented-plans/connector-silence.md`.
+- ../issues/closed/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md:14 (mention) — > `beebox/docs/implemented-plans/connector-silence.md`.
+- ../issues/closed/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md:13 (mention) — > `beebox/docs/implemented-plans/connector-silence.md`.
+- ../issues/closed/bugs/2026-09-19-failing-gmail-draft-retried-forever.md:14 (mention) — > See `beebox/docs/implemented-plans/connector-silence.md`.
+- ../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md:16 (mention) — > `beebox/docs/implemented-plans/connector-silence.md`.
+- ../issues/closed/features/2026-09-19-box-growth-measures-no-bytes.md:13 (mention) — > boxholder-set. See `beebox/docs/implemented-plans/connector-silence.md`.
+
+References:
+- → ../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md (frontmatter)
+- → ../issues/closed/features/2026-09-19-box-growth-measures-no-bytes.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-19-failing-gmail-draft-retried-forever.md (frontmatter)
+- → ../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md (link)
+- → ../issues/closed/bugs/2026-09-16-gmail-draft-upload-errors-are-silent.md (link)
+- → ../issues/closed/bugs/2026-09-16-wakeup-retriages-inbox-item-blocked-on-connector.md (link)
+- → ../issues/closed/bugs/2026-08-10-box-growth-warning-cannot-clear.md (link)
+- → docs/connectors.md (mention)
+- → docs/health-checks.md (mention)
+- → docs/implemented-plans/schedule-alert-signal.md (mention)
+- → docs/cards-as-markdown.md (mention)
+
 #### docs/implemented-plans/connector-sync-isolation.md
 
 Title: "Connector sync isolation and Drive untracking" | 472 lines | shipped history | implemented
@@ -3971,7 +4006,7 @@ References:
 - → docs/gmail-setup.md (mention)
 - → docs/connectors.md (mention)
 - → ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md (link)
-- → ../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md (link)
+- → ../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md (link)
 
 #### docs/implemented-plans/gmail-gc-unlabeled.md
 
@@ -3991,7 +4026,7 @@ Title: "Dead Google auth as a first-class health + notify condition" | 140 lines
 
 Referenced by:
 - docs/google-setup.md:156 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
-- docs/health-checks.md:183 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+- docs/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:14 (link) — [google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
 
@@ -4895,6 +4930,7 @@ References:
 Title: "Schedule alerts: priority decides delivery, one daily digest, conditions that close" | 550 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/connector-silence.md:99 (mention) — (`docs/implemented-plans/schedule-alert-signal.md`). That covers
 - ../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
 - ../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
 - ../issues/features/2026-09-18-deploy-notifications-bypass-alert-priorities.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/schedule-alert-signal.md)). The deploy path
@@ -5581,6 +5617,7 @@ Title: "Box-side GLM: Z.ai models on the claude engine" | 487 lines | proposal |
 
 Referenced by:
 - ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md:14 (mention) — fe3142614, 5ee730681, 2d3304d79 — see `beebox/docs/plans/box-glm-provider.md`).
+- ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md:46 (mention) — the provider env; `docs/plans/box-glm-provider.md` is the design.
 
 References:
 - → ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md (frontmatter)
@@ -7087,7 +7124,7 @@ Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
-- docs/connectors.md:85 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
+- docs/connectors.md:114 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/CLAUDE.md`).
 - docs/implemented-plans/capture-mode.md:621 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image

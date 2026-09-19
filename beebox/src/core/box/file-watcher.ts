@@ -29,6 +29,7 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import type { EventBus } from "../event-bus.js";
 import { BOX_DIRS } from "../../lib/paths.js";
+import { clearWatchLimit, recordWatchLimit } from "./watch-limit.js";
 
 const watchers = new Map<string, BoxWatcher>();
 
@@ -190,6 +191,10 @@ class BoxWatcher implements BoxWatcherHandle {
   private reportWatchLimit(dir: string): void {
     if (this.limitReported) return;
     this.limitReported = true;
+    recordWatchLimit(this.boxRoot, {
+      maxWatchedDirs: this.limits.maxWatchedDirs,
+      belowPath: path.relative(this.boxRoot, dir),
+    });
     console.error(
       `[box-watcher] directory watch limit of ${this.limits.maxWatchedDirs.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
         `live updates below ${path.relative(this.boxRoot, dir)} are disabled`,
@@ -496,5 +501,6 @@ export async function closeBoxWatcher(boxRoot: string): Promise<void> {
   const watcher = watchers.get(boxRoot);
   if (!watcher) return;
   watchers.delete(boxRoot);
+  clearWatchLimit(boxRoot);
   watcher.close();
 }

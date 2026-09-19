@@ -49,7 +49,6 @@ const warningState = {
     measuredAt: "2026-08-05T11:00:00.000Z",
     counts: { ...measured.state.current.counts, directories: 20_000 },
   },
-  acknowledgedAt: null,
 };
 await fs.writeFile(boxGrowthStatePath(box.root), `${JSON.stringify(warningState, null, 2)}\n`);
 ```
@@ -68,10 +67,10 @@ const deniedExpectation = await caller(box.root, false).health.expectBoxGrowthRa
 print(`${deniedAcknowledge}:${deniedExpectation}`);
 // State is unchanged after the rejected call.
 const afterDenied = await readBoxGrowthState(box.root);
-print(afterDenied.status === "measured" ? afterDenied.acknowledgedAt : "missing");
+print(afterDenied.status === "measured" ? afterDenied.previous.measuredAt : "missing");
 =>
 FORBIDDEN:FORBIDDEN
-null
+2026-08-05T10:00:00.000Z
 ```
 
 ## Acknowledgement preserves rate sensitivity
@@ -81,15 +80,13 @@ const result = await caller(box.root, true).health.acknowledgeBoxGrowth();
 const accepted = await readBoxGrowthState(box.root);
 print(result.success);
 if (accepted.status !== "measured") throw new Error("expected measured state");
-print(accepted.accepted.counts.directories);
 print(accepted.previous.counts.directories);
-print(accepted.acknowledgedAt !== null);
+print(accepted.lastNotice);
 print(accepted.rateExpectations.length);
 =>
 true
 20000
-20000
-true
+null
 0
 ```
 
@@ -103,10 +100,10 @@ print(expectedResult.success);
 if (expected.status !== "measured") throw new Error("expected measured state");
 print(expected.rateExpectations.some((item) => item.kind === "rate-directories"));
 print(expected.rateExpectations.some((item) => item.kind === "rate-connector-directories"));
-print(expected.acknowledgedAt !== null);
+print(expected.previous.counts.directories);
 =>
 true
 true
 false
-true
+20000
 ```

@@ -1,12 +1,19 @@
 ---
 title: "Box-growth warns forever on a box with an email connector, and is blind to the box's biggest bytes"
-workstream: box-family-email
+workstream: connector-silence
 area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
 priority: normal
+resolution: implemented
 ---
+
+> **Closed** — parts 1, 2 and 4 (fixed absolute thresholds that cannot clear)
+> resolved by `db57ccf95`, which removes the level findings and warns on the
+> file watcher's real limit instead; part 3 (bytes and `.beebox` blind spot)
+> resolved by `03e8b7e59` and `8f4019e61`. See
+> `beebox/docs/implemented-plans/connector-silence.md`.
 
 Three separate problems in `beebox/src/core/box-growth/`, found together
 on one production box. They compound: the check cries wolf about the wrong
@@ -51,7 +58,7 @@ takes it, also silently blesses whatever the baseline happened to catch.
 `node_modules`. On the observed box `.beebox` is 193 MB against 415 MB of
 content — the single largest thing in the box, and entirely invisible to the
 growth check. 165 MB of it is one stale `search-index.json` (see
-[low-priority-jobs-wedge-wakeup-forever](../closed/bugs/2026-08-10-low-priority-jobs-wedge-wakeup-forever.md)).
+[low-priority-jobs-wedge-wakeup-forever](2026-08-10-low-priority-jobs-wedge-wakeup-forever.md)).
 
 Related: the measurement has no byte dimension at all. It counts files,
 directories, commits and git object bytes, but never content bytes, so a box
