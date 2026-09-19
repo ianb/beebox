@@ -5,7 +5,16 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+> **Closed** — `d8233fd4c` took the derived option: `src/lib/lock-guard.ts`
+> exports `lockGuardPath`/`LOCK_GUARD_SUFFIX`, and
+> `box-root-vocabulary.ts`'s `isBoxRootVocabularyName` accepts
+> `<listed .lock name>.guard` for every tooling entry, covering future locks
+> too. No `.gitignore` change: the guard directory is always empty
+> (proper-lockfile only `mkdir`s and `utimes` it), and git does not track
+> empty directories, so the pattern gap named above has no effect.
 
 While a reactor holds its lock, every commit in the box fails pre-commit.
 This includes `bbx finish`, which a reactor job must run to complete.

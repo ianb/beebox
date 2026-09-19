@@ -1,12 +1,12 @@
 ---
 title: "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary"
-status: draft
+status: implemented
 workstream: card-self-refs
 issues:
-  - ../../../issues/bugs/2026-09-16-flat-layout-media-cards-with-absolute-refs-fail-to-load.md
-  - ../../../issues/bugs/2026-09-16-bbx-mv-refuses-plain-md-files.md
-  - ../../../issues/bugs/2026-09-16-bbx-mv-directory-leaves-self-refs-stale.md
-  - ../../../issues/bugs/2026-09-16-reactor-lock-guard-dir-blocks-every-commit.md
+  - ../../../issues/closed/bugs/2026-09-16-flat-layout-media-cards-with-absolute-refs-fail-to-load.md
+  - ../../../issues/closed/bugs/2026-09-16-bbx-mv-refuses-plain-md-files.md
+  - ../../../issues/closed/bugs/2026-09-16-bbx-mv-directory-leaves-self-refs-stale.md
+  - ../../../issues/closed/bugs/2026-09-16-reactor-lock-guard-dir-blocks-every-commit.md
 ---
 # Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary
 
