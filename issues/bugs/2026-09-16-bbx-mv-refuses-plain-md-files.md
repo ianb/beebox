@@ -1,6 +1,6 @@
 ---
 title: "bbx mv rejects a plain .md file, but the agent guide says it moves one"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent

@@ -1,6 +1,6 @@
 ---
 title: "The reactor lock's guard directory fails the box-root vocabulary check, so no commit succeeds while a reactor runs"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent

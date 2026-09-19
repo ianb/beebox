@@ -1,6 +1,6 @@
 ---
 title: "bbx mv on a directory does not rewrite absolute refs that cards inside it hold to their own files"
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent

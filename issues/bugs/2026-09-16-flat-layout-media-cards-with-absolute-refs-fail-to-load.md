@@ -1,6 +1,6 @@
 ---
 title: "Image and audio cards with a box-absolute filename.ref show \"Failed to load\""
-workstream: unattached
+workstream: card-self-refs
 area: beebox
 filed-by: agent
 discovered-by: agent
