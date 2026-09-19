@@ -370,20 +370,25 @@ export const chatControlProcedures = {
       const contextDir = input.contextDir ?? null;
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
-      if (input.engine !== undefined && !(await loadEnabledEngines(ctx.boxRoot)).includes(input.engine)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.engine} is not enabled for this box` });
+      const enabled = await loadEnabledEngines(ctx.boxRoot);
+      // A model is only meaningful on the engine it was checked against, so a
+      // reservation that names one records that engine too — the same rule
+      // as a `"new"` send (`chat-send-target.ts`).
+      const engine = input.engine ?? (input.model === undefined ? undefined : enabled[0] ?? "claude");
+      if (engine !== undefined && !enabled.includes(engine)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${engine} is not enabled for this box` });
       }
-      if (input.model !== undefined && !isChatModelAllowed(input.engine ?? "claude", { model: input.model, added: await loadAddedModels(ctx.boxRoot) })) {
+      if (input.model !== undefined && engine !== undefined && !isChatModelAllowed(engine, { model: input.model, added: await loadAddedModels(ctx.boxRoot) })) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Model ${input.model} is unavailable for ${input.engine ?? "claude"} chats`,
+          message: `Model ${input.model} is unavailable for ${engine} chats`,
         });
       }
       return registry.reserve({
         sessionId: input.sessionId,
         contextDir,
         seedFeatures: await seedFeaturesForNewChat({ boxRoot: ctx.boxRoot, contextDir }),
-        ...(input.engine !== undefined ? { requestedEngine: input.engine } : {}),
+        ...(engine !== undefined ? { requestedEngine: engine } : {}),
         ...(input.model !== undefined ? { model: input.model } : {}),
       });
     }),

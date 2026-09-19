@@ -32,6 +32,7 @@ import {
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "./model.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
+import { liveProviderRefusal } from "../../provider-env.js";
 import { createRunLockHolder, withChatRunAdmission } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -316,6 +317,9 @@ export class ChatSession extends EventEmitter {
     }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
+
+    // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
+    const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,

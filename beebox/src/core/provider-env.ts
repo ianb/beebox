@@ -12,6 +12,7 @@ import { assertNever } from "../lib/invariant.js";
 import { providerOf } from "../shared/agent-models.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "./glm-key.js";
 import { openRouterChatAdditions } from "./openrouter-chat.js";
+import { ProviderSetupError } from "./provider-setup-error.js";
 
 /** True when a run on this model goes somewhere other than first-party Anthropic via the claude engine. */
 export function isThirdPartyModel(model: string | null | undefined): model is string {
@@ -38,6 +39,24 @@ export async function providerEnvAdditions(params: {
   const additions = await additionsFor({ boxRoot, model, purpose });
   if (additions !== null && params.env) Object.assign(params.env, additions);
   return additions;
+}
+
+/**
+ * For a run that is already live: the refusal its model's provider would give
+ * a fresh spawn now, or null when it may continue. A live subprocess holds the
+ * env it started with, so without this a model removed in admin, or a revoked
+ * key, keeps billing until the next cold start. The caller reports the
+ * refusal and closes the run, so the next attempt refuses at spawn too.
+ */
+export async function liveProviderRefusal(params: { boxRoot: string; model: string | null }): Promise<ProviderSetupError | null> {
+  if (!isThirdPartyModel(params.model)) return null;
+  try {
+    await providerEnvAdditions({ boxRoot: params.boxRoot, model: params.model, purpose: "chat-send" });
+    return null;
+  } catch (e) {
+    if (e instanceof ProviderSetupError) return e;
+    throw e;
+  }
 }
 
 async function additionsFor(params: { boxRoot: string; model: string; purpose: string }): Promise<Record<string, string> | null> {

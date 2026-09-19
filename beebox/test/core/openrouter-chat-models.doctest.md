@@ -210,3 +210,55 @@ path refuses both the same way.
 new OpenRouterSetupError("x") instanceof ProviderSetupError
 => true
 ```
+
+## A live chat stops on its next turn after removal
+
+The spawn gate alone is not enough: a running subprocess keeps the provider
+env it started with. So each turn on a live third-party run re-checks. Once
+the owner removes the model, the next turn is refused with the fix, the run is
+closed, and nothing further is sent to OpenRouter.
+
+```ts
+const { ChatSession } = await import("../../src/core/chat/session/index.js");
+const { createFakeChatBackend } = await import("../../src/services/claude-chat.js");
+const { tick } = await import("../helpers/chat-session-spawner-helpers.js");
+const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
+
+const box = await boxWith({ openrouterModels: [kimi] });
+await grantKey(box.root);
+const backend = createFakeChatBackend();
+const session = new ChatSession(box.root, { backend, skipBootstrap: true });
+const errors: string[] = [];
+session.on("error", (e: Error) => errors.push(e.name));
+session.setModel(kimi.id);
+
+await session.send("first");
+await tick();
+backend.lastRun()?.emitResult();
+await tick();
+const run = backend.lastRun();
+JSON.stringify([backend.runs.length, run?.startOptions.model, run?.startOptions.env?.ANTHROPIC_BASE_URL])
+=> [1,"moonshotai/kimi-k2-0905:exacto","https://openrouter.ai/api"]
+
+await writeFile(join(box.root, "_config/box.json"), JSON.stringify({}));
+clearBoxConfigCache(box.root);
+const sent = await session.send("second");
+await tick();
+JSON.stringify([sent, errors, run?.sent.length, run?.closed, backend.runs.length])
+=> [false,["OpenRouterSetupError"],1,true,1]
+```
+
+The next attempt cold-starts into the same refusal. It does not fall back to
+the box default.
+
+```ts continue
+const again = await session.send("third");
+await tick();
+JSON.stringify([again, errors.length, backend.runs.length])
+=> [false,2,1]
+```
+
+```ts cleanup
+session.stop();
+await box.cleanup();
+```

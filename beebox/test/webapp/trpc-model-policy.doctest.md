@@ -132,6 +132,20 @@ reserved: reserved
 ok model=claude-sonnet-5
 ```
 
+A reservation that names a model but no engine records the engine the model
+was checked against. Leaving it implicit let a Claude model validate and then
+start on the box's Codex default, quietly running something else.
+
+```ts continue
+const { resolveChatEngine } = await import("../../src/core/chat/session/engine.js");
+const implicit = "33333333-4444-4555-8666-777777777777";
+print(`reserved: ${(await api.chat.reserveSession({ sessionId: implicit, model: "claude-haiku-4-5-20251001" })).kind}`);
+print(`engine: ${await resolveChatEngine(server.boxRoot, { sessionId: implicit })}`);
+=>
+reserved: reserved
+engine: claude
+```
+
 ```ts cleanup
 await server.cleanup();
 ```

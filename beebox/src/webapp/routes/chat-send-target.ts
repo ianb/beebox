@@ -53,10 +53,11 @@ async function validatedChoice(
   if (args.model !== undefined && !isChatModelAllowed(engine, { model: args.model, added: await loadAddedModels(boxRoot) })) {
     throw new UnavailableChatChoiceError(engine, args.model);
   }
-  return {
-    ...(args.engine !== undefined ? { engine } : {}),
-    ...(args.model !== undefined ? { model: args.model } : {}),
-  };
+  // A model is only meaningful on the engine it was checked against, so that
+  // engine travels with it. Leaving it implicit let a new chat on a
+  // Codex-default box validate a Claude-engine model and then start on Codex,
+  // quietly running something the sender never picked.
+  return args.model === undefined ? (args.engine === undefined ? {} : { engine }) : { engine, model: args.model };
 }
 
 async function resolveSendTarget(ctx: ChatRoutesContext, args: ResolveSendArgs): Promise<{ session: ChatSession; id: string | null }> {
