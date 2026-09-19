@@ -357,9 +357,13 @@ const rewritten = await readBoxGrowthState(warningBox.root);
 print(rewritten.status === "measured" && !("acknowledgedAt" in rewritten));
 =>
 true:none
-Box growth is within accepted limits
+Box growth is within accepted limits; not measured: disk use (not measured)
 true
 ```
+
+That state predates disk-use measurement, so the green result says bytes were
+not checked rather than implying they were. The next hourly measurement
+records them.
 
 ```ts cleanup
 await warningBox.cleanup();
@@ -443,6 +447,7 @@ const noGitMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
   counts: { directories: 10, files: 20 },
   history: { status: "unavailable", error: "not a Git repository" },
+  bytes: { status: "available", contentBytes: 4096, engineBytes: 0 },
   largestSubtrees: [],
 };
 await fs.mkdir(path.dirname(boxGrowthStatePath(noGitBox.root)), { recursive: true });
@@ -459,8 +464,8 @@ const noGitHealth = await boxGrowthHealthCheck(noGitBox.root, {
   now: at("2026-08-05T12:01:00Z"),
   schedulerStatus: "running",
 });
-print(`${noGitHealth.ok}:${noGitHealth.message.includes("Git history measurement is unavailable")}`);
-=> true:true
+print(`${noGitHealth.ok}:${noGitHealth.message}`);
+=> true:Box growth is within accepted limits; not measured: Git history
 ```
 
 ```ts cleanup

@@ -18,6 +18,7 @@ import {
   type GrowthMeasurement,
 } from "./model.js";
 import { scanBoxGrowth } from "./scan.js";
+import { describeFinding, failedSampleParts, failedSamples } from "./describe.js";
 import { evaluateBoxGrowth } from "./policy.js";
 
 export { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
@@ -247,31 +248,6 @@ function warning(
   };
 }
 
-function count(value: number): string {
-  return Math.round(value).toLocaleString("en-US");
-}
-
-function megabytes(bytes: number): string {
-  return `${count(bytes / (1024 * 1024))} MB`;
-}
-
-function describeFinding(finding: GrowthFinding): string {
-  if (finding.kind === "rate-commits") {
-    return `${count(finding.actual)} commits/hour (limit ${count(finding.threshold)})`;
-  }
-  if (finding.kind === "rate-content-bytes") {
-    return `box content grew by ${megabytes(finding.actual)}/hour (limit ${megabytes(finding.threshold)})`;
-  }
-  if (finding.kind === "rate-engine-bytes") {
-    return `.beebox (engine indexes, caches and logs) grew by ${megabytes(finding.actual)}/hour (limit ${megabytes(finding.threshold)})`;
-  }
-  const unit = finding.kind.endsWith("directories") ? "directories" : "files";
-  const connector = finding.kind.startsWith("rate-connector");
-  const scope = connector ? finding.path ?? "connector subtree" : "box";
-  const detail = connector || finding.path === undefined ? "" : `; fastest subtree: ${finding.path}`;
-  return `${scope} grew by ${count(finding.actual)} ${unit}/hour (limit ${count(finding.threshold)})${detail}`;
-}
-
 export async function boxGrowthHealthCheck(
   boxRoot: string,
   options: { now: Date; schedulerStatus: "running" | "stale" | "never" },
@@ -291,12 +267,16 @@ export async function boxGrowthHealthCheck(
   }
   const findings = evaluateBoxGrowth({ ...state });
   const incomplete = !state.current.complete;
-  const historyError = !incomplete && state.current.history.status === "unavailable" ? state.current.history.error : null;
+  const failed = failedSamples(state.current, incomplete);
   if (findings.length === 0 && state.lastError === null && state.lastNotice === null && !incomplete) {
+    const unavailable = [
+      ...(failed.history === null ? [] : ["Git history"]),
+      ...(failed.bytes === null ? [] : [`disk use (${failed.bytes})`]),
+    ];
     return healthy(
-      historyError === null
+      unavailable.length === 0
         ? "Box growth is within accepted limits"
-        : "Box growth is within accepted limits; Git history measurement is unavailable",
+        : `Box growth is within accepted limits; not measured: ${unavailable.join(", ")}`,
     );
   }
   const parts = findings.map((finding) => describeFinding(finding));
@@ -306,7 +286,7 @@ export async function boxGrowthHealthCheck(
   }
   if (state.lastError !== null) parts.push(`latest scan failed: ${state.lastError}`);
   if (state.lastNotice !== null) parts.push(state.lastNotice);
-  if (historyError !== null && findings.length > 0) parts.push(`history measurement failed: ${historyError}`);
+  if (findings.length > 0) parts.push(...failedSampleParts(failed));
   const actions: NonNullable<BoxGrowthHealthResult["actions"]> = [];
   if (findings.length > 0 || state.lastNotice !== null) actions.push("acknowledge-box-growth");
   if (findings.some((finding) => isRateFindingKind(finding.kind))) {
