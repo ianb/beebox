@@ -69,3 +69,29 @@ card-open (listing snapshot, folded-row reveal, drill into `_content`, card
 click, render check). If the app is slow, file a bug. If the walk is slow, fix
 the wait. Also consider adding sub-step timing to the log, so that a later
 review can locate this kind of increase without running the walk again.
+
+## Cause and fix (2026-09-19, workstream refresh-maps-correctness)
+
+The walk regressed, not the app. The page has about 200 DOM nodes, and a full
+`snapshot` of it takes about 1.2s. The time went to `bin/browse` calls; each
+`wait` finished in about 0.6s, which is process startup.
+
+- **Scoped snapshots.** `annotatedSnapshot` (`browse/src/act.ts`) collects
+  every `bbx-` id on the page, then makes one `get attr` call per unmatched
+  interactive ref until every id is accounted for. A snapshot scoped with `-s`
+  cannot contain ids outside its scope, so the loop never stopped early. More
+  ids on the page (themed card workspaces, 2026-09-09) made every scoped
+  snapshot slower: the Browse-scoped snapshot took 5–13s. Fix: the scan now
+  drops ids outside the scope in the same `eval`. The Browse snapshot takes
+  1.4s. The ids shown are unchanged (compared before and after on three
+  scopes).
+- **Unconditional full snapshot.** The card-open step took a whole-page
+  snapshot and the URL on every walk, only to fill the error message on
+  failure. That cost about 12s. They are now taken only on failure.
+
+Result on this worktree's box: card-open went from 61s to 31s, and the whole
+walk from 103s to 75s with a cold restart. What remains is the fixed cost of
+the checked click, about 6.5s each and three per walk. A checked click on a
+ref without an id spawns about six `agent-browser` processes (URL, ref id,
+box, viewport, check, click). That design dates from 2026-08-23, before the
+increase, and is left as it is.
