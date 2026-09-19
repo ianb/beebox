@@ -10,12 +10,16 @@
  * immediate-children set has changed (added/deleted/renamed). Plain edits
  * to existing files don't invalidate the index.
  *
- * The walking/listing helpers live in `precheck-listing.ts` and the
+ * Every listing — which directories qualify, their current children, and
+ * the prior children they are diffed against — comes from the git tree of a
+ * commit (see `precheck-listing.ts`). The precheck refuses a dirty working
+ * tree, so HEAD's tree is what is on disk minus gitignored files.
+ *
+ * The tree-reading helpers live in `precheck-listing.ts` and the
  * ignore-pattern matching in `precheck-ignore.ts`; this file owns the
  * public types and orchestrates the detection.
  */
 
-import * as path from "node:path";
 import { isRepo, getStatus, getHead, hasCommits, gitBoxPrefix } from "../../lib/git.js";
 import { BOX_DIRS } from "../../lib/paths.js";
 import { loadMapState } from "./state.js";
@@ -26,11 +30,13 @@ import {
 } from "./precheck-ignore.js";
 import {
   listMappableDirs,
-  listChildrenAtCommit,
-  listChildrenOnDisk,
+  listChildren,
+  readBoxTree,
+  type BoxTree,
+  type ListingUnavailable,
 } from "./precheck-listing.js";
-import { fileExists } from "../../lib/file-exists.js";
 import { invariant } from "../../lib/invariant.js";
+import type { Result } from "../../lib/result.js";
 
 export interface MapTask {
   /** Path of the MAP.md to write, relative to box root. */
@@ -123,18 +129,33 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
 
   const head = await getHead(boxRoot);
   const state = await loadMapState(boxRoot);
-  const dirs = await listMappableDirs(boxRoot, patterns);
+  const headTree = await readBoxTree(boxRoot, head);
+  // HEAD must resolve — we just read it from this repo. If it doesn't, the
+  // repo is broken in a way no local workaround should paper over.
+  invariant(headTree.ok, `HEAD (${head}) did not resolve while reading the box tree`);
+  const curr = headTree.value;
+  // One tree per distinct recorded asOf; most entries share a handful.
+  const priorTrees = new Map<string, Promise<Result<BoxTree, ListingUnavailable>>>();
+  const priorTree = (commit: string): Promise<Result<BoxTree, ListingUnavailable>> => {
+    let tree = priorTrees.get(commit);
+    if (!tree) {
+      tree = readBoxTree(boxRoot, commit);
+      priorTrees.set(commit, tree);
+    }
+    return tree;
+  };
+
+  const dirs = listMappableDirs(curr, patterns);
   const tasks: MapTask[] = [];
   const anomalies: MapAnomaly[] = [];
 
   for (const dirRel of dirs) {
-    const mapAbs = path.join(boxRoot, dirRel, "MAP.md");
     const mapRel = dirRel === "" ? "MAP.md" : `${dirRel}/MAP.md`;
-    const mapExists = await fileExists(mapAbs);
+    const mapExists = (curr.get(dirRel) ?? []).some((e) => !e.isDir && e.name === "MAP.md");
     const stateEntry = state.maps[dirRel];
+    const currChildren = listChildren({ tree: curr, dirRel, patterns });
 
     if (!mapExists || !stateEntry) {
-      const children = await listChildrenOnDisk({ boxRoot, dirRel, patterns });
       tasks.push({
         map: mapRel,
         dir: dirRel,
@@ -142,30 +163,14 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
         head,
         added: [],
         deleted: [],
-        children,
+        children: currChildren,
       });
       continue;
     }
 
     if (stateEntry.asOf === head) continue;
 
-    const prev = await listChildrenAtCommit({
-      boxRoot,
-      dirRel,
-      commit: stateEntry.asOf,
-      patterns,
-    });
-    const curr = await listChildrenAtCommit({
-      boxRoot,
-      dirRel,
-      commit: head,
-      patterns,
-    });
-    // HEAD must resolve — we just read it from this repo. If it doesn't, the
-    // repo is broken in a way no local workaround should paper over.
-    invariant(curr.ok, `HEAD (${head}) did not resolve while listing ${dirRel}`);
-    const currChildren = curr.value;
-
+    const prev = await priorTree(stateEntry.asOf);
     if (!prev.ok) {
       // The recorded asOf is gone (history rewritten, GC'd, shallow clone).
       // There's no trustworthy prior listing to diff against, so a diff would
@@ -189,7 +194,7 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
       continue;
     }
 
-    const prevChildren = prev.value;
+    const prevChildren = listChildren({ tree: prev.value, dirRel, patterns });
     const prevSet = new Set(prevChildren);
     const currSet = new Set(currChildren);
     const added = currChildren.filter((c) => !prevSet.has(c));

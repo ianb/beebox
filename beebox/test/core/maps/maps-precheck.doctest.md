@@ -411,7 +411,7 @@ _config: a/, b/, interface/, migrations.jsonl, template-versions.json, transcrip
 ```
 
 The git-side listing agrees. This half has to be set up so the mirror appears
-*between* the recorded state and HEAD — `listChildrenAtCommit` compares only the
+*between* the recorded state and HEAD — the diff compares only the
 immediate children of the mapped directory, so planting the symlink anywhere
 else, or before the state is stamped, asserts nothing:
 
@@ -579,7 +579,7 @@ When the commit a MAP.md was generated against no longer resolves — history
 rewritten, objects GC'd, a shallow clone — there is no trustworthy prior
 listing. Diffing against it would report every current child as newly added.
 The precheck records an anomaly and downgrades the task to `create`, so the
-map is regenerated from what's actually on disk.
+map is regenerated from HEAD's listing.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -642,6 +642,105 @@ print(brief.tasks.map((t) => `${t.dir}:${t.action}:${t.added.join("|")}`).join("
 =>
 anomalies: 0
 store:update:later/
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Listings come from the committed tree, on every path
+
+The walker, the create listing, and the update listing all read the same git
+tree at HEAD. A directory whose only contents are gitignored is not part of
+the box's record, so it appears in none of them. Before, the walker and the
+create listing read disk while change detection read git: the directory
+counted toward its parent's map, never dirtied it, and appeared in the listing
+or not depending on which branch ran.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
+await box.write(".gitignore", (await box.read(".gitignore")) + "\n*.jpg\n");
+await box.write("store/notes/a.md", "a");
+await box.write("store/b.md", "b");
+await box.write("store/MAP.md", "# Map: store\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+await saveMapState({ boxRoot: box.root, state: { maps: { ...skeleton, store: { asOf: head, generatedAt: "t" } } } });
+box.commitAll("state");
+
+await box.write("store/photos/holiday.jpg", "JPEG");
+const quiet = await precheck({ boxRoot: box.root });
+print(`needsWork=${quiet.needsWork}`);
+=> needsWork=false
+```
+
+An unrelated tracked change dirties `store`; the listing still omits the
+ignored directory:
+
+```ts continue
+await box.write("store/c.md", "c");
+box.commitAll("add c");
+const update = await precheck({ boxRoot: box.root });
+print(update.tasks.map((t) => `${t.dir}:${t.action}:${t.children.join(",")}`).join(" "));
+=> store:update:b.md,c.md,notes/
+```
+
+The create path, with no state entry, gives the same listing:
+
+```ts continue
+await saveMapState({ boxRoot: box.root, state: { maps: skeleton } });
+box.commitAll("drop store state");
+const create = await precheck({ boxRoot: box.root });
+print(create.tasks.map((t) => `${t.dir}:${t.action}:${t.children.join(",")}`).join(" "));
+=> store:create:b.md,c.md,notes/
+```
+
+A directory holding only ignored files does not make its parent a container
+either:
+
+```ts continue
+await box.write("solo/pics/one.jpg", "JPEG");
+await box.write("solo/pics/two.jpg", "JPEG");
+await box.write("solo/readme.md", "r");
+await box.write("solo/other.md", "o");
+box.commitAll("solo");
+const solo = await precheck({ boxRoot: box.root });
+print(`solo mapped: ${solo.tasks.some((t) => t.dir === "solo")}`);
+=> solo mapped: false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Non-ASCII names are listed as written
+
+Git quotes non-ASCII paths in its default output (`"caf\303\251.md"`). The
+listing reads NUL-separated raw paths, so an added name matches what is on
+disk and what the map names.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
+await box.write("store/notes/a.md", "a");
+await box.write("store/b.md", "b");
+await box.write("store/MAP.md", "# Map: store\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+await saveMapState({ boxRoot: box.root, state: { maps: { ...skeleton, store: { asOf: head, generatedAt: "t" } } } });
+box.commitAll("state");
+
+await box.write("store/café.md", "c");
+await box.write("store/résumés/r.md", "r");
+box.commitAll("add accented names");
+const brief = await precheck({ boxRoot: box.root });
+const store = brief.tasks.find((t) => t.dir === "store")!;
+print(`added: ${store.added.join(", ")}`);
+print(`children: ${store.children.join(", ")}`);
+=>
+added: café.md, résumés/
+children: b.md, café.md, notes/, résumés/
 ```
 
 ```ts cleanup
