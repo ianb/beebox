@@ -445,13 +445,15 @@ No critical gaps.
 ## NOT in scope
 
 - **Measuring bytes and `.beebox`** (growth issue part 3). Boxholder decision:
-  follow-up issue. It needs a new measurement dimension and a disk-pressure
+  follow-up issue
+  [box-growth-measures-no-bytes](../../../issues/features/2026-09-19-box-growth-measures-no-bytes.md). It needs a new measurement dimension and a disk-pressure
   policy.
 - **Stranding a draft that fails for days.** A draft whose upload keeps
   failing is retried every sync. Considered stamping `gmail-draft-error` and
   stopping after 7 days; not now, because the common cause is an expired grant
   where retrying is right after reconnecting, and the `failing` verdict
-  already notifies once. Filed as a follow-up.
+  already notifies once. Filed as
+  [failing-gmail-draft-retried-forever](../../../issues/bugs/2026-09-19-failing-gmail-draft-retried-forever.md).
 - **Per-connector declared expectations** (config saying "expect N/day").
   The learned baseline covers the incident with no configuration.
 - **A briefing line or box-agent chat mention.** Boxholder chose push plus
