@@ -1,12 +1,17 @@
 ---
 title: "Gmail draft upload failures are silent: no CLI output, no health signal"
-workstream: unattached
+workstream: connector-silence
 area: beebox
 labels: [connectors]
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+> **Closed** — `cd78d1dc7` makes `uploadDrafts` copy `drafts.errors` into the
+> sync result, so `bbx finalize`/wakeup print and count it. See
+> `beebox/docs/implemented-plans/connector-silence.md`.
 
 An `email-outbound` card never received a `gmail-draft-id`.
 `bbx finalize -c gmail` printed `No outbound items` and nothing else.

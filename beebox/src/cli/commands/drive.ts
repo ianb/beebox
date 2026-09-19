@@ -48,6 +48,7 @@ import {
   driveMountCommand,
   driveUnmountCommand,
 } from "./drive-mount-cli.js";
+import { syncConnector } from "../../connectors/activity.js";
 
 /** One row of `bbx drive list`. Matches the `drive.list` procedure's shape. */
 interface DriveListRow {
@@ -83,7 +84,7 @@ const driveSyncCommand = new Command("sync")
     const boxRoot = await requireBoxRoot();
     const connector = createGoogleDriveConnector(boxRoot);
     connector.triggeredBy = "bbx drive sync";
-    const result = await connector.sync();
+    const result = await syncConnector(connector, { boxRoot });
 
     const refusal = syncRefusal(result);
     if (refusal !== null) {

@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
+import { truncateTitle } from "../core/file-summary.js";
 import { errorMessage, errnoCode } from "../lib/error-guards.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { BOX_DIRS, getBoxDir } from "../lib/paths.js";
@@ -36,6 +37,9 @@ import { findTrackedGmailThreads } from "./gmail-tracking.js";
 import { writeThreadCards, type WriteThreadsResult } from "./gmail-threads.js";
 import { registerConnector, type Connector, type SyncResult, type SyncSkipped } from "./index.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
+
+/** A MIME or API error can be long; the sync result is read by a person. */
+const DRAFT_ERROR_MAX_CHARS = 200;
 
 interface SyncWork {
   config: GmailConnectorConfig;
@@ -247,17 +251,33 @@ class GmailConnector implements Connector {
   }
 
   private async uploadDrafts(service: GoogleGmailService, result: SyncResult): Promise<void> {
-    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service });
-    if (drafts.updated.length === 0) return;
+    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service, now: getBoxTime(this.boxRoot) });
+    if (drafts.errors.length > 0) {
+      // Inbound sync still succeeded, so `success` stays true; the error makes
+      // the failure reach the wakeup/finalize output and the activity record
+      // instead of vanishing (a stuck draft used to be undiagnosable).
+      const detail = drafts.errors
+        .map(({ path: cardPath, error }) => `${cardPath}: ${truncateTitle(error, DRAFT_ERROR_MAX_CHARS)}`)
+        .join("; ");
+      const message = `Draft upload failed for ${drafts.errors.length} card${drafts.errors.length === 1 ? "" : "s"}: ${detail}`;
+      result.error = result.error === undefined ? message : `${result.error}; ${message}`;
+    }
+    const changed = [...drafts.updated, ...drafts.stranded, ...drafts.marked];
+    if (changed.length === 0) return;
+    const parts = [
+      ...(drafts.updated.length === 0 ? [] : [`Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`]),
+      ...(drafts.stranded.length === 0 ? [] : [`stop retrying ${drafts.stranded.length} failed draft${drafts.stranded.length === 1 ? "" : "s"}`]),
+      ...(drafts.marked.length === 0 ? [] : [`record ${drafts.marked.length} draft upload failure${drafts.marked.length === 1 ? "" : "s"}`]),
+    ];
     await stageAndCommitPaths(this.boxRoot, {
-      paths: drafts.updated,
-      message: `Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`,
+      paths: changed,
+      message: parts.join("; "),
       trailers: {
         "Pushed-By": "gmail-connector",
         ...(this.triggeredBy === undefined ? {} : { "Triggered-By": this.triggeredBy }),
       },
     });
-    result.updated.push(...drafts.updated);
+    result.updated.push(...changed);
   }
 
   private async syncUnderLock(service: GoogleGmailService): Promise<SyncResult> {

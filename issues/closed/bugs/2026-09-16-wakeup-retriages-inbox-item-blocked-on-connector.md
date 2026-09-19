@@ -1,11 +1,16 @@
 ---
 title: "Wakeup opens a new intake job every cycle for an inbox item blocked on a broken connector"
-workstream: unattached
+workstream: connector-silence
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+resolution: implemented
 ---
+
+> **Closed** — `cd78d1dc7` excludes `*.email-outbound.card` from the wakeup
+> unjobbed-inbox-item scan (`NEVER_TRIAGED_SUFFIXES`). See
+> `beebox/docs/implemented-plans/connector-silence.md`.
 
 An `email-outbound` draft could not upload because the box's Google OAuth
 grant had expired. A reauthorization todo already tracked that. Each wakeup
