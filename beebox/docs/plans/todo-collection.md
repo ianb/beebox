@@ -399,6 +399,11 @@ interface Row<Derived, Reduction> {
   Reductions read the first set, so a hidden done item still counts. `items`
   carries the second set plus the ancestors that give it context, each marked.
   A card with no matching item has no row.
+- **Built, beyond the shape above:** a `CollectionDef` may declare
+  `crossCardIssues(items)`, run over every in-scope item once the scan is
+  done. Todos use it for the duplicate-`id` check the old collector did
+  box-wide; without it, retiring `collectTodos` would have retired that
+  visible-invalid signal with it.
 - **The runner holds no state.** `DeriveContext` is
   `{ now, timeZone, since: number | null }`. `since` is a box-local date epoch
   that the *caller* supplies. The review sweep keeps its own baseline file and
@@ -493,7 +498,9 @@ line read `runCollection`.
     card's own subtree (`todo-view.ts:37-41`), and now also includes referring
     items. `glob: "**"` is the box; nothing refers into it from outside.
 - **`bbx query <collection>`** is added. `bbx todos` stays for now (see Open
-  design questions) and calls the same runner. Flags: `--here <path>`,
+  design questions) and calls the same runner, flattening the rows back to the
+  matching items so its flat listing and its `{todos, issues}` JSON are
+  unchanged apart from the new item fields. Flags: `--here <path>`,
   `--glob`, `--group`, `--no-referring`, `--json`, plus the collection's params
   (`--status`, `--assigned`, `--on-plate`). Text output: per row,
   `summaryText(card)` and the path; under it, one line per item with its
@@ -504,7 +511,10 @@ line read `runCollection`.
   `here: ""`. The three sets and their rules do not change. Each job item gains
   `card` (the summary text) and `sectionPath`, so the brief reads in context.
   `TodoReviewItemSchema` (`src/schemas/todo-review-job.ts:22-27`) gains two
-  optional fields; existing job cards stay valid.
+  optional fields; existing job cards stay valid. **Built:** the two are
+  `card` (the summary text) and `section` (the heading path joined with
+  " › "), and `stirring` is no longer the sweep's own arithmetic — it is the
+  collection's, derived from the `since` baseline the sweep passes.
 - **Ambient line.** `computeTodoAmbientLine` reads the box-wide reduction. The
   text changes only in its pointer: `` `bbx query todos` ``.
 
@@ -596,9 +606,12 @@ No critical gap: each row has planned handling and a test.
 - **Partial migration / transition state** — ADDRESSED. `collectTodos` keeps
   its signature until Track 4's last chunk, so each chunk leaves a working
   tree. No box data changes shape.
-- **The header's `FileEntry` peek opens a full card viewer inside the list** —
-  GAP, small: whether peek is wanted inside a todo list, or a plain link. Lean:
-  plain link in the list; decide when the list is on screen.
+- ~~**The header's `FileEntry` peek opens a full card viewer inside the list**~~
+  **DECIDED (2026-09-20), on screen: `FileEntry` stays, peek and all.** The
+  alternative — a hand-built link — would have had to re-implement the mark,
+  the type icon, and the type's list component to look the same, which is
+  the polymorphism Track 1 exists to provide. Peek is opt-in; nothing expands
+  unless the reader asks.
 
 ## NOT in scope
 
@@ -659,7 +672,9 @@ New agent-facing behaviour, so audits land run, in
   heading it sits under, and nesting).
 
 `summarize` is a schema-authoring concept; it goes in
-`docs/adding-schemas.md` and the schema-guide skill, with one audit:
+`docs/adding-schemas.md`, the box's own schema-authoring guide
+(`src/core/box/schemas-guide.ts` — the surface a box agent actually reads),
+and the schema-guide skill, with one audit:
 "How does a box-local card type control how it appears in lists?"
 
 ## What will hold this after it ships
