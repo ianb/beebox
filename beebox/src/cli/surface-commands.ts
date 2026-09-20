@@ -75,6 +75,7 @@ import { locationCommand } from "./commands/location.js";
 import { pushCommand } from "./commands/push.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
+import { queryCommand } from "./commands/query.js";
 import { connectorCommand } from "./commands/connector.js";
 
 /** Registration order is irrelevant — the surface table decides placement. */
@@ -140,6 +141,7 @@ const ALL: readonly Command[] = [
   pushCommand,
   tailscaleCommand,
   todosCommand,
+  queryCommand,
   connectorCommand,
 ];
 

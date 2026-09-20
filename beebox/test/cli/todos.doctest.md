@@ -1,7 +1,8 @@
 # `bbx todos` — read/query CLI
 
-`src/cli/commands/todos.ts` is a thin presentation layer over the collector
-(`core/todo/collect.ts`): filters (`--status`, `--assigned`, `--glob`,
+`src/cli/commands/todos.ts` is a thin presentation layer over the todo
+collection (`core/todo/query.ts`, the same runner `bbx query todos` and the
+web list use): filters (`--status`, `--assigned`, `--glob`,
 `--on-plate`), a human listing grouped by plate-state, and `--json` for the
 full structured records. `runTodosForBox(boxRoot, options)` is exercised
 directly (same approach as `test/cli/auth-command.doctest.md`) rather than
