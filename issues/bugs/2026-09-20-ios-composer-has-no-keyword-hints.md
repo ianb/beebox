@@ -1,6 +1,6 @@
 ---
 title: "The rotating voice-keyword hint is web-only; the iOS native composer shows nothing"
-workstream: unattached
+workstream: ios-keyword-hints
 area: beebox
 labels: [voice, ios, ui]
 filed-by: agent
