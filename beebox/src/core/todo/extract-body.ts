@@ -111,9 +111,14 @@ function visit(input: {
   const { node, container, index, state, parent } = input;
 
   if (node.type === "heading") {
-    recordHeading(node, state);
-    // Headings define sections; a todo written inside one would name itself as
-    // its own section, so the walk does not descend into them.
+    const level = headingLevel(node);
+    // A heading defines a section, so a todo written inside one belongs to the
+    // sections ABOVE it rather than naming itself. The deeper levels are
+    // cleared before the walk, and this heading's own text is recorded after
+    // it — the todo sees the path it sits under, not the path it starts.
+    if (level !== null) state.headings.length = level;
+    walkChildren(node, { state, parent: null });
+    if (level !== null) recordHeading(node, { state, level });
     return;
   }
 
@@ -238,9 +243,12 @@ function trimAnnotation(flattened: FlattenResult): string {
   return flattened.text.replace(/^[\s‐-―:;,.|·•-]+/u, "").trim();
 }
 
-function recordHeading(node: Node, state: WalkState): void {
+function headingLevel(node: Node): number | null {
   const level = node.attributes["level"];
-  if (typeof level !== "number" || level < 1) return;
+  return typeof level === "number" && level >= 1 ? level : null;
+}
+
+function recordHeading(node: Node, { state, level }: { state: WalkState; level: number }): void {
   state.headings[level] = flattenNodes(node.children).text;
   state.headings.length = level + 1;
 }

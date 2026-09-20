@@ -92,6 +92,25 @@ show(CARD, [
 9 [Only a deep one] parent=- "Under it" ann="" refs=
 ```
 
+A todo written *inside* a heading is still collected. It belongs to the
+sections ABOVE that heading rather than naming itself, its annotation is the
+rest of the heading line, and the heading still names the section for
+everything that follows — flattened the same way any heading is, with the
+todo's own words left out and the annotation's kept.
+
+```ts continue
+show(CARD, [
+  "# House",
+  "",
+  "## Shop {% todo %}Decide the list{% /todo %} — before Saturday",
+  "",
+  "- {% todo %}Drill bits{% /todo %}",
+].join("\n"))
+=>
+7 [House] parent=- "Decide the list" ann="before Saturday" refs=
+9 [House / Shop — before Saturday] parent=- "Drill bits" ann="" refs=
+```
+
 ## Nesting: a todo's parent is the todo that owns its list item
 
 The nested list is a *sibling* of the parent todo's `inline` under the same
