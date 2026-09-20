@@ -3,6 +3,24 @@ import UIKit
 @testable import BeeBox
 
 final class SpeechKeywordsTests: XCTestCase {
+    func testKeywordHintsMatchNativeVoiceVocabulary() {
+        XCTAssertEqual(
+            SpeechKeywords.keywordHintsWithoutText,
+            ["\"microphone off\""]
+        )
+        XCTAssertEqual(
+            SpeechKeywords.keywordHintsWithText,
+            [
+                "\"send message\"",
+                "\"clean up and send\"",
+                "\"send and close\"",
+                "\"erase message\"",
+                "\"cancel message\"",
+                "\"microphone off\"",
+            ]
+        )
+    }
+
     func testProgressiveTranscriptReplacesVolatileResults() {
         var transcript = ProgressiveSpeechTranscript()
 
