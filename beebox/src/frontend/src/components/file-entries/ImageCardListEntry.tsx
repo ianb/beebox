@@ -7,7 +7,7 @@
  */
 
 import type { ListProps } from "../../file-types/registry";
-import type { ImageAttrs } from "@schemas/image";
+import type { ImageSummaryAttrs } from "@schemas/image";
 import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 import { isTransformablePhotoPath } from "../../lib/image-transform-url";
@@ -26,7 +26,7 @@ function imageSrc(cardPath: string, filenameRef: string): string {
   });
 }
 
-export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {
+export function ImageCardListEntry({ data, compact }: ListProps<ImageSummaryAttrs>) {
   const filename = data.attrs ? data.attrs.filename : undefined;
 
   return (

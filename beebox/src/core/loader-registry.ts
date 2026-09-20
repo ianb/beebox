@@ -1,141 +1,143 @@
 /**
- * Registry for FileLoaders — maps a file (by card type or path pattern) to a
- * loader that produces a typed FileSummary. One custom registration per match
- * key; a colliding registration logs a warning and wins (last-wins).
+ * Produces a `FileSummary` for a file.
  *
- * Dispatch rule: exact card-type match wins over path-pattern match. If no
- * custom loader matches, the built-in fallback produces
- * { path, title: stripExt(basename) }.
+ * A CARD's summary belongs to its card type: `summarize` builds the standard
+ * base (title, `contains:`, `symbol:`) and hands it to the schema's
+ * `summarize` hook, which extends or replaces it. A card that failed
+ * validation has no fields to hand over, so it keeps the base summary derived
+ * from its filename.
+ *
+ * NON-card files still go through path loaders registered here
+ * (`registerPathLoader`), because a plain file has no schema to ask.
  */
 
+import type { CardSchema, CardSummaryBase, CardSummaryParts } from "../cards/schema.js";
+import { cardFields } from "./card-io.js";
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 import { readCardSymbol } from "./card-symbol.js";
 import { validateThemeChoice } from "../shared/card-theme.js";
 
-interface TypeRegistration {
-  kind: "type";
-  type: string;
-  loader: FileLoader<unknown>;
-}
-
 interface PathRegistration {
-  kind: "match";
   match: (path: string) => boolean;
   loader: FileLoader<unknown>;
 }
 
-type Registration = TypeRegistration | PathRegistration;
-
-const registrations: Registration[] = [];
-
-/**
- * Register a loader for a specific card type.
- * Colliding type registrations log a warning — last-wins.
- */
-export function registerTypeLoader<T>(type: string, loader: FileLoader<T>): void {
-  const existing = registrations.find(r => r.kind === "type" && r.type === type);
-  if (existing) {
-    console.warn(`Loader collision for type "${type}": overriding previous registration`);
-    const idx = registrations.indexOf(existing);
-    registrations.splice(idx, 1);
-  }
-  registrations.push({
-    kind: "type",
-    type,
-    loader,
-  });
-}
+const registrations: PathRegistration[] = [];
 
 /**
  * Register a loader matched by path predicate (e.g. `p => p.endsWith(".md")`).
- * Path matches are checked after card-type matches miss.
+ * Cards never reach these — their type's schema answers for them.
  */
 export function registerPathLoader<T>(
   match: (path: string) => boolean,
   loader: FileLoader<T>,
 ): void {
-  registrations.push({
-    kind: "match",
-    match,
-    loader,
-  });
+  registrations.push({ match, loader });
 }
 
 /**
- * Built-in fallback loader. Reads nothing beyond the path.
+ * The summary every file gets before its type has a say: an authored `title:`
+ * or the filename, plus the global `contains:` and `symbol:` fields.
  */
-const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
-  path: raw.path,
-  title: titleFromFilename(raw.path),
-});
+function buildBase(input: LoaderInput): CardSummaryBase {
+  const declared = input.fields?.["title"];
+  const title = typeof declared === "string" && declared.trim() !== ""
+    ? declared.trim()
+    : titleFromFilename(input.path);
+  let base: CardSummaryBase = { title };
+  const contains = input.fields?.["contains"];
+  if (typeof contains === "string" && contains !== "") {
+    base = { ...base, contains };
+  }
+  const rawSymbol = input.fields?.["symbol"];
+  if (rawSymbol !== undefined) {
+    const symbol = readCardSymbol(rawSymbol, { cardPath: input.path });
+    if (symbol !== null) base = { ...base, symbol };
+  }
+  return base;
+}
 
 /**
- * Find the matching loader for a file. Dispatch order:
- *   1. card-type exact match (input.type)
- *   2. path predicate match
- *   3. fallback
+ * Ask the card type how it wants to appear. A type with no `summarize`, and a
+ * card whose fields didn't validate, keep the base summary. A hook that throws
+ * is a bug in that schema, not a reason to lose the row: warn and fall back.
  */
-function resolveLoader(input: LoaderInput): { loader: FileLoader<unknown>; isFallback: boolean } {
+function cardParts(
+  input: LoaderInput,
+  { base, cardSchemas }: { base: CardSummaryBase; cardSchemas: Map<string, CardSchema> },
+): CardSummaryParts<unknown> {
   const type = input.type;
-  if (type) {
-    const match = registrations.find(r => r.kind === "type" && r.type === type);
-    if (match) return { loader: match.loader, isFallback: false };
+  const fields = input.fields;
+  if (type === undefined || fields === undefined) return base;
+  const schema = cardSchemas.get(type);
+  if (schema?.summarize === undefined) return base;
+  try {
+    const parts = schema.summarize(cardFields({ schema, fields }, schema), base);
+    // An empty title would render a blank row; the base title always says
+    // something, so it stands in.
+    if (parts.title.trim() === "") return { ...parts, title: base.title };
+    return parts;
+  } catch (e) {
+    console.warn(`summarize() for card type "${type}" failed on ${input.path}; using the base summary:`, e);
+    return base;
   }
-  const pathMatches = registrations.filter(
-    r => r.kind === "match" && r.match(input.path),
-  );
-  if (pathMatches.length > 1) {
-    const paths = pathMatches.length;
+}
+
+/**
+ * Non-card files: the first matching path loader, else the base summary.
+ * A path loader's own title wins over the filename — it computed it on
+ * purpose — but an empty one falls back.
+ */
+function pathParts(input: LoaderInput, base: CardSummaryBase): CardSummaryParts<unknown> {
+  const matches = registrations.filter(r => r.match(input.path));
+  if (matches.length > 1) {
     console.warn(
-      `Path loader collision for "${input.path}": ${paths} matches; using first registered`,
+      `Path loader collision for "${input.path}": ${matches.length} matches; using first registered`,
     );
   }
-  const pathMatch = pathMatches[0];
-  if (pathMatch) return { loader: pathMatch.loader, isFallback: false };
-  return { loader: fallbackLoader, isFallback: true };
+  const first = matches[0];
+  if (first === undefined) return base;
+  const summary = first.loader(input);
+  let parts: CardSummaryParts<unknown> = base;
+  if (summary.title.trim() !== "") parts = { ...parts, title: summary.title };
+  if (summary.contains !== undefined) parts = { ...parts, contains: summary.contains };
+  if (summary.symbol !== undefined) parts = { ...parts, symbol: summary.symbol };
+  if (summary.detail !== undefined) parts = { ...parts, detail: summary.detail };
+  if (summary.attrs !== undefined) parts = { ...parts, attrs: summary.attrs };
+  return parts;
 }
 
 /**
- * Run the resolved loader to produce a summary.
+ * Build the summary for one file. `cardSchemas` is the box's schema map (the
+ * same one `buildLoadContext` produced to read the card), so a box-local card
+ * type summarizes its own cards.
  */
-export function summarize(input: LoaderInput): FileSummary<unknown> {
-  const { loader, isFallback } = resolveLoader(input);
-  const summary = loader(input);
-  // `title`, `contains` and `symbol` are global card fields — surface them
-  // uniformly rather than teaching every loader about them.
-  let out = summary;
-  if (out.type === undefined && input.type !== undefined) {
-    out = { ...out, type: input.type };
-  }
+export function summarize(
+  input: LoaderInput,
+  cardSchemas: Map<string, CardSchema>,
+): FileSummary<unknown> {
+  const base = buildBase(input);
+  const parts = input.type === undefined
+    ? pathParts(input, base)
+    : cardParts(input, { base, cardSchemas });
+
+  let out: FileSummary<unknown> = { path: input.path, title: parts.title };
+  if (input.type !== undefined) out = { ...out, type: input.type };
   const authoredTheme = input.fields?.["theme"];
   if (authoredTheme !== undefined) {
     // Preserve an explicit but malformed choice as the resolver's plain
     // fallback: it must block lower-precedence defaults just like a full card.
     out = { ...out, cardTheme: validateThemeChoice(authoredTheme, "card theme").choice };
   }
-  // A card's own `title:` beats the FALLBACK loader's filename-derived title,
-  // and never beats a title a real loader computed on purpose — a memo's title
-  // IS its text (`schemas/memo.ts`). Asking the resolver which one ran, rather
-  // than comparing the title against the filename: a memo whose body happens to
-  // read "Bread" in `Bread.memo.card` would lose to its frontmatter under a
-  // string comparison.
-  const declared = input.fields?.["title"];
-  if (isFallback && typeof declared === "string" && declared.trim() !== "") {
-    out = { ...out, title: declared.trim() };
-  }
-  if (out.contains === undefined && input.fields !== undefined) {
-    const contains = input.fields["contains"];
-    if (typeof contains === "string" && contains !== "") out = { ...out, contains };
-  }
-  if (out.symbol === undefined && input.fields?.["symbol"] !== undefined) {
-    const symbol = readCardSymbol(input.fields["symbol"], { cardPath: input.path });
-    if (symbol !== null) out = { ...out, symbol };
-  }
+  if (parts.contains !== undefined) out = { ...out, contains: parts.contains };
+  if (parts.symbol !== undefined) out = { ...out, symbol: parts.symbol };
+  if (parts.detail !== undefined) out = { ...out, detail: parts.detail };
+  if (parts.attrs !== undefined) out = { ...out, attrs: parts.attrs };
   return out;
 }
 
 /**
- * Reset the registry. Intended for tests only.
+ * Reset the path-loader registry. Intended for tests only.
  */
 export function resetLoaderRegistry(): void {
   registrations.length = 0;

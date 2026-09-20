@@ -4,7 +4,6 @@
  */
 
 import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
-import type { ImageAttrs } from "@schemas/image";
 import { EXTRACTED_CARD_TYPE } from "../lib/pdf-card";
 import { registerFileType } from "./registry";
 import {
@@ -24,7 +23,7 @@ export function registerBuiltinFileTypes(): void {
   registered = true;
 
   registerFileType({ type: "memo" }, { listUI: { icon: DocumentIcon } });
-  registerFileType<ImageAttrs>({ type: "image" }, {
+  registerFileType({ type: "image" }, {
     listUI: { icon: ImageIcon, ListComponent: ImageCardListEntry },
   });
   registerFileType({ type: "audio" }, { listUI: { icon: AudioIcon } });
