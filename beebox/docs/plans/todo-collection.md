@@ -124,10 +124,11 @@ boxholder's explicit request, and says so in the budget above.
   that wraps a list does contain its nested todos, and `walkChildren`
   (`:143-158`) would then merge their text. No doctest covers either nesting
   shape today.
-- **Body reference extraction** — `src/core/body-refs.ts:296` `extractBodyRefs`
-  and `:110` `extractBodyLinks`, with `src/shared/ref-path.ts:100` `parseRef`
-  and `:176` `resolveRefPath`. **Reused** for item references. Per
-  `beebox/CLAUDE.md`, no other ref parsing is written.
+- **Ref parsing** — `src/shared/ref-path.ts:100` `parseRef` and `:176`
+  `resolveRefPath`. **Reused** for item references; per `beebox/CLAUDE.md`, no
+  other ref parsing is written. `src/core/body-refs.ts:110` `extractBodyLinks`
+  scans whole-body Markdown source and cannot be aimed at one todo, so Track 2
+  reads `link` nodes from the AST it is already walking.
 - **No reverse reference index.** Searched `beebox/src` for `findIncomingRefs`
   and `findOutgoingRefs`: nothing. The reference scope in Track 3 is a filter
   over extracted items, not a lookup.
@@ -196,8 +197,15 @@ cannot take part.
 summarize?: (card: InferCardFields<CardSchema<TTag, TFields>>, base: CardSummaryBase) => CardSummaryParts;
 
 interface CardSummaryBase { title: string; contains?: string; symbol?: CardSymbolData }
-interface CardSummaryParts extends CardSummaryBase { detail?: string; attrs?: unknown }
+interface CardSummaryParts<TAttrs> extends CardSummaryBase { detail?: string; attrs?: TAttrs }
 ```
+
+- `cardSchema` gains a third generic, `TAttrs`, inferred from `summarize`'s
+  return type and carried on `CardSchema`. `SummaryAttrs<typeof XSchema>`
+  extracts it. A list component declares `ListProps<SummaryAttrs<typeof
+  ImageSchema>>` through a type-only import. This keeps the tie that
+  `FileLoader<ImageAttrs>` gives today (`src/schemas/image.tsx:152`): a
+  `summarize` that returns another shape is a compile error in the component.
 
 - `base` is the standard summary: `title` from the `title` field or the
   filename, `contains`, `symbol`. A type extends it (`{ ...base, detail }`) or
@@ -231,8 +239,10 @@ interface CardSummaryParts extends CardSummaryBase { detail?: string; attrs?: un
   value imports through it; the backend tsconfig would also pick the file up.
   The nearest placement that keeps every rule: a mirror directory,
   `src/frontend/src/schemas/<type>.list-entry.tsx`, one file per type with the
-  schema's basename, typed by a type-only import of the `attrs` type that the
-  type's `summarize` returns, and registered from the same file.
+  schema's basename, exporting the component. It does not register itself:
+  `src/frontend/src/file-types/builtins.tsx` imports it and registers it, as it
+  does for `ImageCardListEntry` today (`builtins.tsx:6`), so the file has an
+  import edge, runs at startup (`main.tsx:17`), and is visible to knip.
   `ImageCardListEntry.tsx` moves there first. "Nearby" is then by name and by
   type, not by directory. See Open design questions.
 
@@ -277,8 +287,11 @@ interface TodoItem {
   `collect-body.ts:68`. The stack holds: the current headings by level
   (`heading` nodes carry `attributes.level`; their text is the flattened
   `inline` child), and the enclosing list `item` nodes.
-- **`parent` comes from list-item ancestry.** A todo *owns* the `item` whose
-  own `inline` (or first paragraph) contains it. A todo inside a nested list
+- **`parent` comes from list-item ancestry.** A todo *owns* an `item` when it
+  sits in one of the item's direct `inline` or `paragraph` children. When
+  several do, the owner is the last one before the nested list. This covers
+  the loose-list shape, where the item's first paragraph is plain text and the
+  todo is in a later paragraph. A todo inside a nested list
   takes as `parent` the todo that owns the nearest enclosing `item`. An
   enclosing `item` with no todo is skipped. A block-form todo is the parent of
   the todos inside it.
@@ -288,9 +301,12 @@ interface TodoItem {
   nodes that follow the tag inside the same `inline` node, found by index in
   the parent's `children`. When one `inline` holds two todos, the annotation
   of the first stops at the second. A block todo has `annotation: ""`.
-- `refs` come from `{% see-also ref %}`, and from Markdown links in the todo's
-  text and annotation, through `extractBodyLinks`, `parseRef`, and
-  `resolveRefPath` with `kind: "card"`. `resolveRefPath` resolves a string
+- `refs` come from `{% see-also ref %}`, and from `link` nodes in the AST:
+  those inside the todo tag and those among the annotation's sibling nodes,
+  read from `attributes.href`. They are collected during the walk, before text
+  is flattened; flattening keeps only a link's label. `extractBodyLinks` is not
+  used, because it scans Markdown source, not a node range. Each href goes
+  through `parseRef` and `resolveRefPath` with `kind: "card"`. `resolveRefPath` resolves a string
   and does not prove that the target exists or is a card
   (`src/shared/ref-path.ts:176`), so `refs` are **box-relative paths**, files
   or directories, unchecked. External links and refs that escape the box are
@@ -398,8 +414,12 @@ interface Row<Derived, Reduction> {
 - **Groupings for todos.** `place` (one group; rows are cards in path order;
   the renderer nests sections and parents) and `plate` (the six plate states in
   today's order). Rows form again inside each group.
-- **Reduction for todos.** `{ open, done, dropped, parked, next: string | null }`
-  where `next` is the earliest `due` or resolved `start` among open items.
+- **Reduction for todos.**
+  `{ open, done, dropped, parked, onPlate, escalated, next: string | null }`.
+  `onPlate` counts open items whose plate state is `escalated` or `on-plate`;
+  `escalated` counts the first of those. The ambient line needs exactly these
+  two (`ambient-summary.ts:22-27`). `next` is the earliest `due` or resolved
+  `start` among open items.
 - **Todo params.** `{ status: TodoStatus[] (default open, parked), assigned?, onPlate? }`
   — the `todos.list` inputs, unchanged in meaning.
 - The stage rules are enforced by the types: `extract` has no `ctx` with a
@@ -513,9 +533,9 @@ No critical gap: each row has planned handling and a test.
 | A todo nested three levels deep | planned | `parent` chain; renderer indents; no depth cap | clear |
 | A nested todo's parent is filtered out (parent done, child open) | planned (collection-run doctest) | keep the parent as a context-only ancestor, marked not matching | clear |
 | Annotation text is very long | planned (frontend logic doctest) | list truncates with expand; JSON keeps all | clear |
-| A link in a todo points at a card that moved | existing (`bbx validate` link warnings) | unresolvable refs are left out of `refs`; the todo still lists under its own card | clear for the link; the missing reference row is silent, accepted because validate reports the link |
+| A link in a todo points at a card that moved | existing (`bbx validate` link warnings; `bbx mv` rewrites body links) | the ref resolves to the old path and matches by string, so the todo lists under the old place and not the new one | clear for the link through validate; the misplaced reference row is silent, accepted because validate reports the link |
+| A link inside a todo is lost when text is flattened | planned (todo-collect doctest: a link in the text and a link in the annotation both reach `refs`) | refs are read from `link` nodes before flattening | clear |
 | `here` is a card path, not a directory | planned (collection-run doctest) | scope is that one card; a reference matches only the card itself | clear |
-| A ref resolves to a path that does not exist | planned | it matches by string like any other; a dangling ref under `here` still lists the todo, which is the useful outcome | clear |
 | `--here` or `glob` contains `..` | existing (`trpc-todos-list`, `todo-collect` doctests), moved | reject, as `todos.ts:50-57` and `isUnsafeGlobPattern` do | clear |
 | Box-wide extract with `includeReferring` is slow on a large box | planned (timing note in collection-run doctest on the fixture box) | same cost as today's unscoped `collectTodos`; no new handling | clear (slow, not wrong) |
 | A card fails to load inside the scope | existing (`todo-collect` doctest) | `issues` channel, shown in the list and the CLI | clear |
