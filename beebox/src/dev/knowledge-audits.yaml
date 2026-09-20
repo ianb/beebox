@@ -689,6 +689,18 @@ tests:
     correct_contains: ["validate"]
     tags: [schemas, extension, validation]
 
+  - id: schema-summarize-hook
+    prompt: "How does a box-local card type control how it appears in lists?"
+    expected_level: knows_about
+    watch_for: >
+      Names the schema's `summarize` hook on cardSchema() — it takes the
+      card's own fields plus the base summary and returns the summary the
+      list shows (typically the base plus a `detail` line). Must NOT invent a
+      frontend component registration, a central list-rendering switch, or a
+      per-card frontmatter field.
+    correct_contains: ["summarize"]
+    tags: [schemas, extension]
+
   # === CLI Commands ===
   #
   # Status (2026-07-03): 8/9 pass. bbx-chat-self-note-env now passes after
@@ -1415,7 +1427,7 @@ tests:
   # (Track 6).
   # Distinct from the "=== Todo Lists ===" section above, which tests the
   # older, largely-unused todo-list card type — these test the universal
-  # capture-in-place {% todo %} tag, bbx todos, and the todo-view card.
+  # capture-in-place {% todo %} tag, bbx query todos, and the todo-view card.
   #
   # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
   # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
@@ -1447,12 +1459,43 @@ tests:
     prompt: "How do you see every open todo across the box, and how do you mark one done?"
     expected_level: knows_directly
     watch_for: >
-      Names `bbx todos` as the query path (not a browsing UI or a search).
-      Marking one done is editing the {% todo %} tag's status attribute (or
-      the frontmatter todos: entry) directly — there is no `bbx todos`
+      Names `bbx query todos` as the query path (not a browsing UI or a
+      search). Marking one done is editing the {% todo %} tag's status
+      attribute (or the frontmatter todos: entry) directly — there is no
       mutation subcommand.
-    correct_contains: ["bbx todos"]
+    correct_contains: ["bbx query todos"]
     tags: [todos, cli]
+
+  # === Todo collection (docs/plans/todo-collection.md, Track 5) ===
+  #
+  # Where a todo is written is what it means: the heading above it, the todo
+  # it nests under, and the links it carries all decide how it reads back.
+
+  - id: todo-collection-project-scope
+    prompt: >
+      How do you see the open todos for one project directory, including
+      todos elsewhere in the box that link to it?
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for `bbx query todos --here <dir>` rather than a glob-only
+      scan, a grep, or opening cards one at a time. Should say that the
+      reference pass is what brings in todos written outside the directory
+      that point into it.
+    correct_contains: ["bbx query todos --here"]
+    tags: [todos, cli]
+
+  - id: todo-collection-position-is-meaning
+    prompt: >
+      You are adding a todo to a long planning document. What decides which
+      group it shows under in the todo list?
+    expected_level: knows_directly
+    watch_for: >
+      Says the heading it sits under, and the todo it nests beneath — not a
+      tag attribute, a card field, or its dates. Bonus if it says to put the
+      todo under the heading it belongs to for that reason, or mentions that
+      a note after the closing tag travels with the todo.
+    correct_contains_any: ["heading", "nest"]
+    tags: [todos, markdoc]
 
   # Status (2026-09-17): 2/2 pass on first run (knows_directly, 0 files read /
   # 0 searches each, 48k ctx) against the "Your own follow-ups" block added to
@@ -1659,10 +1702,10 @@ tests:
     prompt: "What should the boxholder be focusing on right now?"
     expected_level: knows_directly
     watch_for: >
-      Runs `bbx todos` (ideally `--on-plate`) to check actual plate-state
-      before answering, rather than grepping the box for {% todo %} tags by
-      hand or guessing from memory of past conversation.
-    bash_contains: ["bbx todos"]
+      Runs `bbx query todos` (ideally `--on-plate`) to check actual
+      plate-state before answering, rather than grepping the box for
+      {% todo %} tags by hand or guessing from memory of past conversation.
+    bash_contains: ["bbx query todos"]
     tags: [todos, application, cli]
     notes: >
       Pass condition is reaching for the query tool unprompted — the
