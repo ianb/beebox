@@ -3,7 +3,9 @@
  * except for the image-card demo (added separately).
  */
 
-import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
+// The image card's list component lives beside its schema. `@schemas/*.list-entry`
+// is the one value-legal spelling through that alias (see vite.config.ts).
+import { ImageCardListEntry } from "@schemas/image.list-entry";
 import { EXTRACTED_CARD_TYPE } from "../lib/pdf-card";
 import { registerFileType } from "./registry";
 import {

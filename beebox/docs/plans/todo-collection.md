@@ -236,19 +236,26 @@ interface CardSummaryParts<TAttrs> extends CardSummaryBase { detail?: string; at
   (boxholder, 2026-09-20). Schemas load in the server and the CLI; a component
   on the schema object would pull frontend code into both. So the registry
   stays `registerFileType(... listUI ...)`.
-  **Placement.** A component file inside `src/schemas/` does not work without
-  weakening a deliberate boundary: the frontend tsconfig does not include
-  `../schemas` (`src/frontend/tsconfig.json:48`), `@schemas/*` is type-only and
-  unaliased in Vite on purpose, and `src/frontend/eslint.config.ts:50` bans
-  value imports through it; the backend tsconfig would also pick the file up.
-  The nearest placement that keeps every rule: a mirror directory,
-  `src/frontend/src/schemas/<type>.list-entry.tsx`, one file per type with the
-  schema's basename, exporting the component. It does not register itself:
-  `src/frontend/src/file-types/builtins.tsx` imports it and registers it, as it
-  does for `ImageCardListEntry` today (`builtins.tsx:6`), so the file has an
-  import edge, runs at startup (`main.tsx:17`), and is visible to knip.
-  `ImageCardListEntry.tsx` moves there first. "Nearby" is then by name and by
-  type, not by directory. See Open design questions.
+  **Placement — built.** The component lives beside its schema:
+  `src/schemas/<type>.list-entry.tsx` (boxholder, 2026-09-20: "I want each
+  component to live alongside the rest of the schema"). It is frontend code in
+  a backend tree, so the boundary is narrowed rather than opened, and the
+  narrowing names one glob:
+  - The backend tsconfig excludes `src/schemas/**/*.list-entry.tsx`; the
+    frontend tsconfig includes it. `pnpm build` emits nothing for it.
+  - `vite.config.ts` aliases `@schemas/<name>.list-entry` and nothing else
+    under `@schemas`. The frontend lint rule that bans value imports through
+    `@schemas` is now a regex with that one exception; `@core` and `@backend`
+    are unchanged.
+  - `eslint.config.ts` lints the glob with the React profile, allows it to
+    reach the schemas, core and cards trees by type import only (values may
+    come from `src/shared/` and `src/frontend/` alone), and bans every other
+    module in `src/` from importing it.
+  - It does not register itself: `src/frontend/src/file-types/builtins.tsx`
+    imports it and registers it, so the file has an import edge and runs at
+    startup (`main.tsx:17`). `knip.ts` reads the glob as frontend-workspace
+    source so that edge is visible.
+  `ImageCardListEntry.tsx` moved there first.
 
 **Vocabulary lock-ins.** The config key `summarize`; the summary field
 `detail`; `summaryText`. `summarize` becomes part of the public `beebox/cards`

@@ -276,10 +276,30 @@ export const BOX_DIRS = {
 
 ### 6. (Optional) Frontend file-type entry
 
-If the card needs an icon or a custom list-component in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
+If the card needs an icon in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
 
 ```ts
-registerFileType({ type: "my-thing" }, { icon: CardIcon });
+registerFileType({ type: "my-thing" }, { listUI: { icon: CardIcon } });
+```
+
+A card type that wants its own list row — a thumbnail, a badge — writes a
+component beside its schema, as `src/schemas/my-thing.list-entry.tsx`. It takes
+`ListProps<MyThingSummaryAttrs>`, so what the schema's `summarize` returns and
+what the component reads cannot drift. `image.list-entry.tsx` is the worked
+example.
+
+A `*.list-entry.tsx` file is frontend code living in the schemas tree, and the
+build fences it as such: it may reach the schemas, core and cards trees by
+`import type` only (values come from `src/frontend/` and `src/shared/`), no
+backend module may import it, and the backend tsconfig excludes it. Register it
+in `builtins.tsx` — it does not register itself:
+
+```ts
+import { MyThingListEntry } from "@schemas/my-thing.list-entry";
+
+registerFileType({ type: "my-thing" }, {
+  listUI: { icon: CardIcon, ListComponent: MyThingListEntry },
+});
 ```
 
 ## Mutating an Existing Frontmatter Card
