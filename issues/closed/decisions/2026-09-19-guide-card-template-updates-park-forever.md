@@ -5,7 +5,13 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: split from issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (closed by refresh-maps-correctness)
+resolution: implemented
 ---
+
+> Closed: the decision is recorded (a box agent merges the update). Implementing
+> a resolution path is handed to
+> [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md),
+> which now carries this as an explicit requirement and stays open.
 
 A guide card is a learning surface: `triage-rules` accumulate
 `source: inferred` entries. Once a box learns anything, its guide differs
@@ -19,7 +25,7 @@ upstream revision can both be right, and reconciling them is judgment. The
 box agent reads the parked copy against the live card and writes the merge.
 
 That needs a resolution path to exist, which is
-[parked template resolution](../features/2026-08-24-parked-template-resolution-path.md):
+[parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md):
 something that shows local, parked and last stock, and records the result so
 the box stops being asked. This issue only records the decision.
 

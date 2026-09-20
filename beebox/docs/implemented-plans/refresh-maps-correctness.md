@@ -21,7 +21,7 @@ removes the review instruction.
 [validate-judge-lacks-ignore-policy](../../../issues/closed/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md),
 [existing-maps-as-create-forever](../../../issues/closed/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md).
 Related, not closed:
-[procedure-templates-ship-pre-one-root-paths](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md)
+[procedure-templates-ship-pre-one-root-paths](../../../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md)
 (this plan fixes the refresh-maps row of its table only; the other two
 templates stay broken).
 

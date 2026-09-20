@@ -1,11 +1,24 @@
 ---
 title: Three shipped procedure templates still name pre-one-root paths, so they cannot be installed
-workstream: unattached
+workstream: refresh-maps-correctness
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — reconciling parked `_config/_template-updates/` copies across four local boxes
+resolution: implemented
 ---
+
+> Closed by `d817052f8` (fix pre-one-root paths in procedure templates,
+> retire process-pages) and `e81209284` (stock-gate the deletion;
+> view-card-shape scans `src/views`). `process-retrospective` and
+> `view-card-shape` had their pre-one-root paths repathed;
+> `process-pages` was retired outright rather than repathed
+> (`beebox/scripts/migrate/retire-process-pages.ts`) since nothing has
+> written to its inputs since the clerk's Save Page action was removed. The
+> `prompt: >-` folding concern raised in the last paragraph was checked
+> against the remaining templates and found to be a non-issue there. The
+> adjacent guide-card learning-surface note was split out to
+> [guide-card template updates](../decisions/2026-09-19-guide-card-template-updates-park-forever.md).
 
 `beebox/templates/procedures/` ships four procedure cards. Three of them
 address the box through paths this shape does not have:

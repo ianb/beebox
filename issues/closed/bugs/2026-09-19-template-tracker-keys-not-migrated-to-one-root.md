@@ -5,7 +5,15 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: refresh-maps-correctness (worktree-refresh-maps-correctness), fixing the pre-one-root procedure templates
+resolution: implemented
 ---
+
+> Closed by `b2ae1028f` (re-key the template tracker onto v3 paths).
+> `beebox/scripts/migrate/rekey-template-versions.ts` fixes part 1 (the key
+> rename). Part 2 (an automated rewrite leaving the recorded hash stale) is
+> not fixed here — it is recorded as a requirement on
+> [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md),
+> which stays open.
 
 `_config/template-versions.json` records the stock hash `installTemplateFile`
 last installed for each template, keyed by box-relative path. The one-root
@@ -46,4 +54,4 @@ as a boxholder edit and parks every update. On `test1`, `refresh-maps` and
 force-accepted by hand. Deciding how an automated rewrite should record its
 result is tracked with the rest of the parked-template work.
 
-Related: [parked template resolution](../features/2026-08-24-parked-template-resolution-path.md).
+Related: [parked template resolution](../../features/2026-08-24-parked-template-resolution-path.md).
