@@ -1,12 +1,42 @@
 ---
 title: "The rotating voice-keyword hint is web-only; the iOS native composer shows nothing"
 workstream: ios-keyword-hints
+needs: [manual-testing]
 area: beebox
 labels: [voice, ios, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder noticing the hint is missing on the phone
 ---
+
+> **⏳ Awaiting manual testing** — the native hint surface landed in `f48ae9256`; exercise the live iOS composer on a simulator or device to confirm its placement, rotation, and accessibility hint. The native list remains local to `SpeechKeywords.swift`, and the HQ phrase is still not represented.
+
+## What is resolved
+
+Commit `f48ae9256` adds a rotating native hint beside the live microphone in
+`ios-app/BeeBox/Views/NativeComposerView.swift`. It uses native-owned phrase
+lists from `ios-app/BeeBox/Services/SpeechKeywords.swift`, shows only
+`"microphone off"` before text exists, and exposes the phrase list through the
+microphone control's accessibility hint. The focused
+`SpeechKeywordsTests.testKeywordHintsMatchNativeVoiceVocabulary` test passed on
+the iPhone 17 Pro simulator.
+
+## Remaining gap
+
+The native and web lists are still separate, as required by the mobile
+contract, so this change does not prevent future vocabulary drift. Native's
+`sendHq` action still has no displayed hint, and the fixture launch hung after
+the focused test run, so placement and rotation have not received visual
+runtime verification.
+
+## Manual testing
+
+With the native composer open on an iPhone simulator or device, start the
+microphone with and without draft text. Confirm that a phrase appears beside
+the microphone, that it changes after 10 seconds while dictation is active,
+and that the no-text state shows only `"microphone off"`. Confirm that VoiceOver
+announces the microphone's keyword guidance. This check is for visual and
+accessibility behavior; it does not close the separate HQ-vocabulary gap.
 
 While the mic is live on the web, the composer shows a rotating one-phrase
 reminder of the spoken keywords — `"send message"`, `"clean up and send"`,
