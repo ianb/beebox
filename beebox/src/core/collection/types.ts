@@ -82,18 +82,29 @@ export interface CollectionDef<
   sectionOf(item: Derived): string[];
   /** Always over ALL in-scope items, so a hidden done item still counts. */
   reduce(items: Derived[]): Reduction;
+  /**
+   * What only shows up once every card has been read — a duplicate id, say.
+   * Runs over every in-scope item and appends to the issues channel, so a
+   * cross-card problem stays as visible as a card that failed to load.
+   */
+  crossCardIssues?(items: Derived[]): CollectionIssue[];
   groupings: Record<string, (item: Derived) => GroupKey>;
 }
 
 export interface CollectionQuery<Params> {
   /** Box-relative directory or card path; `""` is the box. */
   here: string;
-  /** Default: the subtree of `here`. */
-  glob?: string;
+  /**
+   * Default: the subtree of `here`. Typed `| undefined` rather than plain
+   * optional so a query built from a zod-optional input (the tRPC router,
+   * `bbx query`'s flags) assigns straight through under
+   * `exactOptionalPropertyTypes`.
+   */
+  glob?: string | undefined;
   /** Default true, unless `here` is the box. */
-  includeReferring?: boolean;
+  includeReferring?: boolean | undefined;
   /** A key of `groupings`. Default `"place"`. */
-  group?: string;
+  group?: string | undefined;
   params: Params;
 }
 

@@ -98,6 +98,7 @@ export async function runCollection<
 
   cards.sort((a, b) => a.relPath.localeCompare(b.relPath));
   const everything = cards.flatMap((card) => card.inScope);
+  if (def.crossCardIssues !== undefined) issues.push(...def.crossCardIssues(everything));
   return {
     query: resolved,
     reduction: def.reduce(everything),

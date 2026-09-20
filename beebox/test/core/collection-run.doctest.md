@@ -299,6 +299,18 @@ withIssue.groups[0].rows.length
 => 2
 ```
 
+Some problems only appear once every card has been read. A collection may
+declare a `crossCardIssues` pass for those; todos use it for a duplicate `id`,
+which hides nothing but does break the one handle an agent has for naming a
+single todo.
+
+```ts continue
+await box.write(`${KITCHEN}/Dup.doc.card`, doc("Dup", '{% todo id="grout" %}One{% /todo %}\n\n{% todo id="grout" %}Two{% /todo %}\n'));
+const dup = await run({ here: KITCHEN, includeReferring: false, params: params({}) });
+JSON.stringify(dup.issues.filter((i) => i.kind === "duplicate-id").map((i) => i.message))
+=> ["duplicate todo id \"grout\" used at: _content/projects/Kitchen/Dup.doc.card:4, _content/projects/Kitchen/Dup.doc.card:6"]
+```
+
 The reference pass is deliberately quieter: a card outside the scope that
 fails to parse is skipped without an issue, because an unparseable card cannot
 be shown to refer to anything, and a project-scoped view should not fill up

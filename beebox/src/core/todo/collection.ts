@@ -21,7 +21,7 @@ import { assertNever } from "../../lib/invariant.js";
 import { compareTodoLocator, formatTodoLocation, type CollectedTodo, type TodoItem } from "./collect-types.js";
 import { deriveTodo } from "./derive.js";
 import { extractCardTodos, mayHaveTodo } from "./extract.js";
-import type { CollectionDef, DeriveContext, GroupKey } from "../collection/types.js";
+import type { CollectionDef, CollectionIssue, DeriveContext, GroupKey } from "../collection/types.js";
 
 /** A collected todo plus the one thing that needs a baseline rather than a clock. */
 export interface DerivedTodo extends CollectedTodo {
@@ -159,6 +159,32 @@ function countStatus(counts: { open: number; done: number; dropped: number; park
   }
 }
 
+/**
+ * The same `id` on two todos, box-wide. Nothing is hidden by it — both todos
+ * still list — but an `id` is how an agent names one todo to change it, so a
+ * collision has to be visible.
+ */
+function duplicateIdIssues(items: DerivedTodo[]): CollectionIssue[] {
+  const byId = new Map<string, string[]>();
+  for (const item of items) {
+    if (item.id === undefined) continue;
+    const locations = byId.get(item.id) ?? [];
+    locations.push(formatTodoLocation(item));
+    byId.set(item.id, locations);
+  }
+  const issues: CollectionIssue[] = [];
+  for (const [id, locations] of byId) {
+    if (locations.length < 2) continue;
+    const sorted = locations.toSorted();
+    issues.push({
+      kind: "duplicate-id",
+      path: sorted.join(", "),
+      message: `duplicate todo id "${id}" used at: ${sorted.join(", ")}`,
+    });
+  }
+  return issues.toSorted((a, b) => a.path.localeCompare(b.path));
+}
+
 export const todoCollection: CollectionDef<TodoItem, DerivedTodo, TodoParams, TodoReduction> = {
   name: "todos",
   params: TodoParamsSchema,
@@ -173,5 +199,6 @@ export const todoCollection: CollectionDef<TodoItem, DerivedTodo, TodoParams, To
   compareItems: (a, b) => compareTodoLocator(a.locator, b.locator),
   sectionOf: (item) => item.sectionPath,
   reduce: reduceTodos,
+  crossCardIssues: duplicateIdIssues,
   groupings: { place: placeGroup, plate: plateGroup },
 };
