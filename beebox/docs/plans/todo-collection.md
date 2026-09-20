@@ -33,8 +33,8 @@ other open item covers this work.
 
 ## Smallest fix and budget
 
-**Smallest fix.** Add `sectionPath` and `parent` to `CollectedTodo`, stop a
-nested todo's text leaking into its parent, and group `TodoViewCard` by card.
+**Smallest fix.** Add `sectionPath` and `parent` to `CollectedTodo`, and group
+`TodoViewCard` by card, section, and parent.
 About 250 source lines and 150 test lines. It fixes the list for a box whose
 todos are undated. It leaves the agent command todo-specific, leaves the clock
 inside extraction, gives no reference scope, and leaves box-local card types
@@ -44,15 +44,18 @@ with a filename for a header.
 
 | Track | Source | Test |
 |---|---|---|
-| 1. `summarize` on the card type | 250 | 200 |
-| 2. Pure extract with position and references | 350 | 300 |
-| 3. Collection pipeline and the todo definition | 350 | 300 |
-| 4. Consumers: list, `bbx query`, sweep, ambient line | 700 | 450 |
-| 5. Agent guide, schema instructions, audits | 50 | — |
+| 1. `summarize` on the card type | 300 | 250 |
+| 2. Pure extract with position and references | 400 | 350 |
+| 3. Collection pipeline and the todo definition | 450 | 400 |
+| 4. Consumers: list, `bbx query`, sweep, ambient line | 900 | 650 |
+| 5. Agent guide, schema instructions, audits | 100 | — |
 
-About 3,150 changed source and test lines, counting deletions
+About 4,000 changed source and test lines, counting deletions
 (`loader-registrations.ts`, most of `cli/commands/todos.ts`, most of
-`TodoViewCard.tsx`, their doctests). Authored docs add about 250 lines.
+`TodoViewCard.tsx`, their doctests). Authored docs add about 250 lines. The
+first estimate was 3,150; cross-model review judged it low against the number
+of surfaces that name `bbx todos` and the four doctest suites that move, and
+the table was raised.
 
 > **BIG CHANGE.** The size comes from four consumers moving to one result
 > shape, and from their doctests moving with them. The boxholder asked
@@ -111,10 +114,16 @@ boxholder's explicit request, and says so in the budget above.
   `deriveTodoPlateState`, already pure: `:13-15` *"`now`/`timeZone` are always
   passed in by the caller"*. **Reused** unchanged as the derive stage.
 - **The body walk** — `collect-body.ts:68-71`, a flat `ast.walk()` with no
-  parent, heading, or sibling context. `walkChildren` (`:143-158`) recurses
-  into every child, so a nested todo's text lands in its parent's `text`, and
-  the nested todo is also collected on its own. **Rebuilt** in Track 2. No
-  doctest covers nesting today.
+  parent, heading, or sibling context. **Rebuilt** in Track 2. Verified shape
+  of the raw AST for `- {% todo %}A{% /todo %} — note [link](…)` with an
+  indented `- {% todo %}B{% /todo %}` under it (probe run 2026-09-20):
+  `item > inline > [tag:todo > text "A", text " — note ", link]`, and the
+  nested `list` is a **sibling of that `inline` under the same `item`**, not a
+  child of the todo tag. So the ordinary nested shape does not leak text into
+  the parent (an earlier draft of this plan claimed it did). A block-form todo
+  that wraps a list does contain its nested todos, and `walkChildren`
+  (`:143-158`) would then merge their text. No doctest covers either nesting
+  shape today.
 - **Body reference extraction** — `src/core/body-refs.ts:296` `extractBodyRefs`
   and `:110` `extractBodyLinks`, with `src/shared/ref-path.ts:100` `parseRef`
   and `:176` `resolveRefPath`. **Reused** for item references. Per
@@ -184,7 +193,7 @@ cannot take part.
 
 ```ts
 // src/cards/schema.ts — CardSchemaConfig gains:
-summarize?: (card: InferFieldsRecord<TFields> & GlobalFields, base: CardSummaryBase) => CardSummaryParts;
+summarize?: (card: InferCardFields<CardSchema<TTag, TFields>>, base: CardSummaryBase) => CardSummaryParts;
 
 interface CardSummaryBase { title: string; contains?: string; symbol?: CardSymbolData }
 interface CardSummaryParts extends CardSummaryBase { detail?: string; attrs?: unknown }
@@ -199,23 +208,33 @@ interface CardSummaryParts extends CardSummaryBase { detail?: string; attrs?: un
   shows it under the title.
 - `summaryText(summary): string` in `src/core/file-summary.ts` returns
   `title`, then ` — detail` when present. It is the text form for Track 4.
+- The hook type uses the exported `InferCardFields` (`src/cards/schema.ts:369`),
+  not the private `InferFieldsRecord` (`:351`). `CardSchema` (`:285`) gains the
+  field so that the hook survives `cardSchema()`.
 - `src/core/loader-registry.ts` keeps path loaders for non-card files
   (`registerPathLoader`, `:53`) and resolves a card's summary from its schema.
-  `summarize(input)` gains a `cardSchemas` argument, which
-  `files.summarize` already has the means to build (`createCardSchemaMap`).
+  `summarize(input)` (`:101`) is schema-free today; it gains a `cardSchemas`
+  argument. `files.summarize` has `boxRoot` and already builds a load context
+  before it reads a card (`src/webapp/trpc/routers/files.ts:47`), so box-local
+  schemas are reachable there. `files.summarize` is the registry's only caller
+  outside tests.
 - `memoLoader` and `imageLoader` become `summarize` on their schemas.
   `loader-registrations.ts` is deleted.
 - **The React half is a separate registry, located beside the schema**
   (boxholder, 2026-09-20). Schemas load in the server and the CLI; a component
   on the schema object would pull frontend code into both. So the registry
-  stays `registerFileType(... listUI ...)`, and a type's list component moves
-  next to its schema: `src/schemas/<type>.list-entry.tsx`, typed against the
-  same `attrs` type that the type's `summarize` returns. The frontend's
-  renderer setup imports these files; nothing under `src/core`, `src/cli`, or
-  `src/webapp` may. `ImageCardListEntry.tsx` moves first. The frontend lint
-  profile (the `className` boundary, React rules) must apply to
-  `src/schemas/*.list-entry.tsx`; the chunk extends the ESLint file globs for
-  it and weakens no rule.
+  stays `registerFileType(... listUI ...)`.
+  **Placement.** A component file inside `src/schemas/` does not work without
+  weakening a deliberate boundary: the frontend tsconfig does not include
+  `../schemas` (`src/frontend/tsconfig.json:48`), `@schemas/*` is type-only and
+  unaliased in Vite on purpose, and `src/frontend/eslint.config.ts:50` bans
+  value imports through it; the backend tsconfig would also pick the file up.
+  The nearest placement that keeps every rule: a mirror directory,
+  `src/frontend/src/schemas/<type>.list-entry.tsx`, one file per type with the
+  schema's basename, typed by a type-only import of the `attrs` type that the
+  type's `summarize` returns, and registered from the same file.
+  `ImageCardListEntry.tsx` moves there first. "Nearby" is then by name and by
+  type, not by directory. See Open design questions.
 
 **Vocabulary lock-ins.** The config key `summarize`; the summary field
 `detail`; `summaryText`. `summarize` becomes part of the public `beebox/cards`
@@ -234,8 +253,7 @@ other card. Each item keeps where it sits and what it points at.
 **Why this needs to change.** In a working box, 145 of about 152 open todos
 have no date, so plate state puts them in one group. Their meaning is in the
 heading above them, the item they nest under, and the note after the closing
-tag. The collector drops all three, and merges a nested todo's text into its
-parent.
+tag. The collector drops all three.
 
 **Direction.**
 
@@ -250,20 +268,33 @@ interface TodoItem {
   sectionPath: string[];      // heading texts above the item, outermost first; [] for frontmatter todos
   parent: TodoLocator | null; // the todo whose list item contains this one
   annotation: string;         // text after the closing tag, inside the same paragraph; "" when none
-  refs: string[];             // box-relative card paths, resolved; from see-also refs and from links in text and annotation
+  refs: string[];             // box-relative paths, resolved and unchecked; from see-also refs and from links in text and annotation
 }
 ```
 
-- The walk keeps a stack: current headings by level, and enclosing todos. It
-  replaces `ast.walk()` at `collect-body.ts:68`.
-- A todo's `text` stops at a nested todo. The nested todo's text belongs to the
-  nested item only.
-- `annotation` applies to an inline todo: the text of the sibling nodes that
-  follow it in the same paragraph. A block todo has `annotation: ""`.
+- The walk is recursive over `children` with its own stack, because raw
+  Markdoc nodes have no parent pointer. It replaces `ast.walk()` at
+  `collect-body.ts:68`. The stack holds: the current headings by level
+  (`heading` nodes carry `attributes.level`; their text is the flattened
+  `inline` child), and the enclosing list `item` nodes.
+- **`parent` comes from list-item ancestry.** A todo *owns* the `item` whose
+  own `inline` (or first paragraph) contains it. A todo inside a nested list
+  takes as `parent` the todo that owns the nearest enclosing `item`. An
+  enclosing `item` with no todo is skipped. A block-form todo is the parent of
+  the todos inside it.
+- A todo's `text` stops at a nested todo tag, which matters only for the
+  block form.
+- `annotation` applies to an inline todo: the flattened text of the sibling
+  nodes that follow the tag inside the same `inline` node, found by index in
+  the parent's `children`. When one `inline` holds two todos, the annotation
+  of the first stops at the second. A block todo has `annotation: ""`.
 - `refs` come from `{% see-also ref %}`, and from Markdown links in the todo's
   text and annotation, through `extractBodyLinks`, `parseRef`, and
-  `resolveRefPath` with `kind: "card"`. External links and unresolvable refs
-  are left out of `refs`; link validation stays `bbx validate`'s job.
+  `resolveRefPath` with `kind: "card"`. `resolveRefPath` resolves a string
+  and does not prove that the target exists or is a card
+  (`src/shared/ref-path.ts:176`), so `refs` are **box-relative paths**, files
+  or directories, unchecked. External links and refs that escape the box are
+  left out; link validation stays `bbx validate`'s job.
 - `plateState` leaves the item. `deriveTodo(item, plateCtx): DerivedTodo` adds
   it, using `deriveTodoPlateState` unchanged.
 - `CollectedTodo` becomes `DerivedTodo`. `collectTodos` stays as extract plus
@@ -273,11 +304,11 @@ interface TodoItem {
 **Vocabulary lock-ins.** `sectionPath`, `parent`, `annotation`, `refs` appear in
 `bbx query todos --json` and in the review job brief.
 
-**First implementation chunk.** `extract.ts` with the stack walk, nested-text
-fix, and `sectionPath` and `parent`; new cases in
-`test/core/todo-collect.doctest.md`: heading path, two levels of nesting, a
-nested todo's text absent from its parent, frontmatter todos with
-`sectionPath: []`.
+**First implementation chunk.** `extract.ts` with the stack walk,
+`sectionPath`, and `parent`; new cases in `test/core/todo-collect.doctest.md`:
+heading path, two levels of list nesting, an enclosing item with no todo, a
+block-form todo that wraps a nested todo (its text excludes the child's),
+frontmatter todos with `sectionPath: []`.
 
 ### Track 3 — The collection pipeline and the todo definition
 
@@ -297,10 +328,10 @@ interface CollectionDef<Item, Derived, Params, Reduction> {
   name: string;
   params: z.ZodType<Params>;
   extract(input: ExtractInput): { items: Item[]; issues: CollectionIssue[] };   // pure, one card
-  derive(item: Item, ctx: DeriveContext): Derived;                              // ctx: now, timeZone
-  filter(item: Derived, params: Params): boolean;
+  derive(item: Item, ctx: DeriveContext): Derived;                              // ctx: now, timeZone, since
+  matches(item: Derived, params: Params): boolean;
   refsOf(item: Derived): string[];
-  reduce(items: Derived[]): Reduction;
+  reduce(items: Derived[]): Reduction;                                          // always over ALL items in scope
   groupings: Record<string, (item: Derived) => GroupKey>;                       // key, label, order
 }
 
@@ -321,21 +352,49 @@ interface CollectionResult<Derived, Reduction> {
 interface Row<Derived, Reduction> {
   card: FileSummary;            // Track 1
   via: "scope" | "reference";
-  reduction: Reduction;
+  reduction: Reduction;         // over every item of this card that is in scope
   sections: Array<{ path: string[]; reduction: Reduction }>;
-  items: Derived[];
+  items: Array<Derived & { matching: boolean }>;   // matching items, plus non-matching ancestors for context
 }
 ```
+
+- **All items against matching items.** The runner keeps two sets per card:
+  every derived item in scope, and the subset where `matches` is true.
+  Reductions read the first set, so a hidden done item still counts. `items`
+  carries the second set plus the ancestors that give it context, each marked.
+  A card with no matching item has no row.
+- **The runner holds no state.** `DeriveContext` is
+  `{ now, timeZone, since: number | null }`. `since` is a box-local date epoch
+  that the *caller* supplies. The review sweep keeps its own baseline file and
+  its own rule for advancing it (`review-sweep.ts:216-232`); it passes
+  `lastSweepEpoch` as `since`, and the todo `derive` sets
+  `stirring: boolean` from it. Other callers pass `null`.
+- **`count.ts` does not use the runner.** It stays a fast path over `extract`
+  and `derive`.
 
 - `runCollection(boxRoot, def, query)` in `src/core/collection/run.ts` does the
   stages in order. Stage 1 reuses `listTodoCardPaths` (renamed
   `listScopedCardPaths`, moved beside the runner) with its traversal guards.
-- **Reference scope.** With `includeReferring`, the runner extracts box-wide.
-  A card inside the glob contributes all its items, `via: "scope"`. A card
-  outside contributes only items where some `refsOf(item)` is `here` or under
-  it, plus those items' ancestors, `via: "reference"`. There is no index; this
-  costs one box-wide extract, which is what `collectTodos` costs today with no
-  glob.
+- **`here`, exactly.** `here` is `""` (the box), a directory, or a card path.
+  The scope glob defaults to `<dir>/**` for a directory and to the one card
+  for a card path. A reference *matches* when the resolved ref equals `here`,
+  or, for a directory, starts with `here + "/"`. A card path has no subtree:
+  a ref to its sibling does not match. The `todo-view` card keeps its meaning
+  by passing its own **directory** as `here` (as `todos.ts:88-94` computes
+  today), not its own path.
+- **Reference scope.** With `includeReferring`, a card inside the glob
+  contributes all its items, `via: "scope"`, whether or not they also refer
+  into `here`. A card outside the glob contributes only items with a matching
+  ref, plus those items' ancestors, `via: "reference"`.
+- **Cost, stated plainly.** There is no index, so `includeReferring` reads
+  every card in the box. For the box-wide plate this is today's cost. For a
+  project-local `todo-view` it is a **regression**: today that query scans
+  only its subtree (`todos.ts:65`, `:88`). Two things bound it until indexing
+  exists: cards outside the glob are skipped without a parse unless their text
+  can hold a todo (the `mayHaveTodo` test, `count.ts:52-54`, moved to a shared
+  place), and `--no-referring` / `includeReferring: false` restores the
+  subtree-only scan. The timing doctest records both numbers on the fixture
+  box.
 - **Groupings for todos.** `place` (one group; rows are cards in path order;
   the renderer nests sections and parents) and `plate` (the six plate states in
   today's order). Rows form again inside each group.
@@ -343,8 +402,6 @@ interface Row<Derived, Reduction> {
   where `next` is the earliest `due` or resolved `start` among open items.
 - **Todo params.** `{ status: TodoStatus[] (default open, parked), assigned?, onPlate? }`
   — the `todos.list` inputs, unchanged in meaning.
-- Done and dropped items count in every reduction even when the filter hides
-  them, so "5 of 7" is right.
 - The stage rules are enforced by the types: `extract` has no `ctx` with a
   clock; only `derive` receives `DeriveContext`.
 
@@ -451,13 +508,14 @@ No critical gap: each row has planned handling and a test.
 |---|---|---|---|
 | A type's `summarize` throws on a valid card | planned (loader-registry doctest) | catch, log with type and path, return `base` | clear (logged; header falls back) |
 | `summarize` returns an empty `title` | planned | replace with `base.title` | clear |
-| Server code imports a `*.list-entry.tsx` file | planned (`pnpm lint:circular` plus an ESLint import restriction on the glob) | lint error at commit | clear |
+| A list component's `attrs` type drifts from what `summarize` returns | structural | the component imports the type from the schema module (type-only), so drift is a compile error | clear |
 | A heading contains inline markup or a tag | planned (todo-collect doctest) | flatten to text, as todo text is today | clear |
 | A todo nested three levels deep | planned | `parent` chain; renderer indents; no depth cap | clear |
 | A nested todo's parent is filtered out (parent done, child open) | planned (collection-run doctest) | keep the parent as a context-only ancestor, marked not matching | clear |
 | Annotation text is very long | planned (frontend logic doctest) | list truncates with expand; JSON keeps all | clear |
 | A link in a todo points at a card that moved | existing (`bbx validate` link warnings) | unresolvable refs are left out of `refs`; the todo still lists under its own card | clear for the link; the missing reference row is silent, accepted because validate reports the link |
-| `here` is a card path, not a directory | planned | scope is the card's directory subtree; references match the card or its directory | clear |
+| `here` is a card path, not a directory | planned (collection-run doctest) | scope is that one card; a reference matches only the card itself | clear |
+| A ref resolves to a path that does not exist | planned | it matches by string like any other; a dangling ref under `here` still lists the todo, which is the useful outcome | clear |
 | `--here` or `glob` contains `..` | existing (`trpc-todos-list`, `todo-collect` doctests), moved | reject, as `todos.ts:50-57` and `isUnsafeGlobPattern` do | clear |
 | Box-wide extract with `includeReferring` is slow on a large box | planned (timing note in collection-run doctest on the fixture box) | same cost as today's unscoped `collectTodos`; no new handling | clear (slow, not wrong) |
 | A card fails to load inside the scope | existing (`todo-collect` doctest) | `issues` channel, shown in the list and the CLI | clear |
@@ -516,10 +574,22 @@ No critical gap: each row has planned handling and a test.
 
 ## Open design questions
 
-- **What happens to `bbx todos`.** Lean: remove it, and make the unknown-verb
-  error for `todos` name `bbx query todos`. The guide and audits change in the
-  same plan, so a new session never learns the old verb. The alternative, an
-  alias, keeps two spellings for one thing. Decide before Track 4's CLI chunk.
+- **What happens to `bbx todos`.** The verb is named in more places than the
+  guide: the smoke entry (`src/cli/surface-data.ts:63`),
+  `test/cli/surface.doctest.md`, the ambient-line text and its doctests
+  (`ambient-summary.ts:28`, `session-context`, reactor prompts), the
+  `todo-view` and `todo-review-job` instructions, `docs/cards-as-markdown.md`,
+  and three audits. The CLI has no retired-verb hint today; `legacy-argv.ts`
+  rewrites only the `migrate`/`init` handoff (`:26`, `:48`). Lean: remove the
+  verb, change every mention in this plan, and add a small retired-verb table
+  that makes `bbx todos` fail with "use `bbx query todos`" (new behaviour,
+  about 40 lines, reusable for the next rename). The alternative is to keep
+  `bbx todos` as a second spelling. Decide before Track 4's CLI chunk.
+- **Where a type's list component lives.** Direction above is the mirror
+  directory `src/frontend/src/schemas/`. The boxholder asked for "very nearby
+  the rest of the schema/types". True co-location in `src/schemas/` needs the
+  frontend's type-only `@schemas` rule opened for one file pattern, which is a
+  lint-boundary change that needs the boxholder's explicit permission.
 - **Whether `place` order is path order or landmark order.** Lean: path order
   now; it is deterministic and needs nothing new.
 - **Whether a referring item shows under its own card or under the card it
