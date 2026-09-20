@@ -23,7 +23,7 @@ const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"]
 /**
  * A `glob`/`here` input that could resolve outside the box root: an
  * OS-absolute pattern (the `glob` package honors these verbatim, ignoring
- * `cwd`) or any `..` path segment. Every consumer (`todos.list`'s zod input,
+ * `cwd`) or any `..` path segment. Every consumer (`collections.query`'s zod input,
  * `bbx todos --glob`, the collection runner) shares this one guard rather
  * than each re-deriving it, so the box-root boundary can't drift out of sync
  * between them.

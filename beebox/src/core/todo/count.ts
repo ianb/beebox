@@ -22,7 +22,7 @@
  * 2. A card whose text can't possibly name a todo is skipped without parsing.
  *    The full collector still parses it, because it also reports cards that
  *    fail to load — issues the badge count has no way to surface anyway; they
- *    stay visible through `bbx todos` / `todos.list`, which is where a
+ *    stay visible through `bbx query todos` / `collections.query`, where a
  *    boxholder looks for them.
  *
  * On a ~860-card box that is ~40 ms instead of ~200 ms.

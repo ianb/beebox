@@ -2,7 +2,7 @@
  * Todos as a collection — the first (and today the only) `CollectionDef`
  * (`docs/plans/todo-collection.md`, Track 3).
  *
- * Nothing new is decided here. The filter is `todos.list`'s filter, the plate
+ * Nothing new is decided here. The filter is the old `todos.list` filter, the plate
  * grouping is the order and the labels the list already shows, `stirring` is
  * the review sweep's own rule, and the reduction counts exactly what the
  * ambient line and the card header need. What changes is that all of it is
@@ -33,7 +33,7 @@ export interface DerivedTodo extends CollectedTodo {
   stirring: boolean;
 }
 
-/** What a todo query can ask for — `todos.list`'s inputs, unchanged in meaning. */
+/** What a todo query can ask for — the old `todos.list` inputs, unchanged in meaning. */
 export const TodoParamsSchema = z.object({
   status: z.array(z.enum(TODO_STATUSES)).default(["open", "parked"]),
   assigned: z.string().optional(),

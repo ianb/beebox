@@ -9,7 +9,6 @@ import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
 import { collectionsRouter } from "./routers/collections.js";
-import { todosRouter } from "./routers/todos.js";
 import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
@@ -48,7 +47,6 @@ export const appRouter = router({
   debugLog: debugLogRouter,
   admin: adminRouter,
   collections: collectionsRouter,
-  todos: todosRouter,
   health: healthRouter,
   drive: driveRouter,
   files: filesRouter,

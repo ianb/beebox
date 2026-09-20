@@ -1,16 +1,16 @@
 /**
- * `todo-view` card schema (`docs/implemented-plans/todo-annotation.md`, Track 4) — a
+ * `todo-view` card schema (`docs/plans/todo-collection.md`, Track 4) — a
  * frontmatter-only card that IS a todos display surface: its fields are a
- * query over the collector (`src/core/todo/collect.ts`), rendered by
+ * query over the todo collection (`src/core/todo/collection.ts`), rendered by
  * `TodoViewCard` (`src/frontend/src/components/TodoViewCard.tsx`) via the
- * `todos.list` tRPC procedure.
+ * `collections.query` tRPC procedure.
  *
  * **`glob` has no schema default on purpose.** `cardSchema` never sees a
  * card's own path, so "default to this card's own directory subtree" can't
  * be expressed here (a static `"**"` default would make every project-local
- * instance silently box-wide). The renderer passes the card's own path as
- * `cardPath` to `todos.list`, which resolves an omitted `glob` server-side to
- * `<card's directory>/**` — see `src/webapp/trpc/routers/todos.ts`.
+ * instance silently box-wide). The renderer passes the card's own DIRECTORY
+ * as the query's `here`, and an omitted `glob` follows from that —
+ * `<card's directory>/**`, plus todos elsewhere that link into it.
  */
 
 import { z } from "zod";
