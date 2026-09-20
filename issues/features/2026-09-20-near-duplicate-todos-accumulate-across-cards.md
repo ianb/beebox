@@ -66,7 +66,7 @@ culling? Pointers?"
 ## Related
 
 - [Collection views](2026-08-19-collection-views-are-badly-defined.md) and its
-  [design notes](../../beebox/docs/plans/collections.md): a list of todos over
+  [design notes](../../beebox/docs/plans/collections-design-notes.md): a list of todos over
   a whole box is where the copies become visible, and a scope that follows
   references makes them more visible.
 - [Todos as inline things to think about](2026-08-30-todos-inline-things-to-think-about.md):

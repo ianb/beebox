@@ -1,5 +1,5 @@
 ---
-title: "Collections — queries over cards, with todos as the worked example"
+title: "Collections — design notes: queries over cards, with todos as the worked example"
 status: draft
 workstream: collection-views
 issues:
