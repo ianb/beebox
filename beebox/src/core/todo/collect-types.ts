@@ -23,8 +23,17 @@ export interface TodoSeeAlso {
   note: string | undefined;
 }
 
-/** One collected todo, from either capture form, with its derived plate-state. */
-export interface CollectedTodo {
+/**
+ * One todo exactly as its card spells it — the output of the PURE extract
+ * stage (`extract.ts`). Nothing here depends on a clock, a timezone, or any
+ * other card, which is what lets a cache sit in front of extraction later
+ * (`docs/plans/todo-collection.md`, Track 2).
+ *
+ * The three position/reference fields are what make an undated todo legible:
+ * where it was written (`sectionPath`, `parent`), what the author said right
+ * after it (`annotation`), and what it points at (`refs`).
+ */
+export interface TodoItem {
   /** Box-relative card path. */
   path: string;
   locator: TodoLocator;
@@ -37,6 +46,22 @@ export interface CollectedTodo {
   due: string | undefined;
   start: string | undefined;
   seeAlso: TodoSeeAlso[];
+  /** Heading texts above the todo, outermost first. `[]` for a frontmatter todo, or a body todo written above the first heading. */
+  sectionPath: string[];
+  /** The todo whose list item (or block-form `{% todo %}`) contains this one, or `null` at the top level. */
+  parent: TodoLocator | null;
+  /** Text written after the closing tag inside the same paragraph, with its leading separator trimmed. `""` when there is none. */
+  annotation: string;
+  /** Box-relative paths this todo points at — resolved, deduped, in order of appearance, NOT checked for existence. */
+  refs: string[];
+}
+
+/**
+ * One collected todo with the box-local plate-state derived onto it — the
+ * output of the derive stage (`derive.ts`). The clock lives here and nowhere
+ * upstream.
+ */
+export interface CollectedTodo extends TodoItem {
   plateState: TodoPlateState;
 }
 

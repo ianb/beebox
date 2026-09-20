@@ -33,25 +33,14 @@ import * as path from "node:path";
 import { errorMessage } from "../../lib/error-guards.js";
 import { mapInBatches } from "../../lib/map-batched.js";
 import { isBoxholderTodo } from "../../shared/todo-model.js";
-import { buildTodoScanContext, collectCardTodos, listTodoCardPaths } from "./collect.js";
-import type { CollectedTodo, TodoCollectionIssue } from "./collect-types.js";
+import { buildTodoScanContext } from "./collect.js";
+import { listScopedCardPaths } from "../collection/card-scope.js";
+import { extractCardTodos, mayHaveTodo } from "./extract.js";
+import { deriveTodo } from "./derive.js";
+import type { CollectedTodo } from "./collect-types.js";
 
 /** Cards read at once. High enough to saturate the filesystem, low enough to bound open handles. */
 const READ_CONCURRENCY = 64;
-
-/**
- * Cheapest possible proof that a card cannot hold a todo in either capture
- * form. Both forms have to spell "todo" in the file: the body tag is matched
- * on `node.tag === "todo"` (`collect-body.ts`), and the frontmatter list is
- * the `todos:` key. The one way YAML can name that key without the literal
- * characters is an escape inside a double-quoted key (`"todos":`), so a
- * backslash anywhere in the card also buys a full parse — pathological, but
- * cheap to be right about, and a backslash is rare enough that the fast path
- * survives.
- */
-function mayHaveTodo(content: string): boolean {
-  return content.includes("todo") || content.includes("\\");
-}
 
 async function readCardText(absPath: string): Promise<string | null> {
   try {
@@ -70,14 +59,11 @@ async function readCardText(absPath: string): Promise<string | null> {
  */
 export async function countOnPlateTodos(boxRoot: string): Promise<number> {
   const [absPaths, { ctx, plateCtx }] = await Promise.all([
-    listTodoCardPaths(boxRoot, "**/*.card"),
+    listScopedCardPaths(boxRoot, "**/*.card"),
     buildTodoScanContext(boxRoot),
   ]);
 
   const todos: CollectedTodo[] = [];
-  // Extraction wants an issue sink; nothing reads it on this path (see the
-  // module comment) — the badge is a number, not a report.
-  const issues: TodoCollectionIssue[] = [];
 
   const read = await mapInBatches(absPaths, {
     size: READ_CONCURRENCY,
@@ -86,15 +72,10 @@ export async function countOnPlateTodos(boxRoot: string): Promise<number> {
   for (const { absPath, content } of read) {
     if (content === null) continue;
     if (!mayHaveTodo(content)) continue;
-    collectCardTodos({
-      absPath,
-      relPath: path.relative(boxRoot, absPath),
-      content,
-      ctx,
-      plateCtx,
-      todos,
-      issues,
-    });
+    // Extraction also reports issues; nothing reads them on this path (see the
+    // module comment) — the badge is a number, not a report.
+    const extracted = extractCardTodos({ relPath: path.relative(boxRoot, absPath), content, ctx });
+    for (const item of extracted.items) todos.push(deriveTodo(item, plateCtx));
   }
 
   return todos.filter((t) => isBoxholderTodo(t) && (t.plateState === "escalated" || t.plateState === "on-plate")).length;

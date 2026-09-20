@@ -132,7 +132,7 @@ PARKED (1)
   _content/plate.memo.card:11  [parked-one] Parked
 «blankline»
 1 cards could not be read for todos:
-  [load] _content/bad.memo.card: /«*»_content/bad.memo.card: invalid memo frontmatter:
+  [load] _content/bad.memo.card: _content/bad.memo.card: invalid memo frontmatter:
   - created: Invalid ISO datetime
 ```
 

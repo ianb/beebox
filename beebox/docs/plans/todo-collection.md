@@ -324,9 +324,13 @@ interface TodoItem {
   left out; link validation stays `bbx validate`'s job.
 - `plateState` leaves the item. `deriveTodo(item, plateCtx): DerivedTodo` adds
   it, using `deriveTodoPlateState` unchanged.
-- `CollectedTodo` becomes `DerivedTodo`. `collectTodos` stays as extract plus
-  derive over a glob, so callers outside Track 4 keep working through the
-  transition. `count.ts` switches to the same two calls.
+- **Built:** `TodoItem` is the extracted shape and `CollectedTodo` keeps its
+  name as the derived one (`TodoItem` plus `plateState`), because every
+  consumer of the name is rewritten in Track 4 anyway — renaming it twice
+  would be churn. `collectTodos` stays as extract plus derive over a glob, so
+  callers outside Track 4 keep working through the transition. `count.ts`
+  switches to the same two calls, and `mayHaveTodo` moves to `extract.ts`
+  where both it and the runner can reach it.
 
 **Vocabulary lock-ins.** `sectionPath`, `parent`, `annotation`, `refs` appear in
 `bbx query todos --json` and in the review job brief.

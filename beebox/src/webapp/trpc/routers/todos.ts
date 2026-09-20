@@ -8,7 +8,8 @@
 import * as path from "node:path";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
-import { collectTodos, isUnsafeGlobPattern } from "../../../core/todo/collect.js";
+import { collectTodos } from "../../../core/todo/collect.js";
+import { isUnsafeGlobPattern } from "../../../core/collection/card-scope.js";
 import type { TodoCollectionResult } from "../../../core/todo/collect-types.js";
 import { TODO_STATUSES } from "../../../shared/todo-model.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
