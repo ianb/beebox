@@ -87,6 +87,13 @@ function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact:
   return (
     <div className="min-w-0">
       <div className="truncate text-warm-800 font-medium">{data.title}</div>
+      {/* The card type's own second line — a status, a count, a date. It sits
+          above `contains:` because the type wrote it about this card. */}
+      {data.detail === undefined ? null : (
+        <div className="truncate text-xs text-warm-600" title={data.detail}>
+          {data.detail}
+        </div>
+      )}
       {compact || data.contains === undefined ? null : (
         <div className="truncate text-xs text-warm-600" title={data.contains}>
           {data.contains}
