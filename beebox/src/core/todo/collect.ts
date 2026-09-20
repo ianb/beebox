@@ -36,9 +36,8 @@ import type {
   CollectTodosOptions,
   TodoCollectionIssue,
   TodoCollectionResult,
-  TodoLocator,
 } from "./collect-types.js";
-import { formatTodoLocation } from "./collect-types.js";
+import { compareTodoLocator, formatTodoLocation } from "./collect-types.js";
 
 /** The per-card load + plate-state context both scans need. */
 export async function buildTodoScanContext(boxRoot: string): Promise<{ ctx: LoadCardContext; plateCtx: TodoPlateContext }> {
@@ -122,13 +121,5 @@ function duplicateIdIssues(todos: CollectedTodo[]): TodoCollectionIssue[] {
 
 function compareByLocator(a: CollectedTodo, b: CollectedTodo): number {
   if (a.path !== b.path) return a.path.localeCompare(b.path);
-  return compareLocator(a.locator, b.locator);
-}
-
-/** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */
-function compareLocator(a: TodoLocator, b: TodoLocator): number {
-  if (a.kind !== b.kind) return a.kind === "body" ? -1 : 1;
-  if (a.kind === "body" && b.kind === "body") return a.line - b.line;
-  if (a.kind === "frontmatter" && b.kind === "frontmatter") return a.index - b.index;
-  return 0;
+  return compareTodoLocator(a.locator, b.locator);
 }

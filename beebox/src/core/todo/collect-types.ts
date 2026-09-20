@@ -107,6 +107,14 @@ export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">
   return locator.kind === "body" ? `${path}:${String(locator.line)}` : `${path}#todos[${String(locator.index)}]`;
 }
 
+/** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */
+export function compareTodoLocator(a: TodoLocator, b: TodoLocator): number {
+  if (a.kind !== b.kind) return a.kind === "body" ? -1 : 1;
+  if (a.kind === "body" && b.kind === "body") return a.line - b.line;
+  if (a.kind === "frontmatter" && b.kind === "frontmatter") return a.index - b.index;
+  return 0;
+}
+
 /**
  * Build a `TodoPlateInput` from possibly-`undefined` `start`/`due` values —
  * `TodoPlateInput`'s fields are optional (`?:`), not `X | undefined`, so

@@ -357,11 +357,16 @@ written four times.
 // src/core/collection/types.ts
 interface CollectionDef<Item, Derived, Params, Reduction> {
   name: string;
-  params: z.ZodType<Params>;
+  params: z.ZodType<Params, unknown>;
   extract(input: ExtractInput): { items: Item[]; issues: CollectionIssue[] };   // pure, one card
+  mayHaveItem(content: string): boolean;        // skip a parse in the reference pass
   derive(item: Item, ctx: DeriveContext): Derived;                              // ctx: now, timeZone, since
   matches(item: Derived, params: Params): boolean;
   refsOf(item: Derived): string[];
+  keyOf(item: Derived): string;                 // identity within one card
+  parentKeyOf(item: Derived): string | null;    // the ancestor chain the runner keeps for context
+  compareItems(a: Derived, b: Derived): number; // canonical order within one card
+  sectionOf(item: Derived): string[];           // what a row's `sections` group by
   reduce(items: Derived[]): Reduction;                                          // always over ALL items in scope
   groupings: Record<string, (item: Derived) => GroupKey>;                       // key, label, order
 }
@@ -403,9 +408,18 @@ interface Row<Derived, Reduction> {
 - **`count.ts` does not use the runner.** It stays a fast path over `extract`
   and `derive`.
 
-- `runCollection(boxRoot, def, query)` in `src/core/collection/run.ts` does the
-  stages in order. Stage 1 reuses `listTodoCardPaths` (renamed
-  `listScopedCardPaths`, moved beside the runner) with its traversal guards.
+- `runCollection(boxRoot, { def, query, deriveCtx })` in
+  `src/core/collection/run.ts` does the stages in order (a named-params object,
+  because the style rule caps positional parameters at two). Stage 1 reuses
+  `listTodoCardPaths`, renamed `listScopedCardPaths` and moved to
+  `src/core/collection/card-scope.ts` with its traversal guards, in Track 2.
+  **Built, beyond the shape above:** identity (`keyOf`/`parentKeyOf`), order
+  (`compareItems`), and sections (`sectionOf`) are `CollectionDef` members,
+  because the runner cannot build ancestors, deterministic item order, or a
+  row's `sections` without asking the collection what an item's identity and
+  place are. Each reduction has a stated scope: the top-level one covers every
+  in-scope item of every card scanned, a row's covers that card's in-scope
+  items, and a group's covers the group's matching items.
 - **`here`, exactly.** `here` is `""` (the box), a directory, or a card path.
   The scope glob defaults to `<dir>/**` for a directory and to the one card
   for a card path. A reference *matches* when the resolved ref equals `here`,
@@ -417,6 +431,10 @@ interface Row<Derived, Reduction> {
   contributes all its items, `via: "scope"`, whether or not they also refer
   into `here`. A card outside the glob contributes only items with a matching
   ref, plus those items' ancestors, `via: "reference"`.
+  A card outside the glob that fails to load or parse is skipped without an
+  issue: an unparseable card cannot be shown to refer to anything, and a
+  project-scoped view must not fill with the rest of the box's problems. The
+  scope pass owns the issues channel.
 - **Cost, stated plainly.** There is no index, so `includeReferring` reads
   every card in the box. For the box-wide plate this is today's cost. For a
   project-local `todo-view` it is a **regression**: today that query scans
@@ -426,9 +444,10 @@ interface Row<Derived, Reduction> {
   place), and `--no-referring` / `includeReferring: false` restores the
   subtree-only scan. The timing doctest records both numbers on the fixture
   box.
-- **Groupings for todos.** `place` (one group; rows are cards in path order;
-  the renderer nests sections and parents) and `plate` (the six plate states in
-  today's order). Rows form again inside each group.
+- **Groupings for todos.** `place` (one group, key `"place"`; rows are cards in
+  path order; the renderer nests sections and parents) and `plate` (the plate
+  states in today's order with today's labels — a state with no items is
+  absent, not an empty group). Rows form again inside each group.
 - **Reduction for todos.**
   `{ open, done, dropped, parked, onPlate, escalated, next: string | null }`.
   `onPlate` counts open items whose plate state is `escalated` or `on-plate`;
