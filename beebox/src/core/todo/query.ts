@@ -23,7 +23,7 @@ export type TodoQueryResult = CollectionResult<DerivedTodo, TodoReduction>;
  * box-local calendar-date epoch; only the review sweep keeps one, and
  * everything else passes `null`.
  */
-export async function buildTodoDeriveContext(boxRoot: string, since: number | null): Promise<DeriveContext> {
+async function buildTodoDeriveContext(boxRoot: string, since: number | null): Promise<DeriveContext> {
   return {
     now: getBoxTime(boxRoot),
     timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -37,18 +37,4 @@ export async function runTodoQuery(
 ): Promise<TodoQueryResult> {
   const deriveCtx = await buildTodoDeriveContext(boxRoot, input.since);
   return runCollection(boxRoot, { def: todoCollection, query: input.query, deriveCtx });
-}
-
-/** Every item a result carries, across its groups and rows, deduped by locator. */
-export function resultItems(result: TodoQueryResult): DerivedTodo[] {
-  const byKey = new Map<string, DerivedTodo>();
-  for (const group of result.groups) {
-    for (const row of group.rows) {
-      for (const item of row.items) {
-        if (!item.matching) continue;
-        byKey.set(todoCollection.keyOf(item), item);
-      }
-    }
-  }
-  return [...byKey.values()];
 }

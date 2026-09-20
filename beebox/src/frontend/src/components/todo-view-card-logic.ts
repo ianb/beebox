@@ -221,7 +221,7 @@ function dateOf(item: TodoRowItem): { date: string; kind: "due" | "start" } | nu
 }
 
 /** How long an annotation may run before the list truncates it behind an expand control. */
-export const ANNOTATION_CLAMP = 140;
+const ANNOTATION_CLAMP = 140;
 
 export function needsExpand(annotation: string): boolean {
   return annotation.length > ANNOTATION_CLAMP;

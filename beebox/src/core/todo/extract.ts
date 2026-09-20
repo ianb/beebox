@@ -75,17 +75,6 @@ function classifyCardType(input: {
   };
 }
 
-/**
- * The `unknown-type` issue for a card whose type can't be schema-loaded, or
- * `null` when it can. Exported so the collector can classify a card BEFORE
- * reading it: a card that is both unknown-type and unreadable should report
- * the unknown type, which is the more actionable of the two.
- */
-export function todoCardTypeIssue(input: { relPath: string; ctx: LoadCardContext }): TodoCollectionIssue | null {
-  const classified = classifyCardType(input);
-  return classified.ok ? null : classified.issue;
-}
-
 /** Every todo one already-read card spells, with anything that blocked extraction reported beside them. */
 export function extractCardTodos(input: {
   relPath: string;
