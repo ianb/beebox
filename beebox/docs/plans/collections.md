@@ -163,6 +163,42 @@ Consequences for the model:
 - The sweep's three sets depend on dates that are absent. **OPEN:** what the
   agent should raise when nothing is dated.
 
+A reading of the todo text (kept out of this repository) adds these. The
+boxholder's caution applies: most of this content came from one agent sweep, so
+it shows how an agent arranges todos, not how they accumulate. One document is
+different: a list that people wrote elsewhere and imported. It is an outline:
+headings by asset or person, short noun phrases, nested items.
+
+- **An item's context is its position.** Meaning comes from the heading path,
+  from the parent list item (todos nest: a goal with steps), and from the text
+  after the closing tag (a note, often with links to related cards). The
+  collector keeps none of these. All are pure per-card data, so extract can
+  carry them: `sectionPath`, `parent`, `annotation`, `refs`.
+- **The result inside a card is a tree**: card, section, item, child item. The
+  flat `items[]` stays, with `sectionPath` and `parent` on each item so that a
+  renderer can build the tree again.
+- **Attributes live in structure and prose, not in tag attributes.** A heading
+  that is a person's name assigns its items. "Waiting on", "Decide", and open
+  questions are kinds of item that only the wording marks. A filter on
+  `assigned` finds almost none of this.
+- **One todo has several kinds.** Actions, topics to think about, open
+  questions (when done, the text holds the answer), waits with a check-back
+  date, decisions, and documents to find. Dates appear only on waits and legal
+  deadlines, where they are real.
+- **A lens that is not a directory is wanted, and it is a join by reference.**
+  One asset has todos in its own directory, in sections named for it in other
+  documents, and in items whose notes link to its cards. "What is going on with
+  this asset" needs all three. This changes the join question above: extract
+  stays per-card and emits each item's `refs`; the **scope** stage may then
+  include items that refer into *here*. A reference index can serve that later.
+- **The same task appears in several documents**, because several areas care
+  about it. A box-wide list shows it several times. Identity across cards is
+  agent judgment, not something a query can derive.
+- **Done items are a record.** They hold answers and dates. A reduction per
+  card and per section (open, done, next date) is what the card header should
+  show. A card where every item is done is finished, and the reduction can say
+  so.
+
 ## Deferred, and kept in view
 
 - **Embedding in Markdown.** The boxholder wants `![]()` to embed a collection
