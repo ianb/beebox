@@ -62,9 +62,10 @@ the table was raised.
 > (2026-09-20) for the todo scope to keep the general shape: polymorphic
 > rendering with fallbacks, explicit rendering, and a powerful query type.
 > **Approved by the boxholder, 2026-09-20 ("go ahead"), at about 4,000 lines.**
-> The two open questions below (list-component placement, `bbx todos`) were
-> put to the boxholder with the leans stated; no objection was given, so
-> implementation follows the leans. Either can still be overridden.
+> Boxholder decisions the same day: "the size is okay"; "I want each
+> component to live alongside the rest of the schema. If that requires
+> changing the depth that is okay"; "leave bbx todos but plan to delete it
+> later".
 
 What the fuller design buys over the smallest fix: one query that the web list,
 the agent, and the scheduled sweep all read; extraction that a cache can sit
@@ -461,14 +462,14 @@ line read `runCollection`.
   - The `todo-view` schema does not change. An omitted `glob` still means the
     card's own subtree (`todo-view.ts:37-41`), and now also includes referring
     items. `glob: "**"` is the box; nothing refers into it from outside.
-- **`bbx query <collection>`** replaces `bbx todos`. Flags: `--here <path>`,
+- **`bbx query <collection>`** is added. `bbx todos` stays for now (see Open
+  design questions) and calls the same runner. Flags: `--here <path>`,
   `--glob`, `--group`, `--no-referring`, `--json`, plus the collection's params
   (`--status`, `--assigned`, `--on-plate`). Text output: per row,
   `summaryText(card)` and the path; under it, one line per item with its
   section path, locator, text, and dates; then the issues block as today
-  (`cli/commands/todos.ts:121-127`). `--json` prints `CollectionResult`. The
-  `todos` verb is removed from `surface-data.ts` and `query` is added with
-  `audience: "agent"`.
+  (`cli/commands/todos.ts:121-127`). `--json` prints `CollectionResult`. `query` is added to `surface-data.ts` with `audience: "agent"`; the `todos`
+  entry stays.
 - **Review sweep.** `computeSets` reads derived items from `runCollection` with
   `here: ""`. The three sets and their rules do not change. Each job item gains
   `card` (the summary text) and `sectionPath`, so the brief reads in context.
@@ -543,7 +544,7 @@ No critical gap: each row has planned handling and a test.
 | Box-wide extract with `includeReferring` is slow on a large box | planned (timing note in collection-run doctest on the fixture box) | same cost as today's unscoped `collectTodos`; no new handling | clear (slow, not wrong) |
 | A card fails to load inside the scope | existing (`todo-collect` doctest) | `issues` channel, shown in the list and the CLI | clear |
 | An old `todo-review-job` card lacks the new item fields | planned (schema doctest) | fields are optional | clear |
-| Agent runs `bbx todos` from habit | planned (cli doctest) | see Open design questions | clear |
+| Agent runs `bbx todos` from habit | existing (`test/cli/todos.doctest.md`) | the verb still works, on the runner | clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -597,22 +598,16 @@ No critical gap: each row has planned handling and a test.
 
 ## Open design questions
 
-- **What happens to `bbx todos`.** The verb is named in more places than the
-  guide: the smoke entry (`src/cli/surface-data.ts:63`),
-  `test/cli/surface.doctest.md`, the ambient-line text and its doctests
-  (`ambient-summary.ts:28`, `session-context`, reactor prompts), the
-  `todo-view` and `todo-review-job` instructions, `docs/cards-as-markdown.md`,
-  and three audits. The CLI has no retired-verb hint today; `legacy-argv.ts`
-  rewrites only the `migrate`/`init` handoff (`:26`, `:48`). Lean: remove the
-  verb, change every mention in this plan, and add a small retired-verb table
-  that makes `bbx todos` fail with "use `bbx query todos`" (new behaviour,
-  about 40 lines, reusable for the next rename). The alternative is to keep
-  `bbx todos` as a second spelling. Decide before Track 4's CLI chunk.
-- **Where a type's list component lives.** Direction above is the mirror
-  directory `src/frontend/src/schemas/`. The boxholder asked for "very nearby
-  the rest of the schema/types". True co-location in `src/schemas/` needs the
-  frontend's type-only `@schemas` rule opened for one file pattern, which is a
-  lint-boundary change that needs the boxholder's explicit permission.
+- ~~What happens to `bbx todos`~~ **DECIDED (2026-09-20): it stays, and is
+  deleted later.** `bbx query todos` is added beside it. `bbx todos` keeps its
+  flags and output and is re-based on the runner so that there is one code
+  path. The guide, the ambient line, and the audits teach `bbx query todos`.
+  No retired-verb mechanism is built now. A follow-up issue records the
+  removal and the surfaces that name the verb.
+- ~~Where a type's list component lives~~ **DECIDED (2026-09-20): alongside
+  the schema**, as `src/schemas/<type>.list-entry.tsx`, with a narrow
+  exception in the frontend's type-only `@schemas` boundary for that file
+  pattern. Track 1 describes what was built.
 - **Whether `place` order is path order or landmark order.** Lean: path order
   now; it is deterministic and needs nothing new.
 - **Whether a referring item shows under its own card or under the card it
@@ -666,8 +661,8 @@ New agent-facing behaviour, so audits land run, in
    definition.
 6. Track 3 — reference scope with ancestors and `via`.
 7. **Track 4** — `collections.query` router; then the list; then `bbx query`;
-   then the sweep and the ambient line; then remove `todos.list`,
-   `collectTodos`' old callers, and `bbx todos`.
+   then the sweep and the ambient line; then remove `todos.list` and
+   `collectTodos`' old callers, and re-base `bbx todos` on the runner.
 8. **Track 5** — guide, instructions, docs, audits run.
 9. Browser check of the list on the worktree box, an exhibit, cross-model
    review of the branch.
@@ -686,8 +681,7 @@ says so.
   and lint are clean.
 - **Knowledge audits** above land run, with status recorded.
 - **Migration.** None. No card changes shape. The `todo-view` card and the
-  `todo-review-job` card stay valid. The one removal an agent can notice is the
-  `bbx todos` verb.
+  `todo-review-job` card stay valid. No verb is removed.
 - **Fixture content.** The worktree test box gets a planning document with
   headings, nested todos, annotations, and links into a second directory, on
   the clone's `keep` branch, so the list and the reference scope can be seen.
