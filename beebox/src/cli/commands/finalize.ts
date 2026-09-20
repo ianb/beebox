@@ -18,6 +18,7 @@ import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { syncConnector } from "../../connectors/activity.js";
 
 export const finalizeCommand = new Command("finalize")
   .description("Run outbound connectors (post-processing phase)")
@@ -83,7 +84,7 @@ export const finalizeCommand = new Command("finalize")
       console.log(`Syncing ${connector.name}...`);
 
       try {
-        const result = await connector.sync();
+        const result = await syncConnector(connector, { boxRoot });
 
         if (result.pushed && result.pushed.length > 0) {
           console.log(`  Pushed ${result.pushed.length} card(s):`);

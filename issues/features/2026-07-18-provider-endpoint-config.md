@@ -23,6 +23,14 @@ priority: backlog
 > diversity, vision-capable non-China models, self-hosted vLLM) are independent
 > of the vendor-independence goal Codex addressed, and remain unaddressed.
 
+> **2026-09-19 — OpenRouter chat slice shipped.** The owner can now add
+> specific OpenRouter chat models in Admin, per
+> [openrouter-chat-models](../../beebox/docs/implemented-plans/openrouter-chat-models.md)
+> (resolved
+> [2026-09-19-openrouter-chat-models-added-in-admin](../closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md)).
+> This issue stays open for what that plan did not build: API-billed Anthropic
+> and self-hosted vLLM.
+
 The ADOPT recommendation from the backend deep pass
 ([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)): a
 per-box or install-time provider setting — base URL, auth token, model-id map —

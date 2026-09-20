@@ -134,6 +134,32 @@ count
 => 1
 ```
 
+### Skips outbound drafts waiting in the email inbox
+
+An `email-outbound` card is a draft the agent wrote, waiting for the Gmail
+connector to upload it. It is never intake work, so a draft that cannot upload
+yet does not earn a fresh intake job every cycle:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await box.seed("_content/inbox/email/thread-1/draft-001.email-outbound.card", "---\ntype: email-outbound\nstatus: draft\nto: a@example.com\nsubject: Hi\n---\nHello.\n");
+await box.seed("_content/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
+box.commitAll("add items");
+
+// Only the received message is jobbed
+const count = await createIntakeJobsForUnjobbed(box.root);
+count
+=> 1
+
+const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
+const content = await readFile(join(box.root, "_bookkeeping/jobs", allFiles.find(f => f.endsWith(".intake.job.card"))), "utf-8");
+content.includes("email-outbound")
+=> false
+```
+
 ### Returns 0 for empty inbox
 
 ```ts

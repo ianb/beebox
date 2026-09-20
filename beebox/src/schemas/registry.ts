@@ -303,7 +303,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   }
 
   // Files that vanished since the last rebuild drop their type (and bookkeeping).
-  for (const key of [...records.keys()]) {
+  for (const key of records.keys()) {
     if (!seen.has(key)) records.delete(key);
   }
   boxFileRecords.set(boxRoot, records);

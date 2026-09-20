@@ -162,3 +162,32 @@ JSON.stringify({
 registry3.shutdown();
 eventBus3.close();
 ```
+
+## A chat whose model was removed drops the schedule
+
+A chat that explicitly picked an OpenRouter model the owner has since removed
+refuses its turn. The fired schedule goes nowhere — no fresh-session retry on
+the box default. Scheduled messages are low priority, and a retry would change
+which model answers (boxholder, 2026-09-19).
+
+```ts
+const box4 = await makeTmpBox({ git: true });
+const backend4 = createFakeChatBackend();
+const registry4 = makeRegistry(box4.root, backend4);
+const eventBus4 = createEventBus(box4.root);
+await makeTranscript(box4.root, SESSION_A);
+// The chat's own pick; the box config has no openrouterModels, as after removal.
+registry4.getOrCreate(SESSION_A).setModel("moonshotai/kimi-k2-0905:exacto");
+
+await fireChatSchedule(
+  { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
+  makeSchedule({ sessionId: SESSION_A }),
+);
+backend4.runs.length
+=> 0
+```
+
+```ts cleanup
+registry4.shutdown();
+eventBus4.close();
+```

@@ -32,22 +32,21 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.273`, Codex `0.154.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.274`, Codex `0.154.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.277` (SDK), `2.1.277` (Claude Code), `0.155.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.278` (SDK), `2.1.278` (Claude Code), `0.155.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.273` was taken this turn as the newest settled
-  version. Next in line: `0.3.274` (settles 2026-09-18T22:38Z), then
-  **`0.3.275` and `0.3.276` as a pair** — 2.1.276 exists only to repair a 2.1.275
-  regression where every request fails with a 400 when `ANTHROPIC_BASE_URL`
-  points at a proxy or gateway, and beebox's `BBX_LOG_PROMPTS=1` path points it
-  at a local proxy — then `0.3.277`. Codex `0.155.0` (~19h) settles
-  2026-09-19T23:19Z.
+- **Current recommendation:** `0.3.274` was taken this turn as the newest settled
+  version. `0.3.275` was 1.7h short, so the broken half of the
+  `0.3.275`/`0.3.276` pair could not slip in; by the next run both are settled
+  and go in together. After them: `0.3.277`, `0.3.278`. Codex `0.155.0` was
+  4.6h short; `0.155.1` fixes only a TUI default, which beebox's SDK-driven Codex
+  path does not use, so the two need not be paired for beebox's sake.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -68,7 +67,29 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### Codex 0.155.0 — pending (published 2026-09-17T23:19Z, ~19h at this turn)
+### Codex 0.155.1 — pending (published 2026-09-18T20:09Z, ~23h at this turn)
+
+A single fix: *"New local TUI sessions now leave reasoning summaries disabled by
+default, fixing request rejection by providers that do not support them."* It
+repairs `0.155.0`'s new live-reasoning-summary display, but only for **TUI**
+sessions. beebox runs Codex through `@openai/codex-sdk`
+(`src/services/codex-sdk-session.ts`), not the TUI, so `0.155.0` carries no
+regression on beebox's path and the two need not be taken as a pair here.
+- **Action:** Settled path; takeable 2026-09-20 with the deploy gate.
+- **Sources:** [Codex rust-v0.155.1](https://github.com/openai/codex/releases/tag/rust-v0.155.1)
+
+### 0.3.278 / Claude Code 2.1.278 — pending, nothing relevant (published 2026-09-19T01:49Z, ~17h at this turn)
+
+- **Upstream:** SDK parity-only. 2.1.278 changes auto mode to default to the
+  server-side classifier for Claude API and Enterprise users and on Bedrock,
+  Vertex, Foundry and gateways, and adds an `Auto mode server` row to `/status`.
+- **Beebox applicability:** None. Box agents run `bypassPermissions`, worker
+  sessions `--dangerously-skip-permissions`, and the schedules run
+  `bypassPermissions` or `dontAsk`; nothing here runs in auto mode.
+- **Action:** Settled path; takeable 2026-09-21.
+- **Sources:** [Claude Code 2.1.278](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21278)
+
+### Codex 0.155.0 — pending (published 2026-09-17T23:19Z, ~43h at 2026-09-19; settles 2026-09-19T23:19Z)
 
 `@openai/codex-sdk` `0.155.0` published in lockstep. No removals or renamed
 entry points this time, so nothing on beebox's plugin path
@@ -154,7 +175,7 @@ Touch ID for MCP requests, configurable daemon update schedules.
 - **Action:** Settled path, **only together with `0.3.276`** — see above.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03275), [Claude Code 2.1.275](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21275)
 
-### 0.3.274 / Claude Code 2.1.274 — pending (published 2026-09-16T22:38Z, ~44h at 2026-09-18; settles 2026-09-18T22:38Z)
+### 0.3.274 / Claude Code 2.1.274 — APPLIED 2026-09-19 (published 2026-09-16T22:38Z)
 
 - **Probed, not reproduced — a watch item:** *"Changed queued background-task
   completions to share one model call: each still gets its own `result`, all but
@@ -195,7 +216,12 @@ Touch ID for MCP requests, configurable daemon update schedules.
   - *"Fixed hook-driven sessions … ending with 'Prompt is too long' instead of
     compacting when the context overflowed again after a reactive compaction."*
   - A visible warning when memory usage is critical.
-- **Action:** Settled path; takeable 2026-09-19.
+- **Action:** Applied 2026-09-19 on the settled path (~68h old). The
+  background-completion batching above is now in the pin; the probe that did not
+  reproduce it was run against this same version, so it was not re-run.
+  `pnpm -C beebox test`: **10,926 pass, 0 fail** (a ~10-minute run, slower than
+  usual). `sdk-steering-probe`: all four steering behaviors pass — on a run that
+  overlapped the tail of the suite, so under load.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03274), [Claude Code 2.1.274](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21274)
 
 ### 0.3.273 / Claude Code 2.1.273 — APPLIED 2026-09-18 (published 2026-09-15T18:09Z)

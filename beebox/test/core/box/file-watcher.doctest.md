@@ -17,6 +17,8 @@ import {
   MAX_NOTIFICATION_WORK,
   COALESCE_MS,
 } from "../../../src/core/box/file-watcher.js";
+import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
+import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health-watch-limit.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -192,8 +194,17 @@ grew < 20
 => true
 ```
 
-```ts cleanup
+Closing gives every one of them back. `close()` drops each directory's subtree
+while iterating the same map, so a nested tree is where a skipped or repeated
+entry would show up as a leaked watch.
+
+```ts continue
 await closeBoxWatcher(box.root);
+`watched: ${watcher.watchedDirs().length} | fds released: ${openFDs() - before <= 0}`
+=> watched: 0 | fds released: true
+```
+
+```ts cleanup
 bus.close();
 await box.cleanup();
 ```
@@ -555,6 +566,20 @@ try {
 
 `watched: ${watcher.watchedDirs().length} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`
 => watched: 16 | logs: 1 | named-limit: true
+```
+
+The limit is also kept for the dashboard's `box-watch-limit` health check, which
+names where live updates stopped. Closing the watcher clears it:
+
+```ts continue
+const limited = watchLimitStatus(box.root);
+const [check] = watchLimitHealthChecks(box.root);
+`${limited?.maxWatchedDirs} | ${check?.name}:${check?.ok} | ${check?.message.startsWith("Live updates are off below ")}`
+=> 16 | box-watch-limit:false | true
+
+await closeBoxWatcher(box.root);
+`${watchLimitStatus(box.root)} | ${watchLimitHealthChecks(box.root).length}`
+=> null | 0
 ```
 
 ```ts cleanup

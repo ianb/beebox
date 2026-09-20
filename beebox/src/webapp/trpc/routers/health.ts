@@ -9,11 +9,8 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
-import {
-  AUTH_PROBE_INCONCLUSIVE,
-  createClaudeCliService,
-  type ClaudeCliService,
-} from "../../../services/claude-cli.js";
+import type { ClaudeCliService } from "../../../services/claude-cli.js";
+import { claudeAuthCheck } from "./health-claude-auth.js";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
@@ -41,6 +38,8 @@ import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
 import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
 import { templateUpdatesCheck } from "./health-templates.js";
 import { packageDocsCheck } from "./health-package-docs.js";
+import { watchLimitHealthChecks } from "./health-watch-limit.js";
+import { connectorHealthChecks, dismissConnectorEpisodeProcedure } from "./health-connectors.js";
 import { hostPackagesCheck } from "./health-host-packages.js";
 import { queryInstalledPackages } from "../../../core/host-packages-system.js";
 
@@ -49,7 +48,7 @@ export interface HealthCheck {
   ok: boolean;
   message: string;
   severity: "error" | "warning";
-  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates">;
+  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates" | "dismiss-connector-episode">;
 }
 
 export interface CommitInfo {
@@ -148,52 +147,6 @@ export interface RunHealthChecksOptions {
 
 
 /**
- * Claude Code auth, for agent operations (chat, reactor, procedures).
- *
- * Probes via `claude auth status` through the ClaudeCli service rather than
- * peeking at `~/.claude/.credentials.json`: that file only exists on Linux, so
- * the old file-peek skipped macOS entirely (where credentials live in the
- * Keychain), leaving local dev with no signal. The CLI reads whichever store
- * this platform uses.
- *
- * Three outcomes, not two. A probe that returns no usable answer is reported
- * as a warning that says so, never as "not logged in" — `claude auth status`
- * intermittently comes back empty on a machine that is genuinely logged in,
- * and naming the wrong remedy sends someone to re-authenticate for a problem
- * they do not have.
- */
-async function claudeAuthCheck(injected?: ClaudeCliService): Promise<HealthCheck> {
-  const claudeCli = injected ?? createClaudeCliService();
-  const authStatus = await claudeCli.authStatus();
-  if (authStatus["loggedIn"] === true) {
-    return {
-      name: "claude-credentials",
-      ok: true,
-      message: "Claude Code is logged in",
-      severity: "error",
-    };
-  }
-  if (authStatus[AUTH_PROBE_INCONCLUSIVE] === true) {
-    return {
-      name: "claude-credentials",
-      ok: false,
-      message:
-        "Claude Code auth could not be determined — `claude auth status` returned no " +
-        "usable answer. Agent operations may still work; re-run this check before acting on it",
-      severity: "warning",
-    };
-  }
-  return {
-    name: "claude-credentials",
-    ok: false,
-    message:
-      "The assistant engine (Claude Code) isn't signed in on this server — chat and " +
-      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
-    severity: "error",
-  };
-}
-
-/**
  * Run all health checks for a box.
  */
 export async function runHealthChecks(
@@ -284,6 +237,8 @@ export async function runHealthChecks(
   );
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
+  checks.push(...watchLimitHealthChecks(boxRoot));
+  checks.push(...(await connectorHealthChecks(boxRoot, { now })));
 
   // --- Interface card checks ---
 
@@ -409,4 +364,5 @@ export const healthRouter = router({
     }),
   acknowledgeBoxGrowth: acknowledgeBoxGrowthProcedure,
   expectBoxGrowthRates: expectBoxGrowthRatesProcedure,
+  dismissConnectorEpisode: dismissConnectorEpisodeProcedure,
 });

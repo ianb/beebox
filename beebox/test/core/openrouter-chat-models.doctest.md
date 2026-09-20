@@ -1,0 +1,281 @@
+# OpenRouter chat models run only when the owner added them
+
+OpenRouter models bill per use, so a box never runs one because a key
+happens to exist. The owner adds each model in admin (`openrouterModels` in
+box config), and every spawn checks both that list and the key
+(`docs/plans/openrouter-chat-models.md`). These tests are the gate.
+
+```ts setup
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { chatModelForEngine, chatModelLabel, chatModelOptions, isChatModelAllowed, isOpenRouterModelId } from "../../src/shared/chat-models.js";
+import { isThirdPartyModel, providerOf, resolveProcedureModel } from "../../src/shared/agent-models.js";
+import { resolveEffectiveModel, resolveSmallModelForEngine } from "../../src/core/model-policy.js";
+import { loadAddedModels, loadBoxModel, loadSmallModel } from "../../src/core/box/config.js";
+import { providerEnvAdditions } from "../../src/core/provider-env.js";
+import { openRouterChatEnv, OpenRouterSetupError } from "../../src/core/openrouter-chat.js";
+import { ProviderSetupError } from "../../src/core/provider-setup-error.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+const kimi = { id: "moonshotai/kimi-k2-0905:exacto", label: "Kimi K2" };
+
+async function boxWith(config: Record<string, unknown>) {
+  process.env.BBX_SECRETS_FILE = join(await mkdtemp(join(tmpdir(), "bbx-secrets-")), "secrets.json");
+  const box = await makeTmpBox();
+  await mkdir(join(box.root, "_config"), { recursive: true });
+  await writeFile(join(box.root, "_config/box.json"), JSON.stringify(config));
+  return box;
+}
+
+async function grantKey(boxRoot: string) {
+  await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
+  await grantSecret({ slug: await boxSlug(boxRoot), name: "openrouter", access: "server" });
+}
+
+async function refusal(run: () => Promise<unknown>): Promise<string> {
+  try {
+    await run();
+    return "no refusal";
+  } catch (e) {
+    return e instanceof ProviderSetupError ? `${e.name}: ${e.message}` : `unexpected: ${String(e)}`;
+  }
+}
+```
+
+## The id shape names the provider
+
+OpenRouter ids are `author/slug`, with an optional `:variant`. No first-party,
+Codex, or GLM id contains a slash, so the slash alone is the provider rule.
+
+```ts
+JSON.stringify(["deepseek/deepseek-v3.2", kimi.id, "glm-5.3", "claude-opus-5", "gpt-5.6-sol"].map(providerOf))
+=> ["openrouter","openrouter","glm","anthropic","openai"]
+
+JSON.stringify([isOpenRouterModelId(kimi.id), isOpenRouterModelId("deepseek"), isOpenRouterModelId("Deep/Seek"), isOpenRouterModelId("a/b:c:d")])
+=> [true,false,false,false]
+```
+
+## The static menu never offers one; the added list does
+
+An empty list is the default for every box. Only claude chats take added
+models — they ride its Anthropic-shaped transport.
+
+```ts
+isChatModelAllowed("claude", { model: kimi.id, added: [] })
+=> false
+
+isChatModelAllowed("claude", { model: kimi.id, added: [kimi] })
+=> true
+
+isChatModelAllowed("codex", { model: kimi.id, added: [kimi] })
+=> false
+
+chatModelOptions("claude", [kimi]).at(-1)?.label
+=> Kimi K2
+```
+
+## A removed pick is kept, not quietly replaced
+
+A chat that explicitly picked a model the owner later removed keeps that pick.
+Following the box default instead would change who answers without anyone
+choosing it; the spawn refuses with the fix (below). A follower is unaffected.
+
+```ts
+JSON.stringify([
+  resolveEffectiveModel({ engine: "claude", pinned: "claude-sonnet-5", added: [] }, { kind: "explicit", model: kimi.id }),
+  resolveEffectiveModel({ engine: "claude", pinned: "claude-sonnet-5", added: [] }, { kind: "follow" }),
+])
+=> [{"model":"moonshotai/kimi-k2-0905:exacto","source":"explicit"},{"model":"claude-sonnet-5","source":"default"}]
+
+chatModelForEngine("claude", kimi.id)
+=> moonshotai/kimi-k2-0905:exacto
+
+chatModelLabel("claude", { model: kimi.id, added: [] })
+=> moonshotai/kimi-k2-0905:exacto (removed in admin)
+```
+
+## Tiered work stays first-party
+
+An added model has no tier. On a box whose default is an OpenRouter model, a
+procedure step that asks for `strong` and the cheap structured passes resolve
+to first-party Claude — the boxholder's call (2026-09-19): only the model the
+owner chose spends per use.
+
+```ts
+JSON.stringify([
+  resolveProcedureModel({ engine: "claude", model: "strong", provider: providerOf(kimi.id) }),
+  resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: kimi.id }),
+])
+=> ["claude-opus-5","claude-haiku-4-5-20251001"]
+```
+
+## Box config: the list, the default, and the small slot
+
+A malformed entry is dropped with a warning; the rest survive. An added model
+may be the box default. It may never be the small-pass model.
+
+```ts
+const box = await boxWith({
+  agentModel: kimi.id,
+  smallModel: kimi.id,
+  openrouterModels: [kimi, { id: "not an id", label: "x" }, { id: "qwen/qwen3-coder", label: "" }, { ...kimi, label: "dup" }],
+});
+JSON.stringify(await loadAddedModels(box.root))
+=> [{"id":"moonshotai/kimi-k2-0905:exacto","label":"Kimi K2"}]
+
+await loadBoxModel(box.root)
+=> moonshotai/kimi-k2-0905:exacto
+
+await loadSmallModel(box.root)
+=> null
+
+await box.cleanup();
+```
+
+A default that names a model no longer in the list is not a policy the box
+can run, so it reads as none.
+
+```ts
+const box = await boxWith({ agentModel: kimi.id });
+await loadBoxModel(box.root)
+=> null
+
+await box.cleanup();
+```
+
+## The spawn gate
+
+`providerEnvAdditions` is what every spawn path calls. A first-party model
+needs nothing.
+
+```ts
+const box = await boxWith({});
+JSON.stringify([
+  await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5", purpose: "test" }),
+  await providerEnvAdditions({ boxRoot: box.root, model: null, purpose: "test" }),
+  isThirdPartyModel("claude-opus-5"),
+  isThirdPartyModel(kimi.id),
+])
+=> [null,null,false,true]
+
+await box.cleanup();
+```
+
+A key alone runs nothing. The refusal names where to add the model.
+
+```ts
+const box = await boxWith({});
+await grantKey(box.root);
+await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" }))
+=> OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, which is not added for this box. Add it in Admin → OpenRouter models, or pick another model.
+
+await box.cleanup();
+```
+
+An added model without a key refuses too, naming the key setup.
+
+```ts
+const box = await boxWith({ openrouterModels: [kimi] });
+(await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" }))).startsWith("OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, but no usable OpenRouter key")
+=> true
+
+await box.cleanup();
+```
+
+Both present: the run gets the endpoint, the key, a blank `ANTHROPIC_API_KEY`,
+and every Claude Code model role pinned to the chosen model, so no background
+call goes out under a `claude-*` id on this key.
+
+```ts
+const box = await boxWith({ openrouterModels: [kimi] });
+await grantKey(box.root);
+const env: Record<string, string | undefined> = { KEEP: "yes" };
+const additions = await providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test", env });
+JSON.stringify(additions) === JSON.stringify(openRouterChatEnv({ key: "placeholder-openrouter-key", model: kimi.id }))
+=> true
+
+JSON.stringify([env.KEEP, env.ANTHROPIC_BASE_URL, env.ANTHROPIC_API_KEY, env.ANTHROPIC_DEFAULT_HAIKU_MODEL, env.CLAUDE_CODE_SUBAGENT_MODEL])
+=> ["yes","https://openrouter.ai/api","","moonshotai/kimi-k2-0905:exacto","moonshotai/kimi-k2-0905:exacto"]
+
+await box.cleanup();
+```
+
+`OpenRouterSetupError` and GLM's key error share one base, so every spawn
+path refuses both the same way.
+
+```ts
+new OpenRouterSetupError("x") instanceof ProviderSetupError
+=> true
+```
+
+## No cost figure for third-party runs
+
+The SDK prices every turn as Claude, which overstated OpenRouter spend 5–20×
+in the spike. A wrong number is worse than none, so a third-party run's
+result carries no `total_cost_usd`. First-party runs keep theirs.
+
+```ts
+const { adaptBackendMessage } = await import("../../src/core/chat/session/messages.js");
+const result = {
+  type: "result", subtype: "success", is_error: false, result: "", duration_ms: 1, duration_api_ms: 1,
+  num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, usage: {}, modelUsage: {},
+  permission_denials: [], session_id: "s", uuid: "u",
+};
+JSON.stringify([kimi.id, "glm-5.3", "claude-opus-5"].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
+=> ["none","none",0.25]
+```
+
+## A live chat stops on its next turn after removal
+
+The spawn gate alone is not enough: a running subprocess keeps the provider
+env it started with. So each turn on a live third-party run re-checks. Once
+the owner removes the model, the next turn is refused with the fix, the run is
+closed, and nothing further is sent to OpenRouter.
+
+```ts
+const { ChatSession } = await import("../../src/core/chat/session/index.js");
+const { createFakeChatBackend } = await import("../../src/services/claude-chat.js");
+const { tick } = await import("../helpers/chat-session-spawner-helpers.js");
+const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
+
+const box = await boxWith({ openrouterModels: [kimi] });
+await grantKey(box.root);
+const backend = createFakeChatBackend();
+const session = new ChatSession(box.root, { backend, skipBootstrap: true });
+const errors: string[] = [];
+session.on("error", (e: Error) => errors.push(e.name));
+session.setModel(kimi.id);
+
+await session.send("first");
+await tick();
+backend.lastRun()?.emitResult();
+await tick();
+const run = backend.lastRun();
+JSON.stringify([backend.runs.length, run?.startOptions.model, run?.startOptions.env?.ANTHROPIC_BASE_URL])
+=> [1,"moonshotai/kimi-k2-0905:exacto","https://openrouter.ai/api"]
+
+await writeFile(join(box.root, "_config/box.json"), JSON.stringify({}));
+clearBoxConfigCache(box.root);
+const sent = await session.send("second");
+await tick();
+JSON.stringify([sent, errors, run?.sent.length, run?.closed, backend.runs.length])
+=> [false,["OpenRouterSetupError"],1,true,1]
+```
+
+The next attempt cold-starts into the same refusal. It does not fall back to
+the box default.
+
+```ts continue
+const again = await session.send("third");
+await tick();
+JSON.stringify([again, errors.length, backend.runs.length])
+=> [false,2,1]
+```
+
+```ts cleanup
+session.stop();
+await box.cleanup();
+```

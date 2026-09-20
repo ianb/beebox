@@ -6,7 +6,9 @@
  *
  * Drafts already stamped with `gmail-draft-id` are skipped on subsequent
  * runs — this is a one-shot upload. Editing the card after upload does
- * NOT update the Gmail draft (yet).
+ * NOT update the Gmail draft (yet). A draft that failed for a reason in the
+ * card itself is stamped `gmail-draft-error` and skipped too, until someone
+ * removes the field (see `gmail-draft-card.ts`).
  *
  * Outbound cards live in `*.email-outbound.card` files, intentionally
  * separate from `*.email-message.card` (received) so the wakeup intake
@@ -17,13 +19,20 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
-import { parse as parseYaml } from "yaml";
-import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { parseFrontmatterObject } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { containWithinBox, realpathContained } from "../lib/box-containment.js";
 import { getBoxDir } from "../lib/paths.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
+import {
+  DRAFT_ERROR_FIELD,
+  DRAFT_FAILING_SINCE_FIELD,
+  MissingFieldError,
+  recordDraftFailure,
+  stampDraftCard,
+  UnresolvedInReplyToRefError,
+} from "./gmail-draft-card.js";
 
 interface DraftFields {
   to: string;
@@ -39,6 +48,10 @@ interface UploadResult {
   updated: string[];
   /** Per-card errors keyed by card path. */
   errors: Array<{ path: string; error: string }>;
+  /** Card paths stamped `gmail-draft-error`: no longer retried. */
+  stranded: string[];
+  /** Card paths newly stamped `gmail-draft-failing-since`: a retried failure's clock started. */
+  marked: string[];
 }
 
 /**
@@ -48,10 +61,11 @@ interface UploadResult {
 export async function uploadPendingDrafts(opts: {
   boxRoot: string;
   service: GoogleGmailService;
+  now: Date;
 }): Promise<UploadResult> {
-  const result: UploadResult = { updated: [], errors: [] };
-  const cards = await findDraftCards(opts.boxRoot);
-  for (const cardPath of cards) {
+  const result: UploadResult = { updated: [], errors: [], stranded: [], marked: [] };
+  const cards = (await findOutboundDrafts(opts.boxRoot)).filter((draft) => draft.error === null);
+  for (const { cardPath, failingSince } of cards) {
     try {
       const stamped = await uploadOneDraft({
         boxRoot: opts.boxRoot,
@@ -62,22 +76,38 @@ export async function uploadPendingDrafts(opts: {
         result.updated.push(path.relative(opts.boxRoot, cardPath));
       }
     } catch (err) {
-      result.errors.push({
-        path: path.relative(opts.boxRoot, cardPath),
-        error: errorMessage(err),
-      });
+      const relPath = path.relative(opts.boxRoot, cardPath);
+      result.errors.push({ path: relPath, error: errorMessage(err) });
+      const outcome = await recordDraftFailure({ cardPath, error: err, now: opts.now, failingSince });
+      if (outcome === "stranded") result.stranded.push(relPath);
+      if (outcome === "marked") result.marked.push(relPath);
     }
   }
   return result;
 }
 
+/** Drafts the connector stopped retrying, with the error stamped on each. Box-relative paths. */
+export async function findStrandedDrafts(boxRoot: string): Promise<Array<{ path: string; error: string }>> {
+  return (await findOutboundDrafts(boxRoot)).flatMap(({ cardPath, error }) =>
+    error === null ? [] : [{ path: path.relative(boxRoot, cardPath), error }]);
+}
+
+interface OutboundDraft {
+  /** Absolute path. */
+  cardPath: string;
+  /** The stamped `gmail-draft-error`, or null for a draft still to upload. */
+  error: string | null;
+  /** The stamped `gmail-draft-failing-since`, or null. */
+  failingSince: string | null;
+}
+
 /**
  * Walk _content/inbox/email/ for email-outbound cards in draft status without
- * a gmail-draft-id stamp. Returns absolute paths.
+ * a gmail-draft-id stamp.
  */
-async function findDraftCards(boxRoot: string): Promise<string[]> {
+async function findOutboundDrafts(boxRoot: string): Promise<OutboundDraft[]> {
   const emailDir = path.join(getBoxDir(boxRoot, "inbox"), "email");
-  const drafts: string[] = [];
+  const drafts: OutboundDraft[] = [];
   let entries: string[];
   try {
     entries = await fs.readdir(emailDir);
@@ -116,7 +146,13 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
         const status = typeof fm["status"] === "string" ? fm["status"] : "draft";
         const stamped = typeof fm["gmail-draft-id"] === "string";
         if (status === "draft" && !stamped) {
-          drafts.push(cardPath);
+          const error = fm[DRAFT_ERROR_FIELD];
+          const failingSince = fm[DRAFT_FAILING_SINCE_FIELD];
+          drafts.push({
+            cardPath,
+            error: typeof error === "string" ? error : null,
+            failingSince: typeof failingSince === "string" ? failingSince : null,
+          });
         }
       } catch (e) {
         // unparseable or unreadable — skip this card, keep scanning the rest
@@ -187,8 +223,8 @@ async function uploadOneDraft(opts: {
 
   await stampDraftCard({
     cardPath: opts.cardPath,
-    draftId: draft.id,
-    draftUrl: url,
+    fields: { "gmail-draft-id": draft.id, "gmail-draft-url": url },
+    remove: [DRAFT_FAILING_SINCE_FIELD],
   });
   return true;
 }
@@ -306,52 +342,4 @@ function base64UrlEncode(s: string): string {
     .replaceAll("+", "-")
     .replaceAll("/", "_")
     .replace(/=+$/, "");
-}
-
-async function stampDraftCard(opts: {
-  cardPath: string;
-  draftId: string;
-  draftUrl: string;
-}): Promise<void> {
-  const content = await fs.readFile(opts.cardPath, "utf-8");
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) {
-    throw new StampDraftCardError(opts.cardPath, `${opts.cardPath} has no frontmatter`);
-  }
-  let fm: unknown;
-  try {
-    fm = parseYaml(split.frontmatterText);
-  } catch (e) {
-    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${errorMessage(e)}`);
-  }
-  if (!isRecord(fm)) {
-    throw new StampDraftCardError(opts.cardPath, `frontmatter in ${opts.cardPath} is not a mapping`);
-  }
-  const fields = fm;
-  fields["gmail-draft-id"] = opts.draftId;
-  fields["gmail-draft-url"] = opts.draftUrl;
-  await fs.writeFile(opts.cardPath, renderFrontmatterBlock(fields, split.body));
-}
-
-class MissingFieldError extends Error {
-  constructor(readonly field: string) {
-    super(`Draft is missing required <${field}>`);
-    this.name = "MissingFieldError";
-  }
-}
-
-class UnresolvedInReplyToRefError extends Error {
-  constructor(readonly ref: string, readonly sourcePath: string) {
-    super(
-      `in-reply-to ref "${ref}" did not resolve to a readable email-message card with message-id and thread-id (looked at ${sourcePath})`,
-    );
-    this.name = "UnresolvedInReplyToRefError";
-  }
-}
-
-class StampDraftCardError extends Error {
-  constructor(readonly cardPath: string, detail: string) {
-    super(`stampDraftCard: ${detail}`);
-    this.name = "StampDraftCardError";
-  }
 }

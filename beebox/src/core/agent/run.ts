@@ -13,8 +13,9 @@ import { buildScriptEnv } from "../script-env.js";
 import { gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
 import { startPromptLogger, stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
-import { glmEnvAdditions, GlmKeyError, resolveGlmKeyOrThrow } from "../glm-key.js";
-import { providerOf } from "../../shared/agent-models.js";
+import { providerEnvAdditions } from "../provider-env.js";
+import { isThirdPartyModel } from "../../shared/agent-models.js";
+import { ProviderSetupError } from "../provider-setup-error.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
@@ -204,15 +205,15 @@ async function setupRunEnv(
   const shouldLog = process.env.BBX_LOG_PROMPTS === "1";
   let logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
 
-  // A GLM run bypasses the logging proxy: the proxy forwards to first-party,
-  // and the two features claim the same ANTHROPIC_BASE_URL slot. Warn and
-  // disable rather than teach the proxy a second upstream
-  // (docs/plans/box-glm-provider.md, Track 3).
-  const glmRun = options.model !== undefined && providerOf(options.model) === "glm";
-  if (glmRun && logger) {
+  // A third-party run (GLM, an added OpenRouter model) bypasses the logging
+  // proxy: the proxy forwards to first-party, and the two features claim the
+  // same ANTHROPIC_BASE_URL slot. Warn and disable rather than teach the proxy
+  // other upstreams (docs/plans/box-glm-provider.md, Track 3).
+  const thirdParty = isThirdPartyModel(options.model);
+  if (thirdParty && logger) {
     stopPromptLogger(logger);
     logger = null;
-    onOutput?.("Prompt logging disabled for this run: GLM runs bypass the logging proxy.\n");
+    onOutput?.("Prompt logging disabled for this run: third-party model runs bypass the logging proxy.\n");
   }
 
   if (shouldLog && logger) {
@@ -228,13 +229,9 @@ async function setupRunEnv(
     ...(logger ? { ANTHROPIC_BASE_URL: `http://localhost:${logger.port}/` } : {}),
   });
 
-  if (glmRun) {
-    // GLM rides the claude engine via Z.ai's Anthropic-compatible endpoint.
-    // The key comes from the machine secret store (server-level grant); a
-    // missing one throws GlmKeyError, which runAgent shapes below.
-    const key = await resolveGlmKeyOrThrow(boxRoot, { purpose: "agent-run" });
-    Object.assign(env, glmEnvAdditions(key));
-  }
+  // Endpoint and key for a third-party model; a refusal throws
+  // ProviderSetupError, which the preflight in runAgent already shaped.
+  await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run", env });
 
   return { logger, env: dropUndefined(env) };
 }
@@ -264,16 +261,16 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   // Fakes replace `createAgent`, so this real SDK path (and its probe) is never
   // reached by fake-injecting tests.
   try {
-    // Provider-aware preflight: a GLM model is gated on the store key, not on
-    // a Claude login — `claude auth status` reports token presence and says
-    // nothing about whether the endpoint will accept it.
-    if (options.model !== undefined && providerOf(options.model) === "glm") {
-      await resolveGlmKeyOrThrow(boxRoot, { purpose: "agent-run" });
+    // Provider-aware preflight: a third-party model is gated on its provider
+    // setup, not on a Claude login — `claude auth status` reports token
+    // presence and says nothing about whether that endpoint will accept it.
+    if (isThirdPartyModel(options.model)) {
+      await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run" });
     } else {
       await checkClaudeAuth();
     }
   } catch (e) {
-    if (e instanceof ClaudeAuthError || e instanceof GlmKeyError) {
+    if (e instanceof ClaudeAuthError || e instanceof ProviderSetupError) {
       return {
         success: false,
         output: "",
@@ -314,8 +311,10 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     options.signal?.removeEventListener("abort", onAbort);
   }
 
-  return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
-    provider: "claude",
-    boxRoot,
-  });
+  const result = buildAgentResult(outcome, options.resumeSessionId);
+  // Quota classification reads Claude's own limit messages and parks the
+  // whole claude engine. A third-party provider's failure is not Claude's, so
+  // it stays an ordinary failure rather than pausing first-party work.
+  if (isThirdPartyModel(options.model)) return result;
+  return applyEngineUnavailability(result, { provider: "claude", boxRoot });
 }

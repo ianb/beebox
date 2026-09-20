@@ -2595,6 +2595,28 @@ tests:
     correct_contains: ["email-outbound"]
     tags: [email, drafts]
 
+  # Status (2026-09-19, Claude): draft-email-stranded 1/1 passed (rerun after
+  # the 7-day retry limit was added to the instructions); read
+  # card-email-outbound.md and named both steps (fix the ref, delete the line).
+  - id: draft-email-stranded
+    prompt: >
+      A draft reply you wrote last week still has no gmail-draft-url. Its card
+      now has a gmail-draft-error line saying the in-reply-to ref did not
+      resolve. What does that mean, and what do you do to get it uploaded?
+    expected_level: knows_about
+    watch_for: >
+      Reads the email-outbound docs and says the connector stopped retrying
+      because the card itself is the problem; fix the in-reply-to ref (or the
+      named field), then delete the gmail-draft-error line so the next sync
+      uploads it. Should NOT say to wait for the next sync or re-run sync as
+      is, and should NOT blame the Google connection.
+    should_read: ["card-email-outbound.md"]
+    correct_contains: ["gmail-draft-error"]
+    correct_matches:
+      - '(?:delet|remov)[\s\S]{0,120}gmail-draft-error|gmail-draft-error[\s\S]{0,120}(?:delet|remov)'
+      - '(?:fix|correct|repoint|point)[\s\S]{0,160}(?:ref|in-reply-to)|(?:ref|in-reply-to)[\s\S]{0,160}(?:fix|correct)'
+    tags: [email, drafts]
+
   # === Landmarks ===
   #
   # Landmarks are the user-navigation overlay on the box's filesystem.
