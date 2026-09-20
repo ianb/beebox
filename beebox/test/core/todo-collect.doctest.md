@@ -152,7 +152,7 @@ bug: a **multi-line block** `{% todo %}` (opening tag, body, closing tag on
 separate lines) used to fall through the "which tag does this validate error
 belong to" match (it compared against `lines[1]`, correct only for a one-line
 span) and get attributed to `(body)` instead of `todo` — so
-`collect-body.ts`'s `todoErrors` filter never caught it, and the invalid
+`extract-body.ts`'s `todoErrors` filter never caught it, and the invalid
 `status` was silently coerced to `"open"` instead of becoming a visible-invalid
 result.
 

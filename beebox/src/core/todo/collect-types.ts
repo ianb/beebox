@@ -1,6 +1,6 @@
 /**
  * Shared record shapes for the todo collector (`collect.ts`) and its two
- * capture-form walkers (`collect-body.ts` for `{% todo %}`, `collect.ts`
+ * capture-form extractors (`extract-body.ts` for `{% todo %}`, `extract.ts`
  * itself for the frontmatter `todos:` list).
  *
  * Optional attribute fields are typed `X | undefined` rather than `X?:` —
@@ -120,7 +120,7 @@ export function compareTodoLocator(a: TodoLocator, b: TodoLocator): number {
  * `TodoPlateInput`'s fields are optional (`?:`), not `X | undefined`, so
  * under `exactOptionalPropertyTypes` an `undefined` value can't be assigned
  * to the key directly; it must be omitted instead. Shared by both capture
- * forms (`collect-body.ts`'s tag walk, `collect.ts`'s frontmatter-entry
+ * forms (`extract-body.ts`'s tag walk, `extract.ts`'s frontmatter-entry
  * walk) so the omission dance isn't repeated.
  */
 export function plateInputFor(input: {

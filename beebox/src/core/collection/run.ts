@@ -37,14 +37,14 @@ import type {
 import type { LoadCardContext } from "../card-io.js";
 
 /** Thrown when a query names a grouping the collection doesn't define. */
-export class UnknownGroupingError extends Error {
+class UnknownGroupingError extends Error {
   constructor(collection: string, group: string) {
     super(`collection "${collection}" has no grouping "${group}"`);
     this.name = "UnknownGroupingError";
   }
 }
 
-export function resolveQuery<Params>(query: CollectionQuery<Params>): ResolvedQuery {
+function resolveQuery<Params>(query: CollectionQuery<Params>): ResolvedQuery {
   const here = query.here;
   return {
     here,

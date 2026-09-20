@@ -13,7 +13,7 @@
 import { parseCardFileName } from "../../shared/card-name.js";
 
 /** True when `here` names one card rather than a directory. */
-export function hereIsCard(here: string): boolean {
+function hereIsCard(here: string): boolean {
   const base = here.split("/").pop() ?? here;
   return parseCardFileName(base) !== null;
 }
