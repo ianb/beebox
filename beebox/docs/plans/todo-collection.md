@@ -1,6 +1,6 @@
 ---
 title: "Todo collection — todos as a staged query, with summaries that belong to the card type"
-status: draft
+status: active
 workstream: collection-views
 issues: []
 ---
@@ -61,7 +61,10 @@ the table was raised.
 > shape, and from their doctests moving with them. The boxholder asked
 > (2026-09-20) for the todo scope to keep the general shape: polymorphic
 > rendering with fallbacks, explicit rendering, and a powerful query type.
-> **This size needs the boxholder's approval before implementation starts.**
+> **Approved by the boxholder, 2026-09-20 ("go ahead"), at about 4,000 lines.**
+> The two open questions below (list-component placement, `bbx todos`) were
+> put to the boxholder with the leans stated; no objection was given, so
+> implementation follows the leans. Either can still be overridden.
 
 What the fuller design buys over the smallest fix: one query that the web list,
 the agent, and the scheduled sweep all read; extraction that a cache can sit
