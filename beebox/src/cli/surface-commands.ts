@@ -44,6 +44,7 @@ import { fieldTestCommand } from "./commands/field-test.js";
 import { tickCommand } from "./commands/tick.js";
 import { scheduledCommand } from "./commands/scheduled.js";
 import { healthCommand } from "./commands/health.js";
+import { hostCommand } from "./commands/host.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { activityCommand } from "./commands/activity.js";
 import { trickCommand } from "./commands/trick.js";
@@ -63,7 +64,6 @@ import { usageCommand } from "./commands/usage.js";
 import { driveCommand } from "./commands/drive.js";
 import { chatCommand } from "./commands/chat.js";
 import { refreshMapsCommand } from "./commands/refresh-maps.js";
-import { feedbackCommand } from "./commands/feedback.js";
 import { retroCommand } from "./commands/retro.js";
 import { boxesCommand } from "./commands/boxes.js";
 import { intakeCommand } from "./commands/intake.js";
@@ -74,6 +74,7 @@ import { locationCommand } from "./commands/location.js";
 import { pushCommand } from "./commands/push.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
+import { queryCommand } from "./commands/query.js";
 import { connectorCommand } from "./commands/connector.js";
 
 /** Registration order is irrelevant — the surface table decides placement. */
@@ -108,6 +109,7 @@ const ALL: readonly Command[] = [
   tickCommand,
   scheduledCommand,
   healthCommand,
+  hostCommand,
   doctorCommand,
   activityCommand,
   trickCommand,
@@ -127,7 +129,6 @@ const ALL: readonly Command[] = [
   driveCommand,
   chatCommand,
   refreshMapsCommand,
-  feedbackCommand,
   retroCommand,
   boxesCommand,
   intakeCommand,
@@ -138,6 +139,7 @@ const ALL: readonly Command[] = [
   pushCommand,
   tailscaleCommand,
   todosCommand,
+  queryCommand,
   connectorCommand,
 ];
 

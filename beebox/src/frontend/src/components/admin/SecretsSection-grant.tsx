@@ -14,6 +14,7 @@ import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { SelectField } from "../ui/fields";
 
 type MachineView = RouterOutput["secrets"]["machineView"];
@@ -87,7 +88,7 @@ export function GrantExistingForm({
         <Row gap="sm" wrap>
           <Button id="bbx-admin-secrets-grant-submit" type="submit" intent="primary" loading={grant.isPending} loadingLabel="Granting…">Grant</Button>
         </Row>
-        {grant.error ? <div role="alert"><Text size="sm" tone="danger">{grant.error.message}</Text></div> : null}
+        {grant.error ? <div role="alert"><ErrorText>{grant.error.message}</ErrorText></div> : null}
       </Stack>
     </form>
   );

@@ -1,8 +1,8 @@
 /**
- * Chat session procedures that read only persisted state (no live session
- * registry): conversation history, the web-chat session list, the default
- * session id, and a session's resolved feature map. Spread into the chat
- * router so paths stay `trpc.chat.history` etc.
+ * Chat session procedures that primarily read persisted state: conversation
+ * history, the web-chat session list, the default session id, and a session's
+ * resolved feature map. Spread into the chat router so paths stay
+ * `trpc.chat.history` etc.
  *
  * The registry/scheduleManager-dependent chat controls (status, set-model,
  * set-feature, interrupt, restart, schedules) stay raw Fastify routes — they
@@ -21,6 +21,7 @@ import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
 import { titleForSession, loadChatLists, deadHuskLabel } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
+import { getChatRuntime } from "../../chat-runtime.js";
 
 /**
  * How much of a session's log to return. Shared by `chat.history` (which adds
@@ -146,9 +147,23 @@ export const chatSessionProcedures = {
     return { sessionId };
   }),
 
-  // Read a session's resolved feature map (defaults filled in), from disk.
+  // Read a session's resolved feature map (defaults filled in). A reserved
+  // chat has no history row yet: its inherited defaults and pre-start toggles
+  // live on the reservation until the first run records them. Prefer that
+  // record, then disk; a live session only bridges the first-run write window.
   features: publicProcedure.input(z.object({ session: z.string() })).query(async ({ input, ctx }) => {
+    const registry = getChatRuntime(ctx.boxRoot)?.registry;
+    const reservation = registry?.getReservation(input.session);
+    if (reservation !== null && reservation !== undefined) {
+      return { features: resolveFeatures(reservation.seedFeatures) };
+    }
     const stored = await getFeaturesForSession(ctx.boxRoot, input.session).catch(() => null);
+    if (stored !== null) return { features: resolveFeatures(stored) };
+    // During first-run promotion, the history row is written before its seed
+    // features. The loaded live store bridges that short handoff window. A
+    // non-touching lookup keeps this read from extending the chat's idle life.
+    const live = registry?.peek(input.session);
+    if (live !== null && live !== undefined) return { features: live.getFeatures() };
     return { features: resolveFeatures(stored) };
   }),
 };

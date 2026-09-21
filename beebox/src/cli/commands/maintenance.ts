@@ -43,7 +43,7 @@ export async function runMaintenance(roots: string[], invocation: { command: str
   const held: { root: string; handle: BoxMaintenance }[] = [];
   const completed = new Set<string>();
   try {
-    for (const root of boxes) held.push({ root, handle: await closeBoxMaintenance(root, { reason: "deployment", recover: true }) });
+    for (const root of boxes) held.push({ root, handle: await closeBoxMaintenance(root, { reason: "deployment" }) });
     for (const { handle } of held) await handle.drain();
     for (const { root, handle } of held) {
       const snapshot = await handle.run(() => captureMigrationSnapshot(root, "deployment"));

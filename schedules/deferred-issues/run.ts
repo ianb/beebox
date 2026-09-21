@@ -48,16 +48,39 @@ const total = publicCount + privateCount;
 
 if (total === 0) process.exit(0);
 
+const ISSUES_PAGE = "http://localhost:3210/workstreams/issues";
+
+/** One Markdown list item that opens the issue in the issue browser. */
+function issueLine(move: { destination: string }, visibility: "public" | "private"): string {
+  const relPath = path.join(path.basename(path.dirname(move.destination)), path.basename(move.destination));
+  const query = new URLSearchParams({ issue: relPath, issueVisibility: visibility });
+  return `- ${visibility}: [${path.basename(move.destination, ".md")}](${ISSUES_PAGE}?${query.toString()})`;
+}
+
+/** An activated issue already marked important is worth reading today's
+ *  digest for; anything else is a notification. */
+async function priorityOf(move: { destination: string }): Promise<string | null> {
+  const text = dryRun ? null : await fs.readFile(move.destination, "utf8");
+  const frontmatter = text?.split("\n---")[0] ?? "";
+  return /^priority:\s*(\S+)/mu.exec(frontmatter)?.[1] ?? null;
+}
+
+const moves = [
+  ...activated.public.map((move) => ({ move, visibility: "public" as const })),
+  ...activated.private.map((move) => ({ move, visibility: "private" as const })),
+];
+const priorities = await Promise.all(moves.map(({ move }) => priorityOf(move)));
+const priority = priorities.includes("important") ? "normal" : "fyi";
 const message = [
-  `${String(publicCount)} public and ${String(privateCount)} private issue(s) became active.`,
-  ...activated.public.map((move) => `public: ${path.basename(move.destination)}`),
-  ...activated.private.map((move) => `private: ${path.basename(move.destination)}`),
+  `**${String(total)} deferred issue${total === 1 ? "" : "s"} became active** (${String(publicCount)} public, ${String(privateCount)} private):`,
+  "",
+  ...moves.map(({ move, visibility }) => issueLine(move, visibility)),
 ].join("\n");
 
 if (dryRun) {
   process.stdout.write(`[deferred-issues] would activate ${String(total)} issue(s)\n${message}\n`);
 } else {
   await execa(path.join(REPO_ROOT, "bin", "schedules"), [
-    "alert", "--priority", "normal", "--title", "Deferred issues activated", "--message", message,
+    "alert", "--priority", priority, "--title", "Deferred issues activated", "--message", message,
   ], { stdout: "inherit", stderr: "inherit" });
 }

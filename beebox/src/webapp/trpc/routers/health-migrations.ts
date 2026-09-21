@@ -31,12 +31,13 @@ export async function pendingMigrationsCheck(boxRoot: string): Promise<HealthChe
     ...(!hasGit ? ["Git repository missing; migration recovery unavailable"] : []),
     ...(pending.length > 0 ? [`${String(pending.length)} pending migration(s): ${pending.map((m) => m.name).join(", ")}`] : []),
     ...(questions.length > 0 ? [`Repair questions: ${questions.join(", ")}`] : []),
-    ...(maintenance ? [`Admission closed: ${maintenance.reason} (${maintenance.phase})`] : []),
+    ...(maintenance?.owner ? [`Maintenance in progress: ${maintenance.reason} (pid ${String(maintenance.owner.pid)})`]
+      : maintenance ? [`Unfinished maintenance: ${maintenance.reason}${maintenance.since === undefined ? "" : ` since ${maintenance.since}`}`] : []),
   ];
   return {
     name: "box-migrations",
     ok: detail.length === 0,
-    message: detail.length > 0 ? `${detail.join(". ")}. Run \`bbx migrate --apply --repair\` to retry; dirty edits are preserved in Git recovery.` : "box migrations are up to date",
+    message: detail.length > 0 ? `${detail.join(". ")}. Run \`bbx engine migrate --sweep --repair\` to retry; dirty edits are preserved in Git recovery.` : "box migrations are up to date",
     severity: "warning",
   };
 }

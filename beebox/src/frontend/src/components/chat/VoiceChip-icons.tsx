@@ -16,7 +16,7 @@ function PersonMark(): ReactElement {
 
 function BotMark(): ReactElement {
   return (
-    <g transform="translate(25 1)">
+    <g transform="translate(19 1)">
       <path d="M4.5 3V1.5M3 1.5h3" />
       <rect x=".8" y="4" width="7.4" height="8" rx="1.5" />
       <path d="M3 9.8h3" />
@@ -28,9 +28,9 @@ function BotMark(): ReactElement {
 
 function FloorMarks({ floor, diarizationEnabled }: { floor: ConversationFloor; diarizationEnabled: boolean }): ReactElement {
   const arrows = {
-    shared: "M12 5h8l-2-2M20 11h-8l2 2",
-    person: "M12 8h8m-3-3 3 3-3 3",
-    box: "M20 8h-8m3-3-3 3 3 3",
+    shared: "M10 5h6l-2-2M16 11h-6l2 2",
+    person: "M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5",
+    box: "M16 8h-6m2.5-2.5-2.5 2.5 2.5 2.5",
   } satisfies Record<ConversationFloor, string>;
   return (
     <>
@@ -49,7 +49,7 @@ function FloorMarks({ floor, diarizationEnabled }: { floor: ConversationFloor; d
 }
 
 function AnswerMarks({ muted }: { muted: boolean }): ReactElement {
-  return <path d={muted ? "M37 4h11M37 8h8M37 12h11" : "M39 6a3 3 0 0 1 0 4M42 3.5a6.5 6.5 0 0 1 0 9"} />;
+  return <path d={muted ? "M30 4h10M30 8h7M30 12h10" : "M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9"} />;
 }
 
 /**
@@ -57,6 +57,19 @@ function AnswerMarks({ muted }: { muted: boolean }): ReactElement {
  * Floor and answer channel remain independent: narration permits spoken
  * exceptions unless answers are explicitly in text. The shared bot connects
  * those facts without drawing it twice or making both participants emit sound.
+ *
+ * Same four marks as ever, drawn bigger. They used to sit in a 50×16 box at
+ * 1:1, which put about 8px and a 1.3px stroke into each one: legible on a
+ * desktop, three unrelated glyphs on a phone
+ * (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`). The dead
+ * space between person, arrow, bot and output was most of that width, so
+ * closing it and rendering the 41-unit box at 51px buys every mark a quarter
+ * more size AND gives the app bar back 7px. Nothing was dropped to pay for it.
+ *
+ * A reduced two-mark face was tried here first and rejected by the boxholder:
+ * the redrawn arrows were cruder than these, the mute mark did not read, and
+ * it had been applied at desktop width where nothing was wrong. Shrink the
+ * spacing before the vocabulary.
  */
 export function ConversationIcon({ floor, muted, diarizationEnabled }: {
   floor: ConversationFloor;
@@ -64,7 +77,7 @@ export function ConversationIcon({ floor, muted, diarizationEnabled }: {
   diarizationEnabled: boolean;
 }): ReactElement {
   return (
-    <svg className="w-[50px] h-4 shrink-0" viewBox="0 0 50 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-[51px] h-5 shrink-0" viewBox="0 0 41 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <FloorMarks floor={floor} diarizationEnabled={diarizationEnabled} />
       <AnswerMarks muted={muted} />
     </svg>
@@ -74,7 +87,7 @@ export function ConversationIcon({ floor, muted, diarizationEnabled }: {
 /** The same bot and output marks, isolated for the answer-channel menu row. */
 export function SpeakerIcon({ muted }: { muted: boolean }): ReactElement {
   return (
-    <svg className="w-[25px] h-4 shrink-0" viewBox="25 0 25 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-[26px] h-5 shrink-0" viewBox="19 0 22 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <BotMark />
       <AnswerMarks muted={muted} />
     </svg>
@@ -84,7 +97,7 @@ export function SpeakerIcon({ muted }: { muted: boolean }): ReactElement {
 /** The same participants and arrows, isolated for the narration menu row. */
 export function FloorIcon({ floor, diarizationEnabled }: { floor: ConversationFloor; diarizationEnabled: boolean }): ReactElement {
   return (
-    <svg className="w-[34px] h-4 shrink-0" viewBox="0 0 34 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-[34px] h-5 shrink-0" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <FloorMarks floor={floor} diarizationEnabled={diarizationEnabled} />
     </svg>
   );

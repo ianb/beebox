@@ -1,4 +1,4 @@
-import { BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import { answerWithAdmission } from "../../../core/commands/answer.js";
 import * as path from "node:path";
 import { z } from "zod";

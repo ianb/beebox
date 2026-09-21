@@ -6,6 +6,23 @@
 
 set -euo pipefail
 
+# Every command this script runs for a hook needs a box. A Codex session in a
+# checkout that is not a box (the beebox monorepo itself, or any worktree of
+# it) would otherwise fail `validate` on EVERY edit with a Node stack trace and
+# exit 1 — reported to the session as "Hook failed", once per tool call, with
+# nothing the session can do about it. Absent a box, the hook has no work: say
+# nothing and succeed.
+box_dir="$PWD"
+while [ "$box_dir" != "/" ]; do
+  if [ -e "$box_dir/.beebox" ]; then
+    break
+  fi
+  box_dir=$(dirname "$box_dir")
+done
+if [ "$box_dir" = "/" ]; then
+  exit 0
+fi
+
 if [ -n "${BBX_BIN:-}" ] && [ -x "$BBX_BIN" ]; then
   exec "$BBX_BIN" "$@"
 fi

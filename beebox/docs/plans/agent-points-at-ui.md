@@ -721,7 +721,7 @@ Authored ids, chosen so web and native agree (Track 5 uses the same strings):
 | `bbx-nav-session` | `SessionChip.tsx:206` | — |
 | `bbx-nav-voice` | `VoiceChip.tsx:228` | — |
 | `bbx-nav-profile` | `AppNav.tsx:44-58` | — |
-| `bbx-nav-todo` / `bbx-nav-errors` | `AppNav.tsx:168,187` | — |
+| `bbx-nav-questions` / `bbx-nav-todo` / `bbx-nav-errors` | `app-nav-badges.tsx` | — |
 | `bbx-composer-add` | `InteractiveChat-composer.tsx:208` | `ComposerActionsView` trigger |
 | `bbx-composer-input` | `InteractiveChat-composer.tsx:60` | `ComposerTextView.swift:30` |
 | `bbx-composer-send` | `InteractiveChat-composer.tsx:121` | `NativeComposerView.swift:361` |

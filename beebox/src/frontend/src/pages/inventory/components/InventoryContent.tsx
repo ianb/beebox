@@ -6,6 +6,9 @@ import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { TabBar } from "../../../components/ui/TabBar";
 import { Text } from "../../../components/ui/Text";
+import { ErrorText } from "../../../components/ui/ErrorText";
+import { Hint } from "../../../components/ui/Hint";
+import { Heading } from "../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryTreemap } from "./InventoryTreemap";
 
@@ -53,15 +56,15 @@ function RepositorySummary({ data }: { data: Inventory }) {
   return (
     <Card as="section" aria-label="Git repository summary">
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">Git storage</Text>
+        <Heading level={2}>Git storage</Heading>
         <Row gap="lg" wrap>
           <InventoryStatistic value={formatBytes(repository.checkoutDiskBytes)} label="repository footprint" />
           <InventoryStatistic value={formatBytes(repository.gitDiskBytes)} label="of that, Git storage" />
           <InventoryStatistic value={repository.annexed ? repository.annexQueryAvailable ? `${annexedPercent}%` : "Unavailable" : "Not enabled"} label="logical content annexed" />
         </Row>
-        {repository.complete ? null : <Text as="p" tone="danger" size="sm">Repository footprint is a lower bound because some paths could not be read.</Text>}
-        {repository.annexed && !repository.annexQueryAvailable ? <Text as="p" tone="danger" size="sm">Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</Text> : null}
-        {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Text as="p" tone="muted" size="sm">This repository is not using Git-annex.</Text>}
+        {repository.complete ? null : <ErrorText>Repository footprint is a lower bound because some paths could not be read.</ErrorText>}
+        {repository.annexed && !repository.annexQueryAvailable ? <ErrorText>Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</ErrorText> : null}
+        {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Hint>This repository is not using Git-annex.</Hint>}
       </Stack>
     </Card>
   );
@@ -104,7 +107,7 @@ function StorageRow({ label, columns }: { label: string; columns: Array<{ files:
 function InventoryEmpty() {
   return (
     <Card>
-      <Text as="h2" size="lg" weight="semibold">No content files found</Text>
+      <Heading level={2}>No content files found</Heading>
       <Text as="p" tone="muted" className="mt-1">The scan excludes runtime and dependency directories.</Text>
     </Card>
   );
@@ -114,8 +117,8 @@ function InventorySummary({ data, linkStatus }: { data: Inventory; linkStatus: L
   return (
     <Card as="section" aria-label="Storage summary">
       <Stack gap="md">
-        {data.complete ? null : <Text as="p" tone="danger" size="sm">This scan is partial because {data.skippedPaths.toLocaleString()} filesystem path(s) could not be read. Totals are lower bounds.</Text>}
-        {data.linkStatusComplete ? null : <Text as="p" tone="danger" size="sm">Incoming-reference detection is partial. Linked contains confirmed matches; Unlinked may include cards whose referrers could not be read.</Text>}
+        {data.complete ? null : <ErrorText>This scan is partial because {data.skippedPaths.toLocaleString()} filesystem path(s) could not be read. Totals are lower bounds.</ErrorText>}
+        {data.linkStatusComplete ? null : <ErrorText>Incoming-reference detection is partial. Linked contains confirmed matches; Unlinked may include cards whose referrers could not be read.</ErrorText>}
         <Text as="div" size="xs" tone="muted" uppercase>{linkStatus === "all" ? "Whole box" : "Whole-box totals"}</Text>
         <Row gap="lg" wrap>
           <InventoryStatistic value={data.totals.files.toLocaleString()} label="physical files" />
@@ -131,7 +134,7 @@ function InventoryStatistic({ value, label }: { value: string; label: string }) 
   return (
     <Stack gap="none">
       <Text as="div" size="2xl" weight="bold">{value}</Text>
-      <Text as="div" size="sm" tone="muted">{label}</Text>
+      <Hint>{label}</Hint>
     </Stack>
   );
 }
@@ -148,7 +151,7 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
   return (
     <Card as="section" aria-label="Storage area view">
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">Area view</Text>
+        <Heading level={2}>Area view</Heading>
         <TabBar value={linkStatus} onChange={setLinkStatus} idPrefix="bbx-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
         <Row justify="between" align="end" wrap>
           <TabBar value={projection} onChange={setProjection} idPrefix="bbx-inventory-projection" label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
@@ -164,7 +167,7 @@ function InventoryDataTable({ items, linkStatus, projection }: { items: Inventor
   return (
     <Card as="section" aria-label={`${projection} storage table`}>
       <Stack gap="md">
-        <Text as="h2" size="lg" weight="semibold">{linkStatus === "all" ? "All content" : `${linkStatus === "linked" ? "Linked" : "Unlinked"} cards`} — {projection === "grouped" ? "grouped" : "direct files"}</Text>
+        <Heading level={2}>{linkStatus === "all" ? "All content" : `${linkStatus === "linked" ? "Linked" : "Unlinked"} cards`} — {projection === "grouped" ? "grouped" : "direct files"}</Heading>
         {items.length === 0 ? <Text as="p" tone="muted">No matching cards.</Text> : <InventoryTable items={items} />}
       </Stack>
     </Card>
@@ -175,7 +178,7 @@ function InventoryRules({ data }: { data: Inventory }) {
   return (
     <Card background="warm" as="section" aria-label="Counting rules">
       <Stack gap="sm">
-        <Text as="h2" size="lg" weight="semibold">What the numbers mean</Text>
+        <Heading level={2}>What the numbers mean</Heading>
         <Text as="p" size="sm"><Text weight="semibold">Grouped:</Text> each <Text mono>Name.type.card</Text> and its sibling <Text mono>Name.attach/</Text> directory count as one item of that card type. Loose files remain grouped by extension.</Text>
         <Text as="p" size="sm"><Text weight="semibold">Direct:</Text> every regular file and symlink counts separately by card type or final extension. Symlink sizes follow their targets when available; dangling links use the link size.</Text>
         <Text as="p" size="sm"><Text weight="semibold">Linked:</Text> a card has at least one detected incoming reference from another card, authored Markdown file, or box view, using the same recognized ref forms as <Text mono>bbx mv</Text>. References to its attachments count; self-references do not. Tooling/generated Markdown and temporary cards are not referrers. Loose files and orphan attachment directories appear only under All.</Text>

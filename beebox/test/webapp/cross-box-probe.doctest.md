@@ -203,7 +203,7 @@ figure ?path= traversal: 400 {"error":"Path outside box"}
 
 `card.get`, `history.list` (its `filter.path`), and `landmarks.forDir` all
 reject the escape outright (`BAD_REQUEST`). `status.browse`, `views.resolveRef`,
-and `todos.list` degrade to an empty/not-found answer rather than throwing —
+and `collections.query` degrade to an empty/not-found answer rather than throwing —
 asserted as "does not contain B's marker" since an empty result is still a
 safe result. An absolute path into B (rather than a `..`-relative one) is
 included for `card.get`: `card.ts`'s `resolveCardPath` calls `boxRelativePath`
@@ -239,8 +239,10 @@ print(`views.resolveRef: exists=${viewsRef.exists} title-is-filename-only=${view
 const landmarksForDir = await attempt(() => caller.landmarks.forDir({ dir: `${relIntoBeta}/_content/sub` }));
 print(`landmarks.forDir: ${landmarksForDir.ok ? "SUCCEEDED" : landmarksForDir.code}`);
 
-const todosList = await attempt(() => caller.todos.list({ cardPath: relIntoBeta }));
-print(`todos.list (cardPath): ${todosList.ok ? "SUCCEEDED" : todosList.code}`);
+const collectionsQuery = await attempt(() =>
+  caller.collections.query({ collection: "todos", query: { here: relIntoBeta, params: { status: ["open"] } } })
+);
+print(`collections.query (here): ${collectionsQuery.ok ? "SUCCEEDED" : collectionsQuery.code}`);
 =>
 card.get (relative ..): BAD_REQUEST
 card.get (absolute): BAD_REQUEST
@@ -248,7 +250,7 @@ status.browse: dirs=0 cards=0 files=0
 history.list (filter.path): BAD_REQUEST
 views.resolveRef: exists=false title-is-filename-only=true
 landmarks.forDir: BAD_REQUEST
-todos.list (cardPath): BAD_REQUEST
+collections.query (here): BAD_REQUEST
 ```
 
 ### `files.summarize`
@@ -265,6 +267,19 @@ const leaked = JSON.stringify(summarized).includes(BETA_MARKER) || JSON.stringif
 print(`files.summarize leaks beta's card: ${leaked}`);
 =>
 files.summarize leaks beta's card: false
+```
+
+### `files.kind`
+
+Answers only file, directory or missing, but "missing" versus "file" for a
+sibling's path would still reveal that box's layout. The namespace guard
+rejects the path before any `stat`.
+
+```ts continue
+const kindProbe = await attempt(() => caller.files.kind({ path: relToBetaMarker }));
+print(`files.kind on beta's card: ${kindProbe.ok ? kindProbe.value.kind : kindProbe.code}`);
+=>
+files.kind on beta's card: BAD_REQUEST
 ```
 
 ## 4. `chatControl.reserveSession`, `chat.newFeatures`, `chat.openers` — the Deliverable 1 fix

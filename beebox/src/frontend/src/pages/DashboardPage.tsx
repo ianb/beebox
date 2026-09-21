@@ -12,20 +12,21 @@ import { AttentionCards } from "../components/dashboard/AttentionCards";
 import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
-import { HealthWarnings } from "../components/dashboard/HealthWarnings";
+import { HealthWarnings, type HealthActionPending } from "../components/dashboard/HealthWarnings";
 import { OpsLinks } from "../components/dashboard/OpsLinks";
-import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
 export function DashboardPage() {
   const utils = trpc.useUtils();
   const currentUser = useCurrentUser();
-  const [growthActionError, setGrowthActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [dismissingCheck, setDismissingCheck] = useState<string | null>(null);
   const statusQuery = trpc.status.status.useQuery();
   const healthQuery = trpc.health.check.useQuery();
   const acknowledgeBoxGrowth = trpc.health.acknowledgeBoxGrowth.useMutation();
   const expectBoxGrowthRates = trpc.health.expectBoxGrowthRates.useMutation();
+  const dismissConnectorEpisode = trpc.health.dismissConnectorEpisode.useMutation();
   const schedulesQuery = trpc.scheduler.schedules.useQuery();
   const ticksQuery = trpc.scheduler.log.useQuery({ limit: 20, event: "tick" });
   const commitsQuery = trpc.status.activity.useQuery({ count: 15 });
@@ -64,55 +65,59 @@ export function DashboardPage() {
   const activityLoading = commitsQuery.isLoading || ticksQuery.isLoading;
   const activityError = commitsQuery.error || ticksQuery.error;
 
-  async function refreshGrowthHealth(): Promise<void> {
+  async function refreshHealth(): Promise<void> {
     const health = await trpcClient.health.check.query({ fresh: true });
     utils.health.check.setData(undefined, health);
   }
 
-  async function acknowledgeCurrentGrowth(): Promise<void> {
-    setGrowthActionError(null);
+  /** Run an owner decision, then force a live health read into the dashboard cache. */
+  async function decide(action: () => Promise<unknown>): Promise<void> {
+    setActionError(null);
     try {
-      await acknowledgeBoxGrowth.mutateAsync();
+      await action();
       // Do not invalidate into an older in-flight snapshot. Force a live read,
       // then put that exact result into the normal dashboard query cache.
-      await refreshGrowthHealth();
+      await refreshHealth();
     } catch (error) {
-      setGrowthActionError(errorMessage(error));
+      setActionError(errorMessage(error));
     }
   }
 
-  async function expectCurrentGrowthRates(): Promise<void> {
-    setGrowthActionError(null);
+  const acknowledgeCurrentGrowth = () => decide(() => acknowledgeBoxGrowth.mutateAsync());
+  const expectCurrentGrowthRates = () => decide(() => expectBoxGrowthRates.mutateAsync());
+  async function dismissEpisode(check: string): Promise<void> {
+    setDismissingCheck(check);
     try {
-      await expectBoxGrowthRates.mutateAsync();
-      await refreshGrowthHealth();
-    } catch (error) {
-      setGrowthActionError(errorMessage(error));
+      await decide(() => dismissConnectorEpisode.mutateAsync({ check }));
+    } finally {
+      setDismissingCheck(null);
     }
   }
+  const actionPending: HealthActionPending = acknowledgeBoxGrowth.isPending
+    ? { kind: "acknowledge" }
+    : expectBoxGrowthRates.isPending
+      ? { kind: "expect-rates" }
+      : dismissingCheck !== null ? { kind: "dismiss", check: dismissingCheck } : null;
 
   return (
-    <Column overflow="hidden" className="h-full">
+    <Stack gap="none" overflow="hidden" className="h-full">
       <HeaderStrip
         status={status}
         connected={connected}
       />
 
-      <Column overflow="auto" focusable className="flex-1">
+      <Stack gap="none" overflow="auto" focusable className="flex-1">
         <Stack gap="lg" className="w-full min-w-0 max-w-4xl mx-auto py-4 px-4">
           <OpsLinks />
 
           <HealthWarnings
             health={healthQuery.data ?? null}
-            canManageBoxGrowth={currentUser?.isOwner === true}
-            growthActionPending={
-              acknowledgeBoxGrowth.isPending
-                ? "acknowledge"
-                : expectBoxGrowthRates.isPending ? "expect-rates" : null
-            }
-            growthActionError={growthActionError}
+            canManage={currentUser?.isOwner === true}
+            actionPending={actionPending}
+            actionError={actionError}
             onAcknowledgeBoxGrowth={acknowledgeCurrentGrowth}
             onExpectBoxGrowthRates={expectCurrentGrowthRates}
+            onDismissConnectorEpisode={dismissEpisode}
           />
 
           <AttentionCards
@@ -135,9 +140,9 @@ export function DashboardPage() {
             error={activityError}
           />
         </Stack>
-      </Column>
+      </Stack>
 
       <SystemInfo status={status} version={healthQuery.data?.version ?? null} />
-    </Column>
+    </Stack>
   );
 }

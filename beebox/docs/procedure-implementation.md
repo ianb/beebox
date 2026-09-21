@@ -15,12 +15,12 @@ Run directories are a **recent cache, not an archive** — git history retains e
 ```
 _config/
   procedures/
-    process-pages.procedure.card
+    browser-task-drain.procedure.card
 
 _bookkeeping/
   procedure/
     runs/
-      process-pages_2026-02-06T2000/
+      browser-task-drain_2026-02-06T2000/
         run.procedure-run.card
 ```
 
@@ -46,37 +46,34 @@ scripts read naturally inline.
 ## Step Structure
 
 Condensed from a real definition
-(`templates/procedures/process-pages.procedure.card`):
+(`templates/procedures/browser-task-drain.procedure.card`):
 
 ```yaml
 steps:
-  - id: intake
-    description: Classify and route saved pages
+  - id: drain
+    description: File every waiting batch, record by record
     precheck:
       shells:
         - |-
-          count=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          count=$(find _content -path '*.attach/inbox/*' -name records.json 2>/dev/null | wc -l)
           if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-          echo "Found $count page(s) to process"
+          echo "Found $count batch(es) waiting in browser-task inboxes"
       whys:
-        - No saved pages to process
+        - No browser-task batch is waiting
     run:
       agents:
-        - prompt: >-
+        - prompt: |-
             Your agent prompt here...
           model: balanced
-          max-turns: 30
+          max-turns: 60
     validate:
       shells:
         - |-
-          remaining=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
-          questions=$(ls _bookkeeping/questions/intake-*.question.card 2>/dev/null | wc -l)
-          [ "$remaining" -eq 0 ] || [ "$questions" -gt 0 ]
-      instructions:
-        - |-
-          Every page should either be routed to a destination, trashed,
-          or have a question created asking the user what to do.
-      severity: abort
+          # Fail while any batch in an inbox/ has not started filing.
+          ...
+      whys:
+        - Every batch that was waiting has at least started filing
+      severity: review
 ```
 
 ### Shell Commands

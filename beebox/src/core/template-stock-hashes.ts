@@ -24,6 +24,13 @@ export interface TemplateStockEntry {
 }
 
 export const TEMPLATE_STOCK_HASHES = {
+  "agent-feedback-guide": {
+    current: "7b70d5b4c06c7820224a5da90ec6d2f577b0761381f5828481575f980f939ef9",
+    superseded: [
+      "685ab3899807ab4d52705e67080832906d2ac4ce5da3c4ae1171b4c6b69fdc5f",
+      "84e32a13b19db444378f23296b4ec5f4e96f5edcd51f233a2a18b9047cd95b2d",
+    ],
+  },
   "briefing-seed": {
     current: "ef850476650452469d989cb94c85d1d8b1fa10eee32d3568930cbb12d15489cc",
     superseded: [
@@ -31,13 +38,14 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "schemas-guide-v2": {
-    current: "238a9263cfa2194a6c06a44e8155e0b7a65042e883fb97880cb10592b5c3b4ff",
+    current: "d0021bd9506ab4255818d9246019471a5ef0ca7627a8f6a1544305bf8033ae37",
     superseded: [
       "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
       "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
       "f42242f4226592409bd2e95b076f9e88f0bf2270480df68e288a31ea1f6212df",
       "8cef3e54d557d88bc5916e92861159bea1d41e505a4ba6b660ae429358369f0f",
       "1290649a5abe4684c99ebd86386e152cd2cb3af411b0fb33d86673736dea972c",
+      "238a9263cfa2194a6c06a44e8155e0b7a65042e883fb97880cb10592b5c3b4ff",
     ],
   },
   "tricks-guide-v2": {

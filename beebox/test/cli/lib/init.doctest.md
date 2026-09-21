@@ -94,7 +94,6 @@ const { boxRoot } = await fullInit(tmp);
 await listFiles(boxRoot, "_config/procedures")
 =>
 browser-task-drain.procedure.card
-process-pages.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
 trick-secret-runtime.procedure.card
@@ -109,8 +108,8 @@ const refreshMaps = await fs.readFile(
   path.join(boxRoot, "_config/procedures/refresh-maps.procedure.card"),
   "utf8",
 );
-const processPages = await fs.readFile(
-  path.join(boxRoot, "_config/procedures/process-pages.procedure.card"),
+const browserTaskDrain = await fs.readFile(
+  path.join(boxRoot, "_config/procedures/browser-task-drain.procedure.card"),
   "utf8",
 );
 const procedureDir = path.join(boxRoot, "_config/procedures");
@@ -120,11 +119,11 @@ const stockProcedures = await Promise.all(
     .map((name) => fs.readFile(path.join(procedureDir, name), "utf8")),
 );
 print(`refresh-maps: ${refreshMaps.includes("model: balanced")}`);
-print(`process-pages: ${processPages.includes("model: balanced")}`);
+print(`browser-task-drain: ${browserTaskDrain.includes("model: balanced")}`);
 print(`provider pins: ${/model: (?:haiku|sonnet|opus|fable)/.test(stockProcedures.join("\n"))}`);
 =>
 refresh-maps: true
-process-pages: true
+browser-task-drain: true
 provider pins: false
 ```
 
@@ -133,6 +132,7 @@ await listFiles(boxRoot, "_config")
 =>
 calendar.guide.card
 connectors
+feedback
 intake.guide.card
 interface
 main.personality.card

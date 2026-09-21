@@ -74,3 +74,37 @@ confident wrong diagnosis and unactionable advice.
 An earlier version of this issue asserted a `PATH` cause from a process inspection
 that, on re-checking, had probably read the wrong process. Recorded here so nobody
 builds on it: the mechanism above is what the code shows, and the trigger is open.
+
+
+> Recovered 2026-09-21 from the August 25 journey A report. This is historical
+> evidence, not a fresh re-encounter; current status and priority are unchanged.
+
+## A first-time user's view of this failure (journey A, 2026-08-25)
+
+A simulated first-time user hit this wall as the very first thing the product
+ever did for them: two questions, two pink bars, zero answers. Their third try
+worked — retrying was the whole fix — and nothing on screen suggested trying
+again.
+
+Their reading of the message, verbatim, is the sharpest account we have of what
+this string does to a user:
+
+> "I have no idea what 'Claude Code' is. My friend said 'an AI app'. Nobody
+> said Claude Code."
+> "run `claude auth login` — run it *where*? There's no place in this app to
+> run anything. This is a sentence written for whoever built it, shown to
+> whoever uses it."
+> "Nothing tells me whether my two messages were *lost* or are queued."
+
+And what they asked for is a fair spec for the interim fix, independent of the
+root cause: *"This box can't reach its AI right now — nothing you typed was
+lost. Whoever set it up needs to sign it in."* Plus a retry button — and, given
+retry-fixed-it here, arguably an automatic one.
+
+They ranked this #1 of everything that nearly ended the evening: "If I hadn't
+been told to push through I'd have closed the tab and texted my friend."
+
+Unresolved by the retry: their two failed messages stayed visible in that
+session with nothing under them, and after starting a new chat they could not
+find them again — "Whether my first two messages still exist anywhere" made
+their closing list of open questions.

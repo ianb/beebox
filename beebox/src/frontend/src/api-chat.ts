@@ -34,7 +34,7 @@ import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { maintenanceRetryDelayMs } from "./lib/maintenance-retry";
 import { currentChatChannel } from "./lib/chat-channel";
-import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
+import { parseChatAgentEngine, type AddedModel, type ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -125,6 +125,8 @@ export interface ChatStatus {
   boxEngine: ChatAgentEngine;
   /** A usable `glm` key exists for this box — gates the picker's GLM rows. */
   glmAvailable: boolean;
+  /** Owner-added OpenRouter models; empty when the box has no usable key. */
+  addedModels: AddedModel[];
 }
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<ChatStatus> {

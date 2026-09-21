@@ -104,6 +104,14 @@ RECOVERY
   fi
 fi
 
+# A recreated container starts without the distro packages this box recorded
+# (`bbx host install`); reinstall them. A failure (mirror down, policy refusal)
+# warns and serving continues: a missing tool degrades one job, and
+# `bbx health` shows what is missing.
+if ! bbx host sync --box "$BOX_ROOT"; then
+  echo "beebox: some recorded host packages were not installed; see bbx health." >&2
+fi
+
 # Serve the box on all interfaces inside the container; the host-side port
 # mapping (compose) decides who can reach it.
 exec bbx engine serve "$BOX_ROOT" --host 0.0.0.0 --port 3210

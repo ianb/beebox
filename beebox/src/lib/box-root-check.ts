@@ -13,13 +13,12 @@
  */
 
 import * as fs from "node:fs/promises";
-import { BOX_ROOT_VOCABULARY } from "./box-root-vocabulary.js";
+import { isBoxRootVocabularyName } from "./box-root-vocabulary.js";
 import { errnoCode } from "./error-guards.js";
 
 /** OS/editor junk that is never a real stray — ignored outright, not reported. */
 const IGNORED_JUNK = new Set([".DS_Store", "Thumbs.db", "desktop.ini", ".localized"]);
 
-const VOCABULARY_NAMES: ReadonlySet<string> = new Set(BOX_ROOT_VOCABULARY.map((entry): string => entry.name));
 
 export interface BoxRootStray {
   /** The offending root entry's name. */
@@ -47,7 +46,7 @@ export async function checkBoxRoot(boxRoot: string): Promise<BoxRootStray[]> {
   const strays: BoxRootStray[] = [];
   for (const name of entries.toSorted()) {
     if (IGNORED_JUNK.has(name)) continue;
-    if (VOCABULARY_NAMES.has(name)) continue;
+    if (isBoxRootVocabularyName(name)) continue;
 
     if (name.startsWith("_")) {
       strays.push({

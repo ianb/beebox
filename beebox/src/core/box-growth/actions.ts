@@ -28,14 +28,15 @@ function expectationKey(expectation: Pick<GrowthRateExpectation, "kind" | "path"
   return `${expectation.kind}:${expectation.path ?? "box"}`;
 }
 
-export function acknowledgedGrowthState(state: BoxGrowthState, now: Date): BoxGrowthState {
+/**
+ * Accept the current measurement as the rate baseline and clear the notice.
+ * There is no level to accept: box size alone is never a finding.
+ */
+export function acknowledgedGrowthState(state: BoxGrowthState): BoxGrowthState {
   if (state.status !== "measured") throw new BoxGrowthAcceptanceError();
   return {
     ...state,
-    accepted: state.current,
     previous: state.current,
-    current: state.current,
-    acknowledgedAt: now.toISOString(),
     lastNotice: null,
   };
 }
@@ -65,8 +66,5 @@ export function expectedGrowthRateState(state: BoxGrowthState, now: Date): BoxGr
       expectations.set(key, expectation);
     }
   }
-  return acknowledgedGrowthState(
-    { ...state, rateExpectations: [...expectations.values()] },
-    now,
-  );
+  return acknowledgedGrowthState({ ...state, rateExpectations: [...expectations.values()] });
 }

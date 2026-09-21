@@ -82,9 +82,14 @@ export default defineConfig({
     // (Probed 2026-07-12: tsx pointed at src/frontend/tsconfig.json resolves a
     // value import through @core, so tsx is not the guard — the eslint rule is;
     // see the tsconfig paths comment.)
-    alias: {
-      "@shared": resolvePath(__dirname, "../shared"),
-    },
+    // Array form: the regex entry aliases ONE spelling through @schemas —
+    // `@schemas/<name>.list-entry`, a card type's list component, which is
+    // frontend code living beside its schema. Everything else under @schemas
+    // stays unaliased, so a value import through it still fails this build.
+    alias: [
+      { find: /^@schemas\/([\w.-]+\.list-entry)$/, replacement: resolvePath(__dirname, "../schemas/$1") },
+      { find: "@shared", replacement: resolvePath(__dirname, "../shared") },
+    ],
   },
   optimizeDeps: {
     // @ianbicking/canvas-loop is a linked workspace package whose subpaths

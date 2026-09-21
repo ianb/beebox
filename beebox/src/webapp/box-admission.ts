@@ -1,7 +1,8 @@
 /** HTTP preparation and detached work share the box's cross-process admission. */
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { BoxSpec } from "./server-types.js";
-import { acquireBoxWork, BoxMaintenanceError, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";
+import { acquireBoxWork, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../lib/box-maintenance-error.js";
 import { parseOAuthState } from "../connectors/google-oauth-state.js";
 import { toError } from "../lib/error-guards.js";
 
@@ -14,8 +15,6 @@ export function boxRequestsAreIdle(boxRoot: string): boolean {
 
 function requestBoxes(request: FastifyRequest, boxes: BoxSpec[]): BoxSpec[] {
   const url = new URL(request.url, "http://localhost");
-  // This exact procedure validates and owns its narrowly scoped answer lease.
-  if (typeof request.headers["x-bbx-box-work"] !== "string" && boxes.some((box) => url.pathname === `/${box.slug}/api/trpc/actions.answer`)) return [];
   if (url.pathname === "/auth/google-services/callback") {
     const parsed = parseOAuthState(url.searchParams.get("state") ?? undefined);
     const box = boxes.find((candidate) => candidate.slug === parsed?.boxSlug);

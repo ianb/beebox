@@ -61,6 +61,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "search", audience: "agent", smoke: { run: ["search", "zqxjkv"] } },
   { name: "contains", audience: "agent", smoke: { run: ["contains", "list"] } },
   { name: "todos", audience: "agent", smoke: { run: ["todos"] } },
+  { name: "query", audience: "agent", smoke: { run: ["query", "todos"] } },
   { name: "validate", audience: "agent", smoke: { run: ["validate"] } },
   { name: "refresh-maps", audience: "agent", smoke: MUTATES },
   { name: "extfile", audience: "agent", smoke: MUTATES },
@@ -80,6 +81,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "finalize", audience: "agent", smoke: MUTATES },
   { name: "procedure", audience: "agent", smoke: { run: ["procedure", "list"] } },
   { name: "trick", audience: "agent", smoke: { run: ["trick"] } },
+  { name: "host", audience: "agent", smoke: { skip: "installs system packages as root through sudo" } },
 
   // ---- Reading the box's own state -------------------------------------
   { name: "status", audience: "agent", smoke: { run: ["status"] } },
@@ -101,7 +103,6 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
-  { name: "feedback", audience: "agent", smoke: { skip: "writes and commits a feedback file" } },
 
   // ---- Credentialed: these delegate to the box's server under the agent
   //      profile (`cli/lib/credentialed-verb.ts`), which is exactly what the

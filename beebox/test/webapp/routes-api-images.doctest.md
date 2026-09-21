@@ -75,6 +75,23 @@ const cardMetadata = await Sharp(cardImage.rawPayload).metadata();
 => 200 24x16
 ```
 
+A card name containing a dot keeps it: `Mr. Smith.image.card` owns
+`Mr. Smith.attach/`. The loader accepts only the `attach/` form of
+`filename.ref`; a box-absolute ref to the same file does not load (the
+`filename-attach-scope` migration rewrites that legacy form):
+
+```ts continue
+await mkdir(join(server.boxRoot, "_content/Mr. Smith.attach"), { recursive: true });
+await writeFile(join(server.boxRoot, "_content/Mr. Smith.attach/photo.jpg"), jpeg);
+await server.seed("_content/Mr. Smith.image.card", "---\nfilename:\n  ref: attach/photo.jpg\n---\n");
+(await imageRequest("/api/images/_content/Mr.%20Smith.image.card?width=24&format=jpeg")).statusCode
+=> 200
+
+await server.seed("_content/Flat.image.card", "---\nfilename:\n  ref: /_content/photo.jpg\n---\n");
+(await imageRequest("/api/images/_content/Flat.image.card?width=24&format=jpeg")).statusCode
+=> 404
+```
+
 Crop decisions use dimensions after EXIF orientation, so an already-smaller portrait is not enlarged and cropped:
 
 ```ts continue

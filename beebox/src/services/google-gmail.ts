@@ -40,6 +40,14 @@ export type * from "./google-gmail-types.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 
+/** Gmail refused a draft as malformed (HTTP 400). The draft itself must change before it can succeed. */
+export class GmailDraftRejectedError extends Error {
+  constructor(readonly detail: string) {
+    super(`Gmail rejected the draft${detail === "" ? "" : `: ${detail.slice(0, 300)}`}`);
+    this.name = "GmailDraftRejectedError";
+  }
+}
+
 export interface GoogleGmailService {
   /** List message refs (id + threadId) matching a Gmail search query. */
   listMessages(opts: {
@@ -201,9 +209,17 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
     async createDraft(opts) {
       const message: { raw: string; threadId?: string } = { raw: opts.raw };
       if (opts.threadId) message.threadId = opts.threadId;
-      const data = await api
-        .post("users/me/drafts", { json: { message } })
-        .json<GmailDraft>();
+      let data: GmailDraft;
+      try {
+        data = await api.post("users/me/drafts", { json: { message } }).json<GmailDraft>();
+      } catch (e) {
+        // 400 is Gmail rejecting this message (bad address, malformed MIME);
+        // retrying it cannot help. Auth, quota and server errors stay as they are.
+        if (e instanceof HTTPError && e.response.status === 400) {
+          throw new GmailDraftRejectedError(await e.response.text().catch(() => ""));
+        }
+        throw e;
+      }
       validateResponse(data, { schema: gmailDraftSchema, service: "gmail", operation: "createDraft" });
       return data;
     },

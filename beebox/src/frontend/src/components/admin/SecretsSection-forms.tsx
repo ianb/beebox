@@ -20,6 +20,8 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
 import { TextField } from "../ui/fields";
 import { GuidePanel, postSaveMessage, type SecretGuideEntry } from "./SecretsSection-guide";
 
@@ -117,7 +119,16 @@ function NameFieldWithSuggestion({
   );
 }
 
-/** The secret value: the format entry lends its prefix as the placeholder and its hint as the helper. */
+/**
+ * The secret value: the format entry lends its prefix as the placeholder and
+ * its hint as the helper.
+ *
+ * A machine credential is not a login, but every password manager reads
+ * `type="password"` in a submitting form as one and offers to save it. Chrome
+ * ignores `autocomplete="off"` on a password field, so the opt-out is
+ * `new-password` plus the managers' own ignore attributes. The field keeps
+ * `type="password"` because that is what masks the value while it is typed.
+ */
 function ValueField({ id, entry, value, onChange }: { id?: string; entry: FormatHints[number] | null; value: string; onChange: (value: string) => void }) {
   return (
     <TextField
@@ -126,7 +137,11 @@ function ValueField({ id, entry, value, onChange }: { id?: string; entry: Format
       type="password"
       value={value}
       onChange={onChange}
-      autoComplete="off"
+      autoComplete="new-password"
+      data-1p-ignore=""
+      data-lpignore="true"
+      data-bwignore="true"
+      data-form-type="other"
       required
       placeholder={entry === null || entry.prefix === undefined ? undefined : `${entry.prefix}…`}
       helper={entry === null ? "Stored in the machine secret store; never shown again." : entry.hint}
@@ -238,7 +253,7 @@ export function SecretValueForm({
               knownNames={(guides ?? []).map((candidate) => candidate.key)}
             />
           ) : (
-            <Text size="sm" tone="muted">For <Text mono>{fixedName}</Text></Text>
+            <Hint>For <Text mono>{fixedName}</Text></Hint>
           )}
           <ValueField id={ids?.value} entry={entry} value={value} onChange={setValue} />
           {fixedName === null ? (
@@ -262,7 +277,7 @@ export function SecretValueForm({
           </Row>
           {saved ? <SavedStatus saved={saved} uses={uses} /> : null}
           {setValueMutation.error ? (
-            <div role="alert"><Text size="sm" tone="danger">{setValueMutation.error.message}</Text></div>
+            <div role="alert"><ErrorText>{setValueMutation.error.message}</ErrorText></div>
           ) : null}
         </Stack>
       </form>

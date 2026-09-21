@@ -8,22 +8,31 @@ import { Button } from "../ui/Button";
 
 type HealthResponse = RouterOutput["health"]["check"];
 
+/** Which owner action is in flight: a growth decision, or dismissing one check's connector episode. */
+export type HealthActionPending =
+  | { kind: "acknowledge" }
+  | { kind: "expect-rates" }
+  | { kind: "dismiss"; check: string }
+  | null;
+
 interface HealthWarningsProps {
   health: HealthResponse | null;
-  canManageBoxGrowth: boolean;
-  growthActionPending: "acknowledge" | "expect-rates" | null;
-  growthActionError: string | null;
+  canManage: boolean;
+  actionPending: HealthActionPending;
+  actionError: string | null;
   onAcknowledgeBoxGrowth: () => Promise<void>;
   onExpectBoxGrowthRates: () => Promise<void>;
+  onDismissConnectorEpisode: (check: string) => Promise<void>;
 }
 
 export function HealthWarnings({
   health,
-  canManageBoxGrowth,
-  growthActionPending,
-  growthActionError,
+  canManage,
+  actionPending,
+  actionError,
   onAcknowledgeBoxGrowth,
   onExpectBoxGrowthRates,
+  onDismissConnectorEpisode,
 }: HealthWarningsProps) {
   if (!health) return null;
   if (health.status === "healthy") return null;
@@ -44,15 +53,15 @@ export function HealthWarnings({
           >
             {check.severity === "error" ? "\u2718" : "\u26A0"} {check.message}
           </div>
-          {check.actions !== undefined && canManageBoxGrowth ? (
+          {check.actions !== undefined && canManage ? (
             <div className="space-y-1">
               <div className="flex flex-wrap gap-2">
                 {check.actions.includes("acknowledge-box-growth") ? (
                   <Button
                     intent="secondary"
                     size="sm"
-                    loading={growthActionPending === "acknowledge"}
-                    disabled={growthActionPending !== null}
+                    loading={actionPending?.kind === "acknowledge"}
+                    disabled={actionPending !== null}
                     loadingLabel="Acknowledging…"
                     onClick={onAcknowledgeBoxGrowth}
                   >
@@ -63,27 +72,39 @@ export function HealthWarnings({
                   <Button
                     intent="secondary"
                     size="sm"
-                    loading={growthActionPending === "expect-rates"}
-                    disabled={growthActionPending !== null}
+                    loading={actionPending?.kind === "expect-rates"}
+                    disabled={actionPending !== null}
                     loadingLabel="Saving expectation…"
                     onClick={onExpectBoxGrowthRates}
                   >
                     Expect these rates
                   </Button>
                 ) : null}
+                {check.actions.includes("dismiss-connector-episode") ? (
+                  <Button
+                    intent="secondary"
+                    size="sm"
+                    loading={actionPending?.kind === "dismiss" && actionPending.check === check.name}
+                    disabled={actionPending !== null}
+                    loadingLabel="Dismissing…"
+                    onClick={() => onDismissConnectorEpisode(check.name)}
+                  >
+                    This is expected
+                  </Button>
+                ) : null}
               </div>
               {check.actions.includes("expect-box-growth-rates") ? (
                 <div className="text-xs text-warning-dark">
-                  Acknowledge records this milestone but keeps rate limits. Expecting these rates gives the displayed rates 50% headroom.
+                  Acknowledge makes this measurement the new baseline but keeps rate limits. Expecting these rates gives the displayed rates 50% headroom.
                 </div>
               ) : null}
             </div>
           ) : null}
         </div>
       ))}
-      {growthActionError !== null ? (
+      {actionError !== null ? (
         <div role="alert" className="text-xs text-danger-dark">
-          Could not update growth monitoring: {growthActionError}
+          Could not save that decision: {actionError}
         </div>
       ) : null}
     </section>

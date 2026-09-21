@@ -168,7 +168,7 @@ await fs.writeFile(
 );
 
 const hubBin = path.join(PACKAGE_ROOT, "bin", "bbx");
-const hubProcess = execFile(hubBin, ["hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
+const hubProcess = execFile(hubBin, ["engine", "hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
 let hubStdout = "";
 let hubStderr = "";
 let hubExited = null;

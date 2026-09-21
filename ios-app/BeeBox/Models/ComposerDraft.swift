@@ -329,8 +329,21 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var diarized: Bool
     var hqText: Bool? = nil
     var hqService: String? = nil
+    var hqFallback: Bool? = nil
     var state: PendingEmissionState
     var createdAt: Date
+}
+
+enum VoicePreparationOutcome: Equatable, Sendable {
+    case hq(text: String, diarized: Bool, service: String?)
+    case fallback(text: String)
+
+    var text: String {
+        switch self {
+        case .hq(let text, _, _), .fallback(let text):
+            text
+        }
+    }
 }
 
 /// When a `pending` emission is redelivered, and when it has waited long enough

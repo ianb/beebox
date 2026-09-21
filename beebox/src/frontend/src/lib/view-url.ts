@@ -102,6 +102,28 @@ export function isExternalUrl(src: string): boolean {
 }
 
 /**
+ * markdown-it's link normalization, made box-aware. markdown-it percent-encodes
+ * every destination, so `[a](<Beach walk.md>)` would reach the in-box resolver
+ * as `Beach%20walk.md` and name a file with a literal `%20`. An in-box link is
+ * a box ref, not a URL, so it is handed over decoded (`x%20y.md` means
+ * `x y.md`, as in CommonMark); an external URL keeps markdown-it's `encode`.
+ */
+export function normalizeMarkdownLink(url: string, encode: (url: string) => string): string {
+  if (isExternalUrl(url)) return encode(url);
+  // Only the path is decoded: the query and fragment stay as written, and
+  // their readers (`URLSearchParams`) decode them once themselves.
+  const cut = url.search(/[#?]/);
+  const pathPart = cut === -1 ? url : url.slice(0, cut);
+  const suffix = cut === -1 ? "" : url.slice(cut);
+  try {
+    return decodeURI(pathPart) + suffix;
+  } catch (_e) {
+    // A malformed escape (`100%.md`) is not an escape at all: keep the text.
+    return url;
+  }
+}
+
+/**
  * Turn a markdown link/image href — a box path that may be leading-slash
  * absolute or document-relative, and may carry `?view=`/params — into a
  * ViewTarget, resolving the path part against `basePath`. The query is split off

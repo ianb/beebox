@@ -55,10 +55,23 @@ const BOUNDARY_PATTERNS = [
     // a backend graph in a tsx path even though the Vite client build rejects
     // it. Needs @typescript-eslint/no-restricted-
     // imports (the base ESLint rule has no `allowTypeImports`).
-    group: ["@core/**", "@schemas/**", "@backend/**"],
+    group: ["@core/**", "@backend/**"],
     allowTypeImports: true,
     message:
-      "@core/@schemas/@backend are TYPE-ONLY aliases (no Vite alias). Import only types (`import type …`). A value import executes under tsx and pulls backend source into that graph — relocate the value into src/shared/ and import via @shared.",
+      "@core/@backend are TYPE-ONLY aliases (no Vite alias). Import only types (`import type …`). A value import executes under tsx and pulls backend source into that graph — relocate the value into src/shared/ and import via @shared.",
+  },
+  {
+    // @schemas is type-only too, with ONE exception: a card type's list
+    // component, `@schemas/<type>.list-entry`. That file is frontend code
+    // living beside its schema (boxholder decision, 2026-09-20);
+    // vite.config.ts aliases exactly that spelling, and ../../eslint.config.ts
+    // fences what such a file may import in turn. Written as a `regex` rather
+    // than a negated `group` pattern because a `!` entry in `group` does not
+    // exclude a match (probed 2026-09-20).
+    regex: String.raw`^@schemas/(?!.*\.list-entry$).`,
+    allowTypeImports: true,
+    message:
+      "@schemas is a TYPE-ONLY alias (no Vite alias) apart from `@schemas/<type>.list-entry`. Import only types (`import type …`). A value import executes under tsx and pulls backend source into that graph — relocate the value into src/shared/ and import via @shared.",
   },
 ];
 // src/shared/ is bundler-safe, so a raw `../shared/…` bundles nothing harmful —

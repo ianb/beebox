@@ -1,6 +1,7 @@
 import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { TextField } from "../ui/fields";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { SearchResults, type SearchResult } from "./SearchResults";
 import { trpc } from "../../lib/trpc";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider";
@@ -47,7 +48,7 @@ export function QuickSearchOverlay() {
       <div className="p-3"><TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" autoFocus /></div>
       {!query ? <Text tone="muted" className="px-3 pb-4">Type to search this box. Press Escape to close.</Text> : null}
       {results.isLoading ? <Text tone="muted" className="px-3 pb-4">Searching…</Text> : null}
-      {results.error ? <Text tone="danger" className="px-3 pb-4">Could not search: {results.error.message}</Text> : null}
+      {results.error ? <ErrorText className="px-3 pb-4">Could not search: {results.error.message}</ErrorText> : null}
       {results.data ? <div className="max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
     </div>
   </div>;

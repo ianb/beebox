@@ -10,6 +10,7 @@ import {
   resolveContentTarget,
   classifyMarkdownHref,
   isExternalUrl,
+  normalizeMarkdownLink,
   resolveImageSrc,
   externalImageProxyUrl,
   apiFileUrl,
@@ -261,6 +262,32 @@ An ill-formed id is *not* rejected here. Classification does not touch the docum
 ```ts
 JSON.stringify(classifyMarkdownHref("control:composer-mic"))
 => {"kind":"control","id":"composer-mic","action":"point","description":null,"unknownAction":null}
+```
+
+## normalizeMarkdownLink
+
+markdown-it percent-encodes every link destination, so a link to
+`<Beach walk.md>` would reach the in-box resolver as `Beach%20walk.md`.
+`normalizeMarkdownLink` hands an in-box link's path over decoded; its query
+stays as written, because `URLSearchParams` decodes it once later. An
+external URL goes to markdown-it's own encoder (stood in for here by
+`encodeURI`). A malformed escape is kept as written:
+
+```ts
+const encode = (url) => encodeURI(url);
+[
+  normalizeMarkdownLink("/_content/Beach%20walk.attach/p.jpg", encode),
+  normalizeMarkdownLink("Beach%20walk.doc.card?k=%2526", encode),
+  normalizeMarkdownLink("100%.md", encode),
+  normalizeMarkdownLink("https://example.com/a b", encode),
+]
+=>
+[
+  "/_content/Beach walk.attach/p.jpg",
+  "Beach walk.doc.card?k=%2526",
+  "100%.md",
+  "https://example.com/a%20b"
+]
 ```
 
 ## isExternalUrl

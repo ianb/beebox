@@ -17,8 +17,8 @@
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
-import { isGlmModelId, useGlmAvailable } from "./glm-availability-store";
+import { chatModelLabel, chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { isGlmModelId, useAddedModels, useGlmAvailable } from "./model-availability-store";
 
 const ENGINE_NAMES: Record<ChatAgentEngine, string> = { claude: "Claude", codex: "Codex" };
 
@@ -67,6 +67,7 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
   const enabled = enabledEngines.includes(engine);
   // Hooks before the early return below.
   const glmAvailable = useGlmAvailable();
+  const addedModels = useAddedModels();
   const heading = (
     <div role="none" className="px-3 pt-2 pb-1 flex justify-between gap-2">
       <span className="text-xs uppercase tracking-wide text-warm-500">{ENGINE_NAMES[engine]}</span>
@@ -93,7 +94,7 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
   return (
     <>
       {heading}
-      {chatModelOptions(engine).filter((opt) => opt.model === null || !isGlmModelId(opt.model) || glmAvailable).map((opt) => {
+      {chatModelOptions(engine, addedModels).filter((opt) => opt.model === null || !isGlmModelId(opt.model) || glmAvailable).map((opt) => {
         const model = opt.model;
         if (model === null) return null;
         // Pinning is confined to the box's own engine: the pin writes one
@@ -137,9 +138,10 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
 /** "Model" sub-panel. */
 export function ModelPanel(props: ModelPanelProps) {
   const { onBack, selectedModel, boxDefault, canPin, agentEngine, enabledEngines, boxEngine } = props;
+  const addedModels = useAddedModels();
   const defaultLabel = boxDefault === null
     ? null
-    : chatModelOptions(agentEngine).find((o) => o.model === boxDefault)?.label ?? boxDefault;
+    : chatModelLabel(agentEngine, { model: boxDefault, added: addedModels }) ?? boxDefault;
   // This chat's own engine leads — it is the section the chat can always act
   // on — then the box's default, then anything else.
   const order = [...new Set<ChatAgentEngine>([agentEngine, boxEngine, ...enabledEngines, "claude", "codex"])];

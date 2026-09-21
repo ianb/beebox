@@ -9,6 +9,7 @@ import { resolveGitDir } from "./git-lock.js";
 import { writeFileAtomic } from "./atomic-write.js";
 import { errnoCode } from "./error-guards.js";
 import { invariant } from "./invariant.js";
+import { BoxMaintenanceError, type WorkHolder } from "./box-maintenance-error.js";
 
 const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
 type Permit = z.infer<typeof permitSchema>;
@@ -16,12 +17,19 @@ const phaseSchema = z.object({
   id: z.string().uuid(), reason: z.string(), phase: z.enum(["draining", "exclusive", "ready"]),
   /** When a draining phase gives up waiting; absent once changes begin, when reopening is not predictable. */
   until: z.string().datetime().optional(),
+  /** When the maintenance attempt that wrote this record began; carried across a retry. */
+  since: z.string().datetime().optional(),
 });
 type Phase = z.infer<typeof phaseSchema>;
+/**
+ * A phase record and whether anyone still holds it. A record with a live owner
+ * closes the box. A record without one is unfinished maintenance: it refuses
+ * nothing, so a crashed or failed owner can never leave a box unusable, and it
+ * stays until the next attempt completes.
+ */
+export interface MaintenanceStatus extends Phase { owner: WorkHolder | null }
 const workHolderSchema = z.object({ reason: z.string(), since: z.string() });
 const workLeaseSchema = z.object({ holders: z.array(workHolderSchema).default([]) });
-/** One admitted piece of work, as another process sees it. */
-export interface WorkHolder { pid: number; reason: string; since: string }
 const context = new AsyncLocalStorage<Permit | null>();
 const directories = new Map<string, Promise<string>>();
 interface ProcessLease {
@@ -32,39 +40,11 @@ interface ProcessLease {
 const processes = new Map<string, ProcessLease>();
 const HOLDER_PUBLISH_MS = 250;
 
-type MaintenanceRefusal = "foreign" | "expired" | "closed" | "recovery" | "nested" | "timeout";
-
-/** A refusal that names what holds the box and, when it is known, how long. */
-export class BoxMaintenanceError extends Error {
-  readonly reason: MaintenanceRefusal;
-  /** How long until a closed box is expected to reopen, when its phase records a deadline. */
-  readonly retryAfterMs: number | undefined;
-  /** The maintenance owner that refused this one, when another owner holds the box. */
-  readonly holder: WorkHolder | undefined;
-  constructor(opts: { reason: MaintenanceRefusal; detail?: string; retryAfterMs?: number; holder?: WorkHolder }) {
-    const messages = {
-      foreign: "Work permission belongs to another box", expired: "Work permission has expired",
-      closed: "Box admission is closed; retry after maintenance", recovery: "Interrupted maintenance needs recovery",
-      nested: "Nested maintenance is not allowed", timeout: "Timed out draining box work",
-    };
-    super(opts.reason === "closed" && opts.detail ? closedMessage(opts.detail, opts.retryAfterMs) : `${messages[opts.reason]}${opts.detail ? `: ${opts.detail}` : ""}`);
-    this.name = "BoxMaintenanceError";
-    this.reason = opts.reason;
-    this.retryAfterMs = opts.retryAfterMs;
-    this.holder = opts.holder;
-  }
-}
-
 /** Another maintenance owner holds the box: a refusal, not a crash, and its sidecar says who. */
 function ownerHeldError(error: LockHeldError): BoxMaintenanceError {
-  const reason = typeof error.holder.metadata.reason === "string" ? error.holder.metadata.reason : "maintenance";
-  const holder = { pid: error.holder.pid, reason, since: error.holder.acquiredAt };
+  const holder = ownerHolder(error.holder);
+  const { reason } = holder;
   return new BoxMaintenanceError({ reason: "closed", detail: `${reason} (pid ${String(holder.pid)}, since ${holder.since})`, holder });
-}
-
-function closedMessage(reason: string, retryAfterMs: number | undefined): string {
-  const wait = retryAfterMs === undefined ? "" : `; expected to reopen within ${String(Math.max(1, Math.ceil(retryAfterMs / 60_000)))} min`;
-  return `Box is closed for ${reason}${wait}`;
 }
 
 function closedError(phase: Phase): BoxMaintenanceError {
@@ -116,6 +96,21 @@ async function readPhase(directory: string): Promise<Phase | null> {
   try { return phaseSchema.parse(JSON.parse(await readFile(join(directory, "phase.json"), "utf8"))); }
   catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
 }
+function ownerHolder(holder: LockHolder): WorkHolder {
+  const reason = typeof holder.metadata.reason === "string" ? holder.metadata.reason : "maintenance";
+  return { pid: holder.pid, reason, since: holder.acquiredAt };
+}
+/** The live maintenance owner, or null when no process holds the owner lock. */
+async function ownerOf(directory: string): Promise<WorkHolder | null> {
+  const holder = await inspectLock(join(directory, "owner.lock"));
+  return holder && ownerHolder(holder);
+}
+/** The phase that closes the box now: a record whose owner lock is still held. */
+async function closedPhase(directory: string): Promise<Phase | null> {
+  const phase = await readPhase(directory);
+  if (!phase) return null;
+  return (await ownerOf(directory)) === null ? null : phase;
+}
 async function validPermit(directory: string, inherited?: string | null): Promise<Permit | undefined> {
   if (inherited === null) return undefined;
   const encoded = inherited ?? (context.getStore() !== undefined ? undefined : process.env.BBX_BOX_WORK);
@@ -148,7 +143,7 @@ export interface BoxWorkRequest {
 export async function acquireBoxWork(boxRoot: string, { reason, inherited }: BoxWorkRequest): Promise<BoxWork> {
   const directory = await directoryFor(boxRoot);
   if (!inherited && (inherited === null || context.getStore() === null || !context.getStore() && !process.env.BBX_BOX_WORK)) {
-    const closed = await readPhase(directory);
+    const closed = await closedPhase(directory);
     if (closed) throw closedError(closed);
   }
   return withAdmission(directory, async () => {
@@ -182,11 +177,9 @@ export async function acquireBoxWork(boxRoot: string, { reason, inherited }: Box
     try {
       await work.ready;
       const parent = await validPermit(directory, inherited);
-      const phase = await readPhase(directory);
-      if (phase && !parent) throw closedError(phase);
-      if (phase && phase.phase !== "draining" && !parent?.maintenance) {
-        throw new BoxMaintenanceError({ reason: "recovery", detail: phase.reason });
-      }
+      const phase = await closedPhase(directory);
+      // A retained descendant may finish while the owner drains, never once changes begin.
+      if (phase && (!parent || phase.phase !== "draining" && !parent.maintenance)) throw closedError(phase);
       const permit = parent?.maintenance ? parent : work.permit;
       return { run: (fn) => context.run(permit, fn), release };
     } catch (error) { await release(); throw error; }
@@ -224,21 +217,30 @@ export function boxWorkEnvironment(): Record<string, string> {
   return permit ? { BBX_BOX_WORK: JSON.stringify(permit) } : inherited ? { BBX_BOX_WORK: inherited } : {};
 }
 
-export async function boxMaintenanceStatus(boxRoot: string): Promise<Phase | null> {
-  return readPhase(await directoryFor(boxRoot));
+export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> {
+  const directory = await directoryFor(boxRoot);
+  const phase = await readPhase(directory);
+  return phase && { ...phase, owner: await ownerOf(directory) };
 }
 
 export interface BoxMaintenance extends BoxWork {
+  /** Whether this owner still holds the box; false once its lock was lost or reclaimed. */
+  held(): Promise<boolean>;
   drain(): Promise<void>;
   prepare(): Promise<void>;
   beginChanges(): Promise<void>;
   complete(): Promise<void>;
 }
 
-/** Close first, then drain. Failed changing attempts stay closed for recovery. */
+/**
+ * Close first, then drain. A changing attempt that does not complete leaves its
+ * phase record behind as unfinished maintenance; the box reopens as soon as
+ * this owner's lock is gone, and the next attempt over the record clears it on
+ * completion.
+ */
 export async function closeBoxMaintenance(
   boxRoot: string,
-  opts: { reason: string; drainMs?: number; recover?: boolean; join?: boolean },
+  opts: { reason: string; drainMs?: number; join?: boolean },
 ): Promise<BoxMaintenance> {
   const directory = await directoryFor(boxRoot);
   if (opts.join) {
@@ -252,11 +254,16 @@ export async function closeBoxMaintenance(
     const delegatedWork = await acquireBoxWork(boxRoot, { reason: `delegated ${opts.reason}`, inherited: JSON.stringify(parent) });
     const phase = async (value: Phase["phase"]): Promise<void> => {
       await validPermit(directory, JSON.stringify(parent));
-      await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ id: parent.id, reason: opts.reason, phase: value }) });
+      const since = (await readPhase(directory))?.since;
+      await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ id: parent.id, reason: opts.reason, phase: value, ...(since === undefined ? {} : { since }) }) });
     };
     // Delegates only declare startup readiness explicitly; intermediate completion changes no phase.
     const noRelease = async (): Promise<void> => {};
-    return { run: (fn) => context.run(parent, fn), drain: noRelease, release: () => delegatedWork.release(),
+    const held = (): Promise<boolean> => validPermit(directory, JSON.stringify(parent)).then(() => true, (error: unknown) => {
+      if (error instanceof BoxMaintenanceError) return false;
+      throw error;
+    });
+    return { run: (fn) => context.run(parent, fn), drain: noRelease, release: () => delegatedWork.release(), held,
       prepare: () => phase("ready"), complete: noRelease, beginChanges: () => phase("exclusive") };
   }
   if (await validPermit(directory)) throw new BoxMaintenanceError({ reason: "nested" });
@@ -270,9 +277,16 @@ export async function closeBoxMaintenance(
   let completed = false;
   let released = false;
   const drainMs = opts.drainMs ?? 600_000;
-  const writePhase = (phase: Phase["phase"]): Promise<void> => writeFileAtomic(join(directory, "phase.json"), {
-    content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
-  });
+  let since = new Date().toISOString();
+  const ownsLock = async (): Promise<boolean> => (await inspectLock(leasePath(permit)))?.metadata.id === permit.id;
+  // A handle whose lock was reclaimed (a sleep past the stale window) must not
+  // publish over, or clear, the closure of the owner that replaced it.
+  const writePhase = async (phase: Phase["phase"]): Promise<void> => {
+    if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });
+    await writeFileAtomic(join(directory, "phase.json"), {
+      content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
+    });
+  };
   const release = async (): Promise<void> => {
     if (released) return;
     released = true;
@@ -283,21 +297,20 @@ export async function closeBoxMaintenance(
         const phase = await readPhase(directory);
         changing = phase !== null && phase.phase !== "draining";
       }
-      if (completed || !changing) await rm(join(directory, "phase.json"), { force: true });
+      if ((completed || !changing) && await ownsLock()) await rm(join(directory, "phase.json"), { force: true });
     }
     finally { await releaseLock(leasePath(permit)); }
   };
   try {
+    // An unfinished record stays until an attempt completes: even one that
+    // cannot drain keeps it, and its start time carries over.
     const previous = await readPhase(directory);
-    if (previous && previous.phase !== "draining" && !opts.recover) {
-      changing = true;
-      throw new BoxMaintenanceError({ reason: "recovery", detail: previous.reason });
-    }
-    // Retain a prior uncertain phase even if this recovery attempt cannot drain.
     changing = previous !== null && previous.phase !== "draining";
+    since = previous?.since ?? since;
     await writePhase(changing ? "exclusive" : "draining");
     return {
       run: (fn) => context.run(permit, fn), release,
+      async held() { return !released && ownsLock(); },
       async drain() {
         const deadline = Date.now() + drainMs;
         for (;;) {
@@ -310,16 +323,11 @@ export async function closeBoxMaintenance(
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       },
-      async prepare() {
-        if (released) throw new BoxMaintenanceError({ reason: "expired" });
-        await writePhase("ready"); changing = true;
-      },
-      async beginChanges() {
-        if (released) throw new BoxMaintenanceError({ reason: "expired" });
-        await writePhase("exclusive"); changing = true;
-      },
+      async prepare() { await writePhase("ready"); changing = true; },
+      async beginChanges() { await writePhase("exclusive"); changing = true; },
       async complete() {
         await withAdmission(directory, async () => {
+          if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });
           invariant((await scanLocks(join(directory, "work"), { suffix: ".lock", profile: "default" })).size === 0, "Maintenance children must finish before reopening");
           completed = true;
           await release();
@@ -339,7 +347,7 @@ export async function acquireBoxMaintenance(boxRoot: string, opts: Parameters<ty
 /** Startup may initialize a prepared generation; ordinary requests stay closed. */
 export async function acquireBoxStartup(boxRoot: string): Promise<BoxWork> {
   const directory = await directoryFor(boxRoot);
-  const phase = await readPhase(directory);
+  const phase = await closedPhase(directory);
   if (!phase) return acquireBoxWork(boxRoot, { reason: "startup", inherited: null });
   if (phase.phase !== "ready") throw closedError(phase);
   return acquireBoxWork(boxRoot, { reason: "startup", inherited: JSON.stringify({ directory, id: phase.id, maintenance: true }) });

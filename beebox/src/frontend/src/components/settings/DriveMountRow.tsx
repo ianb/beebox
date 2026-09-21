@@ -24,16 +24,16 @@ import { FriendlyDate } from "../ui/FriendlyDate";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
 import { bbxSource } from "../../lib/source-tag";
+import { controlAddress } from "@shared/control-address";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 
 /** Preserve case-sensitive Drive identity inside the scan's lowercase id grammar. */
 export function driveControlId(action: "cancel" | "confirm" | "open" | "sync" | "unmount", driveId: string): string {
-  const encodedId = [...driveId]
-    .map((character) => character.codePointAt(0)?.toString(16).padStart(6, "0"))
-    .join("");
-  return `bbx-settings-drive-${action}-id-${encodedId}`;
+  return controlAddress(`bbx-settings-drive-${action}-id`, driveId);
 }
 
 function childSummary(children: DriveMount["children"]): string {
@@ -161,7 +161,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
         {mount.status === null ? <Badge tone="neutral">never synced</Badge> : null}
       </Row>
 
-      <Text size="sm" tone="muted">
+      <Hint>
         mirrors into {mount.dir === "" ? "the box root" : mount.dir} · {childSummary(mount.children)}
         {problemSummary(mount.problems) === null ? null : <>{" · "}{problemSummary(mount.problems)}</>}
         {mount.lastSync === null ? null : (
@@ -170,10 +170,10 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
             <FriendlyDate iso={mount.lastSync} />
           </>
         )}
-      </Text>
+      </Hint>
 
       {mount.error === null ? null : (
-        <Text size="sm" tone="danger">{mount.error}</Text>
+        <ErrorText>{mount.error}</ErrorText>
       )}
 
       <Row gap="sm" align="center" wrap>

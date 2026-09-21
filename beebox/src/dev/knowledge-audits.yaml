@@ -1,4 +1,32 @@
 tests:
+  # === Quick chat routing ===
+  # Status (2026-09-21, Claude): 1/1 passed, 0 reads/searches, 23k context,
+  # against a disposable standalone clone with installed package-doc files.
+  # Earlier fixture attempts had a missing @import after cleanup removed a
+  # node_modules symlink; those were fixture failures, not rubric recall.
+  - id: quick-chat-rubric-maintenance
+    prompt: >
+      The boxholder wants quick captures about their garden to reach the right
+      conversation. They also want an older garden-planning chat kept eligible.
+      Where do you maintain the rules, how do you refer to the targets and keep
+      that older chat eligible, and how do authored rules relate to current
+      conversation facts? Distinguish continuing a chat from starting one in a
+      landmark. Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
+    fixture:
+      CLAUDE.md: |
+        @node_modules/beebox/box-docs/quick-chat.md
+    correct_contains:
+      - "_config/chat-routing.yaml"
+      - "keepEligible"
+    correct_matches:
+      - '(?:target|ref|path)[\s\S]{0,240}(?:card|landmark)|(?:card|landmark)[\s\S]{0,240}(?:target|ref|path)'
+      - '(?:authored|boxholder|rules)[\s\S]{0,350}(?:preserv|separat|not replace|not overwrite)|(?:preserv|separat)[\s\S]{0,350}(?:authored|rules)'
+      - '(?:metadata|recency|summar|transcript|facts)[\s\S]{0,350}(?:router|generat|current|separat)|(?:router|generat|current|separat)[\s\S]{0,350}(?:metadata|recency|summar|transcript|facts)'
+      - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
+    tags: [quick-chat]
+
   # === Migration recovery ===
   # Status (2026-09-14, Claude): 1/1 passed with no reads/searches using the
   # shipped guide in a standalone installed-package fixture. Cross-repository
@@ -160,6 +188,28 @@ tests:
       - '(?:missing-only|preserv|not overwrite)'
       - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
     tags: [interface-cards]
+
+  # === Host packages (docs/plans/box-host-packages.md) ===
+  # Status (2026-09-17, Claude): 1/1 passed with no reads/searches on the
+  # worktree's test1 clone (a macOS host); the agent also named the unsupported-
+  # host path and a question card for non-chat runs.
+
+  - id: host-package-install
+    prompt: >
+      The boxholder wants label sheets rendered to PDF with gLabels, but
+      `glabels-3-batch` is not installed on this host. How do you get it, what
+      does the box keep as a record, and what do you do if the install is
+      refused or this host cannot install packages? Explain only; do not run
+      tools or change files.
+    expected_level: knows_directly
+    watch_for: >
+      Uses bbx host install glabels with --why, names _config/host-packages.json
+      and committing it, and on refusal or an unsupported host asks the
+      boxholder instead of suggesting sudo apt.
+    correct_contains: ["bbx host install", "--why", "host-packages.json"]
+    correct_matches:
+      - '(?:refus|unsupported|macOS|cannot)[\s\S]{0,250}(?:ask|boxholder)'
+    tags: [host-packages]
 
   # === Browser tasks (docs/plans/browser-task-card.md) ===
 
@@ -666,6 +716,23 @@ tests:
       `.refine()`. Knowing it sees only the card's own data is a plus.
     correct_contains: ["validate"]
     tags: [schemas, extension, validation]
+
+  # Status (2026-09-20): pass on first run (1 file read, 1 search, 51k ctx)
+  # against the `summarize` section added to the box's own schema-authoring
+  # guide (src/core/box/schemas-guide.ts). knows_about rather than
+  # knows_directly: the agent reads that guide, which is where schema
+  # authoring is taught.
+  - id: schema-summarize-hook
+    prompt: "How does a box-local card type control how it appears in lists?"
+    expected_level: knows_about
+    watch_for: >
+      Names the schema's `summarize` hook on cardSchema() — it takes the
+      card's own fields plus the base summary and returns the summary the
+      list shows (typically the base plus a `detail` line). Must NOT invent a
+      frontend component registration, a central list-rendering switch, or a
+      per-card frontmatter field.
+    correct_contains: ["summarize"]
+    tags: [schemas, extension]
 
   # === CLI Commands ===
   #
@@ -1393,7 +1460,7 @@ tests:
   # (Track 6).
   # Distinct from the "=== Todo Lists ===" section above, which tests the
   # older, largely-unused todo-list card type — these test the universal
-  # capture-in-place {% todo %} tag, bbx todos, and the todo-view card.
+  # capture-in-place {% todo %} tag, bbx query todos, and the todo-view card.
   #
   # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
   # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
@@ -1425,12 +1492,50 @@ tests:
     prompt: "How do you see every open todo across the box, and how do you mark one done?"
     expected_level: knows_directly
     watch_for: >
-      Names `bbx todos` as the query path (not a browsing UI or a search).
-      Marking one done is editing the {% todo %} tag's status attribute (or
-      the frontmatter todos: entry) directly — there is no `bbx todos`
+      Names `bbx query todos` as the query path (not a browsing UI or a
+      search). Marking one done is editing the {% todo %} tag's status
+      attribute (or the frontmatter todos: entry) directly — there is no
       mutation subcommand.
-    correct_contains: ["bbx todos"]
+    correct_contains: ["bbx query todos"]
     tags: [todos, cli]
+
+  # === Todo collection (docs/plans/todo-collection.md, Track 5) ===
+  #
+  # Where a todo is written is what it means: the heading above it, the todo
+  # it nests under, and the links it carries all decide how it reads back.
+  #
+  # Status (2026-09-20): 2/2 pass on first run (knows_directly, 0 files read /
+  # 0 searches each, 51k ctx) against the rewritten "Querying" block in the
+  # always-on agent-guide todos section (src/core/agent-guide/todos.ts). The
+  # two verb updates in this file's earlier sections
+  # (todo-annotation-bbx-todos, todo-application-query-plate) were rerun the
+  # same day and pass on the new verb.
+
+  - id: todo-collection-project-scope
+    prompt: >
+      How do you see the open todos for one project directory, including
+      todos elsewhere in the box that link to it?
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for `bbx query todos --here <dir>` rather than a glob-only
+      scan, a grep, or opening cards one at a time. Should say that the
+      reference pass is what brings in todos written outside the directory
+      that point into it.
+    correct_contains: ["bbx query todos --here"]
+    tags: [todos, cli]
+
+  - id: todo-collection-position-is-meaning
+    prompt: >
+      You are adding a todo to a long planning document. What decides which
+      group it shows under in the todo list?
+    expected_level: knows_directly
+    watch_for: >
+      Says the heading it sits under, and the todo it nests beneath — not a
+      tag attribute, a card field, or its dates. Bonus if it says to put the
+      todo under the heading it belongs to for that reason, or mentions that
+      a note after the closing tag travels with the todo.
+    correct_contains_any: ["heading", "nest"]
+    tags: [todos, markdoc]
 
   # Status (2026-09-17): 2/2 pass on first run (knows_directly, 0 files read /
   # 0 searches each, 48k ctx) against the "Your own follow-ups" block added to
@@ -1637,10 +1742,10 @@ tests:
     prompt: "What should the boxholder be focusing on right now?"
     expected_level: knows_directly
     watch_for: >
-      Runs `bbx todos` (ideally `--on-plate`) to check actual plate-state
-      before answering, rather than grepping the box for {% todo %} tags by
-      hand or guessing from memory of past conversation.
-    bash_contains: ["bbx todos"]
+      Runs `bbx query todos` (ideally `--on-plate`) to check actual
+      plate-state before answering, rather than grepping the box for
+      {% todo %} tags by hand or guessing from memory of past conversation.
+    bash_contains: ["bbx query todos"]
     tags: [todos, application, cli]
     notes: >
       Pass condition is reaching for the query tool unprompted — the
@@ -2573,6 +2678,28 @@ tests:
     correct_contains: ["email-outbound"]
     tags: [email, drafts]
 
+  # Status (2026-09-19, Claude): draft-email-stranded 1/1 passed (rerun after
+  # the 7-day retry limit was added to the instructions); read
+  # card-email-outbound.md and named both steps (fix the ref, delete the line).
+  - id: draft-email-stranded
+    prompt: >
+      A draft reply you wrote last week still has no gmail-draft-url. Its card
+      now has a gmail-draft-error line saying the in-reply-to ref did not
+      resolve. What does that mean, and what do you do to get it uploaded?
+    expected_level: knows_about
+    watch_for: >
+      Reads the email-outbound docs and says the connector stopped retrying
+      because the card itself is the problem; fix the in-reply-to ref (or the
+      named field), then delete the gmail-draft-error line so the next sync
+      uploads it. Should NOT say to wait for the next sync or re-run sync as
+      is, and should NOT blame the Google connection.
+    should_read: ["card-email-outbound.md"]
+    correct_contains: ["gmail-draft-error"]
+    correct_matches:
+      - '(?:delet|remov)[\s\S]{0,120}gmail-draft-error|gmail-draft-error[\s\S]{0,120}(?:delet|remov)'
+      - '(?:fix|correct|repoint|point)[\s\S]{0,160}(?:ref|in-reply-to)|(?:ref|in-reply-to)[\s\S]{0,160}(?:fix|correct)'
+    tags: [email, drafts]
+
   # === Landmarks ===
   #
   # Landmarks are the user-navigation overlay on the box's filesystem.
@@ -2786,69 +2913,119 @@ tests:
       mode: agent says it has to look, or its answer matches some
       generic notion of "scans" without the box-specific details.
 
-  # === Agent Feedback (bbx feedback) ===
+  # === Agent feedback cards ===
   #
-  # Verifies agents know about the bbx feedback command, when to use it,
-  # and will actually use it when they notice something confusing.
+  # Verifies agents know where to record tooling observations, can distinguish
+  # them from boxholder feedback cards, and will write one when needed.
   #
-  # Status (2026-05-13): All 3 pass. bbx-feedback-purpose and bbx-feedback-when-to-use
-  # answered with 0 file reads (knows_directly). bbx-feedback-uses-it read 1 file
-  # (bbx-commands.md to check validate docs) then ran bbx feedback correctly.
+  # Status (2026-05-13): Previous command-based audits passed 3/3.
+  # Status (2026-09-21): Card-based audits passed 3/3 on the isolated test box.
+  # Purpose and use cases needed no reads; behavioral creation read 8 files,
+  # created _config/feedback/Confusing_Validate_Committed_Flag.doc.card with
+  # context, and committed it.
+  # Status (2026-09-21, path rerun): Behavioral audit passed 1/1; the agent
+  # wrote the prompted machine path as /_config/box.json in its card.
+  # Status (2026-09-21, directory): Local guide audit passed 1/1 with no file
+  # reads or searches; the agent named the card shape, written context, session
+  # and path handling, and the separate boxholder feedback type.
+  # Status (2026-09-21, skill): Three draft opportunity checks failed because
+  # they required a particular guidance-file read or skill-name mention. The
+  # final behavior check passed 1/1: the agent recognized the unsolicited
+  # observation and drafted a follow-up card. The full rerun passed the other
+  # 4/4 feedback audits; its opportunity case still had the old name check.
+  # Status (2026-09-21, system boundary): 6/6 feedback audits passed after
+  # naming the skill beebox-system-feedback and excluding ordinary box content.
+  # The in-box project/draft counterexample was rejected without file reads;
+  # the CLI-friction case still produced a doc card.
+  # Status (2026-09-21, boundary check): The corrected No/Yes-polarity audit
+  # passed 1/1 without reads. It kept content edits with the card/draft and
+  # named sync or template damage as the system-level exception.
 
-  - id: bbx-feedback-purpose
-    prompt: "There's a bbx feedback command. What is it for and who uses it?"
-    expected_level: knows_directly
-    watch_for: >
-      Explains it's for agents to record CLI friction, confusing conventions,
-      odd file placements, or unclear behaviors — without interrupting the
-      current task. Should mention it writes to config/feedback/ and commits.
-      Should not confuse this with the feedback card type (user feedback on
-      briefings, captures, etc.).
-    correct_contains: ["config/feedback", "commit"]
-    correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
-    tags: [feedback, cli]
-
-  - id: bbx-feedback-when-to-use
+  - id: agent-feedback-skill-opportunity
     prompt: >
-      Give me three examples of situations where you would use bbx feedback,
-      and three where you would not.
+      While doing an unrelated cleanup task, you discover that bbx validate
+      --committed has a confusing name: it checks whether the working tree is
+      clean. No one asked you to file feedback. What should you do with this
+      observation?
+    expected_level: discoverable
+    watch_for: >
+      Agent recognizes the unsolicited opportunity and says to record a
+      .doc.card in _config/feedback/ with written
+      context and a normal commit.
+    correct_contains: [".doc.card", "_config/feedback/", "commit"]
+    tags: [feedback, cards, skills]
+
+  - id: agent-feedback-directory-guide
+    context_dir: _config/feedback
+    prompt: >
+      You are working in this directory. What belongs here, how should you
+      write a new observation, and when should you use a .feedback.card instead?
     expected_level: knows_directly
     watch_for: >
-      "Would use" examples should be about CLI tooling observations: confusing
-      flag names, unclear error messages, awkward workflows, files landing in
-      odd places, surprising behavior. "Would not use" examples should contrast
-      with other channels: chat for questions the user needs to answer, bbx
-      answer for pending question cards, self-note for scheduled-task summaries,
-      just fixing something vs. noting it.
-    correct_contains_any: ["flag", "option", "error", "confus", "awkward", "workflow", "convention"]
-    tags: [feedback, cli]
-    notes: >
-      The key distinction: bbx feedback is for tooling observations the developer
-      (not the boxholder) should act on. It's NOT for user-facing feedback,
-      questions for the boxholder, or things the agent can fix itself right now.
+      Agent observations about confusing Bee Box tooling go here as .doc.card
+      files with a clear title, searchable summary, written context, and a normal
+      commit. A .feedback.card holds a boxholder response to surfaced content.
+    correct_contains: [".doc.card", ".feedback.card", "Context"]
+    tags: [feedback, cards]
 
-  - id: bbx-feedback-uses-it
+  - id: agent-feedback-card-purpose
+    prompt: "Where should you record an observation about confusing Bee Box tooling, and what card type should you use?"
+    expected_level: knows_directly
+    watch_for: >
+      Says to create a .doc.card in _config/feedback/, write the observation
+      and relevant context in its body, and commit normally. Distinguishes
+      this from a .feedback.card, which captures a boxholder response.
+    correct_contains: ["_config/feedback/", ".doc.card", ".feedback.card"]
+    tags: [feedback, cards]
+
+  - id: agent-feedback-card-when-to-use
+    prompt: >
+      Give me three situations where you would put a doc card in
+      _config/feedback/, and two where you would not.
+    expected_level: knows_directly
+    watch_for: >
+      Use it for CLI/tooling friction and confusing conventions. Do not put
+      the boxholder's response to a surfaced card there; that is .feedback.card.
+    correct_contains_any: ["flag", "option", "error", "confus", "awkward", "workflow", "convention"]
+    tags: [feedback, cards]
+    notes: >
+      The directory is an agent-to-developer observation inbox, not a general
+      user-feedback or question channel.
+
+  - id: beebox-system-feedback-boundary
+    prompt: >
+      While working in this box, you notice a project card gives the wrong
+      deadline and the boxholder's draft needs clearer wording. Should either
+      observation go in _config/feedback/? Begin with Yes or No, then explain
+      what you would do instead.
+    expected_level: knows_directly
+    watch_for: >
+      Neither belongs in the Bee Box system feedback inbox. Correct or discuss
+      the project card and draft in their normal box workflow. Reserve the
+      feedback directory for defects or friction in Bee Box software itself.
+    correct_matches: ["^\\s*No\\b"]
+    tags: [feedback, cards, boundary]
+
+  - id: agent-feedback-card-uses-it
     prompt: >
       While looking at the validate command docs, you notice that the --committed
       flag is confusingly named — it sounds like it validates committed cards,
-      but it actually checks that the git working tree is clean. Note this
-      observation appropriately and then tell me what bbx validate --committed
-      actually does.
+      but it actually checks that the git working tree is clean. Record this
+      tooling observation with its relevant context. The error you saw named
+      /home/beebox/boxes/test1/_config/box.json. Then tell me what bbx validate
+      --committed actually does.
     expected_level: knows_directly
     watch_for: >
-      Agent runs `bbx feedback` with a specific observation about the --committed
-      flag naming, then correctly explains what the flag actually does (checks
-      git working tree cleanliness). Should not ask the user about it or use
-      any other channel for the observation.
+      Agent creates a .doc.card under _config/feedback/ with a useful title,
+      the confusing flag name, why it misleads, and context. It commits the
+      card with ordinary card/Git tools and explains the working-tree check.
     correct_contains: ["clean", "working tree"]
+    cards_contain: ["--committed", "Context", "/_config/box.json"]
     max_turns: 15
-    tags: [feedback, cli, behavioral]
+    tags: [feedback, cards, behavioral]
     notes: >
-      This is a behavioral test — we're checking that the agent actually uses
-      bbx feedback rather than just knowing it exists. The prompt says "note this
-      observation appropriately" which should trigger bbx feedback. If the agent
-      instead asks the user or uses a self-note, it has the wrong model of the
-      command's purpose.
+      The card itself is checked for relevant context; the report should also
+      be inspected for its path and commit because cards_contain is box-wide.
 
   # === Triage Pipeline ===
   #

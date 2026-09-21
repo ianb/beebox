@@ -8,6 +8,7 @@ import { Badge } from "../ui/Badge";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
 import { Toggle } from "../ui/Toggle";
 import { InlineAction } from "../ui/InlineAction";
 import { FriendlyDate } from "../ui/FriendlyDate";
@@ -60,7 +61,7 @@ export function TaskStatus(props: TaskStatusProps) {
           </Text>
         ) : null}
       </Row>
-      {error !== null ? <Text as="p" tone="danger">{error}</Text> : null}
+      {error !== null ? <ErrorText>{error}</ErrorText> : null}
     </Stack>
   );
 }

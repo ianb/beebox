@@ -91,10 +91,10 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
 }
 
 /** Run an agent-applied (procedure) migration by delegating to `bbx procedure run`. */
-function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined }): Promise<number> {
+function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined; onOutput: (text: string) => void }): Promise<number> {
   return runMigrationProcess({
     file: BBX_BIN, args: ["procedure", "run", args.procedure], cwd: args.boxRoot,
-    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal,
+    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal, onOutput: args.onOutput,
   });
 }
 
@@ -142,14 +142,19 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
     refresh: true,
     json: options.json,
     repair: options.repair ?? options.apply,
+    // A person running --apply gets the procedure now; the scheduled --repair
+    // pass gets it once per human answer.
+    unattended: !options.apply,
     withinMaintenance: options.withinMaintenance,
     prepare: options.prepare,
     yield: options.yield,
-    runProcedure: options.apply ? async (procedure, signal) => {
+    // `--apply` runs procedures directly; `--repair` (the unattended pass)
+    // runs them under the one-run-per-answer bound.
+    runProcedure: options.apply || options.repair ? async (procedure, run) => {
       await installProcedures(boxRoot);
       await installGuides(boxRoot);
       await assertProcedureHasGate({ procedure, boxRoot });
-      return runProcedure({ procedure, boxRoot, json: options.json, signal });
+      return runProcedure({ procedure, boxRoot, json: options.json, ...run });
     } : undefined,
   });
   if (options.json) {
@@ -175,7 +180,7 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
       return 1;
     case "needs-procedure":
       reportApplied(result.applied);
-      console.warn(`Stopped at "${result.procedure}": procedure-kind migrations drive an agent and are not run unattended. Apply it with \`bbx migrate --apply\`.`);
+      console.warn(`Stopped at "${result.procedure}": a procedure-kind migration drives an agent. The next \`--sweep --repair\` pass runs it; \`bbx engine migrate --apply\` runs it now.`);
       return 1;
     case "failed":
       reportApplied(result.applied);

@@ -1,7 +1,7 @@
 /**
  * Todos: authoring a `{% todo %}` or frontmatter `todos:` entry, when to
- * reach for one over a question card, `bbx todos` as the query path, and
- * the tending rules the review sweep's job cards depend on (Track 5c,
+ * reach for one over a question card, `bbx query todos` as the query path,
+ * and the tending rules the review sweep's job cards depend on (Track 5c,
  * `docs/implemented-plans/todo-annotation.md`).
  */
 
@@ -18,11 +18,8 @@ as "figure this out later." Deferring a decision onto a list is still
 avoiding the question, not answering it.
 
 Capture a todo in context — inline in whatever card the intention came up
-in — rather than switching to a separate task list. The suggested way to
-make a todo list at all is a simple \`.doc.card\` with embedded
-\`{% todo %}\` items; reaching for a separate hand-maintained list card when
-one already exists is usually the wrong reflex — wrap the intention in place
-instead.
+in — rather than switching to a separate task list. A todo list, when you
+want one, is a plain \`.doc.card\` with \`{% todo %}\` items in it.
 
 ### Capturing one
 
@@ -73,16 +70,23 @@ decided against it — and say why in the text.
 Two limits. This is not a way to defer a decision that is really a question
 (see above — that rule doesn't relax just because the list is yours). And an
 agent todo you keep stepping over for months is noise: drop it, or raise it
-as a real question. \`bbx todos --assigned agent\` is how you find them
-again, and the \`todo-review\` sweep will bring the stale ones back to you.
+as a real question. \`bbx query todos --assigned agent\` finds them again,
+and the \`todo-review\` sweep brings the stale ones back to you.
 
 ### Querying
 
-\`bbx todos\` is your query path — filterable by \`--status\`, \`--assigned\`,
-\`--glob\`, \`--on-plate\`, with \`--json\` for structured output. There is no
+\`bbx query todos\` is your query path. \`--here <dir>\` asks about one
+project: its own todos, plus todos elsewhere that link into it.
+\`--group plate\` is the date view, \`--assigned agent\` your own follow-ups;
+also \`--status\`, \`--glob\`, \`--on-plate\`, and \`--json\`. There is no
 mutation command: to change a todo, edit its \`{% todo %}\` tag or frontmatter
 entry directly, like any other card content — normal validation, git
 history, and file-locking apply, nothing special.
+
+Where you write a todo is how it reads back: headings and nesting group
+todos, so put one under the heading it belongs to and under the todo it is
+part of. A note written after the closing tag travels with the todo. A link
+in a todo makes it show up on the linked place as well as its own.
 
 ### Tending
 

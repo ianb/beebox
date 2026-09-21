@@ -64,6 +64,44 @@ export function unreachableDetail(since: number, opts: { now: number; line: stri
   return elapsed < UNREACHABLE_REPORT_MS ? null : `Production unreachable for ${String(Math.round(elapsed / 3_600_000))}h: ${opts.line}`;
 }
 
+export interface ConvergenceAlert {
+  condition: "unconverged" | "prod-unreachable";
+  title: string;
+  message: string;
+}
+
+/**
+ * What a run reports, as standing conditions the alert store updates in
+ * place. The keys never include the finding text: the set of boxes that need
+ * work changes run to run (and prod lines drop out whenever the laptop is
+ * offline), and a key built from it made every change a new alert — ten open
+ * for one `needs-procedure` condition in two days.
+ *
+ * `keep` is every condition that stays open; the run resolves the rest. A run
+ * that could not reach production has not checked the prod boxes, so it keeps
+ * `unconverged` open even when every local box is clean.
+ */
+export function reportPlan(input: {
+  findings: readonly string[];
+  unreachableDetail: string | null;
+  prodChecked: boolean;
+}): { alerts: ConvergenceAlert[]; keep: string[] } {
+  const alerts: ConvergenceAlert[] = [];
+  if (input.findings.length > 0) {
+    alerts.push({
+      condition: "unconverged",
+      title: `Box convergence: ${String(input.findings.length)} finding${input.findings.length === 1 ? "" : "s"}`,
+      message: input.findings.map((finding) => `- ${finding}`).join("\n"),
+    });
+  }
+  if (input.unreachableDetail !== null) {
+    alerts.push({ condition: "prod-unreachable", title: "Box convergence: production unreachable", message: input.unreachableDetail });
+  }
+  const keep = alerts.map((alert) => alert.condition);
+  if (!input.prodChecked && !keep.includes("unconverged")) keep.push("unconverged");
+  return { alerts, keep };
+}
+
 /** Shell arguments are data, including paths read from the remote registry. */
 export function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;

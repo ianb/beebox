@@ -1258,10 +1258,11 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         try await relaunchedPending.finishVoicePreparation(
             id: preparation.id,
-            text: "original HQ <send-message phrase=\"send now\" />",
-            diarized: true,
-            hqText: true,
-            hqService: "test-hq"
+            outcome: .hq(
+                text: "original HQ <send-message phrase=\"send now\" />",
+                diarized: true,
+                service: "test-hq"
+            )
         )
         XCTAssertTrue(relaunchedPending.voicePreparations.isEmpty)
         XCTAssertEqual(relaunchedPending.pending.map(\.id), [preparation.id, nextEmission.id])
@@ -1277,6 +1278,42 @@ final class ComposerDraftRepositoryTests: XCTestCase {
                 boxID: boxID
             )
         }
+    }
+
+    @MainActor
+    func testVoicePreparationFallbackProvenanceSurvivesRelaunch() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        let audioURL = rootURL.deletingLastPathComponent()
+            .appendingPathComponent("voice-fallback-\(UUID().uuidString).wav")
+        try Data("voice bytes".utf8).write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+        let preparation = try await store.stageVoicePreparation(
+            draft: .empty,
+            liveTranscript: "realtime text",
+            priorInput: "",
+            action: .send,
+            matchedPhrase: "send message",
+            audioURL: audioURL,
+            boxID: boxID,
+            binding: testBinding,
+            bindingRevision: 1
+        )
+
+        try await store.finishVoicePreparation(
+            id: preparation.id,
+            outcome: .fallback(text: "realtime text")
+        )
+        XCTAssertEqual(store.pending.first?.hqFallback, true)
+        XCTAssertNil(store.pending.first?.hqText)
+        XCTAssertEqual(store.deliveries.first?.hqFallback, true)
+
+        let relaunched = PendingEmissionStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.pending.first?.hqFallback, true)
+        XCTAssertEqual(relaunched.deliveries.first?.hqFallback, true)
     }
 
     @MainActor

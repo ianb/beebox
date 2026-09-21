@@ -7,7 +7,6 @@ import { errorMessage } from "../../lib/error-guards.js";
 interface RefreshOptions {
   json?: boolean;
   withinMaintenance?: boolean;
-  repair?: boolean;
 }
 
 export const docsCommand = new Command("docs")
@@ -22,16 +21,11 @@ export const docsCommand = new Command("docs")
         "--within-maintenance",
         "Join the invoking maintenance controller",
       )
-      .option(
-        "--repair",
-        "Retry an interrupted refresh using its recovery snapshot",
-      )
       .action(async (options: RefreshOptions) => {
         try {
           const result = await refreshGeneratedDocs({
             boxRoot: await requireBoxRoot(),
             withinMaintenance: options.withinMaintenance === true,
-            recover: options.repair === true,
           });
           if (options.json) console.log(JSON.stringify(result));
           else if (result.status === "refreshed")

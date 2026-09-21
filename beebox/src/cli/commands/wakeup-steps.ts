@@ -293,6 +293,16 @@ async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
 }
 
 /**
+ * Inbox card types that are never intake work. An `email-outbound` card is a
+ * draft the agent wrote; it waits in `_content/inbox/email/` for the Gmail
+ * connector to upload it (`connectors/gmail-drafts.ts` names that separation
+ * as the reason for the type). A finished intake job's card is deleted, so
+ * without this exclusion every wakeup re-jobbed a draft still waiting to
+ * upload, and each job found nothing to do.
+ */
+const NEVER_TRIAGED_SUFFIXES = [".email-outbound.card"];
+
+/**
  * Walk the inbox (or a connector's declared inbox paths) and return the
  * relative paths of `.card` files not already referenced by a job.
  */
@@ -322,7 +332,11 @@ async function findUnjobbedInboxItems(
         // Skip excluded subdirectories at the inbox root level (full scan only)
         if (atInboxRoot && excludedSubdirs.includes(entry)) continue;
         await scanDir(fullPath, false);
-      } else if (entry.endsWith(".card") && !existingRefs.has(relPath)) {
+      } else if (
+        entry.endsWith(".card") &&
+        !NEVER_TRIAGED_SUFFIXES.some((suffix) => entry.endsWith(suffix)) &&
+        !existingRefs.has(relPath)
+      ) {
         unjobbedItems.push(relPath);
       }
     }

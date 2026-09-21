@@ -17,6 +17,7 @@ import {
 import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { runConnectorProcedureTriggers } from "./connector-procedure-triggers.js";
+import { syncConnector } from "../../connectors/activity.js";
 
 /**
  * Arguments for the sync command.
@@ -62,7 +63,7 @@ async function executeSync(
     ctx.writeLine(`Syncing ${connector.name}...`);
 
     try {
-      const result = await connector.sync();
+      const result = await syncConnector(connector, { boxRoot: ctx.boxRoot });
 
       if (result.created.length > 0) {
         ctx.writeLine(`  Created ${result.created.length} card(s):`);

@@ -171,6 +171,26 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Review existing tricks for credential dependencies and add sibling
   // secrets.json declarations for the standard trick runtime.
   { name: "trick-secret-runtime", procedure: "trick-secret-runtime" },
+  // Rewrite box-absolute refs still in v2 layout (`/store/…`) to the v3 path
+  // the one-root migration moved their target to, when that target exists.
+  // Runs before `filename-attach-scope`, which then sees v3-form refs.
+  { name: "v2-refs-to-v3", script: "scripts/migrate/v2-refs-to-v3.ts" },
+  // Move legacy flat-layout media files into their card's attach scope and
+  // point `filename.ref` at `attach/<file>`. Best effort: uncertain cards are
+  // reported, not failed; `bbx validate` keeps warning on them.
+  { name: "filename-attach-scope", script: "scripts/migrate/filename-attach-scope.ts" },
+  // Remove the retired process-pages procedure (installProcedures never
+  // prunes). Its input, record cards in pages-saved/, has had no writer since
+  // the clerk's Save Page was removed; a copy still reading it is deleted, a
+  // repointed one is parked for review. See the script's module comment.
+  { name: "retire-process-pages", script: "scripts/migrate/retire-process-pages.ts" },
+  // Re-key `_config/template-versions.json` onto v3 paths: the one-root
+  // migration moved the tracked files without renaming the tracker's keys, so
+  // every tracked template read as untracked and parked. See the script.
+  { name: "rekey-template-versions", script: "scripts/migrate/rekey-template-versions.ts" },
+  // Agent observations now live as ordinary doc cards in _config/feedback.
+  // Convert command-written Markdown in both active and resolved directories.
+  { name: "feedback-to-doc-cards", script: "scripts/migrate/feedback-to-doc-cards.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
