@@ -6,6 +6,7 @@ labels: [chat, box-shape]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-state-not-tracked — cross-model review of the unknown-session-id fix
+priority: backlog
 ---
 
 The chat reads now refuse to route an unrecorded session id to a guessed engine

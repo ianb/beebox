@@ -49,6 +49,7 @@ where to put new material.
 | Box layout reference | [docs/box-layout.md](box-layout.md) |
 | Landmarks (navigation surface) | [docs/landmarks.md](landmarks.md) |
 | Client debug log | [docs/client-debug-log.md](client-debug-log.md) |
+| Quick chat routing and rubric | [docs/quick-chat.md](quick-chat.md) |
 | Chat session lifecycle | [docs/chat-session-lifecycle.md](chat-session-lifecycle.md) |
 | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
 | Chat review (nightly titles + summaries) | [docs/chat-review.md](chat-review.md) |

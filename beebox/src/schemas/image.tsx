@@ -16,8 +16,8 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
-import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
+import { cardSchema, type InferCardFields, type SummaryAttrs } from "../cards/index.js";
+import { titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
 const ImageStatusSchema = z.enum(["new", "analyzed", "invalid"]);
 export type ImageStatus = z.infer<typeof ImageStatusSchema>;
@@ -66,6 +66,17 @@ const DocumentDate = z.object({
   label: z.string(),
   value: z.string(),
 });
+
+/**
+ * What an image row carries beyond its title: enough for the list component
+ * to draw a thumbnail and say what state the image is in.
+ */
+interface ImageAttrs {
+  status: ImageStatus;
+  "has-text"?: boolean;
+  rotation?: ImageRotation;
+  filename?: string;
+}
 
 const DocumentMeta = z.object({
   kind: z.string().optional(),
@@ -140,46 +151,32 @@ something looks wrong.
 
 Status: new (unanalyzed) → analyzed (description filled in) → invalid
 (accidental capture, too blurry, not useful).`,
+  // What the image LOOKS like is its title; the attached file and its state
+  // travel as attrs so the list component can draw a thumbnail.
+  summarize: (card, base) => {
+    const ref = card.filename.ref;
+    let title = "";
+    if (card.description !== undefined && card.description.trim() !== "") {
+      title = card.description.trim();
+    } else if (ref !== "") {
+      title = titleFromFilename(ref);
+    }
+    const attrs: ImageAttrs = { status: card.status };
+    if (card["has-text"] !== undefined) attrs["has-text"] = card["has-text"];
+    if (card.rotation !== undefined) attrs.rotation = card.rotation;
+    if (ref !== "") attrs.filename = ref;
+    return {
+      ...base,
+      title: title === "" ? base.title : truncateTitle(title, 80),
+      attrs,
+    };
+  },
 });
 
 export type ImageFields = InferCardFields<typeof ImageSchema>;
 
-/**
- * Loader summary used by the file viewer: derives a title from
- * description, filename, or path. Falls back gracefully when the file
- * isn't a parsed card yet.
- */
-export interface ImageAttrs {
-  status: ImageStatus;
-  "has-text"?: boolean;
-  rotation?: ImageRotation;
-  filename?: string;
-}
-
-export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
-  const fallback = titleFromFilename(raw.path);
-  // For Phase 2 image cards the raw input is the parsed YAML fields object.
-  // eslint-disable-next-line no-restricted-syntax -- raw is the loosely-typed loader input; reading the optional Phase-2 `fields` object off it requires one boundary cast.
-  const fields = (raw as { fields?: Partial<ImageFields> }).fields;
-  if (fields === undefined) {
-    return { path: raw.path, type: "image", title: fallback, attrs: { status: "new" } };
-  }
-  const description = fields.description;
-  const ref = fields.filename?.ref;
-  let title = "";
-  if (typeof description === "string" && description.trim() !== "") {
-    title = description.trim();
-  } else if (typeof ref === "string" && ref !== "") {
-    title = titleFromFilename(ref);
-  }
-  if (title === "") title = fallback;
-  title = truncateTitle(title, 80);
-  const attrs: ImageAttrs = { status: fields.status ?? "new" };
-  if (typeof fields["has-text"] === "boolean") attrs["has-text"] = fields["has-text"];
-  if (fields.rotation !== undefined) attrs.rotation = fields.rotation;
-  if (typeof ref === "string" && ref !== "") attrs.filename = ref;
-  return { path: raw.path, type: "image", title, attrs };
-};
+/** What `ImageSchema.summarize` hands a list component (see {@link SummaryAttrs}). */
+export type ImageSummaryAttrs = SummaryAttrs<typeof ImageSchema>;
 
 /**
  * Build the file content for a new image card. Used when first storing a

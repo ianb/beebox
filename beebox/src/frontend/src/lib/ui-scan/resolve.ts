@@ -21,17 +21,12 @@
 // Raw relative (not `@shared/…`): loaded outside Vite by its own doctest, which
 // runs under the root tsconfig where the alias does not resolve.
 import { err, ok, type Result } from "../../../../shared/result.js";
+import { isControlAddress } from "../../../../shared/control-address.js";
 
-/** The namespace that separates published addresses from internal a11y wiring. */
-export const CONTROL_ID_PREFIX = "bbx-";
-
-/** `bbx-` plus kebab-case segments — nothing that would need escaping. */
-const CONTROL_ID_PATTERN = /^bbx(?:-[\da-z]+)+$/;
-
-/** Whether an id is a control address at all, before any lookup. */
-export function isControlAddress(id: string): boolean {
-  return CONTROL_ID_PATTERN.test(id);
-}
+// The grammar itself lives in `shared/control-address.ts`, with the encoder a
+// component uses to mint an address out of runtime data; re-exported here
+// because this module is where the app reads addresses back.
+export { controlAddress, isControlAddress } from "../../../../shared/control-address.js";
 
 /**
  * Why an address did not resolve. Callers branch on this to write the tooltip.

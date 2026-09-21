@@ -1,3 +1,4 @@
+import { quickChatRouter } from "./routers/quick-chat.js";
 import { router } from "./trpc.js";
 import { historyRouter } from "./routers/history.js";
 import { statusRouter } from "./routers/status.js";
@@ -8,7 +9,7 @@ import { actionsRouter } from "./routers/actions.js";
 import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
-import { todosRouter } from "./routers/todos.js";
+import { collectionsRouter } from "./routers/collections.js";
 import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
@@ -37,6 +38,7 @@ import { gmailRouter } from "./routers/gmail.js";
 import { searchRouter } from "./routers/search.js";
 
 export const appRouter = router({
+  quickChat: quickChatRouter,
   history: historyRouter,
   status: statusRouter,
   card: cardRouter,
@@ -46,7 +48,7 @@ export const appRouter = router({
   commands: commandsRouter,
   debugLog: debugLogRouter,
   admin: adminRouter,
-  todos: todosRouter,
+  collections: collectionsRouter,
   health: healthRouter,
   drive: driveRouter,
   files: filesRouter,

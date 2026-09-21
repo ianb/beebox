@@ -51,7 +51,7 @@ await box2.write(
   memo('{% todo id="one" %}Solo undated todo{% /todo %}\n')
 );
 await computeTodoAmbientLine(box2.root)
-=> 1 open todo on the plate — `bbx todos`
+=> 1 open todo on the plate — `bbx query todos`
 ```
 
 Escalated (past-due) todos get called out separately, and the count is
@@ -67,5 +67,5 @@ await box3.write(
   )
 );
 await computeTodoAmbientLine(box3.root)
-=> 2 open todos on the plate (1 escalated) — `bbx todos`
+=> 2 open todos on the plate (1 escalated) — `bbx query todos`
 ```

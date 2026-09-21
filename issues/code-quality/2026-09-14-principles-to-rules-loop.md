@@ -7,6 +7,7 @@ labels: [craft, principles]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the idea of specifying the ideal craft of the code and system… then we look around and see if there's something that doesn't live up to that"
+priority: normal
 ---
 
 The boxholder's framing: *"The idea of specifying the ideal craft of the code

@@ -156,7 +156,7 @@ await box.write(
 );
 
 (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos
-=> 1 open todo on the plate — `bbx todos`
+=> 1 open todo on the plate — `bbx query todos`
 ```
 
 ```ts cleanup

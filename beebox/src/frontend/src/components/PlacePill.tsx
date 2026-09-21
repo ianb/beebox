@@ -63,10 +63,17 @@ function FolderIcon() {
   );
 }
 
-/** Menu-opens-here caret, on both halves. */
+/**
+ * Menu-opens-here caret, on both halves.
+ *
+ * Hidden below `sm:`: at phone width it is 12px per chip spent saying "this
+ * opens a menu", which the pill and chips already say by being tappable and by
+ * their `aria-haspopup` — and 12px is a word of the place label
+ * (boxholder, 2026-09-20). It stays from `sm:` up, where the bar can afford it.
+ */
 function CaretIcon() {
   return (
-    <svg className="w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="hidden sm:block w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -178,7 +185,7 @@ export function PlacePill({
             type="button"
             id="bbx-nav-place"
             onClick={(e) => { if (!open) switchMenu.open(); toggle(e); }}
-            className="min-h-[40px] w-full min-w-0 pl-3 pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="min-h-[40px] w-full min-w-0 pl-2 pr-1 sm:pl-3 sm:pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={title}
             aria-label={`Where you are: ${faceLabel}`}
             {...ariaProps}

@@ -152,7 +152,7 @@ function isValidTimeZone(timeZone: string): boolean {
  * A typo'd zone (e.g. `"America/Chciago"`) makes `Intl.DateTimeFormat`
  * throw `RangeError` the moment anything tries to use it — and every
  * plate-state/timezone-aware call site in the todo system (the collector,
- * `bbx todos`, `todos.list`, the review sweep, session-context's ambient
+ * `bbx query todos`, `collections.query`, the review sweep, session-context's ambient
  * timezone line) does exactly that. Validating HERE, at the one place the
  * raw config value enters the system, means a bad value degrades to the
  * host's own timezone (still wrong, but visibly so — via the warning below

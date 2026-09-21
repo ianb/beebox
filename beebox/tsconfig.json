@@ -39,5 +39,10 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/frontend"]
+  // `src/schemas/**/*.list-entry.tsx` is a card type's LIST COMPONENT: frontend
+  // code that lives beside its schema. It belongs to the frontend program (DOM
+  // lib, JSX runtime, the frontend's own modules), not this one, and nothing
+  // here may import it — see src/schemas/image.list-entry.tsx and
+  // eslint.config.ts.
+  "exclude": ["node_modules", "dist", "src/frontend", "src/schemas/**/*.list-entry.tsx"]
 }

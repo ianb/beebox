@@ -69,4 +69,5 @@ final class ScreenAwakeTests: XCTestCase {
         XCTAssertFalse(state.set(.voiceTurn, active: false))
         XCTAssertTrue(state.set(.speechPlayback, active: false))
     }
+
 }

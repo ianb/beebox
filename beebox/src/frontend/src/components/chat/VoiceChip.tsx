@@ -70,7 +70,16 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
       data-voice-diarization={diarizationEnabled}
     >
       <ConversationIcon floor={narrationEnabled ? "person" : "shared"} muted={muted} diarizationEnabled={diarizationEnabled} />
-      {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
+      {hqInFlight ? (
+        <>
+          {/* The word costs about 70px, and at phone width the bar has none to
+              spare (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`).
+              Below `sm:` the same fact is a pulse on the chip; the accessible
+              name says "transcribing" at every width either way. */}
+          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
+          <span className="hidden sm:inline text-xs opacity-80">transcribing…</span>
+        </>
+      ) : null}
       {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
     </span>
   );
@@ -292,7 +301,7 @@ export const VoiceChip = memo(function VoiceChip({
           data-bbx-reveal
           data-bbx-does="opens the voice menu — mute, narration mode, transcription services"
           onClick={toggle}
-          className="min-h-[40px] px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] px-2 sm:px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={label}
           aria-label={label}
           {...ariaProps}

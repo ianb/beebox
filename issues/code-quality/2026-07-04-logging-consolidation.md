@@ -1,6 +1,8 @@
 ---
 title: "One way to log everywhere"
 workstream: unknown
+priority: normal
+next-action: reconfirm
 ---
 
 2026-07-04 · boxholder-ruled direction: "there should be one way to log

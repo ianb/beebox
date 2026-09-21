@@ -55,6 +55,19 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      finding when it bears on the decision; write it. If no decision depends
      on an external premise, state that briefly and skip the search. -->
 
+## Ontology
+
+<!-- Every noun the design needs, one line each: what it is, what identifies
+     it, what it is NOT, and which other nouns it points at. Mark the ones the
+     codebase already has, with file:line, and use THOSE names. Write the
+     tracks below in these terms only.
+     Two names for one thing, one field doing two jobs, and a state that
+     cannot be represented are ontology mistakes; they are cheap here and
+     expensive at implementation, where they surface as a migration.
+     Worth most when the plan introduces a card type or a shared-vocabulary
+     tag — there the ontology IS the design. A plan that adds no nouns says
+     so in a line. -->
+
 ## Tracks / scope
 
 <!-- Order by implementation dependency, then surface size (unblockers first,

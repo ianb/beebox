@@ -15,15 +15,23 @@ import { z } from "zod";
 
 /**
  * One flagged todo, compact enough to read at a glance: its locator (the
- * `bbx todos` display form, `path:line` or `path#todos[i]`), its text, and
- * whichever date drove it into this set (already formatted for humans, not
- * a second date the agent has to parse).
+ * `bbx query todos` display form, `path:line` or `path#todos[i]`), its text,
+ * and whichever date drove it into this set (already formatted for humans,
+ * not a second date the agent has to parse).
+ *
+ * `card` and `section` say WHERE it was written, which is what makes an
+ * undated todo mean anything. Both are optional so a job card queued before
+ * they existed still validates.
  */
 const TodoReviewItemSchema = z.object({
   locator: z.string(),
   text: z.string(),
   assigned: z.string().optional(),
   detail: z.string(),
+  /** The card it was written in, as a person would name it: title, then its type's own detail line. */
+  card: z.string().optional(),
+  /** The heading path above it within that card, outermost first, joined with " › ". Absent when it sat under no heading. */
+  section: z.string().optional(),
 });
 
 export const TodoReviewJobSchema = cardSchema("todo-review-job", {
@@ -87,9 +95,10 @@ report-only.
 
 ## What to do
 
-1. Read each item's \`locator\` if you need the surrounding card for context
-   (\`bbx todos\` shows the same locators; the card itself has the full text
-   and any \`{% see-also %}\` evidence).
+1. \`card\` and \`section\` say where each item was written — which card, and
+   which heading inside it. Read the item's \`locator\` when you need more of
+   the surrounding card (\`bbx query todos\` shows the same locators; the card
+   itself has the full text and any \`{% see-also %}\` evidence).
 2. Decide, per item: does it look done (evidence exists), a likely
    duplicate of another open todo, or just needs raising? You are not
    obligated to act on every item — most sweeps call for nothing more than
@@ -109,6 +118,8 @@ export interface TodoReviewJobItem {
   text: string;
   assigned?: string | undefined;
   detail: string;
+  card?: string | undefined;
+  section?: string | undefined;
 }
 
 export function createTodoReviewJobTemplate(options: {

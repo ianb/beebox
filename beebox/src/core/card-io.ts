@@ -54,7 +54,7 @@ interface ZodIssueLike {
  *
  * Replaces the multi-line JSON dump Zod's `.message` produces.
  */
-function formatZodIssues(issues: ReadonlyArray<ZodIssueLike>): string {
+export function formatZodIssues(issues: ReadonlyArray<ZodIssueLike>): string {
   return issues
     .map((issue) => {
       const pathStr =

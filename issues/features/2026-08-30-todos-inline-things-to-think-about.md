@@ -37,6 +37,13 @@ Two asks:
    general "context beside the card" surface wanting to exist; design them as
    one panel, not per-feature bolt-ons.
 
+## Progress (2026-09-20)
+
+[Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
+rewrote the list half: it now groups todos by card and section, in place
+order, instead of a flat list. The two asks above are still not built: no
+card-edge "N open things here" summary, and no companion panel.
+
 Related: `2026-07-28-directories-as-viewable-things` (in-place lenses, same
 instinct — the view comes to the content), `2026-07-29-verify-todo-annotation-rendering`
 (the manual-testing gate on current rendering — still the developer's),

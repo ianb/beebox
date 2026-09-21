@@ -107,6 +107,7 @@ Write findings to a sibling `<plan>.review.md`:
 ```
 # Plan Engineering Review — <topic>
 ## What already exists
+## Ontology (verified against the code's own names)
 ## Prior art (external) — verified      ← verify external premises the design depends on
 ## Stated preferences this plan trades against
 ## Could this be simpler? (verified)

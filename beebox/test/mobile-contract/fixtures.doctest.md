@@ -292,7 +292,7 @@ reason. Payloads without `version` retain the documented legacy leniency.
 
 ```ts
 runFamily("emission", validateEmission)
-=> {"family":"emission","cases":12,"pass":12}
+=> {"family":"emission","cases":15,"pass":15}
 ```
 
 ## composer-command

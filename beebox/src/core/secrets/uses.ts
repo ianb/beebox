@@ -75,6 +75,7 @@ const builtinUses: Record<string, string[]> = {
   ],
   replicate: ["Replicate model calls from box views, through the server-side adapter"],
   openrouter: [
+    "choosing a conversation for Quick chat with TypeSafe Jev",
     "embeddings for semantic and hybrid card search, when the box has no OpenAI key",
     "answering questions about recordings, and describing scanned images when the Gemini scan backend is selected, when the box has no Gemini key",
     "the Whisper high-quality transcription pass, when the box has no OpenAI key",

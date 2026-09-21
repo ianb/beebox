@@ -251,7 +251,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
  * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
  * templated" pin): `_content/plate.todo-view.card`, explicit `glob: "**"` so
  * it stays box-wide even though it doesn't live at the box root (an omitted
- * `glob` would scope to `store/**` per `todos.list`'s directory-subtree
+ * `glob` would scope to `store/**` per the query's directory-subtree
  * resolution rule — this card wants the whole box).
  *
  * @returns Whether a new template was installed
