@@ -13,7 +13,9 @@ mechanism, and a theme that has gone thin gets said honestly rather than
 dropped. Conventions: `docs-authoring.md`. Design: `../beebox/docs/plans/agent-docs.md`.
 
 Ordered roughly by how much each distinguishes Bee Box from an assistant
-someone already has.
+someone already has. Candidates not yet admitted, for the boxholder to
+decide: idle by default and also a chatbot; a theory of you, written down;
+trust earned in steps; even the interface is documents.
 
 ---
 
@@ -117,26 +119,41 @@ the system does not enforce.
 **Pages.** `capabilities/provenance.md`, `concepts/enriched-markdown.md`,
 `design/durability-and-provenance.md`.
 
-## 6. Typed, with room for language
+## 6. Cards: typed records that are also containers
 
-**What it is.** The shape of the data matches the shape of the idea: a recipe
-is stored as a recipe, a person as a person, so the assistant reasons over
-structure rather than over prose. And there is always an overflow, so the
-fullness of what you know is kept even when it does not fit a type yet. You
-start by putting things in; the organization that fits emerges from use.
+**What it is.** The card system is the center of the design, and where most
+of the thought has gone. The shape of the data matches the shape of the
+idea: a recipe is stored as a recipe, a person as a person, so the assistant
+reasons over structure rather than prose. There is always an overflow, so
+the fullness of what you know is kept when it does not fit a type yet; you
+start by putting things in, and the organization that fits emerges from use.
+And a card is not only a record: it is a container. What belongs to it
+travels with it. This sits beside the git theme (a card's history is part of
+the card) but is not the git part; it is the object model.
 
-**How it is expressed.** A schema per card type, checked on load and again
-before a commit. A markdown body as the canonical escape valve. Generic
-record and memo types for things without a shape yet. A repeated shape
-becomes a type; existing cards are reshaped by a migration rather than
-rewritten by hand.
+**How it is expressed.** A card is a file named for what it is, and the
+filename carries the type. Its header is checked against the type's schema
+on load, again right after the agent edits it, and again before a change can
+be committed. Its markdown body is the canonical escape valve, with the
+baseline marks any card can use. Its attachments (photos, recordings, PDFs,
+source files, generated images) live in a sibling folder and move with it;
+references into that folder have their own link form. References between
+cards take three forms, are found by convention in any field and in the
+body, are checked, and are rewritten when a card moves. Schemas carry
+instructions the agent reads when it works with that kind of card;
+templates create well-formed cards; a box can define its own kinds; a
+repeated shape becomes a type and existing cards are reshaped by a
+migration rather than by hand. Generic record and memo types hold things
+without a shape yet.
 
 **Where it is thin.** An unknown field in a card's header is dropped on load
 and flagged, so the overflow is the body, not a stray field. Promoting a
-shape is agent work, not automatic.
+repeated shape to a type is agent work, not automatic. Contradiction between
+a new source and an existing card is not a recorded state (theme 2).
 
-**Pages.** `capabilities/shape-it-later.md`, `concepts/cards.md`,
-`design/representation.md`, `07-how-it-works.md`.
+**Pages.** `concepts/cards.md`, `capabilities/shape-it-later.md`,
+`capabilities/integrity.md`, `concepts/enriched-markdown.md`,
+`contracts/box-layout.md`, `reference/cards/index.md`, `07-how-it-works.md`.
 
 ## 7. It extends itself
 
@@ -212,6 +229,25 @@ a bus factor, and the project says so.
 
 **Pages.** `11-status-and-maturity.md`, `dev/development-process.md`,
 `dev/agent-coding.md`.
+
+## 11. Groups get a box each
+
+**What it is.** A box can be shared, and the sharing has one granularity:
+everyone in a box shares everything in it, and a different group gets a
+different box. A household can talk to its box in one chat. This is
+primitive, and it works.
+
+**How it is expressed.** Member invites and passwords, an allowed-users
+list, one hub running many boxes on one machine, Telegram or the web chat
+as the shared surface, a calendar and lists everyone sees. The identity
+design ruling: shared boxes, one sharing granularity each.
+
+**Where it is thin.** No per-person areas or permissions inside a box;
+per-member identity beyond the login list is not designed yet; the Telegram
+path is rough; the household narrative describes an aspiration in places.
+
+**Pages.** `04-who-it-is-for.md`, `uses/a-household-in-one-chat.md`,
+`design/identity.md`, `architecture/01-what-is-this.md`.
 
 ---
 

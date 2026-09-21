@@ -32,11 +32,14 @@ only what it knows but how it came to know it.
 - **The filesystem is all the state.** No hidden database beside the files.
 - **Everything in git**, so the history answers "why", not just "what".
 - **Your words kept as your words**, marked apart from what the agent inferred.
-- **Typed records with room for prose**; the shape emerges as you use it.
+- **Cards: typed records that are also containers**, with room for prose;
+  what belongs to a card travels with it, and the shape emerges as you use it.
 - **Voice at length, camera and voice together, from your phone**; email,
   calendar, and documents synced in.
 - **It extends itself**: ask, and the agent builds the views, routines, and
   kinds of record you want, inside your box.
+- **Groups get a box each**: a household shares one through a chat; a
+  different group, a different box. Primitive, and it works.
 
 Self-hosted, source-available under GPLv3, one maintainer, early.
 

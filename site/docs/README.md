@@ -84,7 +84,7 @@ documentation does not say, rather than guessing.
 
 ## Themes
 
-Ten ideas run through Bee Box, and most pages carry one. Following a theme is
+Eleven ideas run through Bee Box, and most pages carry one. Following a theme is
 often a better way to explore this documentation than reading in order: pick
 the ones that bear on what the person is asking and open the pages named.
 
@@ -110,10 +110,13 @@ the ones that bear on what the person is asking and open the pages named.
   as they said it; what the agent inferred is marked as the agent's.
   ([provenance](capabilities/provenance.md),
   [enriched markdown](concepts/enriched-markdown.md))
-- **Typed, with room for language.** A recipe is stored as a recipe, a person
-  as a person, and there is always an overflow, so nothing is lost for not
-  fitting a type yet. ([dump it in now, shape it later](capabilities/shape-it-later.md),
-  [cards](concepts/cards.md), [representation](design/representation.md))
+- **Cards: typed records that are also containers.** A card is a file named
+  for what it is, checked against its type, with room for prose; what belongs
+  to it travels with it, and links between cards are checked and follow moves.
+  The shape emerges as you use it. ([cards](concepts/cards.md),
+  [dump it in now, shape it later](capabilities/shape-it-later.md),
+  [it keeps itself coherent](capabilities/integrity.md),
+  [representation](design/representation.md))
 - **It extends itself.** How a kind of card is displayed, what kinds exist,
   what runs on a schedule: the agent can build those inside the box, and read
   them to understand how the box works.
@@ -127,6 +130,11 @@ the ones that bear on what the person is asking and open the pages named.
   writes a question and waits; the answer becomes a rule it reads next time.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
+- **Groups get a box each.** Everyone in a box shares everything in it, and a
+  different group gets a different box; a household can talk to its box in one
+  chat. Primitive, and it works. ([who it is for](04-who-it-is-for.md),
+  [a household in one chat](uses/a-household-in-one-chat.md),
+  [identity](design/identity.md))
 - **Open, so it can be understood.** Source-available for the same reason the
   history is readable, and the process the agents work from is in the
   repository too. ([status and maturity](11-status-and-maturity.md),
