@@ -8,12 +8,11 @@ id: B-inventory
 title: I never know what I've got
 
 box:
-  # `empty` prunes a clone down to the package skeleton: no store, no box content,
-  # no people. Every journey premise is "this is MY box", and a stranger's courses
+  # `empty` initializes a fresh box with the current package skeleton and defaults. Every journey premise is "this is MY box", and a stranger's courses
   # and inbox read as confusing rather than realistic (observed, 2026-08-22).
   base: empty
-  # Optional shell, run with $BOX set to the box's content root before the person
-  # arrives. A box is only files, so any starting state can be built from outside —
+  # Optional shell, run with $BOX set to the single box root before the person
+  # arrives; authored user files belong in $BOX/_content. A box is only files, so any starting state can be built from outside —
   # a few contacts they would already have, a half-finished note, last month's
   # receipts. This journey wants none: the person is starting from nothing, which
   # is the point.

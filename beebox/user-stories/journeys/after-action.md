@@ -90,6 +90,9 @@ believing any negative result:
   product leaking someone else's data.
 - **Do the numbers come from this run?** Timing that aggregates several runs will look
   like the product being slow.
+- **Did the walk exercise microphone or voice behavior?** Journey walks do not test a
+  real, fake, or mock microphone. Any failure encountered while using a mock mic is a
+  harness limitation and must not be classified or filed as product evidence.
 
 ### 4. Investigate what survives
 
@@ -158,9 +161,9 @@ a row.
 Two rows is the right answer more often than one. If you find yourself writing
 "and also" inside a row, that is a second finding.
 
-## Then prune
+## Keep the evidence
 
-`prepare.ts` prunes a superseded run when the next walk is provisioned: the box and
-the screenshots go, the notes stay. It refuses to prune a walk that was never
-collected. The report is what makes that safe — write it before the next run, because
-afterwards the raw material is thinner.
+`prepare.ts` retains earlier boxes, screenshots, notes, and snapshots. It refuses
+another walk of the same journey until every earlier walk with notes has a nonempty
+report. Collection alone is not an after-action review. Any later cleanup is an
+explicit operator decision; preparation does not delete a previous run's evidence.
