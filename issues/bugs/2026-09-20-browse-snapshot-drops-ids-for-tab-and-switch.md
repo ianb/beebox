@@ -8,6 +8,39 @@ discovered-by: agent
 discovered-in: worktree-collection-views — chasing a reported missing id on the todo-view controls
 ---
 
+> **Cause found 2026-09-21, and it is ours, not agent-browser's.** The title's
+> role theory is wrong. `bin/browse` annotates snapshots from the app's own
+> scan (`window.__bbxUiScan()`, `browse/src/act.ts` → `liveScan`), and the scan
+> reports these elements with `id: null`. Verified live on `/main/test1/browse`:
+>
+>     raw DOM   {"role":"tab","id":"bbx-workspace-tab-_config%2Finterface%2Flandmarks.card"}
+>     __bbxUiScan {"role":"tab","id":null,...}
+>
+> The filter is `CONTROL_ID_PATTERN = /^bbx(?:-[\da-z]+)+$/`
+> (`beebox/src/frontend/src/lib/ui-scan/resolve.ts:28`) — "bbx- plus kebab-case
+> segments, nothing that would need escaping". That id carries `%2F`, uppercase
+> and a dot, so it fails and `scan.ts:104` returns null.
+>
+> So the rule is **any id that is not lowercase kebab-case is invisible to the
+> tooling, whatever its role**. Tabs looked role-shaped because workspace tab
+> ids embed an encoded card path. The issue's own unexplored note points the
+> same way: `bbx-card-properties-:r0:` is a *button*, and React `useId` colons
+> fail the same pattern.
+>
+> Same pattern gates `resolve.ts:61`, which answers `bad-id`, so an
+> id-addressed action on these controls presumably cannot target them either —
+> check that, because it makes this more than a display bug.
+>
+> **Still unexplained:** `bbx-todo-view-show-finished` (the `switch` above) is
+> plain kebab-case and should pass. Either that one has a second cause — the
+> annotator matches by role plus accessible name (`browse/src/controls.ts`,
+> `annotateSnapshot`), so a name mismatch also drops the id — or it was
+> mis-copied. It was on a page in `worktree-collection-views`, not checked here.
+>
+> The fix is a decision, not a patch: widen the pattern to the ids the app
+> actually mints, or stop minting ids that cannot be addressed. Encoded card
+> paths and `useId` colons are two different offenders.
+
 `bin/browse snapshot -i` (agent-browser 0.27.0) reports `id=` for buttons,
 links, and textareas, and reports no id for elements whose role is `tab`,
 `switch`, or `tabpanel` — even when those elements carry a `bbx-` id. On the
