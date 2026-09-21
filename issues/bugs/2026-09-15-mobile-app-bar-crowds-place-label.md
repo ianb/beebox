@@ -7,6 +7,26 @@ discovered-by: agent
 discovered-in: worktree-chip-icon-design — verifying the revised chat properties chip
 ---
 
+> **Re-encountered 2026-09-20 on a phone, worse than filed.** The boxholder,
+> sending a screenshot: "The top bar as you can see the icons are all wrong,
+> maybe because of so many items." At that width the place pill has lost its
+> label entirely and renders as a bare circled card mark with a chevron —
+> nothing on it says where you are. The bar was carrying seven controls: place
+> pill, chat chip, voice chip, questions badge (2), plate badge (11), error
+> badge, profile.
+>
+> Two distinct problems, and only the first is what this issue was filed about:
+>
+> 1. **The place pill absorbs all compression.** The right-hand group is
+>    `shrink-0` (`AppNav.tsx:152`), so every control added there comes out of
+>    the one flexible element. Past some width the label reaches zero and the
+>    pill stops being a place *selector* at all.
+> 2. **The composite voice icon is unreadable at phone size.** It is a single
+>    SVG assembling a person mark, a direction arrow, a bot mark and speaker
+>    waves (`chat/VoiceChip-icons.tsx`), which resolves at desktop size and
+>    reads as three unrelated glyphs on a phone. That is a legibility problem
+>    at a given size, not a layout one, and it does not go away by making room.
+
 At a 375px viewport with both count badges visible, the app bar leaves very
 little width for the place control. Browser measurements during the chat chip
 change showed about 37px for the place pill, compared with about 48px before
