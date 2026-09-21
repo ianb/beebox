@@ -71,3 +71,5 @@ ChatGPT retry against beebox.run: absolute links helped but the markdown corpus 
 Landed the development-process docs (five pages) and the contributor preamble rewrite.
 
 Landed the weekly agent-docs-refresh schedule.
+
+Landed the themes frame (site/docs-themes.md), the Themes section on llms.txt, and the home card as title, description, attributes, and prompts.
