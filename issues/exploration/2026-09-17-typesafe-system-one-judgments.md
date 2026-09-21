@@ -42,7 +42,7 @@ parsing what comes back. Candidates where the needed answer is a label, a rank,
 or a yes/no:
 
 - **Inbox triage and job routing** — which handler an incoming item needs.
-  Related: [triage agent session routing](../features/2026-06-28-triage-agent-session-routing.md),
+  Related: [triage agent session routing](../closed/features/2026-06-28-triage-agent-session-routing.md),
   where the open question is "which existing session should this message join?"
   That is a Choice over candidate sessions.
 - **Search ranking** — reranking issue or card search candidates by relevance.

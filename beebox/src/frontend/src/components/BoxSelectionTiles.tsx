@@ -54,7 +54,7 @@ export function SignInLink({ returnTo }: { returnTo: string }) {
 
 /**
  * Full tile for the root box selector: clickable box name (lands on the
- * box's chat via the index redirect) + a quick-jump Capture row. No Chat
+ * box's chat via the index redirect) + a quick-jump Quick chat row. No Chat
  * quick link — the name itself lands on chat now.
  */
 export function BoxActionsTile({ box }: { box: Box }) {
@@ -71,11 +71,11 @@ export function BoxActionsTile({ box }: { box: Box }) {
       </Link>
       <div className="border-t border-warm-200">
         <Link
-          to={href(`/${box.slug}/chat`)}
-          search={toSearch({ capture: "1" })}
+          id={`bbx-box-quick-chat-${box.slug}`}
+          to={href(`/${box.slug}/quick-chat`)}
           className="block py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
         >
-          Capture
+          Quick chat
         </Link>
       </div>
     </div>

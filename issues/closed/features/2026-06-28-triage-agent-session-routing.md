@@ -1,10 +1,17 @@
 ---
 title: "triage agent session routing"
-workstream: unknown
-needs: [design]
+workstream: chat-routing
 area: beebox
 priority: normal
+resolution: implemented
 ---
+
+Closed by `3cc3c1da7` after the Quick chat routing implementation landed on
+the worktree's finish path. The implementation uses Jev through OpenRouter,
+prefers existing destinations, falls back to a recent/general chat or new
+root chat, and shows the routing receipt. Live calibration and native visual
+review remain evaluation follow-ups; document triage remains in the separate
+combined issue.
 
 An incoming message doesn't always belong in a fresh chat — often it's a
 follow-up to an ongoing conversation, or a memo that some *existing* session is
@@ -44,3 +51,12 @@ Open questions (don't design here):
   triage hop leaves (none? a routing note?).
 - **Failure mode.** Mis-routes are recoverable but annoying; the bias should be
   "when unsure, start fresh" rather than guess into the wrong conversation.
+
+## Current implementation
+
+The [Quick chat plan](../../../beebox/docs/plans/chat-routing.md) owns the active
+work. Later boxholder decisions supersede the older fresh-session fallback
+above: prefer existing conversations, send immediately, and show the selected
+destination and close probabilities afterward. The first entry UI is provisional
+and uses Jev through OpenRouter. Document triage and native cold-start heuristics
+remain separate. This issue stays open until the work is finished and landed.

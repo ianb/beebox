@@ -25,6 +25,25 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-device-token")
     }
 
+    func testQuickChatAuthenticatesWithoutNativeComposerOrSessionParameters() {
+        let box = makeBox(authToken: "secret-device-token").withSessionID("existing-session")
+        let request = ChatWebView.authenticatedRequest(for: box, page: .quickChat)
+
+        XCTAssertEqual(request.url?.absoluteString, "https://box.example.com/test1/quick-chat")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-device-token")
+        XCTAssertEqual(box.sessionID, "existing-session")
+    }
+
+    func testQuickChatStartupCarriesAuthWithoutNativeBridge() {
+        let view = ChatWebView(box: makeBox(authToken: "secret-device-token"), page: .quickChat)
+        let source = view.startupScript()?.source ?? ""
+
+        XCTAssertTrue(source.contains("beebox.mobileAuthToken"))
+        XCTAssertTrue(source.contains("window.location.origin === allowedOrigin"))
+        XCTAssertFalse(source.contains("beeboxNativeReceive"))
+        XCTAssertFalse(source.contains("messageHandlers"))
+    }
+
     func testRequestURLCarriesNoCredential() {
         let box = makeBox(authToken: "secret-device-token")
         let request = ChatWebView.authenticatedRequest(for: box)

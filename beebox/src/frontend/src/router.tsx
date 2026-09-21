@@ -16,6 +16,7 @@ import { parseViewUrl, viewStateSearchValue } from "./lib/view-url";
 import { legacyBrowseTarget } from "./lib/browse-card-state";
 import { legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
 import { trpcClient } from "./lib/trpc";
+import { QuickChatPage } from "./pages/quick-chat/QuickChatPage";
 import { ChatPage } from "./pages/ChatPage";
 import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
@@ -316,13 +317,14 @@ const boxCatchAllRoute = createRoute({
   },
 });
 
+const quickChatRoute = createRoute({ staticData: { title: "Quick chat" }, getParentRoute: () => boxLayoutRoute, path: "/quick-chat", component: QuickChatPage });
+
 // --- Route tree ---
 
 const routeTree = rootRoute.addChildren([
-  indexRoute,
-  loginRoute,
-  setupRoute,
+  indexRoute, loginRoute, setupRoute,
   boxLayoutRoute.addChildren([
+    quickChatRoute,
     productLayoutRoute.addChildren([
     boxIndexRoute,
     dashboardRoute,
