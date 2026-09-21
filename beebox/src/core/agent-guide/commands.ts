@@ -17,12 +17,12 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
 
 **Reach for these:**
 
-- \`bbx feedback "<message>"\` — record anything that feels off about the tooling:
-  a confusing flag, an unclear error message, an awkward workflow, a surprising
-  behavior. It's **silent** — writes a file to \`_config/feedback/\` and commits it
-  without interrupting your task — so reach for it reflexively the moment
-  something is off. Good feedback is specific about *what* was confusing and
-  *why*.
+- When Bee Box itself behaves confusingly — a command, interface, sync, or
+  agent instruction — use the \`beebox-system-feedback\` skill. Record the
+  observation and written context as a \`.doc.card\` in \`_config/feedback/\`
+  and commit it with your task. Feedback about a card's contents or the
+  boxholder's work belongs with that work. A \`.feedback.card\` means the
+  boxholder's response to something the box surfaced.
 - \`bbx force-wakeup [--connector <name>]\` — runs a real wakeup on the server
   right now, either the whole cycle or just one connector, and reports what each
   connector created, updated, or skipped and why. Reach for it after mounting a

@@ -2,8 +2,8 @@
  * Compact transcript rendering, shared by the retrospective observer and the
  * nightly chat review (docs/implemented-plans/chat-review.md).
  *
- * Same register as `bbx feedback`'s session-context block: user and agent text
- * plus one-line tool summaries, tool results skipped (noise without signal).
+ * User and agent text plus one-line tool summaries, with tool results skipped
+ * because they add noise without signal.
  * Voice-direction and `<typed>`/`<speech>` wrappers are stripped so a reader
  * quotes clean human text.
  *

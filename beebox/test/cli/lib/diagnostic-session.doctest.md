@@ -1,7 +1,7 @@
 # Diagnostic session provider resolution
 
-`bbx session` and `bbx feedback` use native session identities without guessing from
-opaque ID syntax. Explicit selection wins, the current Codex thread is recognized,
+`bbx session` uses native session identities without guessing from opaque ID
+syntax. Explicit selection wins, the current Codex thread is recognized,
 and registered web chats retain their pinned engine.
 
 ```ts setup

@@ -1,6 +1,7 @@
 ---
 title: "`bbx feedback` can fail on whitespace it introduced itself"
-workstream: unattached
+workstream: feedback-as-cards
+resolution: implemented
 area: beebox
 labels: [cli, feedback]
 filed-by: agent
@@ -9,6 +10,8 @@ discovered-in: main session — bbx feedback triage from a real box
 priority: normal
 next-action: discuss
 ---
+
+> Implemented in `453400e0d`: the `bbx feedback` command and raw transcript embedding path were removed; legacy notes are migrated with trailing whitespace normalization before card collection.
 
 > **Re-encountered 2026-09-16 — resolving feedback also fails.** Moving
 > committed feedback files into `_config/feedback/resolved/` on a production box
