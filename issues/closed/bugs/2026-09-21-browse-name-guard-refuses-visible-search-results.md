@@ -39,6 +39,36 @@ The independent replay produced the same refusal, while `elementFromPoint` at
 the result centre returned the result button itself (`centerHitsOwnResult: true`).
 This is a harness defect, not evidence of an app overlay blocking search.
 
+## Re-encounter and repair (2026-09-21)
+
+The same guard failure reappeared during the F journey on the canonical Search
+surface, this time for the visible Search input on fresh snapshot references.
+An independent replay on disposable C reproduced it deterministically:
+
+```text
+searchbox "Search this box" [ref=e36]
+✗ fill @e36 refused: covered — the element at the ref's center is input#:r2:, not "Search this box"
+```
+
+The input was visible and its center hit the input itself. Its accessible name
+came from the associated visually hidden native label (`label[for=":r2:"]`,
+text `Search this box`), while the tighter hit-control boundary in
+`namesOf` only collected the input's placeholder and value. The prior ancestor
+scope and prefix-match repairs therefore left this native-label case uncovered.
+
+The local repair adds associated native label text from `e.labels` to the
+candidate names while preserving the nearest-control boundary and whole-name
+matching. The fresh C replay then succeeded:
+
+```text
+✓ Done
+```
+
+The existing rich-result/overlay guard fixtures still reject overlays and
+changed names while accepting an unobstructed rich option. The focused
+`browse-controls` doctest remains 8/8 passing, and browse typecheck and lint
+pass. No product behavior changes.
+
 ## Verified mechanism
 
 `browse/src/act.ts:237–254` passes the snapshot accessible name to the point

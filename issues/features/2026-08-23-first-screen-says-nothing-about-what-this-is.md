@@ -89,3 +89,14 @@ none of it theirs, none explained): "Suddenly this feels less like an assistant
 and more like someone handed me the keys to a filing cabinet." That is the
 first-run-experience half of this cluster
 ([first-run-experience](2026-07-20-first-run-experience.md)).
+
+## Re-encounter, 2026-09-21 - journey F
+
+A fresh newcomer with no chosen use case saw only “Start a conversation.”
+Screenshot 01 independently confirms it; `InteractiveChat-messages.tsx:269`
+renders that empty state. Asking chat produced useful examples and ultimately
+led to valued Spanish practice. The missing orientation did not stop this
+walker, but discovery again depended on knowing to ask. The synthetic run slug
+is fixture naming, not an additional vocabulary defect.
+
+Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

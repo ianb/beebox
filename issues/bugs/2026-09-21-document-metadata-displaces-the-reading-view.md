@@ -34,3 +34,13 @@ Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/r
 actions 6, 19, 38, and closing remarks; screenshots 05, 09, 21, 29.
 Related: the earlier [vocabulary sweep](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
 fixed other surfaces; this is a distinct default-renderer mechanism.
+
+## Re-encounter, 2026-09-21 - journey F
+
+Household Jobs and Ser vs Estar both displayed `contains` and
+`prominence: primary` above the useful content with Properties closed.
+Screenshots 09 and 16 independently show the same default-renderer mechanism.
+The walker could read the saved work but repeatedly called these labels
+bookkeeping. No document-rendering change was made.
+
+Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

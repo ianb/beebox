@@ -40,3 +40,15 @@ a browsing context. The earlier Browse reappearance when opening The Plate
 
 Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 6-13 and 52-54, plus closing remarks. No navigation behavior changed.
+
+## Re-encounter, 2026-09-21 - journey F
+
+Opening The Plate again brought Browse and prior tabs into view; the person
+used two minus controls to get back to chat. Screenshots 10 and 18 preserve
+that context. Per-conversation `sessionStorage` restoration is explicit in
+`sidecar-tabs-storage.ts:72–109`, but this does not establish the exact cause
+of every pane transition in the walk. This is another observation of spatial
+orientation cost, not proof that replacement is the right policy or that
+restoration itself is a defect.
+
+Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
