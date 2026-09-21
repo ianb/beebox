@@ -2905,6 +2905,13 @@ tests:
   # final behavior check passed 1/1: the agent recognized the unsolicited
   # observation and drafted a follow-up card. The full rerun passed the other
   # 4/4 feedback audits; its opportunity case still had the old name check.
+  # Status (2026-09-21, system boundary): 6/6 feedback audits passed after
+  # naming the skill beebox-system-feedback and excluding ordinary box content.
+  # The in-box project/draft counterexample was rejected without file reads;
+  # the CLI-friction case still produced a doc card.
+  # Status (2026-09-21, boundary check): The corrected No/Yes-polarity audit
+  # passed 1/1 without reads. It kept content edits with the card/draft and
+  # named sync or template damage as the system-level exception.
 
   - id: agent-feedback-skill-opportunity
     prompt: >
@@ -2956,6 +2963,20 @@ tests:
     notes: >
       The directory is an agent-to-developer observation inbox, not a general
       user-feedback or question channel.
+
+  - id: beebox-system-feedback-boundary
+    prompt: >
+      While working in this box, you notice a project card gives the wrong
+      deadline and the boxholder's draft needs clearer wording. Should either
+      observation go in _config/feedback/? Begin with Yes or No, then explain
+      what you would do instead.
+    expected_level: knows_directly
+    watch_for: >
+      Neither belongs in the Bee Box system feedback inbox. Correct or discuss
+      the project card and draft in their normal box workflow. Reserve the
+      feedback directory for defects or friction in Bee Box software itself.
+    correct_matches: ["^\\s*No\\b"]
+    tags: [feedback, cards, boundary]
 
   - id: agent-feedback-card-uses-it
     prompt: >

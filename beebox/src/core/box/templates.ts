@@ -161,10 +161,15 @@ the real cards, renders once, prints the output or a source-mapped error).
 Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
 `;
 
-export const FEEDBACK_CLAUDE_MD = `# Agent observations for Bee Box developers
+export const FEEDBACK_CLAUDE_MD = `# Feedback about the Bee Box system
 
-When Bee Box tooling is confusing or behaves unexpectedly, record the observation
-here as a \`.doc.card\`. Use a specific title and a \`contains:\` summary so a
+Use this directory only for observations about Bee Box itself: its commands,
+interface, generated guidance, sync, or agent instructions. A problem with an
+individual card's contents, the boxholder's project, or ordinary work in this
+box belongs in that work, not here. A system behavior can qualify even when you
+noticed it while handling a card.
+
+Record a system observation here as a \`.doc.card\`. Use a specific title and a \`contains:\` summary so a
 developer can find and understand it. Describe what happened, what you expected,
 and why the difference matters. Include the relevant error or exchange under a
 short **Context** heading, in your own words; link an earlier card for follow-ups.
@@ -172,7 +177,7 @@ Include a session ID only when you know which session it identifies. Use
 box-relative paths such as \`/_config/box.json\` instead of machine paths.
 Commit the card with your normal work.
 
-This directory is for observations from the agent to Bee Box developers.
+These observations go from the agent to Bee Box developers.
 \`.feedback.card\` is the boxholder's response to something the box surfaced.
 `;
 

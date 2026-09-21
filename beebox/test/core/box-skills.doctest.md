@@ -23,7 +23,7 @@ const box = await makeTmpBox();
 const written = await generateSkills(box.root);
 written
 => [
-  "agent-feedback",
+  "beebox-system-feedback",
   "build-course",
   "calendar",
   "drive",
