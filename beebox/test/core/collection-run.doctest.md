@@ -228,15 +228,16 @@ A card inside the glob contributes ALL its items, `via: "scope"`. A card
 outside contributes only the items whose refs point into `here`, plus those
 items' ancestors, `via: "reference"`.
 
+Rows are ordered `via` first and path second: the place's own cards, then the
+cards that point into it. A referring card's path has nothing to do with the
+place, so letting it sort among the project's own cards — `Garden/Notes`
+ahead of `Kitchen/Plan` in a query about the kitchen — would put somebody
+else's list at the top of this one.
+
 ```ts continue
 render(await run({ here: KITCHEN, params: params({}) }))
 =>
 # place "By place" {"open":7,"done":0,"dropped":0,"parked":1,"onPlate":7,"escalated":0,"next":"2026-07-27"}
-  _content/projects/Garden/Notes.doc.card (reference) {"open":4,"done":0,"dropped":0,"parked":0,"onPlate":4,"escalated":0,"next":null}
-    * [Hardware] Hardware run
-    * [Hardware] Grab grout for the kitchen
-    * [Hardware] Ask about the cabinet plan
-    * [Hardware] Check the supplies list
   _content/projects/Kitchen/Plan.doc.card (scope) {"open":2,"done":2,"dropped":0,"parked":1,"onPlate":2,"escalated":0,"next":null}
     - [Cabinets] Strip the doors
     * [Cabinets] Sand the frames
@@ -244,6 +245,11 @@ render(await run({ here: KITCHEN, params: params({}) }))
     * [Floor] Replace the window
   _content/projects/Kitchen/Supplies.doc.card (scope) {"open":1,"done":0,"dropped":1,"parked":0,"onPlate":1,"escalated":0,"next":"2026-07-27"}
     * [] Reorder the grout
+  _content/projects/Garden/Notes.doc.card (reference) {"open":4,"done":0,"dropped":0,"parked":0,"onPlate":4,"escalated":0,"next":null}
+    * [Hardware] Hardware run
+    * [Hardware] Grab grout for the kitchen
+    * [Hardware] Ask about the cabinet plan
+    * [Hardware] Check the supplies list
 ```
 
 "Water the beans" is in the same card and points nowhere near the kitchen, so

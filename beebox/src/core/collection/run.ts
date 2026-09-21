@@ -96,7 +96,14 @@ export async function runCollection<
     );
   }
 
-  cards.sort((a, b) => a.relPath.localeCompare(b.relPath));
+  // The place's own cards first, then the cards that merely point into it,
+  // each set in path order. Row order is decided here rather than per
+  // consumer, so the web list, `bbx query` and `bbx todos` agree — and so a
+  // card from elsewhere in the box cannot sort above the project's own work
+  // just because its path starts with an earlier letter. `rows.ts` walks
+  // `cards` in this order for every group, so the `plate` grouping gets the
+  // same rule inside each of its groups.
+  cards.sort((a, b) => viaOrder(a.via) - viaOrder(b.via) || a.relPath.localeCompare(b.relPath));
   const everything = cards.flatMap((card) => card.inScope);
   if (def.crossCardIssues !== undefined) issues.push(...def.crossCardIssues(everything));
   return {
@@ -105,6 +112,10 @@ export async function runCollection<
     groups: buildGroups({ def, cards, params: query.params, grouping }),
     issues,
   };
+}
+
+function viaOrder(via: "scope" | "reference"): number {
+  return via === "scope" ? 0 : 1;
 }
 
 async function readCard(input: {

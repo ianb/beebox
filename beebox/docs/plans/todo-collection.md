@@ -449,6 +449,11 @@ interface Row<Derived, Reduction> {
   place), and `--no-referring` / `includeReferring: false` restores the
   subtree-only scan. The timing doctest records both numbers on the fixture
   box.
+- **Row order.** Rows are ordered `via` first and path second — every card the
+  scope holds, in path order, then every card that only refers into `here`, in
+  path order — so a card from elsewhere in the box cannot sort above the
+  place's own work, and so every consumer shows one order. The rule applies
+  inside each group of any grouping.
 - **Groupings for todos.** `place` (one group, key `"place"`; rows are cards in
   path order; the renderer nests sections and parents) and `plate` (the plate
   states in today's order with today's labels — a state with no items is

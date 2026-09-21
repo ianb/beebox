@@ -63,14 +63,13 @@ await box.write("_content/Errands.doc.card", doc("Errands", [
 ## `--here` scopes to a place, and picks up what links into it
 
 The card header is the card's own summary plus its path and what it amounts
-to. A card that is in the list only because its todos point here says so.
+to. A card that is in the list only because its todos point here says so — and
+it comes after the place's own cards, whatever its path sorts like, so the
+project's own work reads first.
 
 ```ts
 await run({ here: PORCH })
 =>
-Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
-  _content/Errands.doc.card:4  Hardware run
-      — for the porch
 Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit  (context)
@@ -78,6 +77,9 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
         — Sofia has the scanner
  § Decking
   _content/projects/Porch/Plan.doc.card:13  Order lumber  (due=2026-08-10)
+Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
+  _content/Errands.doc.card:4  Hardware run
+      — for the porch
 ```
 
 "Pull the permit" is `done`, so the default filter does not match it — but its
