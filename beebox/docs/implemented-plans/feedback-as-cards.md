@@ -1,10 +1,10 @@
 ---
 title: "Agent feedback as doc cards"
-status: active
+status: implemented
 workstream: feedback-as-cards
 issues:
-  - ../../../issues/exploration/2026-09-16-feedback-as-a-card-location.md
-  - ../../../issues/bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md
+  - ../../../issues/closed/exploration/2026-09-16-feedback-as-a-card-location.md
+  - ../../../issues/closed/bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md
 ---
 # Agent feedback as doc cards
 

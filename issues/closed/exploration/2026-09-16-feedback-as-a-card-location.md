@@ -1,11 +1,14 @@
 ---
 title: "Replace the bbx feedback command with a directory of feedback cards"
 workstream: feedback-as-cards
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — production box feedback triage (bbx feedback)
 ---
+
+> Implemented in `453400e0d`: agent system observations now use `.doc.card` files in `_config/feedback/`, with migration and collection support. The approved design keeps the directory name and uses written context with an optional session ID.
 
 The boxholder: "I feel like we can simplify feedback by just making it a
 location where cards go, and not a whole command."
@@ -29,6 +32,6 @@ command would become a convenience that creates one card, or be removed.
 - `feedback-review/collect.ts` matches files by timestamped filename. It
   would need to read cards instead.
 
-Related: [introspectable feedback storage](2026-05-19-introspectable-feedback-storage.md),
+Related: [introspectable feedback storage](../../exploration/2026-05-19-introspectable-feedback-storage.md),
 [bbx feedback rejects its own transcript](../bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md),
-[feedback collection cadence](../docs-and-chores/2026-07-14-feedback-collection-cadence.md).
+[feedback collection cadence](../../docs-and-chores/2026-07-14-feedback-collection-cadence.md).
