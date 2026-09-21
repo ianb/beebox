@@ -56,11 +56,9 @@ export interface VoiceChipFaceState {
 }
 
 /**
- * Two marks carry two independent facts: who holds the floor and how the box
- * answers. Speaker labels (diarization) change neither, and since the face lost
- * its participants they are carried by the accessible name alone — the
- * `data-voice-diarization` attribute keeps them observable to tests and to the
- * chip's own styling. The whole chip remains one menu trigger.
+ * One continuous drawing carries two independent facts: who holds the floor
+ * and how the bot answers. Diarization replaces the human with a group without
+ * changing either fact. The whole chip remains one menu trigger.
  */
 export function VoiceChipFace(props: VoiceChipFaceState) {
   const { muted, narrationEnabled, hqInFlight, alert, diarizationEnabled = false } = props;
@@ -71,13 +69,13 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
       data-voice-narration={narrationEnabled}
       data-voice-diarization={diarizationEnabled}
     >
-      <ConversationIcon floor={narrationEnabled ? "person" : "shared"} muted={muted} />
+      <ConversationIcon floor={narrationEnabled ? "person" : "shared"} muted={muted} diarizationEnabled={diarizationEnabled} />
       {hqInFlight ? (
         <>
-          {/* The word costs about 70px, which is most of what this change gave
-              back to the place label — so below `sm:` the same fact is a pulse
-              on the chip instead. The accessible name says "transcribing" at
-              every width either way. */}
+          {/* The word costs about 70px, and at phone width the bar has none to
+              spare (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`).
+              Below `sm:` the same fact is a pulse on the chip; the accessible
+              name says "transcribing" at every width either way. */}
           <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
           <span className="hidden sm:inline text-xs opacity-80">transcribing…</span>
         </>
@@ -89,6 +87,7 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
 
 interface VoiceChipBodyProps {
   panel: VoiceChipPanel;
+  narrationDiarizationEnabled: boolean;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
@@ -115,7 +114,7 @@ interface VoiceChipBodyProps {
  */
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
-    panel, muted, onToggleMute, narrationEnabled, onToggleNarration,
+    panel, muted, onToggleMute, narrationEnabled, onToggleNarration, narrationDiarizationEnabled,
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
@@ -135,7 +134,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             // The row's icon is the mode it SWITCHES TO, so the menu previews
             // the glyph the chip will wear — not the mode you are in, which the
             // chip already shows.
-            icon={<span className="inline-flex w-[34px] justify-center"><FloorIcon floor={narrationEnabled ? "shared" : "person"} /></span>}
+            icon={<FloorIcon floor={narrationEnabled ? "shared" : "person"} diarizationEnabled={narrationDiarizationEnabled} />}
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
@@ -302,7 +301,7 @@ export const VoiceChip = memo(function VoiceChip({
           data-bbx-reveal
           data-bbx-does="opens the voice menu — mute, narration mode, transcription services"
           onClick={toggle}
-          className="min-h-[40px] px-2 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40"
+          className="min-h-[40px] px-2 sm:px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={label}
           aria-label={label}
           {...ariaProps}
@@ -313,6 +312,7 @@ export const VoiceChip = memo(function VoiceChip({
     >
       <VoiceChipBody
         panel={panel}
+        narrationDiarizationEnabled={voiceChipDiarizationEnabled({ hqDictationEnabled, narrationEnabled: !narrationEnabled, hqService: currentHqService })}
         muted={muted}
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
