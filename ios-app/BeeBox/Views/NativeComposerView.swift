@@ -22,6 +22,7 @@ struct NativeComposerView: View {
     var onInterruptSpeech: () -> Void = {}
     var requiresConversationBinding = false
     var automaticallyResumeVoicePreparations = true
+    var backgroundTaskApplication: any BackgroundTaskApplication = UIApplication.shared
     var voiceStateOverride: VoiceCompositionState?
     var initiallyFocused = false
     var initialDetailedSelection: DraftSelection?
@@ -97,6 +98,12 @@ struct NativeComposerView: View {
                     return
                 }
                 pendingReferenceDate = Date()
+                if automaticallyResumeVoicePreparations {
+                    resumeVoicePreparations(
+                        pendingStore.voicePreparations,
+                        foregroundTransitionIsAuthoritative: true
+                    )
+                }
             }
             .onChange(of: voiceTurn.isActive) { _, _ in
                 keywordHintIndex = 0
@@ -387,6 +394,7 @@ struct NativeComposerView: View {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
                     voicePreparations: pendingStore.voicePreparations,
+                    activeVoicePreparationIDs: activeVoicePreparationIDs,
                     referenceDate: pendingReferenceDate,
                     canRestore: draftIsEmpty,
                     onBindVoice: { preparation in
@@ -871,15 +879,39 @@ struct NativeComposerView: View {
         }
     }
 
-    private func resumeVoicePreparations(_ preparations: [VoicePreparation]) {
+    private func resumeVoicePreparations(
+        _ preparations: [VoicePreparation],
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) {
         for preparation in preparations where preparation.boxID == box.id {
-            resumeVoicePreparation(preparation, box: box)
+            resumeVoicePreparation(
+                preparation,
+                box: box,
+                foregroundTransitionIsAuthoritative: foregroundTransitionIsAuthoritative
+            )
         }
     }
 
-    private func resumeVoicePreparation(_ preparation: VoicePreparation, box: PairedBox) {
+    private func resumeVoicePreparation(
+        _ preparation: VoicePreparation,
+        box: PairedBox,
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) {
         guard !requiresConversationBinding || preparation.binding != nil else {
             statusText = "Saved voice message needs a conversation. Restore it before sending."
+            return
+        }
+        let applicationState = backgroundTaskApplication.applicationState
+        guard VoicePreparationResumePolicy.shouldStart(
+            applicationState: applicationState,
+            foregroundTransitionIsAuthoritative: foregroundTransitionIsAuthoritative
+        ) else {
+            BoxLog.info(
+                "voice HQ deferred preparation=\(preparation.id.uuidString) applicationState="
+                    + HqFallbackDiagnostics.applicationStateName(applicationState),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
             return
         }
         guard activeVoicePreparationIDs.insert(preparation.id).inserted else {
@@ -891,10 +923,7 @@ struct NativeComposerView: View {
             do {
                 try await pendingStore.finishVoicePreparation(
                     id: preparation.id,
-                    text: prepared.text,
-                    diarized: prepared.diarized,
-                    hqText: prepared.hqText,
-                    hqService: prepared.hqService
+                    outcome: prepared
                 )
                 // The recording was retained at send time with the realtime
                 // transcript, because that was all that existed then; the
@@ -915,21 +944,55 @@ struct NativeComposerView: View {
     private func prepareVoiceMessage(
         _ preparation: VoicePreparation,
         box: PairedBox
-    ) async -> (text: String, diarized: Bool, hqText: Bool, hqService: String?) {
+    ) async -> VoicePreparationOutcome {
         guard let audioURL = await pendingStore.voiceAudioURL(for: preparation) else {
-            return (preparation.liveTranscript, false, false, nil)
+            BoxLog.warn(
+                "voice HQ fallback preparation=\(preparation.id.uuidString) reason=no-recording-reference"
+                    + " applicationState="
+                    + HqFallbackDiagnostics.applicationStateName(backgroundTaskApplication.applicationState),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+            return .fallback(text: preparation.liveTranscript)
         }
+        let startUptime = ProcessInfo.processInfo.systemUptime
+        let startWallTime = Date()
+        let startApplicationState = backgroundTaskApplication.applicationState
+        let audioBytes = (try? audioURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? -1
+        let backgroundHold = BackgroundExecutionHold(application: backgroundTaskApplication)
+        let holdAcquired = backgroundHold.begin(name: "beebox.hq-transcription") {
+            BoxLog.warn(
+                "voice HQ background hold expired preparation=\(preparation.id.uuidString)",
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+        }
+        defer { backgroundHold.end() }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
-            return (
-                VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
-                hqResult.diarized,
-                true,
-                hqResult.service
+            return .hq(
+                text: VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
+                diarized: hqResult.diarized,
+                service: hqResult.service
             )
         } catch {
+            BoxLog.warn(
+                HqFallbackDiagnostics.message(
+                    preparation: preparation,
+                    audioBytes: audioBytes,
+                    elapsedMilliseconds: Int((ProcessInfo.processInfo.systemUptime - startUptime) * 1_000),
+                    elapsedWallMilliseconds: Int(Date().timeIntervalSince(startWallTime) * 1_000),
+                    startApplicationState: startApplicationState,
+                    failureApplicationState: backgroundTaskApplication.applicationState,
+                    holdAcquired: holdAcquired,
+                    holdExpired: backgroundHold.expired,
+                    error: error
+                ),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
             statusText = "HQ transcription failed; sending live dictation."
-            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false, false, nil)
+            return .fallback(text: VoicePreparationResolver.text(for: preparation, hqTranscript: nil))
         }
     }
 
@@ -1750,6 +1813,69 @@ struct NativeComposerView: View {
     }
 }
 
+enum HqFallbackDiagnostics {
+    static func message(
+        preparation: VoicePreparation,
+        audioBytes: Int,
+        elapsedMilliseconds: Int,
+        elapsedWallMilliseconds: Int,
+        startApplicationState: UIApplication.State,
+        failureApplicationState: UIApplication.State,
+        holdAcquired: Bool,
+        holdExpired: Bool,
+        error: Error,
+        now: Date = Date()
+    ) -> String {
+        let preparationAgeMilliseconds = max(0, Int(now.timeIntervalSince(preparation.createdAt) * 1_000))
+        var fields = [
+            "voice HQ fallback",
+            "preparation=\(preparation.id.uuidString)",
+            "preparationAgeMs=\(preparationAgeMilliseconds)",
+            "audioBytes=\(audioBytes)",
+            "elapsedMs=\(max(0, elapsedMilliseconds))",
+            "elapsedWallMs=\(max(0, elapsedWallMilliseconds))",
+            "startApplicationState=\(applicationStateName(startApplicationState))",
+            "failureApplicationState=\(applicationStateName(failureApplicationState))",
+            "holdAcquired=\(holdAcquired)",
+            "holdExpired=\(holdExpired)",
+            "errorType=\(String(reflecting: type(of: error)))",
+        ]
+        if let urlError = error as? URLError {
+            fields.append("urlErrorCode=\(urlError.code.rawValue)")
+        }
+        if let apiError = error as? ChatAPI.ChatAPIError,
+           case .server(_, let status, let permanent, let code) = apiError {
+            fields.append("httpStatus=\(status.map(String.init) ?? "none")")
+            fields.append("serverCode=\(code ?? "none")")
+            fields.append("permanent=\(permanent.map(String.init) ?? "none")")
+        }
+        if !(error is URLError), !(error is ChatAPI.ChatAPIError) {
+            let nsError = error as NSError
+            fields.append("errorDomain=\(nsError.domain)")
+            fields.append("errorCode=\(nsError.code)")
+        }
+        return fields.joined(separator: " ")
+    }
+
+    static func applicationStateName(_ state: UIApplication.State) -> String {
+        switch state {
+        case .active: "active"
+        case .inactive: "inactive"
+        case .background: "background"
+        @unknown default: "unknown"
+        }
+    }
+}
+
+enum VoicePreparationResumePolicy {
+    static func shouldStart(
+        applicationState: UIApplication.State,
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) -> Bool {
+        foregroundTransitionIsAuthoritative || applicationState == .active
+    }
+}
+
 /// The individual terms of the composer's `isSending` lock, named.
 ///
 /// Two callers need the same classification and neither can work from a single
@@ -2040,6 +2166,7 @@ private struct FileAttachmentList: View {
 private struct PendingEmissionList: View {
     var emissions: [PendingEmission]
     var voicePreparations: [VoicePreparation]
+    var activeVoicePreparationIDs: Set<UUID>
     /// Wall clock the pending rows age against; the owner refreshes it.
     var referenceDate: Date
     var canRestore: Bool
@@ -2054,8 +2181,13 @@ private struct PendingEmissionList: View {
                 HStack(spacing: 8) {
                     if preparation.binding == nil {
                         Button("Send saved voice message to this conversation") { onBindVoice(preparation) }
-                    } else { ProgressView() }
-                    Text(preparation.binding == nil ? "Choose a conversation first." : "Improving voice transcription…")
+                    } else if activeVoicePreparationIDs.contains(preparation.id) {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "clock")
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(voicePreparationStatus(preparation))
                         .font(.caption)
                         .lineLimit(1)
                 }
@@ -2115,6 +2247,16 @@ private struct PendingEmissionList: View {
         }
         .padding(10)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func voicePreparationStatus(_ preparation: VoicePreparation) -> String {
+        if preparation.binding == nil {
+            return "Choose a conversation first."
+        }
+        if activeVoicePreparationIDs.contains(preparation.id) {
+            return "Improving voice transcription…"
+        }
+        return "Voice message saved; transcription will resume in the app."
     }
 }
 

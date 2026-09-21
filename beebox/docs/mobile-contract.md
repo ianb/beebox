@@ -358,8 +358,9 @@ the contract.
   payload when any image is malformed.
 - **V2 validation:** `native-emission.ts` · `parseNativeEmissionDetail` requires every V2 field
   and rejects the whole payload when an image, file, or selection is malformed. Unknown versions
-  reject with a reason naming that version. File metadata is retained on the `Emission` value even
-  though current chat assembly needs only `id` and `path`.
+  reject with a reason naming that version. `hqText:true` and `hqFallback:true` are mutually
+  exclusive; malformed or contradictory provenance rejects the whole payload. File metadata is
+  retained on the `Emission` value even though current chat assembly needs only `id` and `path`.
 - **Legacy compatibility (intentional boundary leniency):** a payload with no `version` keeps the
   shipped decoder policy: a missing/invalid `id`
   is replaced with a generated emission id (`withNativeId` keeps the native id only when it is a
@@ -368,8 +369,10 @@ the contract.
   synthetic rejection (a `null` parse) occurs **only when neither text nor any valid image
   survives**. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`) pin both policies separately.
 - **Field mapping:** V2 is a complete projection of web
-  `Emission { id, origin, text, images, files, selections, diarized }`. Legacy payloads produce
-  empty `files` and `selections`.
+  `Emission { id, origin, text, images, files, selections, diarized, hqText?, hqService?,
+  hqFallback? }`. `hqText:true` says the text came from the completed HQ pass;
+  `hqFallback:true` says requested HQ failed and realtime text was substituted, which the
+  assembler persists as `hq="failed"`. Legacy payloads produce empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -505,7 +508,10 @@ mint them independently; the ids are per-emission and per-kind.
   `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
   `send`, `sendKeywordIntent`.
 - **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
-  transcription later fails, the durable preparation visibly falls back to its live transcript.
+  transcription later fails, the durable preparation visibly falls back to its live transcript
+  with `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
+  one-shot request. A preparation reached while the application is already non-active stays staged
+  until foregrounding; this is best-effort foreground transport, not a background `URLSession`.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -859,7 +865,8 @@ See §1.3 (full request/response/errors).
   true` with a `code` (e.g. `missing_openrouter_key`) means the configured HQ service cannot
   run on this box until its configuration changes — every later segment fails the same way, so
   a client should say so once rather than retry per segment. The web client shows it on the
-  voice chip; iOS reads only `error` today (additive fields, ignored).
+  voice chip; iOS preserves `status`, `permanent`, and `code` for its fallback diagnostic while
+  continuing to show the server's `error` as the localized description.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1138,7 +1145,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `beeboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
+| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,hqFallback?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
 | B12 | Composer destination | web→native | V1 selection/assigned publications via `beeboxComposerBinding`; native acknowledges `beeboxComposerBindingVersion=1` + `beebox:composer-binding-ready` | `NativeComposerContract.swift` · `NativeComposerBinding`; `PendingEmissionStore.swift` · `receiveBinding` | `shared/chat-composer-binding.ts`; `everywhere/BoxConversationShell.tsx` | LOUD: unresolved disables send |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
@@ -1186,7 +1193,7 @@ without the other is a contract break.
   therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
-- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}`; image
+- **Emission V2 JSON keys** `{version,id,text,origin,diarized,hqText?,hqService?,hqFallback?,images,files,selections}`; image
   entry keys `{id,mimeType,dataBase64,path?}` — `Models/NativeComposerContract.swift` ·
   `NativeEmissionV2`, `Models/ChatImageAttachment.swift` ↔ `native-emission.ts` ·
   `NativeEmissionV2` / `parseNativeEmissionDetail`.

@@ -1,6 +1,6 @@
 ---
 title: "Native HQ fallback resilience"
-status: draft
+status: implemented
 workstream: hq-settings-broken
 issues: []
 ---
@@ -76,7 +76,7 @@ enum VoicePreparationOutcome: Equatable {
 
 **Why this needs to change.** The current catch can say only “HQ transcription failed”; HTTP `permanent`/`code` are discarded, a missing recording reference silently takes the realtime path, and a background suspension is observationally indistinguishable from an ordinary timeout or network loss.
 
-**Direction.** Extend `ChatAPIError.server` to retain `status`, `message`, `permanent`, and `code`, while preserving its existing localized message for callers. Capture an HQ-attempt snapshot immediately before the request: monotonic start time, live `UIApplication.State` from the injected application adapter, audio byte count when available, and the hold instance. On fallback, read application state again from that adapter and emit one warning with preparation ID, box ID, preparation age, request elapsed time, start/current application state, hold-acquired and hold-expired state, concrete Swift error type, `URLError` code if present, and structured server fields if present. Do not read `@Environment(\.scenePhase)` from the long-lived task: that value belongs to the view snapshot and can silently report the start state at failure time. Do not invent a seven-way category when every case has the same product outcome. Existing lower-level `ChatAPI` logs retain the operation name (`default-session` versus `transcribe-audio`) and detailed transport/HTTP/decode context; the boundary log supplies the preparation and lifecycle correlation without repeating raw messages.
+**Direction.** Extend `ChatAPIError.server` to retain `status`, `message`, `permanent`, and `code`, while preserving its existing localized message for callers. Capture an HQ-attempt snapshot immediately before the request: monotonic and wall-clock start times, live `UIApplication.State` from the injected application adapter, audio byte count when available, and the hold instance. On fallback, read application state again from that adapter and emit one warning with preparation ID, box ID, preparation age, awake-time and wall-clock request elapsed time, start/current application state, hold-acquired and hold-expired state, concrete Swift error type, `URLError` code if present, and structured server fields if present. The wall-clock duration makes time spent asleep visible while the monotonic duration remains immune to clock adjustments. Do not read `@Environment(\.scenePhase)` from the long-lived task: that value belongs to the view snapshot and can silently report the start state at failure time. Do not invent a seven-way category when every case has the same product outcome. Existing lower-level `ChatAPI` logs retain the operation name (`default-session` versus `transcribe-audio`) and detailed transport/HTTP/decode context; the boundary log supplies the preparation and lifecycle correlation without repeating raw messages.
 
 The request still uses the platform's current timeout behavior. This track measures timeout code and elapsed time; changing timeouts is not smuggled into the diagnosis fix.
 

@@ -14,6 +14,7 @@ struct NativeChatEmission: Equatable, Identifiable {
     var diarized: Bool
     var hqText: Bool? = nil
     var hqService: String? = nil
+    var hqFallback: Bool? = nil
     var images: [ChatImageAttachment]
     var files: [NativeEmissionFile] = []
     var selections: [NativeEmissionSelection] = []
