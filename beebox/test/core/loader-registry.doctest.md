@@ -157,6 +157,50 @@ JSON.stringify(summarize({ path: "_content/Broken_Quote.quote.card" }, schemaMap
 => {"path":"_content/Broken_Quote.quote.card","title":"Broken Quote"}
 ```
 
+## A hook never sees fields its schema did not vouch for
+
+A `summarize` hook is typed as receiving this type's validated fields, and it
+is entitled to read them that way — `card.state.toUpperCase()` on a card type
+whose `state` is a `z.enum`. The production callers load the card first, so
+its fields were validated; `summarize` is exported, though, and a caller that
+hands over a raw bag must not be the one that makes a schema's hook wrong.
+The fields are checked against the schema before the hook is called, and a bag
+that fails keeps the base summary.
+
+```ts
+resetLoaderRegistry();
+const calls: string[] = [];
+const ImageSchema = cardSchema("image", {
+  fields: { status: z.enum(["draft", "published"]) },
+  summarize: (card, base) => {
+    calls.push(card.status);
+    return { ...base, detail: card.status.toUpperCase() };
+  },
+});
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+const s = summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: 7 } }, schemaMap(ImageSchema));
+console.warn = original;
+JSON.stringify([s.title, s.detail, calls.length])
+=> ["Kite",null,0]
+```
+
+The fall back is visible, not silent: whoever called `summarize` that way gets
+told which field was wrong.
+
+```ts continue
+warnings[0]
+=> summarize() was handed unvalidated "image" fields for _content/Kite.image.card; using the base summary:
+```
+
+Validated fields reach the hook exactly as before.
+
+```ts continue
+summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: "draft" } }, schemaMap(ImageSchema)).detail
+=> DRAFT
+```
+
 ## A `summarize` that throws is a bug in that schema, not a lost row
 
 ```ts
