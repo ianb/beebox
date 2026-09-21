@@ -2897,6 +2897,22 @@ tests:
   # context, and committed it.
   # Status (2026-09-21, path rerun): Behavioral audit passed 1/1; the agent
   # wrote the prompted machine path as /_config/box.json in its card.
+  # Status (2026-09-21, directory): Local guide audit passed 1/1 with no file
+  # reads or searches; the agent named the card shape, written context, session
+  # and path handling, and the separate boxholder feedback type.
+
+  - id: agent-feedback-directory-guide
+    context_dir: _config/feedback
+    prompt: >
+      You are working in this directory. What belongs here, how should you
+      write a new observation, and when should you use a .feedback.card instead?
+    expected_level: knows_directly
+    watch_for: >
+      Agent observations about confusing Bee Box tooling go here as .doc.card
+      files with a clear title, searchable summary, written context, and a normal
+      commit. A .feedback.card holds a boxholder response to surfaced content.
+    correct_contains: [".doc.card", ".feedback.card", "Context"]
+    tags: [feedback, cards]
 
   - id: agent-feedback-card-purpose
     prompt: "Where should you record an observation about confusing Bee Box tooling, and what card type should you use?"

@@ -4573,6 +4573,14 @@ test1:
       peak: 60860
       added: 11808
       turns: 18
+  agent-feedback-directory-guide:
+    - date: 2026-09-21T11:44:05.343Z
+      boxCommit: 70ed154f99f6be0c508f5b9e1a6a9686da399729
+      repoCommit: aeec841d1a2f63c0c7ca1406c93d0e3953f6ac38
+      initial: 22674
+      peak: 22674
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

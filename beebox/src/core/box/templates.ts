@@ -161,6 +161,21 @@ the real cards, renders once, prints the output or a source-mapped error).
 Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
 `;
 
+const FEEDBACK_CLAUDE_MD = `# Agent observations for Bee Box developers
+
+When Bee Box tooling is confusing or behaves unexpectedly, record the observation
+here as a \`.doc.card\`. Use a specific title and a \`contains:\` summary so a
+developer can find and understand it. Describe what happened, what you expected,
+and why the difference matters. Include the relevant error or exchange under a
+short **Context** heading, in your own words; link an earlier card for follow-ups.
+Include a session ID only when you know which session it identifies. Use
+box-relative paths such as \`/_config/box.json\` instead of machine paths.
+Commit the card with your normal work.
+
+This directory is for observations from the agent to Bee Box developers.
+\`.feedback.card\` is the boxholder's response to something the box surfaced.
+`;
+
 /**
  * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
  * exist. A box's tricks live at `boxRoot/src/tricks/` (`boxCodePaths`
@@ -213,6 +228,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   // entry.
   { name: "schemas-guide-v2", relPath: "src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
   { name: "views-guide-v2", relPath: "src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "agent-feedback-guide", relPath: "_config/feedback/CLAUDE.md", content: FEEDBACK_CLAUDE_MD },
   { name: "tricks-guide-v2", relPath: "src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
   // The root briefing seed. Unlike the guides it lives under `_content/`
   // (it's a card template, `createBriefingTemplate`), but it has the same
@@ -251,5 +267,15 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     relPath: "src/views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
     priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
+  });
+}
+
+/** Install or refresh the local guide for agent-authored feedback cards. */
+export async function installFeedbackGuide(boxRoot: string): Promise<void> {
+  await installTemplateFile({
+    boxRoot,
+    relPath: "_config/feedback/CLAUDE.md",
+    templateContent: FEEDBACK_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["agent-feedback-guide"].superseded,
   });
 }

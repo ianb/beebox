@@ -17,6 +17,7 @@ import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript
 import { MIGRATIONS } from "../migrations.js";
 import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import {
+  installFeedbackGuide,
   installSchemasGuide,
   installTricksFiles,
   installViewsGuide,
@@ -209,6 +210,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 
   // Install views CLAUDE.md if missing
   await installViewsGuide(resolvedRoot);
+  await installFeedbackGuide(resolvedRoot);
 
   // Initialize git repo (only on fresh init) — don't commit yet;
   // the init command installs more files (schedules, procedures, etc.)
