@@ -93,10 +93,20 @@ first-run-experience half of this cluster
 ## Re-encounter, 2026-09-21 - journey F
 
 A fresh newcomer with no chosen use case saw only “Start a conversation.”
-Screenshot 01 independently confirms it; `InteractiveChat-messages.tsx:269`
-renders that empty state. Asking chat produced useful examples and ultimately
-led to valued Spanish practice. The missing orientation did not stop this
-walker, but discovery again depended on knowing to ask. The synthetic run slug
-is fixture naming, not an additional vocabulary defect.
+Screenshot 01 independently confirms the empty arrival, but this is **not**
+evidence that the product has no orientation feature: first-run openers have
+been implemented and two valid suggestions were present in the fixture briefing.
+The fresh Claude session reservation supplies a UUID, while `useChatBinding`
+in `InteractiveChat.tsx:75–77` only requests openers for literal `"new"`.
+`resolve-conversation.ts:47–70` and `BoxConversationShell.tsx:83–94` explain
+why this fresh product route suppresses the existing suggestions.
+
+The initial after-action reading only cited the empty-state fallback; review
+corrected that incomplete diagnosis. The harness opened the ordinary box root,
+which redirects to `/chat`; it did not supply an existing session. The synthetic
+run slug is fixture naming, not a product vocabulary defect. Asking chat still
+produced useful examples and ultimately valued Spanish practice.
 
 Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+The [concrete reservation regression](../bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
+is tracked separately from this broader orientation design question.

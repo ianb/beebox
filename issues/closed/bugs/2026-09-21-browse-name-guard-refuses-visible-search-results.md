@@ -69,6 +69,14 @@ changed names while accepting an unobstructed rich option. The focused
 `browse-controls` doctest remains 8/8 passing, and browse typecheck and lint
 pass. No product behavior changes.
 
+Coverage limit: native labels, block spacing and overlay boundaries were
+browser-verified only; there is no durable automated DOM regression for them.
+The local `scratch/check-rich-guard.mjs` fixture was adapted to the isolated
+`f-search-probe` session; the label case used the real C-box Search input.
+The eight doctests exercise snapshot parsing/escaping, and typecheck/lint do
+not parse the JavaScript inside the generated script string. These gates
+must not be described as automated coverage of the native-label fix.
+
 ## Verified mechanism
 
 `browse/src/act.ts:237–254` passes the snapshot accessible name to the point

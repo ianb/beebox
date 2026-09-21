@@ -25,6 +25,14 @@ export const NAME_CANDIDATES_SCRIPT = `
       for (const v of [e.getAttribute('aria-label'), e.getAttribute('title'), e.getAttribute('placeholder'), e.getAttribute('alt'), e.value, textWithBlockSpacing(e)]) {
         if (typeof v === 'string' && v.trim() !== '') out.push(v.replace(/\\s+/g, ' ').trim());
       }
+      // Native labels are part of a labelable control's accessible name even
+      // when the nearest-control boundary is the control itself.
+      if ('labels' in e && e.labels) {
+        for (const label of e.labels) {
+          const text = (label.textContent || '').replace(/\\s+/g, ' ').trim();
+          if (text !== '') out.push(text);
+        }
+      }
       if (e.getAttribute('aria-labelledby')) {
         for (const id of e.getAttribute('aria-labelledby').split(/\\s+/)) {
           const l = document.getElementById(id); if (l) out.push((l.textContent || '').replace(/\\s+/g, ' ').trim());
