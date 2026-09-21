@@ -110,6 +110,11 @@ half-provisioned by a missing file.
 - **Nothing the walk says is a finding until it is separately verified.** Three of the
   seven bugs the 2026-08-24 walk reported were the harness, not the app, each written
   up in good faith. That pass is [after-action.md](after-action.md).
+- **Journey walks do not test microphone or voice behavior.** Do not exercise a real,
+  fake, or mock microphone while walking a journey. If a mock-mic interaction is
+  encountered or fails, treat it as a harness limitation and do not present it as
+  product evidence; real microphone behavior belongs to a separate device-testing
+  workflow.
 
 ## Scheduled work needs its own verification
 

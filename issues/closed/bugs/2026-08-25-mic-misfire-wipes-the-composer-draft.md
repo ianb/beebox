@@ -7,21 +7,24 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk
 priority: important
+resolution: wontfix
 ---
+
+> Closed 2026-09-20 as a harness-only historical observation. Journey walks do not
+> test microphone or voice behavior, and incidental mic failures in the automated
+> browser are treated as harness limitations, not product evidence. The original account and provenance remain below.
 
 ## Recovery assessment (2026-09-21)
 
-Still an unverified historical observation. Current voice-start paths invoke
-`START_DICTATION` and recording-start failure returns the transcription machine
-to idle, but this inspection did not locate a current typed-draft clear point.
-Do not infer a confirmed present data-loss bug or a fix from adjacent native-iOS
-voice-turn changes. The original report's lack of an independent reproduction
-continues to apply.
+Historical observation from an automated-browser mic interaction. It is outside the
+journey scope and is not a valid product finding. Do not infer a confirmed present
+data-loss bug or a fix from this account or from adjacent native-iOS voice-turn
+changes.
 
 
 > Recovered 2026-09-21 from `worktree-user-stories-refresh` at `f914fcb4e`.
 > The account below describes the 2026-08-25 walk, not a new reproduction.
-> Source line numbers in that account are historical. Current disposition is recorded below.
+> Source line numbers in that account are historical. Current disposition is recorded above.
 
 
 Journey A's walker fat-fingered the microphone button while typing. Recording

@@ -50,6 +50,7 @@ bin/browse click @e3          # by ref only when it shows no id
 bin/browse fill bbx-some-id "text"
 bin/browse upload @e5 <file>  # file input
 bin/browse scroll down [px]   # also up/left/right
+bin/browse scroll down [px] --selector "<scrollable-pane-css>"  # target an inner pane
 bin/browse scrollintoview bbx-some-id   # bring a control into view before acting on it
 bin/browse screenshot <path>  # save a screenshot
 bin/browse eval "<js>"        # read something off the page if you must
@@ -67,6 +68,13 @@ A refusal that says `offscreen` is the one you can always do something about: sc
 something that way is not worth a note — but if you scroll to it and it still cannot be used,
 that is the app, and it is worth one. You are already signed in.
 
+`scroll down [px]` targets the document. When the thing you are reading is inside a pane,
+identify that pane first and pass its CSS selector with `--selector`; do not guess which pane
+is active. If needed, use a read-only `eval` to compare a candidate's `scrollHeight`,
+`clientHeight`, and `scrollTop`, then use `scrollintoview` on a visible heading or control as
+an alternate way to reach content. A successful `✓ Done` only means the command was delivered;
+check the screen or those geometry values to confirm that the intended pane moved.
+
 **Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set**, e.g.
 
 ```
@@ -75,6 +83,11 @@ BROWSE_BOX={{BOX_SLUG}} bin/browse open /
 
 Without it the tool drives a different box and nothing you do will be about yours. `/` is the
 app's own path — the tool adds the rest.
+
+Do not test microphone or voice behavior during a journey walk. Do not invoke a real,
+fake, or mock microphone. If a microphone control or mock-mic failure gets in the way,
+record it as a harness limitation and continue with the person's goal; it is not
+evidence about the product.
 
 **Take a screenshot at each meaningful step**, into
 `{{SHOTS}}`,

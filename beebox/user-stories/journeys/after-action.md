@@ -90,6 +90,9 @@ believing any negative result:
   product leaking someone else's data.
 - **Do the numbers come from this run?** Timing that aggregates several runs will look
   like the product being slow.
+- **Did the walk exercise microphone or voice behavior?** Journey walks do not test a
+  real, fake, or mock microphone. Any failure encountered while using a mock mic is a
+  harness limitation and must not be classified or filed as product evidence.
 
 ### 4. Investigate what survives
 

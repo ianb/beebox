@@ -1,5 +1,5 @@
 ---
-title: "One pink bar carries three unrelated severities, and users learn to ignore it in an hour"
+title: "One pink bar flattens unrelated status and error states"
 workstream: unattached
 area: beebox
 labels: [journey-findings, ui-sensibility]
@@ -16,30 +16,34 @@ plain chat and transcription error strings under the same danger styling.
 The original first-run navigation error-counter subclaim is outdated:
 `AppNav.tsx:239-249` now gates that counter on opening Debug Log, as recorded in
 the [closed vocabulary sweep](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md).
-This is not the schedule-alert surface fixed in September. No current browser
-comparison of all three severities was performed.
+This is not the schedule-alert surface fixed in September. The mic interaction is excluded from the product finding. No current browser
+comparison of the remaining auth and connection states was performed.
 
 
 > Recovered 2026-09-21 from `worktree-user-stories-refresh` at `f914fcb4e`.
 > The account below describes the 2026-08-25 walk, not a new reproduction.
-> Source line numbers in that account are historical. Current disposition is recorded below.
+> Source line numbers in that account are historical. Current disposition is recorded above.
 
 
 When the box shows me red text, I want its urgency to mean something, so that
 when it matters I still look.
 
-Journey A's walker met the same pink error bar three times in one evening, with
-three unrelated meanings:
+Journey A's walker met the same pink error bar for two independently observed
+product states in one evening, with unrelated meanings:
 
 1. **"Claude Code is not logged in — run `claude auth login` on this machine"**
    — the box's AI was unreachable; their message got no answer. Severe, and
    transient — retrying fixed it, which nothing on screen suggested.
 2. **"Active connection is not open"** — benign; the reply arrived fine anyway.
-3. **"Recording didn't start. Please try again."** — a user-action failure with
-   an actual next step, caused by their own misclick.
 
-> "One of those is my problem and two of them aren't, and they look identical.
-> That's why I'd stopped reading it."
+The historical account also includes **"Recording didn't start. Please try
+again."** from an automated-browser interaction. Journey walks do not test
+microphone or voice behavior, so this observation is excluded from the product
+finding.
+
+The walker reported learning to ignore the shared error surface. Their original
+comparison also included the excluded microphone interaction; it does not
+establish a third product severity.
 
 Learning to ignore the error surface on night one is the worst possible
 training. The severities are already distinguishable at the call sites; the
