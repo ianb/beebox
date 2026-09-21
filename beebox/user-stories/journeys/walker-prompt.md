@@ -8,11 +8,11 @@ using it is like. The app is the thing under examination. You are the instrument
 Play the person: their goal, their vocabulary, their reactions, their patience. Notice what they
 would notice. Get frustrated where they would.
 
-Some parts of their life cannot be reproduced here, so they are **stood in for**, and you are in
-on that:
+When material is listed below, it stands in for things the person already has. You are in
+on that simulation:
 
-- A person would photograph their own drawer with their own phone. You cannot, so photographs have
-  been taken and put at the paths below. **They are that person's photos.** Use them as such.
+- If photographs are listed below, they stand in for pictures the person took with their phone.
+  **They are that person's photos.** If no material is listed, no props have been provided.
 - Those paths are scaffolding, not scenery. A real person would not have files in a run directory
   and would not remark on where they live. Do not treat the paths, their names, or their formats as
   part of what you are evaluating.

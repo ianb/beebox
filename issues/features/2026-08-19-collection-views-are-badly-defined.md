@@ -434,3 +434,29 @@ Two details worth keeping:
 They also asked what `reviewed` is for — *"whether it does anything, or is just
 a label I now feel responsible for maintaining."* A status a collection view
 never surfaces is exactly a label the user maintains for nobody.
+
+
+> Recovered 2026-09-21 from the August 25 journey A report. This is historical
+> evidence, not a fresh re-encounter; current status and priority are unchanged.
+
+## Second unprompted request for the same primitive (journey A, 2026-08-25)
+
+A different walk, a different domain, the same missing view. After watching a
+reminder mechanism fail and recover, the walker wanted to *verify* what would
+happen and found there was nowhere to look:
+
+> "It's told me twice it has set one, in two different mechanisms, and I have
+> no page I can look at that says 'on 25 Sept, this will happen'."
+
+The agent answered honestly — dated todos live in the lending doc and surface
+on the plate; scheduled nudges are cards in a folder; "there's no single 'my
+reminders' page yet" — and offered to build one. The walker named that offer
+the most interesting sentence of the evening, and named the missing page their
+first ask.
+
+This is the same shape as B's containers-and-counts request: a view over a set
+(here: everything that will fire, from two mechanisms, in date order). Two
+walks, two domains, both users asked for a collection view within their first
+hour. Also note the verification angle: with no such page, a user who just
+watched timers misfire has no way to check the system's claims about the
+future — trust that a collection view would repair.

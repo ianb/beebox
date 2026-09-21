@@ -110,3 +110,12 @@ half-provisioned by a missing file.
 - **Nothing the walk says is a finding until it is separately verified.** Three of the
   seven bugs the 2026-08-24 walk reported were the harness, not the app, each written
   up in good faith. That pass is [after-action.md](after-action.md).
+
+## Scheduled work needs its own verification
+
+Preparation creates and serves a disposable box; it does not register or drive
+scheduler ticks. A valid enabled schedule is not evidence that a reminder will
+arrive. A run making that claim must observe the trigger and its delivery.
+In-process chat timers are a separate mechanism and can run while the box is
+served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+one misfire, but did not verify its replacement scheduled reminder.

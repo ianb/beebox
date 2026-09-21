@@ -56,3 +56,36 @@ fixture naming, not a new product vocabulary finding.
 
 Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 1-3. No onboarding implementation attempted.
+
+
+> Recovered 2026-09-21 from the August 25 journey A report. This is historical
+> evidence, not a fresh re-encounter; current status and priority are unchanged.
+
+## Journey A's closing ask (2026-08-25) — the front door after a successful evening
+
+A second walk, this one a *success* — everything filed correctly, the payoff
+question answered in nine seconds — ended with the same tension, stated better
+than we have stated it:
+
+> "It offered to build me a page that gathers my reminders in one place. I want
+> that, and I want it to be the **front door**: what's out, what I owe, what's
+> due. Right now the front door is an empty chat box, and everything I built
+> tonight is behind a file path."
+
+Two details that sharpen the requirement:
+
+- The empty-chat front door is the front door of a box that now *has content* —
+  this is not only a first-run problem. After a productive evening, day two
+  still opens on an empty composer.
+- The offer to build the page ("say the word") was itself the walker's
+  highlight: "That reframes the whole app for me: it's not a fixed set of
+  screens, I can ask for a screen." Whatever the front door becomes, that
+  discovery — the box is malleable — currently happens only by luck, deep in a
+  failure-recovery conversation.
+
+Related evidence on the same walk: the browse sidebar's empty skeleton
+(`recipes/`, `reviews/`, `usage/`, `drive/`, `archive/` — standard box shape,
+none of it theirs, none explained): "Suddenly this feels less like an assistant
+and more like someone handed me the keys to a filing cabinet." That is the
+first-run-experience half of this cluster
+([first-run-experience](2026-07-20-first-run-experience.md)).
