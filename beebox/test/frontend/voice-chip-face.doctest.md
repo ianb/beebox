@@ -16,6 +16,14 @@ by default but may still speak by exception — when asked, or when the boxholde
 is hands-busy (`NARRATION_OVERLAY`) — and answering in text removes that
 exception, so a genuine question arrives as a callout instead.
 
+The four marks sat in a 50×16 box at 1:1 until 2026-09-20, which gave each one
+about 8px under a 1.3px stroke — legible on a desktop, three unrelated glyphs on
+a phone (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`). Most of
+that width was the space between the marks, not the marks, so closing it and
+rendering the 41-unit box at 51px made every mark a quarter bigger and handed
+the app bar 7px back. A reduced two-mark face was tried first and rejected:
+shrink the spacing before the vocabulary.
+
 This replaced a microphone dimmed to 40% when narration was off. A mic cannot
 carry the distinction (voice input uses the mic in both modes), and the deeper
 reason is that narration is a *relationship*: it changes what the box does as
@@ -35,11 +43,11 @@ function renderFace(state) {
 }
 
 /** The floor glyph's flow path — the arrow between the two marks. */
-const TURNS = "M12 5h8l-2-2M20 11h-8l2 2";
-const YOU_HOLD_FLOOR = "M12 8h8m-3-3 3 3-3 3";
+const TURNS = "M10 5h6l-2-2M16 11h-6l2 2";
+const YOU_HOLD_FLOOR = "M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5";
 /** The speaker segment: sound waves when aloud, written lines when in text. */
-const ALOUD = "M39 6a3 3 0 0 1 0 4";
-const IN_TEXT = "M37 4h11M37 8h8M37 12h11";
+const ALOUD = "M31.5 6a3 3 0 0 1 0 4";
+const IN_TEXT = "M30 4h10M30 8h7M30 12h10";
 ```
 
 ## Taking turns, answering aloud
@@ -101,11 +109,26 @@ JSON.stringify([
 
 ## HQ transcription in flight keeps its readable label
 
+The word is worth about 70px, which at phone width is most of the place label,
+so it appears only from `sm:` up. Below that the same fact is a pulse, and the
+accessible name says it at every width.
+
 ```ts
 const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
-face.includes("transcribing…")
-=> true
+JSON.stringify([face.includes("transcribing…"), face.includes("hidden sm:inline"), face.includes("sm:hidden")])
+=> [true,true,true]
+```
 
+Nothing of it survives when no transcription is in flight — neither the word nor
+the pulse.
+
+```ts continue
+const idle = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
+JSON.stringify([idle.includes("transcribing…"), idle.includes("animate-pulse")])
+=> [false,false]
+```
+
+```ts continue
 voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false })
 => Voice — taking turns, answers aloud, transcribing
 ```

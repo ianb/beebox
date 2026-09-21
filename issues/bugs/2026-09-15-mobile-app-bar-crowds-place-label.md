@@ -1,11 +1,14 @@
 ---
 title: "Mobile app bar crowds the place label when count badges are visible"
-workstream: unattached
+workstream: mobile-app-bar
+needs: [manual-testing]
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chip-icon-design — verifying the revised chat properties chip
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `c97f04dd9` + `23333c33e`; open a chat on your phone with both counts showing and check that the place pill names where you are and the voice icon reads clearly. Only the developer clears this.
 
 > **Re-encountered 2026-09-20 on a phone, worse than filed.** The boxholder,
 > sending a screenshot: "The top bar as you can see the icons are all wrong,
@@ -42,3 +45,68 @@ controls do not shrink. The flexible place pill uses `min-w-0` and a truncated
 label in `beebox/src/frontend/src/components/PlacePill.tsx:165` and `:194`.
 Check narrow widths with both count badges, chat properties, and voice controls
 visible. Preserve a recognizable, tappable place selector.
+
+## Fixed 2026-09-20
+
+Measured in a real browser at a 375px viewport on a chat page, in the state
+from the phone screenshot (chat chip, voice chip, questions, plate, error
+badge, profile, long landmark name). The right-hand group went from 349px of a
+351px row to 289px. The place pill went from 2px with a 0px label to 54px with
+a 40px label; at 430px it gets 109px and a 95px label.
+
+Nothing left the bar:
+
+1. **The voice icon keeps all four marks and gets bigger.** Most of its 50px
+   was the space between person, arrow, bot and output rather than the marks
+   themselves. Closing that and rendering the 41-unit box at 51px makes every
+   mark a quarter larger and returns 7px.
+2. **The carets go below `sm:`.** Twelve pixels per chip said "this opens a
+   menu", which the controls already say by being tappable and by
+   `aria-haspopup`. Boxholder's suggestion.
+3. **The chat chip shows its sliders glyph below `sm:`** and the word "Chat"
+   from `sm:` up, rather than the reverse. The `aria-label` names the chip in
+   full at every width.
+4. **The questions, plate, and error badges became segments of one pill**
+   (`beebox/src/frontend/src/components/app-nav-badges.tsx`). Three capsules
+   spent 52px on padding and gaps to carry 40px of content. Each segment is
+   still its own control with its own destination and accessible name.
+5. **HQ-in-flight is a pulse below `sm:`** instead of the word "transcribing…",
+   which is worth about 70px at the width that has none. The accessible name
+   says it at every width.
+
+### Two things tried and rejected
+
+A **reduced two-mark voice face** — person and bot dropped, arrow and speaker
+redrawn — was built first and rejected by the boxholder: the redrawn arrows
+were cruder than the originals, the mute mark did not read, and it had been
+applied at desktop width where nothing was wrong. The lesson is in
+`VoiceChip-icons.tsx`: shrink the spacing before the vocabulary.
+
+**Putting the chat and voice chips in one pill** saved 17px but read as though
+two menus had been combined. They keep their own capsules.
+
+Evidence: exhibit `mobile-app-bar/mobile-app-bar-the-place-label-is-back`.
+
+### Residual: 320px
+
+At a 320px viewport with all seven controls the label still collapses. The
+right-hand group is 289px and the row is 296px there. Closing that needs a
+control to leave the bar at that width — a priority order among the seven —
+which is a decision for the developer, not a defect in this fix. Nothing
+overflows horizontally at any width tested (320, 375, 390, 430).
+
+## Manual testing
+
+On a phone, open a chat in a landmark with a long name, with pending questions
+and on-plate todos so both counts show.
+
+1. The place pill names where you are — a symbol and a readable, truncated
+   label with a chevron, not a bare mark. Tapping it still opens the switch
+   menu.
+2. The voice icon is the drawing you know, larger. Check both answer states
+   through the menu's Mute row — waves for aloud, written lines for in text —
+   and both floor states through Narration mode.
+3. The chat chip shows sliders rather than the word "Chat", neither chip shows
+   a caret, and both still open their own menus.
+4. The three counts read as one pill with dividers, and each segment still goes
+   to its own destination.

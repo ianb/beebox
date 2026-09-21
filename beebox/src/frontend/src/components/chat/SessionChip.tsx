@@ -4,8 +4,9 @@
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
  * panel-swap idiom).
  *
- * Sliders plus a persistent "Chat" label identify chat properties even when
- * the conversation title is hidden. The model dial compares against the box
+ * Sliders plus a "Chat" label identify chat properties even when the
+ * conversation title is hidden. Below `sm:` only the sliders remain, and the
+ * `aria-label` names the chip in full at every width. The model dial compares against the box
  * default; its attached star marks a different harness.
  *
  * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
@@ -43,10 +44,15 @@ import { modelDrift, engineDrift } from "./model-drift";
 // positioning complexity. Resets to "root" when the dropdown closes.
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
-/** Chat properties; the adjacent "Chat" label supplies the subject. */
+/**
+ * Chat properties. From `sm:` up the adjacent "Chat" label supplies the
+ * subject; below it the glyph carries the chip alone, which is why it is the
+ * half that stays — the word costs three times the width of the mark, and at
+ * phone size the bar has none to spare.
+ */
 function ChatSettingsIcon() {
   return (
-    <svg className="hidden sm:block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 7h4m4 0h10M3 17h10m4 0h4" />
       <circle cx="9" cy="7" r="2" />
       <circle cx="15" cy="17" r="2" />
@@ -78,7 +84,7 @@ function ModelGaugeIcon({ drift, offEngine }: { drift: "above" | "below" | "same
 /** Menu-opens-here caret, matching the place pill's. */
 function CaretIcon() {
   return (
-    <svg className="w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="hidden sm:block w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -304,7 +310,7 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             {...ariaProps}
           >
             <ChatSettingsIcon />
-            <span className="shrink-0 font-medium">Chat</span>
+            <span className="hidden sm:inline shrink-0 font-medium">Chat</span>
             {drift === null && !offEngine ? null : <ModelGaugeIcon drift={drift} offEngine={offEngine} />}
             {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
             <CaretIcon />

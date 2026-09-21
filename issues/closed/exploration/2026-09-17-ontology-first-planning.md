@@ -2,12 +2,23 @@
 title: "Try ontology-first planning: ask the planner for a strong ontology before the architecture"
 workstream: unattached
 area: beebox
-needs: [decision]
+resolution: implemented
 labels: [planning, agents, bbx-plan]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a skeet the boxholder wants to test here
 ---
+
+> **Adopted 2026-09-21 without the trial.** The boxholder: "I'd like to add
+> [this] to the bbx-plan skill. Probably a template section?" So the A/B
+> comparison below was not run — the step is now an **Ontology** section in
+> `.claude/skills/bbx-plan/TEMPLATE.md`, between *Prior art (external)* and
+> *Tracks / scope*, and a matching heading in the reviewer's section list in
+> `SKILL.md`. What was not done: the cross-model reviewer prompt
+> (`.claude/skills/cross-model/SKILL.md`) still says nothing about checking a
+> plan's ontology against the code's, and no evidence was gathered that the
+> step improves a plan. If the next few plans show it is noise, remove it —
+> this closed on a decision, not a measurement.
 
 A skeet the boxholder saw, quoted as posted:
 

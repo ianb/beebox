@@ -32,3 +32,22 @@ restarted, because a worktree session must not manage the shared router.
 
 Impact: no screenshot evidence and no exhibit for UI work in this worktree.
 The visual check fell back to the accessibility snapshot and page text.
+
+**Re-encountered the same day in `worktree-mobile-app-bar`,** with two of the
+open questions answered:
+
+- It is not the app. `bin/browse screenshot` also hangs on
+  `data:text/html,<h1>hi</h1>`, a page with no app, no readiness marker, and
+  no network.
+- A fresh daemon does not clear it. `bin/browse close --all` followed by a new
+  `open` still hangs on capture, as does a separate `--session` with its own
+  Chrome profile.
+- `--no-wait`, an explicit output path, and a selector-scoped capture all hang
+  the same way. Six attempts, 30 s to 120 s timeouts, no file written.
+
+One run launched in the background reported exit 0 after the foreground
+timeout had already been moved aside, and still wrote no file — so the capture
+does not merely block, it can also return without producing output.
+
+The remaining untested hypothesis from the original filing stands: the display
+was asleep or locked during every attempt in both worktrees.

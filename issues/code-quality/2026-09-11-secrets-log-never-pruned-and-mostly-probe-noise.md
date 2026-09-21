@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-finish-migrations — closing the secret-store transition window
 needs: [decision]
+priority: important
 ---
 
 The secret access log has no retention policy, and almost everything in it is
