@@ -132,6 +132,7 @@ await listFiles(boxRoot, "_config")
 =>
 calendar.guide.card
 connectors
+feedback
 intake.guide.card
 interface
 main.personality.card
