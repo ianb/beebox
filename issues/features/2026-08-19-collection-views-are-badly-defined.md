@@ -1,6 +1,6 @@
 ---
 title: "Collection views are badly defined — there is no first-class view over a set of cards"
-workstream: unattached
+workstream: collection-views
 area: beebox
 needs: [design]
 labels: [views, cards, plugins]
@@ -434,3 +434,81 @@ Two details worth keeping:
 They also asked what `reviewed` is for — *"whether it does anything, or is just
 a label I now feel responsible for maintaining."* A status a collection view
 never surfaces is exactly a label the user maintains for nobody.
+
+## Todo instance landed (2026-09-20)
+
+The first instance is built:
+[Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
+implements a staged collection pipeline (`src/core/collection/`), the todo
+definition on top of it (`src/core/todo/collection.ts`, `query.ts`), and
+consumers (`collections.query` tRPC router, `TodoViewCard`, `bbx query`). It
+commits to one instance rather than the general shape this issue asks for:
+non-todo collections, Markdown embedding (`![...](collection-link)`),
+indexing, and box-authored collections are not built. This issue stays open
+for that general design.
+
+## Code survey (2026-09-19)
+
+A survey of the code changes three premises in the sections above.
+
+**A box-local view already receives a set of cards.** `ViewProps.cards`
+(`beebox/src/core/views/types.ts:32-35`) is filled by globbing the view's
+`dependencies` export (`loadViewCards`, `beebox/src/core/views/cards.ts:60-130`).
+"The view ships its own queries" is the shipped mechanism. The card a view
+attaches to supplies the address only. Two limits: `dependencies` is a
+module-scope constant, so the anchor card cannot scope or label the selection
+(`/api/views/:slug/cards` ignores params, `beebox/src/webapp/routes/views.ts:97-104`),
+and `ViewProps` has no search, glob, or list call.
+
+**Index cards are already the practice.** `_config/interface/{questions,landmarks,inventory,history}.card`
+hold a title and nothing else. Each exists so that a box-wide enumeration has
+a card address (`beebox/src/shared/system-card-paths.ts`,
+`beebox/src/frontend/src/renderers/system-cards.tsx:47-53`).
+`plate.todo-view.card` is `title` plus `glob: "**"`: a stored query, shipped.
+An omitted `glob` means "the subtree of this card"
+(`beebox/src/webapp/trpc/routers/todos.ts:88-94`).
+
+**The search index is not the selection machinery. Glob is.** Orama filters on
+`kind` only. The path filter is a post-hoc `startsWith`. Frontmatter is not
+indexed generically (`foldFields`, `beebox/src/core/search/extract.ts:218-283`).
+There is no sort, no group-by, and no count. Five features select cards with
+their own glob resolver: view `dependencies`, `todo-view`, landmark `expand`,
+the landmarks list, and `bbx ls`.
+
+**Landmark `expand` is the nearest existing collection.** It has a glob
+relative to the landmark directory, an `order` enum, a named `group` with a
+total count and a child cap, and per-match label templates
+(`beebox/src/schemas/landmark.ts:76-90`, `beebox/src/core/landmark/resolve.ts`).
+That is (label, query) without a pluggable view.
+
+**This was designed once and parked.**
+[`query-cards.md`](../../beebox/docs/unimplemented-plans/query-cards.md)
+(2026-07-03) specified a `list` named view with `include` / `exclude` / `type` /
+`group-by` params. The boxholder's verdict was "too complex, too contextless".
+The recorded diagnosis: each interface-as-cards success is anchored ("the
+recipes *here*"), and a standalone query card is a selection with no *here*.
+The "reified query" in the design direction above is the same object. A new
+design must answer that verdict. The part of the plan that was kept is a tile
+registry: an optional per-type `Tile` form for list cells. It was planned in
+`docs/landmarks.md` and again in that plan, and it is not built.
+
+**The consolidation claim is mostly false.** The items of `todo-view` are todos
+inside cards. The items of `tab-arrangement` are browser tabs in a frozen
+snapshot. `nav` is a hand-ordered menu of routes and refs. None of the three
+dispatches items to the renderer registry. Only `directory.tsx:103-107` does.
+The enumerations that are sets of cards are the questions list, the landmarks
+list, the directory listing, `gfolder`, landmark `expand`, and view
+`dependencies`.
+
+**A directory is a third possible owner.**
+[Directories as viewable things](2026-07-28-directories-as-viewable-things.md)
+asks for `?view=` on a directory path. A directory has an address and is a
+*here* without a minted card. Positional cards (a bare `<type>.card`, "the
+‹type› of this directory", `beebox/src/shared/card-name.ts:1-16`) are the
+existing way to give a directory a card.
+
+**Neighbour, not the same mechanism:**
+[the chat stack of referenced things](2026-09-18-chat-stack-of-referenced-things.md).
+Its set is an explicit list of refs that the agent chooses. It is ephemeral and
+has no address. It shares the rendering half, a per-type item preview, which is
+the unbuilt tile registry.

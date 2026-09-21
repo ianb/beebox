@@ -3454,6 +3454,13 @@ test1:
       peak: 42485
       added: 0
       turns: 1
+    - date: 2026-09-20T23:37:53.096Z
+      boxCommit: 4c7267c29062bbc6469bd67c10fcd38902b0f4a2
+      repoCommit: 83d69fc39514aeb6b99dcf43258fb0184d49fae1
+      initial: 51420
+      peak: 51420
+      added: 0
+      turns: 1
   todo-annotation-vs-question:
     - date: 2026-07-29T04:34:08.445Z
       boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
@@ -3693,6 +3700,13 @@ test1:
       peak: 48550
       added: 6071
       turns: 10
+    - date: 2026-09-20T23:38:39.943Z
+      boxCommit: 4c7267c29062bbc6469bd67c10fcd38902b0f4a2
+      repoCommit: 83d69fc39514aeb6b99dcf43258fb0184d49fae1
+      initial: 51414
+      peak: 56874
+      added: 5460
+      turns: 7
   todo-application-scoped-surface:
     - date: 2026-07-29T13:13:53.463Z
       boxCommit: c39e8c1c01fa547092cdc68c87cbd58ceff1abda
@@ -4504,6 +4518,30 @@ test1:
       peak: 52799
       added: 1435
       turns: 6
+  todo-collection-project-scope:
+    - date: 2026-09-20T23:37:26.092Z
+      boxCommit: 949bad44176019dd20a43d684910a0657e86422c
+      repoCommit: 83d69fc39514aeb6b99dcf43258fb0184d49fae1
+      initial: 51449
+      peak: 51449
+      added: 0
+      turns: 1
+  todo-collection-position-is-meaning:
+    - date: 2026-09-20T23:37:38.628Z
+      boxCommit: 4c7267c29062bbc6469bd67c10fcd38902b0f4a2
+      repoCommit: 83d69fc39514aeb6b99dcf43258fb0184d49fae1
+      initial: 51428
+      peak: 51428
+      added: 0
+      turns: 2
+  schema-summarize-hook:
+    - date: 2026-09-20T23:38:09.124Z
+      boxCommit: 4c7267c29062bbc6469bd67c10fcd38902b0f4a2
+      repoCommit: 83d69fc39514aeb6b99dcf43258fb0184d49fae1
+      initial: 51416
+      peak: 54387
+      added: 2971
+      turns: 3
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -157,6 +157,13 @@ Codex reads generated `AGENTS.md` files and `$skill` names; Claude reads
 `CLAUDE.md` and `/skill` names. Use the vocabulary the receiving agent will
 recognize.
 
+**Never write a bare `$skill` or `/skill` in briefing prose.** Both are
+invocation syntax, and the receiving agent runs them. A Codex session briefed
+with "land on main only through `$finish` when they ask" invoked `$finish` on
+its first turn, before reading anything (2026-09-20). Name the skill without
+its sigil — "use the finish skill", "the bbx-plan skill" — and keep the sigil
+for a line you actually intend the session to execute.
+
 ## Launch
 
 Use the tracked repo-relative command. The bare command may be unavailable in

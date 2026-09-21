@@ -1,16 +1,16 @@
 /**
- * `todo-view` card schema (`docs/implemented-plans/todo-annotation.md`, Track 4) — a
+ * `todo-view` card schema (`docs/plans/todo-collection.md`, Track 4) — a
  * frontmatter-only card that IS a todos display surface: its fields are a
- * query over the collector (`src/core/todo/collect.ts`), rendered by
+ * query over the todo collection (`src/core/todo/collection.ts`), rendered by
  * `TodoViewCard` (`src/frontend/src/components/TodoViewCard.tsx`) via the
- * `todos.list` tRPC procedure.
+ * `collections.query` tRPC procedure.
  *
  * **`glob` has no schema default on purpose.** `cardSchema` never sees a
  * card's own path, so "default to this card's own directory subtree" can't
  * be expressed here (a static `"**"` default would make every project-local
- * instance silently box-wide). The renderer passes the card's own path as
- * `cardPath` to `todos.list`, which resolves an omitted `glob` server-side to
- * `<card's directory>/**` — see `src/webapp/trpc/routers/todos.ts`.
+ * instance silently box-wide). The renderer passes the card's own DIRECTORY
+ * as the query's `here`, and an omitted `glob` follows from that —
+ * `<card's directory>/**`, plus todos elsewhere that link into it.
  */
 
 import { z } from "zod";
@@ -29,14 +29,16 @@ export const TodoViewSchema = cardSchema("todo-view", {
 
 A \`todo-view\` card IS a todos display surface — not a list you fill in by
 hand, but a live query over every \`{% todo %}\` tag and frontmatter \`todos:\`
-entry the box's collector finds. Its frontmatter fields are the query; the
-renderer runs it every time the card is opened.
+entry the box holds. Its frontmatter fields are the query; the renderer runs
+it every time the card is opened. \`bbx query todos --here <dir>\` asks the
+same question from the command line.
 
 ## Fields
 
 - \`glob:\` — which cards to scan, relative to the box root (e.g.
   \`"_content/projects/kitchen-remodel/**"\`). **Omit it** to scope the view to
-  this card's own directory subtree — that's the common case for a
+  this card's own directory subtree, plus todos written elsewhere that link
+  into that directory — that's the common case for a
   project-local plate. The box-wide instance
   (\`_content/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
 - \`status:\` — restrict to specific statuses (\`open\`, \`done\`, \`dropped\`,
@@ -60,12 +62,16 @@ useful.
 
 ## Rendering
 
-Read-only in v1 — no click-to-done. Todos group by plate-state (escalated /
-on plate / quiet / parked, per \`todo-model.ts\`'s truth table), each item
-linking to its source card at card granularity (no line-anchored deep links
-yet). Cards the collector couldn't read (parse/validate/load failures) show
-in their own muted section rather than silently vanishing — the same
-"never hide a failure" rule the collector and \`bbx todos\` follow.`,
+Read-only — no click-to-done; changing a todo is editing the card it was
+written in. The few todos that carry a \`due\` or a \`start\` lead as a dated
+strip. Below that the list is grouped by card and, inside each card, by the
+headings the todos sit under, with nested todos under their parents — which
+is why where you write a todo decides how it reads back. A card whose todos
+merely link into this place is included and says so. The reader can switch
+the grouping to plate-state or show finished todos; neither is a card field.
+Cards that couldn't be read (parse/validate/load failures) show in their own
+muted section rather than silently vanishing — the same "never hide a
+failure" rule every todo surface follows.`,
 });
 
 export type TodoViewFields = InferCardFields<typeof TodoViewSchema>;

@@ -27,6 +27,7 @@ import {
 import {
   buildCodexAgentToml,
   generateCodexAgents,
+  generateCodexHooks,
 } from "./generate-codex-agents.js";
 
 test("nested mirror is header + verbatim content, no preamble", () => {
@@ -294,4 +295,19 @@ test("generates Codex agents, replaces stale hand-written mirrors, removes orpha
   assert.deepEqual(generateCodexAgents(repo), []);
   assert.equal(existsSync(join(repo, ".codex", "agents", "finish.toml")), false);
   assert.equal(existsSync(join(repo, ".codex", "agents", "native.toml")), true);
+});
+
+test("the Codex hook file carries an absolute command, and never a Claude-only variable", () => {
+  assert.equal(generateCodexHooks(repo), ".codex/hooks.json");
+  const written = readFileSync(join(repo, ".codex", "hooks.json"), "utf8");
+  assert.ok(!written.includes("CLAUDE_PROJECT_DIR"));
+  assert.ok(written.includes(join(repo, "beebox", "node_modules", ".bin", "vibe-check")));
+  // Regenerating is a no-op rewrite, not a refusal: the file it wrote is its own.
+  assert.equal(generateCodexHooks(repo), ".codex/hooks.json");
+});
+
+test("a hand-authored Codex hook file is left alone", () => {
+  writeFileSync(join(repo, ".codex", "hooks.json"), '{"hooks":{}}\n');
+  assert.equal(generateCodexHooks(repo), null);
+  assert.equal(readFileSync(join(repo, ".codex", "hooks.json"), "utf8"), '{"hooks":{}}\n');
 });

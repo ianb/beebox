@@ -8,9 +8,18 @@ inflates their badge.
 
 ```ts setup
 import { countOnPlateTodos } from "../../src/core/todo/count.js";
-import { collectTodos } from "../../src/core/todo/collect.js";
+import { runTodoQuery } from "../../src/core/todo/query.js";
 import { isBoxholderTodo, TODO_AGENT } from "../../src/shared/todo-model.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+/** Every todo in the box, whatever its status — the collection runner, box-wide. */
+async function collectTodos(boxRoot) {
+  const result = await runTodoQuery(boxRoot, {
+    query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+    since: null,
+  });
+  return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
+}
 
 const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
 const memo = (body: string): string => `---\n${MEMO_FM}---\n${body}`;

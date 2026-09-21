@@ -12,17 +12,18 @@
  * card, and the review sweep's job brief. See `isBoxholderTodo`
  * (`src/shared/todo-model.ts`).
  *
- * It is a fast path over the same machinery `collectTodos` uses — same card
- * set, same context, same per-card extraction (`collectCardTodos`) — with two
- * differences that only a *count* can make:
+ * It is a fast path over the same machinery the collection runner uses — same
+ * card set, same context, same per-card `extractCardTodos` and `deriveTodo` —
+ * deliberately NOT going through `runCollection`, with two differences that
+ * only a *count* can make:
  *
  * 1. Card text is read with bounded parallelism rather than one card at a
- *    time. The full collector stays serial because its issue list is ordered
- *    work; a count doesn't care.
+ *    time. The runner stays serial because its issue list is ordered work;
+ *    a count doesn't care.
  * 2. A card whose text can't possibly name a todo is skipped without parsing.
- *    The full collector still parses it, because it also reports cards that
+ *    The runner still parses it, because it also reports cards that
  *    fail to load — issues the badge count has no way to surface anyway; they
- *    stay visible through `bbx todos` / `todos.list`, which is where a
+ *    stay visible through `bbx query todos` / `collections.query`, where a
  *    boxholder looks for them.
  *
  * On a ~860-card box that is ~40 ms instead of ~200 ms.
@@ -33,25 +34,29 @@ import * as path from "node:path";
 import { errorMessage } from "../../lib/error-guards.js";
 import { mapInBatches } from "../../lib/map-batched.js";
 import { isBoxholderTodo } from "../../shared/todo-model.js";
-import { buildTodoScanContext, collectCardTodos, listTodoCardPaths } from "./collect.js";
-import type { CollectedTodo, TodoCollectionIssue } from "./collect-types.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { getBoxTime } from "../../lib/time.js";
+import { loadBoxTimezone } from "../box/config.js";
+import { listScopedCardPaths } from "../collection/card-scope.js";
+import { extractCardTodos, mayHaveTodo } from "./extract.js";
+import { deriveTodo } from "./derive.js";
+import type { CollectedTodo } from "./collect-types.js";
+import type { LoadCardContext } from "../card-io.js";
+import type { TodoPlateContext } from "../../shared/todo-model.js";
+
+/** The per-card load context and the box's clock, the two things extraction and derivation need. */
+async function buildTodoScanContext(boxRoot: string): Promise<{ ctx: LoadCardContext; plateCtx: TodoPlateContext }> {
+  return {
+    ctx: { cardSchemas: await createCardSchemaMap(boxRoot) },
+    plateCtx: {
+      now: getBoxTime(boxRoot),
+      timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+  };
+}
 
 /** Cards read at once. High enough to saturate the filesystem, low enough to bound open handles. */
 const READ_CONCURRENCY = 64;
-
-/**
- * Cheapest possible proof that a card cannot hold a todo in either capture
- * form. Both forms have to spell "todo" in the file: the body tag is matched
- * on `node.tag === "todo"` (`collect-body.ts`), and the frontmatter list is
- * the `todos:` key. The one way YAML can name that key without the literal
- * characters is an escape inside a double-quoted key (`"todos":`), so a
- * backslash anywhere in the card also buys a full parse — pathological, but
- * cheap to be right about, and a backslash is rare enough that the fast path
- * survives.
- */
-function mayHaveTodo(content: string): boolean {
-  return content.includes("todo") || content.includes("\\");
-}
 
 async function readCardText(absPath: string): Promise<string | null> {
   try {
@@ -70,14 +75,11 @@ async function readCardText(absPath: string): Promise<string | null> {
  */
 export async function countOnPlateTodos(boxRoot: string): Promise<number> {
   const [absPaths, { ctx, plateCtx }] = await Promise.all([
-    listTodoCardPaths(boxRoot, "**/*.card"),
+    listScopedCardPaths(boxRoot, "**/*.card"),
     buildTodoScanContext(boxRoot),
   ]);
 
   const todos: CollectedTodo[] = [];
-  // Extraction wants an issue sink; nothing reads it on this path (see the
-  // module comment) — the badge is a number, not a report.
-  const issues: TodoCollectionIssue[] = [];
 
   const read = await mapInBatches(absPaths, {
     size: READ_CONCURRENCY,
@@ -86,15 +88,10 @@ export async function countOnPlateTodos(boxRoot: string): Promise<number> {
   for (const { absPath, content } of read) {
     if (content === null) continue;
     if (!mayHaveTodo(content)) continue;
-    collectCardTodos({
-      absPath,
-      relPath: path.relative(boxRoot, absPath),
-      content,
-      ctx,
-      plateCtx,
-      todos,
-      issues,
-    });
+    // Extraction also reports issues; nothing reads them on this path (see the
+    // module comment) — the badge is a number, not a report.
+    const extracted = extractCardTodos({ relPath: path.relative(boxRoot, absPath), content, ctx });
+    for (const item of extracted.items) todos.push(deriveTodo(item, plateCtx));
   }
 
   return todos.filter((t) => isBoxholderTodo(t) && (t.plateState === "escalated" || t.plateState === "on-plate")).length;

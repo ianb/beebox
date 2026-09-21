@@ -121,6 +121,41 @@ There is intentionally **no box-aware validate variant** today — if you find
 yourself wanting one (resolve a ref, inspect another card), raise it rather than
 smuggling box access in; the self-contained shape is the deliberate contract.
 
+#### How the card appears in a list — the `summarize` hook
+
+A card's list row — a header in a todo list, a line in the recent-files
+dropdown, a tool-use expansion — is a `FileSummary`. Every card gets a base
+one for free: its `title:` field or its filename, plus `contains:` and
+`symbol:`. Add `summarize` when the type can say something better.
+
+```ts
+export const ExpenseSchema = cardSchema("expense", {
+  fields: { amount: z.number(), vendor: z.string(), paid: z.boolean() },
+  summarize: (card, base) => ({
+    ...base,
+    title: card.vendor,
+    detail: `${String(card.amount)} · ${card.paid ? "paid" : "due"}`,
+    attrs: { paid: card.paid },
+  }),
+});
+```
+
+- `card` is this schema's own validated fields, typed from the `fields`
+  declaration. No hand-parsing, no `fields["amount"]`.
+- `base` is the standard summary. Spread it to extend (`{ ...base, detail }`)
+  or override the parts you want to replace.
+- `detail` is a second line shown under the title. `summaryText(summary)`
+  (`src/core/file-summary.ts`) is its text form: `title — detail`.
+- `attrs` is a typed payload for the type's list component. Read it back with
+  `SummaryAttrs<typeof ExpenseSchema>`.
+- It runs only on a card that validated. One that didn't keeps the base
+  summary from its filename.
+- Keep it pure — no box access, no clock, no I/O. It runs once per row. A hook
+  that throws is logged and the row falls back to the base summary.
+
+`summarize` is part of the public `beebox/cards` API, so a box-local schema
+can define one.
+
 #### Box-owned state on *template* cards — the `templateMerge` policy
 
 Only relevant if your card type is one beebox **ships and updates as a
@@ -241,10 +276,30 @@ export const BOX_DIRS = {
 
 ### 6. (Optional) Frontend file-type entry
 
-If the card needs an icon or a custom list-component in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
+If the card needs an icon in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
 
 ```ts
-registerFileType({ type: "my-thing" }, { icon: CardIcon });
+registerFileType({ type: "my-thing" }, { listUI: { icon: CardIcon } });
+```
+
+A card type that wants its own list row — a thumbnail, a badge — writes a
+component beside its schema, as `src/schemas/my-thing.list-entry.tsx`. It takes
+`ListProps<MyThingSummaryAttrs>`, so what the schema's `summarize` returns and
+what the component reads cannot drift. `image.list-entry.tsx` is the worked
+example.
+
+A `*.list-entry.tsx` file is frontend code living in the schemas tree, and the
+build fences it as such: it may reach the schemas, core and cards trees by
+`import type` only (values come from `src/frontend/` and `src/shared/`), no
+backend module may import it, and the backend tsconfig excludes it. Register it
+in `builtins.tsx` — it does not register itself:
+
+```ts
+import { MyThingListEntry } from "@schemas/my-thing.list-entry";
+
+registerFileType({ type: "my-thing" }, {
+  listUI: { icon: CardIcon, ListComponent: MyThingListEntry },
+});
 ```
 
 ## Mutating an Existing Frontmatter Card

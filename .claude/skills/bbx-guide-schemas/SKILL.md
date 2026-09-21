@@ -40,6 +40,15 @@ Things the schema system does that you'd otherwise miss:
   presentation choice. It is independent of the preferred view; read
   `node_modules/beebox/box-docs/card-themes.md` before setting a schema theme
   preference or advising on a card override.
+- **A type owns its summary.** `cardSchema`'s `summarize(card, base)` hook
+  decides how the type appears in lists (todo list headers, recent files,
+  `bbx query` text). `card` is typed from the schema's own fields and the hook
+  runs only on a validated card; spread `base` and add `detail`/`attrs`, or
+  replace it. The React list component is a separate registry: it lives beside
+  the schema as `src/schemas/<type>.list-entry.tsx`, is registered from
+  `src/frontend/src/file-types/builtins.tsx`, types its props with
+  `SummaryAttrs<typeof XSchema>`, and reaches schema/core/cards code by
+  `import type` only (lint-enforced). See `docs/adding-schemas.md`.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
   `docs/prompt-surface-review.md` before writing more than a couple of
