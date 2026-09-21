@@ -201,6 +201,19 @@ summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "im
 => DRAFT
 ```
 
+The hook reads what the schema parsed, so a field the caller left out arrives
+with its default, and the body (which the frontmatter schema does not know)
+still comes through.
+
+```ts continue
+const NoteSchema = cardSchema("note", {
+  fields: { state: z.enum(["new", "kept"]).default("new"), body: body(z.string()) },
+  summarize: (card, base) => ({ ...base, detail: `${card.state}: ${card.body}` }),
+});
+summarize({ path: "_content/Kite.note.card", type: "note", fields: { type: "note", body: "string is frayed" } }, schemaMap(NoteSchema)).detail
+=> new: string is frayed
+```
+
 ## A `summarize` that throws is a bug in that schema, not a lost row
 
 ```ts

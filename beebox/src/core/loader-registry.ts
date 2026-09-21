@@ -15,6 +15,7 @@ import type { CardSchema, CardSummaryBase, CardSummaryParts } from "../cards/sch
 import { cardFields, formatZodIssues } from "./card-io.js";
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 import { readCardSymbol } from "./card-symbol.js";
+import { isRecord } from "../lib/is-record.js";
 import { validateThemeChoice } from "../shared/card-theme.js";
 
 interface PathRegistration {
@@ -86,8 +87,12 @@ function cardParts(
     );
     return base;
   }
+  // The hook gets what the schema PARSED, not what came in: a field the
+  // caller omitted arrives with its default. `frontmatterSchema` does not know
+  // the body, so the parsed frontmatter is laid over the incoming fields.
+  const parsed = isRecord(check.data) ? { ...fields, ...check.data } : fields;
   try {
-    const parts = schema.summarize(cardFields({ schema, fields }, schema), base);
+    const parts = schema.summarize(cardFields({ schema, fields: parsed }, schema), base);
     // An empty title would render a blank row; the base title always says
     // something, so it stands in.
     if (parts.title.trim() === "") return { ...parts, title: base.title };
