@@ -16,6 +16,11 @@
 
 import { z } from "zod";
 import { CHAT_CHANNELS } from "./chat-channel.js";
+// The address grammar the frontend resolver enforces, applied again here
+// because this is the boundary: an id that is not a real address must never
+// reach the dump, where it would be printed as a `control:` link the app
+// cannot honour.
+import { CONTROL_ID_PATTERN, MAX_CONTROL_ID_LENGTH } from "./control-address.js";
 
 /**
  * How much of the surface the scan actually saw.
@@ -34,13 +39,6 @@ export type UiScanCoverage = (typeof UI_SCAN_COVERAGES)[number];
 /** What a `control:` pointer may ask the app to do with an element. */
 const controlActionSchema = z.enum(["point", "focus", "reveal"]);
 
-/**
- * `bbx-` plus kebab-case segments — the same address grammar the frontend
- * resolver enforces (`lib/ui-scan/resolve.ts`), restated here because this is
- * the boundary. An id that is not a real address must never reach the dump: it
- * would be printed as a `control:` link the app cannot honour.
- */
-const CONTROL_ID_PATTERN = /^bbx(?:-[\da-z]+)+$/;
 
 /**
  * Text a client may put in front of the agent. Control characters (newlines
@@ -62,7 +60,7 @@ export const uiScanEntrySchema = z
   .object({
     kind: z.enum(["control", "landmark"]),
     /** The element's `bbx-` DOM id, or null for a control with no address. */
-    id: z.string().max(120).regex(CONTROL_ID_PATTERN).nullable(),
+    id: z.string().max(MAX_CONTROL_ID_LENGTH).regex(CONTROL_ID_PATTERN).nullable(),
     role: plainText(60),
     name: plainText(300),
     container: plainText(300).nullable(),
@@ -92,7 +90,7 @@ export const uiScanPayloadSchema = z
     /** Visible elements dropped because their explicit `role` isn't one we report. */
     omittedUnknownRole: z.number().int().nonnegative(),
     /** `bbx-` ids carried by more than one element — `getElementById` picks one. */
-    duplicateIds: z.array(z.string().max(120).regex(CONTROL_ID_PATTERN)).max(MAX_SCAN_ENTRIES),
+    duplicateIds: z.array(z.string().max(MAX_CONTROL_ID_LENGTH).regex(CONTROL_ID_PATTERN)).max(MAX_SCAN_ENTRIES),
     /** True when the entry cap stopped the walk before the document ended. */
     truncated: z.boolean(),
     coverage: z.enum(UI_SCAN_COVERAGES),
