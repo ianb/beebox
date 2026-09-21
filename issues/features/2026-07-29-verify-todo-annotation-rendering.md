@@ -60,13 +60,11 @@ Open a todo-view card and expect:
   state in the URL across reload.
 
 Fixture content for a walkthrough (a project with open todos across several
-sections) lives on the `keep` branch of the worktree's isolated test1 clone
-(`~/src/box-worktrees/collection-views/test1`, commit `4f546073`):
-`_content/projects/porch-rebuild/Porch.todo-view.card`. Before merge, try
-`/collection-views/test1/browse/projects/porch-rebuild/Porch.todo-view.card`
-on the shared dev router. This content is not on `main`'s test1 as of
-2026-09-20; after merge, land it there (or an equivalent) before testing, or
-test against another box that already has dated and undated todos.
+sections) landed on `main`'s test1 (`~/src/boxes/test1`, commit `526e68c3`,
+carried over from the `keep` branch of this workstream's isolated clone):
+`_content/projects/porch-rebuild/Porch.todo-view.card`. Try
+`/main/test1/browse/projects/porch-rebuild/Porch.todo-view.card` on the
+shared dev router.
 
 Confirm the observed result matches the expected behavior above before
 clearing the manual-testing flag.
