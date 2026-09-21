@@ -24,7 +24,7 @@ import { createChatBackend, type ChatBackend } from "../../../services/claude-ch
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
 import { ChatReservationStore, type ChatReservation, type ReserveResult } from "./reserve.js";
 import type { AgentEngine } from "../../box/config.js";
-import { reserveAndWarm, sweepExpiredReservations } from "./registry-reservations.js";
+import { createReservationFeatureHandoff, reserveAndWarm, sweepExpiredReservations } from "./registry-reservations.js";
 import { recordSessionStart } from "./session-start-record.js";
 import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
@@ -220,6 +220,9 @@ export class ChatSessionRegistry extends EventEmitter {
     return entry.session;
   }
 
+  /** Read an existing session without extending its idle lifetime. */
+  peek(sessionId: string): ChatSession | null { return this.deletion.isBlocked(sessionId) ? null : this.entries.get(sessionId)?.session ?? null; }
+
   /**
    * Get an existing session, or build one bound to that id (resumes from
    * the on-disk JSONL on first send).
@@ -238,6 +241,7 @@ export class ChatSessionRegistry extends EventEmitter {
     // captured at reserve time ride with it (nothing else carries them — the
     // send only forwards those for a `"new"` session).
     const reservation = this.reservations.get(sessionId);
+    const reservationFeatures = createReservationFeatureHandoff(reservation?.seedFeatures ?? {});
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
@@ -256,13 +260,14 @@ export class ChatSessionRegistry extends EventEmitter {
             // addressability TTL later expires. A pre-start feature toggle can
             // therefore never fall through to started-chat history and mint a
             // second engine answer.
-            persistPendingFeatures: (updates) => { Object.assign(reservation.seedFeatures, updates); return true; },
+            persistPendingFeatures: reservationFeatures.persist,
             ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
             ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {
               ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
               seedFeatures: reservation.seedFeatures,
               engine: reservation.engine,
+              onFeaturesWritten: reservationFeatures.markWritten,
             }),
           }
         : {}),
@@ -391,7 +396,7 @@ export class ChatSessionRegistry extends EventEmitter {
     params: {
       contextDir?: string | undefined;
       seedFeatures?: Record<string, string> | undefined;
-      engine?: AgentEngine | undefined;
+      engine?: AgentEngine | undefined; onFeaturesWritten?: (() => void) | undefined;
     },
   ): Promise<void> {
     // Released on the history write, not before it: until that row exists the
