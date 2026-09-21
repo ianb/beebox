@@ -6,6 +6,7 @@ labels: [box-shape]
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-box-layout-criteria — fleet migration: a media-heavy box spent 2+ hours in the move phase"
+next-action: invalid
 ---
 
 `executeMoves` (`src/core/migrations/one-root-move-plan.ts`) runs one

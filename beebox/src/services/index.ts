@@ -7,6 +7,7 @@
  * All fields are optional — not every box configures every service.
  */
 
+import type { JevService } from "./jev.js";
 import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
 import type { CodexCliService } from "./codex-cli.js";
@@ -23,6 +24,7 @@ import type { FetchLike } from "../core/secrets/probe-registry.js";
 // ─── Services container ──────────────────────────────────────────────────────
 
 export interface Services {
+  jev?: JevService | undefined;
   telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;

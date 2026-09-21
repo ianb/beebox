@@ -75,6 +75,11 @@ enum NativeComposerCommandDelivery {
 }
 
 struct ChatWebView: UIViewRepresentable {
+    enum Page {
+        case chat
+        case quickChat
+    }
+
     enum NewWindowDestination: Equatable {
         case currentContext
         case browser
@@ -91,6 +96,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     var box: PairedBox
+    var page: Page
     var pendingEmissions: [NativeChatEmission]
     var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     var locationShareRequest: NativeLocationShareRequest?
@@ -118,6 +124,7 @@ struct ChatWebView: UIViewRepresentable {
 
     init(
         box: PairedBox,
+        page: Page = .chat,
         pendingEmissions: [NativeChatEmission] = [],
         emissionRedeliveryRequest: NativeEmissionRedeliveryRequest? = nil,
         locationShareRequest: NativeLocationShareRequest? = nil,
@@ -144,6 +151,7 @@ struct ChatWebView: UIViewRepresentable {
         onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in }
     ) {
         self.box = box
+        self.page = page
         self.pendingEmissions = pendingEmissions
         self.emissionRedeliveryRequest = emissionRedeliveryRequest
         self.locationShareRequest = locationShareRequest
@@ -172,17 +180,19 @@ struct ChatWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = Self.makeConfiguration()
-        configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
-        configuration.userContentController.add(context.coordinator, name: "beeboxSession")
-        configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
-        configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
-        configuration.userContentController.add(context.coordinator, name: "beeboxLastAudioRequest")
+        if page == .chat {
+            configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
+            configuration.userContentController.add(context.coordinator, name: "beeboxSession")
+            configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
+            configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
+            configuration.userContentController.add(context.coordinator, name: "beeboxLastAudioRequest")
+        }
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -1056,8 +1066,9 @@ struct ChatWebView: UIViewRepresentable {
     /// `setCookie`'s completion handler is documented-unreliable and can hang
     /// (WebKit bug 185483). Letting the navigation response set the cookie uses
     /// WebKit's own network stack and sidesteps that entirely.
-    static func authenticatedRequest(for box: PairedBox) -> URLRequest {
-        var request = URLRequest(url: box.chatURL)
+    static func authenticatedRequest(for box: PairedBox, page: Page = .chat) -> URLRequest {
+        let url = page == .quickChat ? box.baseURL.appendingPathComponent("quick-chat") : box.chatURL
+        var request = URLRequest(url: url)
         if let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
            authToken.isEmpty == false {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -1066,17 +1077,17 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     private func request() -> URLRequest {
-        Self.authenticatedRequest(for: box)
+        Self.authenticatedRequest(for: box, page: page)
     }
 
-    private func startupScript() -> WKUserScript? {
+    func startupScript() -> WKUserScript? {
         guard
             let originData = try? JSONEncoder().encode(Self.origin(from: box.baseURL) ?? ""),
             let allowedOrigin = String(data: originData, encoding: .utf8)
         else {
             return nil
         }
-        let sessionObserver = """
+        let sessionObserver = page == .chat ? """
         (() => {
           const allowedOrigin = \(allowedOrigin);
           if (window.location.origin !== allowedOrigin) return;
@@ -1133,7 +1144,7 @@ struct ChatWebView: UIViewRepresentable {
           window.addEventListener('popstate', post);
           post();
         })();
-        """
+        """ : ""
         guard let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines), !authToken.isEmpty else {
             return WKUserScript(source: sessionObserver, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         }

@@ -46,7 +46,7 @@ addressable.
 ```ts
 const encoded = driveControlId("unmount", "Folder_A-1");
 encoded
-=> bbx-settings-drive-unmount-id-00004600006f00006c00006400006500007200005f00004100002d000031
+=> bbx-settings-drive-unmount-id-izxwyzdfojpucljr
 
 isControlAddress(encoded)
 => true

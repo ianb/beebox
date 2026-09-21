@@ -4984,3 +4984,26 @@ audit-test1:
       peak: 21717
       added: 0
       turns: 1
+quick-chat-audit:
+  quick-chat-rubric-maintenance:
+    - date: 2026-09-21T10:54:28.714Z
+      boxCommit: 0f37237d120c31bd70b504ba466a491ea18a774b
+      repoCommit: c6a479f4c15349ce8fde189e2da40fd4f89b3a8d
+      initial: 22170
+      peak: 22170
+      added: 0
+      turns: 2
+    - date: 2026-09-21T10:55:19.788Z
+      boxCommit: 0f37237d120c31bd70b504ba466a491ea18a774b
+      repoCommit: c6a479f4c15349ce8fde189e2da40fd4f89b3a8d
+      initial: 22170
+      peak: 22170
+      added: 0
+      turns: 2
+    - date: 2026-09-21T10:55:34.080Z
+      boxCommit: 0f37237d120c31bd70b504ba466a491ea18a774b
+      repoCommit: c6a479f4c15349ce8fde189e2da40fd4f89b3a8d
+      initial: 22940
+      peak: 22940
+      added: 0
+      turns: 1

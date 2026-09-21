@@ -80,7 +80,9 @@ runs on Anthropic's API — every agent turn sends its working context
 (your prompts, and whatever cards or emails the agent reads during the
 turn) to Anthropic, billed against your Claude subscription. Voice goes
 to a transcription vendor (Mistral by default; configurable). Connect
-Google or Telegram and those sync in both directions. Each wakeup pushes
+Google or Telegram and those sync in both directions. Quick chat sends your
+message and bounded conversation context to TypeSafe through OpenRouter to
+choose a destination. Each wakeup pushes
 the box's git history to whatever remote you configured — and nowhere
 else. There is no telemetry or analytics of any kind.
 

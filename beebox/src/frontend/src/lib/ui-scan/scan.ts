@@ -8,10 +8,13 @@
  * role, name and container and a null id, so the agent can describe it in words
  * without being handed a link the app cannot honour.
  *
- * The walk covers chrome, not content: a subtree marked
- * `data-bbx-scan="exclude"` ({@link SCAN_BOUNDARY_ATTRIBUTE}) is pruned the way
- * an `aria-hidden` one is, which is what keeps the transcript, the open card and
- * the embeds out of a payload the agent is told is an inventory of controls.
+ * The walk covers the whole document by default. A caller that wants chrome
+ * only — the `bbx chat ui` dump does — asks for `scope: "chrome"`, and a
+ * subtree marked `data-bbx-scan="exclude"` ({@link SCAN_BOUNDARY_ATTRIBUTE}) is
+ * then pruned the way an `aria-hidden` one is. Scope is the caller's choice
+ * because withholding an address is never the safe default: an annotated
+ * control the walk skipped is one `bin/browse` prints with no id and cannot act
+ * on, which is a wrong finding about the app.
  *
  * The walk is over {@link ScanElement} rather than `Element` so it can be
  * exercised without a DOM (the frontend doctests run under plain Node);
@@ -21,7 +24,7 @@
 
 import { computeAccessibleName } from "./accessible-name.js";
 import { classifyElement } from "./roles.js";
-import { CONTROL_ID_PREFIX, isControlAddress } from "./resolve.js";
+import { isControlAddress } from "./resolve.js";
 import { hidesSubtree } from "./visibility.js";
 import type { ControlAction, ControlEntry, ScanElement, ScanResult } from "./types.js";
 
@@ -32,9 +35,18 @@ import type { ControlAction, ControlEntry, ScanElement, ScanResult } from "./typ
  */
 export const MAX_ENTRIES = 200;
 
+/**
+ * How much of the page one scan covers.
+ *
+ * - `document` — every control, card contents included. What a driver wants.
+ * - `chrome` — content roots pruned, so the list is the app's own controls.
+ */
+export type ScanScope = "document" | "chrome";
+
 export interface ScanOptions {
   /** Viewport size in CSS pixels, for deciding {@link ControlEntry.offscreen}. */
   viewport: { width: number; height: number };
+  scope: ScanScope;
 }
 
 function attr(element: ScanElement, name: string): string | null {
@@ -50,26 +62,26 @@ function attr(element: ScanElement, name: string): string | null {
 const SCAN_EXCLUDE = "exclude";
 
 /**
- * Marks a subtree as user content, pruning it from the walk exactly the way
- * `aria-hidden` does — the elements inside are still on the user's screen, they
- * are simply not this payload's business.
+ * Marks a subtree as user content — a card body, the transcript, an embed.
  *
- * It is what makes "the dump is chrome" true rather than aspirational: without
- * it the walk reaches every link, button and textbox the user's own cards,
- * transcript and embeds render, and ships their accessible names to the agent.
- * That is the content the scan is *not* the way to learn about (the agent reads
- * a card by opening it), and it is why the request needs no consent prompt
- * (`components/chat/ui-scan-request-handler.ts`).
+ * It is not a privacy boundary. The agent can open any of this content
+ * directly, so pruning it hides nothing from anyone; it is an editorial line.
+ * The `bbx chat ui` dump is an inventory of the app's own controls, and a
+ * rendered card's links and buttons would bury that list without answering the
+ * question the agent asked. So `scope: "chrome"` skips them, and every other
+ * caller sees them.
  *
  * It goes on content roots only, never on the chrome around them: the companion
  * pane's tab strip and close button stay scannable while the card rendered
- * below them does not. No `bbx-` address sits inside an excluded subtree.
+ * below them does not. Annotated controls do sit below it — a card's properties
+ * toggle, Browse's listing-mode switch — which is why the scope is a choice and
+ * not a fixed rule.
  *
- * Excluded controls are not counted. An omission the dump reports is one the
- * agent might otherwise be misled by; this is a boundary the design drew, and
- * "42 controls you may not see" would invite exactly the guessing the boundary
- * exists to prevent. Duplicate-address detection still covers the whole
- * document — a duplicate `bbx-` id anywhere breaks `getElementById`.
+ * Skipped controls are not counted. An omission the dump reports is one the
+ * agent might otherwise be misled by; "42 controls you may not see" would
+ * invite exactly the guessing a narrowed list exists to prevent. Duplicate-
+ * address detection ignores the scope entirely — a duplicate `bbx-` id anywhere
+ * breaks `getElementById`.
  */
 const SCAN_BOUNDARY_ATTRIBUTE = "data-bbx-scan";
 
@@ -104,12 +116,21 @@ function addressOf(element: ScanElement): string | null {
   return isControlAddress(id) ? id : null;
 }
 
-/** Every `bbx-` id carried by more than one element, hidden subtrees included. */
+/**
+ * Every address carried by more than one element, hidden subtrees included.
+ *
+ * Addresses rather than every `bbx-`-prefixed id: the warning exists because a
+ * duplicate makes `getElementById` pick one arbitrarily and an id-addressed
+ * action land on the wrong control, which is only a hazard for an id something
+ * can be addressed by. Reporting a non-address here would also put a string the
+ * wire schema rejects into the payload, failing the whole dump over a duplicate
+ * on internal a11y wiring.
+ */
 function findDuplicateIds(root: ScanElement): string[] {
   const counts = new Map<string, number>();
   function count(element: ScanElement): void {
     const id = attr(element, "id");
-    if (id !== null && id.startsWith(CONTROL_ID_PREFIX)) {
+    if (id !== null && isControlAddress(id)) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
     }
     for (const child of element.children) if (child.kind === "element") count(child);
@@ -146,7 +167,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
 
   function visit(element: ScanElement, container: string | null): void {
     if (truncated) return;
-    if (isContentBoundary(element)) return;
+    if (options.scope === "chrome" && isContentBoundary(element)) return;
     if (hidesSubtree(element)) return;
 
     let childContainer = container;

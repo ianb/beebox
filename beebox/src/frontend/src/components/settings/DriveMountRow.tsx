@@ -27,15 +27,13 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { bbxSource } from "../../lib/source-tag";
+import { controlAddress } from "@shared/control-address";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 
 /** Preserve case-sensitive Drive identity inside the scan's lowercase id grammar. */
 export function driveControlId(action: "cancel" | "confirm" | "open" | "sync" | "unmount", driveId: string): string {
-  const encodedId = [...driveId]
-    .map((character) => character.codePointAt(0)?.toString(16).padStart(6, "0"))
-    .join("");
-  return `bbx-settings-drive-${action}-id-${encodedId}`;
+  return controlAddress(`bbx-settings-drive-${action}-id`, driveId);
 }
 
 function childSummary(children: DriveMount["children"]): string {

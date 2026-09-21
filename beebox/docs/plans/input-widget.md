@@ -289,7 +289,7 @@ Notes:
 - **One adapter at first**: `ChatTarget` (wraps the chat machine's SEND
   + turn state + interrupt; merges witness context into the payload).
   `unaddressed` (triage memo,
-  [issues/features/2026-06-28-triage-agent-session-routing.md](../../../issues/features/2026-06-28-triage-agent-session-routing.md))
+  [issues/features/2026-06-28-triage-agent-session-routing.md](../../../issues/closed/features/2026-06-28-triage-agent-session-routing.md))
   is a declared kind with no adapter yet.
 
 ## Input — the singleton
@@ -662,7 +662,7 @@ is frame state.
   practically per-tab instances. Leave as-is until it hurts.
 - **The `unaddressed` target** (triage memo) — declared in the type,
   designed elsewhere
-  ([issues/features/2026-06-28-triage-agent-session-routing.md](../../../issues/features/2026-06-28-triage-agent-session-routing.md)).
+  ([issues/features/2026-06-28-triage-agent-session-routing.md](../../../issues/closed/features/2026-06-28-triage-agent-session-routing.md)).
 - **Where the aim indicator lives** in the UI (the input shows *what*
   it's aimed at; the target strip shows the target's state) — an
   embodiment question, not an API one.

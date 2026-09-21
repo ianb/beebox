@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — while explaining why test/dev/workstream-list.doctest.md went red for five full-suite runs
+priority: normal
 ---
 
 A change to a `bin/` shell script selects no tests and can be blamed for no
