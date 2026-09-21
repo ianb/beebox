@@ -23,6 +23,7 @@ import {
   TRICKS_SKILL,
   VIEWS_SKILL,
 } from "./skills-content.js";
+import { AGENT_FEEDBACK_SKILL } from "./skills-content-agent-feedback.js";
 import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 
@@ -43,6 +44,7 @@ interface BoxSkill {
  */
 function buildBoxSkills(): BoxSkill[] {
   return [
+    { name: "agent-feedback", content: AGENT_FEEDBACK_SKILL },
     {
       name: "build-course",
       content: BUILD_COURSE_SKILL,

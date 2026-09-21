@@ -161,7 +161,7 @@ the real cards, renders once, prints the output or a source-mapped error).
 Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
 `;
 
-const FEEDBACK_CLAUDE_MD = `# Agent observations for Bee Box developers
+export const FEEDBACK_CLAUDE_MD = `# Agent observations for Bee Box developers
 
 When Bee Box tooling is confusing or behaves unexpectedly, record the observation
 here as a \`.doc.card\`. Use a specific title and a \`contains:\` summary so a

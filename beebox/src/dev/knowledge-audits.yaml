@@ -2900,6 +2900,25 @@ tests:
   # Status (2026-09-21, directory): Local guide audit passed 1/1 with no file
   # reads or searches; the agent named the card shape, written context, session
   # and path handling, and the separate boxholder feedback type.
+  # Status (2026-09-21, skill): Three draft opportunity checks failed because
+  # they required a particular guidance-file read or skill-name mention. The
+  # final behavior check passed 1/1: the agent recognized the unsolicited
+  # observation and drafted a follow-up card. The full rerun passed the other
+  # 4/4 feedback audits; its opportunity case still had the old name check.
+
+  - id: agent-feedback-skill-opportunity
+    prompt: >
+      While doing an unrelated cleanup task, you discover that bbx validate
+      --committed has a confusing name: it checks whether the working tree is
+      clean. No one asked you to file feedback. What should you do with this
+      observation?
+    expected_level: discoverable
+    watch_for: >
+      Agent recognizes the unsolicited opportunity and says to record a
+      .doc.card in _config/feedback/ with written
+      context and a normal commit.
+    correct_contains: [".doc.card", "_config/feedback/", "commit"]
+    tags: [feedback, cards, skills]
 
   - id: agent-feedback-directory-guide
     context_dir: _config/feedback

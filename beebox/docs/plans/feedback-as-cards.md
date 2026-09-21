@@ -42,7 +42,7 @@ No external premise governs this change. The repository's existing card and migr
 
 ## Tracks / scope
 
-1. **Agent writing path.** Remove command registration and teach a short `.doc.card` example in the agent guide. Install a nested `_config/feedback/CLAUDE.md` for guidance while working in that directory. The agent writes a title, observation and relevant context, links related cards, then commits normally. A session ID is included only when known; never guess the latest session. First chunk: update guide and remove the command.
+1. **Agent writing path.** Remove command registration and teach the opportunity in the agent guide and the managed `agent-feedback` skill. Install a nested `_config/feedback/CLAUDE.md` for guidance while working in that directory. The agent writes a title, observation and relevant context, links related cards, then commits normally. A session ID is included only when known; never guess the latest session. First chunk: update guide and remove the command.
 2. **Reader.** Find doc cards directly inside each `_config/feedback/`, excluding `resolved/` and directory docs. Keep legacy filename recognition during migration, but require the box migration before resolving a legacy note; its raw transcript whitespace can fail the move's commit hook. Treat unexpected files and read/remote errors as visible scan failures. Resolve doc cards through the existing card move operation, which rewrites inbound refs and commits affected paths. First chunk: collector update and focused fixtures.
 3. **Stored data.** Register one append-only script migration. Convert every legacy timestamped file under both feedback and resolved directories to a `.doc.card` sibling. Preserve the observation and context in the body, remove the redundant absolute `Box path` line, rewrite paths under that box root as box-relative paths, shorten other machine-home prefixes to `~/` with a visible note, normalize trailing whitespace that made moves fail lint, and derive a title from its feedback section or filename. Refuse a destination collision. First chunk: migrator plus isolated-box run.
 
@@ -93,7 +93,7 @@ None for the first implementation chunk. The boxholder approved the type and con
 
 ## Knowledge audits
 
-Replace command-specific audits with direct-knowledge and behavioral checks: agent explains the directory/type distinction and creates a doc card with relevant context. Audit the nested guide from `_config/feedback/` as well. Run the filtered audits against the isolated test box and record the result.
+Replace command-specific audits with direct-knowledge and behavioral checks: agent explains the directory/type distinction and creates a doc card with relevant context. Audit the nested guide from `_config/feedback/` and whether the agent recognizes an unsolicited observation during an unrelated task. The provisioning test checks that the skill is installed; the audit does not observe skill invocation. Run the filtered audits against the isolated test box and record the result.
 
 ## What will hold this after it ships
 

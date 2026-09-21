@@ -18,20 +18,10 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
 **Reach for these:**
 
 - When something feels off about Bee Box tooling — a confusing flag, unclear
-  error, awkward workflow, or surprising behavior — record it as a \`.doc.card\`
-  in \`_config/feedback/\`. For example, create
-  \`_config/feedback/Confusing_Validate_Flag.doc.card\` with \`bbx create\`, give it
-  a specific title and \`contains:\` sentence, then write the observation in
-  its Markdown body and commit it with your task. Include what happened, why it
-  was confusing, and the relevant exchange or error under a short **Context**
-  heading. Link earlier observations when this follows one. Include a native
-  session ID only if you know it is the right session; \`bbx session\` can help
-  inspect a transcript, but do not guess from \`--latest\`. Write file paths in
-  the card relative to the box root (for example \`/_config/box.json\`), even
-  when the original error printed an absolute machine path. This directory is
-  for agent observations that a developer will review. A \`.feedback.card\`
-  means the boxholder's response to something the box surfaced; do not use that
-  type for tooling observations.
+  error, awkward workflow, or surprising behavior — use the \`agent-feedback\`
+  skill. Record your observation and written context as a \`.doc.card\` in
+  \`_config/feedback/\` and commit it with your task. A \`.feedback.card\`
+  means the boxholder's response to something the box surfaced.
 - \`bbx force-wakeup [--connector <name>]\` — runs a real wakeup on the server
   right now, either the whole cycle or just one connector, and reports what each
   connector created, updated, or skipped and why. Reach for it after mounting a

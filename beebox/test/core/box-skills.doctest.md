@@ -23,6 +23,7 @@ const box = await makeTmpBox();
 const written = await generateSkills(box.root);
 written
 => [
+  "agent-feedback",
   "build-course",
   "calendar",
   "drive",

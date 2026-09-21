@@ -4550,12 +4550,26 @@ test1:
       peak: 49099
       added: 0
       turns: 1
+    - date: 2026-09-21T11:59:16.821Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 48989
+      peak: 48989
+      added: 0
+      turns: 1
   agent-feedback-card-when-to-use:
     - date: 2026-09-21T11:08:11.293Z
       boxCommit: c1223aa1e04f337466649cbf1cc5da5f29e09f45
       repoCommit: cbcd735bd31d879e22afae735be30729b93551dd
       initial: 49086
       peak: 49086
+      added: 0
+      turns: 1
+    - date: 2026-09-21T11:59:16.821Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 48990
+      peak: 48990
       added: 0
       turns: 1
   agent-feedback-card-uses-it:
@@ -4573,6 +4587,13 @@ test1:
       peak: 60860
       added: 11808
       turns: 18
+    - date: 2026-09-21T11:59:16.821Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49077
+      peak: 62663
+      added: 13586
+      turns: 11
   agent-feedback-directory-guide:
     - date: 2026-09-21T11:44:05.343Z
       boxCommit: 70ed154f99f6be0c508f5b9e1a6a9686da399729
@@ -4581,6 +4602,49 @@ test1:
       peak: 22674
       added: 0
       turns: 1
+    - date: 2026-09-21T11:59:16.821Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 22752
+      peak: 22752
+      added: 0
+      turns: 1
+  agent-feedback-skill-opportunity:
+    - date: 2026-09-21T11:56:07.507Z
+      boxCommit: ff504153ca2c80127a035140ed75fc131127f90b
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49068
+      peak: 53170
+      added: 4102
+      turns: 5
+    - date: 2026-09-21T11:57:33.867Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49068
+      peak: 56881
+      added: 7813
+      turns: 13
+    - date: 2026-09-21T11:59:16.821Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49068
+      peak: 53299
+      added: 4231
+      turns: 5
+    - date: 2026-09-21T12:00:36.734Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49054
+      peak: 56329
+      added: 7275
+      turns: 14
+    - date: 2026-09-21T12:02:04.150Z
+      boxCommit: bdb653a1fc88fbcd769e155e844d1c1596b42f08
+      repoCommit: 46de39b572c3420296cfd7103a8f1c76da913739
+      initial: 49054
+      peak: 57376
+      added: 8322
+      turns: 17
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
