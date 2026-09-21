@@ -3,13 +3,13 @@ title: Quick chat destination routing
 status: partial
 workstream: chat-routing
 issues:
-  - ../../../issues/features/2026-06-28-triage-agent-session-routing.md
+  - ../../../issues/closed/features/2026-06-28-triage-agent-session-routing.md
 ---
 # Quick chat destination routing
 
 When the boxholder has a thought to send, they should not have to find the right conversation first. Quick chat selects an existing conversation or a new conversation in the right landmark, delivers through ordinary chat, and then shows the routing result.
 
-**Issues addressed:** The session-routing issue above. Related: `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` also owns document triage, which this plan does not resolve; do not close that combined issue. `issues/features/2026-08-02-mcp-launch-into-chat.md` concerns agent-initiated handoffs and remains separate.
+**Issues addressed:** The closed session-routing issue above. Related: `issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md` also owns document triage, which this plan does not resolve; do not close that combined issue. `issues/features/2026-08-02-mcp-launch-into-chat.md` concerns agent-initiated handoffs and remains separate.
 
 ## Smallest fix and budget
 

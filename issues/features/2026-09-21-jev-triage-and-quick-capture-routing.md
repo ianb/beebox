@@ -55,7 +55,7 @@ What has to be worked out:
 
 The boxholder has wanted "a generic entry point that is routed to a chat, new
 or existing, and a particular landmark". That is
-[triage agent session routing](2026-06-28-triage-agent-session-routing.md)
+[triage agent session routing](../closed/features/2026-06-28-triage-agent-session-routing.md)
 (`needs: [design]`), which proposes a throwaway triage session with a
 `switch-to-session` tool that re-dispatches the message to the destination.
 
