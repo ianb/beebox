@@ -115,15 +115,17 @@ spent writing these notes, which a real person would not do, so `date` will tell
 has passed when the app has kept you waiting four minutes. Someone doing this before you wrote
 "it answered after about twenty minutes" into a session that had run six.
 
-When you want to know how long you have been kept waiting, ask:
+For a limited measurement of how long the app takes to start responding, ask:
 
 ```
 pnpm exec tsx beebox/user-stories/journeys/clock.ts {{BOX_CONTENT}}
 ```
 
-That counts only the time the app kept you waiting — the thing you would actually notice.
-Quote it when you have an opinion about speed, and stamp your entries with it rather than a
-time of day.
+This measures only Claude root-chat time until the first assistant text. A preamble may
+arrive well before the answer is finished. Scoped chats and other engines are not measured.
+Quote it only as time until a response starts, never as total waiting or completion time.
+If it is unavailable, say so. Number your entries in order; describe any further waiting
+from what you actually see without inventing a duration.
 
 Before each thing you try:
 

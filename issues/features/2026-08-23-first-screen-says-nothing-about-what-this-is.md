@@ -44,3 +44,15 @@ The same person, in the first two minutes:
 
 Whatever the front door says will be read through that. Worth settling what
 "box" means to a user before writing copy that uses it three ways.
+
+## Re-encounter, 2026-09-21 - journey C
+
+A fresh reconnecting-with-friends walk again opened on an otherwise empty chat
+with "Start a conversation" and "Type a message". Screenshot 01 confirms the
+absence of orientation. The person could proceed because the text box was
+obvious and they already had a concrete goal; this run does not establish what
+a person without a goal would do. The generated journey slug in the header is
+fixture naming, not a new product vocabulary finding.
+
+Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+actions 1-3. No onboarding implementation attempted.
