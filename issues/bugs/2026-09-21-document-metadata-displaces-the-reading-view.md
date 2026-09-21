@@ -45,3 +45,22 @@ The walker could read the saved work but repeatedly called these labels
 bookkeeping. No document-rendering change was made.
 
 Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+
+## Re-encounter, 2026-09-21 - journey D
+
+The Chemistry Foundations course, its progress card, lesson plan, and
+landmark all exposed implementation-facing fields in the ordinary reading
+surface. Screenshots 08, 10–13, and 22 show `audience`, `goals`,
+`success-criteria`, `navigation`/`label`/`ref`, and lesson/progress fields such
+as `do`, `mode`, `concepts`, `note`, `node`, `basis`, `evidence`, and
+`next-probe`. The lesson text also exposed tutor instructions such as
+"listen for the model, not the vocabulary." The learner described these as a
+tutor's file rather than a study note.
+
+This is the same generic renderer mechanism verified above, but it adds a
+courseware case: domain cards need a reader-facing study view while retaining
+the agent's durable plan and evidence. It is a broader information hierarchy
+question than merely hiding the Properties panel.
+
+Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+screenshots 08, 10–13, and 22.

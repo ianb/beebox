@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk; mechanism traced by a verifier agent
 priority: normal
+next-action: discuss
 ---
 
 ## Recovery assessment (2026-09-21)
@@ -43,3 +44,21 @@ escalated+on-plate predicate is independently spelled at four sites
 (`core/todo/count.ts:91`, `ambient-summary.ts:22,25`, `review-sweep.ts:132`,
 `todo-view-card-logic.ts:17-21`) with nothing enforcing agreement — worth
 consolidating into one named helper while in the area.
+
+## Re-encounter, 2026-09-21 - journey D
+
+The chemistry walk showed a second source of the same visible ambiguity. The
+top badge showed `1`, while The Plate showed `2 open`; the second row was an
+agent-assigned reference task. This is intentional: `core/todo/count.ts` counts
+only boxholder todos on the plate and excludes `assigned="agent"`, while the
+stock `todo-view` query has no assignment filter and therefore shows both. The
+Plate row exposes the `agent` assignment, but the badge does not explain the
+different ownership scope. The count is not wrong; the visible badge still
+needs wording that makes its scope clear.
+
+Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+screenshot 16 and independently inspected saved task assignments; mechanism in `beebox/src/core/todo/count.ts:2-13`
+and `beebox/src/frontend/src/components/TodoViewCard.tsx:174-191`.
+
+The existing normal priority may be stale after this fresh re-encounter.
+Discuss whether the repeated scope confusion warrants reprioritizing the presentation work; priority is unchanged.
