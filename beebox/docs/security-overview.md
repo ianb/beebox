@@ -128,7 +128,8 @@ The summary:
   collection. This is not a zero-retention guarantee. Avoid Quick chat or omit
   that key grant to avoid this egress; ordinary direct chat remains available.
   Quick chat sends to the selected conversation before showing the result.
-  Correcting a destination sends another copy; it cannot undo agent actions.
+  Destination links stage the original text in another chat; they cannot undo
+  agent actions.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,

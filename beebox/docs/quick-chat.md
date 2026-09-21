@@ -23,9 +23,11 @@ separately from the normal chat draft. Use **Recover or retry send** after an
 interrupted attempt. The same submission reuses its recorded destination;
 it does not ask Jev again. **Another message** clears that form for new input.
 
-If it sent to the wrong destination, select another option
-and choose **Send a copy there**. This sends the original text again. It does
-not move transcript history or undo actions the first chat has taken.
+The result lists the strongest alternatives as direct links. Clicking one opens
+that chat with the original text staged in its composer; it does not send a
+second copy automatically. This is the recovery path when the first destination
+was wrong, and it does not move transcript history or undo actions the first
+chat has taken.
 
 ## Destinations and preference
 
