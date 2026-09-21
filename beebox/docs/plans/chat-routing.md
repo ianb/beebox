@@ -13,7 +13,7 @@ When the boxholder has a thought to send, they should not have to find the right
 
 ## Smallest fix and budget
 
-The evaluation version selects a destination and sends immediately; it shows the chosen destination and close alternatives afterward. It replaces the box-selector Capture link and adds an explicit iOS Quick chat action. The boxholder clarified that this is a live evaluation surface: easy to reach and use, but provisional and inexpensive to revise. It collects explicit copy-to-another-destination corrections for later calibration. Its near-tie margin is provisional, visibly reported, and not a correctness guarantee.
+The evaluation version selects a destination and sends immediately; it shows the chosen destination and direct links to close alternatives afterward. Each link opens that chat with the original text staged in its composer. It replaces the box-selector Capture link and adds an explicit iOS Quick chat action. The boxholder clarified that this is a live evaluation surface: easy to reach and use, but provisional and inexpensive to revise. Its near-tie margin is provisional, visibly reported, and not a correctness guarantee.
 
 Estimated additions plus deletions: 700–900 source lines for catalog, typed service, decision record, and web UI; 50–150 source lines for native presentation/navigation; 350–450 test lines; 150–250 authored documentation lines. Total estimate: 1,250–1,750 lines, no generated output anticipated. Do not extend the native emission/binding contract for this trial. Reassess if presentation requires materially more machinery.
 
@@ -89,7 +89,7 @@ First implementation chunk: deterministic web state for draft → saved routing 
 
 ## Could this be simpler?
 
-A manual destination picker is simpler but leaves the reported daily routing burden intact. A single prompt over session titles is smaller but cannot distinguish ongoing threads with similar titles. The chosen version supplies bounded conversation evidence and captures human corrections. A visible receipt and explicit copy correction keep evaluation observable without adding a confirmation step to every capture.
+A manual destination picker is simpler but leaves the reported daily routing burden intact. A single prompt over session titles is smaller but cannot distinguish ongoing threads with similar titles. The chosen version supplies bounded conversation evidence and keeps the result observable through direct destination links and the staged original message. It does not add a confirmation step to every capture.
 
 ## Subplans
 
@@ -106,11 +106,11 @@ No native-binding subplan is needed for the revised evaluation surface. The boxh
 | Chat disappears before send | Existing exact-target guard; add route case | Re-select, never fresh fallback | Clear |
 | Retry dispatches to another target | Planned route/state doctest | Stable submission identity and fixed accepted target | Clear |
 | Opening or dismissing iOS form disrupts original draft | Planned navigation test and simulator check | Separate sheet; native draft and pending store stay unchanged | Must be verified before shipping |
-| User accepts wrong destination | Planned UI flow | Show destination; explicit resend correction | Clear; prior effects cannot be undone |
+| User accepts wrong destination | Planned UI flow | Show destination; direct link stages the original message in another chat | Clear; prior effects cannot be undone |
 
 ## Agent-flow / user-flow edge cases
 
-- Wrong destination: ADDRESSED by visible receipt and explicit copy correction record. Resending after execution is not an undo.
+- Wrong destination: ADDRESSED by visible receipt and direct links that stage the original text in another chat's composer. Opening another destination is not an undo.
 - Stale reference: ADDRESSED by catalog and pre-send validation.
 - Concurrent edits: ADDRESSED by capturing the rubric/candidate snapshot; later edits affect the next proposal, not an accepted target.
 - Hand-edited rubric: ADDRESSED by schema validation and visible errors.
@@ -127,7 +127,7 @@ No native-binding subplan is needed for the revised evaluation surface. The boxh
 - Automatic iOS cold-start heuristics: explicit button is the first version of the boxholder's allowed alternative; no arbitrary idle cutoff.
 - Hiding routing receipts: retain them throughout the evaluation.
 - Attachment understanding: begin with typed or transcribed text; do not silently ignore an attached file when choosing a destination.
-- Undoing agent effects or moving transcript history: correction is explicit resend with a misroute record.
+- Undoing agent effects or moving transcript history: a destination link stages the original message in another chat; it does not move or undo the first delivery.
 
 ## Open design questions
 

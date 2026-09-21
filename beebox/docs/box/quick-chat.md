@@ -39,5 +39,6 @@ routing visibly. Background landmarks need explicit rubric entries.
 Do not put credentials in this file. Quick chat uses the box-granted
 OpenRouter key and sends captured text, candidate facts, rules, and bounded
 conversation text through OpenRouter to TypeSafe Jev. It handles text only.
-A correction sends another copy to a selected destination; it cannot undo
-agent actions or move the original transcript.
+The result links open the selected chat with the original text staged in its
+composer. Opening another destination does not send a second copy, undo agent
+actions, or move the original transcript.

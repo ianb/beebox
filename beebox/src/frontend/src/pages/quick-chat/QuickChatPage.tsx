@@ -94,6 +94,6 @@ function QuickChatForm({ boxSlug }: { boxSlug: string }) {
       </Stack>
     </form>
     {error !== null && <div role="alert"><ErrorText>{error}</ErrorText></div>}
-    {result !== null && <QuickChatResult result={result} boxSlug={boxSlug} busy={busy} onSend={candidateId => void send(candidateId)} />}
+    {result !== null && <QuickChatResult result={result} boxSlug={boxSlug} />}
   </Stack>;
 }
