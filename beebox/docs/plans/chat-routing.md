@@ -1,6 +1,6 @@
 ---
 title: Quick chat destination routing
-status: active
+status: partial
 workstream: chat-routing
 issues:
   - ../../../issues/features/2026-06-28-triage-agent-session-routing.md
@@ -100,8 +100,8 @@ No native-binding subplan is needed for the revised evaluation surface. The boxh
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Correct older chat omitted | Planned catalog doctest | Explicit retained rubric entries; manual alternatives | Visible selection; omission tracked |
-| Too many candidates | Planned pure doctest | Manual selection, no silent truncation | Clear |
-| Key missing, request fails, or response malformed | Planned fake-service doctest | Keep draft and offer manual selection | Clear |
+| Too many candidates | Planned pure doctest | Keep the draft and direct the user to Chats; no silent truncation | Clear |
+| Key missing, request fails, or response malformed | Planned fake-service doctest | Keep the draft and direct the user to Chats | Clear |
 | Message changes while judgment runs | Planned state doctest | Invalidate stale proposal | Clear |
 | Chat disappears before send | Existing exact-target guard; add route case | Re-select, never fresh fallback | Clear |
 | Retry dispatches to another target | Planned route/state doctest | Stable submission identity and fixed accepted target | Clear |
@@ -178,4 +178,8 @@ Browser evidence covers the real missing-key refusal and synthetic queued
 receipts at narrow and desktop widths; successful browser receipts used network
 fixtures, not a live agent. The authenticated provider tests used only synthetic
 content and the existing authorized development key. No credentials were changed.
-Security artifacts remain unreviewed drafts.
+The security artifacts were reviewed by Ian and committed as a scoped amendment;
+they retain the previous full-inventory anchor and explicitly do not claim a
+fresh audit of unrelated historical changes. Native sheet visual review,
+physical-device review, and live box evaluation remain open, so this plan is
+partial rather than an assertion of calibrated routing quality.
