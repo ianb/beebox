@@ -6,9 +6,37 @@ labels: [voice, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sticky hq transcription preference"
-needs: [manual-testing]
 priority: normal
 ---
+
+>  **Re-encountered 2026-09-20 — the shipped behavior does not work.** The
+> boxholder: "Everything about the hq settings is kind of broken. Doesn't
+> inherit. Doesn't stick." The `manual-testing` gate is removed: a recurrence
+> means the feature is not merely unverified, it is broken. The manual-testing
+> steps below are kept as history and as the shape of a real regression test.
+>
+> Two symptoms, and a reading of the code found a candidate mechanism for each.
+> Neither is confirmed by reproduction.
+>
+> **Does not stick.** `ChatFeatures.persist`
+> (`beebox/src/core/chat/session/features.ts:102-127`) returns without writing
+> in two cases: when `getSessionId()` is `null`, and when no engine is recorded
+> for the session. A toggle in a chat that has not yet started a session — the
+> obvious moment to set it, before dictating the first message — is therefore
+> kept in memory only. The second branch logs; the first is silent.
+>
+> **Does not inherit.** Inheritance is a *seed*, not a resolution:
+> `seedFeaturesForNewChat` (`core/landmark/features.ts:98`) merges box default,
+> landmark, and request, and it is called only when a chat is created
+> (`webapp/trpc/routers/chat-control-procedures.ts:153,390`,
+> `webapp/routes/chat-send-target.ts`). Changing a landmark or box default
+> therefore cannot reach a chat that already exists, and nothing re-reads it.
+> Whether that is the reported failure, or whether the seed is also lost on
+> some creation paths, needs reproduction.
+>
+> `mergeSeedFeatures` (`core/chat/features.ts:120-133`) also drops any value
+> that fails `isKnownFeature`/`isValidValue` with no diagnostic, so a malformed
+> landmark or box value is indistinguishable from an absent one.
 
 Web support landed in `6410124b5`, but physical-device testing found that the
 iOS native composer did not receive or honor the HQ state. Keep this open until

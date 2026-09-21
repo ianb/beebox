@@ -16,11 +16,11 @@ import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { backupAdminProcedures } from "./admin-backup.js";
+import { openrouterAdminProcedures } from "./admin-openrouter.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
-import { modelTier } from "../../../shared/agent-models.js";
-import { normalizeModelId } from "../../../shared/model-ids.js";
+import { isConfigurableModel, loadAddedModels } from "../../../core/box/config.js";
 import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
@@ -225,6 +225,7 @@ export const adminRouter = router({
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
       agentModel: config.agentModel ?? null,
+      openrouterModels: await loadAddedModels(ctx.boxRoot),
       // Absent means "only the default engine", the same rule loadEnabledEngines
       // applies — resolved here so the UI never has to re-derive it.
       engines: config.engines ?? { [config.agentEngine]: true },
@@ -250,12 +251,10 @@ export const adminRouter = router({
            * `null` clears the box's model policy. A model no engine offers is
            * refused here rather than saved: the resolver would drop it on every
            * read, so the box would report "Saved" and then quietly run the
-           * harness default forever.
+           * harness default forever. An added OpenRouter model is checked in
+           * the mutation, which can read the box's list.
            */
-          agentModel: z.string()
-            .refine((m) => modelTier(normalizeModelId(m)) !== null, { message: "Unknown model id" })
-            .nullable()
-            .optional(),
+          agentModel: z.string().nullable().optional(),
           engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
           hqDictation: z.enum(["on", "off"]).optional(),
         })
@@ -264,6 +263,9 @@ export const adminRouter = router({
         }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (typeof input.agentModel === "string" && !(await isConfigurableModel(ctx.boxRoot, input.agentModel))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown model id ${input.agentModel}` });
+      }
       const result = await updateBoxConfigFields({
         boxRoot: ctx.boxRoot,
         ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
@@ -291,6 +293,7 @@ export const adminRouter = router({
 
   ...googleAdminProcedures,
   ...backupAdminProcedures,
+  ...openrouterAdminProcedures,
 
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();

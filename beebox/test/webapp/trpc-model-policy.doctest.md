@@ -34,12 +34,12 @@ pinned nothing reports the `strong` tier for its engine rather than `null`.
 ```ts
 const server = await makeTestServer();
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
 ```
 
 Clearing the pin returns the box to the `strong` tier, not to "whatever the
@@ -130,6 +130,20 @@ print(setOnCoined);
 =>
 reserved: reserved
 ok model=claude-sonnet-5
+```
+
+A reservation that names a model but no engine records the engine the model
+was checked against. Leaving it implicit let a Claude model validate and then
+start on the box's Codex default, quietly running something else.
+
+```ts continue
+const { resolveChatEngine } = await import("../../src/core/chat/session/engine.js");
+const implicit = "33333333-4444-4555-8666-777777777777";
+print(`reserved: ${(await api.chat.reserveSession({ sessionId: implicit, model: "claude-haiku-4-5-20251001" })).kind}`);
+print(`engine: ${await resolveChatEngine(server.boxRoot, { sessionId: implicit })}`);
+=>
+reserved: reserved
+engine: claude
 ```
 
 ```ts cleanup

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-19T17:37:58Z
-Total documents: 391
+Generated: 2026-09-19T17:57:17Z
+Total documents: 392
 
 ## Issues
 
@@ -33,6 +33,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (704 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (251 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (340 lines) · shipped history · implemented
+- **docs/implemented-plans/openrouter-chat-models.md** — "OpenRouter chat models, added by the owner in admin" (588 lines) · shipped history · implemented
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (446 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (379 lines) · implementation review
 - **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
@@ -1307,6 +1308,7 @@ Referenced by:
 - docs/implemented-plans/moved-card-forwarding.md:43 (mention) — - The server and client exchange a discriminated recovery value, not a message convention. This follows engineering prin
 - docs/implemented-plans/on-demand-image-thumbnails.md:18 (mention) — - Principle 3 requires HTTP query input to be validated once at the boundary: `docs/engineering-principles.md:37`: *"Val
 - docs/implemented-plans/one-root-box-layout.md:110 (mention) — boundaries)** — `docs/engineering-principles.md:12,37`: the box path
+- docs/implemented-plans/openrouter-chat-models.md:402 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
 - docs/implemented-plans/questions-end-to-end.md:61 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/refresh-maps-convergence.md:64 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
 - docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
@@ -1937,12 +1939,13 @@ References:
 
 #### docs/model-policy.md
 
-Title: "Which model a box thinks with" | 148 lines | current reference
+Title: "Which model a box thinks with" | 182 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:205 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/guides.md:53 (link) — | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
+- docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
 - docs/mobile-contract.md:910 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
@@ -4443,6 +4446,18 @@ References:
 - → docs/landmarks.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/openrouter-chat-models.md **[ORPHAN]**
+
+Title: "OpenRouter chat models, added by the owner in admin" | 588 lines | shipped history | implemented
+
+References:
+- → ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md (frontmatter)
+- → ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md (link)
+- → ../issues/features/2026-07-18-provider-endpoint-config.md (link)
+- → docs/plans/box-glm-provider.md (mention)
+- → docs/model-policy.md (mention)
+- → docs/engineering-principles.md (mention)
+
 #### docs/implemented-plans/private-issues-shadow-repo.md
 
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines | shipped history | implemented
@@ -5616,6 +5631,7 @@ References:
 Title: "Box-side GLM: Z.ai models on the claude engine" | 487 lines | proposal | partial
 
 Referenced by:
+- docs/implemented-plans/openrouter-chat-models.md:71 (mention) — the GLM precedent (`docs/plans/box-glm-provider.md`, "Stated preferences").
 - ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md:14 (mention) — fe3142614, 5ee730681, 2d3304d79 — see `beebox/docs/plans/box-glm-provider.md`).
 - ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md:46 (mention) — the provider env; `docs/plans/box-glm-provider.md` is the design.
 

@@ -53,6 +53,10 @@ struct NativeComposerView: View {
     @State private var pendingClockTicker = Timer
         .publish(every: 5, on: .main, in: .common)
         .autoconnect()
+    @State private var keywordHintTicker = Timer
+        .publish(every: 10, on: .main, in: .common)
+        .autoconnect()
+    @State private var keywordHintIndex = 0
     /// When each `isSending` term became true. Wall-clock `Date` rather than a
     /// monotonic reading: a term still held after the phone slept for an hour has
     /// been held for an hour, and that is what the log should say.
@@ -78,6 +82,13 @@ struct NativeComposerView: View {
                 }
                 pendingReferenceDate = date
             }
+            .onReceive(keywordHintTicker) { _ in
+                guard voiceTurn.isActive || isVoiceRecording || isVoiceStarting else {
+                    keywordHintIndex = 0
+                    return
+                }
+                keywordHintIndex += 1
+            }
             .onChange(of: sendBlockers) { previous, current in
                 noteSendBlockerChange(from: previous, to: current)
             }
@@ -86,6 +97,12 @@ struct NativeComposerView: View {
                     return
                 }
                 pendingReferenceDate = Date()
+            }
+            .onChange(of: voiceTurn.isActive) { _, _ in
+                keywordHintIndex = 0
+            }
+            .onChange(of: hasKeywordHintText) { _, _ in
+                keywordHintIndex = 0
             }
             .onChange(of: screenAwakeReasons) { _, reasons in
                 applyScreenAwake(reasons)
@@ -292,13 +309,46 @@ struct NativeComposerView: View {
 
                 textEntry
 
-                trailingControl
+                trailingControlWithKeywordHint
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
             .padding(.bottom, 5)
             .offset(y: 10)
         }
+    }
+
+    private var trailingControlWithKeywordHint: some View {
+        trailingControl
+            .overlay(alignment: .bottomTrailing) {
+                if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+                    Text(currentKeywordHint)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.thinMaterial, in: Capsule())
+                        .fixedSize()
+                        .offset(y: -64)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+    }
+
+    private var hasKeywordHintText: Bool {
+        hasTextContent
+    }
+
+    private var currentKeywordHint: String {
+        let hints = hasKeywordHintText
+            ? SpeechKeywords.keywordHintsWithText
+            : SpeechKeywords.keywordHintsWithoutText
+        return hints[keywordHintIndex % hints.count]
+    }
+
+    private var voiceKeywordAccessibilityHint: String {
+        "While dictating, say send message, clean up and send, send and close, erase message, cancel message, or microphone off."
     }
 
     /// What to say while there is no send binding — one line per state, because
@@ -488,6 +538,7 @@ struct NativeComposerView: View {
                     foregroundStyle: .red,
                     action: stopMicrophoneWithEarcon
                 )
+                .accessibilityHint(voiceKeywordAccessibilityHint)
             }
         } else if hasTextContent {
             composerButton(
@@ -527,6 +578,7 @@ struct NativeComposerView: View {
             does: "tap to dictate continuously; say a send keyword to send hands-free",
             action: requestMicrophone
         )
+        .accessibilityHint(voiceKeywordAccessibilityHint)
     }
 
     private var isVoiceRecording: Bool {
@@ -553,6 +605,7 @@ struct NativeComposerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Starting dictation — tap to stop")
+        .accessibilityHint(voiceKeywordAccessibilityHint)
     }
 
     private func openCapture() {

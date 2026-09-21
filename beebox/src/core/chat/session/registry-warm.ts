@@ -15,7 +15,7 @@ import { makeLog } from "./log.js";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
 import type { ChatBackend, ChatBackendStartOptions } from "../../../services/claude-chat.js";
 import { resolveSessionModel } from "./model.js";
-import { glmChatAdditions } from "../../glm-key.js";
+import { providerEnvAdditions } from "../../provider-env.js";
 import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
@@ -56,9 +56,9 @@ async function probeStartOptions(opts: {
     engine: start.engine ?? "claude",
     explicit: opts.model ?? null,
   });
-  // A GLM prewarm bakes the provider env in at spawn — the warm subprocess
-  // never re-resolves it at send time.
-  const additions = await glmChatAdditions({ boxRoot: opts.boxRoot, model: resolved.model, purpose: "chat-prewarm" });
+  // A third-party prewarm bakes the provider env in at spawn — the warm
+  // subprocess never re-resolves it at send time.
+  const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: resolved.model, purpose: "chat-prewarm" });
   const model = resolved.model ?? undefined;
   if (additions === null) return model === undefined ? start : { ...start, model };
   return { ...start, model, env: { ...start.env, ...additions } };

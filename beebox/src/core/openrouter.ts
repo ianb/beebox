@@ -7,6 +7,12 @@
  * There is no base-URL setting, and no per-service provider field — the switch
  * happens here, in code.
  *
+ * **The one exception is chat and agent models** (`core/openrouter-chat.ts`).
+ * A granted key runs none of them: the owner must also add each model in
+ * admin, because a chat turn on an agent loop bills per use at a scale these
+ * cents-per-call services never reach, and the box must not start spending
+ * that way because a key happens to exist (boxholder, 2026-09-19).
+ *
  * **Precedence: the service's own provider key wins.** An `openai` key keeps
  * embeddings on OpenAI even when an OpenRouter key is also granted. That is
  * deliberate, and it is the conservative direction: adding a credential must
@@ -37,7 +43,7 @@
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
-const OPENROUTER_SECRET_NAME = "openrouter";
+export const OPENROUTER_SECRET_NAME = "openrouter";
 
 /** Every OpenRouter endpoint hangs off this; nothing configures it. */
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -115,6 +121,17 @@ export async function getOpenRouterKey(
     }
   }
   return null;
+}
+
+/**
+ * Does this box have a usable OpenRouter key right now? A non-spending
+ * presence check (observed neither in `lastUsed` nor `purposes`) backing the
+ * chat picker's added-model rows, the `glmKeyUsable` precedent. The spawn
+ * re-checks and refuses — the picker is a courtesy, the refusal is the gate.
+ */
+export async function openRouterKeyUsable(boxRoot: string): Promise<boolean> {
+  const resolved = await resolveSecret({ boxRoot, name: OPENROUTER_SECRET_NAME, purpose: "menu-availability", access: "server", observe: false });
+  return resolved.ok;
 }
 
 /**

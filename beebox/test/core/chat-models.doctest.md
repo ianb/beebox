@@ -14,16 +14,16 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
 ```ts
-JSON.stringify(chatModelOptions("claude").map((option) => option.label))
+JSON.stringify(chatModelOptions("claude", []).map((option) => option.label))
 => ["Default (Opus)","Fable 5.1","Opus 5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
 
-JSON.stringify(chatModelOptions("codex"))
+JSON.stringify(chatModelOptions("codex", []))
 => [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
 
-isChatModelAllowed("codex", "gpt-5.6-sol")
+isChatModelAllowed("codex", { model: "gpt-5.6-sol", added: [] })
 => true
 
-isChatModelAllowed("codex", "claude-opus-5")
+isChatModelAllowed("codex", { model: "claude-opus-5", added: [] })
 => false
 
 JSON.stringify([parseChatAgentEngine("codex"), parseChatAgentEngine(undefined), parseChatAgentEngine("other")])
@@ -102,11 +102,11 @@ invent one.
 
 ```ts
 JSON.stringify([
-  resolveBoxModelForEngine("claude", "claude-sonnet-5"),
-  resolveBoxModelForEngine("codex", "claude-sonnet-5"),
-  resolveBoxModelForEngine("claude", "claude-opus-4-8"),
-  resolveBoxModelForEngine("claude", "not-a-model"),
-  resolveBoxModelForEngine("claude", null),
+  resolveBoxModelForEngine("claude", { pinned: "claude-sonnet-5", added: [] }),
+  resolveBoxModelForEngine("codex", { pinned: "claude-sonnet-5", added: [] }),
+  resolveBoxModelForEngine("claude", { pinned: "claude-opus-4-8", added: [] }),
+  resolveBoxModelForEngine("claude", { pinned: "not-a-model", added: [] }),
+  resolveBoxModelForEngine("claude", { pinned: null, added: [] }),
 ])
 => ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5",null,null]
 ```
@@ -121,10 +121,10 @@ box saying nothing.
 
 ```ts
 JSON.stringify([
-  boxDefaultModel("claude", null),
-  boxDefaultModel("codex", null),
-  boxDefaultModel("claude", "claude-sonnet-5"),
-  boxDefaultModel("claude", "not-a-model"),
+  boxDefaultModel("claude", { pinned: null, added: [] }),
+  boxDefaultModel("codex", { pinned: null, added: [] }),
+  boxDefaultModel("claude", { pinned: "claude-sonnet-5", added: [] }),
+  boxDefaultModel("claude", { pinned: "not-a-model", added: [] }),
 ])
 => ["claude-opus-5","gpt-5.6-sol","claude-sonnet-5",null]
 ```
@@ -139,10 +139,10 @@ to the other engine falls through to the pin rather than to nothing.
 ```ts
 const pinned = "claude-sonnet-5";
 JSON.stringify([
-  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "claude-fable-5-1" }),
-  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "follow" }),
-  resolveEffectiveModel({ engine: "claude", pinned: null }, { kind: "follow" }),
-  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "gpt-5.6-sol" }),
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "claude-fable-5-1" }),
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "follow" }),
+  resolveEffectiveModel({ engine: "claude", pinned: null, added: [] }, { kind: "follow" }),
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "gpt-5.6-sol" }),
 ])
 => [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-opus-5","source":"default"},{"model":"claude-sonnet-5","source":"default"}]
 ```

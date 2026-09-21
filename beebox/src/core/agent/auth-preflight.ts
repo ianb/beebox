@@ -22,8 +22,9 @@ import {
   redactCodexCliDetail,
   type CodexCliService,
 } from "../../services/codex-cli.js";
-import { GlmKeyError, resolveGlmKeyOrThrow } from "../glm-key.js";
-import { providerOf } from "../../shared/agent-models.js";
+import { providerEnvAdditions } from "../provider-env.js";
+import { isThirdPartyModel } from "../../shared/agent-models.js";
+import { ProviderSetupError } from "../provider-setup-error.js";
 import { invariant } from "../../lib/invariant.js";
 
 export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli.js";
@@ -179,9 +180,9 @@ export async function preflightChatBackend(params: {
     requiresCodexAuth?: boolean | undefined;
   };
   engine?: "claude" | "codex" | undefined;
-  /** The model this turn will run — a GLM model is gated on the store key. */
+  /** The model this turn will run — a third-party model is gated on its provider setup. */
   model?: string | undefined;
-  /** Box root for the GLM key check. Required when `model` is a glm id. */
+  /** Box root for the provider check. Required when `model` is a third-party id. */
   boxRoot?: string | undefined;
   session: { emit(event: "error", error: Error): boolean };
   /** CLI service for the probe. Omit in production; tests inject a fake. */
@@ -201,16 +202,16 @@ export async function preflightChatBackend(params: {
       throw error;
     }
   }
-  // A GLM-model turn is gated on the store key, not on a Claude login:
-  // `claude auth status` reports token presence and says nothing about
-  // whether the endpoint will accept it.
-  if (params.model !== undefined && providerOf(params.model) === "glm") {
-    invariant(params.boxRoot !== undefined, "preflightChatBackend: a glm model requires boxRoot");
+  // A third-party-model turn (GLM, an added OpenRouter model) is gated on its
+  // provider setup, not on a Claude login: `claude auth status` reports token
+  // presence and says nothing about whether that endpoint will accept it.
+  if (isThirdPartyModel(params.model)) {
+    invariant(params.boxRoot !== undefined, "preflightChatBackend: a third-party model requires boxRoot");
     try {
-      await resolveGlmKeyOrThrow(params.boxRoot, { purpose: "chat-preflight" });
+      await providerEnvAdditions({ boxRoot: params.boxRoot, model: params.model, purpose: "chat-preflight" });
       return true;
     } catch (e) {
-      if (e instanceof GlmKeyError) {
+      if (e instanceof ProviderSetupError) {
         params.session.emit("error", e);
         return false;
       }

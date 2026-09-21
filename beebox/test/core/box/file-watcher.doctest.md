@@ -194,8 +194,17 @@ grew < 20
 => true
 ```
 
-```ts cleanup
+Closing gives every one of them back. `close()` drops each directory's subtree
+while iterating the same map, so a nested tree is where a skipped or repeated
+entry would show up as a leaked watch.
+
+```ts continue
 await closeBoxWatcher(box.root);
+`watched: ${watcher.watchedDirs().length} | fds released: ${openFDs() - before <= 0}`
+=> watched: 0 | fds released: true
+```
+
+```ts cleanup
 bus.close();
 await box.cleanup();
 ```

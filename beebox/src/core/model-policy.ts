@@ -8,10 +8,10 @@
  * slightly different fallback orders.
  */
 
-import { isChatModelAllowed } from "../shared/chat-models.js";
+import { isChatModelAllowed, isOpenRouterModelId, type AddedModel } from "../shared/chat-models.js";
 import { modelTier, providerOf, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
-import { loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
+import { loadAddedModels, loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
 
 /** A chat's own model state: an explicit pick, or "whatever the box says". */
 export type ChatModelChoice =
@@ -53,10 +53,13 @@ const UNPINNED_DEFAULT_TIER = "strong";
  * (see {@link resolveSmallModelForEngine}), which is why the default does not
  * live in here.
  */
-export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | null): string | null {
+export function resolveBoxModelForEngine(
+  engine: AgentEngine,
+  { pinned, added }: { pinned: string | null; added: readonly AddedModel[] },
+): string | null {
   if (pinned === null) return null;
   const model = normalizeModelId(pinned);
-  if (isChatModelAllowed(engine, model)) return model;
+  if (isChatModelAllowed(engine, { model, added })) return model;
   const tier = modelTier(model);
   if (tier === null) return null;
   return resolveProcedureModel({ engine, model: tier, provider: providerOf(model) });
@@ -77,9 +80,12 @@ export function resolveBoxModelForEngine(engine: AgentEngine, pinned: string | n
  * something the policy cannot read is not the same as a box saying nothing, and
  * quietly substituting a default there would hide a misconfiguration.
  */
-export function boxDefaultModel(engine: AgentEngine, pinned: string | null): string | null {
+export function boxDefaultModel(
+  engine: AgentEngine,
+  { pinned, added }: { pinned: string | null; added: readonly AddedModel[] },
+): string | null {
   if (pinned === null) return resolveProcedureModel({ engine, model: UNPINNED_DEFAULT_TIER });
-  return resolveBoxModelForEngine(engine, pinned);
+  return resolveBoxModelForEngine(engine, { pinned, added });
 }
 
 /**
@@ -88,16 +94,22 @@ export function boxDefaultModel(engine: AgentEngine, pinned: string | null): str
  * An explicit choice wins, unless it belongs to the other engine — a chat that
  * picked a Claude model on a box now running Codex falls through to the box
  * policy rather than to nothing.
+ *
+ * One exception keeps a pick the box no longer allows: an OpenRouter model the
+ * owner removed from admin. Falling through would quietly change who answers
+ * the chat, so the pick survives here and the spawn refuses it with the fix
+ * (boxholder, 2026-09-19).
  */
 export function resolveEffectiveModel(
-  { engine, pinned }: { engine: AgentEngine; pinned: string | null },
+  { engine, pinned, added }: { engine: AgentEngine; pinned: string | null; added: readonly AddedModel[] },
   choice: ChatModelChoice,
 ): ResolvedModel {
   if (choice.kind === "explicit") {
     const explicit = normalizeModelId(choice.model);
-    if (isChatModelAllowed(engine, explicit)) return { model: explicit, source: "explicit" };
+    if (isChatModelAllowed(engine, { model: explicit, added })) return { model: explicit, source: "explicit" };
+    if (engine === "claude" && isOpenRouterModelId(explicit)) return { model: explicit, source: "explicit" };
   }
-  const fromPolicy = boxDefaultModel(engine, pinned);
+  const fromPolicy = boxDefaultModel(engine, { pinned, added });
   if (fromPolicy !== null) return { model: fromPolicy, source: "default" };
   return { model: null, source: "none" };
 }
@@ -124,7 +136,7 @@ export function liveModelState(
  */
 export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | null> {
   const engine = await loadAgentEngine(boxRoot);
-  return resolveBoxModelForEngine(engine, await loadBoxModel(boxRoot));
+  return resolveBoxModelForEngine(engine, { pinned: await loadBoxModel(boxRoot), added: await loadAddedModels(boxRoot) });
 }
 
 /**
@@ -145,7 +157,9 @@ export function resolveSmallModelForEngine(params: {
   /** The box's effective default model — picks the efficient tier's provider when `pinned` is null. */
   boxDefault: string | null;
 }): string {
-  const chosen = resolveBoxModelForEngine(params.engine, params.pinned);
+  // No added list: an OpenRouter model is never a small-pass pin
+  // (`readConfiguredModel` refuses it), so only the static menu applies.
+  const chosen = resolveBoxModelForEngine(params.engine, { pinned: params.pinned, added: [] });
   if (chosen !== null) return chosen;
   // No pinned small model: take the engine's efficient tier on the provider
   // the box's own default runs, so a GLM-defaulted box's cheap passes stay GLM

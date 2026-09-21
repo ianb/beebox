@@ -16,10 +16,11 @@ import { boxDefaultModel, liveModelState, resolveEffectiveModel, type ModelSourc
 import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "../../../core/chat/session/engine.js";
 import { glmKeyUsable } from "../../../core/glm-key.js";
-import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
+import { loadAddedModels, loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
 import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import type { AgentEngine } from "../../../core/box/config.js";
-import { isChatModelAllowed } from "../../../shared/chat-models.js";
+import { isChatModelAllowed, type AddedModel } from "../../../shared/chat-models.js";
+import { openRouterKeyUsable } from "../../../core/openrouter.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { archiveChatSession } from "../../../core/chat/session/archive.js";
@@ -89,6 +90,12 @@ export interface ChatSessionStatus {
   boxEngine: AgentEngine;
   /** A usable `glm` key exists for this box — gates the picker's GLM rows. */
   glmAvailable: boolean;
+  /**
+   * The OpenRouter models the owner added in admin, or none when the box has
+   * no usable `openrouter` key — rows whose every run would refuse are noise.
+   * A courtesy like `glmAvailable`; the spawn is the gate.
+   */
+  addedModels: AddedModel[];
 }
 
 /**
@@ -105,14 +112,15 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
   const { registry } = requireRuntime(boxRoot);
   const engine = await resolveChatEngine(boxRoot, { sessionId });
   const pinned = await loadBoxModel(boxRoot);
-  const boxDefault = boxDefaultModel(engine, pinned);
+  const added = await loadAddedModels(boxRoot);
+  const boxDefault = boxDefaultModel(engine, { pinned, added });
   const target = sessionId === null ? undefined : registry.get(sessionId);
   // An evicted session is not in the registry, so its choice comes off disk —
   // the same value it would load back with.
   const state = target?.modelState()
     ?? { explicit: sessionId === null ? null : loadCurrentModel(boxRoot, chatModelFileForSession(sessionId)), resolved: null };
   const wouldUse = resolveEffectiveModel(
-    { engine, pinned },
+    { engine, pinned, added },
     state.explicit === null ? { kind: "follow" } : { kind: "explicit", model: state.explicit },
   );
   const running = target?.isRunning() ?? false;
@@ -133,6 +141,7 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
     enabledEngines: await loadEnabledEngines(boxRoot),
     boxEngine: await loadAgentEngine(boxRoot),
     glmAvailable: await glmKeyUsable(boxRoot),
+    addedModels: added.length > 0 && (await openRouterKeyUsable(boxRoot)) ? added : [],
   };
 }
 
@@ -236,7 +245,7 @@ export const chatControlProcedures = {
   // up the new model (a live `set_model` control request isn't honored).
   setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
     const engine = await requireRecordedEngine(ctx.boxRoot, input.session);
-    if (!isChatModelAllowed(engine, input.model)) {
+    if (!isChatModelAllowed(engine, { model: input.model, added: await loadAddedModels(ctx.boxRoot) })) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `Model ${input.model ?? "default"} is unavailable for ${engine} chats`,
@@ -275,7 +284,7 @@ export const chatControlProcedures = {
    */
   setDefaultModel: ownerProcedure.input(z.object({ model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
     const engine = await loadAgentEngine(ctx.boxRoot);
-    if (input.model !== null && !isChatModelAllowed(engine, input.model)) {
+    if (input.model !== null && !isChatModelAllowed(engine, { model: input.model, added: await loadAddedModels(ctx.boxRoot) })) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `Model ${input.model} is unavailable for ${engine} chats`,
@@ -361,20 +370,25 @@ export const chatControlProcedures = {
       const contextDir = input.contextDir ?? null;
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
-      if (input.engine !== undefined && !(await loadEnabledEngines(ctx.boxRoot)).includes(input.engine)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.engine} is not enabled for this box` });
+      const enabled = await loadEnabledEngines(ctx.boxRoot);
+      // A model is only meaningful on the engine it was checked against, so a
+      // reservation that names one records that engine too — the same rule
+      // as a `"new"` send (`chat-send-target.ts`).
+      const engine = input.engine ?? (input.model === undefined ? undefined : enabled[0] ?? "claude");
+      if (engine !== undefined && !enabled.includes(engine)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${engine} is not enabled for this box` });
       }
-      if (input.model !== undefined && !isChatModelAllowed(input.engine ?? "claude", input.model)) {
+      if (input.model !== undefined && engine !== undefined && !isChatModelAllowed(engine, { model: input.model, added: await loadAddedModels(ctx.boxRoot) })) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Model ${input.model} is unavailable for ${input.engine ?? "claude"} chats`,
+          message: `Model ${input.model} is unavailable for ${engine} chats`,
         });
       }
       return registry.reserve({
         sessionId: input.sessionId,
         contextDir,
         seedFeatures: await seedFeaturesForNewChat({ boxRoot: ctx.boxRoot, contextDir }),
-        ...(input.engine !== undefined ? { requestedEngine: input.engine } : {}),
+        ...(engine !== undefined ? { requestedEngine: engine } : {}),
         ...(input.model !== undefined ? { model: input.model } : {}),
       });
     }),
