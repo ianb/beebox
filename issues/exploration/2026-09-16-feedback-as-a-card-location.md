@@ -1,6 +1,6 @@
 ---
 title: "Replace the bbx feedback command with a directory of feedback cards"
-workstream: unattached
+workstream: feedback-as-cards
 area: beebox
 filed-by: agent
 discovered-by: Ian

@@ -13,7 +13,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { deployTarget } from "../bin/deploy-target.js";
@@ -27,11 +27,22 @@ const FEEDBACK_DIR = path.join("_config", "feedback");
 const RESOLVED_DIR = path.join("_config", "feedback", "resolved");
 const REMOTE_BOXES_DIR = "/home/beebox/boxes";
 
-// `bbx feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
-// that shape so the feedback dir's own docs (CLAUDE.md, MAP.md, README.md) are
-// never collected — and, critically, never swept into resolved/ by --resolve-all.
-function isFeedbackFilename(name: string): boolean {
+const DIRECTORY_DOCS = new Set(["AGENTS.md", "CLAUDE.md", "MAP.md", "README.md"]);
+
+function isLegacyFeedbackFilename(name: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-.+\.md$/.test(name);
+}
+
+function isFeedbackFilename(name: string): boolean {
+  return name.endsWith(".doc.card") || isLegacyFeedbackFilename(name);
+}
+
+function isCandidate(name: string): boolean {
+  return !name.startsWith(".") && !DIRECTORY_DOCS.has(name);
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function getRemoteSshTarget(): string | null {
@@ -69,8 +80,9 @@ function findLocalBoxes(boxesDir: string): string[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(boxesDir, { withFileTypes: true });
-  } catch {
-    return [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
 
   return entries
@@ -88,26 +100,36 @@ interface FeedbackFile {
   remoteSshTarget?: string;
 }
 
-function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
+function collectLocalFeedback(boxes: string[], errors: string[], requireDirectory: boolean): FeedbackFile[] {
   const items: FeedbackFile[] = [];
+  let feedbackDirsFound = 0;
 
   for (const boxRoot of boxes) {
     const feedbackDir = path.join(boxRoot, FEEDBACK_DIR);
     if (!fs.existsSync(feedbackDir)) continue;
+    feedbackDirsFound++;
 
-    let files: string[];
+    let entries: fs.Dirent[];
     try {
-      files = fs.readdirSync(feedbackDir).filter(isFeedbackFilename);
-    } catch {
+      entries = fs.readdirSync(feedbackDir, { withFileTypes: true });
+    } catch (err) {
+      errors.push(`Cannot scan ${feedbackDir}: ${String(err)}`);
       continue;
     }
 
-    for (const file of files.sort()) {
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const file = entry.name;
+      if (!isCandidate(file) || entry.isDirectory()) continue;
+      if (!entry.isFile() || !isFeedbackFilename(file)) {
+        errors.push(`Unrecognized feedback file: ${path.join(feedbackDir, file)}`);
+        continue;
+      }
       const filePath = path.join(feedbackDir, file);
       let content: string;
       try {
         content = fs.readFileSync(filePath, "utf-8");
-      } catch {
+      } catch (err) {
+        errors.push(`Cannot read ${filePath}: ${String(err)}`);
         continue;
       }
 
@@ -121,34 +143,55 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
     }
   }
 
+  if (requireDirectory && boxes.length > 0 && feedbackDirsFound === 0) {
+    errors.push(`No _config/feedback/ directories found in ${boxes.length} local box(es); check the feedback path.`);
+  }
+
   return items;
 }
 
-function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
+function collectRemoteFeedback(sshTarget: string, errors: string[]): FeedbackFile[] {
   const find = runOnServer({
     sshTarget,
-    script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/_config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
+    script: [
+      "set -e",
+      `dirs=$(find ${shellQuote(REMOTE_BOXES_DIR)} -mindepth 3 -maxdepth 3 -type d -path '*/_config/feedback' -print)`,
+      `if [ -z "$dirs" ]; then echo 'No remote _config/feedback/ directories found; check the feedback path.' >&2; exit 1; fi`,
+      `find ${shellQuote(REMOTE_BOXES_DIR)} -mindepth 4 -maxdepth 4 -type f -path '*/_config/feedback/*' -print`,
+    ].join("\n"),
   });
   if (find.exitCode !== 0) {
-    console.error(`Warning: could not reach ${sshTarget}: ${find.stderr.trim()}`);
+    errors.push(`Cannot scan ${sshTarget}: ${find.stderr.trim() || `exit ${find.exitCode}`}`);
     return [];
   }
 
-  const files = find.stdout.trim().split("\n").filter(Boolean).filter((p) => isFeedbackFilename(path.basename(p)));
+  const files = find.stdout.trim().split("\n").filter(Boolean);
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {
+    const file = path.basename(filePath);
+    if (!isCandidate(file)) continue;
+    if (!isFeedbackFilename(file)) {
+      errors.push(`Unrecognized remote feedback file: ${filePath}`);
+      continue;
+    }
     // Path format: /home/beebox/boxes/<boxname>/_config/feedback/<file>
     const boxName = filePath.split("/")[4];
-    if (!boxName) continue;
+    if (!boxName) {
+      errors.push(`Unexpected remote feedback path: ${filePath}`);
+      continue;
+    }
     const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
     const relPath = filePath.slice(boxRoot.length + 1);
 
     const read = runOnServer({
       sshTarget,
-      script: `cat ${JSON.stringify(filePath)}`,
+      script: `cat ${shellQuote(filePath)}`,
     });
-    if (read.exitCode !== 0) continue;
+    if (read.exitCode !== 0) {
+      errors.push(`Cannot read ${filePath}: ${read.stderr.trim() || `exit ${read.exitCode}`}`);
+      continue;
+    }
 
     items.push({
       boxRoot,
@@ -163,35 +206,30 @@ function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
   return items;
 }
 
-function resolveLocalFile(item: FeedbackFile): void {
-  const resolvedDir = path.join(item.boxRoot, RESOLVED_DIR);
-  fs.mkdirSync(resolvedDir, { recursive: true });
-
-  const dest = path.join(resolvedDir, path.basename(item.filePath));
-  fs.renameSync(item.filePath, dest);
-
-  const srcRel = item.relPath;
+function resolveLocalFile(item: FeedbackFile): boolean {
+  const dest = path.join(item.boxRoot, RESOLVED_DIR, path.basename(item.filePath));
+  if (fs.existsSync(dest)) {
+    console.error(`Resolved destination already exists: ${dest}`);
+    return false;
+  }
   const destRel = path.relative(item.boxRoot, dest);
-
-  // Commit ONLY these two paths: a box routinely has connector changes staged,
-  // and a bare `git commit` swept them in under this message. On failure (the
-  // box's pre-commit lint, usually) undo the move so nothing is left staged.
-  const git = (args: string): void => {
-    execSync(`git -C ${JSON.stringify(item.boxRoot)} ${args}`, { stdio: "pipe" });
-  };
-  const paths = `${JSON.stringify(srcRel)} ${JSON.stringify(destRel)}`;
   try {
-    git(`add -- ${paths}`);
-    git(`commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)} -- ${paths}`);
+    execFileSync(path.join(__dirname, "..", "beebox", "bin", "bbx"), ["mv", "--commit", item.relPath, destRel], {
+      cwd: item.boxRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
     console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
+    return true;
   } catch (err) {
-    git(`reset -q -- ${paths}`);
-    fs.renameSync(dest, item.filePath);
-    console.error(`Git error resolving ${item.filePath} (move undone): ${(err as Error).message}`);
+    const details = err as Error & { stderr?: Buffer | string };
+    const reason = details.stderr?.toString().trim() || String(err);
+    console.error(`bbx mv failed resolving ${item.filePath}: ${reason}. The box may contain partial changes; inspect it before retrying.`);
+    return false;
   }
 }
 
-function resolveRemoteFile(item: FeedbackFile): void {
+function resolveRemoteFile(item: FeedbackFile): boolean {
   const destPath = item.filePath.replace(
     "/_config/feedback/",
     "/_config/feedback/resolved/"
@@ -201,40 +239,33 @@ function resolveRemoteFile(item: FeedbackFile): void {
     "_config/feedback/resolved/"
   );
 
-  // Runs as the `beebox` user (run-on-server default). NEVER drop the
-  // `su` and let git run as root — root-owned commits leave root-owned
-  // objects under .git/objects/ that later block beebox-user commits.
-  // See feedback-review/run-on-server.ts for the why.
-  // Same rules as resolveLocalFile: commit only these two paths, and undo the
-  // move if the commit fails so the live box is left as it was.
-  const box = JSON.stringify(item.boxRoot);
-  const paths = `${JSON.stringify(item.relPath)} ${JSON.stringify(destRel)}`;
+  // runOnServer drops to the `beebox` user; the deployed CLI lives at this
+  // stable symlink and commits the move and rewritten referrers by path.
   const script = [
     "set -e",
-    `mkdir -p ${JSON.stringify(path.dirname(destPath))}`,
-    `mv ${JSON.stringify(item.filePath)} ${JSON.stringify(destPath)}`,
-    `git -C ${box} add -- ${paths}`,
-    `if ! git -C ${box} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)} -- ${paths}; then`,
-    `  git -C ${box} reset -q -- ${paths}`,
-    `  mv ${JSON.stringify(destPath)} ${JSON.stringify(item.filePath)}`,
-    "  exit 1",
-    "fi",
+    `test ! -e ${shellQuote(destPath)} || { echo 'Resolved destination already exists' >&2; exit 1; }`,
+    `cd ${shellQuote(item.boxRoot)}`,
+    `BBX_CLI_PREBUILT=1 /usr/local/bin/bbx mv --commit ${shellQuote(item.relPath)} ${shellQuote(destRel)}`,
   ].join("\n");
 
   const r = runOnServer({ sshTarget: item.remoteSshTarget!, script });
   if (r.exitCode !== 0) {
-    console.error(`Remote git error resolving ${item.filePath} (move undone): ${r.stderr.trim()}`);
-    return;
+    console.error(`Remote bbx mv failed resolving ${item.filePath}: ${r.stderr.trim() || `exit ${r.exitCode}`}. The box may contain partial changes; inspect it before retrying.`);
+    return false;
   }
   console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
+  return true;
 }
 
-function resolveFile(item: FeedbackFile): void {
-  if (item.remoteSshTarget) {
-    resolveRemoteFile(item);
-  } else {
-    resolveLocalFile(item);
+function resolveFile(item: FeedbackFile): boolean {
+  if (isLegacyFeedbackFilename(path.basename(item.filePath))) {
+    console.error(`Cannot resolve legacy feedback ${item.filePath}: apply the feedback-to-doc-cards box migration first.`);
+    return false;
   }
+  if (item.remoteSshTarget) {
+    return resolveRemoteFile(item);
+  }
+  return resolveLocalFile(item);
 }
 
 function printFeedback(items: FeedbackFile[]): void {
@@ -259,15 +290,24 @@ async function main(): Promise<void> {
   const { boxesDir, resolve, resolveAll, noRemote } = parseArgs();
 
   const localBoxes = findLocalBoxes(boxesDir);
-  const items: FeedbackFile[] = collectLocalFeedback(localBoxes);
+  const errors: string[] = [];
+  if (noRemote && localBoxes.length === 0) {
+    errors.push(`No local boxes found in ${boxesDir}; check --boxes.`);
+  }
+  const items: FeedbackFile[] = collectLocalFeedback(localBoxes, errors, noRemote);
 
   if (!noRemote) {
     const remoteSshTarget = getRemoteSshTarget();
     if (remoteSshTarget) {
-      items.push(...collectRemoteFeedback(remoteSshTarget));
+      items.push(...collectRemoteFeedback(remoteSshTarget, errors));
     } else {
-      console.error("Warning: no deploy target configured (beebox/deploy/target.env), skipping remote collection.");
+      errors.push("No deploy target configured (beebox/deploy/target.env); remote collection was not run. Use --no-remote for a local-only scan.");
     }
+  }
+
+  if (errors.length > 0) {
+    for (const error of errors) console.error(error);
+    throw new Error(`Feedback scan incomplete (${errors.length} error(s)); no items were resolved.`);
   }
 
   if (resolve !== null) {
@@ -282,13 +322,16 @@ async function main(): Promise<void> {
       console.error("Run without --resolve to list available files.");
       process.exit(1);
     }
-    resolveFile(match);
+    if (!resolveFile(match)) process.exitCode = 1;
     return;
   }
 
   if (resolveAll) {
     for (const item of items) {
-      resolveFile(item);
+      if (!resolveFile(item)) {
+        process.exitCode = 1;
+        break;
+      }
     }
     return;
   }

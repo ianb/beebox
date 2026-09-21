@@ -4542,6 +4542,37 @@ test1:
       peak: 54387
       added: 2971
       turns: 3
+  agent-feedback-card-purpose:
+    - date: 2026-09-21T11:08:11.293Z
+      boxCommit: c1223aa1e04f337466649cbf1cc5da5f29e09f45
+      repoCommit: cbcd735bd31d879e22afae735be30729b93551dd
+      initial: 49099
+      peak: 49099
+      added: 0
+      turns: 1
+  agent-feedback-card-when-to-use:
+    - date: 2026-09-21T11:08:11.293Z
+      boxCommit: c1223aa1e04f337466649cbf1cc5da5f29e09f45
+      repoCommit: cbcd735bd31d879e22afae735be30729b93551dd
+      initial: 49086
+      peak: 49086
+      added: 0
+      turns: 1
+  agent-feedback-card-uses-it:
+    - date: 2026-09-21T11:08:11.293Z
+      boxCommit: c1223aa1e04f337466649cbf1cc5da5f29e09f45
+      repoCommit: cbcd735bd31d879e22afae735be30729b93551dd
+      initial: 49145
+      peak: 60226
+      added: 11081
+      turns: 15
+    - date: 2026-09-21T11:25:53.217Z
+      boxCommit: 4e227d982fb68bb8aec58ba6b0c31c1ce61519f4
+      repoCommit: cbcd735bd31d879e22afae735be30729b93551dd
+      initial: 49052
+      peak: 60860
+      added: 11808
+      turns: 18
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

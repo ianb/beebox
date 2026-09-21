@@ -2885,69 +2885,63 @@ tests:
       mode: agent says it has to look, or its answer matches some
       generic notion of "scans" without the box-specific details.
 
-  # === Agent Feedback (bbx feedback) ===
+  # === Agent feedback cards ===
   #
-  # Verifies agents know about the bbx feedback command, when to use it,
-  # and will actually use it when they notice something confusing.
+  # Verifies agents know where to record tooling observations, can distinguish
+  # them from boxholder feedback cards, and will write one when needed.
   #
-  # Status (2026-05-13): All 3 pass. bbx-feedback-purpose and bbx-feedback-when-to-use
-  # answered with 0 file reads (knows_directly). bbx-feedback-uses-it read 1 file
-  # (bbx-commands.md to check validate docs) then ran bbx feedback correctly.
+  # Status (2026-05-13): Previous command-based audits passed 3/3.
+  # Status (2026-09-21): Card-based audits passed 3/3 on the isolated test box.
+  # Purpose and use cases needed no reads; behavioral creation read 8 files,
+  # created _config/feedback/Confusing_Validate_Committed_Flag.doc.card with
+  # context, and committed it.
+  # Status (2026-09-21, path rerun): Behavioral audit passed 1/1; the agent
+  # wrote the prompted machine path as /_config/box.json in its card.
 
-  - id: bbx-feedback-purpose
-    prompt: "There's a bbx feedback command. What is it for and who uses it?"
+  - id: agent-feedback-card-purpose
+    prompt: "Where should you record an observation about confusing Bee Box tooling, and what card type should you use?"
     expected_level: knows_directly
     watch_for: >
-      Explains it's for agents to record CLI friction, confusing conventions,
-      odd file placements, or unclear behaviors — without interrupting the
-      current task. Should mention it writes to config/feedback/ and commits.
-      Should not confuse this with the feedback card type (user feedback on
-      briefings, captures, etc.).
-    correct_contains: ["config/feedback", "commit"]
-    correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
-    tags: [feedback, cli]
+      Says to create a .doc.card in _config/feedback/, write the observation
+      and relevant context in its body, and commit normally. Distinguishes
+      this from a .feedback.card, which captures a boxholder response.
+    correct_contains: ["_config/feedback/", ".doc.card", ".feedback.card"]
+    tags: [feedback, cards]
 
-  - id: bbx-feedback-when-to-use
+  - id: agent-feedback-card-when-to-use
     prompt: >
-      Give me three examples of situations where you would use bbx feedback,
-      and three where you would not.
+      Give me three situations where you would put a doc card in
+      _config/feedback/, and two where you would not.
     expected_level: knows_directly
     watch_for: >
-      "Would use" examples should be about CLI tooling observations: confusing
-      flag names, unclear error messages, awkward workflows, files landing in
-      odd places, surprising behavior. "Would not use" examples should contrast
-      with other channels: chat for questions the user needs to answer, bbx
-      answer for pending question cards, self-note for scheduled-task summaries,
-      just fixing something vs. noting it.
+      Use it for CLI/tooling friction and confusing conventions. Do not put
+      the boxholder's response to a surfaced card there; that is .feedback.card.
     correct_contains_any: ["flag", "option", "error", "confus", "awkward", "workflow", "convention"]
-    tags: [feedback, cli]
+    tags: [feedback, cards]
     notes: >
-      The key distinction: bbx feedback is for tooling observations the developer
-      (not the boxholder) should act on. It's NOT for user-facing feedback,
-      questions for the boxholder, or things the agent can fix itself right now.
+      The directory is an agent-to-developer observation inbox, not a general
+      user-feedback or question channel.
 
-  - id: bbx-feedback-uses-it
+  - id: agent-feedback-card-uses-it
     prompt: >
       While looking at the validate command docs, you notice that the --committed
       flag is confusingly named — it sounds like it validates committed cards,
-      but it actually checks that the git working tree is clean. Note this
-      observation appropriately and then tell me what bbx validate --committed
-      actually does.
+      but it actually checks that the git working tree is clean. Record this
+      tooling observation with its relevant context. The error you saw named
+      /home/beebox/boxes/test1/_config/box.json. Then tell me what bbx validate
+      --committed actually does.
     expected_level: knows_directly
     watch_for: >
-      Agent runs `bbx feedback` with a specific observation about the --committed
-      flag naming, then correctly explains what the flag actually does (checks
-      git working tree cleanliness). Should not ask the user about it or use
-      any other channel for the observation.
+      Agent creates a .doc.card under _config/feedback/ with a useful title,
+      the confusing flag name, why it misleads, and context. It commits the
+      card with ordinary card/Git tools and explains the working-tree check.
     correct_contains: ["clean", "working tree"]
+    cards_contain: ["--committed", "Context", "/_config/box.json"]
     max_turns: 15
-    tags: [feedback, cli, behavioral]
+    tags: [feedback, cards, behavioral]
     notes: >
-      This is a behavioral test — we're checking that the agent actually uses
-      bbx feedback rather than just knowing it exists. The prompt says "note this
-      observation appropriately" which should trigger bbx feedback. If the agent
-      instead asks the user or uses a self-note, it has the wrong model of the
-      command's purpose.
+      The card itself is checked for relevant context; the report should also
+      be inspected for its path and commit because cards_contain is box-wide.
 
   # === Triage Pipeline ===
   #

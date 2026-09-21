@@ -188,6 +188,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // migration moved the tracked files without renaming the tracker's keys, so
   // every tracked template read as untracked and parked. See the script.
   { name: "rekey-template-versions", script: "scripts/migrate/rekey-template-versions.ts" },
+  // Agent observations now live as ordinary doc cards in _config/feedback.
+  // Convert command-written Markdown in both active and resolved directories.
+  { name: "feedback-to-doc-cards", script: "scripts/migrate/feedback-to-doc-cards.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
