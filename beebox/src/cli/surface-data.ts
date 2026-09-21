@@ -61,6 +61,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "search", audience: "agent", smoke: { run: ["search", "zqxjkv"] } },
   { name: "contains", audience: "agent", smoke: { run: ["contains", "list"] } },
   { name: "todos", audience: "agent", smoke: { run: ["todos"] } },
+  { name: "query", audience: "agent", smoke: { run: ["query", "todos"] } },
   { name: "validate", audience: "agent", smoke: { run: ["validate"] } },
   { name: "refresh-maps", audience: "agent", smoke: MUTATES },
   { name: "extfile", audience: "agent", smoke: MUTATES },

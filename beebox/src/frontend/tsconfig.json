@@ -45,6 +45,9 @@
       "@schemas/*": ["../schemas/*"]
     }
   },
-  "include": ["eslint.config.ts", "src", "../shared/**/*"],
+  // `../schemas/**/*.list-entry.tsx` — a card type's list component, which
+  // lives beside its schema but is frontend code. The backend tsconfig excludes
+  // the same glob.
+  "include": ["eslint.config.ts", "src", "../shared/**/*", "../schemas/**/*.list-entry.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

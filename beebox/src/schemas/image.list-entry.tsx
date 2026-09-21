@@ -1,16 +1,21 @@
 /**
- * Custom ListComponent for image cards — renders a thumbnail alongside the
- * title in the FileEntry middle slot. Demonstrates the extension point.
+ * The image card's list row — a thumbnail beside the title, in place of
+ * `FileEntry`'s default middle slot.
  *
- * The attached image file lives in the card's attach scope; the loader's
- * computed `filename` attr uses the `attach/…` virtual prefix.
+ * It lives beside `image.tsx` because it is the other half of how an image
+ * card presents itself: the schema's `summarize` produces the summary, this
+ * renders it. A `*.list-entry.tsx` file is FRONTEND code sitting in the
+ * schemas tree — the backend program excludes it, it may reach the schemas
+ * and core trees by TYPE import only, and no backend module may import it.
+ * `src/frontend/src/file-types/builtins.tsx` registers it; it does not
+ * register itself.
  */
 
-import type { ListProps } from "../../file-types/registry";
-import type { ImageAttrs } from "@schemas/image";
-import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../../api";
-import { resolveRelativePath } from "../../lib/view-url";
-import { isTransformablePhotoPath } from "../../lib/image-transform-url";
+import type { ListProps } from "../frontend/src/file-types/registry";
+import type { ImageSummaryAttrs } from "./image";
+import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../frontend/src/api";
+import { resolveRelativePath } from "../frontend/src/lib/view-url";
+import { isTransformablePhotoPath } from "../frontend/src/lib/image-transform-url";
 
 function imageSrc(cardPath: string, filenameRef: string): string {
   const resolved = resolveRelativePath(cardPath, filenameRef);
@@ -26,7 +31,7 @@ function imageSrc(cardPath: string, filenameRef: string): string {
   });
 }
 
-export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {
+export function ImageCardListEntry({ data, compact }: ListProps<ImageSummaryAttrs>) {
   const filename = data.attrs ? data.attrs.filename : undefined;
 
   return (

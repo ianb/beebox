@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-19T17:57:17Z
-Total documents: 392
+Generated: 2026-09-21T01:28:56Z
+Total documents: 394
 
 ## Issues
 
@@ -33,7 +33,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (704 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (251 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (340 lines) · shipped history · implemented
-- **docs/implemented-plans/openrouter-chat-models.md** — "OpenRouter chat models, added by the owner in admin" (588 lines) · shipped history · implemented
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (446 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (379 lines) · implementation review
 - **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
@@ -107,7 +106,7 @@ Referenced by:
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
 - docs/README.md:69 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
-- docs/adding-schemas.md:273 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
+- docs/adding-schemas.md:328 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/agent-coding.md:13 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
 - docs/agent-testing.md:39 (mention) — agent absorbed from the guidance a box loads: its `CLAUDE.md`, generated agent
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
@@ -442,6 +441,7 @@ Referenced by:
 - docs/implemented-plans/slopo-codehealth-adoption.md:48 (mention) — - **`beebox/code-style.md`** — style preferences; the centralise-a-cast
 - docs/implemented-plans/tailscale-expose-and-protect.md:51 (mention) — - `beebox/code-style.md` — no default parameters, injected-deps
 - docs/implemented-plans/todo-annotation.md:59 (mention) — - `beebox/code-style.md` — exhaustiveness (`assertNever` over status),
+- docs/implemented-plans/todo-collection.md:91 (mention) — - **`beebox/code-style.md`**: no `as`; exhaustive dispatch with `assertNever`;
 - docs/implemented-plans/user-location.md:66 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:34 (mention) — - `beebox/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webapp-production-mode.md:40 (mention) — - `code-style.md:88-89`: resolve optional values inside function bodies and
@@ -712,7 +712,7 @@ References:
 
 #### docs/adding-schemas.md
 
-Title: "Adding a New Card Schema" | 287 lines | current reference
+Title: "Adding a New Card Schema" | 342 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -731,6 +731,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:461 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
+- docs/implemented-plans/todo-collection.md:680 (mention) — `docs/adding-schemas.md`, the box's own schema-authoring guide
 - docs/migrations.md:575 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
@@ -884,9 +885,9 @@ Referenced by:
 - docs/plans/source-available-release.md:66 (mention) — and documented at `beebox/docs/box-layout.md:194`. No credential values
 - user-stories/catalog/2026-06-26.md:4938 (mention) — The user story is accurately implemented across both claimed files. `beebox/src/cli/commands/init.ts` provides the CLI o
 - user-stories/catalog/2026-08-21.md:7676 (mention) — Files: `beebox/src/lib/box-shape.ts`, `beebox/docs/box-layout.md`
-- ../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md:22 (mention) — and `_bookkeeping/…` (`docs/box-layout.md`).
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:14 (mention) — **Supporting stale references in the same family.** `bbx init` still creates the decoy directory: `config/schemas` is a
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:44 (mention) — fields are already in `docs/box-layout.md`, so a per-box MAP bullet would only
+- ../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md:35 (mention) — and `_bookkeeping/…` (`docs/box-layout.md`).
 - ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:20 (mention) — > `beebox/docs/box-layout.md`.
 - ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:24 (link) — an agent sees. See [`box-layout.md`](../../../beebox/docs/box-layout.md).
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:22 (mention) — the dev-repo `docs/box-layout.md:82` ("scratch space (not committed)"). **Box
@@ -927,7 +928,7 @@ Title: "Card validation hooks" | 77 lines | current reference
 
 Referenced by:
 - CLAUDE.md:29 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
-- docs/cards-as-markdown.md:126 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/cards-as-markdown.md:133 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/guides.md:34 (link) — | Card validation hooks | [docs/card-validation.md](card-validation.md) |
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
@@ -941,7 +942,7 @@ References:
 
 #### docs/cards-as-markdown.md
 
-Title: "Cards as Markdown" | 135 lines | current reference
+Title: "Cards as Markdown" | 142 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -958,6 +959,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:13 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `bbx tail`
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards-as-markdown.md` gains the tag reference; the issue file closes
+- docs/implemented-plans/todo-collection.md:535 (mention) — schema instructions, `docs/cards-as-markdown.md:80-88`, and the two audits that
 - docs/migrations.md:573 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards-as-markdown.md:22-24`, `beebox/docs/box-layout.md:240-250`).
@@ -965,6 +967,7 @@ Referenced by:
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
 - ../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.md:8 (mention) — **Closed:** Implemented: the card format moved to YAML frontmatter + Markdown body, and the legacy XML card format, its
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:20 (mention) — entry). Agent guide, `docs/cards-as-markdown.md`, and `knowledge-audits.yaml`
+- ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:29 (mention) — - `beebox/docs/cards-as-markdown.md` and the implemented todo-annotation plan
 
 References:
 - → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
@@ -972,6 +975,7 @@ References:
 - → docs/box-layout.md (mention)
 - → docs/README.md (mention)
 - → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/implemented-plans/todo-collection.md (mention)
 - → docs/card-validation.md (mention)
 
 #### docs/chat-review.md
@@ -1593,7 +1597,7 @@ Title: "Health Checks" | 297 lines | current reference
 
 Referenced by:
 - deploy/README.md:84 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
-- docs/adding-schemas.md:164 (link) — [`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
+- docs/adding-schemas.md:199 (link) — [`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
 - docs/connectors.md:72 (link) — [health-checks.md](health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 - docs/guides.md:40 (link) — | Deployed-server health-check runbooks | [docs/health-checks.md](health-checks.md) |
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
@@ -1659,7 +1663,7 @@ Referenced by:
 - user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
 - ../.claude/skills/bbx-context/SKILL.md:141 (mention) — `docs/knowledge-audits.md`).
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:60 (mention) — (`docs/knowledge-audits.md`).
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:69 (mention) — (`docs/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:10 (mention) — `beebox/docs/knowledge-audits.md`.
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:102 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
@@ -1732,6 +1736,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md:22 (mention) — A card has no mark. A landmark does — `navigation.symbol` (`beebox/docs/landmarks.md`)
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:28 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:70 (link) — - [Landmarks](../../beebox/docs/landmarks.md) — the navigation surface the
+- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:481 (mention) — `docs/landmarks.md` and again in that plan, and it is not built.
 
 References:
 - → docs/implemented-plans/card-prominence.md (mention)
@@ -1872,6 +1877,7 @@ Referenced by:
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `beebox/docs/mobile-contract.md`**
 - ../CLAUDE.md:9 (link) — - **Native iOS companion:** [ios-app/CLAUDE.md](ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](beebox/docs/mobi
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:39 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
+- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:63 (mention) — (`beebox/docs/mobile-contract.md:487-495`): native detects over its own
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../beebox/docs/mobile-contract.md).
@@ -1979,7 +1985,7 @@ Referenced by:
 
 #### docs/procedure-implementation.md
 
-Title: "Procedures" | 265 lines | current reference
+Title: "Procedures" | 262 lines | current reference
 
 Referenced by:
 - CLAUDE.md:49 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
@@ -2040,7 +2046,7 @@ Referenced by:
 - docs/prompt-audits.md:3 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
 - src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
 - ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompt-surface-review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:45 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
 - ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
 - ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
@@ -4446,13 +4452,17 @@ References:
 - → docs/landmarks.md (mention)
 - → CLAUDE.md (mention)
 
-#### docs/implemented-plans/openrouter-chat-models.md **[ORPHAN]**
+#### docs/implemented-plans/openrouter-chat-models.md
 
 Title: "OpenRouter chat models, added by the owner in admin" | 588 lines | shipped history | implemented
 
+Referenced by:
+- ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md:13 (link) — > [openrouter-chat-models](../../../beebox/docs/implemented-plans/openrouter-chat-models.md)
+- ../issues/features/2026-07-18-provider-endpoint-config.md:28 (link) — > [openrouter-chat-models](../../beebox/docs/implemented-plans/openrouter-chat-models.md)
+
 References:
-- → ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md (frontmatter)
-- → ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md (link)
+- → ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md (frontmatter)
+- → ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md (link)
 - → ../issues/features/2026-07-18-provider-endpoint-config.md (link)
 - → docs/plans/box-glm-provider.md (mention)
 - → docs/model-policy.md (mention)
@@ -4639,7 +4649,7 @@ References:
 - → ../issues/closed/bugs/2026-08-24-map-children-git-vs-disk.md (link)
 - → ../issues/closed/bugs/2026-08-24-validate-judge-lacks-ignore-policy.md (link)
 - → ../issues/closed/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md (link)
-- → ../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
+- → ../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
 - → README.md (mention)
 - → CLAUDE.md (mention)
 
@@ -5224,8 +5234,9 @@ References:
 Title: "`{% todo %}` — universal todo annotation" | 596 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards-as-markdown.md:89 (mention) — record: `docs/implemented-plans/todo-annotation.md`.
+- docs/cards-as-markdown.md:89 (mention) — `docs/implemented-plans/todo-annotation.md` and
 - docs/implemented-plans/card-symbol.md:126 (mention) — (`docs/implemented-plans/todo-annotation.md:292`,
+- docs/implemented-plans/todo-collection.md:98 (mention) — (`docs/implemented-plans/todo-annotation.md`), goals 2 to 4: a trusted
 - docs/migrations.md:481 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
@@ -5245,6 +5256,29 @@ References:
 - → ../issues/exploration/2026-07-28-ad-hoc-agent-views.md (link)
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/todo-collection.md
+
+Title: "Todo collection — todos as a staged query, with summaries that belong to the card type" | 739 lines | shipped history | implemented
+
+Referenced by:
+- docs/cards-as-markdown.md:90 (mention) — `docs/plans/todo-collection.md`.
+- ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:11 (link) — The [todo collection plan](../../beebox/docs/implemented-plans/todo-collection.md) added
+
+References:
+- → docs/plans/collections-design-notes.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/features/2026-08-30-todos-inline-things-to-think-about.md (link)
+- → ../issues/features/2026-07-29-verify-todo-annotation-rendering.md (link)
+- → ../issues/features/2026-09-20-near-duplicate-todos-accumulate-across-cards.md (link)
+- → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
+- → docs/unimplemented-plans/query-cards.md (mention)
+- → code-style.md (mention)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → ../research/collection-use-cases-2026-09-19.md (link)
+- → ../research/tiddlywiki/README.md (link)
+- → docs/cards-as-markdown.md (mention)
+- → docs/adding-schemas.md (mention)
 
 #### docs/implemented-plans/top-nav-ia.md
 
@@ -5633,7 +5667,7 @@ Title: "Box-side GLM: Z.ai models on the claude engine" | 487 lines | proposal |
 Referenced by:
 - docs/implemented-plans/openrouter-chat-models.md:71 (mention) — the GLM precedent (`docs/plans/box-glm-provider.md`, "Stated preferences").
 - ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md:14 (mention) — fe3142614, 5ee730681, 2d3304d79 — see `beebox/docs/plans/box-glm-provider.md`).
-- ../issues/features/2026-09-19-openrouter-chat-models-added-in-admin.md:46 (mention) — the provider env; `docs/plans/box-glm-provider.md` is the design.
+- ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md:55 (mention) — the provider env; `docs/plans/box-glm-provider.md` is the design.
 
 References:
 - → ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md (frontmatter)
@@ -5836,6 +5870,20 @@ Title: "Production Codex session startup and authentication" | 159 lines | propo
 References:
 - → CLAUDE.md (mention)
 - → deploy/README.md (mention)
+
+#### docs/plans/collections-design-notes.md
+
+Title: "Collections — queries over cards, with todos as the worked example" | 220 lines | proposal | draft
+
+Referenced by:
+- docs/implemented-plans/todo-collection.md:18 (link) — [design notes](../plans/collections-design-notes.md). This plan does not repeat them.
+- ../issues/features/2026-09-20-near-duplicate-todos-accumulate-across-cards.md:69 (link) — [design notes](../../beebox/docs/plans/collections-design-notes.md): a list of todos over
+
+References:
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (frontmatter)
+- → docs/unimplemented-plans/query-cards.md (link)
+- → ../research/tiddlywiki/README.md (link)
+- → ../research/collection-use-cases-2026-09-19.md (link)
 
 #### docs/plans/commit-performance.md
 
@@ -6187,6 +6235,7 @@ Title: "iOS input-plane parity" | 556 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:304 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
+- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:90 (mention) — (`beebox/docs/plans/ios-input-plane-parity.md`, still `status: partial`) or
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:4 (frontmatter) — design: ../../beebox/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:26 (link) — [`ios-input-plane-parity.md`](../../beebox/docs/plans/ios-input-plane-parity.md).
 - ../issues/features/2026-08-18-ios-support-all-interface-orientations.md:50 (mention) — - `docs/plans/ios-input-plane-parity.md:461-463` says landscape and the
@@ -6251,7 +6300,7 @@ References:
 - → ../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md (link)
 - → ../issues/features/2026-08-24-parked-template-resolution-path.md (link)
 - → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)
-- → ../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
+- → ../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
 - → ../issues/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md (link)
 - → docs/reports/2026-09-14-migration-implementation-scope.md (link)
 - → docs/engineering-principles.md (mention)
@@ -6957,7 +7006,10 @@ Title: "Query cards — the "select and arrange cards" vocabulary" | 369 lines |
 Referenced by:
 - docs/design/interface-as-cards-background.md:291 (mention) — | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (
 - docs/implemented-plans/docs-reorg.md:52 (mention) — (header claims unmerged branch; commits are on main), `query-cards.md`
+- docs/implemented-plans/todo-collection.md:85 (mention) — `docs/unimplemented-plans/query-cards.md:9-13`: *"too complex, too
+- docs/plans/collections-design-notes.md:15 (link) — [query-cards plan](../unimplemented-plans/query-cards.md), the
 - docs/unimplemented-plans/README.md:19 (mention) — | `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on i
+- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:473 (link) — [`query-cards.md`](../../beebox/docs/unimplemented-plans/query-cards.md)
 
 References:
 - → docs/landmarks.md (mention)

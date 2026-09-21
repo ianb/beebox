@@ -9,8 +9,17 @@ payload) keeps its fuller shape.
 
 ```ts setup
 import { statusRouter } from "../../src/webapp/trpc/routers/status.js";
-import { collectTodos } from "../../src/core/todo/collect.js";
+import { runTodoQuery } from "../../src/core/todo/query.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+/** Every todo in the box, whatever its status — the collection runner, box-wide. */
+async function collectTodos(boxRoot) {
+  const result = await runTodoQuery(boxRoot, {
+    query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+    since: null,
+  });
+  return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
+}
 
 function caller(box) {
   const ctx = {
@@ -117,7 +126,7 @@ JSON.stringify(withTodos)
 
 The badge count is a fast path (parallel reads, and cards whose text can't
 mention a todo are skipped without parsing). It must still agree, card for
-card, with what `collectTodos` reports — including a `{% todo %}` captured in a
+card, with what a box-wide todo query reports — including a `{% todo %}` captured in a
 card body rather than frontmatter.
 
 ```ts continue

@@ -3,12 +3,15 @@
  * deterministic wakeup-housekeeping hook, following the `question-aging.ts`
  * precedent — resurfacing needs a call site, not just guidance.
  *
- * Runs the collector and computes three sets of *open* todos:
+ * Runs the todo collection box-wide (`core/todo/query.ts`, the same runner
+ * `bbx query todos` and the web list use) and computes three sets of *open*
+ * todos:
  * - **escalated** — past `due`.
- * - **stirring** — crossed `start` since the last sweep (a durable
- *   box-local-date baseline, persisted the same way the questions sweep
- *   persists its latch — see `question-alert.ts`'s `.beebox/…json`
- *   precedent). Only this set needs a baseline: escalated and stale are
+ * - **stirring** — crossed `start` since the last sweep. The baseline is the
+ *   sweep's own (`lastSweepDateEpoch`, persisted the same way the questions
+ *   sweep persists its latch — see `question-alert.ts`'s `.beebox/…json`
+ *   precedent), handed to the runner as the query's `since`; the collection
+ *   derives `stirring` from it. Only this set needs a baseline: escalated and stale are
  *   recomputed fresh every pass, so re-running the sweep with nothing new
  *   correctly reports nothing new for THIS set without extra bookkeeping.
  * - **stale** — open, has `created`, is more than 45 days old, and has
@@ -39,9 +42,11 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { sleep } from "../../lib/sleep.js";
 import { findJobCards } from "../reactor/job-discovery.js";
-import { collectTodos } from "./collect.js";
-import { formatTodoLocation, type CollectedTodo } from "./collect-types.js";
-import { resolveStartEpoch, parseIsoDate, boxLocalDateEpoch } from "../../shared/todo-model.js";
+import { runTodoQuery } from "./query.js";
+import { summaryText } from "../file-summary.js";
+import { formatTodoLocation } from "./collect-types.js";
+import type { DerivedTodo } from "./collection.js";
+import { parseIsoDate, boxLocalDateEpoch } from "../../shared/todo-model.js";
 import { createTodoReviewJobTemplate, type TodoReviewJobItem } from "../../schemas/todo-review-job.js";
 
 const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
@@ -96,10 +101,16 @@ async function saveSweepState(boxRoot: string, state: SweepState): Promise<void>
   await fs.writeFile(absPath, `${JSON.stringify(state, null, 2)}\n`);
 }
 
+/**
+ * A swept todo, plus the two things that make it readable in the brief
+ * without opening the card: what the card is, and what heading it sat under.
+ */
+export type SweptTodo = DerivedTodo & { card: string; section: string };
+
 export interface TodoReviewSweepResult {
-  escalated: CollectedTodo[];
-  stirring: CollectedTodo[];
-  stale: CollectedTodo[];
+  escalated: SweptTodo[];
+  stirring: SweptTodo[];
+  stale: SweptTodo[];
   /** Relative path of the job card created this pass, or null (empty sets, or a prior job is still pending). */
   jobPath: string | null;
 }
@@ -122,22 +133,21 @@ function ageInDays(created: string, todayEpoch: number): number | null {
   return Math.floor((todayEpoch - epoch) / MS_PER_DAY);
 }
 
-/** Split a box's open todos into escalated / stirring / stale, per the module doc's definitions. */
+/**
+ * Split a box's open todos into escalated / stirring / stale, per the module
+ * doc's definitions. `stirring` is already decided — the collection derived
+ * it from the `since` baseline this sweep handed the runner — so the only
+ * date arithmetic left here is the stale rule, which is the sweep's own.
+ */
 function computeSets(
-  todos: CollectedTodo[],
-  { todayEpoch, lastSweepEpoch }: { todayEpoch: number; lastSweepEpoch: number },
+  todos: SweptTodo[],
+  todayEpoch: number,
 ): Pick<TodoReviewSweepResult, "escalated" | "stirring" | "stale"> {
-  const open = todos.filter((t) => t.status === "open");
+  const escalated = todos.filter((t) => t.plateState === "escalated");
 
-  const escalated = open.filter((t) => t.plateState === "escalated");
+  const stirring = todos.filter((t) => t.stirring);
 
-  const stirring = open.filter((t) => {
-    if (t.plateState !== "on-plate" || t.start === undefined) return false;
-    const startEpoch = resolveStartEpoch(t.start, t.due);
-    return startEpoch !== null && startEpoch > lastSweepEpoch;
-  });
-
-  const stale = open.filter((t) => {
+  const stale = todos.filter((t) => {
     if (t.start !== undefined || t.due !== undefined || t.created === undefined) return false;
     const age = ageInDays(t.created, todayEpoch);
     return age !== null && age > STALE_DAYS;
@@ -147,7 +157,7 @@ function computeSets(
 }
 
 /** One item's `detail` line — whichever date drove it into its set, human-readable. */
-function detailFor(todo: CollectedTodo, kind: "escalated" | "stirring" | "stale"): string {
+function detailFor(todo: SweptTodo, kind: "escalated" | "stirring" | "stale"): string {
   switch (kind) {
     case "escalated":
       return `due ${todo.due ?? "?"}`;
@@ -158,14 +168,37 @@ function detailFor(todo: CollectedTodo, kind: "escalated" | "stirring" | "stale"
   }
 }
 
-function toJobItem(todo: CollectedTodo, kind: "escalated" | "stirring" | "stale"): TodoReviewJobItem {
+function toJobItem(todo: SweptTodo, kind: "escalated" | "stirring" | "stale"): TodoReviewJobItem {
   const item: TodoReviewJobItem = {
     locator: formatTodoLocation(todo),
     text: todo.text,
     detail: detailFor(todo, kind),
   };
   if (todo.assigned !== undefined) item.assigned = todo.assigned;
+  // Where it was written. A locator says which line; these say what the
+  // reader would have seen around it, so the brief reads in context.
+  if (todo.card !== "") item.card = todo.card;
+  if (todo.section !== "") item.section = todo.section;
   return item;
+}
+
+/** Every open todo the box holds, each carrying its card's summary text and its heading path. */
+async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<SweptTodo[]> {
+  const result = await runTodoQuery(boxRoot, {
+    query: { here: "", params: { status: ["open"] } },
+    since: lastSweepEpoch,
+  });
+  const out: SweptTodo[] = [];
+  for (const group of result.groups) {
+    for (const row of group.rows) {
+      const card = summaryText(row.card);
+      for (const item of row.items) {
+        if (!item.matching) continue;
+        out.push({ ...item, card, section: item.sectionPath.join(" › ") });
+      }
+    }
+  }
+  return out;
 }
 
 /**
@@ -221,8 +254,7 @@ async function runTodoReviewSweepLocked(boxRoot: string): Promise<TodoReviewSwee
   const state = await loadSweepState(boxRoot);
   const lastSweepEpoch = state.lastSweepDateEpoch ?? 0; // first run: everything already on-plate counts as "crossed since the box existed"
 
-  const { todos } = await collectTodos(boxRoot);
-  const sets = computeSets(todos, { todayEpoch, lastSweepEpoch });
+  const sets = computeSets(await sweptTodos(boxRoot, lastSweepEpoch), todayEpoch);
 
   const isEmpty = sets.escalated.length === 0 && sets.stirring.length === 0 && sets.stale.length === 0;
   if (isEmpty) {

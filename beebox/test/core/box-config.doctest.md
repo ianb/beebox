@@ -2,7 +2,7 @@
 
 `_config/box.json`'s `timezone` is hand-editable — a typo (`"America/Chciago"`
 instead of `"America/Chicago"`) is easy to make and easy to miss. Every
-timezone-aware call site (the todo collector, `bbx todos`, `todos.list`, the
+timezone-aware call site (the todo collection, `bbx query todos`, `collections.query`, the
 review sweep, session-context's ambient timezone line) feeds `loadBoxTimezone`'s
 return value straight into `Intl.DateTimeFormat({ timeZone })`, which THROWS a
 bare `RangeError` for an invalid IANA zone — so an unvalidated bad value would

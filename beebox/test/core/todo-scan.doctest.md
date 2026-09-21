@@ -1,16 +1,38 @@
-# The todo collector (`core/todo/collect.ts`)
+# Scanning a box for todos (`core/todo/query.ts`)
 
-Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 3:
-`collectTodos(boxRoot)` globs every card, parses each body once against the
-shared Markdoc vocabulary, and merges both capture forms (`{% todo %}` tags,
-frontmatter `todos:` entries) into one deterministically ordered list —
-reporting parse/validate/load failures and duplicate `id`s as visible
-issues rather than silently dropping a card's todos.
+Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md`
+Track 3, carried forward onto the collection runner
+(`docs/plans/todo-collection.md`, Track 4). A box-wide query globs every card,
+parses each body once against the shared Markdoc vocabulary, and merges both
+capture forms (`{% todo %}` tags, frontmatter `todos:` entries) into one
+deterministically ordered list — reporting parse/validate/load failures and
+duplicate `id`s as visible issues rather than silently dropping a card's
+todos.
+
+`collection-run.doctest.md` covers the scope, grouping, and reduction rules;
+this file covers what one card contributes and what a card that cannot
+contribute reports.
 
 ```ts setup
-import { collectTodos } from "../../src/core/todo/collect.js";
+import { runTodoQuery } from "../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../src/core/todo/collect-types.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+
+/** Every todo in scope, whatever its status, plus the issues beside them. */
+async function collectTodos(boxRoot: string, options?: { glob: string }) {
+  const result = await runTodoQuery(boxRoot, {
+    query: {
+      here: "",
+      ...(options === undefined ? {} : { glob: options.glob }),
+      params: { status: ["open", "done", "dropped", "parked"] },
+    },
+    since: null,
+  });
+  return {
+    todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items),
+    issues: result.issues,
+  };
+}
 
 const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
 
@@ -152,7 +174,7 @@ bug: a **multi-line block** `{% todo %}` (opening tag, body, closing tag on
 separate lines) used to fall through the "which tag does this validate error
 belong to" match (it compared against `lines[1]`, correct only for a one-line
 span) and get attributed to `(body)` instead of `todo` — so
-`collect-body.ts`'s `todoErrors` filter never caught it, and the invalid
+`extract-body.ts`'s `todoErrors` filter never caught it, and the invalid
 `status` was silently coerced to `"open"` instead of becoming a visible-invalid
 result.
 
@@ -255,8 +277,8 @@ wideOpen.todos.length > 0
 `_config/box.json`'s `timezone` is hand-editable; a typo'd IANA zone (e.g.
 `"America/Chciago"`) used to make `Intl.DateTimeFormat` throw a bare
 `RangeError` the moment plate-state derivation ran for ANY todo — taking
-down `collectTodos` (and everything built on it: `bbx todos`, `todos.list`,
-the badge, the review sweep) rather than just that one box's timezone
+down every todo query (and everything built on it: `bbx query todos`, the
+list, the badge, the review sweep) rather than just that one box's timezone
 display. `loadBoxTimezone` now validates and falls back to the host
 timezone with a warning instead of throwing.
 
