@@ -17,6 +17,9 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
   auth token.
 - Manual/dev pairing is still available from the app and URL scheme. In release
   builds, raw `authToken=` URL imports are ignored; use a pairing token instead.
+- **Quick chat** above the native composer opens a separate web sheet for routed
+  messages. Its web composer sends without changing the original chat or native
+  draft; Done returns to that chat. Cold-start behavior is unchanged.
 - Native text, photo, and speech input is delivered into the embedded web chat
   via a small same-origin `WKWebView` bridge. Keep that bridge in sync with the
   frontend native-emission handler.
