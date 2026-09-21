@@ -12,7 +12,6 @@ export const routingCandidateSchema = z.object({
   target: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("existing-session"), sessionId: z.string(), contextDir: z.string() }),
     z.object({ kind: z.literal("new-session"), contextDir: z.string() }),
-    z.object({ kind: z.literal("no-match") }),
   ]),
   landmark: z.object({ path: z.string(), label: z.string() }).optional(),
   lastActivity: z.string().optional(), recentContext: z.string().optional(),
@@ -49,7 +48,6 @@ export function selectRoutingDestination(args: {
   const first = ranked[0];
   invariant(first !== undefined, "Routing requires at least one candidate");
   const existing = ranked.find((entry) => entry.candidate.target.kind === "existing-session");
-  // Never override no-match: uncertainty remains visible instead of forcing a send.
   const preferred = first.candidate.target.kind === "new-session" && existing !== undefined
     && first.probability - existing.probability <= existingMargin ? existing : first;
   return { selected: preferred.candidate, ranked, preferenceApplied: preferred !== first };

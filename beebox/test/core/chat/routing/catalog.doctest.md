@@ -20,7 +20,7 @@ Recent web chats and the latest landmark chat remain distinct from starting a ne
 ```ts
 const candidates = buildRoutingCandidates(base);
 JSON.stringify(candidates.map((candidate) => [candidate.label, candidate.target.kind]))
-=> [["recent","existing-session"],["garden-latest","existing-session"],["New chat in Garden","new-session"],["New general chat","new-session"],["No suitable destination — ask me","no-match"]]
+=> [["recent","existing-session"],["garden-latest","existing-session"],["New chat in Garden","new-session"],["New general chat","new-session"]]
 
 const kept = buildRoutingCandidates({ ...base, rubric: { destinations: [{ target: "/_content/old-root.chat.card", when: "Long-term planning", keepEligible: true }] } });
 kept.some((candidate) => candidate.label === "old-root")
@@ -38,28 +38,36 @@ Background landmarks are excluded unless the rubric explicitly opts in. A delete
 ```ts
 const hidden = { ...landmark, prominence: "background" as const };
 JSON.stringify(buildRoutingCandidates({ ...base, landmarks: [hidden] }).map((candidate) => candidate.label))
-=> ["recent","New general chat","No suitable destination — ask me"]
+=> ["recent","New general chat"]
 
 buildRoutingCandidates({ ...base, landmarks: [hidden], rubric: { destinations: [{ target: "/_content/Garden/Garden.landmark.card", when: "Garden discussion" }] } }).some((candidate) => candidate.label === "garden-latest")
 => true
 ```
 
-Near-ties favor continuing an existing chat. The raw ranking remains visible. A strong new topic wins; no-match is never replaced by the preference.
+Near-ties favor continuing an existing chat. The raw ranking remains visible. A strong new topic wins. An uncertain distribution still selects a chat; root is always available.
 
 ```ts
 const candidates = buildRoutingCandidates(base);
-const near = selectRoutingDestination({ candidates, probabilities: { c0: 0.38, c1: 0.08, c2: 0.44, c3: 0.05, c4: 0.05 } });
+const near = selectRoutingDestination({ candidates, probabilities: { c0: 0.38, c1: 0.08, c2: 0.44, c3: 0.1 } });
 JSON.stringify([near.selected.id, near.ranked[0]?.candidate.id, near.preferenceApplied])
 => ["c0","c2",true]
 
-selectRoutingDestination({ candidates, probabilities: { c0: 0.2, c1: 0.05, c2: 0.65, c3: 0.05, c4: 0.05 } }).selected.id
+selectRoutingDestination({ candidates, probabilities: { c0: 0.2, c1: 0.05, c2: 0.65, c3: 0.1 } }).selected.id
 => c2
 
-selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.05, c2: 0.025, c3: 0.025, c4: 0.5 } }).selected.target.kind
-=> no-match
+selectRoutingDestination({ candidates, probabilities: { c0: 0.1, c1: 0.1, c2: 0.1, c3: 0.7 } }).selected.target.kind
+=> new-session
 
-selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.1, c2: 0.4, c3: 0.05, c4: 0.05 }, existingMargin: 0 }).selected.id
+selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.1, c2: 0.4, c3: 0.1 }, existingMargin: 0 }).selected.id
 => c0
+```
+
+Even an empty box has a routable root destination.
+
+```ts
+const empty = buildRoutingCandidates({ sessions: [], landmarks: [], rubric: { destinations: [] }, now });
+JSON.stringify(selectRoutingDestination({ candidates: empty, probabilities: { c0: 1 } }).selected.target)
+=> {"kind":"new-session","contextDir":""}
 ```
 
 An absent rubric is valid. A malformed rubric stops routing, rather than discarding authored rules.

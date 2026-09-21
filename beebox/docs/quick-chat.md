@@ -23,8 +23,7 @@ separately from the normal chat draft. Use **Recover or retry send** after an
 interrupted attempt. The same submission reuses its recorded destination;
 it does not ask Jev again. **Another message** clears that form for new input.
 
-If Jev selects no match, nothing is sent; choose a destination and press
-**Send there**. If it sent to the wrong destination, select another option
+If it sent to the wrong destination, select another option
 and choose **Send a copy there**. This sends the original text again. It does
 not move transcript history or undo actions the first chat has taken.
 
@@ -41,7 +40,9 @@ The application preserves Jev's original probabilities. If a new conversation
 wins by no more than 0.1 over the strongest existing chat, it continues that
 existing chat instead and says why. Exact ties favor existing chats. This
 margin is provisional, not calibrated evidence that the destination is right.
-A winning no-match answer is never replaced by that preference.
+Uncertainty does not stop delivery. Jev favors a plausible recent or general
+chat, with a new general chat at the root as the fallback when no other
+destination fits.
 
 ## Maintain the rubric
 

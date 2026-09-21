@@ -23,7 +23,7 @@ The boxholder selected “Landmark chats and recent web chats” and requested e
 
 Latest boxholder direction: “entry point UI that is easy to access and use, but not necessarily finished” and “a lower-impact implementation is better (since I might change my mind on this).” Use a web form for the trial, including on iOS; polished native integration is deferred.
 
-The later boxholder decision is to send blindly and inspect results afterward, including close probabilities. Automatic routing is enabled for this trial; no-match and service errors keep the text without sending. The old issue's fresh-session fallback is superseded by the newer existing-destination preference.
+The later boxholder decision is to send blindly and inspect results afterward, including close probabilities. Automatic routing is enabled for this trial; service errors keep the text without sending; uncertain fit falls back to a plausible recent/general chat or a new root chat. The old issue's fresh-session fallback is superseded by the newer existing-destination preference.
 
 `ios-app/CLAUDE.md:11`: “The webview is still the chat client” — keep dispatch in the web layer. Native input must not bypass it.
 
@@ -67,13 +67,13 @@ First implementation chunk: pure catalog fixtures for landmark chats, recent web
 
 ### 2. Typed judgment and routing receipt
 
-Direction: one Choice over complete actions: `existing-session(sessionId)`, `new-session(landmarkRef)`, `new-session(root)`, and `no-match`. Send captured text plus bounded candidate facts. Code maps opaque Choice keys to validated targets; model output never supplies arbitrary refs. Preserve raw probabilities and returned model version.
+Direction: one Choice over complete actions: `existing-session(sessionId)`, `new-session(landmarkRef)`, `new-session(root)`. Send captured text plus bounded candidate facts. Code maps opaque Choice keys to validated targets; model output never supplies arbitrary refs. Preserve raw probabilities and returned model version.
 
 Add a server-only Jev service behind real/fake service interfaces, using the box-granted OpenRouter key at server access and OpenRouter's Decisions interface. No separate TypeSafe credential is required by the documented route. Verify the endpoint contract and existing provider-pinning/data-policy support before implementation; do not treat ordinary chat completions as equivalent. A missing OpenRouter key produces an actionable setup state and manual destination selection. Never modify credentials automatically.
 
-First version dispatches the chosen destination immediately and displays the result and alternatives afterward. A no-match result offers manual choice. Existing targets sort ahead on exact ties. Record distributions and accepted/corrected destinations locally, with the candidate snapshot needed to diagnose missing candidates separately from ranking errors. Store these records as private box state, never in repository fixtures or shared logs. No automated rubric rewriting.
+First version dispatches the chosen destination immediately and displays the result and alternatives afterward. There is no ask-me outcome: a plausible recent/general chat or new root chat provides the fallback. Existing targets sort ahead on exact ties. Record distributions and accepted/corrected destinations locally, with the candidate snapshot needed to diagnose missing candidates separately from ranking errors. Store these records as private box state, never in repository fixtures or shared logs. No automated rubric rewriting.
 
-First implementation chunk: typed service fake and pure response validation, including unknown keys, malformed probabilities, absent answers, timeout, and no-match. No numeric automatic-routing threshold is introduced in this chunk.
+First implementation chunk: typed service fake and pure response validation, including unknown keys, malformed probabilities, absent answers, and timeout. No numeric automatic-routing threshold is introduced in this chunk.
 
 ### 3. Entry, dispatch, and receipts
 
@@ -133,7 +133,7 @@ No native-binding subplan is needed for the revised evaluation surface. The boxh
 
 Live evaluation needs a box-granted OpenRouter key. The boxholder supplied the OpenRouter Jev listing after the initial catalog search missed it. No direct TypeSafe key is needed for the documented route, and no credentials have been changed. Egress is through OpenRouter to TypeSafe; document both parties in the security report. Authenticated synthetic requests verified this integration with the authorized development key; the normal test-box UI still needs its own OpenRouter grant.
 
-Automatic policy later: determine a suitability floor and the margin by which a new session must beat an existing one. Near-ties favor suitable existing sessions; consequential ambiguity asks. Measure against labeled corrections and held-out examples rather than vendor cookbook numbers. Catalog completeness is a separate metric.
+Automatic policy later: determine a suitability floor and the margin by which a new session must beat an existing one. Near-ties favor suitable existing sessions; uncertainty falls back to a recent/general chat or new root chat. Measure against labeled corrections and held-out examples rather than vendor cookbook numbers. Catalog completeness is a separate metric.
 
 ## Knowledge audits
 
@@ -168,7 +168,7 @@ security, native-contract, and rubric audit evidence; no further feature scope
 was added.
 
 Implemented locally for evaluation. The 108 change-selected files passed 1,277
-assertions. The focused Jev/catalog/request suite passed 65 assertions. Backend,
+assertions. The focused Jev/catalog/request suite passed 66 assertions. Backend,
 frontend, tooling, and user-story typechecks and changed-file lint pass. Native
 simulator build and ChatWebViewRequestTests pass; physical-device and native
 sheet visual verification remain unobserved. The rubric knowledge audit passed

@@ -87,7 +87,7 @@ function QuickChatForm({ boxSlug }: { boxSlug: string }) {
       <Stack gap="sm">
         <TextareaField id="bbx-quick-chat-message" label="Message" value={draft.message} rows={5} required maxLength={12000}
           disabled={busy} readOnly={draft.id !== null} onChange={message => setDraft({ id: null, message })} />
-        {!sent && <Button id="bbx-quick-chat-send" type="submit" intent="primary" disabled={busy || !draft.message.trim() || result?.selected.target.kind === "no-match"}>
+        {!sent && <Button id="bbx-quick-chat-send" type="submit" intent="primary" disabled={busy || !draft.message.trim()}>
           {busy ? "Routing and sending…" : draft.id ? "Recover or retry send" : "Send"}
         </Button>}
         {draft.id !== null && <Button id="bbx-quick-chat-new" disabled={busy} onClick={reset}>Another message</Button>}

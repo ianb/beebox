@@ -53,8 +53,8 @@ await failure(() => caller(empty.root, undefined, false).receipt({ id: randomUUI
 await empty.cleanup();
 ```
 
-A resumable chat is eligible alongside new-general and no-match. Concurrent
-retries reuse one persisted no-match judgment, with no delivery scheduled.
+A resumable chat is eligible alongside a new general chat. Concurrent retries
+reuse one persisted judgment and immediately prepare the existing destination.
 
 ```ts
 const box = await makeTmpBox();
@@ -65,14 +65,14 @@ const log = getSessionLogPath(box.root, sessionId);
 await mkdir(dirname(log), { recursive: true });
 await writeFile(log, JSON.stringify({ type: "user", uuid: randomUUID(), timestamp: new Date().toISOString(), message: { role: "user", content: [{ type: "text", text: "Plan the garden" }] } }) + "\n");
 await box.write(`_content/chat/web/2026-09-21_${sessionId}.chat.card`, `---\nsession: ${sessionId}\n---\n\n`);
-const fake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.1, c1: 0.1, c2: 0.8 }, confidence: 0.4 } });
+const fake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.6, c1: 0.4 }, confidence: 0.4 } });
 const api = caller(box.root, fake);
 const request = { id: randomUUID(), message: "Which one did we agree on?" };
 const [first, retry] = await Promise.all([api.prepare(request), api.prepare(request)]);
-JSON.stringify([first.selected.target.kind, first.delivery, first.receipt ?? null, first.id === retry.id, fake.calls.length])
-=> ["no-match",null,null,true,1]
+JSON.stringify([first.selected.target.kind, first.delivery?.session === sessionId, first.delivery?.exactSession, first.receipt ?? null, first.id === retry.id, fake.calls.length])
+=> ["existing-session",true,true,null,true,1]
 
-(await failure(() => api.receipt({ id: first.id, receipt: { sessionId } }))).split(":")[0]
+(await failure(() => api.receipt({ id: first.id, receipt: { sessionId: randomUUID() } }))).split(":")[0]
 => BAD_REQUEST
 
 await failure(() => api.prepare({ ...request, message: "Changed text" }))
@@ -89,7 +89,7 @@ const correction = await api.prepare(correctionRequest);
 JSON.stringify([correction.selected.target.kind, correction.delivery?.session === sessionId, correction.delivery?.exactSession, correction.sourceId === first.id, fake.calls.length])
 => ["existing-session",true,true,true,1]
 
-(await failure(() => api.prepare({ ...correctionRequest, candidateId: "c2" }))).split(":")[0]
+(await failure(() => api.prepare({ ...correctionRequest, candidateId: "c1" }))).split(":")[0]
 => CONFLICT
 
 JSON.stringify(correction.candidates) === JSON.stringify(first.candidates)
@@ -142,7 +142,7 @@ const landmarkBox = await makeTmpBox();
 const landmarkPath = "_content/Garden/Garden.landmark.card";
 await landmarkBox.write(landmarkPath, "---\nnavigation:\n  label: Garden\n---\n");
 const reservations = reservationRuntime(landmarkBox.root, ["reserved", "taken"]);
-const newFake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.9, c1: 0.05, c2: 0.05 }, confidence: 0.9 } });
+const newFake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.9, c1: 0.1 }, confidence: 0.9 } });
 const newApi = caller(landmarkBox.root, newFake);
 const newRequest = { id: randomUUID(), message: "Start planning the garden" };
 const reserved = await newApi.prepare(newRequest);
@@ -176,7 +176,7 @@ receipt records the actual engine-assigned session ID for later reopening.
 const codexBox = await makeTmpBox();
 await codexBox.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
 const unsupportedCalls = reservationRuntime(codexBox.root, ["unsupported"]);
-const codexFake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 0.9, c1: 0.1 }, confidence: 0.9 } });
+const codexFake = createFakeJev({ result: { model: "synthetic-jev", probabilities: { c0: 1 }, confidence: 0.9 } });
 const codexApi = caller(codexBox.root, codexFake);
 const codexRequest = { id: randomUUID(), message: "Start a new topic" };
 const unsupported = await codexApi.prepare(codexRequest);

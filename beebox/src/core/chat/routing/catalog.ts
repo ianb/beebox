@@ -113,7 +113,6 @@ export function buildRoutingCandidates(args: {
   candidates.push({ id: `c${String(candidates.length)}`, label: "New general chat", target: { kind: "new-session", contextDir: "" },
     ...(rootLandmark === undefined ? {} : { landmark: { path: rootLandmark.path, label: rootLandmark.label.slice(0, 300) }, rubric: rules.get(rootLandmark.path) }),
   });
-  candidates.push({ id: `c${String(candidates.length)}`, label: "No suitable destination — ask me", target: { kind: "no-match" } });
   if (candidates.length > 255) throw new RoutingCatalogError({ reason: "overflow" });
   return candidates;
 }
