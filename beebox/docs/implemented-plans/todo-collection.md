@@ -1,6 +1,6 @@
 ---
 title: "Todo collection — todos as a staged query, with summaries that belong to the card type"
-status: active
+status: implemented
 workstream: collection-views
 issues: []
 ---
@@ -15,7 +15,7 @@ cards whose result several consumers render. It builds the general shape and
 commits to one instance.
 
 Background, decisions, and what a working box showed are in the
-[design notes](collections-design-notes.md). This plan does not repeat them.
+[design notes](../plans/collections-design-notes.md). This plan does not repeat them.
 
 **Issues addressed:** none closed. This plan advances
 [collection views](../../../issues/features/2026-08-19-collection-views-are-badly-defined.md)
