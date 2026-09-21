@@ -48,9 +48,11 @@ export async function recordSessionStart(
      * bound and nothing can say to what.
      */
     onHistoryWritten?: (() => void) | undefined;
+    /** Called after the initial feature seed is durable. */
+    onFeaturesWritten?: (() => void) | undefined;
   },
 ): Promise<void> {
-  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten } = params;
+  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten, onFeaturesWritten } = params;
   try {
     await appendHistory(boxRoot, {
       sessionId,
@@ -72,6 +74,7 @@ export async function recordSessionStart(
         engine: engine ?? await loadAgentEngine(boxRoot),
       });
     }
+    onFeaturesWritten?.();
     await setMostActive(boxRoot, sessionId);
   } catch (e) {
     log("session-start", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

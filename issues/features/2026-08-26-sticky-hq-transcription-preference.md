@@ -1,6 +1,6 @@
 ---
 title: "Sticky HQ transcription preference — turning HQ dictation on shouldn't be a per-chat ritual"
-workstream: transcript-confidence
+workstream: hq-settings-broken
 area: beebox
 labels: [voice, ui]
 filed-by: agent
@@ -15,28 +15,33 @@ priority: normal
 > means the feature is not merely unverified, it is broken. The manual-testing
 > steps below are kept as history and as the shape of a real regression test.
 >
-> Two symptoms, and a reading of the code found a candidate mechanism for each.
-> Neither is confirmed by reproduction.
+> **Confirmed 2026-09-20.** The box and landmark writers worked, and
+> `chat.newFeatures` resolved their precedence correctly. The failure began
+> after a Claude chat was immediately assigned a reserved client id: the reload
+> read consulted history, but an unstarted reservation has no history row, so
+> inherited `on` silently became the registry default `off`. Pre-start Chat
+> toggles lived on that same reservation and were lost by the same read.
 >
-> **Does not stick.** `ChatFeatures.persist`
-> (`beebox/src/core/chat/session/features.ts:102-127`) returns without writing
-> in two cases: when `getSessionId()` is `null`, and when no engine is recorded
-> for the session. A toggle in a chat that has not yet started a session — the
-> obvious moment to set it, before dictating the first message — is therefore
-> kept in memory only. The second branch logs; the first is silent.
+> A second persistence defect appeared after the first message. The live
+> session's `persistPendingFeatures` callback continued diverting toggles into
+> the reservation object after the reservation had been released, so the
+> history row retained the original seed. Reload then restored that stale
+> inherited value.
 >
-> **Does not inherit.** Inheritance is a *seed*, not a resolution:
-> `seedFeaturesForNewChat` (`core/landmark/features.ts:98`) merges box default,
-> landmark, and request, and it is called only when a chat is created
-> (`webapp/trpc/routers/chat-control-procedures.ts:153,390`,
-> `webapp/routes/chat-send-target.ts`). Changing a landmark or box default
-> therefore cannot reach a chat that already exists, and nothing re-reads it.
-> Whether that is the reported failure, or whether the seed is also lost on
-> some creation paths, needs reproduction.
+> The fix makes the feature read resolve reservation state first, persisted
+> state second, and a non-touching live-session value only for the short
+> first-run handoff window. Pending-feature persistence now stops using the
+> reservation once its initial feature seed is durable. Regression coverage pins
+> box `on` + landmark `inherit`, landmark `on` + Chat `off`, pre-start reload,
+> post-start persistence, and persisted state outranking an unloaded live
+> session.
 >
-> `mergeSeedFeatures` (`core/chat/features.ts:120-133`) also drops any value
-> that fails `isKnownFeature`/`isValidValue` with no diagnostic, so a malformed
-> landmark or box value is indistinguishable from an absent one.
+> Parent-scope edits intentionally seed **new** chats; they do not rewrite an
+> already-open chat's per-chat value. One known limitation remains: because an
+> unstarted reservation is deliberately process-local, a pre-start Chat
+> override can still be lost across a server restart or six-hour reservation
+> expiry. Making abandoned-chat state durable (or carrying client state through
+> re-reservation) is a separate product decision, not part of this repair.
 
 Web support landed in `6410124b5`, but physical-device testing found that the
 iOS native composer did not receive or honor the HQ state. Keep this open until
