@@ -20,8 +20,14 @@ import { controlAddress, resolveControl, resolveVisibleControl } from "../../../
 import type { ControlEntry, ScanResult } from "../../../../src/frontend/src/lib/ui-scan/types.js";
 import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../helpers/ui-scan-fixture.js";
 
+/** The default scope: everything on the page, which is what a driver reads. */
 function scan(html: string): ScanResult {
-  return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 } });
+  return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 }, scope: "document" });
+}
+
+/** What the `bbx chat ui` dump asks for: the app's own controls, without card contents. */
+function scanChrome(html: string): ScanResult {
+  return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 }, scope: "chrome" });
 }
 
 /** One line per entry, in the tours' `role "name"` idiom the dump also uses. */
@@ -216,17 +222,17 @@ JSON.stringify(scan(`
 => []
 ```
 
-## Content is not chrome
+## Content is not chrome, when the caller asks for chrome
 
-The dump is an inventory of the app's controls, and it is handed to the agent
-without a consent prompt on exactly that basis. A subtree marked
-`data-bbx-scan="exclude"` is pruned the way an `aria-hidden` one is — the chat
-transcript, the card open in the companion pane, an embed — so the links and
-buttons inside the user's own content never reach it. The chrome *around* the
-content, including the annotated addresses, is outside the boundary and stays:
+`scope` decides how much of the page one scan covers. The `bbx chat ui` dump
+asks for `chrome`, and a subtree marked `data-bbx-scan="exclude"` is then pruned
+the way an `aria-hidden` one is — the chat transcript, the card open in the
+companion pane, an embed. Not as a privacy boundary: the agent can open any of
+that content directly. It is editorial — the dump answers "what controls does
+the app offer", and a rendered card's own links would bury the answer.
 
 ```ts
-const boundary = scan(`
+const boundary = scanChrome(`
   <main aria-label="Chat">
     <button title="Show earlier messages"></button>
     <div data-bbx-scan="exclude">
@@ -245,21 +251,46 @@ Chat / button "Close companion view" bbx-panel-close
 ```
 
 Nothing inside the boundary is counted, either. An omission the dump reports is
-one the agent might otherwise be misled by; this is a line the design drew, and
-"3 controls you may not see" would invite exactly the guessing the boundary
-exists to prevent:
+one the agent might otherwise be misled by; "3 controls you may not see" would
+invite exactly the guessing a narrowed list exists to prevent:
 
 ```ts continue
 JSON.stringify({ omittedUnnamed: boundary.omittedUnnamed, omittedUnknownRole: boundary.omittedUnknownRole })
 => {"omittedUnnamed":0,"omittedUnknownRole":0}
 ```
 
-Duplicate detection is the exception: it covers the whole document, excluded
-subtrees included, because a repeated `bbx-` id anywhere is a repeated id
-`getElementById` will resolve to the wrong one of.
+The default scope reads the same page whole. A driver needs this: the controls
+inside a card are the ones it is there to click, and a scan that skipped them
+would print their snapshot lines with no id, which reads as "the app never
+annotated this" rather than "you asked for the other scope".
+
+```ts continue
+lines(scan(`
+  <main aria-label="Chat">
+    <button title="Show earlier messages"></button>
+    <div data-bbx-scan="exclude">
+      <a href="/notes/Rent.card" title="Rent">Rent</a>
+      <button title="Retry this turn"></button>
+      <div><button id="bbx-nested-deep" title="Buried three levels down"></button></div>
+    </div>
+    <button id="bbx-panel-close" title="Close companion view"></button>
+  </main>
+`))
+=>
+- / main "Chat" (no address)
+Chat / button "Show earlier messages" (no address)
+Chat / link "Rent" (no address)
+Chat / button "Retry this turn" (no address)
+Chat / button "Buried three levels down" bbx-nested-deep
+Chat / button "Close companion view" bbx-panel-close
+```
+
+Duplicate detection ignores the scope: it covers the whole document either way,
+because a repeated `bbx-` id anywhere is a repeated id `getElementById` will
+resolve to the wrong one of.
 
 ```ts
-JSON.stringify(scan(`
+JSON.stringify(scanChrome(`
   <button id="bbx-panel-close" title="Close companion view"></button>
   <div data-bbx-scan="exclude"><button id="bbx-panel-close" title="Close"></button></div>
 `).duplicateIds)

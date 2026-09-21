@@ -41,12 +41,29 @@ which solved the same problem for case-sensitive Drive ids, was folded into it.
 The scan degrades an over-long address to "no address" rather than emitting one
 the wire schema would reject, and reports duplicates only for real addresses.
 
-## Not this, and still open
+## The second cause: the scan withheld ids inside cards
+
+The report's `bbx-todo-view-show-finished` is kebab-case and passes the grammar,
+so it had a different cause. `bin/browse` reads ids from `window.__bbxUiScan()`,
+which was the `bbx chat ui` dump's walk — and that walk prunes card bodies,
+the transcript and embeds at `data-bbx-scan="exclude"`. Every annotated control
+below that line (`bbx-browse-listing-mode`, the card properties toggle, the
+todo view's own switch) was absent from the scan entirely, so the snapshot
+printed it with no id.
+
+The boxholder settled this on 2026-09-21: the scan must never withhold an
+address, and the pruning was not a privacy boundary in the first place — the
+agent can open any of that content directly. `scanControls` now takes a
+`scope`; `window.__bbxUiScan()` answers for the whole document, and the dump
+opts into `chrome` for editorial reasons (a rendered card's links would bury
+the list of the app's own controls). The "no consent prompt" and "content-free
+by construction" claims in `ui-scan-request-handler.ts` and `window-hook.ts`
+were rewritten to rest on the real argument rather than on what the walk skips.
+
+`bin/browse` now also warns when the app's entry cap truncated the walk, since
+the symptom of that is again a line with no id.
+
+## Not this
 
 The original title blamed agent-browser 0.27.0 for dropping `tab`, `switch` and
-`tabpanel` roles. It does not; the filter was ours.
-
-The report's `bbx-todo-view-show-finished` has a second, separate cause and is
-not fixed here: it is kebab-case and passes the grammar, but it sits inside a
-card, and card content is pruned from the scan by `data-bbx-scan="exclude"`.
-See `issues/bugs/2026-09-21-browse-cannot-address-controls-inside-cards.md`.
+`tabpanel` roles. It does not; both causes were ours.
