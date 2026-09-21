@@ -6,7 +6,12 @@ labels: [browse, dev-tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-collection-views — chasing a reported missing id on the todo-view controls
+resolution: implemented
 ---
+
+> Closed by `2c1500bfd` (control-address grammar) and `7cf0ab071` (scope-wide
+> scan) on `worktree-browse-id-pattern`. Both causes described below are fixed
+> as designed; no divergence.
 
 A control address is an HTML `id` matching `/^bbx(?:-[\da-z]+)+$/` — lowercase
 kebab-case, nothing a CSS selector would need escaped. Three components built
