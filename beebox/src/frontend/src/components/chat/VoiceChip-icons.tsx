@@ -13,8 +13,8 @@ export type ConversationFloor = "shared" | "person" | "box";
  * which resolves on a desktop and reads as three unrelated glyphs on a phone
  * (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`, second
  * problem). Fewer marks is the only thing that makes each mark bigger: these
- * two are ~12px in a 20×16 box rendered at 24×20, half again the old size, and
- * the strip is 26px narrower — which the app bar also needed.
+ * two are ~12px in a 22×16 box rendered at 26×20, half again the old size, and
+ * the strip is 24px narrower — which the app bar also needed.
  *
  * The participants went, not the facts. `voiceChipLabel` says both outright in
  * words, the menu rows name them, and the arrow keeps its own two ends: two
@@ -64,7 +64,7 @@ export function ConversationIcon({ floor, muted }: {
   muted: boolean;
 }): ReactElement {
   return (
-    <svg className="w-[27px] h-5 shrink-0" viewBox="0 0 22 16" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-[26px] h-5 shrink-0" viewBox="-1 0 22 16" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <FloorMark floor={floor} />
       <AnswerMark muted={muted} />
     </svg>

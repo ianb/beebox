@@ -50,7 +50,10 @@ function SegmentDivider() {
   return <span aria-hidden="true" className="w-px self-stretch my-1 bg-white/25 shrink-0" />;
 }
 
-const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors";
+// The container clips with `overflow-hidden`, so a focus ring drawn outside
+// the segment would be cut off — it has to be inset, the same reason the chips
+// in the shared chip pill switched to `ring-inset`.
+const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40";
 
 export function AttentionBadges({ base, pendingQuestions, onPlateTodos, onToggleDebugLog }: {
   base: string;

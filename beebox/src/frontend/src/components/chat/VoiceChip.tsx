@@ -72,7 +72,16 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
       data-voice-diarization={diarizationEnabled}
     >
       <ConversationIcon floor={narrationEnabled ? "person" : "shared"} muted={muted} />
-      {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
+      {hqInFlight ? (
+        <>
+          {/* The word costs about 70px, which is most of what this change gave
+              back to the place label — so below `sm:` the same fact is a pulse
+              on the chip instead. The accessible name says "transcribing" at
+              every width either way. */}
+          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
+          <span className="hidden sm:inline text-xs opacity-80">transcribing…</span>
+        </>
+      ) : null}
       {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
     </span>
   );

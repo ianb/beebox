@@ -118,11 +118,26 @@ JSON.stringify([
 
 ## HQ transcription in flight keeps its readable label
 
+The word is worth about 70px, which is most of what the reduced face gave back
+to the place label, so it appears only from `sm:` up. Below that the same fact
+is a pulse, and the accessible name says it at every width.
+
 ```ts
 const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
-face.includes("transcribing…")
-=> true
+JSON.stringify([face.includes("transcribing…"), face.includes("hidden sm:inline"), face.includes("sm:hidden")])
+=> [true,true,true]
+```
 
+Nothing of it survives when no transcription is in flight — neither the word
+nor the pulse.
+
+```ts continue
+const idle = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
+JSON.stringify([idle.includes("transcribing…"), idle.includes("animate-pulse")])
+=> [false,false]
+```
+
+```ts continue
 voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false })
 => Voice — taking turns, answers aloud, transcribing
 ```
