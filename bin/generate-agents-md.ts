@@ -40,7 +40,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 
-import { generateCodexAgents } from "./generate-codex-agents.js";
+import { generateCodexAgents, generateCodexHooks } from "./generate-codex-agents.js";
 
 class TrackedAgentsMdError extends Error {
   constructor(readonly tracked: string[]) {
@@ -344,9 +344,11 @@ function main(): void {
   const agentsFiles = generateAgentsFiles(checkoutDir, worktreeName);
   const skillLinks = generateSkillLinks(checkoutDir);
   const codexAgents = generateCodexAgents(checkoutDir);
+  const codexHooks = generateCodexHooks(checkoutDir);
   console.log(
     `generate-agents-md: wrote ${agentsFiles.length} AGENTS.md mirror(s), ` +
-      `${skillLinks.length} skill link(s), and ${codexAgents.length} Codex agent(s) in ${checkoutDir}`,
+      `${skillLinks.length} skill link(s), ${codexAgents.length} Codex agent(s), and ` +
+      `${codexHooks === null ? 0 : 1} Codex hook file(s) in ${checkoutDir}`,
   );
 }
 
