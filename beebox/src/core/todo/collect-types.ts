@@ -13,8 +13,21 @@
 
 import type { TodoPlateInput, TodoPlateState, TodoStatus } from "../../shared/todo-model.js";
 
-/** Where a todo lives within its card: a body `{% todo %}` tag (line, 1-indexed, in the FILE, not the body) or an entry in the frontmatter `todos:` list (index). */
-export type TodoLocator = { kind: "body"; line: number } | { kind: "frontmatter"; index: number };
+/**
+ * Where a todo lives within its card: a body `{% todo %}` tag (line,
+ * 1-indexed, in the FILE, not the body) or an entry in the frontmatter
+ * `todos:` list (index).
+ *
+ * A line can hold more than one todo — `{% todo %}Appraise{% /todo %} — ask
+ * Marisol {% todo %}Insure{% /todo %}` is two — so the line alone is not an
+ * identity. `nth` (1-based, in document order on that line) separates them,
+ * and is OMITTED for the first: `path:line` stays exactly what it has always
+ * been for the todo a human means when they cite a line, and only the second
+ * and later ones grow the `#2` suffix.
+ */
+export type TodoLocator =
+  | { kind: "body"; line: number; nth?: number }
+  | { kind: "frontmatter"; index: number };
 
 /** A `{% see-also %}` reference, from either capture form. */
 export interface TodoSeeAlso {
@@ -101,16 +114,26 @@ export interface CollectTodosOptions {
   glob?: string;
 }
 
-/** `path:line` for a body todo, `path#todos[i]` for a frontmatter one — the CLI's locator display form (`bbx todos`, duplicate-id messages). */
+/**
+ * `path:line` for a body todo (`path:line#2` for the second and later todo on
+ * that line), `path#todos[i]` for a frontmatter one — the CLI's locator
+ * display form (`bbx todos`, duplicate-id messages, the review sweep's job
+ * items) and the identity a collection keys items by.
+ */
 export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">): string {
   const { path, locator } = todo;
-  return locator.kind === "body" ? `${path}:${String(locator.line)}` : `${path}#todos[${String(locator.index)}]`;
+  if (locator.kind === "frontmatter") return `${path}#todos[${String(locator.index)}]`;
+  const nth = locator.nth === undefined || locator.nth <= 1 ? "" : `#${String(locator.nth)}`;
+  return `${path}:${String(locator.line)}${nth}`;
 }
 
 /** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */
 export function compareTodoLocator(a: TodoLocator, b: TodoLocator): number {
   if (a.kind !== b.kind) return a.kind === "body" ? -1 : 1;
-  if (a.kind === "body" && b.kind === "body") return a.line - b.line;
+  if (a.kind === "body" && b.kind === "body") {
+    if (a.line !== b.line) return a.line - b.line;
+    return (a.nth ?? 1) - (b.nth ?? 1);
+  }
   if (a.kind === "frontmatter" && b.kind === "frontmatter") return a.index - b.index;
   return 0;
 }

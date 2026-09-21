@@ -32,6 +32,7 @@ import { collectTagSpans, tagNameFor } from "../body-markdoc-lint.js";
 import { isTodoStatus } from "../../shared/todo-model.js";
 import type { TodoItem, TodoLocator } from "./collect-types.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { invariant } from "../../lib/invariant.js";
 import { flattenNodes, resolveTodoRefs, type FlattenResult } from "./extract-text.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
@@ -52,6 +53,8 @@ interface WalkState {
   lineOffset: number;
   /** The heading text last seen at each level (index = Markdoc's `attributes.level`). A deeper level is cleared when a shallower heading arrives. */
   headings: (string | undefined)[];
+  /** Every todo tag's identity, assigned up front (see `assignLocators`). */
+  locators: Map<Node, TodoLocator>;
   items: TodoItem[];
 }
 
@@ -84,7 +87,13 @@ export function extractBodyTodos(input: {
     return { ok: false, kind: "validate", message };
   }
 
-  const state: WalkState = { relPath, lineOffset, headings: [], items: [] };
+  const state: WalkState = {
+    relPath,
+    lineOffset,
+    headings: [],
+    locators: assignLocators(ast, lineOffset),
+    items: [],
+  };
   walkChildren(ast, { state, parent: null });
   return { ok: true, items: state.items };
 }
@@ -266,8 +275,41 @@ function isTodoTag(node: Node): boolean {
   return node.type === "tag" && node.tag === "todo";
 }
 
+/**
+ * Every todo tag's locator, assigned in one document-order pass BEFORE the
+ * walk. A line can carry several todos, so identity is `line` plus a 1-based
+ * `nth` within that line — omitted for the first, which keeps `path:line` the
+ * address a human writes for it.
+ *
+ * It happens up front because the walk does not meet the tags in document
+ * order: `walkItem` asks `findOwnerLocator` about a list item's LAST todo
+ * before `visit` builds the first one, so numbering as we go would count
+ * backwards on exactly the line this exists for.
+ */
+function assignLocators(root: Node, lineOffset: number): Map<Node, TodoLocator> {
+  const locators = new Map<Node, TodoLocator>();
+  const perLine = new Map<number, number>();
+  const walk = (node: Node): void => {
+    for (const child of node.children) {
+      if (isTodoTag(child)) {
+        const line = lineOffset + bodyLine(child);
+        const nth = (perLine.get(line) ?? 0) + 1;
+        perLine.set(line, nth);
+        locators.set(child, nth === 1 ? { kind: "body", line } : { kind: "body", line, nth });
+      }
+      walk(child);
+    }
+  };
+  walk(root);
+  return locators;
+}
+
 function locatorFor(node: Node, state: WalkState): TodoLocator {
-  return { kind: "body", line: state.lineOffset + bodyLine(node) };
+  const locator = state.locators.get(node);
+  // Every todo tag in this AST was numbered by `assignLocators`, and only todo
+  // tags reach here — a miss would mean the two walks disagree about the tree.
+  invariant(locator !== undefined, `no locator assigned for a {% todo %} tag in ${state.relPath}`);
+  return locator;
 }
 
 /** Markdoc `lines` are 0-indexed; the tag's opening line, 1-indexed to match the body the human reads. */

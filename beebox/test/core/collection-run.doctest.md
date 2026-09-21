@@ -12,6 +12,7 @@ the only place a clock can enter.
 import { runCollection } from "../../src/core/collection/run.js";
 import { todoCollection, TodoParamsSchema } from "../../src/core/todo/collection.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { formatTodoLocation } from "../../src/core/todo/collect-types.js";
 
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
@@ -321,6 +322,37 @@ The reference pass is deliberately quieter: a card outside the scope that
 fails to parse is skipped without an issue, because an unparseable card cannot
 be shown to refer to anything, and a project-scoped view should not fill up
 with the rest of the box's problems.
+
+## Two todos on one line are two rows' worth of item, not one
+
+A row keys its items by identity, so a line carrying two todos has to give up
+two identities or lose one of them. It does: the first keeps the plain
+`path:line`, the second carries `#2`, and the item nested under the line hangs
+off the todo that owns it — the last one written before the nested list.
+
+```ts continue
+await box.write(`${KITCHEN}/Move.doc.card`, doc("Move", [
+  "- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %} — before the move",
+  "  - {% todo %}Get the policy number{% /todo %}",
+  "",
+].join("\n")));
+const move = await run({ here: `${KITCHEN}/Move.doc.card`, includeReferring: false, params: params({}) });
+const moveRow = move.groups[0].rows[0];
+moveRow.items.map((i) => `${formatTodoLocation(i)} ${JSON.stringify(i.text)} parent=${i.parent === null ? "-" : formatTodoLocation({ path: i.path, locator: i.parent })}`).join("\n")
+=>
+_content/projects/Kitchen/Move.doc.card:4 "Appraise" parent=-
+_content/projects/Kitchen/Move.doc.card:4#2 "Insure" parent=-
+_content/projects/Kitchen/Move.doc.card:5 "Get the policy number" parent=_content/projects/Kitchen/Move.doc.card:4#2
+```
+
+The reduction counted all three before this fix too — it reads the flat item
+list. It was the row that dropped one, which is what the web list, `bbx query`
+and `bbx todos` all render.
+
+```ts continue
+count(moveRow.reduction)
+=> {"open":3,"done":0,"dropped":0,"parked":0,"onPlate":3,"escalated":0,"next":null}
+```
 
 ## A glob that could leave the box is refused before anything is read
 

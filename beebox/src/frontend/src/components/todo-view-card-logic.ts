@@ -74,10 +74,22 @@ export function hereForCard(cardPath: string): string {
   return slash === -1 ? "" : cardPath.slice(0, slash);
 }
 
-/** `path:line` for a body todo, `path#todos[i]` for a frontmatter one — the identity `parent` names. */
+/**
+ * `path:line` for a body todo, `path#todos[i]` for a frontmatter one — the
+ * identity `parent` names, and the React key each item is rendered under. A
+ * line can hold several todos, so the second and later ones on a line carry
+ * the `#2` suffix their locator's `nth` gives them.
+ *
+ * It restates `core/todo/collect-types.ts`'s `formatTodoLocation` rather than
+ * importing it: this module is loaded outside Vite by the doctest runner,
+ * where `@core/…` resolves for TYPES only. The two must agree — the keys here
+ * are matched against `parent` locators the backend produced.
+ */
 export function todoKey(item: { path: string; locator: TodoLocator }): string {
   const { path, locator } = item;
-  return locator.kind === "body" ? `${path}:${String(locator.line)}` : `${path}#todos[${String(locator.index)}]`;
+  if (locator.kind === "frontmatter") return `${path}#todos[${String(locator.index)}]`;
+  const nth = locator.nth === undefined || locator.nth <= 1 ? "" : `#${String(locator.nth)}`;
+  return `${path}:${String(locator.line)}${nth}`;
 }
 
 function parentKeyOf(item: { path: string; parent: TodoLocator | null }): string | null {

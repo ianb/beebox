@@ -15,6 +15,7 @@ import { extractCardTodos } from "../../src/core/todo/extract.js";
 import { deriveTodo } from "../../src/core/todo/derive.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { formatTodoLocation, type TodoLocator } from "../../src/core/todo/collect-types.js";
 
 const box = await makeTmpBox();
 const ctx = await buildLoadContext(box.root);
@@ -24,16 +25,21 @@ function memo(body: string): string {
   return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
 }
 
+/** A locator the way this file reads it: the file line, plus `#n` for the second and later todo on that line. */
+function where(locator: TodoLocator): string {
+  if (locator.kind === "frontmatter") return `fm[${String(locator.index)}]`;
+  return `${String(locator.line)}${locator.nth === undefined ? "" : `#${String(locator.nth)}`}`;
+}
+
 /** One line per todo: `line [section path] parent "text" ann="…" refs=…` */
 function show(relPath: string, body: string): string {
   const { items, issues } = extractCardTodos({ relPath, content: memo(body), ctx });
   if (issues.length > 0) return issues.map((i) => `[${i.kind}] ${i.message}`).join("\n");
   return items
     .map((item) => {
-      const where = item.locator.kind === "body" ? String(item.locator.line) : `fm[${String(item.locator.index)}]`;
-      const parent = item.parent === null ? "-" : item.parent.kind === "body" ? String(item.parent.line) : "fm";
+      const parent = item.parent === null ? "-" : item.parent.kind === "body" ? where(item.parent) : "fm";
       return [
-        where,
+        where(item.locator),
         `[${item.sectionPath.join(" / ")}]`,
         `parent=${parent}`,
         JSON.stringify(item.text),
@@ -214,12 +220,40 @@ show(CARD, [
 ].join("\n"))
 =>
 5 [] parent=- "Appraise" ann="ask Marisol" refs=
-5 [] parent=- "Insure" ann="before the move" refs=
-6 [] parent=5 "Get the policy number" ann="" refs=
+5#2 [] parent=- "Insure" ann="before the move" refs=
+6 [] parent=5#2 "Get the policy number" ann="" refs=
 ```
 
-Both todos on line 5 share a locator, which is the honest answer: a body
-locator is a line, and the nested todo names that line as its parent.
+A line is not an identity: the two todos on line 5 are two things, and a
+collection that keyed both as `:5` would show one of them and hang the nested
+todo off whichever it kept. `nth` separates them, counted in document order
+along the line. It is OMITTED for the first, so the address a human or an
+agent writes for a line — `path:5` — still means the todo they meant.
+
+```ts continue
+const twoOnALine = extractCardTodos({
+  relPath: CARD,
+  content: memo("- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %}"),
+  ctx,
+});
+twoOnALine.items.map((item) => formatTodoLocation(item)).join(" ")
+=> _content/projects/Kitchen.memo.card:5 _content/projects/Kitchen.memo.card:5#2
+```
+
+A third on the same line keeps counting, and a todo on a line of its own never
+grows a suffix.
+
+```ts continue
+show(CARD, [
+  "- {% todo %}One{% /todo %} {% todo %}Two{% /todo %} {% todo %}Three{% /todo %}",
+  "- {% todo %}Alone{% /todo %}",
+].join("\n"))
+=>
+5 [] parent=- "One" ann="" refs=
+5#2 [] parent=- "Two" ann="" refs=
+5#3 [] parent=- "Three" ann="" refs=
+6 [] parent=- "Alone" ann="" refs=
+```
 
 ## References: `see-also` refs and markdown links, resolved against the card
 

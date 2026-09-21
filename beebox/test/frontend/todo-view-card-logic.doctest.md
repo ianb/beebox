@@ -141,6 +141,33 @@ JSON.stringify([
 => ["_content/projects/Porch/Plan.doc.card:5","a.doc.card#todos[2]"]
 ```
 
+A line can hold more than one todo, so a body locator carries `nth` for the
+second and later ones. The key is also the React key each item renders under,
+which is why sharing one would not merely confuse the tree: it would make two
+siblings collide in the list.
+
+```ts continue
+const sameLine = [
+  item(5, "Appraise"),
+  item(5, "Insure", { locator: { kind: "body", line: 5, nth: 2 } }),
+  item(6, "Get the policy number", { parent: { kind: "body", line: 5, nth: 2 } }),
+];
+
+JSON.stringify(sameLine.map((i) => todoKey(i)))
+=> ["_content/projects/Porch/Plan.doc.card:5","_content/projects/Porch/Plan.doc.card:5#2","_content/projects/Porch/Plan.doc.card:6"]
+
+new Set(sameLine.map((i) => todoKey(i))).size
+=> 3
+```
+
+`parent` addresses one of the two, not the line, so the nested todo hangs off
+the todo that owns it.
+
+```ts continue
+shape(buildTodoTree(sameLine))
+=> Appraise, Insure > (Get the policy number)
+```
+
 ## Sections: unsectioned first, then the card's headings in order
 
 Only a ROOT is placed in a section. A nested todo belongs under its parent,
