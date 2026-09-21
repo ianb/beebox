@@ -24,6 +24,11 @@ bin/browse type @e2 " more text"                # type without clearing
 bin/browse press Enter
 bin/browse press Control+a
 
+# Scrolling — page by default; target an inner pane explicitly
+bin/browse scroll down 500
+bin/browse scroll down 500 --selector ".scroll-container"
+bin/browse scrollintoview @e8                 # bring one element into view
+
 # Responsive checks
 bin/browse set viewport 375 800                 # mobile
 bin/browse set viewport 1280 800                # back to desktop

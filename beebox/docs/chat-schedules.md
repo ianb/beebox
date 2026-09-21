@@ -9,14 +9,14 @@ Agent-initiated timers set during web chat conversations. The agent uses `<sched
 The agent includes a `<schedule>` tag in its response:
 
 ```xml
-<schedule label="check back" delay="5m" alarm="true" announce="Time to check in!">
+<schedule label="check back" in="5m" alarm="true" announce="Time to check in!">
 Remember to ask about the meeting outcome.
 </schedule>
 ```
 
 Attributes:
 - `label` (required): Display name, also used for cancellation
-- `delay` (required): Duration like `30s`, `5m`, `2h`
+- `in` (required): Duration like `30s`, `5m`, `2h` (units `s/m/h/d/w`)
 - `alarm` (optional): Play alarm sound when firing (`true`/`false`)
 - `announce` (optional): Text spoken via TTS when firing
 

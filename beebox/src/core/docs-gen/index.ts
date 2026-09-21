@@ -30,7 +30,7 @@ import {
   installBriefing,
   installSchedules,
 } from "../box/index.js";
-import { installSchemasGuide, installViewsGuide } from "../box/templates.js";
+import { installFeedbackGuide, installSchemasGuide, installViewsGuide } from "../box/templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { generateRules } from "../init-rules.js";
 import { generateSkills } from "../box/skills.js";
@@ -276,6 +276,7 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
   // standalone-view guide pick up the attach-to-cards rewrite on the normal
   // cycle (not just an explicit `bbx engine init`); user-edited guides are parked.
   await installViewsGuide(boxRoot);
+  await installFeedbackGuide(boxRoot);
   await generateRules(boxRoot);
   // Managed box skills refresh on the same path as the rules they mirror.
   // They used to be provisioned only by `bbx engine init`, so a box that never got a

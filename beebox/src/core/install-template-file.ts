@@ -87,6 +87,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   // hash, so it commits with the template change instead of leaving dirt.
   /^_config\/template-versions\.json$/,
   /^_config\/schemas\/CLAUDE\.md$/,
+  /^_config\/feedback\/CLAUDE\.md$/,
   /^_config\/bbx-validate\.ignore$/,
   /^src\/views\/CLAUDE\.md$/,
   /^src\/schemas\/CLAUDE\.md$/,

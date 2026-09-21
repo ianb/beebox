@@ -138,7 +138,7 @@ hook-bypass hatch would hide the next instance.
 ## Notes
 
 The dirty-tree half overlaps
-[`bbx feedback` can fail on whitespace it introduced itself](../../bugs/2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
+[`bbx feedback` can fail on whitespace it introduced itself](2026-08-12-bbx-feedback-rejects-its-own-transcript.md)
 — the same pattern of generated content failing a lint rule meant for authored
 content.
 

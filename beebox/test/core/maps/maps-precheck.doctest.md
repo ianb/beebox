@@ -428,7 +428,7 @@ print(`store: ${children("store")}`);
 print(`_config: ${children("_config")}`);
 =>
 store: notes/, refs/
-_config: a/, b/, interface/, migrations.jsonl, template-versions.json, transcription.json
+_config: a/, b/, feedback/, interface/, migrations.jsonl, template-versions.json, transcription.json
 ```
 
 The git-side listing agrees. This half has to be set up so the mirror appears

@@ -6,19 +6,16 @@
  * tab holding *exactly* that session acks (closing the server's `no-client`
  * window), scans its live document, and posts the inventory.
  *
- * No consent prompt, on purpose — unlike a screenshot, which captures whatever
- * content is on screen, this returns chrome: roles, control labels and
- * author-written descriptions, plus the few user-derived strings (session
- * title, box name, open tab labels) the agent already receives through
- * `open-card` and the session it is running in. "Chrome" is enforced, not
- * hoped for: the transcript, the open card and every other content region is
- * marked `data-bbx-scan="exclude"` and pruned from the walk
- * (`lib/ui-scan/scan.ts`, `SCAN_BOUNDARY_ATTRIBUTE`), so the links and buttons
- * inside the user's own content never reach this payload. The plan
- * (`docs/plans/agent-points-at-ui.md`, Track 3 "No consent prompt") records
- * this as a judgment call the boxholder should confirm; if the answer comes
- * back the other way, the popup belongs here, queued the way
- * `screenshot-request-handler.ts` queues its own.
+ * No consent prompt: the agent can already open any card, transcript or embed
+ * this page is rendering, so an inventory of the controls on it discloses
+ * nothing the agent could not ask for directly. That is the whole argument —
+ * the boxholder settled it 2026-09-21 — and it does not rest on what the walk
+ * skips.
+ *
+ * It scans `chrome` scope all the same, for editorial reasons: this answers
+ * "what controls does the app offer", and a rendered card's own links and
+ * buttons would bury that list. `scope: "document"` is what a driver wants and
+ * what `window.__bbxUiScan()` returns (`lib/ui-scan/window-hook.ts`).
  *
  * There is no React state and no view, so this is a plain module function
  * called straight from the WS dispatcher (like `fulfillLastAudioRequest`)
@@ -119,7 +116,7 @@ function mergeEntries(
 
 /** Scan the live document, fold in the native inventory, shape it as the wire payload. */
 function buildPayload(native: NativeControlEntry[] | null): UiScanPayload {
-  const scan = scanLiveDocument();
+  const scan = scanLiveDocument("chrome");
   // The scan's own entry type is assigned into the wire type here, so a drift
   // between `ui-scan/types.ts` and `shared/ui-scan.ts` is a compile error at
   // this line rather than a 400 at the route.

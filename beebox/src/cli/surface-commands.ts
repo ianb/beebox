@@ -64,7 +64,6 @@ import { usageCommand } from "./commands/usage.js";
 import { driveCommand } from "./commands/drive.js";
 import { chatCommand } from "./commands/chat.js";
 import { refreshMapsCommand } from "./commands/refresh-maps.js";
-import { feedbackCommand } from "./commands/feedback.js";
 import { retroCommand } from "./commands/retro.js";
 import { boxesCommand } from "./commands/boxes.js";
 import { intakeCommand } from "./commands/intake.js";
@@ -130,7 +129,6 @@ const ALL: readonly Command[] = [
   driveCommand,
   chatCommand,
   refreshMapsCommand,
-  feedbackCommand,
   retroCommand,
   boxesCommand,
   intakeCommand,

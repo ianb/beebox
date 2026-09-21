@@ -71,6 +71,8 @@ interface LiveScan {
   entries: ScanEntry[];
   /** `bbx-` ids more than one element carries right now — `getElementById` would pick one silently. */
   duplicateIds: string[];
+  /** The app's entry cap stopped the walk, so some ids on the page are not in here. */
+  truncated: boolean;
 }
 
 /**
@@ -84,7 +86,7 @@ function scanExpr(scope: string | null): string {
   const inScope = scope === null
     ? "() => true"
     : `(roots => id => { const el = document.getElementById(id); return el !== null && roots.some(r => r.contains(el)); })(Array.from(document.querySelectorAll(${JSON.stringify(scope)})))`;
-  return `JSON.stringify(typeof window.__bbxUiScan === 'function' ? ((s, inScope) => ({ entries: s.entries.map(e => ({ id: e.id !== null && inScope(e.id) ? e.id : null, role: e.role, name: e.name })), duplicateIds: s.duplicateIds }))(window.__bbxUiScan(), ${inScope}) : null)`;
+  return `JSON.stringify(typeof window.__bbxUiScan === 'function' ? ((s, inScope) => ({ entries: s.entries.map(e => ({ id: e.id !== null && inScope(e.id) ? e.id : null, role: e.role, name: e.name })), duplicateIds: s.duplicateIds, truncated: s.truncated }))(window.__bbxUiScan(), ${inScope}) : null)`;
 }
 
 /** The `-s`/`--selector` value of a `snapshot` invocation, or null when unscoped. */
@@ -100,10 +102,11 @@ async function liveScan(scope: string | null): Promise<LiveScan | null> {
     const { stdout } = await run(["eval", scanExpr(scope)]);
     const v = decodeEval(stdout);
     if (typeof v !== "object" || v === null || !("entries" in v)) return null;
-    const scan = v as { entries: unknown; duplicateIds: unknown };
+    const scan = v as { entries: unknown; duplicateIds: unknown; truncated: unknown };
     return {
       entries: Array.isArray(scan.entries) ? (scan.entries as ScanEntry[]) : [],
       duplicateIds: Array.isArray(scan.duplicateIds) ? (scan.duplicateIds as string[]) : [],
+      truncated: scan.truncated === true,
     };
   } catch {
     return null;
@@ -113,6 +116,16 @@ async function liveScan(scope: string | null): Promise<LiveScan | null> {
 function warnDuplicates(duplicateIds: readonly string[]): void {
   if (duplicateIds.length === 0) return;
   process.stderr.write(`browse: duplicate bbx- ids on this page (an id-addressed action on them is refused): ${duplicateIds.join(", ")}\n`);
+}
+
+/**
+ * The app caps its scan, and a page dense enough to hit the cap has ids the
+ * scan never reached. Said out loud because the symptom is a snapshot line with
+ * no id, which otherwise reads as "this control was never annotated".
+ */
+function warnTruncated(truncated: boolean): void {
+  if (!truncated) return;
+  process.stderr.write("browse: the app's control scan hit its entry cap, so some bbx- ids on this page are missing from this snapshot\n");
 }
 
 /** The id attribute of the element a ref names right now, or null. */
@@ -162,6 +175,7 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
   }
   const { entries } = scan;
   warnDuplicates(scan.duplicateIds);
+  warnTruncated(scan.truncated);
   const annotated = annotateSnapshot(text, entries);
   const remainingIds = new Set(entries.flatMap((e) => (e.id === null ? [] : [e.id])));
   for (const rec of Object.values(annotated.refs)) {
