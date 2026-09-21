@@ -10,6 +10,7 @@ import { CardVisibilityProvider } from "../everywhere/card-context";
 import { useWorkspace } from "./WorkspaceProvider";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
 import { isWorkspacePdf } from "./pdf-pane-view";
+import { workspacePanelId, workspaceTabId } from "../workspace-address";
 import { TranscriptFloatingControls } from "./TranscriptFloatingControls";
 import { isMarkdownPath } from "../../file-view-data";
 import type { SidecarTab } from "../sidecar-tabs";
@@ -40,7 +41,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
         onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} />
       <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
-    <div role="tabpanel" id={`bbx-workspace-panel-${encodeURIComponent(tab.target.path)}`} aria-labelledby={visible ? `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}` : undefined} tabIndex={0} aria-hidden={!visible} data-bbx-scan="exclude"
+    <div role="tabpanel" id={workspacePanelId(tab.target.path)} aria-labelledby={visible ? workspaceTabId(tab.target.path) : undefined} tabIndex={0} aria-hidden={!visible} data-bbx-scan="exclude"
       data-card-content={themedSurface ? "card" : "neutral"}
       className="bbx-interface-card-desk flex-1 min-h-0 overflow-auto"
       onFocus={() => workspace.activate(tab.target.path)}

@@ -21,7 +21,7 @@
 
 import { computeAccessibleName } from "./accessible-name.js";
 import { classifyElement } from "./roles.js";
-import { CONTROL_ID_PREFIX, isControlAddress } from "./resolve.js";
+import { isControlAddress } from "./resolve.js";
 import { hidesSubtree } from "./visibility.js";
 import type { ControlAction, ControlEntry, ScanElement, ScanResult } from "./types.js";
 
@@ -63,7 +63,15 @@ const SCAN_EXCLUDE = "exclude";
  *
  * It goes on content roots only, never on the chrome around them: the companion
  * pane's tab strip and close button stay scannable while the card rendered
- * below them does not. No `bbx-` address sits inside an excluded subtree.
+ * below them does not.
+ *
+ * Addresses *do* sit inside excluded subtrees, which the boundary's original
+ * note denied: a card's properties toggle and Browse's listing-mode switch are
+ * annotated controls rendered below the boundary. The dump is right not to
+ * carry them — the agent reads a card by opening it — but `bin/browse` reads
+ * this same walk to learn which snapshot line carries which address, so those
+ * controls print with no id and cannot be acted on by one
+ * (`issues/bugs/2026-09-20-browse-snapshot-drops-ids-for-tab-and-switch.md`).
  *
  * Excluded controls are not counted. An omission the dump reports is one the
  * agent might otherwise be misled by; this is a boundary the design drew, and
@@ -104,12 +112,21 @@ function addressOf(element: ScanElement): string | null {
   return isControlAddress(id) ? id : null;
 }
 
-/** Every `bbx-` id carried by more than one element, hidden subtrees included. */
+/**
+ * Every address carried by more than one element, hidden subtrees included.
+ *
+ * Addresses rather than every `bbx-`-prefixed id: the warning exists because a
+ * duplicate makes `getElementById` pick one arbitrarily and an id-addressed
+ * action land on the wrong control, which is only a hazard for an id something
+ * can be addressed by. Reporting a non-address here would also put a string the
+ * wire schema rejects into the payload, failing the whole dump over a duplicate
+ * on internal a11y wiring.
+ */
 function findDuplicateIds(root: ScanElement): string[] {
   const counts = new Map<string, number>();
   function count(element: ScanElement): void {
     const id = attr(element, "id");
-    if (id !== null && id.startsWith(CONTROL_ID_PREFIX)) {
+    if (id !== null && isControlAddress(id)) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
     }
     for (const child of element.children) if (child.kind === "element") count(child);

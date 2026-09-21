@@ -1,6 +1,6 @@
 ---
-title: "bin/browse snapshot -i omits the DOM id for tab, switch, and tabpanel roles"
-workstream: unattached
+title: "The app mints bbx- ids outside the address grammar, so the scan drops them and bin/browse cannot act on them"
+workstream: browse-id-pattern
 area: beebox
 labels: [browse, dev-tooling]
 filed-by: agent
@@ -8,64 +8,45 @@ discovered-by: agent
 discovered-in: worktree-collection-views — chasing a reported missing id on the todo-view controls
 ---
 
-> **Cause found 2026-09-21, and it is ours, not agent-browser's.** The title's
-> role theory is wrong. `bin/browse` annotates snapshots from the app's own
-> scan (`window.__bbxUiScan()`, `browse/src/act.ts` → `liveScan`), and the scan
-> reports these elements with `id: null`. Verified live on `/main/test1/browse`:
->
->     raw DOM   {"role":"tab","id":"bbx-workspace-tab-_config%2Finterface%2Flandmarks.card"}
->     __bbxUiScan {"role":"tab","id":null,...}
->
-> The filter is `CONTROL_ID_PATTERN = /^bbx(?:-[\da-z]+)+$/`
-> (`beebox/src/frontend/src/lib/ui-scan/resolve.ts:28`) — "bbx- plus kebab-case
-> segments, nothing that would need escaping". That id carries `%2F`, uppercase
-> and a dot, so it fails and `scan.ts:104` returns null.
->
-> So the rule is **any id that is not lowercase kebab-case is invisible to the
-> tooling, whatever its role**. Tabs looked role-shaped because workspace tab
-> ids embed an encoded card path. The issue's own unexplored note points the
-> same way: `bbx-card-properties-:r0:` is a *button*, and React `useId` colons
-> fail the same pattern.
->
-> Same pattern gates `resolve.ts:61`, which answers `bad-id`, so an
-> id-addressed action on these controls presumably cannot target them either —
-> check that, because it makes this more than a display bug.
->
-> **Still unexplained:** `bbx-todo-view-show-finished` (the `switch` above) is
-> plain kebab-case and should pass. Either that one has a second cause — the
-> annotator matches by role plus accessible name (`browse/src/controls.ts`,
-> `annotateSnapshot`), so a name mismatch also drops the id — or it was
-> mis-copied. It was on a page in `worktree-collection-views`, not checked here.
->
-> The fix is a decision, not a patch: widen the pattern to the ids the app
-> actually mints, or stop minting ids that cannot be addressed. Encoded card
-> paths and `useId` colons are two different offenders.
+A control address is an HTML `id` matching `/^bbx(?:-[\da-z]+)+$/` — lowercase
+kebab-case, nothing a CSS selector would need escaped. Three components built
+ids out of runtime data and interpolated it raw, producing ids outside that
+grammar:
 
-`bin/browse snapshot -i` (agent-browser 0.27.0) reports `id=` for buttons,
-links, and textareas, and reports no id for elements whose role is `tab`,
-`switch`, or `tabpanel` — even when those elements carry a `bbx-` id. On the
-worktree app it printed
+- `bbx-workspace-tab-${encodeURIComponent(path)}` and the matching
+  `bbx-workspace-panel-…` (`chat/SidecarTabStrip.tsx`,
+  `chat/workspace/WorkspaceCanvas.tsx`) — `%`, uppercase hex, and a dot.
+- `bbx-card-properties-${useId()}` and the card's front/back ids
+  (`themes/CardThemeSurface.tsx`) — React spells `useId` with colons.
 
-    - tab "By place" [selected, ref=e61]
-    - switch "Show finished" [checked=false, ref=e42]
+The scan reports such an id as `id: null` (`lib/ui-scan/scan.ts` `addressOf`),
+so `bin/browse snapshot -i` prints the control with no address; `resolveControl`
+answers `bad-id` before touching the document; and `bin/browse` parses the
+string as a CSS selector, which Chrome refuses:
 
-while the same page's DOM has `bbx-todo-view-group-place`,
-`bbx-todo-view-group-plate`, and `bbx-todo-view-show-finished` on exactly
-those elements (`bin/browse eval` over `[id^=bbx-]` lists all three). Every
-`bbx-workspace-tab-*`, `bbx-workspace-panel-*`, and `bbx-browse-listing-mode`
-address is invisible the same way, so it is the role and not the page.
+    ✗ click bbx-workspace-tab-_config%2Finterface%2Fbrowse.card refused: bad-selector
+      — 'bbx-workspace-tab-…' is not a valid selector
 
-This reads as a missing address: a reviewer comparing the snapshot against the
-source concludes the component or the primitive dropped the id, and goes
-looking for a bug in `TabBar`/`Toggle` that is not there. Both primitives pass
-`id` straight to the rendered element.
+That is the hole the id-addressing scheme exists to close
+(`issues/closed/bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md`):
+acting by `@eN` ref is unchecked and renumbers, so walkers and agents are told
+to act by `bbx-` id — and for these controls there was no id to act by.
 
-Not investigated: whether ids containing `:` are dropped for a second reason
-(`bbx-card-properties-:r0:`, a `button`, also prints without an id, and React
-`useId` values are the only `bbx-` addresses that contain colons), and whether
-a newer agent-browser fixes it. The binary is opaque, so this was established
-by comparing `snapshot -i` against `eval` on the live page.
+## Fix
 
-Workaround: confirm an address with
-`bin/browse eval 'document.getElementById("bbx-…") !== null'` rather than by
-reading `snapshot -i`.
+`beebox/src/shared/control-address.ts` now owns the grammar, its length cap, and
+`controlAddress(prefix, value)`, which base32-encodes a value into it. The
+three components mint through it; `DriveMountRow`'s hand-rolled hex encoder,
+which solved the same problem for case-sensitive Drive ids, was folded into it.
+The scan degrades an over-long address to "no address" rather than emitting one
+the wire schema would reject, and reports duplicates only for real addresses.
+
+## Not this, and still open
+
+The original title blamed agent-browser 0.27.0 for dropping `tab`, `switch` and
+`tabpanel` roles. It does not; the filter was ours.
+
+The report's `bbx-todo-view-show-finished` has a second, separate cause and is
+not fixed here: it is kebab-case and passes the grammar, but it sits inside a
+card, and card content is pruned from the scan by `data-bbx-scan="exclude"`.
+See `issues/bugs/2026-09-21-browse-cannot-address-controls-inside-cards.md`.

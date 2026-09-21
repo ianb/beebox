@@ -16,7 +16,7 @@ is markup copied from `InteractiveChat-composer.tsx`,
 
 ```ts setup
 import { scanControls, MAX_ENTRIES } from "../../../../src/frontend/src/lib/ui-scan/scan.js";
-import { resolveControl, resolveVisibleControl } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
+import { controlAddress, resolveControl, resolveVisibleControl } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ControlEntry, ScanResult } from "../../../../src/frontend/src/lib/ui-scan/types.js";
 import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../helpers/ui-scan-fixture.js";
 
@@ -175,6 +175,45 @@ so an unnamed one is just a box:
 ```ts
 JSON.stringify(scan(`<section><button title="Send">x</button></section>`).omittedUnnamed)
 => 0
+```
+
+## An id outside the grammar is not an address
+
+The scan reports an `id` only when it is a well-formed address
+(`shared/control-address.ts`), because that is the only kind `bin/browse` can
+interpolate into a selector and the app can honour as a `control:` link. This is
+what the app used to put on a workspace tab and a card's properties button: an
+`encodeURIComponent`'d card path and a React `useId` value, both outside the
+grammar, both reported here with no address at all while the control itself was
+still listed.
+
+```ts
+lines(scan(`
+  <nav aria-label="Open files">
+    <button role="tab" id="bbx-workspace-tab-_config%2Finterface%2Fbrowse.card" title="Browse"></button>
+    <button id="bbx-card-properties-:r0:" title="Properties"></button>
+    <button id="${controlAddress("bbx-workspace-tab", "_config/interface/browse.card")}" role="tab" title="Notes"></button>
+  </nav>
+`))
+=>
+- / navigation "Open files" (no address)
+Open files / tab "Browse" (no address)
+Open files / button "Properties" (no address)
+Open files / tab "Notes" bbx-workspace-tab-l5rw63tgnfts62loorsxeztbmnss6ytsn53xgzjomnqxeza
+```
+
+A `bbx-` id that is not an address is not reported as a duplicate either, even
+when it genuinely repeats. The warning exists because a duplicate sends an
+id-addressed action to the wrong control, which is not a risk for an id nothing
+can be addressed by — and a non-address in that list is a string the wire schema
+rejects, which would fail the whole dump over internal a11y wiring.
+
+```ts continue
+JSON.stringify(scan(`
+  <button id="bbx-card-properties-:r0:" title="Properties"></button>
+  <button id="bbx-card-properties-:r0:" title="Properties"></button>
+`).duplicateIds)
+=> []
 ```
 
 ## Content is not chrome

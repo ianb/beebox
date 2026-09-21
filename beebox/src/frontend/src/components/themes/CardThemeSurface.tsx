@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme";
+import { controlAddress } from "@shared/control-address";
 import type { FileViewMode } from "../file-view-types";
 
 export interface CardThemeSurfaceProps {
@@ -16,11 +17,16 @@ export interface CardThemeSurfaceProps {
 export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(false);
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
-  const id = useId();
+  // React's `useId` spells its values with colons, which the control address
+  // grammar has no room for, so the instance key is encoded rather than
+  // interpolated — an id outside the grammar is one the scan drops and
+  // `bin/browse` cannot act on.
+  const instance = useId();
   const toggle = useRef<HTMLButtonElement>(null);
   const front = useRef<HTMLDivElement>(null);
-  const frontId = `bbx-card-front-${id}`;
-  const backId = `bbx-card-back-${id}`;
+  const propertiesId = controlAddress("bbx-card-properties", instance);
+  const frontId = controlAddress("bbx-card-front", instance);
+  const backId = controlAddress("bbx-card-back", instance);
   const descriptor = THEME_CATALOG.find((item) => item.name === theme.choice.name);
   useEffect(() => {
     front.current?.toggleAttribute("inert", back);
@@ -52,7 +58,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
     >
       <button
         ref={toggle}
-        id={`bbx-card-properties-${id}`}
+        id={propertiesId}
         type="button"
         className="bbx-card-properties print:hidden"
         aria-label={back ? "Back to card" : "Properties"}

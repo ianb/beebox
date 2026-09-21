@@ -17,6 +17,7 @@ import { resolveCardTheme, type ResolvedThemeChoice } from "@shared/card-theme";
 import type { CardIdentity } from "../../hooks/useCardIdentities";
 import { ambiguousMarks, pinnedFace } from "./tab-identity";
 import type { PanelTab } from "./InteractiveChat-controls";
+import { workspacePanelId, workspaceTabId } from "./workspace-address";
 
 function themeForTab({ path, identity, presentation }: { path: string; identity: CardIdentity | null; presentation: ReturnType<typeof useBoxPresentation> }): ResolvedThemeChoice {
   if ((identity?.type === undefined && !path.endsWith(".md")) || presentation?.data === undefined) {
@@ -140,8 +141,8 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
         <button
           type="button"
           role="tab"
-          id={`bbx-workspace-tab-${encodeURIComponent(tab.target.path)}`}
-          aria-controls={isActive ? `bbx-workspace-panel-${encodeURIComponent(tab.target.path)}` : undefined}
+          id={workspaceTabId(tab.target.path)}
+          aria-controls={isActive ? workspacePanelId(tab.target.path) : undefined}
           tabIndex={isActive ? 0 : -1}
           onKeyDown={(event) => {
             const index = tabs.findIndex((item) => item.target.path === tab.target.path);
@@ -223,7 +224,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   // ARIA ownership groups only selection buttons as tabs. Their adjacent pin
   // and close buttons remain independent controls, outside the tablist.
   return <div id={id} className="bbx-interface-tabstrip flex-1 min-w-0 flex">
-      <div role="tablist" aria-label="Open files" className="absolute" aria-owns={tabs.map((tab) => `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}`).join(" ")} />
+      <div role="tablist" aria-label="Open files" className="absolute" aria-owns={tabs.map((tab) => workspaceTabId(tab.target.path)).join(" ")} />
       {pinned.length > 0 ? (
         <div role="none" data-overflow-left={overflow.left || undefined} data-overflow-right={overflow.right || undefined} className="flex-shrink-0 max-w-[50%] flex overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none border-r-2 border-warm-400 bg-warm-100">
           {pinned.map(renderTab)}
