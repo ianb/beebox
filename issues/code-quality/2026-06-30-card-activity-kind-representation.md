@@ -3,6 +3,7 @@ title: "card activity kind representation"
 workstream: unknown
 needs: [design]
 area: beebox
+next-action: reconfirm
 ---
 
 The `<card-activity>` children of the `<chat-app>` snapshot currently use ONE

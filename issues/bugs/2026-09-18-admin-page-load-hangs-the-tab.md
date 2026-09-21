@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder reporting it right after it happened
 next-action: discuss
+priority: normal
 ---
 
 Opening the admin page froze the tab the way a synchronous infinite loop does:
