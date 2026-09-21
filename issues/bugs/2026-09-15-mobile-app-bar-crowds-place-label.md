@@ -1,6 +1,6 @@
 ---
 title: "Mobile app bar crowds the place label when count badges are visible"
-workstream: unattached
+workstream: mobile-app-bar
 area: beebox
 filed-by: agent
 discovered-by: agent
