@@ -1,4 +1,32 @@
 tests:
+  # === Quick chat routing ===
+  # Status (2026-09-21, Claude): 1/1 passed, 0 reads/searches, 23k context,
+  # against a disposable standalone clone with installed package-doc files.
+  # Earlier fixture attempts had a missing @import after cleanup removed a
+  # node_modules symlink; those were fixture failures, not rubric recall.
+  - id: quick-chat-rubric-maintenance
+    prompt: >
+      The boxholder wants quick captures about their garden to reach the right
+      conversation. They also want an older garden-planning chat kept eligible.
+      Where do you maintain the rules, how do you refer to the targets and keep
+      that older chat eligible, and how do authored rules relate to current
+      conversation facts? Distinguish continuing a chat from starting one in a
+      landmark. Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
+    fixture:
+      CLAUDE.md: |
+        @node_modules/beebox/box-docs/quick-chat.md
+    correct_contains:
+      - "_config/chat-routing.yaml"
+      - "keepEligible"
+    correct_matches:
+      - '(?:target|ref|path)[\s\S]{0,240}(?:card|landmark)|(?:card|landmark)[\s\S]{0,240}(?:target|ref|path)'
+      - '(?:authored|boxholder|rules)[\s\S]{0,350}(?:preserv|separat|not replace|not overwrite)|(?:preserv|separat)[\s\S]{0,350}(?:authored|rules)'
+      - '(?:metadata|recency|summar|transcript|facts)[\s\S]{0,350}(?:router|generat|current|separat)|(?:router|generat|current|separat)[\s\S]{0,350}(?:metadata|recency|summar|transcript|facts)'
+      - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
+    tags: [quick-chat]
+
   # === Migration recovery ===
   # Status (2026-09-14, Claude): 1/1 passed with no reads/searches using the
   # shipped guide in a standalone installed-package fixture. Cross-repository

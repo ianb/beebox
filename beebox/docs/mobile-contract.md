@@ -1441,3 +1441,20 @@ ios-app/BeeBox/Services/LogForwarder.swift
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 beebox/test/mobile-contract/
 ```
+
+## Quick chat evaluation entry
+
+The iOS Quick chat button presents `<baseURL>/quick-chat` in an independent
+webview sheet. It reuses paired-box authentication and same-origin navigation,
+but installs no native composer bridge. The web form owns routing and ordinary
+chat send; the main native conversation, draft, and pending emissions remain
+mounted behind the sheet. Done returns to them. This is an explicit entry, not
+an automatic app cold-start rule. Existing native recording state is not
+transferred to the sheet.
+
+The standalone web route shows the chosen destination and competing probabilities
+after sending. A destination link opens ordinary web chat inside the sheet.
+No emission version, native target type, or binding JSON changes for this trial.
+Owners: `ios-app/BeeBox/Views/RootView.swift`, `ChatWebView.swift`, and
+`src/frontend/src/pages/quick-chat/QuickChatPage.tsx`. Request/authentication and
+absence of the native bridge are covered by `ChatWebViewRequestTests`.

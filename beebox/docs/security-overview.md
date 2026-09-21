@@ -1,12 +1,17 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-03
-model: claude-fable-5-1
+date: 2026-09-21
+model: gpt-6-astra
 reviewed-by: Ian
 ---
 
 # Security overview
+
+**Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
+`34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
+previous full-inventory anchor. Unrelated historical changes, the private
+security tier, and the complete surface map were not re-audited.
 
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
@@ -116,6 +121,14 @@ The summary:
   A generic adapter proxy can also forward requests to Replicate,
   Mistral, Anthropic, or OpenAI with the box's stored key — used by
   box-local code, never automatically.
+- **OpenRouter → TypeSafe** — Quick chat sends your message, destination
+  rules, conversation labels and identifiers, and bounded recent conversation
+  text to Jev to choose where the message goes. It uses the box's granted
+  OpenRouter key, pins TypeSafe with fallback disabled, and requests no data
+  collection. This is not a zero-retention guarantee. Avoid Quick chat or omit
+  that key grant to avoid this egress; ordinary direct chat remains available.
+  Quick chat sends to the selected conversation before showing the result.
+  Correcting a destination sends another copy; it cannot undo agent actions.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,

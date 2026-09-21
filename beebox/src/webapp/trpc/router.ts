@@ -1,3 +1,4 @@
+import { quickChatRouter } from "./routers/quick-chat.js";
 import { router } from "./trpc.js";
 import { historyRouter } from "./routers/history.js";
 import { statusRouter } from "./routers/status.js";
@@ -37,6 +38,7 @@ import { gmailRouter } from "./routers/gmail.js";
 import { searchRouter } from "./routers/search.js";
 
 export const appRouter = router({
+  quickChat: quickChatRouter,
   history: historyRouter,
   status: statusRouter,
   card: cardRouter,
