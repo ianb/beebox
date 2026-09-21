@@ -5,9 +5,9 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc.js";
 import type { TrpcContext } from "../context.js";
-import { loadRoutingCandidates, RoutingCatalogError } from "../../../core/chat/routing/catalog.js";
+import { loadRoutingCandidates, boundRoutingContexts, RoutingCatalogError } from "../../../core/chat/routing/catalog.js";
 import { routingCandidateSchema, selectRoutingDestination } from "../../../core/chat/routing/policy.js";
-import { createJevService, JevError } from "../../../services/jev.js";
+import { createJevService, serializeJevRequest, JevError } from "../../../services/jev.js";
 import { getOpenRouterKey } from "../../../core/openrouter.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode, toError } from "../../../lib/error-guards.js";
@@ -67,7 +67,10 @@ async function judge(ctx: TrpcContext, state: { message: string; candidates: Qui
   const key = ctx.services.jev ? null : await getOpenRouterKey(ctx.boxRoot, { purpose: "quick-chat-routing" });
   if (!ctx.services.jev && !key) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Quick chat needs an OpenRouter key granted to this box. Your message has not been sent." });
   const service = ctx.services.jev ?? createJevService({ apiKey: key ?? "" });
-  return service.decide({ state, criteria: Object.fromEntries(state.candidates.map(candidate => [candidate.id, `${candidate.label}: ${candidate.target.kind}. Use the matching candidate in state for its context and rubric.`])) });
+  const criteria = Object.fromEntries(state.candidates.map(candidate => [candidate.id, `${candidate.label}: ${candidate.target.kind}. Use the matching candidate in state for its context and rubric.`]));
+  const overhead = serializeJevRequest({ state: { ...state, candidates: [] }, criteria }).length - 2;
+  const candidates = boundRoutingContexts(state.candidates, Math.min(60_000, 80_000 - overhead));
+  return { ...await service.decide({ state: { ...state, candidates }, criteria }), candidates };
 }
 
 function routingFailure(error: unknown): never {
@@ -87,8 +90,8 @@ export const quickChatRouter = router({
     const source = input.sourceId ? await readRecord(ctx.boxRoot, input.sourceId) : null;
     if (input.sourceId && !source) throw new TRPCError({ code: "NOT_FOUND", message: "Original routing result is unavailable" });
     if (source && source.message !== input.message) throw new TRPCError({ code: "BAD_REQUEST", message: "A correction must resend the original text" });
-    const candidates = source?.candidates ?? await loadRoutingCandidates(ctx.boxRoot);
-    const judgment = source ?? await judge(ctx, { message: input.message, candidates });
+    const judgment = source ?? await judge(ctx, { message: input.message, candidates: await loadRoutingCandidates(ctx.boxRoot) });
+    const candidates = judgment.candidates;
     const selection = selectRoutingDestination({ candidates, probabilities: judgment.probabilities });
     const selected = input.candidateId && source ? candidates.find(candidate => candidate.id === input.candidateId) : selection.selected;
     if (!selected || (input.candidateId && !source)) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose a destination from the original routing result" });

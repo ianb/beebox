@@ -5,7 +5,8 @@ responses become typed errors; they cannot silently change the candidate set.
 These tests use synthetic data and never contact OpenRouter.
 
 ```ts setup
-import { parseJevResponse, createFakeJev, createJevService, JevError } from "../src/services/jev.js";
+import { parseJevResponse, createFakeJev, createJevService, JevError, serializeJevRequest } from "../src/services/jev.js";
+import { boundRoutingContexts } from "../src/core/chat/routing/catalog.js";
 const keys = ["garden", "weekend", "new"];
 function response(probabilities: unknown, confidence: unknown = 0.8) {
   return { model: "typesafe/jev-1.13-test", answers: { destination: { type: "choice", probabilities, confidence } } };
@@ -80,4 +81,41 @@ Oversized catalogs fail before any request. No candidates are silently removed.
 const bounded = createJevService({ apiKey: "unused-test-key" });
 await bounded.decide({ state: { candidates: "x".repeat(80_001) }, criteria: { existing: "Continue", new: "New" } })
 => throws JevError
+```
+
+## Whole-request budgeting preserves candidates with escaped captured text
+
+The budget includes the captured message, criterion descriptions, fixed prompt,
+and JSON escaping. Large catalogs shorten transcript evidence instead of losing
+destinations. These fixtures use the route's criterion descriptions and a
+maximum-length captured message containing backslashes and newlines.
+
+```ts
+const escapedMessage = "garden\\\n".repeat(1500);
+escapedMessage.length
+=> 12000
+
+function budgetedRequest(count) {
+  const candidates = Array.from({ length: count }, (_, index) => ({
+    id: `c${index}`, label: `Chat ${index}`,
+    target: { kind: "existing-session", sessionId: `session-${index}`, contextDir: "" },
+    recentContext: "user: garden plans\n".repeat(110),
+  }));
+  const criteria = Object.fromEntries(candidates.map(candidate => [candidate.id, `${candidate.label}: ${candidate.target.kind}. Use the matching candidate in state for its context and rubric.`]));
+  const budget = 80000 - serializeJevRequest({ state: { message: escapedMessage, candidates: [] }, criteria }).length + 2;
+  const bounded = boundRoutingContexts(candidates, budget);
+  const request = serializeJevRequest({ state: { message: escapedMessage, candidates: bounded }, criteria });
+  return { candidates, bounded, request };
+}
+const largeRequests = [budgetedRequest(120), budgetedRequest(200)];
+JSON.stringify(largeRequests.map(result => ({
+  fits: result.request.length <= 80000,
+  count: result.bounded.length,
+  identitiesPreserved: result.bounded.every((candidate, index) => candidate.id === result.candidates[index].id && candidate.target.sessionId === result.candidates[index].target.sessionId),
+  shortened: result.bounded.every(candidate => candidate.contextTruncated && candidate.recentContext.length < 2000),
+})))
+=> [{"fits":true,"count":120,"identitiesPreserved":true,"shortened":true},{"fits":true,"count":200,"identitiesPreserved":true,"shortened":true}]
+
+boundRoutingContexts([{ id: "c0", label: "Metadata that cannot fit", target: { kind: "new-session", contextDir: "" } }], 20)
+=> throws RoutingCatalogError: Chat routing rules and destination details exceed the request budget. Shorten the rubric, or copy your text into a chat using Chats.
 ```

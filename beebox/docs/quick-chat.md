@@ -87,7 +87,8 @@ The current bounds are:
 - Candidate context: the last 12 parsed transcript entries, user/assistant text
   only, capped at 2,000 characters per chat and 32,000 across chats. Serialized
   candidates stay within 60,000 characters. Shortened excerpts are disclosed in
-  the result; labels are capped at 300 characters.
+  the result; labels are capped at 300 characters. The candidate budget also
+  shrinks to fit the complete serialized message, choices, and instructions.
 - Rubric: at most 100 entries; `when` at most 2,000 characters, `avoid` at most
   1,000, and at most five examples of 500 characters each.
 - Judgment: at most 255 choices, 80,000 serialized request characters, and a

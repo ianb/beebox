@@ -30,7 +30,7 @@ buildRoutingCandidates({ ...base, rubric: { destinations: [{ target: "/_content/
 => throws RoutingCatalogError: Chat routing rubric target is unavailable: /_content/deleted.chat.card
 
 buildRoutingCandidates({ ...base, sessions: Array.from({ length: 254 }, (_, i) => session(String(i), 0)) })
-=> throws RoutingCatalogError: Too many eligible chats for routing. Choose a destination manually.
+=> throws RoutingCatalogError: Too many eligible chats for routing. Copy your text into a chat using Chats.
 ```
 
 Background landmarks are excluded unless the rubric explicitly opts in. A deleted or unavailable session is absent from the supplied live-owner list.
@@ -106,7 +106,7 @@ JSON.stringify([encoded.length === full.length, JSON.stringify(encoded).length <
 => [true,true,true]
 
 boundRoutingContexts(full.map(candidate => ({ ...candidate, rubric: [{ when: "x".repeat(60001) }] })))
-=> throws RoutingCatalogError: Chat routing rules and destination details exceed the request budget. Shorten the rubric or choose a destination manually.
+=> throws RoutingCatalogError: Chat routing rules and destination details exceed the request budget. Shorten the rubric, or copy your text into a chat using Chats.
 
 boundRoutingContexts([{ ...full[0]!, recentContext: "Short context", contextTruncated: true }])[0]?.contextTruncated
 => true

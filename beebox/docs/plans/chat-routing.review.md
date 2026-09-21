@@ -95,3 +95,9 @@ snapshot is intentional evidence for evaluating routing against the exact
 context supplied. Its contents, mode 0600, and lack of expiry are documented.
 A provisional preference for existing chats may retain an older landmark
 conversation; labeled live evaluation will test that behavior.
+
+Verification confirmed the error and reservation fixes. It found that the
+candidate budget also had to account for the serialized message and criteria.
+The service now exposes its exact request serialization; routing subtracts
+that overhead before trimming excerpts and persists the actual sent snapshot.
+Catalog overflow messages now name the available Chats/copy recovery.

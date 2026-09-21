@@ -26,9 +26,9 @@ export class RoutingCatalogError extends Error {
   constructor({ reason, target }: { reason: "stale-target" | "overflow" | "landmarks" | "rubric" | "size"; target?: string }) {
     const messages = {
       "stale-target": `Chat routing rubric target is unavailable: ${target ?? ""}`,
-      overflow: "Too many eligible chats for routing. Choose a destination manually.",
+      overflow: "Too many eligible chats for routing. Copy your text into a chat using Chats.",
       rubric: "Chat routing rubric is invalid. Check _config/chat-routing.yaml.",
-      size: "Chat routing rules and destination details exceed the request budget. Shorten the rubric or choose a destination manually.",
+      size: "Chat routing rules and destination details exceed the request budget. Shorten the rubric, or copy your text into a chat using Chats.",
       landmarks: "Some landmarks could not be read. Repair them before using Quick chat.",
     };
     super(messages[reason]);
@@ -119,7 +119,8 @@ export function buildRoutingCandidates(args: {
 }
 
 /** Keep every destination; share the excerpt budget evenly and report shortened evidence. */
-export function boundRoutingContexts(candidates: RoutingCandidate[]): RoutingCandidate[] {
+export function boundRoutingContexts(candidates: RoutingCandidate[], serializedBudget?: number): RoutingCandidate[] {
+  const budget = serializedBudget ?? 60_000;
   const count = candidates.filter(candidate => candidate.target.kind === "existing-session").length;
   const applyLimit = (limit: number) => candidates.map(candidate => {
     if (candidate.target.kind !== "existing-session") return candidate;
@@ -128,13 +129,13 @@ export function boundRoutingContexts(candidates: RoutingCandidate[]): RoutingCan
       contextTruncated: candidate.contextTruncated === true || text.length > limit };
   });
   const metadata = applyLimit(0);
-  if (JSON.stringify(metadata).length > 60_000) throw new RoutingCatalogError({ reason: "size" });
+  if (JSON.stringify(metadata).length > budget) throw new RoutingCatalogError({ reason: "size" });
   let low = 0;
   let high = count === 0 ? 0 : Math.min(2000, Math.floor(32_000 / count));
   // Exact serialization accounts for escaped control characters in transcript text.
   while (low < high) {
     const middle = Math.ceil((low + high) / 2);
-    if (JSON.stringify(applyLimit(middle)).length <= 60_000) low = middle;
+    if (JSON.stringify(applyLimit(middle)).length <= budget) low = middle;
     else high = middle - 1;
   }
   return applyLimit(low);

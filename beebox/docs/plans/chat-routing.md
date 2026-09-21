@@ -161,13 +161,14 @@ The new YAML configuration needs no migration. Update the current mobile and sec
 
 ## Implementation evidence
 
-The implementation is approximately 1,850 changed lines: 822 source, 455 tests,
-and 573 authored documentation/audit lines. The documentation exceeds the
-initial estimate because it includes security, native-contract, and rubric
-audit evidence; no further feature scope was added.
+The implementation is approximately 1,912 authored changed lines across source,
+tests, documentation, and audit evidence, plus about 135 generated documentation
+index lines. Documentation exceeds the initial estimate because it includes
+security, native-contract, and rubric audit evidence; no further feature scope
+was added.
 
 Implemented locally for evaluation. The 108 change-selected files passed 1,277
-assertions. The focused Jev/catalog/request suite passed 61 assertions. Backend,
+assertions. The focused Jev/catalog/request suite passed 65 assertions. Backend,
 frontend, tooling, and user-story typechecks and changed-file lint pass. Native
 simulator build and ChatWebViewRequestTests pass; physical-device and native
 sheet visual verification remain unobserved. The rubric knowledge audit passed
