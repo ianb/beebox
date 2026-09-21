@@ -12,7 +12,11 @@ The corpus you maintain is the public agent documentation at `beebox.run`:
 `site/docs-manifest.yaml` (which repo docs are promoted and under what
 description). The generated engine reference tracks the code by itself and
 is not yours to edit. Design and conventions: `beebox/docs/plans/agent-docs.md`
-and `site/docs-authoring.md`. Read both before touching anything.
+and `site/docs-authoring.md`, and the frame the pages are written against is
+`site/docs-themes.md` (internal, not published). Read all three before
+touching anything. When the week's changes make a theme stronger or thinner,
+say so in `docs-themes.md` and in the front page's `## Themes` section, not
+only on the page that changed.
 
 ## What to do
 

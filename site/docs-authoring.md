@@ -145,3 +145,12 @@ agent prose in a blockquote, never paraphrase inside one, and do not use a
 blockquote for emphasis or asides. Promoted repo docs keep whatever their
 source uses; the convention is stated for the authored pages only.
 
+## Themes
+
+`docs-themes.md`, beside this file, is the internal frame: the ten themes that
+distinguish Bee Box, what each means, how the product expresses it, and where
+it is thinner than it sounds. It is not published. Write against it: a page
+earns its place by carrying a theme, and a theme that has gone thin gets said
+honestly rather than dropped. The front page's `## Themes` section is the
+short public version; keep the two in step.
+
