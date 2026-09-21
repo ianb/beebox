@@ -22,6 +22,10 @@ cause refusal. A review then exposed an ancestor-scope gap: an overlay inside
 A browser regression reproduced `ok: true` before bounding the ancestor walk;
 after the fix it returned `covered`. The same check passed an unobstructed rich
 option and rejected both a changed name and an overlay within a listbox.
+A further regression covered an overlay control named only with the target
+name's prefix: it incorrectly passed before removing the reverse substring
+comparison and was refused afterwards. Matching now requires a candidate to
+contain the whole expected name.
 The final C-box replay clicked the first Bram result (`@e32` in that snapshot),
 returned `Done`, and selected the Reconnecting document tab.
 
