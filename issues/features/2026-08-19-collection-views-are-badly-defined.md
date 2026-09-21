@@ -435,6 +435,18 @@ They also asked what `reviewed` is for — *"whether it does anything, or is jus
 a label I now feel responsible for maintaining."* A status a collection view
 never surfaces is exactly a label the user maintains for nobody.
 
+## Todo instance landed (2026-09-20)
+
+The first instance is built:
+[Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
+implements a staged collection pipeline (`src/core/collection/`), the todo
+definition on top of it (`src/core/todo/collection.ts`, `query.ts`), and
+consumers (`collections.query` tRPC router, `TodoViewCard`, `bbx query`). It
+commits to one instance rather than the general shape this issue asks for:
+non-todo collections, Markdown embedding (`![...](collection-link)`),
+indexing, and box-authored collections are not built. This issue stays open
+for that general design.
+
 ## Code survey (2026-09-19)
 
 A survey of the code changes three premises in the sections above.

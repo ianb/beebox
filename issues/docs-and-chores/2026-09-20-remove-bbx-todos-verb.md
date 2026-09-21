@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: worktree-collection-views — boxholder decision while approving the todo-collection plan
 ---
 
-The [todo collection plan](../../beebox/docs/plans/todo-collection.md) added
+The [todo collection plan](../../beebox/docs/implemented-plans/todo-collection.md) added
 `bbx query <collection>` and re-based `bbx todos` on the same runner. The
 boxholder's decision (2026-09-20): "leave bbx todos but plan to delete it
 later". This issue is the "later".
