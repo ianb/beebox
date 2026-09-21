@@ -5,86 +5,100 @@ import type { ReactElement } from "react";
 /** Podcast ("box") is drawn for completeness; the mode is not yet reachable. */
 export type ConversationFloor = "shared" | "person" | "box";
 
-/**
- * The face carries two facts and draws exactly one mark for each.
- *
- * It used to draw four: a person, an arrow, a bot, and the bot's output, strung
- * across a 50×16 strip. Every mark was then about 8px wide with a 1.3px stroke,
- * which resolves on a desktop and reads as three unrelated glyphs on a phone
- * (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`, second
- * problem). Fewer marks is the only thing that makes each mark bigger: these
- * two are ~12px in a 22×16 box rendered at 26×20, half again the old size, and
- * the strip is 24px narrower — which the app bar also needed.
- *
- * The participants went, not the facts. `voiceChipLabel` says both outright in
- * words, the menu rows name them, and the arrow keeps its own two ends: two
- * opposed arrows are an exchange, one arrow is a one-way floor. That is the
- * distinction the closed mic bug turned on
- * (`issues/closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`) —
- * a mic could not carry it because voice input is the same in both modes,
- * whereas direction differs by construction.
- *
- * Speaker labels (diarization) no longer have a mark anywhere. It used to be
- * the second head on the person; with no person drawn it lives in the
- * accessible name and the menu's service row.
- */
-
-/** Who holds the floor — an exchange, or one way. */
-function FloorMark({ floor }: { floor: ConversationFloor }): ReactElement {
-  const paths = {
-    shared: "M.5 5h6.5m-2-2 2 2-2 2M9 11H2.5m2-2-2 2 2 2",
-    person: "M.5 8h8.5m-2.5-2.5L9 8 6.5 10.5",
-    box: "M9 8H.5m3-2.5L.5 8 3 10.5",
-  } satisfies Record<ConversationFloor, string>;
-  return <path d={paths[floor]} />;
-}
-
-/**
- * How the box answers — sound, or writing.
- *
- * The speaker body is drawn in BOTH states and only what leaves it changes.
- * Two reasons. It says the box is still answering either way: written lines on
- * their own read as a list — a hamburger menu, in the first drawing of this
- * face — and a slash would say *suppressed*, which is not what happens. And a
- * body shared by both values is what makes this one axis with two settings
- * rather than two unrelated icons sitting next to the arrow.
- */
-function AnswerMark({ muted }: { muted: boolean }): ReactElement {
+function PersonMark(): ReactElement {
   return (
     <>
-      <path d="M11 6h1.5L14.5 4v8l-2-2H11z" />
-      <path d={muted ? "M16 5h3.5M16 8h2.5M16 11h3.5" : "M16 6.4a2.4 2.4 0 0 1 0 3.2M18 4.6a5.2 5.2 0 0 1 0 6.8"} />
+      <circle cx="4.5" cy="5" r="2.2" />
+      <path d="M1 13v-1.5a3.5 3.5 0 0 1 7 0V13" />
     </>
   );
 }
 
-/** Both facts, side by side — the chip's whole face. */
-export function ConversationIcon({ floor, muted }: {
+function BotMark(): ReactElement {
+  return (
+    <g transform="translate(19 1)">
+      <path d="M4.5 3V1.5M3 1.5h3" />
+      <rect x=".8" y="4" width="7.4" height="8" rx="1.5" />
+      <path d="M3 9.8h3" />
+      <circle cx="3" cy="7" r=".65" fill="currentColor" stroke="none" />
+      <circle cx="6" cy="7" r=".65" fill="currentColor" stroke="none" />
+    </g>
+  );
+}
+
+function FloorMarks({ floor, diarizationEnabled }: { floor: ConversationFloor; diarizationEnabled: boolean }): ReactElement {
+  const arrows = {
+    shared: "M10 5h6l-2-2M16 11h-6l2 2",
+    person: "M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5",
+    box: "M16 8h-6m2.5-2.5-2.5 2.5 2.5 2.5",
+  } satisfies Record<ConversationFloor, string>;
+  return (
+    <>
+      <g transform="translate(0 1)">
+        {diarizationEnabled ? (
+          <>
+            <g transform="translate(0 2) scale(.7)"><PersonMark /></g>
+            <g transform="translate(4.5 -1) scale(.7)"><PersonMark /></g>
+          </>
+        ) : <PersonMark />}
+      </g>
+      <path d={arrows[floor]} />
+      <BotMark />
+    </>
+  );
+}
+
+function AnswerMarks({ muted }: { muted: boolean }): ReactElement {
+  return <path d={muted ? "M30 4h10M30 8h7M30 12h10" : "M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9"} />;
+}
+
+/**
+ * One human (or diarized group), arrows, and one bot carrying its answer style.
+ * Floor and answer channel remain independent: narration permits spoken
+ * exceptions unless answers are explicitly in text. The shared bot connects
+ * those facts without drawing it twice or making both participants emit sound.
+ *
+ * Same four marks as ever, drawn bigger. They used to sit in a 50×16 box at
+ * 1:1, which put about 8px and a 1.3px stroke into each one: legible on a
+ * desktop, three unrelated glyphs on a phone
+ * (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`). The dead
+ * space between person, arrow, bot and output was most of that width, so
+ * closing it and rendering the 41-unit box at 51px buys every mark a quarter
+ * more size AND gives the app bar back 7px. Nothing was dropped to pay for it.
+ *
+ * A reduced two-mark face was tried here first and rejected by the boxholder:
+ * the redrawn arrows were cruder than these, the mute mark did not read, and
+ * it had been applied at desktop width where nothing was wrong. Shrink the
+ * spacing before the vocabulary.
+ */
+export function ConversationIcon({ floor, muted, diarizationEnabled }: {
   floor: ConversationFloor;
   muted: boolean;
+  diarizationEnabled: boolean;
 }): ReactElement {
   return (
-    <svg className="w-[26px] h-5 shrink-0" viewBox="-1 0 22 16" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <FloorMark floor={floor} />
-      <AnswerMark muted={muted} />
+    <svg className="w-[51px] h-5 shrink-0" viewBox="0 0 41 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <FloorMarks floor={floor} diarizationEnabled={diarizationEnabled} />
+      <AnswerMarks muted={muted} />
     </svg>
   );
 }
 
-/** The answer mark alone, for the menu's mute row — the same shape the face wears. */
+/** The same bot and output marks, isolated for the answer-channel menu row. */
 export function SpeakerIcon({ muted }: { muted: boolean }): ReactElement {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="10 2 11 12" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <AnswerMark muted={muted} />
+    <svg className="w-[26px] h-5 shrink-0" viewBox="19 0 22 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <BotMark />
+      <AnswerMarks muted={muted} />
     </svg>
   );
 }
 
-/** The floor mark alone, for the menu's narration row — the same shape the face wears. */
-export function FloorIcon({ floor }: { floor: ConversationFloor }): ReactElement {
+/** The same participants and arrows, isolated for the narration menu row. */
+export function FloorIcon({ floor, diarizationEnabled }: { floor: ConversationFloor; diarizationEnabled: boolean }): ReactElement {
   return (
-    <svg className="w-5 h-5 shrink-0" viewBox="-1 2 11 12" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <FloorMark floor={floor} />
+    <svg className="w-[34px] h-5 shrink-0" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <FloorMarks floor={floor} diarizationEnabled={diarizationEnabled} />
     </svg>
   );
 }
