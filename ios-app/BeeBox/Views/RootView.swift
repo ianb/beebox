@@ -531,13 +531,13 @@ private struct NativeControlRing: Identifiable {
 /// The running `Task` keeps this object alive for its own lifetime.
 @MainActor
 private final class LogFlushBackgroundTask {
-    private var identifier = UIBackgroundTaskIdentifier.invalid
+    private let hold = BackgroundExecutionHold()
     private var work: Task<Void, Never>?
 
     func begin() {
-        identifier = UIApplication.shared.beginBackgroundTask(withName: "beebox.log-flush") {
+        _ = hold.begin(name: "beebox.log-flush") { [weak self] in
             MainActor.assumeIsolated {
-                self.end()
+                self?.cancelForExpiration()
             }
         }
         work = Task {
@@ -550,11 +550,12 @@ private final class LogFlushBackgroundTask {
     private func end() {
         work?.cancel()
         work = nil
-        guard identifier != .invalid else {
-            return
-        }
-        UIApplication.shared.endBackgroundTask(identifier)
-        identifier = .invalid
+        hold.end()
+    }
+
+    private func cancelForExpiration() {
+        work?.cancel()
+        work = nil
     }
 }
 

@@ -1,0 +1,23 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-hq-fallback-1",
+    "origin": "voice",
+    "text": "realtime fallback text",
+    "diarized": false,
+    "hqFallback": true,
+    "images": [],
+    "files": [],
+    "selections": []
+  },
+  "expected": {
+    "id": "ios-hq-fallback-1",
+    "origin": "voice",
+    "text": "realtime fallback text",
+    "images": [],
+    "files": [],
+    "selections": [],
+    "diarized": false,
+    "hqFallback": true
+  }
+}
