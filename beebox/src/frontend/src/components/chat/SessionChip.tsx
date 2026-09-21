@@ -4,8 +4,12 @@
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
  * panel-swap idiom).
  *
- * Sliders plus a persistent "Chat" label identify chat properties even when
- * the conversation title is hidden. The model dial compares against the box
+ * Sliders plus a "Chat" label identify chat properties even when the
+ * conversation title is hidden. Below `sm:` only the sliders remain: the label
+ * and the glyph say the same thing, and the phone bar cannot afford both
+ * (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`). The
+ * `aria-label` names the chip in full at every width, so nothing is lost to a
+ * screen reader when the word goes. The model dial compares against the box
  * default; its attached star marks a different harness.
  *
  * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
@@ -13,11 +17,11 @@
  * it can't reach a sibling session in the landmark you're already in. Finding
  * *a session* is a chat concern; finding *a place* is the pill's.
  *
- * Face, following the bar's one-flexible-member rule: "Chat" and caret always,
- * with the model/harness indicator alongside and the properties glyph from sm:;
- * the session label (truncated) from `sm:` up — the chip is the third thing to
- * give way as the viewport narrows, after the box prefix and the folder half's
- * label. Same composition as the pill's here-half, which is the point.
+ * Face, following the bar's one-flexible-member rule: the properties glyph and
+ * caret always, with the model/harness indicator alongside; the "Chat" label
+ * and the session label (truncated) from `sm:` up — the chip is the third thing
+ * to give way as the viewport narrows, after the box prefix and the folder
+ * half's label. Same composition as the pill's here-half, which is the point.
  *
  * `React.memo` is load-bearing, not decoration: this chip is portaled into
  * the bar from the chat's tree, which re-renders on every streaming token
@@ -43,10 +47,15 @@ import { modelDrift, engineDrift } from "./model-drift";
 // positioning complexity. Resets to "root" when the dropdown closes.
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
-/** Chat properties; the adjacent "Chat" label supplies the subject. */
+/**
+ * Chat properties. From `sm:` up the adjacent "Chat" label supplies the
+ * subject; below it the glyph carries the chip alone, which is why it is the
+ * half that stays — a word costs three times the width of the mark, and at
+ * phone size the bar has none to spare.
+ */
 function ChatSettingsIcon() {
   return (
-    <svg className="hidden sm:block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 7h4m4 0h10M3 17h10m4 0h4" />
       <circle cx="9" cy="7" r="2" />
       <circle cx="15" cy="17" r="2" />
@@ -298,13 +307,13 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             data-bbx-reveal
             data-bbx-does="opens the session menu — new session, recent chats, model, advanced"
             onClick={toggle}
-            className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40"
             title={accessibleName}
             aria-label={accessibleName}
             {...ariaProps}
           >
             <ChatSettingsIcon />
-            <span className="shrink-0 font-medium">Chat</span>
+            <span className="hidden sm:inline shrink-0 font-medium">Chat</span>
             {drift === null && !offEngine ? null : <ModelGaugeIcon drift={drift} offEngine={offEngine} />}
             {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
             <CaretIcon />

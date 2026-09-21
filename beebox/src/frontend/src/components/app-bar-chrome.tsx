@@ -280,7 +280,13 @@ export function AppBarChipSlot() {
     },
     [writers],
   );
-  return <div ref={setRef} className="flex items-center gap-2 shrink-0" />;
+  // One pill holding both chips, hairlined apart by the `gap-px` that lets the
+  // container's lighter background through — the same two-menus-one-pill shape
+  // `PlacePill` already wears, and worth ~30px of chrome at phone width
+  // (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`). The chips
+  // bring no border or rounding of their own. `empty:hidden` keeps a page with
+  // no chips from showing a bare capsule.
+  return <div ref={setRef} className="flex items-stretch gap-px shrink-0 rounded-full bg-white/22 border border-white/15 overflow-hidden empty:hidden" />;
 }
 
 /**
