@@ -90,7 +90,7 @@ function pageTitle(title: string): string {
 }
 
 export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string {
-  const context = page.id === workspace.navigation.id ? undefined
+  const context = page.id === workspace.navigation.id || page.frontmatter.layout === "single" ? undefined
     : workspace.pages.find((candidate) => candidate.id === page.parentId) ?? workspace.navigation;
   const chrome = workspace.navigation.frontmatter.chrome ?? { theme: "paper", stock: "cream" };
   const styles = ["materials", "card-themes", "card-turn", "chrome", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");

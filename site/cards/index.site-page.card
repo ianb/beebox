@@ -9,9 +9,10 @@ authorship:
   ai:
     transcription: none
     drafting: Drafted the description and the attribute list from the project's own documentation and the themes note.
-    editing: Arranged the card as what Bee Box is, what it is exploring, and the three agent prompts.
+    editing: Arranged the card as what Bee Box is, the learning prompt, what it is exploring, and the install prompt, with the developer prompt on its own page.
     source-preparation: Checked each attribute against the repository before stating it.
 theme: paper
+layout: single
 next:
   - card: /walkthrough.site-page.card
     label: Explore a morning with the box (draft)
@@ -26,38 +27,26 @@ knowledge base it maintains, and every change is in git, so you can ask not
 only what it knows but how it came to know it. Self-hosted, source-available
 under GPLv3, one maintainer, early.
 
-## What it is exploring
-
-- **A coding agent as the engine**, on your own subscription, with the engine
-  that hosts it kept separate so another agent can take over later.
-- **A knowledge base, wiki-like**: document-oriented, hypertextual, a monorepo
-  for your knowledge.
-- **The filesystem is all the state.** No hidden database beside the files.
-- **Everything in git**, so the history answers "why", not just "what".
-- **Your words kept as your words**, marked apart from what the agent inferred.
-- **Cards: typed records that are also containers**, with room for prose; what
-  belongs to a card travels with it, and the shape emerges as you use it.
-- **It extends itself**: ask, and the agent builds the views, routines, and
-  kinds of record you want, inside your box.
-- **Expressive capture**: voice at length, camera and voice together, from
-  your phone; email, calendar, and documents synced in.
-- **It asks instead of guessing**, and an answer becomes a rule it reads next
-  time.
-- **Groups get a box each**: a household shares one through a chat; a
-  different group, a different box. Primitive, and it works.
-- **Open, so it can be understood**, by you and by the agent operating it.
-
-The documentation says how each of these is expressed, and where each is
-thinner than it sounds.
-
-## Prompts
-
 {% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
 ```
 Read https://beebox.run/llms.txt and follow its links as needed. I'm
 deciding whether to use Bee Box; answer my questions from those pages.
 ```
 {% /agent-prompt %}
+
+## What it is exploring
+
+- A coding agent as the engine, on your own subscription.
+- A knowledge base you own: documents, hypertext, and a git history that
+  answers "why".
+- Your words kept as your words, apart from what the agent inferred.
+- Typed records with room for prose, carrying what belongs to them.
+- An assistant that builds its own views, routines, and kinds of record when
+  you ask.
+- Voice at length, and camera and voice together, from your phone.
+
+The [documentation index](https://beebox.run/llms.txt) says how each of these
+is expressed, and where each is thinner than it sounds.
 
 {% agent-prompt title="Install Bee Box" id="install-with-your-agent" %}
 ```
@@ -68,12 +57,7 @@ me before anything that affects my system or accounts.
 ```
 {% /agent-prompt %}
 
-{% agent-prompt title="Work on the code" id="develop-with-your-agent" %}
-```
-Read https://beebox.run/llms-dev.txt and follow its links as needed. I'm
-going to work on the Bee Box codebase; answer my questions from those pages.
-```
-{% /agent-prompt %}
+Working on the code? See [For developers](/develop.site-page.card).
 
 - [Source on GitHub](https://github.com/ianb/beebox)
 - [Community on Discord](https://discord.gg/FQYn6zyv)

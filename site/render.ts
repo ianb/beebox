@@ -43,6 +43,8 @@ export const pageFrontmatterSchema = z
     authorship: authorshipSchema,
     /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
     unlisted: z.boolean().optional(),
+    /** `single`: no context pane beside this page; the reading card alone, centered (the front page). */
+    layout: z.enum(["single"]).optional(),
     theme: z.enum(["plain", "paper", "post-it"]).optional(),
     stock: z.enum(["cream", "manila", "blue", "yellow", "rose", "mint"]).optional(),
     navigation: z.boolean().optional(),
