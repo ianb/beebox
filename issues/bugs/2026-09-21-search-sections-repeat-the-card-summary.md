@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey C and independent verification
+priority: normal
 ---
 
 A person looking for Bram's uncertain contact history got seven results from

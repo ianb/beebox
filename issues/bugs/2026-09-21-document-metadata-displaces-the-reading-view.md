@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey C and independent verification
+priority: important
 ---
 
 A person trying to read a saved friends page first saw `contains`,

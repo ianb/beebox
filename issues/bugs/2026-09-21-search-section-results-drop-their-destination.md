@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey C and independent verification
+priority: normal
 ---
 
 Journey C searched for its saved friends page and selected the result labelled
