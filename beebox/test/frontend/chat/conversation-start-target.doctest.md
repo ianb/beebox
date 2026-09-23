@@ -44,7 +44,7 @@ conversationTargetFor({ sessionInput: "new", contextDir: "" }, "fresh-id").engin
 => claude
 
 JSON.stringify(conversationTargetFor(
-  { sessionInput: "abc123", contextDir: "notes", startEngine: "codex", startModel: "gpt-5.6-luna" },
+  { sessionInput: "abc123", contextDir: "notes", startEngine: "codex", startModel: "gpt-6-luna" },
   "fresh-id",
 ))
 => {"kind":"session","sessionId":"abc123","contextDir":"notes"}

@@ -15,15 +15,15 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 JSON.stringify(chatModelOptions("claude", []).map((option) => option.label))
-=> ["Default (Opus)","Fable 5.1","Opus 5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
+=> ["Default (Opus)","Fable 5.1","Opus 5.5","GLM 5.3","GLM 5.3 Flash","Sonnet 5","Haiku 4.5"]
 
 JSON.stringify(chatModelOptions("codex", []))
-=> [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
+=> [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-6-luna"}]
 
-isChatModelAllowed("codex", { model: "gpt-5.6-sol", added: [] })
+isChatModelAllowed("codex", { model: "gpt-6-sol", added: [] })
 => true
 
-isChatModelAllowed("codex", { model: "claude-opus-5", added: [] })
+isChatModelAllowed("codex", { model: "claude-opus-5-5", added: [] })
 => false
 
 JSON.stringify([parseChatAgentEngine("codex"), parseChatAgentEngine(undefined), parseChatAgentEngine("other")])
@@ -39,14 +39,21 @@ const secondFile = chatModelFileForSession("second");
 saveCurrentModel(box.root, { modelFile: firstFile, model: "gpt-5.6-sol" });
 
 JSON.stringify([loadCurrentModel(box.root, firstFile), loadCurrentModel(box.root, secondFile)])
-=> ["gpt-5.6-sol",null]
+=> ["gpt-6-sol",null]
 
 saveCurrentModel(box.root, { modelFile: secondFile, model: "claude-opus-5" });
 JSON.stringify([
   loadCurrentModelForEngine(box.root, { modelFile: firstFile, engine: "codex" }),
   loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "codex" }),
+  loadCurrentModelForEngine(box.root, { modelFile: secondFile, engine: "claude" }),
 ])
-=> ["gpt-5.6-sol",null]
+=> ["gpt-6-sol",null,"claude-opus-5-5"]
+
+liveModelState({
+  explicit: loadCurrentModel(box.root, firstFile),
+  resolved: "gpt-6-sol",
+}).source
+=> explicit
 
 await box.cleanup();
 ```
@@ -58,7 +65,7 @@ The guard is what keeps a tier name from being written where an id belongs and
 silently resolving to nothing.
 
 ```ts
-JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName("claude-opus-5")])
+JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName("claude-opus-5-5")])
 => [true,true,false]
 ```
 
@@ -83,7 +90,7 @@ function tiersRoundTrip(engine: AgentEngine): boolean {
 ```
 
 ```ts
-JSON.stringify([modelTier("claude-fable-5-1"), modelTier("gpt-5.6-sol"), modelTier("not-a-model")])
+JSON.stringify([modelTier("claude-fable-5-1"), modelTier("gpt-6-sol"), modelTier("not-a-model")])
 => ["strongest","strong",null]
 
 JSON.stringify(ENGINES.map(tiersRoundTrip))
@@ -108,7 +115,7 @@ JSON.stringify([
   resolveBoxModelForEngine("claude", { pinned: "not-a-model", added: [] }),
   resolveBoxModelForEngine("claude", { pinned: null, added: [] }),
 ])
-=> ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5",null,null]
+=> ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5-5",null,null]
 ```
 
 What an unpinned box actually RUNS is one level up. `boxDefaultModel` answers
@@ -126,7 +133,7 @@ JSON.stringify([
   boxDefaultModel("claude", { pinned: "claude-sonnet-5", added: [] }),
   boxDefaultModel("claude", { pinned: "not-a-model", added: [] }),
 ])
-=> ["claude-opus-5","gpt-5.6-sol","claude-sonnet-5",null]
+=> ["claude-opus-5-5","gpt-6-sol","claude-sonnet-5",null]
 ```
 
 The small-pass slot is deliberately NOT that default — chat review, retro and
@@ -142,9 +149,9 @@ JSON.stringify([
   resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "claude-fable-5-1" }),
   resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "follow" }),
   resolveEffectiveModel({ engine: "claude", pinned: null, added: [] }, { kind: "follow" }),
-  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "gpt-5.6-sol" }),
+  resolveEffectiveModel({ engine: "claude", pinned, added: [] }, { kind: "explicit", model: "gpt-6-sol" }),
 ])
-=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-opus-5","source":"default"},{"model":"claude-sonnet-5","source":"default"}]
+=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-opus-5-5","source":"default"},{"model":"claude-sonnet-5","source":"default"}]
 ```
 
 What a *running* chat reports is the model its subprocess started with, whatever
@@ -204,7 +211,7 @@ JSON.stringify([
   resolveSmallModelForEngine({ engine: "codex", pinned: "claude-sonnet-5", boxDefault: null }),
   resolveSmallModelForEngine({ engine: "claude", pinned: "claude-fable-5-1", boxDefault: null }),
 ])
-=> ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5-1"]
+=> ["claude-haiku-4-5-20251001","gpt-6-luna","gpt-5.6-terra","claude-fable-5-1"]
 ```
 
 A codex box never receives a Claude model id, whatever the box config says —
@@ -220,11 +227,11 @@ const writeSmall = async (config: Record<string, unknown>) => {
 
 await writeSmall({ agentEngine: "codex" });
 await loadEffectiveSmallModel(smallBox.root)
-=> gpt-5.6-luna
+=> gpt-6-luna
 
 await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
 await loadEffectiveSmallModel(smallBox.root)
-=> gpt-5.6-luna
+=> gpt-6-luna
 
 await writeSmall({ agentEngine: "codex", smallModel: "gpt-5.6-terra" });
 await loadEffectiveSmallModel(smallBox.root)
@@ -270,4 +277,3 @@ JSON.stringify(await loadEnabledEngines(engineBox.root))
 
 await engineBox.cleanup();
 ```
-

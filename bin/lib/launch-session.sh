@@ -18,7 +18,7 @@ launch_session_build() {
   LS_LAUNCH_TOKEN="${LS_LAUNCH_TOKEN:-$(uuidgen 2>/dev/null || printf '%s-%s-%s' "$(date +%s)" "$$" "$RANDOM")}"
 
   if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
-    LS_MODEL="gpt-5.6-sol"
+    LS_MODEL="gpt-6-sol"
   fi
 
   # A `glm-*` model routes the SAME claude agent at Z.ai's Anthropic-compatible

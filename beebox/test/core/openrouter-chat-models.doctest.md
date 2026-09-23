@@ -51,7 +51,7 @@ OpenRouter ids are `author/slug`, with an optional `:variant`. No first-party,
 Codex, or GLM id contains a slash, so the slash alone is the provider rule.
 
 ```ts
-JSON.stringify(["deepseek/deepseek-v3.2", kimi.id, "glm-5.3", "claude-opus-5", "gpt-5.6-sol"].map(providerOf))
+JSON.stringify(["deepseek/deepseek-v3.2", kimi.id, "glm-5.3", "claude-opus-5-5", "gpt-6-sol"].map(providerOf))
 => ["openrouter","openrouter","glm","anthropic","openai"]
 
 JSON.stringify([isOpenRouterModelId(kimi.id), isOpenRouterModelId("deepseek"), isOpenRouterModelId("Deep/Seek"), isOpenRouterModelId("a/b:c:d")])
@@ -109,7 +109,7 @@ JSON.stringify([
   resolveProcedureModel({ engine: "claude", model: "strong", provider: providerOf(kimi.id) }),
   resolveSmallModelForEngine({ engine: "claude", pinned: null, boxDefault: kimi.id }),
 ])
-=> ["claude-opus-5","claude-haiku-4-5-20251001"]
+=> ["claude-opus-5-5","claude-haiku-4-5-20251001"]
 ```
 
 ## Box config: the list, the default, and the small slot
@@ -154,9 +154,9 @@ needs nothing.
 ```ts
 const box = await boxWith({});
 JSON.stringify([
-  await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5", purpose: "test" }),
+  await providerEnvAdditions({ boxRoot: box.root, model: "claude-opus-5-5", purpose: "test" }),
   await providerEnvAdditions({ boxRoot: box.root, model: null, purpose: "test" }),
-  isThirdPartyModel("claude-opus-5"),
+  isThirdPartyModel("claude-opus-5-5"),
   isThirdPartyModel(kimi.id),
 ])
 => [null,null,false,true]
@@ -224,7 +224,7 @@ const result = {
   num_turns: 1, stop_reason: "end_turn", total_cost_usd: 0.25, usage: {}, modelUsage: {},
   permission_denials: [], session_id: "s", uuid: "u",
 };
-JSON.stringify([kimi.id, "glm-5.3", "claude-opus-5"].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
+JSON.stringify([kimi.id, "glm-5.3", "claude-opus-5-5"].map((model) => adaptBackendMessage(result, { model })?.total_cost_usd ?? "none"))
 => ["none","none",0.25]
 ```
 

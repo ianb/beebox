@@ -128,7 +128,7 @@ print(`success: ${result.ok}`);
 print(`model: ${fakeAgent.invocations[0].options.model}`);
 =>
 success: true
-model: gpt-5.6-luna
+model: gpt-6-luna
 ```
 
 ```ts cleanup

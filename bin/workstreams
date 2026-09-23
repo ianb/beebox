@@ -509,7 +509,7 @@ case "$cmd" in
     # --agent overrides to a different agent, drop it — otherwise a workstream
     # launched on Claude and resumed with --agent codex runs
     # `codex --model claude-fable-5` (2026-08-27). Empty is safe: the codex
-    # path pins gpt-5.6-sol itself, the claude path falls back to the saved
+    # path pins gpt-6-sol itself, the claude path falls back to the saved
     # default.
     recorded_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
     model=""

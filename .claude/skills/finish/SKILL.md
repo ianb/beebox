@@ -13,7 +13,7 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
 
 1. **Dispatch the `finish` subagent** (subagent_type `finish`, via your
    subagent-launch tool). It runs the whole merge procedure headless on a
-   pinned mid-tier model: Sonnet in Claude Code, `gpt-5.6-luna` in Codex. Do not
+   pinned mid-tier model: Sonnet in Claude Code, `gpt-6-luna` in Codex. Do not
    run it on the session's own model. It lives in `.claude/agents/finish.md`
    (Codex gets a generated `.codex/agents/finish.toml`): `bin/finish-preflight` merges main and
    prints a decision sheet, `bin/finish-verify` runs the tests/typecheck/lint that

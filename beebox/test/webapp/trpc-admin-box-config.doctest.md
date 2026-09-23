@@ -162,6 +162,18 @@ JSON.stringify({ returned: engineResult.agentEngine, saved: engineConfig.agentEn
 => codex
 ```
 
+Retired model pins are shown as the current model in Admin, matching the model
+the runtime will use instead of presenting a working pin as unavailable.
+
+```ts continue
+await box.write("_config/box.json", JSON.stringify({
+  agentEngine: "codex",
+  agentModel: "gpt-5.6-sol",
+}));
+(await caller(box.root).admin.boxConfig()).agentModel
+=> gpt-6-sol
+```
+
 An invalid configured engine is not presented as a valid Claude default. The
 runtime rejects this value too, so Admin must surface the same configuration
 failure instead of fabricating a usable-looking payload.

@@ -239,7 +239,7 @@ test("Codex agent TOML maps the Claude model alias and keeps the body verbatim",
     "---\nname: finish\ndescription: Lands work.\ntools: Bash\nmodel: sonnet\n---\n\n" +
     body;
   const toml = buildCodexAgentToml(".claude/agents/finish.md", md);
-  assert.ok(toml.includes('\nmodel = "gpt-5.6-luna"\n'));
+  assert.ok(toml.includes('\nmodel = "gpt-6-luna"\n'));
   assert.ok(toml.includes('\nname = "finish"\n'));
   assert.ok(toml.includes(`'''\n${body}'''\n`));
   assert.ok(!toml.includes("tools"));
@@ -286,7 +286,7 @@ test("generates Codex agents, replaces stale hand-written mirrors, removes orpha
   assert.deepEqual(generateCodexAgents(repo), [".codex/agents/finish.toml"]);
   assert.ok(
     readFileSync(join(repo, ".codex", "agents", "finish.toml"), "utf8").includes(
-      'model = "gpt-5.6-luna"',
+      'model = "gpt-6-luna"',
     ),
   );
 
