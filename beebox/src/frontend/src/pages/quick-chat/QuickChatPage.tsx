@@ -38,6 +38,10 @@ function QuickChatForm({ boxSlug }: { boxSlug: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { localStorage.setItem(key, JSON.stringify(draft)); }, [draft, key]);
+  useEffect(() => {
+    if (draft.id !== null || busy || typeof document === "undefined") return;
+    document.getElementById("bbx-quick-chat-message")?.focus();
+  }, [draft.id, busy]);
   const sent = result?.receipt !== undefined;
   const turnId = result?.receipt?.turnId;
   trpc.events.turnStream.useSubscription({ turnId: turnId ?? "", lastEventId: null }, {
@@ -86,6 +90,12 @@ function QuickChatForm({ boxSlug }: { boxSlug: string }) {
     <form onSubmit={event => { event.preventDefault(); void send(); }} aria-busy={busy}>
       <Stack gap="sm">
         <TextareaField id="bbx-quick-chat-message" label="Message" value={draft.message} rows={5} required maxLength={12000}
+          onKeyDown={event => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
           disabled={busy} readOnly={draft.id !== null} onChange={message => setDraft({ id: null, message })} />
         {!sent && <Button id="bbx-quick-chat-send" type="submit" intent="primary" disabled={busy || !draft.message.trim()}>
           {busy ? "Routing and sending…" : draft.id ? "Recover or retry send" : "Send"}
