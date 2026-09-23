@@ -33,3 +33,12 @@ the picker follows automatically.
 (`claude-chat.ts` sets `model` only when a caller supplies one) inherit Claude
 Code's default instead — which 2.1.280 also changed, moving Pro and Team Standard
 plans from Sonnet to Opus. Accounts already on Opus by default are unaffected.
+
+## Same table, Codex side (2026-09-23)
+
+Codex `0.156.1` adds GPT-6 Sol and GPT-6 Luna to its model picker and makes the
+rate-limit prompt recommend GPT-6 Luna. The same table resolves beebox's Codex
+aliases to the previous generation — `luna`, `terra` and `sol` to
+`gpt-5.6-luna`, `gpt-5.6-terra` and `gpt-5.6-sol`. Whether those aliases are
+meant to track the current generation the way `opus` is is worth settling in the
+same change; the Codex pin reaches `0.156.1` no earlier than 2026-09-25.

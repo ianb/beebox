@@ -39,16 +39,15 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.280` (SDK), `2.1.280` (Claude Code), `0.155.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.281` (SDK), `2.1.281` (Claude Code), `0.156.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved this turn. Agent SDK to
-  `0.3.278`, taking `0.3.275`–`0.3.278` at once, so the `0.3.275`/`0.3.276` pair
-  went in together as required; Codex to `0.155.1`, taking `0.155.0` with it.
-  Next: `0.3.280` (settles 2026-09-24T15:51Z). When it lands, **adopt its
-  `verbatimPrompts: true` on every `query()` beebox makes** — see its entry.
-  Also open: `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`,
-  since 2.1.280 made Opus 5.5 the flagship and beebox's `opus` alias still
-  resolves to Opus 5.
+- **Current recommendation:** **No bump was due on either channel.** `0.3.280`
+  settles 2026-09-24T15:51Z and Codex `0.156.0` 2026-09-24T19:55Z. When
+  `0.3.280` is pinned, note that the bump only makes `verbatimPrompts`
+  *available*; beebox still has to set it on each `query()`, which is a code
+  change outside this schedule's bump (see the `0.3.280` entry). Also open:
+  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`, now covering
+  the Codex aliases too.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -69,7 +68,71 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.280 / Claude Code 2.1.280 — pending (published 2026-09-22T15:51Z, ~4h at this turn)
+### Codex 0.156.0 / 0.156.1 — pending (published 2026-09-22T19:55Z and 2026-09-23T02:45Z, ~24h and ~17h at this turn)
+
+- **`0.156.1`** adds GPT-6 Sol and GPT-6 Luna to the model picker and makes the
+  rate-limit switch prompt recommend GPT-6 Luna. beebox names its Codex models
+  itself — `luna`, `terra` and `sol` resolve to `gpt-5.6-*` in
+  `beebox/src/shared/model-ids.ts` — so the same staleness question as the Opus
+  5.5 alias applies; folded into
+  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
+- **`0.156.0`, relevant:** worktree support is now **enabled by default** in the
+  agent command center, and worktree sessions can be created from it. Codex
+  worker sessions here get their worktrees from `bin/workstreams create` and run
+  `codex exec` inside one, so this should not collide, but it is the second
+  harness (after Claude Code's `--worktree`) with its own worktree model beside
+  this repo's. Streamed answers and plans are now preserved when a turn fails, is
+  interrupted, or receives a subagent completion event — a correctness fix for
+  beebox's Codex chats. Sandbox isolation gaps closed on Windows, Linux and macOS.
+  No removals, so beebox's plugin path (`codex plugin … --json`) is not at risk;
+  the deploy gate confirms at bump time.
+- **Action:** Settled path; takeable 2026-09-25 with the deploy gate, both
+  together.
+- **Sources:** [rust-v0.156.0](https://github.com/openai/codex/releases/tag/rust-v0.156.0), [rust-v0.156.1](https://github.com/openai/codex/releases/tag/rust-v0.156.1)
+
+### 0.3.281 / Claude Code 2.1.281 — pending (published 2026-09-23T17:02Z, ~3h at this turn)
+
+- **SDK, checked and clear:** the `Settings` type's `attribution` field becomes
+  `boolean | {...}`, so code reading `attribution.commit` needs a narrow. Nothing
+  in `beebox/src` or `bin/` reads that field. Also relevant: permission and
+  dialog callbacks are no longer invoked for requests arriving after `close()`,
+  and control requests issued after a query closed no longer hang or leak —
+  beebox closes runs on stop and park. `sdk.mjs` shrinks from 1.47 MB to 0.97 MB.
+  `conversation_reset` gains `trigger`, `user_message_uuid` and `timestamp`,
+  which makes it easier to adopt for
+  `issues/features/2026-07-11-adapt-conversation-reset-sdk-message.md`.
+- **2.1.281, relevant:**
+  - *"Fixed `--setting-sources` (and SDK `settingSources`) not being forwarded to
+    spawned sessions."* The schedule runner passes `--setting-sources user`, so
+    teammates and background sessions a scheduled run spawned were starting
+    without that restriction.
+  - *"Fixed a recursive `rm` whose target is only command-substitution output,
+    such as `rm -rf "$(pwd)"`, running unprompted in auto and
+    `--dangerously-skip-permissions` mode; it now asks."* Worker sessions run
+    `--dangerously-skip-permissions` and box agents `bypassPermissions`, so such a
+    command now stops for a prompt; in an SDK session with no `canUseTool`, or a
+    `dontAsk` schedule, that means it is refused. The safer outcome; the escape
+    hatch is `CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT=1`.
+  - Non-interactive and SDK sessions no longer fail on the next turn after their
+    starting directory is deleted mid-session — this repo's worktree teardown
+    moves directories out from under live sessions.
+  - Two more permanent-wedge fixes, the ninth and tenth this ledger has tracked:
+    stream-json/SDK sessions failing every turn when an earlier assistant message
+    had plain-string content, and "tool_use.name: String should have at most 200
+    characters".
+  - Several proxy stream-handling fixes (a cleanly closed stream shown as
+    complete, "Content block not found" on a dropped event, duplicated events
+    running tool calls twice) — relevant to beebox's `BBX_LOG_PROMPTS=1` proxy
+    path.
+  - *"Fixed CLAUDE.md and rules files from an `--add-dir` directory inside the
+    working directory being sent to the model twice."* beebox's shape is the
+    reverse: a landmark-bound chat runs with the cwd in a subdirectory and
+    `additionalDirectories: [boxRoot]` (`chat/session/start.ts:158`), so the added
+    directory is the cwd's *parent*. Whether that shape duplicates is unverified.
+- **Action:** Settled path; takeable 2026-09-25.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03281), [Claude Code 2.1.281](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21281)
+
+### 0.3.280 / Claude Code 2.1.280 — pending (published 2026-09-22T15:51Z, ~28h at 2026-09-23; settles 2026-09-24T15:51Z)
 
 - **SDK — adopt when it lands:** a `verbatimPrompts` option, *"prompts are
   delivered as written — no `@path` expansion, no slash-command dispatch and, on
