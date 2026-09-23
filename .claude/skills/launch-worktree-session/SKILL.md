@@ -82,6 +82,9 @@ The human's explicit choice or standing preference always wins. Ask when the
 agent or model is materially ambiguous; model selection affects capability and
 quota. Do not silently promote a task because it looks difficult.
 
+- Prefer Codex Luna (`--model gpt-5.6-luna`) for straightforward work that
+  needs little discernment or discussion: a bug fix with a clear cause, a
+  mechanical change, a well-specified implementation. Choose it without asking.
 - Claude requires an explicit `--model`; otherwise it inherits the human's
   saved CLI default. `opus` is the usual harder-work option.
 - `claude-fable-5-1` and Codex `gpt-6-astra` are the top choices for genuinely
