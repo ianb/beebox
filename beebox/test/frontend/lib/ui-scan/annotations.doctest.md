@@ -189,6 +189,7 @@ TABLE_IDS.join("\n")
 bbx-nav-session
 bbx-nav-voice
 bbx-nav-profile
+bbx-nav-questions
 bbx-nav-todo
 bbx-nav-errors
 bbx-composer-add

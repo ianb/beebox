@@ -19,7 +19,7 @@ import { ProviderSetupError } from "./provider-setup-error.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** OpenRouter's Anthropic-compatible endpoint — the CLI appends `/v1/messages`. */
-export const OPENROUTER_ANTHROPIC_BASE_URL = "https://openrouter.ai/api";
+const OPENROUTER_ANTHROPIC_BASE_URL = "https://openrouter.ai/api";
 
 /**
  * A slow first token otherwise reads as a hang; the same allowance GLM gets

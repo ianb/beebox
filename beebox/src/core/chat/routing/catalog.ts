@@ -11,7 +11,7 @@ import { loadSessionHistory } from "../session/load-history.js";
 import { CHAT_FRESH_WINDOW_MS } from "../session/recent-landmark.js";
 import type { RoutingCandidate, RoutingRule } from "./policy.js";
 
-export const ROUTING_RUBRIC_PATH = "_config/chat-routing.yaml";
+const ROUTING_RUBRIC_PATH = "_config/chat-routing.yaml";
 const RubricSchema = z.object({
   destinations: z.array(z.object({
     target: z.string().min(1), when: z.string().min(1).max(2000),

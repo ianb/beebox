@@ -26,7 +26,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { InlineAction } from "../ui/InlineAction";
 
-export const MANIFEST_FILE = "records.json";
+const MANIFEST_FILE = "records.json";
 
 export interface SubmissionIssue {
   path: string;

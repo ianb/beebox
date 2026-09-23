@@ -571,3 +571,15 @@ command, lands with `bin/land`, and pushes `main` so the site rebuilds.
 Framing changes and new spine pages stay the boxholder's; the session
 reports them instead of making them.
 
+## Themes as the frame (2026-09-18)
+
+`site/docs-themes.md` (internal, not published) names the ten themes that
+distinguish Bee Box, what each means, how the product expresses it, and where
+it is thinner than the theme claims. It is the frame the corpus is written
+against, and it is deliberately more thorough than any published presentation
+of it. The front page carries a short public version as a `## Themes` section,
+one line per theme with the pages that carry it, so a reading agent can
+explore by theme rather than by directory. The home card carries the shortest
+version: a description, the attributes as a list, and the three prompts
+(learn, install, work on the code). The weekly refresh keeps the three in step.
+

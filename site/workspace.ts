@@ -81,15 +81,23 @@ function menuHtml(workspace: SiteWorkspace): string {
   return `<details id="site-menu"><summary class="bbx-place-pill">Menu <span aria-hidden="true">⌄</span></summary><nav class="site-menu-panel" aria-label="Menu">${body}</nav></details>`;
 }
 
+/**
+ * The browser title. A page whose own title already is the site name (the home
+ * card) would otherwise read "Bee Box | Bee Box".
+ */
+function pageTitle(title: string): string {
+  return title === "Bee Box" ? title : `${title} | Bee Box`;
+}
+
 export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string {
-  const context = page.id === workspace.navigation.id ? undefined
+  const context = page.id === workspace.navigation.id || page.frontmatter.layout === "single" ? undefined
     : workspace.pages.find((candidate) => candidate.id === page.parentId) ?? workspace.navigation;
   const chrome = workspace.navigation.frontmatter.chrome ?? { theme: "paper", stock: "cream" };
   const styles = ["materials", "card-themes", "card-turn", "chrome", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");
   const description = escapeHtml(page.frontmatter.summary);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(page.frontmatter.title)} | Bee Box</title><meta name="description" content="${description}">
+<title>${escapeHtml(pageTitle(page.frontmatter.title))}</title><meta name="description" content="${description}">
 ${styles}<style>${FISHEYE_CSS}</style>
 <noscript><style>.fx-b[hidden="until-found"]{display:inline;content-visibility:visible;width:auto;height:auto;overflow:visible}.fx-t{display:none}</style></noscript>
 </head><body class="bbx-box-presentation" data-chrome-theme="${chrome.theme}" data-chrome-stock="${chrome.stock ?? "cream"}" data-site-base="${escapeHtml(workspace.base)}">

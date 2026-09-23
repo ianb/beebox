@@ -17,7 +17,7 @@ import { closeAlert, FILING_RETRY_MS } from "./schedules-alert-lifecycle.js";
 
 /** Local hour of the day the digest becomes due. A laptop asleep then sends it
  *  at the first tick after waking. */
-export const DIGEST_HOUR = 9;
+const DIGEST_HOUR = 9;
 
 /** Due once per local day, at or after `DIGEST_HOUR`. */
 export function digestDue(now: Date, lastDigestAt: string | null): boolean {

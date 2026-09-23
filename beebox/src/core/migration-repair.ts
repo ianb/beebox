@@ -13,7 +13,6 @@ import { errnoCode } from "../lib/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 
-export { MIGRATION_REPAIR_DIRECTIVE } from "./migration-repair-policy.js";
 
 class MigrationRepairUnavailableError extends Error {
   constructor(reason: string) { super(`Migration repair could not start: ${reason}`); this.name = "MigrationRepairUnavailableError"; }

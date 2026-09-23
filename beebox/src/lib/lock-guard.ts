@@ -7,7 +7,7 @@
  * it from here. No Node imports: the vocabulary module reaches the frontend.
  */
 
-export const LOCK_GUARD_SUFFIX = ".guard";
+const LOCK_GUARD_SUFFIX = ".guard";
 
 export function lockGuardPath(lockPath: string): string {
   return `${lockPath}${LOCK_GUARD_SUFFIX}`;

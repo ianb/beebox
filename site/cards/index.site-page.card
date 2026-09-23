@@ -1,23 +1,55 @@
 ---
-title: "Bee Box: an environment for you and your agent"
-summary: "A personal system built on Claude Code: the filesystem is state, git is history, the bbx CLI is the interface. Source-available and self-hostable."
+title: "Bee Box"
+summary: "A personal assistant you run yourself: a coding agent as the engine, on your own subscription, over a folder of files you own."
 authorship:
   people:
     - name: Ian Bicking
       role: creator
-      contribution: Set the direction for Bee Box and supplied the installation prompt.
+      contribution: Set the direction for Bee Box, chose what the front page should say, and supplied the prompts' intent.
   ai:
     transcription: none
-    drafting: Drafted the explanatory copy from the project's README and installation guide.
-    editing: Arranged the card around the installation and learning prompts and source links.
-    source-preparation: Compared the public description with the repository README and agent installation guide.
+    drafting: Drafted the description and the attribute list from the project's own documentation and the themes note.
+    editing: Arranged the card as what Bee Box is, the learning prompt, what it is exploring, and the install prompt, with the developer prompt on its own page.
+    source-preparation: Checked each attribute against the repository before stating it.
 theme: paper
+layout: single
 next:
   - card: /walkthrough.site-page.card
     label: Explore a morning with the box (draft)
 ---
 
-# Bee Box: an environment for you and your agent
+# Bee Box
+
+A personal assistant you run yourself. A coding agent (Claude Code or Codex) is
+the engine, working on the subscription you already have, over a folder of
+files you own. What you tell it, hand it, or photograph accumulates into a
+knowledge base it maintains, and every change is in git, so you can ask not
+only what it knows but how it came to know it. Self-hosted, source-available
+under GPLv3, one maintainer, early.
+
+{% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
+```
+Read https://beebox.run/llms.txt and follow its links as needed. I'm
+deciding whether to use Bee Box; answer my questions from those pages.
+```
+{% /agent-prompt %}
+
+## What it is exploring
+
+- Claude Code or Codex is the engine. You bring your own subscription; Bee Box
+  is the box it works in.
+- A knowledge base that is a folder of typed documents you own, linked like a
+  wiki, with every change in git so the history answers "why" as well as
+  "what". Each record has a checked shape, room for prose, and carries what
+  belongs to it.
+- What you say is stored as a quote, with who said it. What the agent works
+  out is marked as inference and points at its source. The two never blur.
+- An assistant that builds its own views, routines, and kinds of record when
+  you ask.
+- Voice at length, and camera and voice together, from your phone.
+
+The [documentation index](https://beebox.run/llms.txt) says how each of these
+is expressed, and where each is thinner than it sounds.
 
 {% agent-prompt title="Install Bee Box" id="install-with-your-agent" %}
 ```
@@ -28,42 +60,7 @@ me before anything that affects my system or accounts.
 ```
 {% /agent-prompt %}
 
-{% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
-```
-Read https://beebox.run/llms.txt and follow its links as needed. I'm
-deciding whether to use Bee Box; answer my questions from those pages.
-```
-{% /agent-prompt %}
-
-Bee Box is a personal assistant that a coding agent operates with you. Give it
-voice memos, email, web clippings, or chat; it turns those inputs into cards,
-takes actions it understands, and asks when it does not.
-
-## A box is a directory
-
-Cards are Markdown files with structured frontmatter. The filesystem is the
-state of the box, Git is its history, and the `bbx` command is the common
-interface. The box can be read, searched, corrected, and versioned with tools
-that already work on ordinary files.
-
-## You teach it by using it
-
-Rules, answers, and corrections become part of the box. The engine and your
-data stay separate: Bee Box can be upgraded while the cards and history in your
-box remain yours.
-
-Bee Box is early, source-available, and self-hosted. Claude Code and Codex are
-the supported coding agents today.
-
-Project links:
+Working on the code? See [For developers](/develop.site-page.card).
 
 - [Source on GitHub](https://github.com/ianb/beebox)
-- [Community server (Discord)](https://discord.gg/FQYn6zyv)
-
-Install guides:
-
-- [Docker install](https://beebox.run/docs/install/docker.md)
-- [Developer install, from source](https://beebox.run/docs/dev/developer-install.md)
-
-Working on the code? Start at [CONTRIBUTING.md](https://github.com/ianb/beebox/blob/main/CONTRIBUTING.md),
-or point your agent at [llms-dev.txt](https://beebox.run/llms-dev.txt).
+- [Community on Discord](https://discord.gg/FQYn6zyv)

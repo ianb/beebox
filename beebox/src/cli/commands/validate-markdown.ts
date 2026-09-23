@@ -96,7 +96,7 @@ export async function lintMarkdownFiles(
  * migration itself broke) can work with `MarkdownLintSummary`'s structured
  * `errors` map instead of re-parsing a formatted report string.
  */
-export async function boxWideLinkFindings(boxRoot: string): Promise<MarkdownLintSummary> {
+async function boxWideLinkFindings(boxRoot: string): Promise<MarkdownLintSummary> {
   const ignore = await loadValidationIgnore(boxRoot);
   const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((f) => !ignore.isIgnored(f));
   if (mdFiles.length === 0) return { filesChecked: 0, filesWithErrors: 0, totalErrors: 0, errors: {} };
