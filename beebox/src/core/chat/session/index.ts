@@ -32,6 +32,7 @@ import {
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "./model.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
+import { liveProviderRefusal } from "../../provider-env.js";
 import { createRunLockHolder, withChatRunAdmission } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -159,7 +160,7 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    return withChatRunAdmission(this.boxRoot, async (work) => {
+    return withChatRunAdmission({ boxRoot: this.boxRoot, reason: `chat run ${this.sessionId ?? "new"}` }, async (work) => {
     // A coined session stops being "not created yet" the moment its transcript
     // exists — from this run or an earlier one — because the harness rejects a
     // session id it has already written (see reserve.ts).
@@ -220,7 +221,7 @@ export class ChatSession extends EventEmitter {
   private consumeMessages(run: ChatBackendRun): Promise<void> {
     return pumpSessionRun(run, {
       durability: this.durability,
-      boxRoot: this.boxRoot,
+      boxRoot: this.boxRoot, model: this.resolvedModel,
       getSessionId: () => this.sessionId,
       recordTurnMarker: (sessionId) => recordTurnMarkerForSession(this.boxRoot, sessionId),
       handleMessage: (msg) => this.handleMessage(msg),
@@ -304,7 +305,7 @@ export class ChatSession extends EventEmitter {
    * tokens in the text.
    */
   async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
-    const work = await acquireBoxWork(this.boxRoot, options?.independent ? null : undefined);
+    const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
     try { return await work.run(() => this.sendAdmitted(message)); }
     finally { await work.release(); }
   }
@@ -316,6 +317,9 @@ export class ChatSession extends EventEmitter {
     }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
+
+    // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
+    const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,

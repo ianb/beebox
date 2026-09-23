@@ -57,7 +57,7 @@ import { errnoCode } from "../lib/error-guards.js";
  * isn't available (e.g. the server's rsynced, `.git`-less deploy tree).
  *
  * `BBX_HOOK_BIN` overrides all of the above with an explicit absolute path.
- * For doctests/smoke scripts driving a full `bbx init` end-to-end (installing
+ * For doctests/smoke scripts driving a full `bbx engine init` end-to-end (installing
  * AND immediately exercising a real, executable hook) against a worktree
  * checkout: the worktree-routing logic above would otherwise stamp the
  * MAIN checkout's `bbx`, which can lag behind whatever the worktree is
@@ -72,7 +72,7 @@ function resolveBbxBin(): string {
   try {
     // stdio: pipe the failure-case stderr instead of letting execFileSync's
     // default inherit it straight to our own stderr — a released package
-    // (no shipped `.git`) hits this catch on every `bbx init`/hook install,
+    // (no shipped `.git`) hits this catch on every `bbx engine init`/hook install,
     // and "not a git repository" leaking out unprompted for something we
     // already handle gracefully is exactly the noise the monorepo's "quiet
     // on success" rule bans.
@@ -166,7 +166,7 @@ function postCommitBlock(bbxBin: string): string {
     "# Bounded from outside by perl's alarm: a check that spins (a box deleted",
     "# under it does) would otherwise live forever; timers inside a spinning",
     "# node never fire. BBX_NO_URLCHECK=1 skips it (the test suite sets it).",
-    "# Delete just this block to disable; `bbx init` re-adds it.",
+    "# Delete just this block to disable; `bbx engine init` re-adds it.",
     `BBX_URLCHECK=${JSON.stringify(bbxBin)}`,
     "[ -x \"$BBX_URLCHECK\" ] || BBX_URLCHECK=$(command -v bbx || true)",
     "if [ -z \"${BBX_NO_URLCHECK:-}\" ] && [ -n \"$BBX_URLCHECK\" ] && git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then",
@@ -210,7 +210,7 @@ function preCommitBody(bbxBin: string): string {
 ${PRE_COMMIT_MARKER}
 # Block commits that include cards failing schema validation, and hand assets
 # to git-annex before they can be committed as raw bytes.
-# Regenerate via \`bbx init\` if you delete this file.
+# Regenerate via \`bbx engine init\` if you delete this file.
 
 set -e
 

@@ -4,6 +4,7 @@ import type { RendererProps } from "../../file-type-registry";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Hint } from "../ui/Hint";
 import { HistoryBrowser } from "./HistoryBrowser";
 import { describeFilter, paramsToFilter } from "./history-filter";
 import { parseHistoryCardState } from "./history-card-state";
@@ -17,7 +18,7 @@ export function HistoryViewCard(props: Omit<RendererProps, "params"> & { params?
   if (error !== null) {
     return <Card padding="md" border="subtle" muted>
       <Text as="div" size="sm" weight="medium" tone="emphasis">Invalid history state</Text>
-      <Text as="div" size="sm" tone="muted">{error.issues.map(issue => `${issue.path.join(".") || "state"}: ${issue.message}`).join("; ")}</Text>
+      <Hint>{error.issues.map(issue => `${issue.path.join(".") || "state"}: ${issue.message}`).join("; ")}</Hint>
     </Card>;
   }
   const cardDefaults = paramsToFilter(parsedCard.data ?? {});

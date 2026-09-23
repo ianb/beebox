@@ -88,6 +88,14 @@ function alert(overrides: Partial<ScheduleAlert>): ScheduleAlert {
     createdAt: "2026-08-24T11:50:00.000Z",
     state: "open",
     acknowledgedAt: null,
+    closedBy: null,
+    condition: null,
+    lastSeenAt: "2026-08-24T11:50:00.000Z",
+    occurrences: 1,
+    digestedAt: null,
+    issue: null,
+    filingFailedSince: null,
+    filingError: null,
     ...overrides,
   };
 }
@@ -194,7 +202,7 @@ JSON.stringify({
 const alerts = renderToStaticMarkup(createElement(ScheduleAlertList, {
   alerts: [
     alert({}),
-    alert({ id: "20260810-090000-cd34", title: "Docling 2.4 settled", state: "acknowledged", acknowledgedAt: "2026-08-11T09:00:00.000Z" }),
+    alert({ id: "20260810-090000-cd34", title: "Docling 2.4 settled", state: "acknowledged", acknowledgedAt: "2026-08-11T09:00:00.000Z", closedBy: "digest" }),
   ],
   acknowledging: null,
   error: null,
@@ -209,8 +217,42 @@ JSON.stringify({
   foldedAcknowledged: alerts.includes("<details") && alerts.includes("Docling 2.4 settled"),
   selectedAddressable: alerts.includes('id="schedule-alert-20260824-115000-ab12"') && alerts.includes("schedule-alert-selected"),
   openCount: alerts.includes("1 open"),
+  closedByDigest: alerts.includes("closed by the digest"),
 })
-=> {"title":true,"priority":true,"markdownDetails":true,"acknowledgeButton":true,"foldedAcknowledged":true,"selectedAddressable":true,"openCount":true}
+=> {"title":true,"priority":true,"markdownDetails":true,"acknowledgeButton":true,"foldedAcknowledged":true,"selectedAddressable":true,"openCount":true,"closedByDigest":true}
+```
+
+## Open alerts group by priority, the same words the popup uses
+
+Important comes first, then normal, then fyi — the order of urgency, and the
+words the daily digest popup counts. The all-schedules view names each
+alert's schedule. A standing condition says how long it has stood, and a
+filed one names its issue.
+
+```ts
+const grouped = render(createElement(ScheduleAlertList, {
+  alerts: [
+    alert({ id: "20260918-020500-0001", priority: "fyi", workstream: "sdk-update", title: "Pin at 0.3.273" }),
+    alert({ id: "20260918-020500-0002", priority: "important", workstream: "full-suite", title: "red after a landing" }),
+    alert({
+      id: "20260918-020500-0003", priority: "normal", workstream: "box-convergence", title: "Box convergence needs attention",
+      condition: "unconverged", occurrences: 9, issue: "private-issues/bugs/2026-09-25-schedule-box-convergence-unconverged.md",
+    }),
+  ],
+  acknowledging: null,
+  error: null,
+  showSchedule: true,
+  onAcknowledge: () => undefined,
+}));
+const order = ["Important", "Normal", "FYI"].map((word) => grouped.indexOf(`<h3>${word}`));
+JSON.stringify({
+  ordered: order.every((at, i) => at >= 0 && (i === 0 || at > (order[i - 1] ?? 0))),
+  scheduleNamed: grouped.includes('class="schedule-alert-schedule">sdk-update<'),
+  standing: grouped.includes("seen 9 times, last"),
+  filed: grouped.includes('href="/workstreams/issues?issue=bugs%2F2026-09-25-schedule-box-convergence-unconverged.md&amp;issueVisibility=private"'),
+  importantTone: grouped.includes('class="pill pill-danger">important<'),
+})
+=> {"ordered":true,"scheduleNamed":true,"standing":true,"filed":true,"importantTone":true}
 ```
 
 An old notification can still reveal an alert after it has been acknowledged.
@@ -232,7 +274,15 @@ JSON.stringify({
 
 ## Notification deep links resolve to the alert route
 
-The producer and browser share the `/alerts/<schedule>?alert=<id>` contract.
+The producer and browser share the `/alerts?alert=<id>` contract
+(`bin/lib/schedules-alerts.ts` `ALERTS_PAGE_URL`); the per-schedule
+`/alerts/<schedule>` view stays addressable.
+
+```ts
+router.buildLocation({ to: "/alerts", search: { alert: "20260824-115000-ab12" } }).href
+=> /workstreams/alerts?alert=20260824-115000-ab12
+```
+
 
 ```ts
 router.buildLocation({

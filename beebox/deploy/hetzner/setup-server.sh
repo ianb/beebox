@@ -5,7 +5,7 @@
 # container flow in docs/docker-install.md.
 #
 # KNOWN GAP: this still generates the pre-hub `beebox-serve` unit (one process
-# serving every box) rather than `bbx hub` plus per-box units. The live server
+# serving every box) rather than `bbx engine hub` plus per-box units. The live server
 # was switched to the hub by hand; a fresh run of this needs those steps
 # repeated. deploy/README.md has the detail. It also never re-runs on deploy,
 # so nginx and unit changes here reach a live server only on a re-provision
@@ -194,7 +194,7 @@ echo "Creating test box at $BOX_DIR..."
 su - "$BBX_USER" -c "mkdir -p '$BOX_DIR'"
 cd "$BOX_DIR"
 if [[ ! -f .beebox/box.json ]]; then
-  su - "$BBX_USER" -c "cd '$BOX_DIR' && git init && bbx init . && git add -A && git commit -m 'Initial box setup'"
+  su - "$BBX_USER" -c "cd '$BOX_DIR' && git init && bbx engine init . && git add -A && git commit -m 'Initial box setup'"
 fi
 
 # ── Environment file ────────────────────────────────────────────────
@@ -210,8 +210,8 @@ PUBLIC_URL=https://box.example.com
 PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 # Connector credentials do NOT go here. They live in the machine secret store:
-#   bbx secrets set <name>      (mistral, deepgram, openai, openai-thinking, gemini, ...)
-#   bbx secrets grant <box> <name>
+#   bbx engine secrets set <name>      (mistral, deepgram, openai, openai-thinking, gemini, ...)
+#   bbx engine secrets grant <box> <name>
 # See docs/secrets.md.
 
 # Optional — Google sign-in for the fleet login surface. This pair IS env
@@ -251,7 +251,7 @@ After=network.target
 Type=simple
 User=$BBX_USER
 Group=$BBX_USER
-ExecStart=/usr/local/bin/bbx hub
+ExecStart=/usr/local/bin/bbx engine hub
 WorkingDirectory=$BBX_HOME
 EnvironmentFile=$BBX_HOME/.env
 KillMode=mixed
@@ -267,7 +267,7 @@ EOF
 # Register all existing boxes in the manifest used by both serve and
 # scheduler. Idempotent — re-runs are safe.
 for box in $BOX_DIRS; do
-  su - "$BBX_USER" -c "bbx boxes add '$box'" 2>/dev/null || true
+  su - "$BBX_USER" -c "bbx engine boxes add '$box'" 2>/dev/null || true
 done
 
 cat > /etc/systemd/system/beebox-scheduler.service <<EOF
@@ -279,7 +279,7 @@ After=network.target
 Type=simple
 User=$BBX_USER
 Group=$BBX_USER
-ExecStart=/usr/local/bin/bbx scheduler start
+ExecStart=/usr/local/bin/bbx engine scheduler start
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$BBX_HOME/.env
 KillMode=mixed
@@ -368,35 +368,9 @@ systemctl start beebox-hub beebox-scheduler claude-update.timer
 
 # ── Nginx reverse proxy ────────────────────────────────────────────
 echo "Configuring nginx..."
-cat > /etc/nginx/sites-available/beebox <<'EOF'
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    client_max_body_size 50m;
-
-    location / {
-        proxy_pass http://127.0.0.1:3210;
-        proxy_http_version 1.1;
-        # The tRPC client uses httpBatchStreamLink: the server writes each
-        # procedure's result as a JSONL line the moment it resolves, so a fast
-        # query renders without waiting for a slow batch-mate. nginx buffers
-        # proxied responses by default, which would re-couple the batch by
-        # holding every line until the response completed. There is only this
-        # one location (everything is proxied to the hub), so the whole app
-        # opts out; responses here are dynamic API/HTML, never large static
-        # files where buffering would earn its keep.
-        proxy_buffering off;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
-    }
-}
-EOF
+# The site file is repo-owned; deploy.sh reinstalls it on every deploy, so a
+# change reaches existing servers too. See deploy/nginx/beebox.conf.
+install -m 0644 "$INSTALL_DIR/beebox/deploy/nginx/beebox.conf" /etc/nginx/sites-available/beebox
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/beebox /etc/nginx/sites-enabled/beebox

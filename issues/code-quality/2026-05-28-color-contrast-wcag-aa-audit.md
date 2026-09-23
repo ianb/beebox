@@ -2,6 +2,7 @@
 title: "color contrast wcag aa audit"
 workstream: unknown
 area: beebox
+priority: normal
 ---
 
 `bin/tour --all` surfaces ~18 `color-contrast` violations (serious, per

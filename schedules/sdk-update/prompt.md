@@ -129,7 +129,7 @@ all.
 
 Every run ends with exactly one of:
 
-- `bin/schedules alert --title "<one line>" --message "<one short paragraph>"
+- `bin/schedules alert --title "<one line>" --message "<Markdown: the finding, then a list>"
   [--details @<file>] --priority <priority>`
 - `bin/schedules done` — reviewed, nothing worth the boxholder's attention
   (a nothing-relevant ledger entry is the durable record; the alert is for
@@ -138,11 +138,12 @@ Every run ends with exactly one of:
 Priority:
 
 - **important** — a breaking harness or SDK change, or a bump that failed
-  verification. Something is wrong or will be.
-- **normal** — a pin was bumped, or an issue was filed for work this repo has
-  to do.
-- **fyi** — interesting but harmless: a capability worth knowing about, a run
-  of unitemized releases, a ledger-only turn you still want visible.
+  verification. Something is wrong or will be, and a person should look today.
+- **normal** — a decision is waiting: a release you are holding back until
+  something is fixed, or an issue filed for work this repo has to do.
+- **fyi** — a routine pin bump that verified and landed, or something
+  interesting but harmless: a capability worth knowing about, a run of
+  unitemized releases, a ledger-only turn you still want visible.
 
 Report versions, beebox relevance on both channels, what you verified,
 what you committed and landed, and any issue you filed. A run that ends without

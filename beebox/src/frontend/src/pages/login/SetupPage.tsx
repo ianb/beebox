@@ -17,6 +17,7 @@ import { Card } from "../../components/ui/Card";
 import { Row } from "../../components/ui/Row";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
+import { ErrorText } from "../../components/ui/ErrorText";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/fields";
 import { withBase } from "../../api";
@@ -37,7 +38,7 @@ function describeError(status: number, data: SetupErrorResponse): string {
     return `Too many attempts. Try again in ${seconds}s.`;
   }
   if (status === 403) {
-    return "This setup link is invalid. Use the exact link printed to the server console, or run `bbx auth create-user` on the host.";
+    return "This setup link is invalid. Use the exact link printed to the server console, or run `bbx engine auth create-user` on the host.";
   }
   if (status === 410) {
     return data.message ?? data.error ?? "This setup link is no longer usable.";
@@ -62,7 +63,7 @@ function NoTokenGuidance() {
       </Text>
       <Text as="p" tone="subtle">
         Alternatively, create the first account directly on the host with{" "}
-        <code>bbx auth create-user</code>.
+        <code>bbx engine auth create-user</code>.
       </Text>
     </Stack>
   );
@@ -186,7 +187,7 @@ function SetupFields({
       />
       {error !== null ? (
         <div role="alert">
-          <Text as="p" tone="danger" size="sm">{error}</Text>
+          <ErrorText>{error}</ErrorText>
         </div>
       ) : null}
       <Button id="bbx-setup-submit" type="submit" intent="primary" fullWidth loading={submitting}>

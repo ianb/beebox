@@ -6,6 +6,9 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { CheckboxField, TextField } from "../ui/fields";
 
 const LOCAL_OWNER_REQUIRED =
@@ -15,8 +18,8 @@ function InviteError({ message }: { message: string }) {
   return (
     <div role="alert">
       <Stack gap="xs">
-        <Text as="p" size="sm" tone="danger">{message}</Text>
-        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx auth create-user</Text> : null}
+        <ErrorText>{message}</ErrorText>
+        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>bbx engine auth create-user</Text> : null}
       </Stack>
     </div>
   );
@@ -58,10 +61,10 @@ export function InviteSection() {
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
           <Stack gap="xs">
-            <Text as="h2" size="lg" weight="semibold">Create invite link</Text>
-            <Text size="sm" tone="muted">
+            <Heading level={2}>Create invite link</Heading>
+            <Hint>
               The link creates one member account for this box and expires after 15 minutes.
-            </Text>
+            </Hint>
           </Stack>
           <CheckboxField
             id="bbx-admin-invite-open"
@@ -87,7 +90,7 @@ export function InviteSection() {
             error={emailError}
             autoComplete="email"
           />
-          <Button id="bbx-admin-invite-create" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
+          <Button id="bbx-admin-invite-create" className="self-start" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
             Create invite link
           </Button>
           {createInvite.error ? <InviteError message={createInvite.error.message} /> : null}

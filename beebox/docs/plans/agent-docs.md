@@ -558,3 +558,28 @@ scrub-gate hit nobody saw locally. Finish now runs the canonical site build
 before a merge and the post-merge hook says when main is ahead of origin.) Also added: `capabilities/integrity.md` (links parsed and
 checked, references rewritten on a move, validation at several layers).
 
+## Keeping it current (2026-09-16)
+
+The corpus is maintained the way the security report is: on a cadence, by
+an agent, from the git record. `schedules/agent-docs-refresh/` runs weekly:
+its script hands off the first-parent commits on `main` since the last
+refresh that touched anything the corpus describes (engine source and docs,
+the manifest's sources, the authored pages, the companion apps, README and
+CONTRIBUTING); the session maps them to pages, verifies against the code,
+edits the authored pages and the manifest, builds with the Cloudflare
+command, lands with `bin/land`, and pushes `main` so the site rebuilds.
+Framing changes and new spine pages stay the boxholder's; the session
+reports them instead of making them.
+
+## Themes as the frame (2026-09-18)
+
+`site/docs-themes.md` (internal, not published) names the ten themes that
+distinguish Bee Box, what each means, how the product expresses it, and where
+it is thinner than the theme claims. It is the frame the corpus is written
+against, and it is deliberately more thorough than any published presentation
+of it. The front page carries a short public version as a `## Themes` section,
+one line per theme with the pages that carry it, so a reading agent can
+explore by theme rather than by directory. The home card carries the shortest
+version: a description, the attributes as a list, and the three prompts
+(learn, install, work on the code). The weekly refresh keeps the three in step.
+

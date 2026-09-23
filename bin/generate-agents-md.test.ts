@@ -24,6 +24,11 @@ import {
   generateAgentsFiles,
   generateSkillLinks,
 } from "./generate-agents-md.js";
+import {
+  buildCodexAgentToml,
+  generateCodexAgents,
+  generateCodexHooks,
+} from "./generate-codex-agents.js";
 
 test("nested mirror is header + verbatim content, no preamble", () => {
   const content =
@@ -226,4 +231,83 @@ test("refuses to overwrite an existing native Codex skill, and keeps going", () 
     readlinkSync(join(repo, ".agents", "skills", "later")),
     join("..", "..", ".claude", "skills", "later"),
   );
+});
+
+test("Codex agent TOML maps the Claude model alias and keeps the body verbatim", () => {
+  const body = "Run `sed -n 's/\\(x\\)/\\1/p'` then report.\n";
+  const md =
+    "---\nname: finish\ndescription: Lands work.\ntools: Bash\nmodel: sonnet\n---\n\n" +
+    body;
+  const toml = buildCodexAgentToml(".claude/agents/finish.md", md);
+  assert.ok(toml.includes('\nmodel = "gpt-5.6-luna"\n'));
+  assert.ok(toml.includes('\nname = "finish"\n'));
+  assert.ok(toml.includes(`'''\n${body}'''\n`));
+  assert.ok(!toml.includes("tools"));
+});
+
+test("Codex agent TOML fails on an unmapped, inherited, or missing model", () => {
+  for (const [modelLine, shown] of [
+    ["model: opus\n", "opus"],
+    ["model: inherit\n", "inherit"],
+    ["", "(none)"],
+  ] as const) {
+    assert.throws(
+      () =>
+        buildCodexAgentToml(
+          ".claude/agents/x.md",
+          `---\nname: x\ndescription: d\n${modelLine}---\n\nbody\n`,
+        ),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes(`no Codex model mapped for Claude model "${shown}"`),
+    );
+  }
+});
+
+test("generates Codex agents, replaces stale hand-written mirrors, removes orphans", () => {
+  mkdirSync(join(repo, ".claude", "agents"), { recursive: true });
+  writeFileSync(
+    join(repo, ".claude", "agents", "finish.md"),
+    "---\nname: finish\ndescription: d\nmodel: sonnet\n---\n\nbody\n",
+  );
+  git("add", ".claude/agents/finish.md");
+  git("commit", "-q", "-m", "add agent");
+  mkdirSync(join(repo, ".codex", "agents"), { recursive: true });
+  writeFileSync(
+    join(repo, ".codex", "agents", "native.toml"),
+    'name = "native"\n',
+  );
+  // A hand-written stale mirror at a tracked agent's name is replaced.
+  writeFileSync(
+    join(repo, ".codex", "agents", "finish.toml"),
+    'name = "finish"\ndeveloper_instructions = "stale"\n',
+  );
+
+  assert.deepEqual(generateCodexAgents(repo), [".codex/agents/finish.toml"]);
+  assert.ok(
+    readFileSync(join(repo, ".codex", "agents", "finish.toml"), "utf8").includes(
+      'model = "gpt-5.6-luna"',
+    ),
+  );
+
+  git("rm", "-q", ".claude/agents/finish.md");
+  git("commit", "-q", "-m", "remove agent");
+  assert.deepEqual(generateCodexAgents(repo), []);
+  assert.equal(existsSync(join(repo, ".codex", "agents", "finish.toml")), false);
+  assert.equal(existsSync(join(repo, ".codex", "agents", "native.toml")), true);
+});
+
+test("the Codex hook file carries an absolute command, and never a Claude-only variable", () => {
+  assert.equal(generateCodexHooks(repo), ".codex/hooks.json");
+  const written = readFileSync(join(repo, ".codex", "hooks.json"), "utf8");
+  assert.ok(!written.includes("CLAUDE_PROJECT_DIR"));
+  assert.ok(written.includes(join(repo, "beebox", "node_modules", ".bin", "vibe-check")));
+  // Regenerating is a no-op rewrite, not a refusal: the file it wrote is its own.
+  assert.equal(generateCodexHooks(repo), ".codex/hooks.json");
+});
+
+test("a hand-authored Codex hook file is left alone", () => {
+  writeFileSync(join(repo, ".codex", "hooks.json"), '{"hooks":{}}\n');
+  assert.equal(generateCodexHooks(repo), null);
+  assert.equal(readFileSync(join(repo, ".codex", "hooks.json"), "utf8"), '{"hooks":{}}\n');
 });

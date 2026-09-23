@@ -8,7 +8,7 @@
  * Manual and unattended application share the recovery-backed core runner.
  */
 
-import { boxWorkEnvironment, withBoxWork } from "../../lib/box-maintenance.js";
+import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
@@ -32,7 +32,6 @@ import {
 import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
 import { assertNever } from "../../lib/invariant.js";
-import { findV2Box, runBootstrap } from "./migrate-bootstrap.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");
@@ -92,10 +91,10 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
 }
 
 /** Run an agent-applied (procedure) migration by delegating to `bbx procedure run`. */
-function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined }): Promise<number> {
+function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined; onOutput: (text: string) => void }): Promise<number> {
   return runMigrationProcess({
     file: BBX_BIN, args: ["procedure", "run", args.procedure], cwd: args.boxRoot,
-    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal,
+    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal, onOutput: args.onOutput,
   });
 }
 
@@ -125,6 +124,7 @@ interface MigrateOptions {
   repair?: boolean;
   withinMaintenance?: boolean;
   prepare?: boolean;
+  yield?: boolean;
 }
 
 /**
@@ -142,18 +142,24 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
     refresh: true,
     json: options.json,
     repair: options.repair ?? options.apply,
+    // A person running --apply gets the procedure now; the scheduled --repair
+    // pass gets it once per human answer.
+    unattended: !options.apply,
     withinMaintenance: options.withinMaintenance,
     prepare: options.prepare,
-    runProcedure: options.apply ? async (procedure, signal) => {
+    yield: options.yield,
+    // `--apply` runs procedures directly; `--repair` (the unattended pass)
+    // runs them under the one-run-per-answer bound.
+    runProcedure: options.apply || options.repair ? async (procedure, run) => {
       await installProcedures(boxRoot);
       await installGuides(boxRoot);
       await assertProcedureHasGate({ procedure, boxRoot });
-      return runProcedure({ procedure, boxRoot, json: options.json, signal });
+      return runProcedure({ procedure, boxRoot, json: options.json, ...run });
     } : undefined,
   });
   if (options.json) {
     console.log(JSON.stringify(result));
-    return result.status === "current" || result.status === "applied" || result.status === "attention" ? 0 : 1;
+    return ["current", "applied", "attention", "deferred"].includes(result.status) ? 0 : 1;
   }
   switch (result.status) {
     case "attention":
@@ -161,6 +167,9 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
       console.warn(`Migration questions need attention: ${result.questions.join(", ")}`);
       return 0;
     case "current":
+      return 0;
+    case "deferred":
+      console.log(`Deferred: the box is in use (${describeWorkHolders(result.holders)}); the next scheduled pass retries.`);
       return 0;
     case "no-manifest":
       console.warn(`No migration manifest at ${MANIFEST_PATH}; not migrating. Seed it with \`bbx migrate --mark-all-applied\` after confirming the box is up to date.`);
@@ -171,7 +180,7 @@ async function runSweep(boxRoot: string, options: MigrateOptions): Promise<numbe
       return 1;
     case "needs-procedure":
       reportApplied(result.applied);
-      console.warn(`Stopped at "${result.procedure}": procedure-kind migrations drive an agent and are not run unattended. Apply it with \`bbx migrate --apply\`.`);
+      console.warn(`Stopped at "${result.procedure}": a procedure-kind migration drives an agent. The next \`--sweep --repair\` pass runs it; \`bbx engine migrate --apply\` runs it now.`);
       return 1;
     case "failed":
       reportApplied(result.applied);
@@ -217,35 +226,17 @@ async function handleMarkApplied(boxRoot: string, name: string): Promise<void> {
 }
 
 /**
- * Resolve the box's top-level directory, or run (and fully handle) the v2
- * bootstrap conversion and return `null` when this turns out to be a v2 box.
- * Split out of the action purely to keep its complexity down.
+ * Resolve the box's top-level directory.
+ *
+ * This used to branch: a v2 box kept its marker nested at `content/`, where
+ * `findBoxRoot` does not look, so a miss here meant "maybe v2" and ran the
+ * bootstrap conversion. The v2 population is empty and that conversion is
+ * deleted, so a miss is now simply a miss.
  */
-async function resolveTopPathOrBootstrap(options: MigrateOptions): Promise<string | null> {
-  let topPath: string;
-  try {
-    const found = await findBoxRoot(process.cwd());
-    if (!found) throw new NotInBoxError();
-    topPath = found;
-  } catch (e) {
-    // No marker found walking up from cwd at all — the common case for a v2
-    // box invoked from its package root (the marker is nested at content/,
-    // which findBoxRoot doesn't look inside). Try the v2 probe before giving up.
-    const v2Box = await findV2Box(null);
-    if (v2Box === null) throw e;
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-
-  // requireBoxRoot found A marker, but it may be the nested v2 one (e.g.
-  // invoked from inside content/ itself) — the normal manifest-driven flow
-  // below can't read a v2 box's manifest, so check for that case here.
-  const v2Box = await findV2Box(topPath);
-  if (v2Box !== null) {
-    await runBootstrap(v2Box, options);
-    return null;
-  }
-  return topPath;
+async function resolveTopPath(): Promise<string> {
+  const found = await findBoxRoot(process.cwd());
+  if (!found) throw new NotInBoxError();
+  return found;
 }
 
 export const migrateCommand = new Command("migrate")
@@ -258,6 +249,7 @@ export const migrateCommand = new Command("migrate")
   .addOption(new Option("--within-maintenance", "Join the calling maintenance transaction").hideHelp())
   .addOption(new Option("--prepare", "Declare startup readiness after final convergence").hideHelp())
   .option("--repair", "Allow one bounded agent repair after migration failure")
+  .option("--yield", "Defer instead of draining when the box has live work (scheduled passes)")
   .option("--json", "Report the application result as JSON")
   .action(async (options: MigrateOptions) => {
     // `topPath` is the stable top-level directory `requireBoxRoot` found —
@@ -276,10 +268,7 @@ export const migrateCommand = new Command("migrate")
         questions: await migrationQuestions(root) }));
       return;
     }
-    const topPath = await resolveTopPathOrBootstrap(options);
-    if (topPath === null) return;
-
-    const boxRoot = topPath;
+    const boxRoot = await resolveTopPath();
 
     if (options.sweep === true || (options.apply === true && options.status !== true)) {
       process.exitCode = await runSweep(boxRoot, options);
@@ -288,7 +277,7 @@ export const migrateCommand = new Command("migrate")
 
     if (options.markApplied !== undefined) {
       const name = options.markApplied;
-      await withBoxWork(boxRoot, () => handleMarkApplied(boxRoot, name));
+      await withBoxWork({ boxRoot, reason: "mark applied" }, () => handleMarkApplied(boxRoot, name));
       return;
     }
 
@@ -305,7 +294,7 @@ export const migrateCommand = new Command("migrate")
         name: m.name,
         "applied-at": now,
       }));
-      await withBoxWork(boxRoot, () => writeManifest(boxRoot, entries));
+      await withBoxWork({ boxRoot, reason: "mark all applied" }, () => writeManifest(boxRoot, entries));
       console.log(`Wrote ${String(entries.length)} entries to ${MANIFEST_PATH} (no migrations actually ran).`);
       return;
     }

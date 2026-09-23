@@ -35,8 +35,8 @@ the reason the bar above is "green", not "probably fine".
 
 ## Reporting
 
-Finish with `bin/schedules alert` (`normal` for a landed fix or a ready branch
-`bin/land` refused, `important` for a regression or red validation, `fyi` when
-nothing should change). State what you changed or left, why, the test result,
+Finish with `bin/schedules alert` (`fyi` for a landed fix or when nothing
+should change, `normal` for a ready branch `bin/land` refused or red validation
+on the branch, `important` only for a regression already on `main`). State what you changed or left, why, the test result,
 and whether it landed. Use `bin/schedules done` only when there is genuinely
 nothing to report.

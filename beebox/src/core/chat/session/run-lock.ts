@@ -65,10 +65,10 @@ export function createRunLockHolder(
 
 /** Keep the parent admission alive across a persistent SDK run, including prep. */
 export async function withChatRunAdmission(
-  boxRoot: string,
+  { boxRoot, reason }: { boxRoot: string; reason: string },
   start: (work: BoxWork) => Promise<boolean>,
 ): Promise<void> {
-  const work = await acquireBoxWork(boxRoot);
+  const work = await acquireBoxWork(boxRoot, { reason });
   let transferred = false;
   try { transferred = await work.run(() => start(work)); }
   finally { if (!transferred) await work.release(); }

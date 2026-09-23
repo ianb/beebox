@@ -1,4 +1,4 @@
-import { BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 /**
  * Filesystem persistence and queue-combining helpers for ChatSession.
  *

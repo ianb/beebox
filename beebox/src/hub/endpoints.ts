@@ -43,6 +43,12 @@ export interface EndpointProvider {
    * to trigger a cold start (see `hub-server.ts`'s WS handler for why).
    */
   ensureRunning?(slug: string): Promise<Endpoint | undefined>;
+  /**
+   * Why a known slug has no endpoint right now (the last launch error, a
+   * crash-loop latch), for the hub's 503 body. `undefined` for a running or
+   * unknown slug, or when the provider records no reason.
+   */
+  unavailable?(slug: string): string | undefined;
 }
 
 /**

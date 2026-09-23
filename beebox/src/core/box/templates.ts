@@ -17,184 +17,7 @@ import { installTemplateFile } from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { boxCodePaths, getBoxShape } from "../../lib/box-shape.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
-
-const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
-
-Box-local schemas let you define new card types inside your box. Each schema is a \`.ts\` file
-in \`config/schemas/\` that uses the same tools as built-in schemas.
-
-**Default to the frontmatter form** (\`cardSchema\`) shown below: it produces standard cards —
-YAML frontmatter plus a markdown body. Reach for the legacy \`element()\` / XML form only when
-your card needs Markdoc-shaped inline content (see the end of this guide).
-
-## Creating a Schema
-
-Create a \`.ts\` file in \`config/schemas/\` that default-exports a \`cardSchema()\`:
-
-\`\`\`typescript
-import { body, cardSchema } from "beebox/cards";
-import { z } from "zod";
-
-export default cardSchema("my-type", {
-  fields: {
-    status: z.enum(["draft", "final"]).default("draft"),
-    priority: z.enum(["low", "medium", "high"]).optional(),
-    body: body(z.string()),  // omit this line if the card has no prose body
-  },
-  instructions: \\\`# My Type Cards
-
-Instructions for the agent on how to handle this card type.
-These appear in .claude/rules/ and _content/docs/generated/, and are loaded
-when the agent reads or edits a matching card file.\\\`,
-});
-\`\`\`
-
-The filename becomes the card type: \`config/schemas/task.ts\` → \`*.task.card\` files.
-
-On disk, a card of this type is YAML frontmatter + markdown body:
-
-\`\`\`
----
-status: draft
-priority: high
----
-The markdown body (present only when the schema declares a \`body\` field).
-\`\`\`
-
-Key patterns:
-- \`cardSchema(type, { fields, instructions? })\` is the entry point. \`fields\` is a flat object
-  of Zod validators; nest with \`z.object\` / \`z.array\` as needed.
-- \`body(z.string())\` declares the markdown body field — it must be named \`body\`. Omit it for a
-  body-less card (then any non-empty body errors on load).
-- \`type\` is the discriminator; don't list it under \`fields\`, and the on-disk YAML needn't carry
-  it — the filename \`Foo.<type>.card\` supplies it.
-- \`title\` and \`contains\` are available on every card type automatically.
-
-## Validation beyond Zod — the \`validate\` hook
-
-When a card type needs a rule Zod field types can't express — a cross-field
-constraint, a format refinement, or checking the body's parsed structure — add a
-\`validate\` hook to the schema. The rule lives **on the schema**, co-located with
-the type it governs; \`bbx validate\` invokes it automatically.
-
-\`\`\`typescript
-import { cardSchema, type LintIssue } from "beebox/cards";
-import { z } from "zod";
-
-export default cardSchema("link", {
-  validate: ({ fields }) => {
-    const errors: LintIssue[] = [];
-    const url = fields["url"];
-    if (typeof url === "string" && !url.startsWith("https://")) {
-      errors.push({ type: "validation", severity: "error", message: \`url must be https (got "\${url}")\` });
-    }
-    return errors;
-  },
-  fields: { url: z.string() },
-});
-\`\`\`
-
-- The hook receives \`{ fields }\` — the parsed frontmatter, with the body at
-  \`fields["body"]\` when the schema has one. Narrow values yourself (\`typeof\`).
-- It is **self-contained**: it sees only this card's own data, never other cards
-  or the box. Broken-ref checking is handled for you and is not its job.
-- Return \`LintIssue[]\` (\`severity: "error"\` blocks; \`[]\` means clean).
-
-## Available Imports
-
-From \`beebox/cards\`:
-- \`cardSchema(type, config)\` — define a frontmatter card schema
-- \`body(zodSchema)\` — declare the single markdown body field
-- \`type LintIssue\` — the issue type a \`validate\` hook returns (see above)
-
-From \`zod\`:
-- \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
-
-## Optional: Templates
-
-Export a \`template\` to enable \`bbx create\` for your card type. For frontmatter schemas,
-\`generate\` returns the card text — a YAML frontmatter block built with \`stringify\` from \`yaml\`:
-
-\`\`\`typescript
-import { cardSchema } from "beebox/cards";
-import { stringify as stringifyYaml } from "yaml";
-import { z } from "zod";
-
-export const template = {
-  name: "task",
-  description: "A task card",
-  argsSchema: z.object({
-    title: z.string().describe("Task title"),
-    priority: z.enum(["low", "medium", "high"]).optional().describe("Priority level"),
-  }),
-  generate: (args: { title: string; priority?: string }) => {
-    const fields: Record<string, unknown> = { status: "todo", title: args.title };
-    if (args.priority !== undefined) fields.priority = args.priority;
-    return "---\\n" + stringifyYaml(fields) + "---\\n";
-  },
-  cardTypes: ["task"],
-  defaultForTypes: ["task"],
-};
-
-export default cardSchema("task", {
-  // ... schema definition
-});
-\`\`\`
-
-## After Adding or Modifying Schemas
-
-Two independent things happen — don't conflate them:
-
-**1. The card type works immediately.** Loading, validation, and rendering pick
-up a new or edited schema on the next \`bbx\` command automatically, and the running
-web server hot-reloads schema files on save too. You do **not** need to run
-anything to "register" a schema — that was never what \`bbx init\` did.
-
-**2. Regenerate the agent-facing docs from \`instructions\`** — this is what
-\`bbx init\` is for:
-
-\`\`\`bash
-bbx init .
-\`\`\`
-
-This regenerates, from each schema's \`instructions\`:
-- \`.claude/rules/card-<type>.md\` (auto-loaded when you edit a matching card)
-- \`_content/docs/generated/card-<type>.md\`
-and registers any \`template\` exports for \`bbx create\`. Run it after you add or
-change a schema's \`instructions\` so the guidance an agent reads stays current. It
-does not touch the running server's schema registration (a fresh \`bbx\` process
-can't — and doesn't need to).
-
-## Tips
-
-- Keep schema files focused — one card type per file
-- Always include \`instructions\` so the agent knows how to handle the card type
-- Test with \`bbx validate\` after creating cards of the new type
-`;
-
-/**
- * v2 (package-layout) variant of the schemas guide: schemas live at
- * `src/schemas/` (the package root), not `config/schemas/` (the box root).
- * Derived by substitution rather than duplicated by hand so the two stay in
- * lockstep — everything else about writing a schema is identical.
- *
- * A box's schemas dir resolves only `beebox/*` specifiers, via the
- * package's own `node_modules` — bare `import ... from "zod"` / `from "yaml"`
- * don't resolve there, so those lines and the "Available Imports" section are
- * rewritten to the `beebox/schema` re-export instead.
- */
-const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/")
-  .replaceAll("import { z } from \"zod\";", "import { z } from \"beebox/schema\";")
-  .replace(
-    "import { stringify as stringifyYaml } from \"yaml\";\nimport { z } from \"beebox/schema\";",
-    "import { stringifyYaml, z } from \"beebox/schema\";"
-  )
-  .replace(
-    "From `zod`:\n- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)",
-    "From `beebox/schema`:\n" +
-      "- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)\n" +
-      "- `parseYaml`/`stringifyYaml` — YAML (de)serialization, e.g. for a `template.generate`"
-  );
+import { SCHEMAS_CLAUDE_MD_V2 } from "./schemas-guide.js";
 
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {
@@ -224,6 +47,7 @@ tricks/
   scripts/
     CLAUDE.md         <- This file
     clean-inbox/
+      secrets.json     <- optional declared credentials for this trick
       index.ts        <- bbx trick clean-inbox
     summarize/
       index.ts        <- bbx trick summarize
@@ -237,6 +61,7 @@ Tricks are standalone TypeScript programs. Environment variables provide context
 
 - \`BBX_BOX_ROOT\` -- absolute path to the box root
 - \`BBX_TRICK_NAME\` -- the trick name (e.g. "clean-inbox"), useful for usage/help output
+- declared secrets are injected only into this trick's child process environment
 - \`process.argv.slice(2)\` -- extra arguments after the trick name
 
 \`\`\`typescript
@@ -254,6 +79,16 @@ console.log("Done!");
 \`\`\`
 
 The \`export const description\` line is parsed (not executed) by \`bbx trick\` for the listing.
+
+If the trick needs a credential, add a \`secrets.json\` beside \`index.ts\`:
+
+\`\`\`json
+[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]
+\`\`\`
+
+The boxholder must supply and grant the secret. \`bbx trick <name>\` resolves
+declared secrets at launch and injects them only into that trick process. Never
+write a resolved value to a file, argument, or log.
 
 ## Running
 
@@ -326,6 +161,26 @@ the real cards, renders once, prints the output or a source-mapped error).
 Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
 `;
 
+export const FEEDBACK_CLAUDE_MD = `# Feedback about the Bee Box system
+
+Use this directory only for observations about Bee Box itself: its commands,
+interface, generated guidance, sync, or agent instructions. A problem with an
+individual card's contents, the boxholder's project, or ordinary work in this
+box belongs in that work, not here. A system behavior can qualify even when you
+noticed it while handling a card.
+
+Record a system observation here as a \`.doc.card\`. Use a specific title and a \`contains:\` summary so a
+developer can find and understand it. Describe what happened, what you expected,
+and why the difference matters. Include the relevant error or exchange under a
+short **Context** heading, in your own words; link an earlier card for follow-ups.
+Include a session ID only when you know which session it identifies. Use
+box-relative paths such as \`/_config/box.json\` instead of machine paths.
+Commit the card with your normal work.
+
+These observations go from the agent to Bee Box developers.
+\`.feedback.card\` is the boxholder's response to something the box surfaced.
+`;
+
 /**
  * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
  * exist. A box's tricks live at `boxRoot/src/tricks/` (`boxCodePaths`
@@ -378,6 +233,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   // entry.
   { name: "schemas-guide-v2", relPath: "src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
   { name: "views-guide-v2", relPath: "src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "agent-feedback-guide", relPath: "_config/feedback/CLAUDE.md", content: FEEDBACK_CLAUDE_MD },
   { name: "tricks-guide-v2", relPath: "src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
   // The root briefing seed. Unlike the guides it lives under `_content/`
   // (it's a card template, `createBriefingTemplate`), but it has the same
@@ -393,7 +249,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
  * `_config/_template-updates/` when the boxholder has customized it (prior
  * stock hashes come from the ledger so a box on any shipped version overwrites
  * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
- * a fresh `bbx init` is what lets `bbx upgrade` (Track E) roll out guide
+ * a fresh `bbx engine init` is what lets `bbx upgrade` (Track E) roll out guide
  * updates later without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
@@ -416,5 +272,15 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     relPath: "src/views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
     priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
+  });
+}
+
+/** Install or refresh the local guide for agent-authored feedback cards. */
+export async function installFeedbackGuide(boxRoot: string): Promise<void> {
+  await installTemplateFile({
+    boxRoot,
+    relPath: "_config/feedback/CLAUDE.md",
+    templateContent: FEEDBACK_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["agent-feedback-guide"].superseded,
   });
 }

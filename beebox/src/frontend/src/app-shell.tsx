@@ -20,9 +20,9 @@ import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
-import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
+import { StatusMessage } from "./components/ui/StatusMessage";
 import { Button } from "./components/ui/Button";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { useBoxes } from "./hooks/useBoxes";
@@ -33,6 +33,7 @@ import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { DocumentIcon } from "./components/DocumentIcon";
 import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
+import { QuickSearchOverlay } from "./components/search/QuickSearchOverlay";
 
 
 // Re-exported for the route tree
@@ -85,13 +86,13 @@ export function BoxValidationLayout() {
 
   useDropBoxScopedCache(boxSlug);
 
-  if (!boxesState.loaded) return <Text as="div" tone="subtle" className="p-8">Loading box...</Text>;
+  if (!boxesState.loaded) return <StatusMessage>Loading box...</StatusMessage>;
   if (boxesState.error) return <BoxValidationError />;
   return boxExists ? <Outlet /> : <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />;
 }
 
 function BoxValidationError() {
-  return <Stack gap="sm" className="max-w-md mx-auto mt-12 p-4"><Text as="h1" size="xl" weight="bold" tone="danger">Could not load boxes</Text><Text as="p" tone="subtle">The box list could not be checked.</Text><Button id="bbx-box-validation-reload" intent="primary" onClick={() => window.location.reload()}>Try again</Button></Stack>;
+  return <Stack gap="sm" className="max-w-md mx-auto mt-12 p-4"><Text as="h1" size="xl" weight="bold" tone="danger">Could not load boxes</Text><Text as="p" tone="subtle">The box list could not be checked.</Text><Button id="bbx-box-validation-reload" className="self-start" intent="primary" onClick={() => window.location.reload()}>Try again</Button></Stack>;
 }
 
 /** Product chrome and runtime, mounted only after the box is validated. */
@@ -105,7 +106,7 @@ export function ProductLayout() {
     <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />
         <DocumentPlace />
-        <Column className="h-app">
+        <Stack gap="none" className="h-app">
           <AppNav
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
@@ -116,14 +117,15 @@ export function ProductLayout() {
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
-        </Column>
+          <QuickSearchOverlay />
+        </Stack>
     </BoxShellProviders>
   );
 }
 
 /** Dev fixtures deliberately run without product navigation or conversation runtime. */
 export function DevHarnessLayout() {
-  return <Column className="h-app"><main className="flex-1 min-h-0"><Column overflow="auto" className="h-full"><Outlet /></Column></main></Column>;
+  return <Stack gap="none" className="h-app"><main className="flex-1 min-h-0"><Stack gap="none" overflow="auto" className="h-full"><Outlet /></Stack></main></Stack>;
 }
 
 /** Providers retain their children identity when a chat publishes chrome. */

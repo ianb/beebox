@@ -60,9 +60,16 @@ ARG BBX_GIT_EMAIL="beebox@box.example.com"
 # the per-box pre-commit hook runs `git annex pre-commit`, so without the binary
 # every commit on every box fails. git-lfs is retired for assets but still
 # installed for repos that carry legacy filters.
+#
+# sudo + systemd/dbus/procps: box package installs (`bbx host install`, below).
+# systemd/dbus/procps match a server's base, so the wrapper's service rule
+# judges only what a box adds; without them gLabels (which depends on dbus
+# and systemd) would be refused here and accepted on a server. Nothing runs
+# systemd in the container; the packages are inert.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
        pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv git git-lfs git-annex curl ca-certificates \
+       sudo systemd dbus procps \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
   # call `magick` (IM7). Symlink so both names work (same as setup-server.sh).
@@ -92,6 +99,14 @@ RUN corepack enable
 RUN mkdir -p /app/claude-config /data/box \
   && chown -R node:node /app /data \
   && ln -sf /app/node_modules/beebox/bin/bbx /usr/local/bin/bbx
+
+# Box package installs: the same root wrapper and sudoers entry that deploy.sh
+# puts on a server, for the runtime user. The entrypoint's `bbx host sync`
+# reinstalls recorded packages, since a recreated container starts without them.
+COPY beebox/deploy/server-bin/bbx-host-apt /usr/local/sbin/bbx-host-apt
+RUN chown root:root /usr/local/sbin/bbx-host-apt && chmod 0755 /usr/local/sbin/bbx-host-apt \
+  && echo 'node ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > /etc/sudoers.d/beebox-host-apt \
+  && chmod 0440 /etc/sudoers.d/beebox-host-apt && visudo -cqf /etc/sudoers.d/beebox-host-apt
 
 # Relocate Claude Code's config + credentials off the user's home to a
 # dedicated dir the compose file mounts a named volume onto (so `claude auth

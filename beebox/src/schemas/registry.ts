@@ -24,6 +24,7 @@ import { LandmarksSchema } from "./landmarks.js";
 import { HistorySchema } from "./history.js";
 import { InventorySchema } from "./inventory.js";
 import { AdminSchema } from "./admin.js";
+import { SearchSchema } from "./search.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -95,6 +96,7 @@ export const cardSchemas: CardSchema[] = [
   HistorySchema,
   InventorySchema,
   AdminSchema,
+  SearchSchema,
   // authored — everyday recording types first
   DocSchema,
   RecordSchema,
@@ -301,7 +303,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   }
 
   // Files that vanished since the last rebuild drop their type (and bookkeeping).
-  for (const key of [...records.keys()]) {
+  for (const key of records.keys()) {
     if (!seen.has(key)) records.delete(key);
   }
   boxFileRecords.set(boxRoot, records);

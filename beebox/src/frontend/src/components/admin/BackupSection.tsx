@@ -29,7 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex gap-3 text-sm py-1">
       <span className="text-warm-600 w-32 shrink-0">{label}</span>
-      <span className="text-warm-800">{children}</span>
+      <span className="text-warm-800 min-w-0 break-words">{children}</span>
     </div>
   );
 }

@@ -286,11 +286,17 @@ forgetting it is how a credential ends up committed):
    slot. The declaring box is recorded, so `bbx secrets status <box>` shows what
    it is still waiting on. An agent can declare; only the boxholder can supply a
    value or grant it (at `agent` access, for this endpoint to work).
-2. Resolve it **at call time**, every time. Hold the value in a local variable
-   for the length of the outbound request.
-3. Never write it anywhere: not a card, not a config file, not an env var, not a
-   log line, not the code. There is one copy, in the store, and rotation is
-   supposed to touch only that copy.
+2. For a trick, add `secrets.json` beside its `index.ts`, for example:
+   `[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]`.
+3. Run the trick normally with `bbx trick <name>`. The runner resolves the
+   declaration at launch and injects the value only into that child process.
+4. Never write the value yourself: not a card, config file, argument, log line,
+   or source file. The framework does not print it, but a trick can still expose
+   its own environment, so do not log or commit it.
+
+The raw HTTP route described above is a low-level engine reference. Do not
+debug it with shell `curl`: its successful response contains the plaintext
+credential and would put it in the tool transcript.
 
 ## Verification: the probe and format registries
 

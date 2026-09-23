@@ -32,7 +32,7 @@ import {
 import { flakesAlertTitle, redAlertTitle, renderEnvironmentAlert, renderRedAlert } from "./alerts.js";
 import { renderDeferredAlert } from "./trust.js";
 import { landingsSince } from "./batch.js";
-import { alertOnce } from "./reporting.js";
+import { raiseCondition } from "./reporting.js";
 import { checkoutCommit, runFileAlone, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
 import {
@@ -77,10 +77,11 @@ export async function deferRed(input: {
   });
   await writePending(pending);
   const oldest = Object.values(pending).map((entry) => entry.firstSeen).toSorted()[0] ?? null;
-  await alertOnce({
+  await raiseCondition({
     kind: "deferred",
-    files: input.failures,
-    priority: "normal",
+    culprits: [],
+    verdict: false,
+    priority: "fyi",
     title: `full suite: run under load (${input.factor.toFixed(1)}×); ${String(input.failures.length)} failure(s) deferred`,
     message: renderDeferredAlert({
       testedCommit: input.batch.pinned,
@@ -231,10 +232,11 @@ export async function handleRed(input: {
   const firstErrors = firstErrorLines({ raw: input.output, files: failures });
   const cluster = environmentCluster({ failures, firstErrors });
   if (isEnvironmentFailure({ failures, firstErrors })) {
-    await alertOnce({
+    await raiseCondition({
       kind: "environment",
-      files: failures,
-      priority: "important",
+      culprits: [],
+      verdict: false,
+      priority: "normal",
       title: `full suite: ${String(failures.length)} files failed (environment)`,
       message: renderEnvironmentAlert({ testedCommit: batch.pinned, failures, cluster }),
     });
@@ -245,10 +247,11 @@ export async function handleRed(input: {
   const known = await readKnownRed();
   const newReal = newlyRedFiles({ known, current: triaged.real });
   if (triaged.real.length === 0) {
-    await alertOnce({
+    await raiseCondition({
       kind: "flakes",
-      files: triaged.flakes,
-      priority: "normal",
+      culprits: [],
+      verdict: true,
+      priority: "fyi",
       title: flakesAlertTitle(triaged.flakes),
       message: renderRedAlert({
         testedCommit: batch.pinned,
@@ -328,10 +331,13 @@ export async function handleRed(input: {
         ? `Filed: ${filed.written.join(", ")}`
         : `NOT filed (${filed.blocked}) — the issue text is in the run log.`),
   ].join("\n");
-  await alertOnce({
+  // Blamed on a landing is the one red a person can act on today; red nobody
+  // can attribute waits for the digest.
+  await raiseCondition({
     kind: culprits.length === 0 ? "red-unattributed" : "red-blamed",
-    files: triaged.real,
-    priority: "important",
+    culprits: culprits.map((culprit) => culprit.landing.commit),
+    verdict: true,
+    priority: culprits.length === 0 ? "normal" : "important",
     title: redAlertTitle({ real: triaged.real, culprits }),
     message,
   });

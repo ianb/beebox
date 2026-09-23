@@ -11,7 +11,8 @@ other annex fixture used to build its shape with a helper that created
 `.git/annex/objects/` by hand and never ran `git annex`. Those fixtures proved
 the ignore block does not block. Only this one proves bytes actually annex —
 and "the fixture never ran the real init" is what
-`issues/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md` names
+`issues/closed/bugs/2026-09-04-scan-import-gitignore-blocks-attach-staging.md`
+names
 as the reason its bug went unnoticed for months.
 
 ```ts setup

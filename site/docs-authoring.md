@@ -134,3 +134,23 @@ doc's own internal links are rewritten automatically (see `site/CLAUDE.md`)
 - **A real home path, a path or link into `private-issues/`, or a named box under a boxes directory (`~/src/boxes/<name>`; `test1` and placeholders pass), anywhere in the text.** Applies to every doc kind, including generated ones. Authored pages are also scanned against your gitignored `.commit-blocklist`. It's mechanical and
 
 Each failure names the file and, where it applies, the line.
+
+## Whose words: blockquotes
+
+On the authored pages (`site/docs/**`), a blockquote is the maintainer's own
+words, verbatim, and nothing else is set as a blockquote. Everything outside
+a blockquote was written by an agent and reviewed. The front page says so, so
+a reader can tell the two apart; keep the convention when editing: never put
+agent prose in a blockquote, never paraphrase inside one, and do not use a
+blockquote for emphasis or asides. Promoted repo docs keep whatever their
+source uses; the convention is stated for the authored pages only.
+
+## Themes
+
+`docs-themes.md`, beside this file, is the internal frame: the ten themes that
+distinguish Bee Box, what each means, how the product expresses it, and where
+it is thinner than it sounds. It is not published. Write against it: a page
+earns its place by carrying a theme, and a theme that has gone thin gets said
+honestly rather than dropped. The front page's `## Themes` section is the
+short public version; keep the two in step.
+

@@ -32,8 +32,9 @@ import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
+import { maintenanceRetryDelayMs } from "./lib/maintenance-retry";
 import { currentChatChannel } from "./lib/chat-channel";
-import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
+import { parseChatAgentEngine, type AddedModel, type ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -68,6 +69,14 @@ export interface ChatImageAttachment {
   mimeType: string;
   /** Raw base64 data (no data: URL prefix) */
   dataBase64: string;
+  /**
+   * Box-relative path of the uploaded ORIGINAL file (`_tmp/…`), when its
+   * upload landed. `dataBase64` is the reduced inline copy; this is the file
+   * the message's `<attachments>` block lists as `[image#N]: <path>`. It
+   * travels on the emission and the native bridge, not in the `/chat/send`
+   * body: the path reaches the agent through the message text.
+   */
+  path?: string;
 }
 
 export interface SessionEntry {
@@ -116,6 +125,8 @@ export interface ChatStatus {
   boxEngine: ChatAgentEngine;
   /** A usable `glm` key exists for this box — gates the picker's GLM rows. */
   glmAvailable: boolean;
+  /** Owner-added OpenRouter models; empty when the box has no usable key. */
+  addedModels: AddedModel[];
 }
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<ChatStatus> {
@@ -241,6 +252,26 @@ class ConversationStartupPendingError extends Error {
   constructor() { super("Waiting for conversation — retry this send"); this.name = "ConversationStartupPendingError"; }
 }
 
+/** A failed send: 4xx is the box's decision, anything else may be retried by the caller. */
+async function rejectSend(response: Response, startup: boolean | undefined): Promise<never> {
+  if (response.status === 404 && startup === true) throw new ConversationStartupPendingError();
+  const error = await response
+    .json()
+    .catch(() => ({ error: response.statusText }));
+  const reason = error.error || "Chat send failed";
+  if (response.status >= 400 && response.status < 500) throw new ChatSendRejectedError(reason);
+  throw new RequestError(reason);
+}
+
+/** Closed for maintenance with a known reopening: wait it out once, and say so. */
+async function waitOutMaintenance(messageId: string, response: Response): Promise<boolean> {
+  const delayMs = maintenanceRetryDelayMs(response.headers.get("Retry-After"));
+  if (delayMs === null) return false;
+  recordChatSendEvent(messageId, { event: "post-retry-scheduled", detail: { reasonKind: "maintenance", delayMs } });
+  await new Promise<void>((resolve) => startAwakeTimeout({ timeoutMs: delayMs, periodMs: Math.min(1_000, delayMs), onTimeout: () => resolve() }));
+  return true;
+}
+
 export async function startChatTurn(params: {
   startup?: boolean;
   exactSession?: boolean;
@@ -309,15 +340,10 @@ export async function startChatTurn(params: {
       await new Promise<void>((resolve) => startAwakeTimeout({ timeoutMs: delay, periodMs: 50, onTimeout: () => resolve() }));
       return attempt();
     }
-    if (!response.ok) {
-      if (response.status === 404 && params.startup === true) throw new ConversationStartupPendingError();
-      const error = await response
-        .json()
-        .catch(() => ({ error: response.statusText }));
-      const reason = error.error || "Chat send failed";
-      if (response.status >= 400 && response.status < 500) throw new ChatSendRejectedError(reason);
-      throw new RequestError(reason);
-    }
+    // The refusal came from the admission hook, so nothing was recorded and
+    // the same message id is safe to send again.
+    if (response.status === 503 && attemptNumber === 1 && await waitOutMaintenance(messageId, response)) return attempt();
+    if (!response.ok) await rejectSend(response, params.startup);
 
     return response;
   };

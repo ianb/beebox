@@ -3,7 +3,7 @@ title: "Reliable box maintenance and migration with Git recovery"
 status: partial
 workstream: migration-reliability
 issues:
-  - ../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md
+  - ../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md
 ---
 # Reliable box maintenance and migration with Git recovery
 
@@ -13,10 +13,10 @@ repair, and existing questions and alerts for decisions that need a person.
 Migration, deployment, and reload share one boundary: close admission to new
 work, drain accepted work, perform maintenance, verify readiness, then reopen.
 
-**Issues addressed:** [Local boxes never converge](../../../issues/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
+**Issues addressed:** [Local boxes never converge](../../../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md).
 Related but not closed by this plan: [parked template resolution](../../../issues/features/2026-08-24-parked-template-resolution-path.md),
 [template recurrence](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md),
-[incorrect shipped procedure templates](../../../issues/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
+[incorrect shipped procedure templates](../../../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md),
 and [one-root migration performance](../../../issues/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md).
 
 ## Smallest fix and budget
@@ -232,13 +232,16 @@ all parent environment variables or make a successor server's ordinary requests
 privileged merely because its launcher holds the maintenance capability.
 
 The maintenance phase records owner attempt/generation and progress, with
-liveness owned by its held file lock. After a stale owner is reclaimed through
-the existing primitive, a new controller may reopen a pre-mutation attempt only
-if the old generation passes existing health/canary checks and no replacement
-began. After mutation or replacement begins, owner death leaves admission closed
-until a new controller reconciles the attempt; lock expiry alone must not reopen
-it. Expose this state in existing health and schedule diagnostics. Normal
-completion and safe pre-change abort explicitly reopen the gate.
+liveness owned by its held file lock. **Amended 2026-09-17 by
+[box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
+closes the box only while its owner lock is held. Owner death, a failed
+attempt, or an abandoned deploy leaves the record as unfinished maintenance,
+which refuses nothing; the next completed attempt clears it. The original
+rule, "owner death leaves admission closed until a new controller reconciles
+the attempt; lock expiry alone must not reopen it", wedged four boxes on
+2026-09-16 and is withdrawn. Expose this state in existing health and schedule
+diagnostics. Normal completion and safe pre-change abort explicitly reopen the
+gate.
 
 Drain has a ten-minute limit, separate from the operation's execution budget.
 On drain timeout, abort maintenance and report the blocking work; do not proceed
@@ -280,17 +283,14 @@ and its startup convergence has been accounted for. A bound HTTP port returning
 within controller readiness; do not add a new public API or acknowledgement
 channel. Lazy hub startup and scheduler prestart must honor the gate. Reads may
 continue where compatible; mutating startup runs only with an explicit maintenance
-capability. A failure result cannot silently clear maintenance merely to serve.
-A committed partial migration with a durable question can reopen; an uncertain
-half-applied hard failure cannot. Scripts-only deferred repair hands ownership
-to the scheduled convergence runner by releasing exclusive ownership while
-retaining the closed recovery phase; it must be able to
-repair a closed box without depending on normal HTTP/chat admission. Report the
-unavailable box until recovery succeeds. A question alone does not make a
-hard-failed box safe to reopen. Read-only question inspection remains available;
-recording an answer uses a narrow maintenance-owned CLI recovery action, then
-the next convergence attempt consumes it. Ordinary work cannot bypass the gate
-by posing as recovery. Notifications run as part of the maintenance attempt.
+capability. A failure result does not clear the maintenance record, but the record no
+longer closes the box once its owner is gone (amended 2026-09-17, see above):
+a hard failure reopens with its partial output uncommitted in the tree and its
+before-image under the recovery ref, and the pending migration plus its
+question report the state. Scripts-only deferred repair hands the record to the
+scheduled convergence runner by releasing ownership. A question is answered
+through the ordinary path; the fenced CLI recovery action was removed with the
+amendment. Notifications run as part of the maintenance attempt.
 
 **Vocabulary lock-ins.** One per-box work lease and maintenance phase record,
 shared by existing callers. No separate migration lock, reload admission counter,
@@ -308,7 +308,11 @@ into the shared module and wire ordinary work owners before using it for mutatio
 **What and why.** Move script application into one core path used by `--apply`
 and `--sweep`. Both accept dirty input. Keep status and explicit manifest repair
 commands, and keep v2 bootstrap separate. Manual mode may execute registered
-procedure migrations; unattended mode reports them as requiring attention.
+procedure migrations. **Amended 2026-09-17 by
+[procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
+unattended `--repair` mode runs them too, one run per human answer; the
+original "reports them as requiring attention" left every box waiting for a
+person and is withdrawn.
 
 **Direction.** Retain `sweepMigrations` as the core owner while replacing its
 policy, rather than layering a second orchestrator over it. Its typed result
@@ -520,7 +524,9 @@ malformed JSON is unknown/failure, never an empty successful fleet. Emit one
 important alert for unresolved failures, human decisions, or unavailable coverage;
 use existing schedule state to avoid repeating identical detail every hour.
 Busy alone is deferred, but continued pending work is reported on the daily
-cadence even if it is always busy. A fully current result is silent; partial
+cadence even if it is always busy. After the 2026-09-17 amendment a pending
+procedure is applied rather than reported; the daily report names only a
+procedure whose failure question is unanswered. A fully current result is silent; partial
 conversion and outstanding questions remain attention items even with no pending registry entries. Schedule run
 records prove the check occurred.
 
@@ -589,7 +595,7 @@ No silent failure listed below is accepted as the intended behavior.
 | New work races gate closure | Planned cross-process fixture | Atomic registration versus closure | Deferred before mutation |
 | Accepted agent needs CLI tools during drain | Planned descendant fixture | Retained validated lease | Completes, no deadlock |
 | Timer fires while closed | Planned timer fixture | Admission before consuming, resume pending delivery | Pending, not lost |
-| Deploy/reload controller dies | Planned process handoff fixture | Durable phase, successor reconciliation | Closed with recovery diagnostic |
+| Deploy/reload controller dies | `test/lib/box-maintenance.doctest.md` (amended 2026-09-17) | Record stays; box reopens when the owner lock is gone | Health and hub 503 name the record |
 | Busy task never finishes | Planned drain-timeout fixture | Abort before mutation, report blocker | No forced migration |
 | Concurrent maintenance or recursive repair call | Planned process fixture | Shared ownership and reentry refusal | Busy/error |
 | External editor writes during migration | External tools are outside admission | Git recovery; no filesystem transaction claim | Explicit scope limit |

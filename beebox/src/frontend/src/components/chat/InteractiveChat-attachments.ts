@@ -6,10 +6,14 @@
  *
  * Photos small enough to ride inline are downscaled + base64-encoded
  * client-side and drop an `[image#N]` token at the textarea cursor (removal
- * strips the matching token back out).
+ * strips the matching token back out). Their ORIGINAL bytes go up to the
+ * box's `_tmp/` dir at the same time, through the same upload as any file,
+ * so the message can list `[image#N]: <path>` beside the pixels and the
+ * agent has a file to work on, not just a reduced copy to look at
+ * (`ImageItem.original`).
  *
  * Everything else — any non-image, and photos over the inline limit — is
- * uploaded to the box's `tmp/` dir and anchored by a `[file#N]` token carrying
+ * uploaded to the box's `_tmp/` dir and anchored by a `[file#N]` token carrying
  * only its path, so it adds nothing to the send payload however large it is.
  * Its token goes in **immediately**, before the bytes have moved, so the user
  * can keep writing around it; the chip shows the upload's progress and the send
@@ -152,8 +156,10 @@ export function useChatAttachments(opts: {
   const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addUploadFiles, retryFileUpload, awaitPendingUploads, forget: forgetUpload, forgetAll: forgetAllUploads } =
-    useComposerFileUploads(editor);
+  const {
+    addUploadFiles, uploadImageOriginal, retryFileUpload, awaitPendingUploads,
+    forget: forgetUpload, forgetImage: forgetImageUpload, forgetAll: forgetAllUploads,
+  } = useComposerFileUploads(editor);
   /**
    * Downscale, encode and store the photo half of an inline selection,
    * returning the items that made it. Placeholder tiles go up immediately so
@@ -163,41 +169,51 @@ export function useChatAttachments(opts: {
   const addInlinePhotos = useCallback(async (photos: File[]): Promise<ImageItem[]> => {
     if (photos.length === 0) return [];
     editor.bumpPendingImages(photos.length);
-    // Process in parallel; a failure decrements its own pending slot
-    // immediately (nothing was added), while a success's slot is cleared by
-    // `addImage` itself once all results are in.
-    const processed = await Promise.all(
-      photos.map(async (f) => {
+    // Ids are minted up front, in selection order, so the tokens the caller
+    // inserts read in the order the user picked — whatever order the encodes
+    // finish in. An encode that fails leaves a gap; ids are never reused.
+    const ids = photos.map(() => editor.nextImageId());
+    // Each photo is independent: the moment ITS encode is done it is added
+    // and its original starts uploading, without waiting for its siblings —
+    // one stalled encode must not hold every other original off the box. A
+    // failure decrements its own pending slot immediately (nothing was
+    // added); a success's slot is cleared by `addImage` itself.
+    const results = await Promise.all(
+      photos.map(async (source, i): Promise<ImageItem | null> => {
+        const id = ids[i];
+        if (id === undefined) return null;
+        let p;
         try {
-          return await processImageBlob(f);
+          p = await processImageBlob(source);
         } catch (e) {
           console.error("[chat] Failed to process pasted image:", e);
           editor.bumpPendingImages(-1);
           return null;
         }
+        const item: ImageItem = {
+          id,
+          mimeType: p.mimeType,
+          dataBase64: p.dataBase64,
+          objectUrl: p.objectUrl,
+          byteLength: p.byteLength,
+          original: { status: "uploading", progress: 0 },
+        };
+        editor.addImage(item); // also decrements the pending count for this image
+        // The original goes up as-is — never the reduced copy — so the agent's
+        // file is the bytes the user actually has.
+        uploadImageOriginal(item.id, source);
+        return item;
       })
     );
-    const newItems: ImageItem[] = [];
-    for (const p of processed) {
-      if (!p) continue;
-      const item: ImageItem = {
-        id: editor.nextImageId(),
-        mimeType: p.mimeType,
-        dataBase64: p.dataBase64,
-        objectUrl: p.objectUrl,
-        byteLength: p.byteLength,
-      };
-      editor.addImage(item); // also decrements the pending count for this image
-      newItems.push(item);
-    }
+    const newItems = results.flatMap((item) => (item === null ? [] : [item]));
     // Say so when an image didn't make it. The encoder rejects formats the
     // browser can't decode (a HEIC straight off a phone, some SVGs), and this
     // is the only path such a file has: a console-only log would let a picked
     // file vanish with no signal at all (code-style.md defensiveness rule 5).
-    const failed = photos.filter((_f, i) => processed[i] === null);
+    const failed = photos.filter((_f, i) => results[i] === null);
     if (failed.length > 0) toastError(unsupportedImageMessage(failed));
     return newItems;
-  }, [editor]);
+  }, [editor, uploadImageOriginal]);
 
   /**
    * Run one file's upload, moving its chip through `uploading` → `uploaded` or
@@ -251,9 +267,11 @@ export function useChatAttachments(opts: {
     if (target) {
       try { URL.revokeObjectURL(target.objectUrl); } catch (_e) { /* already revoked — harmless */ }
     }
+    // Its original may still be uploading; same rule as a file chip.
+    forgetImageUpload(id);
     // Strips the matching `[imageN]` token from the text too.
     editor.removeImage(id);
-  }, [editor, emissionStore]);
+  }, [editor, emissionStore, forgetImageUpload]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);

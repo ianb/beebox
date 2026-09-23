@@ -3,6 +3,7 @@ title: "v1-removal residue: stale legacy-box src comments + flat scenario boxes"
 workstream: unknown
 
 area: beebox
+priority: important
 ---
 
 > **⚠ Partly overtaken** (full-embrace-annex, 2026-09-14): the

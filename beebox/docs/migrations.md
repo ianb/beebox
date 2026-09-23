@@ -37,9 +37,16 @@ manifest error.
 
 `--apply` and `--sweep` both preserve dirty input and commit each successful
 migration with its manifest entry. Their distinction is agent authority:
-`--apply` permits repair and registered procedure migrations; `--sweep` permits
-only deterministic scripts unless `--repair` is explicit. A procedure migration
-still requires `--apply` and its machine validation gate. The mark-applied
+`--apply` runs repair and registered procedure migrations directly; `--sweep`
+runs only deterministic scripts unless `--repair` is explicit, which adds
+bounded agent repair and procedure migrations under a one-run-per-answer bound
+(a failed run writes one `Migration_<name>-N` question and nothing runs again
+until it is answered). The hourly convergence schedule passes `--repair`, so a
+procedure migration that lands is applied on every idle box at its next hourly
+pass without anyone running it by hand; a busy box defers, and a failure or an
+unanswered question is reported. A procedure still needs its machine
+validation gate.
+The mark-applied
 commands only edit the manifest, leave that edit uncommitted for review, and
 never establish that the conversion actually happened.
 
@@ -52,6 +59,33 @@ requests, independent CLI actions, queued chat turns, and scheduled deliveries
 cannot extend that drain. Accepted agents and scripts retain a validated,
 box-scoped permission for their descendant tool calls. Their tools can finish
 while new independent work is refused. Due chat timers stay pending.
+
+Closing costs the box its live work, so the sweep and the docs refresh look
+before they close: each reads its inputs under an ordinary work lease and
+returns `current` without touching the gate when nothing is pending. Only a
+box with work is closed. A read refused because a maintenance phase already
+exists falls through to the recovery path.
+
+`bbx migrate --sweep --yield`, the hourly schedule's mode, defers to a box in
+use. An idle chat run holds a lease until the box's server sees the phase and
+closes it (the server polls every second), so the pass closes, waits fifteen
+seconds instead of ten minutes, and treats work that outlasts the wait as the
+box being in use: the result is `deferred` with the holders, exit 0, the box
+reopens, and the next pass retries. A deploy already holding the maintenance
+owner lock is the other way a box is in use; a yielding pass defers on it too,
+naming the owner (`deployment`), and a non-yielding caller is refused with
+`Box is closed for deployment (pid …)` rather than a lock error. The schedule reports a deferral only once
+the box has held work for a day. Deploy (`bbx maintenance`) and supervised
+reload never yield.
+
+Every admission carries a reason (`acquireBoxWork(boxRoot, { reason })`), and
+the process's lease sidecar lists the live reasons. A drain that gives up
+names them (`Timed out draining box work: deployment; held by chat run <id>
+since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
+process. A closed box refuses with the maintenance that closed it and, while
+draining, the expected wait (`Box is closed for migration; expected to reopen within 10
+min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
+once before reporting the refusal.
 
 A dirty tree is normal input. Before a mutation phase, the runner retains
 `refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.
@@ -98,22 +132,36 @@ script/procedure process groups get TERM, then bounded KILL, and are awaited
 before ownership releases. Git and docs-generation operations are checked
 between calls and cannot all be interrupted inside a call. The schedule's outer
 25-minute process limit bounds those remaining cases; remote SSH allows 26
-minutes. A timeout is not success. An interrupted mutation leaves the gate
-closed for recovery; lock expiry alone does not reopen it. A pre-change drain
-timeout releases the unchanged box without forcing active work to stop.
+minutes. A timeout is not success. An interrupted mutation leaves a record of
+unfinished maintenance in the gate file, but the record closes the box only
+while the owner's lock is held: a closure cannot outlive its owner, so a
+crashed, killed, or failed attempt never leaves a box refusing requests. The
+record, the pending migration, and its question stay reported (the
+`box-migrations` health check, the hub's 503 while an owner holds the box) until
+a later attempt completes. A pre-change drain timeout releases the unchanged box
+without forcing active work to stop.
 
-A standalone pass that finds a missing manifest or a procedure prerequisite
-before changing anything releases its gate. Under deployment those same unmet
-prerequisites leave the box closed, including when a previous nested operation
-had already declared it ready. They do not authorize activating newer code.
+A standalone pass that finds a missing manifest before changing anything
+releases its gate. Under deployment a missing manifest keeps the box closed for
+the rest of the deployment, including when a previous nested operation had
+already declared it ready; the box reopens when the controller exits. A pending
+procedure migration is different: the box is consistent, so both passes release
+it as ready, the deployment logs the pending procedure, and the next hourly
+`--repair` pass applies it.
+
+Before an attempt commits its output it confirms it still holds the owner lock.
+A lock lost to a system sleep longer than the lock's stale window, or to a
+deployment controller that died under a joined sweep, yields `commit-failed`
+with `maintenance ownership lost`: the output stays uncommitted under its
+recovery ref and no repair agent is spent on it.
 
 ## Automatic convergence and generated guidance
 
 The deployment controller holds affected boxes across activation, migration,
 service replacement, and readiness checks. It runs the shared script-only sweep
-with a separate ten-minute command limit. A failing box remains closed for
-recovery and is reported; a successful process restart alone does not make its
-data current. See [deployment operations](../deploy/README.md).
+with a separate ten-minute command limit. A failing box is reported and stays
+closed only until the controller exits; a successful process restart alone does
+not make its data current. See [deployment operations](../deploy/README.md).
 
 `schedules/box-convergence/` retries hourly and may invoke bounded agent repair.
 It runs only from the main checkout on `main`. Local targets come from that
@@ -327,6 +375,14 @@ All scripts live in `scripts/migrate/`.
 
 (This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `question-lifecycle`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
 
+`trick-secret-runtime` is an agent-applied migration. It reviews existing
+box-local tricks for credentialed external services and adds the new sibling
+`secrets.json` declaration where the code requires one. It does not guess
+secret names, change grants, or write values. The procedure's machine gate runs
+`bbx trick --check-secrets`; the agent checklist records the judgment that the
+code review covered every trick. New tricks should follow the same contract
+when authored, rather than waiting for this migration.
+
 `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
 
 ### `box-packageify` (retired — v2-assert no-op)
@@ -442,6 +498,39 @@ rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
+### `v2-refs-to-v3` (repair — v2-layout refs to v3 paths)
+
+Registered just before `filename-attach-scope`. The one-root migration moved
+every file but left some box-absolute refs in v2 form (`/store/archive/…`),
+which the box namespace fence now refuses. For each such ref in a card or
+`.md` file, the migrator maps the path with `mapV2Path` (the table the files
+were moved with) and rewrites the ref only when the mapped target exists and
+lies inside the box namespace. The query and fragment are kept; fenced code
+examples are left alone. Refs whose target is gone stay as they are, and
+`bbx validate` keeps reporting them as broken. See
+`scripts/migrate/v2-refs-to-v3.ts`. Idempotent: a rewritten ref resolves.
+
+### `filename-attach-scope` (repair — flat media files into attach scopes)
+
+Registered at the end of `MIGRATIONS`. Old capture archives kept media in a
+flat layout: `photo-004.jpg` beside `photo-004-<title>.image.card`, with
+`filename.ref` holding the photo's path instead of `attach/photo-004.jpg`.
+Every `filename.ref` reader accepts only the `attach/` form, so those cards
+showed "Failed to load". For `image`, `audio`, `file` and `pdf` cards the
+migrator moves the file into `<card name>.attach/` and rewrites the card's
+own refs to `attach/<file>`; other cards, `.md` files and views that name
+the file follow the move in their own style.
+
+It is best effort. A card is repaired only when its file is certain: the ref
+resolves to a file in the card's own directory (or is dangling and a file
+with its basename is there — the damage an old `bbx mv` left), the file is
+not a card, no other media card claims it, and the destination is free or
+holds the same bytes. Every other card is printed with a reason and left
+unchanged, and the exit code stays 0. `bbx validate` warns on each remaining
+card, so an agent can finish them. See
+`scripts/migrate/filename-attach-scope.ts`. Idempotent: repaired cards hold
+`attach/` refs and are skipped.
+
 ### `one-root` (shape migration — v2 two-root → v3 one-root layout)
 
 Registered at the end of `MIGRATIONS`, but unlike every migrator above it,
@@ -489,8 +578,9 @@ removal once the fleet has converged — see
 
 ## Recovery and reversal
 
-Keep an interrupted box closed while inspecting its recorded input and current
-partial output. Find the retained snapshots without changing data:
+An interrupted box serves as soon as its maintenance owner is gone, with the
+partial output uncommitted in its tree. Inspect the recorded input and that
+output before retrying. Find the retained snapshots without changing data:
 
 ```bash
 git for-each-ref --format='%(refname)' refs/bbx/migrations/
@@ -507,22 +597,21 @@ migration also requires reconciling its manifest entry and any later dependent
 changes. A recovery ref is retained locally; it is not a claim that ignored
 state or annex content was independently backed up.
 
-`bbx migrate --sweep --repair` can take over an interrupted maintenance attempt,
-inspect retained repair receipts, and retry pending deterministic work. Answer
-an outstanding question when a human decision is required. Successful verified
-completion reopens admission; deleting the gate file is not a repair.
+`bbx engine migrate --sweep --repair` takes over an interrupted attempt,
+inspects retained repair receipts, and retries pending deterministic work.
+Answer an outstanding question when a human decision is required. Successful
+completion clears the record of unfinished maintenance; deleting the gate file
+by hand only discards that record.
 
-A pending migration's recovery question remains answerable while admission is
-closed, using its question card in the UI or:
+A pending migration's recovery question is answered like any other, from its
+question card in the UI, in chat, or with:
 
 ```bash
 bbx answer _bookkeeping/questions/Migration_<name>-0.question.card "Keep both versions"
-bbx migrate --sweep --repair
+bbx engine migrate --sweep --repair
 ```
 
-The closed-box answer path acquires maintenance ownership, verifies the question's
-retained recovery ref and pending manifest entry, and saves only the answer with
-a Git snapshot. It starts no follow-up agent and leaves the box closed. The next
-repair attempt consumes that answer. Questions about migrations already recorded
-as applied wait until the box reopens, when the ordinary answer flow creates the
-follow-up job to repair the remaining data without replaying the old migration.
+The answer's follow-up job carries the question's directive, which authorizes
+one bounded repair; the next sweep also reads the answer. While a maintenance
+owner holds the box, the answer is refused with the owner's reason and can be
+retried once it exits.

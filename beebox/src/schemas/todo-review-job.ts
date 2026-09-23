@@ -15,15 +15,23 @@ import { z } from "zod";
 
 /**
  * One flagged todo, compact enough to read at a glance: its locator (the
- * `bbx todos` display form, `path:line` or `path#todos[i]`), its text, and
- * whichever date drove it into this set (already formatted for humans, not
- * a second date the agent has to parse).
+ * `bbx query todos` display form, `path:line` or `path#todos[i]`), its text,
+ * and whichever date drove it into this set (already formatted for humans,
+ * not a second date the agent has to parse).
+ *
+ * `card` and `section` say WHERE it was written, which is what makes an
+ * undated todo mean anything. Both are optional so a job card queued before
+ * they existed still validates.
  */
 const TodoReviewItemSchema = z.object({
   locator: z.string(),
   text: z.string(),
   assigned: z.string().optional(),
   detail: z.string(),
+  /** The card it was written in, as a person would name it: title, then its type's own detail line. */
+  card: z.string().optional(),
+  /** The heading path above it within that card, outermost first, joined with " › ". Absent when it sat under no heading. */
+  section: z.string().optional(),
 });
 
 export const TodoReviewJobSchema = cardSchema("todo-review-job", {
@@ -72,19 +80,33 @@ directive to you now.
 - \`stale\` — open, no \`start\`/\`due\` at all, sitting untouched for over 45
   days. Likely needs \`parked\`, \`dropped\`, or a real date — not silence.
 
+## Your own items
+
+An item whose \`assigned\` is \`"agent"\` is **yours to chase**, not something
+to raise. Do the work now if the job is small enough to finish here, then
+mark it \`done\` with a \`{% see-also %}\` pointing at the evidence. If it is
+too big for this cycle, leave it open and say so in what you report. An
+agent-assigned item that keeps appearing in \`stale\` and never moves is
+worth dropping honestly rather than carrying forever — that judgment you may
+make yourself, since nobody else took the work on.
+
+The rest of this job — everything \`assigned\` leaves to the boxholder — is
+report-only.
+
 ## What to do
 
-1. Read each item's \`locator\` if you need the surrounding card for context
-   (\`bbx todos\` shows the same locators; the card itself has the full text
-   and any \`{% see-also %}\` evidence).
+1. \`card\` and \`section\` say where each item was written — which card, and
+   which heading inside it. Read the item's \`locator\` when you need more of
+   the surrounding card (\`bbx query todos\` shows the same locators; the card
+   itself has the full text and any \`{% see-also %}\` evidence).
 2. Decide, per item: does it look done (evidence exists), a likely
    duplicate of another open todo, or just needs raising? You are not
    obligated to act on every item — most sweeps call for nothing more than
    telling the boxholder what's outstanding.
 3. **Raise your findings with the boxholder** — a chat mention next time
    you talk, or a question card for anything that needs a park/drop/merge
-   decision. Don't resolve status changes yourself (except the
-   \`assigned="agent"\`-and-you-finished-it case above).
+   decision. Don't resolve status changes yourself (except your own
+   \`assigned="agent"\` items, per the section above).
 4. Commit any edits you did make (marking your own agent work done, adding
    a \`{% see-also %}\`), then \`bbx finish {thisJobFile}\`.`,
 });
@@ -96,6 +118,8 @@ export interface TodoReviewJobItem {
   text: string;
   assigned?: string | undefined;
   detail: string;
+  card?: string | undefined;
+  section?: string | undefined;
 }
 
 export function createTodoReviewJobTemplate(options: {

@@ -50,7 +50,7 @@ function bbxCommandsIntro(): string[] {
     '  memo="The capture session is ready to archive" prompt="Archive it?"',
     "",
     "# Create a scheduled script",
-    'bbx create _config/schedules/check.scheduled-script.card runs="bbx wakeup" cron="0 6 * * *"',
+    'bbx create _config/schedules/check.scheduled-script.card runs="bbx engine wakeup" cron="0 6 * * *"',
     "```",
     "",
     "### Available Templates",

@@ -3,9 +3,8 @@ import { errorMessage } from "@shared/error-guards";
 import { trpc, trpcClient } from "../../lib/trpc";
 import { DEFAULT_INVENTORY_CARD_STATE, inventoryCardViewState, parseInventoryCardState, type InventoryCardState } from "../../lib/inventory-card-state";
 import type { ViewState } from "@shared/view-state";
-import { Column } from "../../components/ui/Column";
 import { Stack } from "../../components/ui/Stack";
-import { Text } from "../../components/ui/Text";
+import { ErrorText } from "../../components/ui/ErrorText";
 import { Button } from "../../components/ui/Button";
 import { InventoryContent } from "./components/InventoryContent";
 import { InventoryError } from "./components/InventoryError";
@@ -35,16 +34,16 @@ export function InventoryCardBody({ viewState, onViewStateChange }: { viewState:
 
   const data = inventory.data;
   return (
-    <Column overflow="auto" className="h-full">
+    <Stack gap="none" overflow="auto" className="h-full">
       <Stack gap="lg" className="w-full max-w-5xl mx-auto py-6 px-4">
         <InventoryHeader refreshing={refreshing} refresh={refresh} refreshError={refreshError} />
-        {parsed.ok ? null : <Stack gap="xs"><Text as="p" tone="danger">{parsed.error}</Text><Button intent="secondary" size="sm" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
+        {parsed.ok ? null : <Stack gap="xs"><ErrorText>{parsed.error}</ErrorText><Button intent="secondary" size="sm" className="self-start" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
         {inventory.isLoading ? (
           <InventoryLoading />
         ) : inventory.error !== null ? (
           <InventoryError message={inventory.error.message} refresh={refresh} />
         ) : data === undefined ? (
-          <Text as="p" tone="danger">The inventory query completed without data.</Text>
+          <ErrorText>The inventory query completed without data.</ErrorText>
         ) : (
           <InventoryContent
             data={data}
@@ -57,7 +56,7 @@ export function InventoryCardBody({ viewState, onViewStateChange }: { viewState:
           />
         )}
       </Stack>
-    </Column>
+    </Stack>
   );
 
   function updateState(next: InventoryCardState): void {

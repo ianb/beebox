@@ -18,6 +18,7 @@ import { registerGoogleServicesCallback } from "./routes/admin.js";
 import { isHubMode } from "./auth.js";
 import { maybeArmFirstRunSetup } from "./setup-token.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
+import { removeServeEndpoint, writeServeEndpoint } from "../core/serve-endpoint.js";
 import { getPublicUrl } from "../lib/public-url.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { sweepStaleIndexLock } from "../lib/git-stale-lock.js";
@@ -331,6 +332,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
     }
+    for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
     // Let any git write we started finish before we go. Exiting on top of one
@@ -376,7 +378,9 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
     // requiring publicUrl to be set in _config/box.json.
     for (const box of boxes) {
-      registerBoxPublicUrl(box.boxRoot, `http://${host}:${port}/${box.slug}`);
+      const publicUrl = `http://${host}:${port}/${box.slug}`;
+      await writeServeEndpoint(box.boxRoot, { pid: process.pid, publicUrl });
+      registerBoxPublicUrl(box.boxRoot, publicUrl);
     }
     console.log(`Server running at http://${host}:${port}`);
     for (const box of boxes) {
@@ -408,7 +412,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
         for (const box of boxes) {
           const runtime = getChatRuntime(box.boxRoot);
           if (!runtime) continue;
-          if (await boxMaintenanceStatus(box.boxRoot)) {
+          // Only a live owner pauses chat; a record without one is unfinished maintenance, not closure.
+          if ((await boxMaintenanceStatus(box.boxRoot))?.owner) {
             pauseBoxChatSchedules(box.boxRoot);
             paused.add(box.boxRoot);
             if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && chatThreadsAreIdle(box.boxRoot) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {

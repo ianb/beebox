@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# `bin/schedules file-standing` honors SCHEDULE_DRY_RUN itself: it prints what
+# it would file and writes nothing.
+exec "$(dirname "$0")/../../bin/schedules" file-standing

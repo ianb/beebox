@@ -6,6 +6,8 @@ export type TextLinkTone = "default" | "subtle";
 
 export interface TextLinkProps {
   to: string;
+  /** Query state for routes whose path is built dynamically. */
+  search?: never;
   /** Stable `bbx-` control address for the rendered link (see lib/ui-scan). */
   id?: string;
   children: ReactNode;
@@ -26,6 +28,7 @@ const TONE_CLASSES: Record<TextLinkTone, string> = {
 
 export function TextLink({
   to,
+  search,
   id,
   children,
   tone: toneArg,
@@ -38,7 +41,7 @@ export function TextLink({
   const underline = underlineArg ?? true;
   const classes = cn(TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
   return (
-    <Link id={id} to={to} onClick={onClick} title={title} className={classes}>
+    <Link id={id} to={to} search={search} onClick={onClick} title={title} className={classes}>
       {children}
     </Link>
   );

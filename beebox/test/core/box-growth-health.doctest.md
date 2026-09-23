@@ -59,6 +59,10 @@ print(`directories: ${measured.counts.directories - baseline.counts.directories}
 print(`files: ${measured.counts.files - baseline.counts.files}`);
 print(`complete: ${measured.complete}`);
 print(`history: ${measured.history.status}`);
+// Disk use: .beebox is measured on its own, never as box content.
+const engineGrew = measured.bytes.status === "available" && baseline.bytes.status === "available"
+  && measured.bytes.engineBytes > baseline.bytes.engineBytes;
+print(`bytes: ${measured.bytes.status} engine-grew: ${engineGrew}`);
 const baselineFiles = new Map(baseline.largestSubtrees.map((item) => [item.path, item.files]));
 const subtreeLabel = (p) => {
   const item = measured.largestSubtrees.find((i) => i.path === p);
@@ -71,6 +75,7 @@ directories: 7
 files: 6
 complete: true
 history: available
+bytes: available engine-grew: true
 _content/drive:connector:2
 _content/inbox/email:connector:1
 
@@ -82,7 +87,7 @@ measured.largestSubtrees.length <= 20
 await box.cleanup();
 ```
 
-## Absolute, hourly, and connector-weighted policy
+## Hourly and connector-weighted policy; size alone is never a finding
 
 ```ts
 const base = {
@@ -91,6 +96,7 @@ const base = {
   skippedDirectories: 0,
   counts: { directories: 100, files: 100 },
   history: { status: "available", gitHead: "a", commits: 10, gitObjects: 20, gitBytes: 30 },
+  bytes: { status: "unavailable", error: "not measured" },
   largestSubtrees: [{ path: "_content/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" }],
 };
 const fast = {
@@ -100,7 +106,7 @@ const fast = {
   history: { ...base.history, commits: 111 },
   largestSubtrees: [{ ...base.largestSubtrees[0], directories: 121, files: 121 }],
 };
-const findings = evaluateBoxGrowth({ accepted: base, previous: base, current: fast });
+const findings = evaluateBoxGrowth({ previous: base, current: fast });
 print(findings.map((finding) => `${finding.kind}:${finding.path ?? "box"}`).join("\n"));
 =>
 rate-directories:_content/inbox/email
@@ -109,32 +115,38 @@ rate-commits:box
 rate-connector-directories:_content/inbox/email
 rate-connector-files:_content/inbox/email
 
-print(`${BOX_GROWTH_THRESHOLDS.absoluteDirectories}:${BOX_GROWTH_THRESHOLDS.absoluteFiles}`);
 print(`${BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour}:${BOX_GROWTH_THRESHOLDS.rateFilesPerHour}:${BOX_GROWTH_THRESHOLDS.rateCommitsPerHour}`);
-=>
-250:1000
-10:25:10
+=> 10:25:10
+```
 
-const absolute = { ...fast, counts: { directories: BOX_GROWTH_THRESHOLDS.absoluteDirectories + 1, files: 1 } };
-const absoluteFinding = evaluateBoxGrowth({ accepted: base, previous: base, current: absolute })
-  .find((item) => item.kind === "absolute-directories");
-print(`${absoluteFinding !== undefined}:${absoluteFinding?.path}`);
-=> true:_content/inbox/email
+Disk use warns on rate too, for box content and for `.beebox` separately.
+A measurement without bytes (an old state file, a failed `du`) has no byte
+finding:
 
-evaluateBoxGrowth({ accepted: absolute, previous: absolute, current: absolute, acknowledgedAt: null }).some((item) => item.kind === "absolute-directories")
-=> true
+```ts continue
+const MB = 1024 * 1024;
+const sized = { ...base, bytes: { status: "available", contentBytes: 400 * MB, engineBytes: 200 * MB } };
+const indexBlewUp = { ...sized, measuredAt: "2026-08-05T13:00:00.000Z", bytes: { status: "available", contentBytes: 402 * MB, engineBytes: 365 * MB } };
+evaluateBoxGrowth({ previous: sized, current: indexBlewUp }).map((f) => `${f.kind}:${Math.round(f.actual / MB)}`).join(",")
+=> rate-engine-bytes:165
 
-const nextMilestone = { ...absolute, counts: { ...absolute.counts, directories: 503 } };
-evaluateBoxGrowth({
-  accepted: absolute,
-  previous: absolute,
-  current: nextMilestone,
-  acknowledgedAt: absolute.measuredAt,
-}).find((item) => item.kind === "absolute-directories")?.threshold
-=> 502
+evaluateBoxGrowth({ previous: base, current: indexBlewUp }).length
+=> 0
+```
+
+A box is never warned about for being large. One Gmail account with a few
+hundred archived threads holds thousands of files and directories, and a
+fixed level warned about it permanently while saying nothing useful. A large
+box growing slowly has no finding:
+
+```ts continue
+const large = { ...base, counts: { directories: 1_800, files: 3_500 } };
+const slightlyLarger = { ...large, measuredAt: "2026-08-05T13:00:00.000Z", counts: { directories: 1_801, files: 3_502 } };
+evaluateBoxGrowth({ previous: large, current: slightlyLarger }).length
+=> 0
 
 const enteredTopTwenty = { ...fast, largestSubtrees: [{ ...fast.largestSubtrees[0], path: "_content/drive" }] };
-evaluateBoxGrowth({ accepted: base, previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))
+evaluateBoxGrowth({ previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))
 => true
 
 const newImport = {
@@ -148,12 +160,12 @@ const newImport = {
     sourceLabel: null,
   }],
 };
-evaluateBoxGrowth({ accepted: base, previous: base, current: newImport })
+evaluateBoxGrowth({ previous: base, current: newImport })
   .find((item) => item.kind === "rate-files")?.path
 => store/import-2026/batch1
 
 const partial = { ...fast, complete: false };
-evaluateBoxGrowth({ accepted: base, previous: base, current: partial })
+evaluateBoxGrowth({ previous: base, current: partial })
   .some((item) => item.kind.startsWith("rate-"))
 => false
 ```
@@ -215,9 +227,9 @@ const replacementHealth = await boxGrowthHealthCheck(box.root, {
   schedulerStatus: "running",
 });
 print(`${replacementHealth.ok}:${replacementHealth.actions?.join(",")}`);
-const accepted = await acknowledgeCurrentBoxGrowth(box.root, { now: at("2026-08-05T14:01:00Z") });
+const accepted = await acknowledgeCurrentBoxGrowth(box.root);
 print(accepted.status);
-print(accepted.status === "measured" && accepted.accepted.measuredAt === accepted.current.measuredAt);
+print(accepted.status === "measured" && accepted.previous.measuredAt === accepted.current.measuredAt);
 print(accepted.status === "measured" ? accepted.rateExpectations.length : -1);
 const health = await boxGrowthHealthCheck(box.root, { now: at("2026-08-05T14:01:00Z"), schedulerStatus: "running" });
 print(`${health.name}:${health.ok}:${health.actions?.join(",") ?? "none"}`);
@@ -311,14 +323,15 @@ print(`${localHealth.ok}:${scheduledHealth.ok}`);
 await missing.cleanup();
 ```
 
-An above-threshold state names its largest subtree and exposes the explicit
-acknowledgement action.
+A state file written before level findings were removed still carries
+`accepted` and `acknowledgedAt: null`, which used to pin a permanent warning
+on a large box. It now reads as healthy; the extra keys are dropped.
 
 ```ts
 const warningBox = await makeTmpBox();
 const warningMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
-  complete: false,
+  complete: true,
   counts: { directories: 20_000, files: 1_000 },
   history: { status: "available", gitHead: "head", commits: 10, gitObjects: 20, gitBytes: 30 },
   largestSubtrees: [{ path: "_content/inbox/email", directories: 19_000, files: 900, source: "connector", sourceLabel: "Gmail" }],
@@ -338,12 +351,19 @@ const warningHealth = await boxGrowthHealthCheck(warningBox.root, {
   now: at("2026-08-05T12:01:00Z"),
   schedulerStatus: "running",
 });
-print(`${warningHealth.ok}:${warningHealth.actions?.join(",")}:${warningHealth.message.includes("_content/inbox/email")}`);
-print(`${warningHealth.message.includes("at least")}:${warningHealth.message.includes("lower bounds")}`);
+print(`${warningHealth.ok}:${warningHealth.actions?.join(",") ?? "none"}`);
+print(warningHealth.message);
+const rewritten = await readBoxGrowthState(warningBox.root);
+print(rewritten.status === "measured" && !("acknowledgedAt" in rewritten));
 =>
-false:acknowledge-box-growth:true
-true:true
+true:none
+Box growth is within accepted limits; not measured: disk use (not measured)
+true
 ```
+
+That state predates disk-use measurement, so the green result says bytes were
+not checked rather than implying they were. The next hourly measurement
+records them.
 
 ```ts cleanup
 await warningBox.cleanup();
@@ -375,10 +395,8 @@ await fs.mkdir(path.dirname(boxGrowthStatePath(mixedBox.root)), { recursive: tru
 await fs.writeFile(boxGrowthStatePath(mixedBox.root), JSON.stringify({
   version: 1,
   status: "measured",
-  accepted: mixedPrevious,
   previous: mixedPrevious,
   current: mixedCurrent,
-  acknowledgedAt: mixedPrevious.measuredAt,
   lastAttemptAt: mixedCurrent.measuredAt,
   lastError: null,
   lastNotice: null,
@@ -424,21 +442,20 @@ Git history failure is reported as degraded measurement detail, not as box
 growth, when the filesystem counters remain healthy.
 
 ```ts
-const noGitBox = await makeTmpBox();
+const noGitBox = await makeTmpBox({ git: "none" });
 const noGitMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
   counts: { directories: 10, files: 20 },
   history: { status: "unavailable", error: "not a Git repository" },
+  bytes: { status: "available", contentBytes: 4096, engineBytes: 0 },
   largestSubtrees: [],
 };
 await fs.mkdir(path.dirname(boxGrowthStatePath(noGitBox.root)), { recursive: true });
 await fs.writeFile(boxGrowthStatePath(noGitBox.root), JSON.stringify({
   version: 1,
   status: "measured",
-  accepted: noGitMeasurement,
   previous: noGitMeasurement,
   current: noGitMeasurement,
-  acknowledgedAt: noGitMeasurement.measuredAt,
   lastAttemptAt: noGitMeasurement.measuredAt,
   lastError: null,
   lastNotice: null,
@@ -447,8 +464,8 @@ const noGitHealth = await boxGrowthHealthCheck(noGitBox.root, {
   now: at("2026-08-05T12:01:00Z"),
   schedulerStatus: "running",
 });
-print(`${noGitHealth.ok}:${noGitHealth.message.includes("Git history measurement is unavailable")}`);
-=> true:true
+print(`${noGitHealth.ok}:${noGitHealth.message}`);
+=> true:Box growth is within accepted limits; not measured: Git history
 ```
 
 ```ts cleanup

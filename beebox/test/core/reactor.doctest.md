@@ -86,7 +86,7 @@ const promptWithAmbient = buildReactorUserPrompt(
   ["_bookkeeping/jobs/only.job.card"],
   {
     jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"],
-    ambientLine: "3 open todos on the plate (1 escalated) — `bbx todos`",
+    ambientLine: "3 open todos on the plate (1 escalated) — `bbx query todos`",
   },
 );
 promptWithAmbient.startsWith("3 open todos on the plate (1 escalated)")

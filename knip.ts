@@ -47,6 +47,7 @@ const config: KnipConfig = {
       project: [
         "src/**/*.{ts,tsx}",
         "!src/frontend/**",
+        "!src/schemas/**/*.list-entry.tsx",
         "test/**/*.ts",
         "test/**/*.doctest.md",
         "scripts/**/*.ts",
@@ -79,8 +80,13 @@ const config: KnipConfig = {
       ],
     },
     "beebox/src/frontend": {
-      entry: ["src/components/view-widgets/node-entry.tsx"],
-      project: ["src/**/*.{ts,tsx}"],
+      entry: [
+        "src/components/view-widgets/node-entry.tsx",
+        // Bundled on its own into the deploy page by
+        // beebox/scripts/build-deploy-page.ts, which names it by path.
+        "src/deploy-page/deploy-page.ts",
+      ],
+      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;

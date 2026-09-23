@@ -140,17 +140,6 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
   { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
   { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
-  // v2 -> v3 one-root layout conversion (docs/implemented-plans/one-root-box-layout.md,
-  // Track E). Unlike every entry above, this migrator runs against a box
-  // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly
-  // against a v2 box (see src/core/migrations/one-root-v2-probe.ts), not
-  // through the normal getBoxShape-gated flow. It moves the migrations
-  // manifest itself (content/config/migrations.jsonl -> _config/migrations.jsonl)
-  // as part of the conversion, then appends this entry to the RELOCATED
-  // manifest — so by the time this name is recorded as applied, the box is
-  // already v3 and every migration above it already ran (against v2 boxes,
-  // historically) or is a no-op for a fresh v3 box.
-  { name: "one-root", script: "scripts/migrate/one-root.ts" },
   // A landmark's mark moves out of the navigation role and onto the card
   // itself, now that `symbol` is a field every card may carry
   // (docs/plans/card-symbol.md). Readers accept both shapes during the
@@ -166,8 +155,42 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // `bbx`. Configuration, not card data, like the hooks and gitignore
   // entries above; the rename rewrote everything but the boxes' own `runs:`.
   { name: "schedule-runs-bbx-2026-09", script: "scripts/migrate/schedule-runs-bbx.ts" },
+  // MUST follow `schedule-runs-bbx-2026-09`, which repoints cards still naming
+  // the retired command. This migrator only recognizes a command whose program
+  // is already `bbx`, so running first it would pass such a card over, and that
+  // rewrite would then leave it at a bare `bbx wakeup` — which no longer
+  // resolves, with neither migration willing to look at it again.
+  //
+  // The CLI split (docs/implemented-plans/bbx-agent-surface.md) moved `wakeup`
+  // and its siblings under `bbx engine`; stock schedule cards carry those verbs
+  // as literal shell strings the scheduler runs through a shell.
+  { name: "schedule-engine-verbs-2026-09", script: "scripts/migrate/schedule-engine-verbs.ts" },
   { name: "canonical-interface-cards", script: "scripts/migrate/canonical-interface-cards.ts" },
   { name: "remaining-interface-cards", script: "scripts/migrate/remaining-interface-cards.ts" },
+  { name: "search-interface-card", script: "scripts/migrate/search-interface-card.ts" },
+  // Review existing tricks for credential dependencies and add sibling
+  // secrets.json declarations for the standard trick runtime.
+  { name: "trick-secret-runtime", procedure: "trick-secret-runtime" },
+  // Rewrite box-absolute refs still in v2 layout (`/store/…`) to the v3 path
+  // the one-root migration moved their target to, when that target exists.
+  // Runs before `filename-attach-scope`, which then sees v3-form refs.
+  { name: "v2-refs-to-v3", script: "scripts/migrate/v2-refs-to-v3.ts" },
+  // Move legacy flat-layout media files into their card's attach scope and
+  // point `filename.ref` at `attach/<file>`. Best effort: uncertain cards are
+  // reported, not failed; `bbx validate` keeps warning on them.
+  { name: "filename-attach-scope", script: "scripts/migrate/filename-attach-scope.ts" },
+  // Remove the retired process-pages procedure (installProcedures never
+  // prunes). Its input, record cards in pages-saved/, has had no writer since
+  // the clerk's Save Page was removed; a copy still reading it is deleted, a
+  // repointed one is parked for review. See the script's module comment.
+  { name: "retire-process-pages", script: "scripts/migrate/retire-process-pages.ts" },
+  // Re-key `_config/template-versions.json` onto v3 paths: the one-root
+  // migration moved the tracked files without renaming the tracker's keys, so
+  // every tracked template read as untracked and parked. See the script.
+  { name: "rekey-template-versions", script: "scripts/migrate/rekey-template-versions.ts" },
+  // Agent observations now live as ordinary doc cards in _config/feedback.
+  // Convert command-written Markdown in both active and resolved directories.
+  { name: "feedback-to-doc-cards", script: "scripts/migrate/feedback-to-doc-cards.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

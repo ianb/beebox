@@ -22,6 +22,7 @@ import { errorMessage } from "../../lib/error-guards.js";
 import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
 import { createCliContext } from "../../core/commands/index.js";
 import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
+import { syncConnector } from "../../connectors/activity.js";
 
 /**
  * Run the configured connectors and report results.
@@ -118,7 +119,7 @@ export async function runConnectors(
     console.log(`Syncing ${connector.name}...`);
 
     try {
-      const result = await connector.sync();
+      const result = await syncConnector(connector, { boxRoot });
       const counts = reportSyncResult(result);
       totalPushed += counts.pushed;
       totalCreated += counts.created;

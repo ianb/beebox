@@ -13,6 +13,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { InlineAction } from "../ui/InlineAction";
 import { Accordion } from "../ui/Accordion";
 import { JsonView } from "../ui/JsonView";
@@ -64,7 +65,7 @@ export function BatchList({ heading, batches, empty, schemaJson, onNavigate }: {
   return (
     <Card padding="md">
       <Stack gap="sm">
-        <Text as="h2" size="lg" weight="bold">{heading}</Text>
+        <Heading level={2}>{heading}</Heading>
         {batches.length === 0 ? <Text as="p" tone="subtle">{empty}</Text> : batches.map((b) => (
           <Accordion key={b.id} variant="plain" title={<BatchTitle batch={b} />}>
             <BatchTable batch={b} schemaJson={schemaJson} onNavigate={onNavigate} />

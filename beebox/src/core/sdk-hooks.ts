@@ -18,6 +18,7 @@ import { isViewFile, findBoxRoot } from "../lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";
+import { connectorOwnedEditWarning, isConnectorOwnedMarkdown } from "./connector-owned-markdown.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {
   return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
@@ -82,6 +83,19 @@ export function cardValidatorHook(): HookCallbackMatcher {
             hookSpecificOutput: {
               hookEventName: "PostToolUse",
               additionalContext: additional,
+            },
+          };
+        }
+
+        // A two-way-synced card's markdown is a mirror of an upstream document,
+        // and whatever is on disk gets pushed back out. Say so instead of
+        // linting it — lint on connector output is what provoked the edit that
+        // destroyed two Google Docs.
+        if (await isConnectorOwnedMarkdown(filePath)) {
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext: connectorOwnedEditWarning(filePath),
             },
           };
         }

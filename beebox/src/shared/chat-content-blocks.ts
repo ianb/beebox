@@ -18,6 +18,8 @@
  * they had (see `ensureTrailingTextBlock` below).
  */
 
+import { attachmentsBlockStart } from "./composer-tokens.js";
+
 
 /**
  * What stands in for an image whose bytes are not in the transcript.
@@ -81,9 +83,13 @@ export function buildChatContentBlocks<TBlock extends { type: string }>(
 
   const blocks: TBlock[] = [];
   const tokenRe = /\[image#?(\d+)]/g;
+  // Tokens inside the trailing <attachments> block are the lines that name an
+  // image's original file, not anchors — leave them as text.
+  tokenRe.lastIndex = 0;
+  const bodyEnd = attachmentsBlockStart(text);
   let cursor = 0;
   let match: RegExpExecArray | null;
-  while ((match = tokenRe.exec(text)) !== null) {
+  while ((match = tokenRe.exec(text)) !== null && match.index < bodyEnd) {
     const idStr = match[1];
     if (idStr === undefined) continue;
     const id = parseInt(idStr, 10);

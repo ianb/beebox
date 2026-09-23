@@ -5,6 +5,8 @@
  * thumbnail references a numeric id that appears as `[imageN]` in the
  * textarea; clicking a thumbnail opens it in a lightbox, the trash button
  * removes the attachment and strips its `[imageN]` token from the text.
+ * The image's original file uploads silently alongside (`ImageItem.original`);
+ * nothing here shows it — the user attached one image, and sees one.
  *
  * The parallel `FileAttachmentPanel` shows uploaded non-image files which
  * the composer references via `[fileN]` tokens.

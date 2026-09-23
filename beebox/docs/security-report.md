@@ -1,18 +1,30 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-14
+date: 2026-09-21
 model: gpt-6-astra
-reviewed-by: DRAFT — unreviewed
+reviewed-by: Ian
 ---
 
 # Security report — structured version
+
+**Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
+`34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
+previous full-inventory anchor. Unrelated historical changes, the private
+security tier, and the complete surface map were not re-audited.
 
 The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root).
+
+**Scoped amendment (2026-09-17):** Added box package installs (§5 row, §8
+item 13, and the §4 blast-radius clause) for `worktree-box-host-packages`,
+fixed the §5 process-model user, and recorded the `files.kind`
+transport-auth and cross-box tests. Targeted, not a full refresh; the
+`generated-at-rev` anchor is unchanged. Ian reviewed this amendment and the
+2026-09-09/09-14/09-16 amendments below on 2026-09-17.
 
 **Scoped amendment (2026-09-14):** This draft adds migration-maintenance
 accounting against `23e37c44c6438f9f5832baa1fd2437144b5b89a8` plus the
@@ -116,7 +128,8 @@ Notable abilities, and the items that are more than routine:
 | Surface | Abilities | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
-| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; its direct caller does not test transport authentication. |
+| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; `test/webapp/auth-required.doctest.md` covers the transport wall (401 without a credential, 200 with one), and `test/webapp/cross-box-probe.doctest.md` covers a sibling box's path (`BAD_REQUEST`). |
+| tRPC `quickChat.prepare` / `quickChat.receipt` | Routing judgment, destination reservation, and receipt records | mitigated | medium | authed | Uses existing box authentication; preparation sends context to Jev (§3) and can incur provider spend. |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
@@ -145,6 +158,7 @@ pub-worker routes are in §6a.
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `_config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.beebox/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `BBX_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
+| Declared trick secrets — `secrets.json` plus `bbx trick` child environment (`cli/lib/trick-secrets.ts`, `cli/commands/trick.ts`) | Value remains in the machine secret store; the runner resolves it at launch and injects it only into the selected trick child under its declared env name | Spend/abuse the granted provider account | Per-box grant; one selected trick invocation | Re-resolved each run; revoke by changing the box grant or rotating the store entry | mitigated — the runner never puts the value in argv, files, logs, or the parent environment; a trick can still print its own environment because it runs with the box agent's permissions |
 | Mobile device tokens — `.beebox/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `bbx_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.beebox/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.beebox/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
@@ -174,6 +188,10 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
+The standard trick runner is a deliberate exception by declaration: it resolves
+only the selected trick's named dependencies and puts those values in that
+single child environment for that invocation; it does not widen the general
+allowlist or persist the values.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.bbx-session-secret`,
 `~/.bbx-auth.json`) stay readable by any process that goes looking; the
@@ -192,7 +210,8 @@ wakeup cycle or routine use without a per-action confirmation.
 | **OpenAI** (`openai-audio.ts`, `openai-embeddings.ts`) | When configured: Whisper is the default HQ re-transcription pass; embeddings run on the automatic index refresh | Raw audio + context prompt; **each card's searchable text** + literal search queries; TTS reply text | Separate keys (transcription ≠ embeddings, deliberate) | Switch transcription service; omit embeddings key → text-only search | ok |
 | **Deepgram / OpenAI Realtime — browser-direct** (`deepgram-key.ts`, `openai-realtime-key.ts`) | Live dictation when selected | Raw microphone audio streamed **from the browser straight to the vendor** | Server-minted ephemeral key (≤20 min); long-lived key stays server-side | Per-box transcription config | ok — distinct risk shape, named in SECURITY.md |
 | **Google Gemini** (`scan-vision.ts:79-106`) | Only when `BBX_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `gemini` secret-store entry, per-box grant | Env opt-in (`BBX_SCAN_VISION`) selects the backend; the key itself is store-only | ok |
-| **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
+| **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm. Quick chat has a separate TypeSafe row below | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
+| **OpenRouter → TypeSafe Jev** (`src/services/jev.ts:89,119`; `src/webapp/trpc/routers/quick-chat.ts:62`) | User presses Quick chat Send; judgment runs before automatic chat dispatch | Captured text; candidate session IDs, context directories, landmark paths/labels, activity timestamps, authored routing rules/examples, and bounded recent user/assistant text. No tool outputs, image or audio bytes | Existing `openrouter` secret, resolved at server access for this box; never sent to the browser | Do not use Quick chat, or omit its box grant; direct chat still works. This service has no direct TypeSafe-key fallback | mitigated; medium / authed — fixed Decisions URL, `only: ["TypeSafe"]`, `allow_fallbacks: false`, `data_collection: "deny"`. These are requested provider policy controls, not a verified zero-retention promise. Request cap 80,000 characters; 30-second timeout; response keys/probabilities validated before selection. |
 | **Google Gmail** (`gmail.ts`, `gmail-drafts.ts`) | Automatic sync | IN: full messages/attachments. OUT: **drafts only — no `gmail.send` scope exists**; autonomous sending is architecturally impossible today | Shared fleet OAuth token | `googleServices.gmail` per-box flag (default off) | ok |
 | **Google Calendar** (`google-calendar.ts`) | Automatic sync | Event create/edit/delete (title, description, attendees) | Same token | `googleServices.calendar` | ok |
 | **Google Drive/Sheets/Docs** (`google-drive.ts`, handlers) | Automatic sync | Two-way edits to files the box already tracks; **full `drive` scope**, not `drive.file` (deliberate, to sync pre-existing docs by URL) | Same token | `googleServices.drive` | accepted (§8 — shared broad token) |
@@ -211,6 +230,7 @@ wakeup cycle or routine use without a per-action confirmation.
 
 | Practice | Where | State | Notes |
 |---|---|---|---|
+| Quick chat records and automatic selection | `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/policy.ts` | mitigated | Routing uses enumerated destinations and sends immediately, potentially triggering agent actions before the result is shown. Destination links stage the original text in another chat and cannot undo those actions. Local decision records retain the message, candidate context, and outcome in `.beebox/quick-chat/` (mode 0600; no automatic expiry). |
 | Maintenance admission | `src/lib/box-maintenance.ts`, `src/webapp/box-admission.ts`, `src/webapp/trpc/trpc.ts` | mitigated | Low severity; authenticated/local reachability. `BBX_BOX_WORK` and its loopback header must match a live, box-scoped lease or maintenance owner. They preserve accepted work through draining and do not replace route authentication. Global login/setup remains available while box writes are closed. `actions.answer` delegates admission to the shared answer command; only a pending migration question with its real Git recovery ref can be answered under a recovery owner while closed. That path keeps maintenance closed and does not run a generic follow-up job. |
 | Migration recovery | `src/core/migration-recovery.ts`, `src/core/migration-repair.ts` | mitigated | Medium severity; local/operator reachability. Git recovery refs preserve tracked and unignored input without changing HEAD/index; ignored runtime data and missing annex objects are outside that snapshot. Bounded repair uses the configured agent's existing permissions, with human questions for unresolved data choices; the bound is not a sandbox. |
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
@@ -226,19 +246,20 @@ wakeup cycle or routine use without a per-action confirmation.
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
-| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
-| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md) |
+| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user, plus root package installs through the §5 wrapper (distro-only, service-free). This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
+| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
-| Process model | `bbx hub` (systemd, dedicated non-root `callback` user) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
+| Process model | `bbx hub` (systemd, dedicated non-root `beebox` user, `setup-server.sh:19`) spawns one `bbx serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
 | Bind defaults | `bbx serve` → `localhost` (`serve.ts:99`); hub → `127.0.0.1` (`hub-config.ts:104`); no `0.0.0.0` anywhere in `src/` | mitigated | med | local | Control is default-loopback + nginx as the only public listener. Residual: operator-overridable — nothing in code *refuses* a non-loopback bind. (No recorded decision that this is fine, so it is not marked `accepted`.) |
 | TLS — public path | Cloudflare-proxied, SSL mode "Flexible": **edge→origin is plain HTTP** (nginx :80 → 127.0.0.1) | gap | high | public (passive on-path) | [cloudflare-flexible-ssl-origin-plaintext](../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md) |
 | TLS — Tailscale path | Terminated by `tailscale serve` (LE certs), tailnet-only | ok | — | — |
 | Tailscale exposure gate | `tailscale-target.ts`, `tailscale-setup.ts:100-160` | mitigated | — | — | Refuses to expose a target that can't prove an auth-enforcing posture (`/auth/me` probe, anonymous-401 check); funnel never invoked, detected funnel = hard failure |
 | Cross-box env isolation | Hub child-env allowlist (§2) | mitigated | — | — | |
+| Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host-apt`); NOPASSWD sudoers entry for the `beebox` user, that one path only; `deploy.sh` installs both from the build checkout via stdin, never from the box-user-owned `/opt/beebox`, and `visudo -c` checks the entry. The Docker image carries the same wrapper for `node`. | accepted | high | local (any box agent) | The wrapper is the whole boundary: re-execs under an empty environment with `bash -p`; exact package names only (apt's regex fallback blocked); a private apt config reads only the distro's deb822 sources file (the legacy `sources.list` is ignored), so third-party sources are invisible; refuses any upgrade or removal; installs only the inspected `name=version` set with `--no-download`; refuses packages that ship system units (including under `/etc/systemd/system`), init scripts, root cron jobs, D-Bus system services, systemd generators, sudoers/polkit rules, or setuid/setgid files. Every attempt is logged to `/var/log/beebox/host-apt.log`. Residual: distro maintainer scripts run as root, a `postinst` `setcap` is not detected, and installs are host-wide (every box sees them). Boxholder decision 2026-09-17 (sudo wrapper, distro only, refuse services); `docs/plans/box-host-packages.md`. Regression: `deploy/server-bin/bbx-host-apt.smoke.sh` (Docker, Ubuntu 24.04 + Debian bookworm). |
 | Secrets on the server | `/home/beebox/.env`, 0600 (`setup-server.sh:186`) | ok | — | — | |
 | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require manual application; documented in `deploy/README.md` but not decided-acceptable — [deploy-infra-drift-setup-server-not-rerun](../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md) |
 | Backups | No first-class mechanism; box git remotes optional; annex `numcopies: 1`, no annex remote | gap | med | — | [server-backup-story](../../issues/decisions/2026-08-07-server-backup-story.md) |
@@ -327,7 +348,7 @@ containment:
 - **Deployment model** — the audience is single-operator boxes; the
   blast radius is your own data, not other tenants'.
 - **Schedules off by default** — nothing auto-processes untrusted input
-  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md)).
+  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
 
@@ -434,6 +455,14 @@ Every `accepted` item, with its rationale:
    the posture for now — a per-box boundary is tracked in
    [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
    the network channel is tested to zero and re-swept weekly. (§7b)
+
+13. **Box agents install distro packages as root** — through one validating
+   sudo wrapper: distro sources only, additive only, no services, root jobs,
+   privilege grants or setuid files. Distro maintainer scripts still run as
+   root for a package an LLM chose, a `postinst` `setcap` goes undetected,
+   and the install is host-wide. Accepted 2026-09-17 on the boxholder's
+   judgment that distro packages are safe, over asking the boxholder for
+   each install. (§5)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being

@@ -102,6 +102,22 @@ newest request when it finishes. Hook-triggered runs each log to
 `deploy/.deploy-logs/`, with `deploy/.last-deploy.log` symlinked to the newest
 (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
+While the services are stopped, nginx serves a deploy page instead of its bare
+502. The activation script puts it up before the stop and takes it down from
+its EXIT trap (`server-bin/bbx-deploy-window`); the page's presence in
+`/run/beebox-deploy/` is what tells nginx the 502 is a deploy
+(`nginx/beebox.conf`). The page is public, so it states only the start time and
+the median of recent downtime windows, and it says so when a deploy runs past
+ten minutes or an hour. Nothing that identifies the change appears on it.
+Timing records: the server appends each window to
+`/var/lib/beebox-deploy/windows.tsv`; the laptop appends one line per deploy
+(start, end, outcome, measured downtime) to `deploy/.deploy-logs/deploys.jsonl`,
+and each progress line in the log carries a UTC time.
+
+A deploy that fails because `ssh` could not reach the server (exit 255) is
+reported as a failure, not an interruption, and still hands off to a queued
+deploy. Only a signal the deploy itself received counts as an interrupt.
+
 The hook records its requested SHA synchronously before launching through
 `bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
 process group. That ordered hook request stays authoritative: a late-starting
@@ -134,7 +150,7 @@ Installs everything on Ubuntu 24.04:
 - Symlinks `bbx` CLI to `/usr/local/bin/`
 - Installs Claude Code CLI (native installer — auto-updates in background)
 - Creates systemd services for the box server and scheduler
-- Configures nginx reverse proxy (port 80 → the box server's port)
+- Installs the nginx site file `nginx/beebox.conf` (port 80 → the hub)
 
 **Known gap:** this script still generates the pre-hub `beebox-serve` unit
 (one process serving every box off `~/.config/beebox/boxes.json`), not `bbx hub` +
@@ -144,14 +160,16 @@ over to the hub by hand (see "Systemd units" below and
 `hetzner/create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
-**This script does not run on deploy.** `deploy.sh` never invokes it, so any
-change to the nginx config or systemd units here reaches a live server only on
-a re-provision — or by applying the equivalent change by hand. The most recent
-such change is `proxy_buffering off;` in the app proxy location (added
-2026-08-01 for tRPC streamed batches); an existing server needs that line added
-to `/etc/nginx/sites-available/beebox` followed by `nginx -t && systemctl
-reload nginx`. Without it the client still works, it just loses the
-progressive-delivery benefit.
+**This script does not run on deploy.** `deploy.sh` never invokes it, so a
+change to the systemd units here reaches a live server only on a re-provision
+or by hand. The nginx site file is the exception: it lives in
+`nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
+makes it the only enabled site, runs `nginx -t` whether or not anything
+changed, and reloads nginx when it did. A configuration that fails the test is
+restored and fails the deploy before anything stops. Edit the file in the repo,
+never on the server. Any other enabled site is moved to
+`/etc/nginx/pre-deploy-owned/` with a timestamp; that is where production's
+hand-made `callback` site went.
 
 ### `add-box.sh` — Add a box to the server
 
@@ -333,7 +351,27 @@ tracked files.
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
+/usr/local/sbin/bbx-host-apt # Root wrapper for box package installs (deploy installs it)
+/etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper
+/var/log/beebox/host-apt.log # One JSON line per box install attempt
+/usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
+/usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
+/run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
+/var/lib/beebox-deploy/windows.tsv  # One line per deploy window: opened, down, closed, outcome
+/etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
 ```
+
+### Box package installs
+
+A box agent installs a distro package with `bbx host install <pkg> --why ...`.
+The command records the need in the box's `_config/host-packages.json`, then
+runs `bbx-host-apt` through sudo. The wrapper installs only additive,
+service-free packages from the distro sources. `deploy.sh` installs the
+wrapper and the sudoers entry on every deploy, so `setup-server.sh` needs no
+copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
+box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
+`docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+`server-bin/bbx-host-apt.smoke.sh`.
 
 ## Systemd units
 

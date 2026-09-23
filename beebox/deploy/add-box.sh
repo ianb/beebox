@@ -6,7 +6,7 @@ set -euo pipefail
 # the services, and verify the new box actually serves.
 #
 # This is the whole process — there is no by-hand `hub.json` step left. The
-# hub edit goes through `bbx hub add-box`, which validates the resulting config
+# hub edit goes through `bbx engine hub add-box`, which validates the resulting config
 # with the hub's own loader before writing it (`src/hub/hub-config-edit.ts`).
 #
 # Usage (run locally) — two forms:
@@ -20,7 +20,7 @@ set -euo pipefail
 #   <repo>           GitHub URL, SSH URL, or owner/repo shorthand
 #   [box-name]       directory name AND URL slug (default: repo basename).
 #                    Must be lowercase letters, digits, and hyphens.
-#   --create         scaffold a new box locally (`bbx init`), push it to a
+#   --create         scaffold a new box locally (`bbx engine init`), push it to a
 #                    PRIVATE GitHub repo, and then add it as normal. The box
 #                    name is the positional argument in this form. Needs the
 #                    `gh` CLI, authenticated. The repo may already exist as
@@ -36,7 +36,7 @@ set -euo pipefail
 #                    clobbers an existing config.
 #   --secrets-from BOX  give the new box the same secret GRANTS another box
 #                    holds (e.g. the shared Mistral key), via
-#                    `bbx secrets copy-grants`. Avoids the "API key not
+#                    `bbx engine secrets copy-grants`. Avoids the "API key not
 #                    configured" health warning. Nothing is copied into the
 #                    box tree: there is one copy of each secret in the
 #                    machine store and this adds a grant to it, so rotation
@@ -59,7 +59,7 @@ set -euo pipefail
 # hub-config edit against the live config. That covers the failures this script
 # used to hit at the very end (a bad slug, a slug already taken, a config the
 # hub would refuse). It is NOT a transaction — a failure in the clone, the
-# `bbx init`, the manifests, or the restart still leaves the earlier steps done.
+# `bbx engine init`, the manifests, or the restart still leaves the earlier steps done.
 # The script says which step failed, and re-running is safe.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -219,7 +219,7 @@ SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
 # ── Preflight (read-only on the server) ─────────────────────────────
-# `bbx hub add-box --dry-run` validates the slug against the LIVE hub.json:
+# `bbx engine hub add-box --dry-run` validates the slug against the LIVE hub.json:
 # reserved names, slug already taken by another box, and a config the hub
 # would refuse to load. It writes nothing. Running it before the clone is the
 # point — the previous version of this script failed at the very end, after
@@ -228,7 +228,7 @@ SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
-  "su - $BBX_USER -c \"bbx hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
+  "su - $BBX_USER -c \"bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
 # Deliberately after the hub preflight: a name the hub would refuse must never
@@ -261,20 +261,20 @@ if [[ -n "$DRY_RUN" ]]; then
     else
       echo "  - create a PRIVATE GitHub repo $CREATE_REPO"
     fi
-    echo "  - scaffold a new box with 'bbx init' and push its initial commit"
+    echo "  - scaffold a new box with 'bbx engine init' and push its initial commit"
     echo ""
   fi
   echo "[dry-run] Would then, on the server:"
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
-  echo "  - run 'bbx init' in it as $BBX_USER"
+  echo "  - run 'bbx engine init' in it as $BBX_USER"
   if [[ -n "$ALLOW_CSV" ]]; then
     echo "  - write _config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
-    echo "  - copy box '$SECRETS_FROM's secret grants (bbx secrets copy-grants; no files move)"
+    echo "  - copy box '$SECRETS_FROM's secret grants (bbx engine secrets copy-grants; no files move)"
   fi
-  echo "  - register with the hub (bbx hub add-box, per the plan above)"
-  echo "  - register with the scheduler manifest (bbx boxes add)"
+  echo "  - register with the hub (bbx engine hub add-box, per the plan above)"
+  echo "  - register with the scheduler manifest (bbx engine boxes add)"
   echo "  - systemctl restart beebox-hub beebox-scheduler"
   echo "  - verify with the hub's canary for this box"
   if [[ -z "$PUSH_REMOTE" ]]; then
@@ -307,7 +307,7 @@ if [[ -n "$CREATE" ]]; then
   BOX_STAGE="$STAGING/$BOX_NAME"
 
   echo "Scaffolding a new box in a temp directory..."
-  # `bbx init` scaffolds the v2 package (content/.beebox/box.json, package.json, ...)
+  # `bbx engine init` scaffolds the v2 package (content/.beebox/box.json, package.json, ...)
   # AND makes the initial git commit — no --skip-git here, that commit is what
   # gets pushed.
   "$BBX_BIN" init "$BOX_STAGE"
@@ -353,7 +353,7 @@ else
   git clone "$REPO" "$BOX_PATH"
 fi
 
-# Run bbx init to ensure all standard directories exist (e.g., people/)
+# Run bbx engine init to ensure all standard directories exist (e.g., people/)
 # and agent docs are up to date. Run as Bee Box user so files get
 # correct ownership. Must chown first so the Bee Box user can write.
 #
@@ -362,12 +362,12 @@ fi
 # structure is not known-good, and the restart would put it in front of users.
 chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 # No --skip-git flag: it is gone (a box is always a git repo), and this is an
-# EXISTING box, so bbx init re-inits in place and makes no initial commit of
+# EXISTING box, so bbx engine init re-inits in place and makes no initial commit of
 # its own. It does bring the box git-annex configuration up to spec, which is
 # the point of running it here.
-echo "Running bbx init to update box structure..."
-if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx init ." 2>&1; then
-  echo "bbx init FAILED for $BOX_PATH — stopping before the box is registered."
+echo "Running bbx engine init to update box structure..."
+if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx engine init ." 2>&1; then
+  echo "bbx engine init FAILED for $BOX_PATH — stopping before the box is registered."
   echo "The repo is cloned; fix the box and re-run this script."
   exit 1
 fi
@@ -415,15 +415,15 @@ if [[ -n "$SECRETS_FROM" ]]; then
   # crash would otherwise register a box with NO credentials and restart the
   # services in front of users, with the reason scrolled off the operator's
   # screen. The box is cloned and inited; fix the cause and re-run.
-  if ! COPY_OUT=\$(su - $BBX_USER -c "bbx secrets copy-grants '$SECRETS_FROM' '$BOX_NAME' --agent-confirmed" 2>&1); then
+  if ! COPY_OUT=\$(su - $BBX_USER -c "bbx engine secrets copy-grants '$SECRETS_FROM' '$BOX_NAME' --agent-confirmed" 2>&1); then
     echo "\$COPY_OUT"
-    echo "Secrets: 'bbx secrets copy-grants $SECRETS_FROM $BOX_NAME' FAILED — stopping before the box is registered."
+    echo "Secrets: 'bbx engine secrets copy-grants $SECRETS_FROM $BOX_NAME' FAILED — stopping before the box is registered."
     exit 1
   fi
   echo "\$COPY_OUT"
 fi
 
-# Re-chown everything (bbx init / the writes above ran as root in places).
+# Re-chown everything (bbx engine init / the writes above ran as root in places).
 chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 
 # ── Register the box with both manifests ────────────────────────────
@@ -432,20 +432,20 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 #                             which box. Takes the PACKAGE ROOT (the hub
 #                             resolves either form itself). This is what makes
 #                             the box reachable.
-#   ~/.config/beebox/boxes.json — the scheduler's box list (bbx scheduler start /
+#   ~/.config/beebox/boxes.json — the scheduler's box list (bbx engine scheduler start /
 #                             bbx tick). Takes the BOX ROOT, i.e. content/ —
 #                             that is where .beebox/box.json lives and what every
 #                             existing entry holds. See
 #                             src/core/box/boxes-config.ts.
-# Passing the package root to 'bbx boxes add' fails its .beebox/box.json check, so use
+# Passing the package root to 'bbx engine boxes add' fails its .beebox/box.json check, so use
 # the content dir resolved above. Neither file is hot-reloaded, hence the
 # restart below.
 #
 # The hub goes first: it is the step with real validation behind it, so if
 # anything is going to be refused it is refused while boxes.json is still
 # untouched. Both commands are idempotent and print what they did.
-su - $BBX_USER -c "bbx hub add-box '$BOX_NAME' '$BOX_PATH'"
-su - $BBX_USER -c "bbx boxes add '\$CONTENT_DIR'"
+su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH'"
+su - $BBX_USER -c "bbx engine boxes add '\$CONTENT_DIR'"
 
 # Restart both services LAST, so they pick up the box, its access config,
 # and its secrets in a single restart.

@@ -65,26 +65,35 @@ The scheduler measures each box at most hourly and stores the latest baseline in
 NUL-delimited type/path pairs so the Node scheduler does not reopen every
 directory or retain every path. The scan counts files and directories
 separately, records the largest subtrees, and samples Git commit/object growth.
-Directories are a first-class signal because very large directory trees can
-exhaust watcher and traversal capacity even when their byte size is modest.
 It counts symlink entries as files but does not follow them, and excludes
 `.git`, `.beebox`, and `node_modules` directories at any depth.
 The filesystem walk has a 10-second budget. If it reaches that deadline or
 encounters a traversal error, the state retains the counts and attribution
-already streamed, marks them as incomplete lower bounds, and warns. Absolute
-limits still apply to those lower bounds; rate checks pause until two complete
-samples are available, so partial traversal does not look like new growth.
+already streamed, marks them as incomplete lower bounds, and warns. Rate checks
+pause until two complete samples are available, so partial traversal does not
+look like new growth.
 
-The dashboard warns on either kind of anomaly:
+Size alone is never a finding. A fixed level (it was 250 directories or 1,000
+files) fired on any box with an email connector and could not clear, which
+taught the boxholder to ignore the dashboard. The dashboard warns on growth
+rate only:
 
-- absolute size: more than 250 directories or 1,000 files;
 - hourly rate: at least 10 new directories, 25 new files, or 10 commits;
 - connector subtree rate: at least 5 new directories or 10 new files for a
-  recognized connector-owned path such as `_content/inbox/email`.
+  recognized connector-owned path such as `_content/inbox/email`;
+- disk-use rate: at least 100 MB/hour of box content, or 100 MB/hour of
+  `.beebox`.
+
+Disk use comes from `du -sk` (`core/box-growth/bytes.ts`), which reads the same
+on Linux and macOS. Content is every top-level entry except `.git`, `.beebox`
+and `node_modules`; `.beebox` (indexes, caches, logs) is measured on its own so
+engine data never reads as content growth. Git's own size is in the history
+sample. A measurement taken before bytes were recorded, or whose `du` failed,
+has no disk-use finding.
 
 Rate checks require two complete samples 30–120 minutes apart. A partial scan,
-first measurement, long scheduler outage, or longer measurement gap still gets
-absolute checks, but that sample does not infer an hourly rate.
+first measurement, long scheduler outage, or longer measurement gap does not
+infer an hourly rate.
 
 The filesystem path is the authoritative source attribution. Git history is a
 supporting signal only: older commits do not consistently carry a `Created-By`
@@ -96,15 +105,21 @@ unavailable; Git failure is appended to a real growth warning when both occur.
 
 The dashboard offers two different owner decisions:
 
-- **Acknowledge this growth** records the current size and comparison baseline.
-  It does not change rate limits. The next absolute-size milestone is the larger
-  of the initial limit or twice the acknowledged size.
+- **Acknowledge this growth** makes the current measurement the comparison
+  baseline and clears any reset notice. It does not change rate limits.
 - **Expect these rates** stores 150% of each currently warning rate as its new
   durable threshold, then performs the same acknowledgement. Box-wide rates
   remain box-wide; connector rates are stored separately by connector path.
 
-Neither action disables monitoring. Expected ongoing growth still crosses and
-warns at later cumulative-size milestones.
+Neither action disables monitoring: a rate above the stored thresholds warns
+again.
+
+The directory count that degrades something is the file watcher's limit
+(`MAX_WATCHED_DIRS`, 1,024). The watcher skips dot-directories and high-churn
+trees, so the growth scan cannot predict it; the watcher records when it runs
+out instead, and the `box-watch-limit` check names the path below which live
+updates are off. Only the server runs a watcher, so `bbx health` never shows
+this check.
 
 If the warning is unexpected, inspect the named subtree before accepting it:
 
@@ -181,6 +196,48 @@ Telegram/Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clea
 the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+
+## connector-activity (a connector that went quiet or keeps failing)
+
+A connector can stop producing while every sync reports success: a filter that
+no longer matches, a permission revoked upstream, a cursor past everything.
+The connector activity record (see [connectors.md](connectors.md#activity-record))
+lets the box notice. `connectors/activity-verdict.ts` holds the rule:
+
+- Only days with at least one sync attempt count. Days with no syncs neither
+  extend nor break a stretch.
+- **failing**: every attempt errored on the latest 2 or more run days.
+- **quiet**: successful syncs brought in no new items for longer than
+  max(2, 2 × the longest such run in the connector's baseline) run days.
+- Only a steady producer can be quiet: history reaching at least 21 days back,
+  and new items on at least 60% of the 28 calendar days before the quiet
+  stretch. A connector that runs a few times a week, or is new, is never
+  watched. The rule errs toward silence: a false alarm on a real box teaches
+  the boxholder to ignore the dashboard.
+
+Each quiet or failing stretch is an **episode**, stored in the activity record.
+The scheduler daemon sends one Telegram/Web Push message per episode, beside the
+task-health and Google-auth alerts (`core/schedule/box-alerts.ts`). The
+dashboard shows a `connector-activity:<name>` warning with a **This is expected**
+button until new items arrive, an ok sync ends the failing stretch, or the owner
+dismisses it. A dismissed episode stays dismissed; the next episode is new and
+alerts again. An open quiet episode does not end when its baseline ages out of
+the record. A record that fails its schema shows as a `connector-activity`
+warning and is never reset, which would discard dismissals.
+
+## gmail-drafts (drafts the connector stopped retrying)
+
+A Gmail draft upload that fails because of the card itself — a missing field,
+an `in-reply-to` ref that resolves to nothing, a message Gmail rejects with
+HTTP 400 — is stamped `gmail-draft-error:` on the `email-outbound` card and not
+retried (`connectors/gmail-draft-card.ts`). The `gmail-drafts` warning lists
+those cards until each is fixed and its `gmail-draft-error` line deleted, or
+the card is deleted. Failures that are not the card's fault (an expired grant,
+a network or server error) are retried every sync, and the connector-activity
+`failing` alert covers them. They are not retried forever: the first one stamps
+`gmail-draft-failing-since:`, and a draft still failing 7 days later is
+stranded with `gmail-draft-error:` like a card problem. A successful upload
+clears the stamp.
 
 ## claude-update (nightly Claude Code self-update)
 

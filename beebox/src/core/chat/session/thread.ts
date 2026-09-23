@@ -18,7 +18,7 @@ import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { resolveSessionModel } from "./model.js";
-import { glmChatAdditions } from "../../glm-key.js";
+import { providerEnvAdditions } from "../../provider-env.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 
@@ -147,7 +147,7 @@ export class ChatThreadSession extends EventEmitter {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
 
-    await withChatRunAdmission(this.boxRoot, async (work) => {
+    await withChatRunAdmission({ boxRoot: this.boxRoot, reason: `thread run ${this.getThreadRef()}` }, async (work) => {
     // A stored id the box has no record of is not resumable: nothing says which
     // engine wrote it, and no transcript exists in either store, so resuming it
     // would ask a guessed engine to continue a conversation it never had. Start
@@ -192,7 +192,7 @@ export class ChatThreadSession extends EventEmitter {
       // BBX_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { BBX_CHAT_SESSION_ID: this.sessionId } : {}),
     });
-    await glmChatAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
+    await providerEnvAdditions({ boxRoot: this.boxRoot, model: threadModel, purpose: "thread-start", env });
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
@@ -207,7 +207,7 @@ export class ChatThreadSession extends EventEmitter {
     this.state = nextLifecycle(this.state, { phase: "ready", run });
 
     liveThreads.add(this);
-    void this.consumeMessages(run).finally(async () => {
+    void this.consumeMessages(run, threadModel).finally(async () => {
       liveThreads.delete(this);
       await work.release();
     });
@@ -218,10 +218,10 @@ export class ChatThreadSession extends EventEmitter {
     });
   }
 
-  private consumeMessages(run: ChatBackendRun): Promise<void> {
+  private consumeMessages(run: ChatBackendRun, model: string | null): Promise<void> {
     return pumpChatRun({
       run,
-      adapt: adaptBackendMessage,
+      adapt: (msg) => adaptBackendMessage(msg, { model }),
       onMessage: (msg) => this.handleMessage(msg),
       onError: (err) => {
         log("error", `Run errored: ${err.message}`);
@@ -352,7 +352,7 @@ export class ChatThreadSession extends EventEmitter {
    * Returns a promise that resolves when the agent finishes its turn.
    */
   async send(message: string): Promise<void> {
-    return withBoxWork(this.boxRoot, () => this.sendAdmitted(message));
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "thread send" }, () => this.sendAdmitted(message));
   }
 
   private async sendAdmitted(message: string): Promise<void> {

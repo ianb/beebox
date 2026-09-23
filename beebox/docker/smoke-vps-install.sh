@@ -9,7 +9,7 @@
 # feasible:
 #
 #   clone the repo → `docker compose build` (a full ~2GB image build INSIDE
-#   dind — several minutes, by design) → `bbx init` → `up -d` → HTTP 200 through
+#   dind — several minutes, by design) → `bbx engine init` → `up -d` → HTTP 200 through
 #   the compose port mapping → then the public profile: copy Caddyfile.example,
 #   `docker compose --profile public up -d`, and prove Caddy reverse-proxies to
 #   the box (HTTP 200 through Caddy).
@@ -103,8 +103,8 @@ step "docker compose build box" docker compose build box
 
 # -T disables TTY allocation; without it `run` also grabs stdin (harmless here
 # since the script is exec'd by path, not piped, but explicit is safer).
-step "docker compose run --rm box bbx init /data/box" \
-  docker compose run --rm -T box bbx init /data/box
+step "docker compose run --rm box bbx engine init /data/box" \
+  docker compose run --rm -T box bbx engine init /data/box
 
 step "docker compose up -d" docker compose up -d
 
@@ -183,7 +183,7 @@ CF
     mkdir -p data/box
     echo "  ... | docker compose build box (host daemon, several minutes)"
     "${dc[@]}" build box
-    "${dc[@]}" run --rm box bbx init /data/box
+    "${dc[@]}" run --rm box bbx engine init /data/box
     "${dc[@]}" up -d
     echo "  ... | probing box on host :33210"
     code=""; deadline=$(( $(date +%s) + 180 ))

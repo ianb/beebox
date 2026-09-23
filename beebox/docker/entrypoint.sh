@@ -5,7 +5,7 @@
 # Contract (locked — see docs/plans/installation-story.md Track D):
 #   * ANY arguments  → exec them verbatim. This is how a box is initialized
 #     and how you authenticate:
-#         docker compose run --rm box bbx init /data/box
+#         docker compose run --rm box bbx engine init /data/box
 #         docker compose run --rm box claude auth login
 #   * NO arguments   → readiness check, then serve the box.
 #
@@ -22,7 +22,7 @@ BOX_ROOT=/data/box
 export PATH="$HOME/.local/bin:$PATH"
 
 # Git identity: baked defaults come from the image; BBX_GIT_NAME / BBX_GIT_EMAIL
-# override them here so `bbx init`'s first commit and any later commits carry
+# override them here so `bbx engine init`'s first commit and any later commits carry
 # the operator's identity. Applied on every code path (init included).
 if [[ -n "${BBX_GIT_NAME:-}" ]]; then
   git config --global user.name "$BBX_GIT_NAME"
@@ -31,7 +31,7 @@ if [[ -n "${BBX_GIT_EMAIL:-}" ]]; then
   git config --global user.email "$BBX_GIT_EMAIL"
 fi
 
-# Any arguments → run them as-is (bbx init, claude auth login, a shell, …).
+# Any arguments → run them as-is (bbx engine init, claude auth login, a shell, …).
 if [[ $# -gt 0 ]]; then
   exec "$@"
 fi
@@ -39,7 +39,7 @@ fi
 # ── No arguments: readiness check, then serve ────────────────────────────
 #
 # A box is ready only when all three hold. Checking just the marker would
-# accept a partial init (bbx init writes the marker early but commits at the
+# accept a partial init (bbx engine init writes the marker early but commits at the
 # end — a crash between the two leaves a box that looks initialized but has no
 # HEAD commit).
 ready=1
@@ -53,13 +53,13 @@ beebox: no initialized box found at /data/box.
 
 Initialize one, then start the server:
 
-  docker compose run --rm box bbx init /data/box
+  docker compose run --rm box bbx engine init /data/box
   docker compose up -d
 
-If you already ran `bbx init` and it failed partway (no git identity, a
+If you already ran `bbx engine init` and it failed partway (no git identity, a
 permission/ownership refusal), inspect and re-run it:
 
-  docker compose run --rm box bbx init /data/box
+  docker compose run --rm box bbx engine init /data/box
 EOF
   exit 1
 fi
@@ -68,7 +68,7 @@ fi
 # This installation has no external convergence schedule. Startup permits one
 # bounded repair; blocked work leaves an inspectable container with admission closed.
 if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
-  if ! bbx maintenance --box "$BOX_ROOT" -- bash -s "$BOX_ROOT" <<'CONVERGE'
+  if ! bbx engine maintenance --box "$BOX_ROOT" -- bash -s "$BOX_ROOT" <<'CONVERGE'
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
@@ -90,13 +90,13 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
 fi
 
 cd "$BOX_ROOT"
-timeout 600 bbx migrate --apply --repair --within-maintenance --prepare --json
+timeout 600 bbx engine migrate --apply --repair --within-maintenance --prepare --json
 CONVERGE
   then
     cat >&2 <<'RECOVERY'
 beebox: convergence needs recovery; normal serving remains stopped.
-Inspect: docker compose exec box bash -lc 'cd /data/box && bbx migrate --status'
-Repair:  docker compose exec box bash -lc 'cd /data/box && bbx migrate --apply --repair'
+Inspect: docker compose exec box bash -lc 'cd /data/box && bbx engine migrate --status'
+Repair:  docker compose exec box bash -lc 'cd /data/box && bbx engine migrate --apply --repair'
 Read any migration question before approving substantial data loss.
 After successful recovery: docker compose restart box
 RECOVERY
@@ -104,6 +104,14 @@ RECOVERY
   fi
 fi
 
+# A recreated container starts without the distro packages this box recorded
+# (`bbx host install`); reinstall them. A failure (mirror down, policy refusal)
+# warns and serving continues: a missing tool degrades one job, and
+# `bbx health` shows what is missing.
+if ! bbx host sync --box "$BOX_ROOT"; then
+  echo "beebox: some recorded host packages were not installed; see bbx health." >&2
+fi
+
 # Serve the box on all interfaces inside the container; the host-side port
 # mapping (compose) decides who can reach it.
-exec bbx serve "$BOX_ROOT" --host 0.0.0.0 --port 3210
+exec bbx engine serve "$BOX_ROOT" --host 0.0.0.0 --port 3210

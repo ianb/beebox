@@ -123,6 +123,28 @@ export interface CardValidateInput {
 }
 
 /**
+ * The summary every card gets for free, before its type has a say: the
+ * `title:` field (or the filename), and the global `contains:` and `symbol:`
+ * fields. A card type's {@link CardSchemaConfig.summarize} receives this and
+ * either extends it (`{ ...base, detail }`) or replaces parts of it.
+ */
+export interface CardSummaryBase {
+  title: string;
+  contains?: string;
+  symbol?: CardSymbolData;
+}
+
+/**
+ * What a card type's `summarize` returns: the base summary's fields, plus a
+ * second line of display text (`detail`) and the type's own typed `attrs`,
+ * which a list component reads through {@link SummaryAttrs}.
+ */
+export interface CardSummaryParts<TAttrs = unknown> extends CardSummaryBase {
+  detail?: string;
+  attrs?: TAttrs;
+}
+
+/**
  * Who creates cards of a type — drives how the agent guide groups the
  * card-type catalogue:
  * - `authored` — agents (and users via the UI) create and edit these; the
@@ -168,7 +190,11 @@ export interface TemplateMergePolicy {
 /**
  * Configuration for cardSchema().
  */
-export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
+export interface CardSchemaConfig<
+  TTag extends string,
+  TFields extends Record<string, FieldDecl>,
+  TAttrs = unknown,
+> {
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
   /**
@@ -237,6 +263,20 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * every card type that does not act as an inbox.
    */
   submissions?: CardSubmissions;
+  /**
+   * How a card of this type appears in a list: a header, a row, a todo
+   * grouping. It receives the card's own validated fields and the standard
+   * {@link CardSummaryBase}, and returns the parts to display —
+   * `{ ...base, detail }` to extend, or fresh values to replace.
+   *
+   * It runs only for a card that parsed against this schema; one that failed
+   * validation keeps the base summary derived from its filename. It must be
+   * pure: no box access, no clock, no I/O. Returning `attrs` gives the type's
+   * list component a typed payload — see {@link SummaryAttrs}.
+   *
+   * Omit it and cards of this type get the base summary.
+   */
+  summarize?: (card: CardFieldsOf<TTag, TFields>, base: CardSummaryBase) => CardSummaryParts<TAttrs>;
 }
 
 /** One problem with a submission, addressed by a path the form can show. */
@@ -285,6 +325,7 @@ export interface CardSubmissions {
 export interface CardSchema<
   TTag extends string = string,
   TFields extends Record<string, FieldDecl> = Record<string, FieldDecl>,
+  TAttrs = unknown,
 > {
   readonly type: TTag;
   readonly fields: TFields;
@@ -321,7 +362,35 @@ export interface CardSchema<
   readonly templateMerge?: TemplateMergePolicy;
   /** Submission contract, when this card type acts as an inbox (see {@link CardSubmissions}). */
   readonly submissions?: CardSubmissions;
+  /**
+   * How a card of this type summarizes itself for a list (see
+   * {@link CardSchemaConfig.summarize}). `core/loader-registry.ts` calls it;
+   * it survives `cardSchema()` so runtime code reaches it through the schema
+   * map rather than a side registry.
+   *
+   * Declared with method syntax, deliberately: a `CardSchema<"memo", …>` has
+   * to stay assignable to a plain `CardSchema` (the schema map holds them all
+   * as one type), and a property-position callback taking the schema's own
+   * field type would make that fail on the contravariant parameter. The caller
+   * closes the hole by passing fields `cardFields()` already vouched for
+   * against this same schema.
+   */
+  summarize?(card: CardFieldsOf<TTag, TFields>, base: CardSummaryBase): CardSummaryParts<TAttrs>;
 }
+
+/**
+ * The typed `attrs` a card type's `summarize` produces, read off the schema
+ * constant: `ListProps<SummaryAttrs<typeof ImageSchema>>`. A list component
+ * that expects a different shape is a compile error, so the component and the
+ * summary cannot drift apart.
+ */
+export type SummaryAttrs<S extends CardSchema> = S extends CardSchema<
+  string,
+  Record<string, FieldDecl>,
+  infer TAttrs
+>
+  ? TAttrs
+  : never;
 
 /**
  * The inferred value type of a single field declaration — the body-wrapped or
@@ -354,11 +423,40 @@ type InferFieldsRecord<TFields extends Record<string, FieldDecl>> = {
   [K in OptionalFieldKeys<TFields>]?: InferFieldDecl<TFields[K]>;
 };
 
+/** The inferred value types of {@link GLOBAL_CARD_FIELDS}. */
+interface GlobalCardFieldValues {
+  title?: string;
+  contains?: string;
+  "contains-evidence"?: string;
+  todos?: TodoEntry[];
+  symbol?: CardSymbolData;
+  prominence?: ProminenceLevel;
+  theme?: ThemeChoice;
+}
+
+/**
+ * The validated shape of a parsed card's `fields` object, built from the same
+ * pieces `cardSchema()` assembles: the injected `type` literal, the
+ * author-declared fields (body unwrapped, `.optional()`/`.default()`
+ * optionality honoured), and the global fields the schema didn't declare
+ * itself.
+ *
+ * Stated over the two type parameters rather than over a `CardSchema` because
+ * {@link CardSchemaConfig.summarize} needs it while `cardSchema()` is still
+ * inferring `TFields` — a conditional over `CardSchema<TTag, TFields>` there
+ * would not resolve. {@link InferCardFields} is this same type, reached from a
+ * schema constant.
+ */
+export type CardFieldsOf<
+  TTag extends string,
+  TFields extends Record<string, FieldDecl>,
+> = { type: TTag }
+  & InferFieldsRecord<TFields>
+  & Omit<GlobalCardFieldValues, keyof TFields>;
+
 /**
  * The validated shape of a parsed card's `fields` object, derived from the
- * schema itself: the injected `type` literal, the author-declared fields (with
- * body unwrapped and `.optional()`/`.default()` optionality honoured), and the
- * global fields ({@link GLOBAL_CARD_FIELDS}) that aren't already declared.
+ * schema itself (see {@link CardFieldsOf}).
  *
  * This replaces the hand-written `XFields` interfaces that used to parallel
  * each schema — one declaration is now the single source of truth for both the
@@ -370,20 +468,7 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
   infer TTag,
   infer TFields
 >
-  ? { type: TTag }
-    & InferFieldsRecord<TFields>
-    & Omit<
-      {
-        title?: string;
-        contains?: string;
-        "contains-evidence"?: string;
-        todos?: TodoEntry[];
-        symbol?: CardSymbolData;
-        prominence?: ProminenceLevel;
-        theme?: ThemeChoice;
-      },
-      keyof TFields
-    >
+  ? CardFieldsOf<TTag, TFields>
   : never;
 
 /**
@@ -397,7 +482,11 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
 export function cardSchema<
   TTag extends string,
   TFields extends Record<string, FieldDecl>,
->(type: TTag, config: CardSchemaConfig<TFields>): CardSchema<TTag, TFields> {
+  TAttrs = unknown,
+>(
+  type: TTag,
+  config: CardSchemaConfig<TTag, TFields, TAttrs>
+): CardSchema<TTag, TFields, TAttrs> {
   if (config.theme !== undefined) {
     const checkedTheme = validateThemeChoice(config.theme, `cardSchema(${type}) theme`);
     if (checkedTheme.problem !== null) {
@@ -458,7 +547,7 @@ export function cardSchema<
   // ordinary would set it, though none currently do).
   const defaultProminence: EffectiveLevel =
     config.prominence ?? (category === "system" ? "background" : "ordinary");
-  const schema: CardSchema<TTag, TFields> = {
+  const schema: CardSchema<TTag, TFields, TAttrs> = {
     type,
     fields: config.fields,
     bodyFieldName,
@@ -471,7 +560,7 @@ export function cardSchema<
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
-  let resolved: CardSchema<TTag, TFields> = schema;
+  let resolved: CardSchema<TTag, TFields, TAttrs> = schema;
   if (config.description !== undefined) {
     resolved = { ...resolved, description: config.description };
   }
@@ -492,6 +581,9 @@ export function cardSchema<
   }
   if (config.submissions !== undefined) {
     resolved = { ...resolved, submissions: config.submissions };
+  }
+  if (config.summarize !== undefined) {
+    resolved = { ...resolved, summarize: config.summarize };
   }
   return resolved;
 }

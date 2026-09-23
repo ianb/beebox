@@ -49,7 +49,7 @@ supervisor.getStatuses()[0].status
 => running
 
 const first = supervisor.getStatuses()[0];
-accepted = await acquireBoxWork(box.root);
+accepted = await acquireBoxWork(box.root, { reason: "test" });
 await writeFile(identityFile, "generation two is different");
 const deadline = Date.now() + 60000;
 while ((await boxMaintenanceStatus(box.root)) === null && Date.now() < deadline) await delay();

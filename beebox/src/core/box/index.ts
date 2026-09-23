@@ -4,7 +4,7 @@
  * Creates and manages the standard directory layout for a Bee Box.
  */
 import { seedSystemCards, assertSystemCardsComplete } from "../system-cards.js";
-import { REMAINING_SYSTEM_CARD_MIGRATION } from "../../shared/system-card-paths.js";
+import { REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from "../../shared/system-card-paths.js";
 
 
 import * as fs from "node:fs/promises";
@@ -16,8 +16,8 @@ import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
 import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
-import { MIGRATED_SECTION_HEADER } from "../migrations/one-root-ignore-merge.js";
 import {
+  installFeedbackGuide,
   installSchemasGuide,
   installTricksFiles,
   installViewsGuide,
@@ -25,6 +25,18 @@ import {
 import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
 import { migrateBoxState } from "../../lib/state-migration.js";
+
+/**
+ * Header of the "Migrated local rules" section a v2→v3 conversion could leave
+ * in a box `.gitignore`/`.gitattributes`.
+ *
+ * The migration that wrote it is deleted — every box is shapeVersion 3 and the
+ * v2 population is empty — but boxes converted while it existed still carry the
+ * section, and `bbx init` regenerates those files on every run. This marker is
+ * what makes the regeneration preserve it instead of dropping a boxholder's
+ * hand-kept rules.
+ */
+const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
 
 const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
 
@@ -117,6 +129,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   if (!isUpdate) {
     try {
       await seedSystemCards(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
+      await seedSystemCards(resolvedRoot, SEARCH_SYSTEM_CARD_MIGRATION);
     } catch (error) {
       // This invocation created the marker; a failed bootstrap must remain a fresh-init retry.
       await fs.rm(markerPath);
@@ -140,6 +153,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
     await assertSystemCardsComplete(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
+    await assertSystemCardsComplete(resolvedRoot, SEARCH_SYSTEM_CARD_MIGRATION);
     const manifestPath = path.join(resolvedRoot, "_config/migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
@@ -196,6 +210,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 
   // Install views CLAUDE.md if missing
   await installViewsGuide(resolvedRoot);
+  await installFeedbackGuide(resolvedRoot);
 
   // Initialize git repo (only on fresh init) — don't commit yet;
   // the init command installs more files (schedules, procedures, etc.)

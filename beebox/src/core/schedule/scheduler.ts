@@ -5,7 +5,8 @@
  * land in `<boxRoot>/.beebox/scheduler.jsonl` (gitignored).
  */
 
-import { withBoxWork, BoxMaintenanceError } from "../../lib/box-maintenance.js";
+import { withBoxWork } from "../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_MARKER } from "../../lib/paths.js";
@@ -14,8 +15,7 @@ import { getStatus, isRepo } from "../../lib/git.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../lib/git-lock.js";
 import { touchSchedulerHeartbeat } from "./health-box.js";
 import { measureBoxGrowthIfDue } from "../box-growth/health.js";
-import { checkHealthAndAlert } from "./health-alert.js";
-import { checkGoogleAuthAndAlert } from "./google-auth-alert.js";
+import { runBoxAlerts } from "./box-alerts.js";
 import {
   loadBoxesConfig,
   type BoxesConfig,
@@ -131,7 +131,7 @@ async function shutdownScheduler(signal: string): Promise<never> {
 
   const config = await loadSchedulerConfig().catch((): SchedulerConfig => ({ boxes: [] }));
   for (const boxPath of config.boxes) {
-    await withBoxWork(boxPath, () => writeBoxLog(boxPath, {
+    await withBoxWork({ boxRoot: boxPath, reason: "scheduler shutdown log" }, () => writeBoxLog(boxPath, {
       ts: new Date().toISOString(),
       event: "shutdown",
       box: boxPath,
@@ -185,7 +185,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
       try {
         // Each pass, including heartbeat, growth and credential housekeeping,
         // gets fresh admission. No daemon-wide permit survives into a later tick.
-        currentPass = withBoxWork(boxPath, async () => {
+        currentPass = withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, async () => {
           try {
             if (!(await isBox(boxPath))) {
               console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);
@@ -269,48 +269,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
             });
           }
 
-          try {
-            const alert = await checkHealthAndAlert(boxPath, { now: new Date() });
-            if (alert) {
-              await writeBoxLog(boxPath, {
-                ts: new Date().toISOString(),
-                event: "health-alert",
-                box: boxPath,
-                tasks: alert.alerted,
-                delivered: alert.delivered,
-              });
-            }
-          } catch (err) {
-            await writeBoxLog(boxPath, {
-              ts: new Date().toISOString(),
-              event: "health-alert",
-              box: boxPath,
-              error: errorMessage(err),
-            });
-          }
-
-          // Google grant liveness: refreshes the verdict ~daily and alerts once per
-          // breakage. Separate from the task-health alert above so a failure in
-          // either doesn't suppress the other.
-          try {
-            const alert = await checkGoogleAuthAndAlert(boxPath, { now: new Date() });
-            if (alert) {
-              await writeBoxLog(boxPath, {
-                ts: new Date().toISOString(),
-                event: "google-auth-alert",
-                box: boxPath,
-                since: alert.alertedForSince,
-                delivered: alert.delivered,
-              });
-            }
-          } catch (err) {
-            await writeBoxLog(boxPath, {
-              ts: new Date().toISOString(),
-              event: "google-auth-alert",
-              box: boxPath,
-              error: errorMessage(err),
-            });
-          }
+          await runBoxAlerts(boxPath, (entry) => writeBoxLog(boxPath, { ...entry, box: boxPath }));
         });
         await currentPass;
       } catch (error) {

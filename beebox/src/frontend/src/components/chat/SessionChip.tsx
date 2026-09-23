@@ -4,20 +4,18 @@
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
  * panel-swap idiom).
  *
- * The face is a chat glyph plus the session's name. The glyph is what the
- * control is ABOUT — the place pill's folder icon says "files and cards", this
- * says "chats" — and it carries that alone when the title is absent or the
- * viewport is narrow. The name alone could not do that job: a title is
- * generated prose that says where you are, not that a menu lives here, and the
- * menu is not purely settings either (it holds New chat and Recent chats
- * alongside Model and Advanced), so no settings-shaped glyph would be honest.
+ * Sliders plus a "Chat" label identify chat properties even when the
+ * conversation title is hidden. Below `sm:` only the sliders remain, and the
+ * `aria-label` names the chip in full at every width. The model dial compares against the box
+ * default; its attached star marks a different harness.
  *
  * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
  * switch menu moves between landmarks and resumes each one's newest chat, so
  * it can't reach a sibling session in the landmark you're already in. Finding
  * *a session* is a chat concern; finding *a place* is the pill's.
  *
- * Face, following the bar's one-flexible-member rule: glyph and caret always,
+ * Face, following the bar's one-flexible-member rule: "Chat" and caret always,
+ * with the model/harness indicator alongside and the properties glyph from sm:;
  * the session label (truncated) from `sm:` up — the chip is the third thing to
  * give way as the viewport narrows, after the box prefix and the folder half's
  * label. Same composition as the pill's here-half, which is the point.
@@ -37,7 +35,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
-import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { chatModelLabel, type ChatAgentEngine } from "@shared/chat-models.js";
+import { useAddedModels } from "./model-availability-store";
 import { modelDrift, engineDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
@@ -45,59 +44,39 @@ import { modelDrift, engineDrift } from "./model-drift";
 // positioning complexity. Resets to "root" when the dropdown closes.
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
-/** Three sliders — "settings for this thing", the phone-width face. */
 /**
- * Chat glyph — what this menu is ABOUT, the way the place pill's folder says
- * "files and cards". It shows at every width, beside the title rather than
- * instead of it: a generated conversation title ("Reminder Wrens check up
- * Thursday") names where you are, and nothing about it promises a menu.
- * Matches `PlacePill`'s `FolderIcon` in size and stroke so the bar reads as one
- * set of controls.
+ * Chat properties. From `sm:` up the adjacent "Chat" label supplies the
+ * subject; below it the glyph carries the chip alone, which is why it is the
+ * half that stays — the word costs three times the width of the mark, and at
+ * phone size the bar has none to spare.
  */
-function ChatBubbleIcon() {
+function ChatSettingsIcon() {
   return (
-    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <svg className="block w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 7h4m4 0h10M3 17h10m4 0h4" />
+      <circle cx="9" cy="7" r="2" />
+      <circle cx="15" cy="17" r="2" />
     </svg>
   );
 }
 
 /**
- * Where this chat sits against the box default, as one dial rather than three
- * unrelated symbols.
- *
- * A needle left/centre/right reads as one scale with a moving part, which is
- * the point: the previous mark appeared only for stronger-or-weaker, so its
- * absence meant "at the default", "still loading" and "unknown model" all at
- * once, and read as an indicator that came and went. One object that is always
- * present and always says something cannot do that. Shape borrowed from the
- * speedometer ChatGPT uses for the same job (boxholder, 2026-09-14).
- *
- * `aria-hidden`: the meaning is in the button's accessible name, so a screen
- * reader hears "above the box default", never a description of a dial.
+ * One instrument: below/at/above the box default, with an attached star for
+ * another harness. Unknown tier leaves the dial absent, never implying "same";
+ * a known harness difference remains visible independently.
  */
-function ModelGaugeIcon({ drift }: { drift: "above" | "below" | "same" }) {
-  // Arc from 8 o'clock to 4 o'clock; the needle leaves the same hub for each
-  // state, so only its angle changes.
-  const needle = drift === "below" ? "M12 17 7.5 12.5" : drift === "above" ? "M12 17 16.5 12.5" : "M12 17V11";
+function ModelGaugeIcon({ drift, offEngine }: { drift: "above" | "below" | "same" | null; offEngine: boolean }) {
+  const needle = drift === "below" ? "M12 17 6.8 12.2" : drift === "above" ? "M12 17 17.2 12.2" : "M12 17V9.8";
   return (
-    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeWidth={2} d="M4.5 17a7.5 7.5 0 1 1 15 0" />
-      <path strokeLinecap="round" strokeWidth={2} d={needle} />
-    </svg>
-  );
-}
-
-/**
- * This chat is not on the box's own harness — a Codex chat on a Claude box, or
- * the reverse. Deliberately NOT a gauge position: a different engine is not
- * stronger or weaker, it is somewhere else, and the tier comparison flattens it
- * (Sol and Opus are both `strong`).
- */
-function OffEngineIcon() {
-  return (
-    <svg className="w-3 h-3 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3 9 9M15 15l2.7 2.7M17.7 6.3 15 9M9 15l-2.7 2.7" />
+    <svg className={drift === null ? "w-3 h-4 shrink-0" : "w-5 h-4 shrink-0"} viewBox={drift === null ? "17 0 13 24" : "0 0 30 24"} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {drift === null ? null : (
+        <g transform="translate(0 -1.5)">
+          <path d="M3 18a9 9 0 0 1 18 0M4.5 12l1.3.7M12 7v1.5M19.5 12l-1.3.7" />
+          <path d={needle} />
+          <circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none" />
+        </g>
+      )}
+      {offEngine ? <path d="m23 1 1.2 3.8L28 6l-3.8 1.2L23 11l-1.2-3.8L18 6l3.8-1.2Z" fill="currentColor" stroke="none" /> : null}
     </svg>
   );
 }
@@ -105,7 +84,7 @@ function OffEngineIcon() {
 /** Menu-opens-here caret, matching the place pill's. */
 function CaretIcon() {
   return (
-    <svg className="w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="hidden sm:block w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -284,12 +263,13 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     onToggleDebugLog,
   } = props;
   const [panel, setPanel] = useState<SessionChipPanel>("root");
+  const addedModels = useAddedModels();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
-    : chatModelOptions(agentEngine).find((o) => o.model === modelInForce)?.label ?? "Unavailable";
+    : chatModelLabel(agentEngine, { model: modelInForce, added: addedModels }) ?? "Unavailable";
   // `modelInForce` is null for a chat that FOLLOWS the box default — that is
   // what makes the label read "Default (Opus)" rather than naming the model —
   // so the drift comparison resolves it first. Without this the gauge was blank
@@ -298,10 +278,8 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   // correctly declines to answer.
   const drift = modelDrift({ model: modelInForce ?? boxDefault, boxDefault });
   const offEngine = engineDrift({ engine: agentEngine, boxEngine });
-  // Editorial title or nothing: `label` is the husk's `title` (null until
-  // the nightly chat review or a hand edit names the session). With no real
-  // title the face is the sliders icon at every width — never a fabricated
-  // name (boxholder call, 2026-08-03).
+  // Keep the editorial title when available; the persistent "Chat" label
+  // identifies the menu even without a title or at narrow widths.
   const titled = label !== null && label !== "";
   // The marks are decoration; the meaning is in the name, so a screen reader
   // hears "below the box default" rather than a description of a dial.
@@ -331,9 +309,9 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             aria-label={accessibleName}
             {...ariaProps}
           >
-            <ChatBubbleIcon />
-            {drift === null ? null : <ModelGaugeIcon drift={drift} />}
-            {offEngine ? <OffEngineIcon /> : null}
+            <ChatSettingsIcon />
+            <span className="hidden sm:inline shrink-0 font-medium">Chat</span>
+            {drift === null && !offEngine ? null : <ModelGaugeIcon drift={drift} offEngine={offEngine} />}
             {titled ? <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span> : null}
             <CaretIcon />
           </button>

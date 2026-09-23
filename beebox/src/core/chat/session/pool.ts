@@ -8,7 +8,8 @@
  * so sessions can be resumed after server restarts.
  */
 
-import { acquireBoxWork, withBoxWork, BoxMaintenanceError } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork, withBoxWork } from "../../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import type { ChatBackend } from "../../../services/claude-chat.js";
 import { makeLog } from "./log.js";
 import { getPublicUrl } from "../../../lib/public-url.js";
@@ -87,7 +88,7 @@ export class ChatSessionPool {
    * Returns the collected <chat-response> texts.
    */
   async send(opts: SendOptions): Promise<SendResult> {
-    return withBoxWork(this.boxRoot, () => this.sendAdmitted(opts));
+    return withBoxWork({ boxRoot: this.boxRoot, reason: "chat pool send" }, () => this.sendAdmitted(opts));
   }
 
   private async sendAdmitted(opts: SendOptions): Promise<SendResult> {
@@ -114,7 +115,7 @@ export class ChatSessionPool {
 
     // Waiting requests must not start another turn through an old admission.
     if (waited) {
-      const nextTurn = await acquireBoxWork(this.boxRoot, null);
+      const nextTurn = await acquireBoxWork(this.boxRoot, { reason: "chat pool next turn", inherited: null });
       await nextTurn.release();
     }
 

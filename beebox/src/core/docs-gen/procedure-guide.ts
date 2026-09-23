@@ -13,11 +13,11 @@ Procedures are multi-step processes defined as YAML-frontmatter cards. The proce
 ## Running Procedures
 
 \`\`\`bash
-bbx procedure run process-pages                   # Run by name
+bbx procedure run refresh-maps                    # Run by name
 bbx procedure run _config/procedures/my.procedure.card  # Run by path
-bbx procedure run process-pages --step intake     # Run one step only
-bbx procedure run process-pages --dry-run         # Preview steps
-bbx procedure run process-pages --directive "prefer the reading list over trashing"  # Pass directive
+bbx procedure run refresh-maps --step prune       # Run one step only
+bbx procedure run refresh-maps --dry-run          # Preview steps
+bbx procedure run process-retrospective --directive "skip the openers step's chat review"  # Pass directive
 bbx procedure list                                   # List available procedures
 bbx procedure status                                 # Show latest run status
 bbx procedure gc                                     # Delete expired run dirs
@@ -30,7 +30,7 @@ Procedure definitions live in \`_config/procedures/\`. Each run creates a tracki
 A **directive** is an opaque runtime string passed when invoking a procedure. It appears as \`<directive>...</directive>\` in every agent's system prompt within the procedure, allowing callers to customize behavior without modifying the procedure card.
 
 \`\`\`bash
-bbx procedure run process-pages --directive "Only process today's pages"
+bbx procedure run process-retrospective --directive "Only integrate observations about scheduling"
 \`\`\`
 
 The directive is also recorded as the \`directive\` field on the procedure-run card for auditability. Step prompts can reference "the Directive" to act on it.
@@ -205,20 +205,20 @@ Agent prompts in procedures should:
 
 ## System Procedures and Migration
 
-Procedure cards in \`_config/procedures/\` are installed by \`bbx init\` from built-in templates. If you edit a system procedure, your changes are preserved:
+Procedure cards in \`_config/procedures/\` are installed by \`bbx engine init\` from built-in templates. If you edit a system procedure, your changes are preserved:
 
-- **\`bbx init\` on a fresh box**: Templates are copied directly.
-- **\`bbx init\` on an existing box (unchanged procedures)**: Templates are updated in place.
-- **\`bbx init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
+- **\`bbx engine init\` on a fresh box**: Templates are copied directly.
+- **\`bbx engine init\` on an existing box (unchanged procedures)**: Templates are updated in place.
+- **\`bbx engine init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/_config/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
 
 To check for updates:
 \`\`\`bash
-ls _config/_template-updates/procedures/
+ls _config/_template-updates/_config/procedures/
 # If any exist, compare with the main version and merge changes
-diff _config/procedures/process-pages.procedure.card _config/_template-updates/procedures/process-pages.procedure.card
+diff _config/procedures/refresh-maps.procedure.card _config/_template-updates/_config/procedures/refresh-maps.procedure.card
 \`\`\`
 
-After merging, delete the file under \`_config/_template-updates/procedures/\`. The next \`bbx init\` will see your merged version as the current copy.
+After merging, delete the file under \`_config/_template-updates/_config/procedures/\`. The next \`bbx engine init\` will see your merged version as the current copy.
 
 ## Git History
 

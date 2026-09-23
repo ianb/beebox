@@ -33,3 +33,4 @@ import "./browser-task";
 
 import "./system-cards";
 import "./browse";
+import "./search";

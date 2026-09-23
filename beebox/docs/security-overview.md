@@ -1,12 +1,17 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-03
-model: claude-fable-5-1
+date: 2026-09-21
+model: gpt-6-astra
 reviewed-by: Ian
 ---
 
 # Security overview
+
+**Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
+`34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
+previous full-inventory anchor. Unrelated historical changes, the private
+security tier, and the complete surface map were not re-audited.
 
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
@@ -63,8 +68,12 @@ the box directory, and no current call site widens it beyond that — but
 the scope parameter itself is unguarded caller input, and either way it
 is a convention the agent operates within, not a sandbox that contains
 it. Treat "what can the agent do" and "what can beebox do" as the
-same question. On fresh boxes, scheduled agent runs are off by default —
-nothing runs until you turn it on.
+same question. On a server or in the Docker image it can also install
+distro packages as root through one validating wrapper, which allows only
+additive installs from the distro sources and refuses packages that add
+services, root jobs, privilege grants or setuid files; the packages'
+install scripts still run as root. On fresh boxes, scheduled agent runs are
+off by default — nothing runs until you turn it on.
 
 ## Prompt injection — the risk we most want you to understand
 
@@ -112,6 +121,15 @@ The summary:
   A generic adapter proxy can also forward requests to Replicate,
   Mistral, Anthropic, or OpenAI with the box's stored key — used by
   box-local code, never automatically.
+- **OpenRouter → TypeSafe** — Quick chat sends your message, destination
+  rules, conversation labels and identifiers, and bounded recent conversation
+  text to Jev to choose where the message goes. It uses the box's granted
+  OpenRouter key, pins TypeSafe with fallback disabled, and requests no data
+  collection. This is not a zero-retention guarantee. Avoid Quick chat or omit
+  that key grant to avoid this egress; ordinary direct chat remains available.
+  Quick chat sends to the selected conversation before showing the result.
+  Destination links stage the original text in another chat; they cannot undo
+  agent actions.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,

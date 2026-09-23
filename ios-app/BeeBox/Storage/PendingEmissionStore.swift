@@ -226,10 +226,7 @@ final class PendingEmissionStore: ObservableObject {
 
     func finishVoicePreparation(
         id: UUID,
-        text: String,
-        diarized: Bool,
-        hqText: Bool,
-        hqService: String?
+        outcome: VoicePreparationOutcome
     ) async throws {
         guard let index = voicePreparations.firstIndex(where: { $0.id == id }) else {
             return
@@ -239,16 +236,33 @@ final class PendingEmissionStore: ObservableObject {
             throw StoreError.inactiveBox
         }
         if pending.contains(where: { $0.id == id }) == false {
+            let diarized: Bool
+            let hqText: Bool?
+            let hqService: String?
+            let hqFallback: Bool?
+            switch outcome {
+            case .hq(_, let isDiarized, let service):
+                diarized = isDiarized
+                hqText = true
+                hqService = service
+                hqFallback = nil
+            case .fallback:
+                diarized = false
+                hqText = nil
+                hqService = nil
+                hqFallback = true
+            }
             let emission = PendingEmission(
                 binding: preparation.binding, bindingRevision: preparation.bindingRevision, replacesFirstEmissionID: preparation.replacesFirstEmissionID,
                 id: id,
                 boxID: preparation.boxID,
                 draft: preparation.draft,
-                text: text,
+                text: outcome.text,
                 origin: .voice,
                 diarized: diarized,
-                hqText: hqText ? true : nil,
-                hqService: hqText ? hqService : nil,
+                hqText: hqText,
+                hqService: hqService,
+                hqFallback: hqFallback,
                 state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
                 createdAt: preparation.createdAt
             )
@@ -516,6 +530,7 @@ final class PendingEmissionStore: ObservableObject {
             diarized: pending.diarized,
             hqText: pending.hqText,
             hqService: pending.hqService,
+            hqFallback: pending.hqFallback,
             images: images,
             files: files,
             selections: selections

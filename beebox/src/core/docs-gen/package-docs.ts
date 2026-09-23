@@ -22,7 +22,7 @@
 
 import { basename, join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
-import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { parseFrontmatterObject, splitCardContent } from "../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { contentHash } from "../../lib/content-hash.js";
@@ -249,17 +249,46 @@ async function ensurePackageDocsUncontended(packageRoot: string): Promise<Ensure
   }
 }
 
-/** Move the live dir aside (to a fresh unique name), swap the new one in, drop the old. */
+/**
+ * Move the live dir aside (to a fresh unique name), swap the new one in, drop
+ * the old. A directory that came from a lower overlayfs layer (the engine
+ * installed in a container image) cannot be renamed — the kernel answers
+ * EXDEV — so there the contents are replaced in place instead.
+ */
 async function swapIn({ tmp, dir, packageRoot }: { tmp: string; dir: string; packageRoot: string }): Promise<void> {
   const old = await mkdtemp(join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-old-`));
   await rm(old, { recursive: true, force: true }); // mkdtemp reserved the name; rename needs it absent
   try {
     await rename(dir, old);
   } catch (e) {
+    if (errnoCode(e) === "EXDEV") {
+      await replaceDirContents({ from: tmp, to: dir });
+      return;
+    }
     if (errnoCode(e) !== "ENOENT") throw e; // nothing to move aside on first write
   }
   await rename(tmp, dir);
   await rm(old, { recursive: true, force: true });
+}
+
+/**
+ * Make `to` hold exactly the files of `from` (a flat directory), then remove
+ * `from`. Not atomic, so the fingerprint goes first and comes back last: a
+ * reader that sees a half-replaced directory sees no matching fingerprint, and
+ * the next ensure rewrites it.
+ */
+export async function replaceDirContents({ from, to }: { from: string; to: string }): Promise<void> {
+  await rm(join(to, FINGERPRINT_FILE), { force: true });
+  const incoming = await readdir(from);
+  const keep = new Set(incoming);
+  for (const name of await readdir(to)) {
+    if (!keep.has(name)) await rm(join(to, name), { recursive: true, force: true });
+  }
+  for (const name of incoming) {
+    if (name !== FINGERPRINT_FILE) await rename(join(from, name), join(to, name));
+  }
+  if (keep.has(FINGERPRINT_FILE)) await rename(join(from, FINGERPRINT_FILE), join(to, FINGERPRINT_FILE));
+  await rmdir(from);
 }
 
 async function storedFingerprint(dir: string): Promise<string | null> {

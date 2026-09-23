@@ -60,6 +60,15 @@ export class InvalidStoreRecordError extends ScheduleError {
   }
 }
 
+/** An alert record that fails the current schema. The usual cause is a record
+ *  written before conditions existed, so the message names the repair. */
+export class InvalidAlertRecordError extends InvalidStoreRecordError {
+  constructor(filePath: string, reasons: string) {
+    super(filePath, `${reasons} (a record from before alert conditions? run \`bin/schedules migrate-alerts\`)`);
+    this.name = "InvalidAlertRecordError";
+  }
+}
+
 /** A tool pattern that would silently split into two argv entries. */
 export class NewlineInToolPatternError extends ScheduleError {
   constructor(readonly pattern: string) {

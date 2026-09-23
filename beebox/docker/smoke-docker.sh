@@ -5,7 +5,7 @@
 # Builds the image, then exercises the entrypoint contract end-to-end against
 # a scratch box on a throwaway compose project:
 #   1. no-args on an empty volume  → nonzero exit + the init recovery message
-#   2. `bbx init /data/box`         → succeeds (scaffolds + commits the box)
+#   2. `bbx engine init /data/box`         → succeeds (scaffolds + commits the box)
 #   3. `up -d` (no-args serve)     → box-local install + serve, HTTP 200 HTML
 #   4. `down -v`                   → clean teardown
 #
@@ -75,19 +75,19 @@ set -e
 if [[ "$empty_code" -eq 0 ]]; then
   fail "no-args on empty volume should exit nonzero, got 0" "$LOG_DIR/empty.log"
 fi
-if ! grep -q "bbx init /data/box" "$LOG_DIR/empty.log"; then
-  fail "no-args on empty volume should print the 'bbx init /data/box' recovery command" "$LOG_DIR/empty.log"
+if ! grep -q "bbx engine init /data/box" "$LOG_DIR/empty.log"; then
+  fail "no-args on empty volume should print the 'bbx engine init /data/box' recovery command" "$LOG_DIR/empty.log"
 fi
 echo "smoke: ok — empty volume refused with init instructions (exit $empty_code)"
 
-# ── 2. bbx init /data/box → success ───────────────────────────────────────
-if ! dc run --rm box bbx init /data/box > "$LOG_DIR/init.log" 2>&1; then
-  fail "bbx init /data/box" "$LOG_DIR/init.log"
+# ── 2. bbx engine init /data/box → success ───────────────────────────────────────
+if ! dc run --rm box bbx engine init /data/box > "$LOG_DIR/init.log" 2>&1; then
+  fail "bbx engine init /data/box" "$LOG_DIR/init.log"
 fi
 if [[ ! -f "$WORK_DIR/data/box/.beebox/box.json" ]]; then
-  fail "bbx init did not create .beebox/box.json" "$LOG_DIR/init.log"
+  fail "bbx engine init did not create .beebox/box.json" "$LOG_DIR/init.log"
 fi
-echo "smoke: ok — bbx init scaffolded a v2 box"
+echo "smoke: ok — bbx engine init scaffolded a v2 box"
 
 # ── 3. up -d (no-args serve) → HTTP 200 HTML ─────────────────────────────
 if ! dc up -d > "$LOG_DIR/up.log" 2>&1; then

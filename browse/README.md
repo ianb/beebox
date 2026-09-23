@@ -12,6 +12,19 @@ Thin wrapper around the upstream [`agent-browser`](https://github.com/vercel-lab
 
 Cheat sheet: [`.claude/skills/browse/SKILL.md`](../.claude/skills/browse/SKILL.md).
 
+Scrolling is page-scoped by default. For an inner pane, pass its CSS selector
+explicitly; the upstream command supports this form and the wrapper forwards
+it unchanged:
+
+```bash
+bin/browse scroll down 500 --selector ".scroll-container"
+```
+
+Do not infer an active pane from the page. Discover the intended scrollable
+element from the snapshot or its geometry, then target that selector. A bare
+`scroll` can report success while leaving an inner pane at the same position
+when the document itself has no scroll range.
+
 **`BROWSE_BASE_URL`** overrides the router-derived base for a driver that owns its own server instead of going through the shared dev router (beebox's field-test harness starts a dedicated `bbx serve` on a free port). It moves both the `/`-leading path rewrite and the browse-key cookie's host, so `BROWSE_BASE_URL=http://127.0.0.1:4711/box bin/browse open /` drives that server's box and authenticates it with the short-lived cookie in this worktree's isolated profile. Unset (normal use) changes nothing.
 
 ## Layout

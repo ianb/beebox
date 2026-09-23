@@ -1,4 +1,5 @@
-import { withBoxWork, BoxMaintenanceError } from "../../lib/box-maintenance.js";
+import { withBoxWork } from "../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context.js";
 import { movedCardRecoveryFromCause } from "../../core/moved-card-recovery.js";
@@ -25,8 +26,8 @@ const t = initTRPC.context<TrpcContext>().create({
 // admission; HTTP mutations inherit the request lease through async context.
 // Queries (including bootstrap and schema-cache reads) do not write box files.
 const admission = t.middleware(async ({ ctx, type, path, next }) => {
-  if (type !== "mutation" || path === "actions.answer") return next();
-  try { return await withBoxWork(ctx.boxRoot, () => next()); }
+  if (type !== "mutation") return next();
+  try { return await withBoxWork({ boxRoot: ctx.boxRoot, reason: `trpc ${path}` }, () => next()); }
   catch (error) {
     if (error instanceof BoxMaintenanceError) throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: error.message });
     throw error;

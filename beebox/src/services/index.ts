@@ -7,6 +7,7 @@
  * All fields are optional — not every box configures every service.
  */
 
+import type { JevService } from "./jev.js";
 import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
 import type { CodexCliService } from "./codex-cli.js";
@@ -18,10 +19,12 @@ import type { EmbeddingsService } from "./openai-embeddings.js";
 import type { GoogleDriveService } from "./google-drive.js";
 import type { WakeupRunner } from "../core/commands/wakeup-runner.js";
 import type { GwsRunner } from "../connectors/gmail-gws.js";
+import type { FetchLike } from "../core/secrets/probe-registry.js";
 
 // ─── Services container ──────────────────────────────────────────────────────
 
 export interface Services {
+  jev?: JevService | undefined;
   telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;
@@ -44,4 +47,10 @@ export interface Services {
    * rather than spawning a real child.
    */
   gwsRunner?: GwsRunner | undefined;
+  /**
+   * How the admin page reads OpenRouter's catalog and key usage. Production
+   * leaves it unset and uses the global `fetch`; a test substitutes recorded
+   * responses so nothing leaves the machine.
+   */
+  openrouterFetch?: FetchLike | undefined;
 }

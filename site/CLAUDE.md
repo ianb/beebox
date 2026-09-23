@@ -274,3 +274,11 @@ unknown paths with the home page and a 200, which rewards a fetcher's guessed
 URL), and a permissive `robots.txt`. Cloudflare reads them from `dist/`; the
 router ignores them.
 
+**Whose words.** On the authored pages a blockquote is the maintainer's own
+words and nothing else is set as one; the front page states this. See
+`docs-authoring.md`, "Whose words".
+
+**Themes.** `docs-themes.md` is the internal frame the corpus is written
+against (ten themes, how each is expressed, where each is thin). Not
+published; the front page carries a short version. See `docs-authoring.md`.
+

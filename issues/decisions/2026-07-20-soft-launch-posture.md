@@ -68,7 +68,7 @@ to people; close when the soft launch happens. Builds on
   [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md) /
   agent-install pattern): instruction docs addressed to the user's agent
   are the product surface; small helper tools, not end-to-end automation.
-- **[Schedules off by default](../features/2026-07-20-schedules-off-by-default.md)**
+- **[Schedules off by default](../closed/features/2026-07-20-schedules-off-by-default.md)**
   on fresh boxes — nothing runs until the user (or their agent, at their
   request) turns it on.
 - Close behind but not gates:
@@ -176,7 +176,7 @@ Filed — features:
 [public-site](../features/2026-07-20-public-site.md),
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),
-[schedules-off-by-default](../features/2026-07-20-schedules-off-by-default.md),
+[schedules-off-by-default](../closed/features/2026-07-20-schedules-off-by-default.md),
 [chat-thread-management](../closed/features/2026-07-20-chat-thread-management.md),
 [first-run-experience](../features/2026-07-20-first-run-experience.md),
 [agent-containment-allowed-directories](../features/2026-07-20-agent-containment-allowed-directories.md).

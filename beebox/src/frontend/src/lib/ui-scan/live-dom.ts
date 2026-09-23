@@ -9,7 +9,7 @@
  * `getComputedStyle` is never called for it.
  */
 
-import { scanControls } from "./scan.js";
+import { scanControls, type ScanScope } from "./scan.js";
 import { isNodeVisible, type VisibilityNode } from "./visibility.js";
 import type { ScanElement, ScanNode, ScanResult } from "./types.js";
 
@@ -91,8 +91,9 @@ export function isElementVisible(element: Element): boolean {
 }
 
 /** Scan what is on screen right now, from `document.body` down. */
-export function scanLiveDocument(): ScanResult {
+export function scanLiveDocument(scope: ScanScope): ScanResult {
   return scanControls(domScanElement(document.body), {
     viewport: { width: window.innerWidth, height: window.innerHeight },
+    scope,
   });
 }

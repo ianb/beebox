@@ -17,12 +17,12 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
 
 **Reach for these:**
 
-- \`bbx feedback "<message>"\` — record anything that feels off about the tooling:
-  a confusing flag, an unclear error message, an awkward workflow, a surprising
-  behavior. It's **silent** — writes a file to \`_config/feedback/\` and commits it
-  without interrupting your task — so reach for it reflexively the moment
-  something is off. Good feedback is specific about *what* was confusing and
-  *why*.
+- When Bee Box itself behaves confusingly — a command, interface, sync, or
+  agent instruction — use the \`beebox-system-feedback\` skill. Record the
+  observation and written context as a \`.doc.card\` in \`_config/feedback/\`
+  and commit it with your task. Feedback about a card's contents or the
+  boxholder's work belongs with that work. A \`.feedback.card\` means the
+  boxholder's response to something the box surfaced.
 - \`bbx force-wakeup [--connector <name>]\` — runs a real wakeup on the server
   right now, either the whole cycle or just one connector, and reports what each
   connector created, updated, or skipped and why. Reach for it after mounting a
@@ -66,15 +66,21 @@ procedure run):
 **System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
 appear here so you recognize them in \`git log\` and health output):
 
-- \`bbx wakeup\` — the cycle itself (connectors, jobs, scripts, push). It only
-  works with the server's credentials, so running it yourself syncs nothing and
-  says so in a way that looks like "nothing new"; \`bbx force-wakeup\` above is
-  your way to trigger it.
+- \`bbx engine wakeup\` — the cycle itself (connectors, jobs, scripts, push). It
+  lives under \`bbx engine\` because it only works with the server's credentials:
+  run from your shell it would sync nothing and report that as "nothing new".
+  \`bbx force-wakeup\` above is your way to trigger a real one.
 - \`bbx reactor\` — process pending jobs in \`_bookkeeping/jobs/\`.
 - \`bbx finalize\` — flush outbound cards in \`_bookkeeping/output/\`.
-- \`bbx health\` — scheduled-task health (failing / overdue / blocked /
-  inconclusive tasks + scheduler liveness). \`inconclusive\` means the last run
-  did its work but its check never reached a verdict — unknown, not broken; do
-  not redo the work on that basis.
+
+\`bbx health\` is not in that list — it is yours to run: scheduled-task health
+(failing / overdue / blocked / inconclusive tasks + scheduler liveness).
+\`inconclusive\` means the last run did its work but its check never reached a
+verdict — unknown, not broken; do not redo the work on that basis.
+
+Anything under \`bbx engine\` is an operator or machine command — starting
+servers, editing the machine's box list, authorizing Google. You will not need
+them, and several refuse an agent session outright. If you find yourself
+reaching for one, that is a thing to ask the boxholder for.
 `;
 }
