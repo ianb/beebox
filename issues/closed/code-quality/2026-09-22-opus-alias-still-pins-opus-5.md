@@ -1,6 +1,7 @@
 ---
 title: "`MODEL_ID.opus` still resolves to `claude-opus-5`; Claude Code 2.1.280 made Opus 5.5 the flagship"
 workstream: model-bump
+resolution: implemented
 area: beebox
 priority: normal
 filed-by: agent
@@ -8,6 +9,10 @@ discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Claude Code 2.1.280
 labels: [sdk-update]
 ---
+
+Resolved by commit `90bf65d57`: the Opus alias now targets Opus 5.5 and old
+stored Opus IDs normalize forward. The same change moves the Luna and Sol
+aliases to GPT-6; Terra remains on GPT-5.6 pending a product decision.
 
 Claude Code 2.1.280: *"Added Claude Opus 5.5 (`claude-opus-5-5`), now the
 default Opus model — 1M context, $4/$20 per Mtok with $0.20/Mtok cache reads."*
