@@ -75,7 +75,7 @@ turning your own guesses into instructions.
 ## Choose the agent and model
 
 For launches driven by this skill, the default is Codex: `--agent codex`.
-With no `--model`, the Codex launcher pins `gpt-5.6-sol`. Do not confuse this
+With no `--model`, the Codex launcher pins `gpt-6-sol`. Do not confuse this
 skill policy with the executable's bare default, which is Claude.
 
 The human's explicit choice or standing preference always wins. Ask when the

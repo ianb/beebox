@@ -12,7 +12,7 @@
 # --model passes `claude --model <model>` (e.g. claude-fable-5-1, opus, sonnet) —
 # or `codex -m <model>` with --agent codex — so a worktree can be spun up on a
 # specific model. Omitted Claude models use Claude's default; omitted Codex
-# models use gpt-5.6-sol.
+# models use gpt-6-sol.
 #
 # A `glm-*` model (e.g. --model glm-5.3) runs the session on Z.ai's GLM through
 # Claude Code itself: the agent is still claude and only the endpoint changes, so

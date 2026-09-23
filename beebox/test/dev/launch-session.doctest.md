@@ -217,8 +217,8 @@ JSON.stringify([
   codexScript.includes('-s danger-full-access -a never'),
   codexScript.includes('-m "gpt-test"'),
   codexScript.includes('bin/codex-session-end'),
-  defaultCodexScript.includes('-m "gpt-5.6-sol"'),
-  defaultCodexScript.includes('--arg model "gpt-5.6-sol"'),
+  defaultCodexScript.includes('-m "gpt-6-sol"'),
+  defaultCodexScript.includes('--arg model "gpt-6-sol"'),
   codexScript.includes('session_registry_complete_launch "seam" "token-seam"'),
   codexScript.indexOf('session_registry_complete_launch "seam" "token-seam"') < codexScript.indexOf('codex "${codex_args[@]}"'),
 ])
