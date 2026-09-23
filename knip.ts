@@ -126,6 +126,8 @@ const config: KnipConfig = {
     "tar",
     "ps",
     "lsof",
+    // box-growth/bytes.ts measures disk use with `du -sk`.
+    "du",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // A tracked executable in this repo, run by the root `dev` script.

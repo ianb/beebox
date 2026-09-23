@@ -76,7 +76,7 @@ type LegacyAlert = z.infer<typeof legacyAlertSchema>;
 
 /** A legacy record in the new shape. Every open one is closed: the boxholder
  *  chose to start clean, and a condition that still holds raises again. */
-export function migrateLegacyAlert(legacy: LegacyAlert, at: string): Alert {
+function migrateLegacyAlert(legacy: LegacyAlert, at: string): Alert {
   const open = legacy.state === "open";
   return {
     ...legacy,
