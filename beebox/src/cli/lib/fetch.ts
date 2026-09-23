@@ -1,10 +1,8 @@
 /**
  * Stubbable fetch wrapper for scenario testing.
  *
- * Stubs can be loaded two ways:
- * 1. In-process via loadFetchStubs() (used by scenario runner parent)
- * 2. Via BBX_STUBS_FILE env var pointing to a stubs.yaml file (used by
- *    child processes spawned during scenario runs)
+ * Stubs load from the BBX_STUBS_FILE env var, which points to a stubs.yaml
+ * file.
  *
  * Strict mode (BBX_STRICT_FETCH=1): monkey-patches globalThis.fetch so that
  * ALL fetch calls must match a stub or an allow-listed URL, otherwise they
@@ -43,32 +41,6 @@ let stubs: FetchStub[] | null = null;
 let scenarioDir: string | null = null;
 let envStubsLoaded = false;
 let originalFetch: typeof globalThis.fetch | null = null;
-
-/**
- * Load fetch stubs for a scenario run (in-process).
- */
-export function loadFetchStubs(dir: string, stubDefs: FetchStub[]): void {
-  scenarioDir = dir;
-  stubs = stubDefs;
-}
-
-/**
- * Clear all fetch stubs (restore normal fetch behavior).
- */
-export function clearFetchStubs(): void {
-  stubs = null;
-  scenarioDir = null;
-}
-
-/**
- * Restore the original globalThis.fetch if it was patched.
- */
-export function uninstallStrictFetch(): void {
-  if (originalFetch) {
-    globalThis.fetch = originalFetch;
-    originalFetch = null;
-  }
-}
 
 /**
  * Lazily load stubs from BBX_STUBS_FILE env var (for child processes).

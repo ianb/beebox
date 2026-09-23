@@ -150,7 +150,7 @@ Already exists (`bbx chat self-note`). Keep as is.
 
 The renames are independent — implement in any order. For each rename:
 
-1. **Update the command registration** in `src/cli/commands/index.ts` and `src/cli/index.ts`.
+1. **Update the command registration** in `src/cli/surface-commands.ts` and its classification in `src/cli/surface-data.ts`.
 2. **Implement the new shape** (e.g., add a parent command with subcommands; old command becomes a subcommand).
 3. **Search and replace** call sites in: agent prompt builders (`src/core/agent-guide/`, `src/core/reactor/prompts.ts`), procedure templates (`templates/procedures/*.card`), generated docs (`generateCbCommands()` in `src/core/docs-gen/index.ts`), tests, scheduled-script cards in test boxes, READMEs.
 4. **Regenerate** in-box agent guides via `bbx init` (or just `generateDocs()`).

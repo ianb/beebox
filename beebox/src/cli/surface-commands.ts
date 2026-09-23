@@ -7,10 +7,6 @@
  * the surface table names a verb that is absent here, and
  * `test/cli/surface.doctest.md` fails when a verb here is absent from the table
  * — so a new command cannot be registered without being classified.
- *
- * Imported per module rather than through `commands/index.js`: that barrel
- * exists, but the ruleset bans adding consumers to one (code-style.md, "No
- * barrels"), and this file is where its last caller can eventually be removed.
  */
 
 import type { Command } from "commander";
