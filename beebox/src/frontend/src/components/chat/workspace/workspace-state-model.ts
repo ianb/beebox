@@ -30,8 +30,6 @@ export function createEmptyWorkspaceState(): WorkspaceState {
   };
 }
 
-export const EMPTY_WORKSPACE_STATE: WorkspaceState = createEmptyWorkspaceState();
-
 export function oppositePane(pane: PaneId): PaneId {
   return pane === "left" ? "right" : "left";
 }

@@ -36,7 +36,7 @@ import {
   sudoAllowsWrapper,
 } from "../../core/host-packages-system.js";
 
-export const HOST_EXIT = { ok: 0, error: 1, refused: 2, unsupported: 3 } as const;
+const HOST_EXIT = { ok: 0, error: 1, refused: 2, unsupported: 3 } as const;
 
 /** The host operations `bbx host` depends on; tests inject fakes. */
 export interface HostSystem {

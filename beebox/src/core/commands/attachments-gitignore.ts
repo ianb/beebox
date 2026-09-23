@@ -37,10 +37,6 @@ class GitignoreReadError extends Error {
  * the block if we change the extension list.
  */
 
-// The asset extension list and its renderers moved to src/lib/asset-extensions.ts —
-// they define asset *identity*, not a gitignore detail, and are now shared with
-// the git-annex classifier. Re-exported here for existing importers.
-export { assetGitignorePatterns } from "../../lib/asset-extensions.js";
 
 
 

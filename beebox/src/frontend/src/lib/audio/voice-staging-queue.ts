@@ -22,7 +22,7 @@
  */
 
 import { getApiBase } from "../../api";
-import { VOICE_UPLOAD_BATCH_SECONDS, VOICE_QUEUE_BOUND_MS, type VoiceOpPayload } from "./voice-staging-queue-core";
+import { type VoiceOpPayload } from "./voice-staging-queue-core";
 import { loadPersisted, wake } from "./voice-staging-drainer";
 import {
   createQueueState,
@@ -43,7 +43,6 @@ import {
 } from "./voice-staging-storage";
 import { sendVoiceOp } from "./voice-staging-transport";
 
-export { VOICE_UPLOAD_BATCH_SECONDS, VOICE_QUEUE_BOUND_MS };
 export type { VoiceStagingStatus, VoiceStagingFailure };
 
 export interface VoiceStagingQueue {

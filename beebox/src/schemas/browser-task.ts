@@ -23,9 +23,8 @@ export type BrowserTaskRunEntry = z.infer<typeof BrowserTaskRun>;
 
 /** Where a task keeps the JSON Schema for one record. Fixed: one place, nothing to configure. */
 export const BROWSER_TASK_SCHEMA_FILE = "schema.json";
-/** Attach-scope subdirectories: batches arrive in `inbox/`, the drain leaves provenance in `processed/`. */
+/** Attach-scope subdirectory batches arrive in; the drain leaves provenance in `processed/`. */
 export const BROWSER_TASK_INBOX_DIR = "inbox";
-export const BROWSER_TASK_PROCESSED_DIR = "processed";
 
 /**
  * The submission contract: read the task's own schema from its attach scope

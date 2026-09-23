@@ -56,7 +56,7 @@ export type SweepResult =
   | { readonly status: "commit-failed"; readonly failed: string; readonly error: string; readonly question?: string | undefined; readonly sessionId?: string | undefined; readonly recoveryRef: string; readonly applied: SweptMigration[] }
   | { readonly status: "applied"; readonly applied: SweptMigration[] };
 
-export class MigrationExecutionTimeoutError extends Error {
+class MigrationExecutionTimeoutError extends Error {
   constructor() {
     super("Migration execution timed out; inspect its recovery snapshot before retrying");
     this.name = "MigrationExecutionTimeoutError";

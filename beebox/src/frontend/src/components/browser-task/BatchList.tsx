@@ -28,7 +28,7 @@ const LONG_TEXT = /text|notes?|description|body|caption|summary/i;
 const LEAD_ORDER = [/^(name|title|event)$/i, /^(start|date|when|posted)/i, /^(venue|where|place)$/i, /^(group)$/i, /^(unsure|confidence|sure)$/i];
 
 /** Pick the table's columns from the record schema; falls back to the first record's keys. */
-export function pickColumns(schemaJson: unknown, sample: unknown): string[] {
+function pickColumns(schemaJson: unknown, sample: unknown): string[] {
   const props = isRecord(schemaJson) && isRecord(schemaJson["properties"]) ? schemaJson["properties"] : null;
   const candidates: string[] = [];
   if (props !== null) {

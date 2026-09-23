@@ -39,7 +39,7 @@ class ManifestReadError extends Error {
  * one-root-specific, so every caller of `appendManifestEntry` gets it, not
  * just the migration that first found the gap.
  */
-export class SymlinkedManifestError extends Error {
+class SymlinkedManifestError extends Error {
   readonly manifestPath: string;
   constructor(manifestPath: string) {
     super(

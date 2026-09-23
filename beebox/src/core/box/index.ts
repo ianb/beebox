@@ -188,8 +188,8 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // dead config that only did harm, by re-LFS-ifying a box's new media if the
   // annex probe ever read false. What stays is the section headers, so the
   // file is byte-identical to what `bbx attachments to-annex` leaves behind and
-  // re-running init is a no-op on every box. `stripLfsFilters` remains the
-  // migration's tool for stripping rules off boxes that still carry them.
+  // re-running init is a no-op on every box. This regen is also what strips
+  // the rules off a box that still carries them.
   await writeRegeneratedFilePreservingMigratedSection(
     path.join(resolvedRoot, ".gitattributes"),
     `# Audio files (voice memos, recordings)

@@ -205,7 +205,3 @@ export function reduceWorkspace(state: WorkspaceState, action: WorkspaceAction):
     case "restoreSnapshot": return restoreSnapshot(action);
   }
 }
-
-export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
-  return reduceWorkspace(state, action).state;
-}

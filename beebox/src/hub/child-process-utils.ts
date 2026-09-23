@@ -9,7 +9,6 @@
 import http from "node:http";
 import { errnoCode } from "../lib/error-guards.js";
 
-export { DEV_BUNDLE_RELOAD_EXIT_CODE } from "../lib/dev-bundle-reload.js";
 
 /**
  * How long a BOX child gets between SIGTERM and SIGKILL.
