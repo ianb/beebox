@@ -66,9 +66,10 @@ the agent works its own todos, was split out after cross-model review
 | 4. Per-place summary (card, directory) | 200 | 150 |
 | 5. List links open in the opposite pane | 60 | 40 |
 | 6. `Markdown` for box views, hand-rolled Markdown is an error | 350 | 250 |
-| 7. todo-review: runs on its own schedule | 200 | 150 |
+| 7. todo-review: own schedule, `recheck`, health check | 450 | 350 |
 
-About 3,100 changed source and test lines. Authored docs (agent guide, view
+About 3,550 changed source and test lines (Track 7 grew by about 450 after
+the boxholder's recheck decision, 2026-09-24). Authored docs (agent guide, view
 guide, `docs/todos`-area reference, this plan) add about 300.
 
 > **BIG CHANGE.** The size comes from two platform pieces that the
@@ -228,6 +229,9 @@ New or sharpened:
   new query result.
 - **Todo write** — setting one todo's status, addressed by path + locator +
   the text and status the client saw. Not a general card-edit API.
+- **Recheck** — a todo attribute: the date the review may next list the
+  todo, or `never`. Written by the review agent or the verify step. Not a
+  plate-state input, not a reminder to the boxholder.
 - **Todo actions** — a React context that gives a rendered todo its two
   actions (set status, add to chat). Provided by the surfaces that can
   perform them; absent elsewhere, and then the controls do not render.
@@ -542,9 +546,51 @@ boxes (finding 3), which stays open.
   are; the review of what to raise on undated boxes is still the design
   notes' open question.
 
+**Every reviewed todo gets a next-check date.** Boxholder, 2026-09-24: "if
+a todo is ignored I feel like it should require the agent to say when it
+should check again, not just on the next tick of the review", and chose a
+todo attribute over a state file ("seems heavy. But it's more-right"). Today
+an escalated todo would be listed on every daily run, and a stale one on
+every run after 45 days.
+
+- New todo attribute `recheck`: an ISO date, or `never`. Tag
+  (`markdoc-config.ts:349-361`) and frontmatter entry, validated in
+  `todo-model.ts` like `due`. It is the review's bookkeeping, not the
+  boxholder's plan: it never changes plate state, badge, or list order.
+- The sweep skips any todo whose `recheck` is `never` or after today,
+  whichever set it would otherwise be in.
+- Each job item must end with one of: a status change (the agent's own
+  todos only, as now); or a `recheck` date 1 to 90 days out, with a short
+  reason written after the todo's closing tag or raised with the boxholder.
+  The agent may write `recheck` on the boxholder's todos; it is the one
+  attribute it may change there without asking.
+- **Enforced.** A `validate` shell in the procedure, `bbx engine todo-review
+  verify <job>`, lists job items that are still open with no future
+  `recheck`. `severity: review` re-invokes the agent with that list
+  (`docs/procedure-implementation.md`, severity table); if it still fails,
+  the step fails and the run card says which items.
+- **Ignored todos stop being reviewed, and that is a health issue.**
+  Boxholder: "If a todo is really hanging out and not well tagged, it should
+  eventually be ignored entirely. And that should be logged as a health
+  issue." After the **third** `recheck` on a todo whose text, status,
+  `start`, and `due` have not changed (counted by the verify step from the
+  todo's recheck history in `.beebox/todo-review-sweep.json`, keyed by path
+  and text — an edit resets the count, which is right: an edit means someone
+  is tending it), the verify step sets `recheck="never"` instead. A new box
+  health check, `todos-unreviewed` (severity `warning`, in
+  `runHealthChecks`, `src/webapp/trpc/routers/health.ts:152`), reports "N
+  open todos are no longer reviewed" with the oldest few named. Removing
+  `recheck`, or any edit to the todo, puts it back in review.
+- The list shows `recheck` as a quiet chip ("agent checks again Oct 15";
+  "no longer reviewed"); the reading view does not show it.
+
+**Vocabulary lock-ins.** Attribute `recheck` (date or `never`); health check
+`todos-unreviewed`; engine subcommands `todo-review check`, `todo-review
+verify`.
+
 **First implementation chunk.** `bbx engine todo-review check` with a
-doctest over an empty box (exit `CHECK_SKIP`) and a box with one escalated
-todo.
+doctest over an empty box (exit `CHECK_SKIP`), a box with one escalated
+todo, and a todo with a future `recheck` (skipped).
 
 ## Could this be simpler?
 
@@ -591,6 +637,9 @@ None. The agent-todos procedure, split out, gets its own plan.
 | Box view uses `{%` in a string for another reason | Track 6 doctest | error message names the rule | Clear; the boxholder chose strict |
 | `Markdown` in `bbx view test` with no router | Track 6 doctest | box-slug context | Clear |
 | todo-review precheck errors | Track 7 doctest | procedure records a failed run | Clear on the run card |
+| Review agent leaves an item with no `recheck` | Track 7 doctest | verify step re-invokes, then fails the step | Clear: run card names the items |
+| Todo retired to `recheck="never"` and forgotten | Track 7 doctest | `todos-unreviewed` health warning | Clear: health list |
+| Todo reworded between rechecks | Track 7 doctest | count resets (intended) | Clear |
 | Card summary query on a card with a load error | Track 4 doctest | no line rendered, issue logged | Silent in the header; the card itself shows its error |
 
 ## Agent-flow / user-flow edge cases
@@ -657,16 +706,17 @@ None. The agent-todos procedure, split out, gets its own plan.
   model as they are.
 - **Where "3 open" leads from a box-view card.** Lean: the directory's
   todo-view card if one exists, else the plate filtered to that card.
-- **How often a todo is reviewed.** Boxholder, 2026-09-24: "if a todo is
-  ignored I feel like it should require the agent to say when it should
-  check again, not just on the next tick of the review." Under discussion;
-  Track 7 does not ship until it is settled.
+- **The three-recheck limit and the 90-day cap** (Track 7). Lean: keep
+  them as constants; tune after a month on a field box.
 
 ## Knowledge audits
 
+- `todo-recheck`: in a todo-review job, the agent ends every item with a
+  status change or a `recheck` date, and may set `recheck` on the
+  boxholder's todos but nothing else (`knows_directly`).
 - `view-markdown-export`: a box agent writing a view that shows card text
   uses `Markdown` from `beebox/view-widgets` (`knows_directly`).
-- It lands RUN against test1 with the status comment recorded.
+- Both land RUN against test1 with the status comment recorded.
 - Track 3 adds no agent-facing concept. Track 7 moves the sweep; the
   existing todo audits are re-run.
 
