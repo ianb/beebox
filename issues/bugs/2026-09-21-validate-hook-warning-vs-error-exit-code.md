@@ -6,7 +6,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
-next-action: discuss
 ---
 
 `bbx validate --hook` (`beebox/src/cli/commands/validate-hook.ts`) is wired as
@@ -49,3 +48,18 @@ warnings could silence exactly the nudges this hook exists to deliver,
 depending on how each connected harness (Claude Code, Codex apply_patch,
 others) treats exit 0 with stderr. This needs checking against each harness's
 actual behavior, not just the hook's own contract.
+
+## Discussion (2026-09-24)
+
+Boxholder's disposition:
+
+- Earlier Claude Code experiments showed that a warning is ignored entirely
+  without exit 2 (stderr on exit 0 did not reach the model). So plain exit 0
+  with stderr is out.
+- If exit 0 plus JSON on stdout (`hookSpecificOutput.additionalContext`)
+  does reach the model, use it for warnings. Prove it with an experiment first.
+- Codex's behavior is unknown. Establish it by experiment.
+- Persistent warnings are a problem in their own right: the same warning
+  (for example, CLAUDE.md over its soft size limit) fires on every edit.
+  Repeats should be suppressed in some way.
+
