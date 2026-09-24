@@ -19,6 +19,11 @@ box. Chat is the everyday way you talk to it.
 - Lets you quote a passage out of any card into what you're typing.
 - Recovers a message that failed to send instead of losing it, and keeps an
   unfinished draft across reloads.
+- Keeps an image you paste or upload as a file the agent can use (crop it,
+  read text from it, file it into a card), as well as showing it to the agent.
+- Lets you pick the model for one chat, from the engines the box has enabled
+  or a model the owner added through OpenRouter, and marks a chat running
+  above or below the box default.
 - Can set a reminder mid-conversation that wakes the same chat back up
   later, optionally with a sound or a spoken announcement.
 
@@ -34,6 +39,8 @@ browsable like anything else in the box. The agent acts inside a turn and
 asks you a question when it is unsure rather than guessing; its mid-turn
 work (files touched, background notes) is visible in the transcript. Chat
 runs on demand, when you send a message, not on a schedule.
+Quick chat, a separate page, sends a thought to whichever chat it fits; see
+[web-interface.md](web-interface.md).
 
 **Limits**
 
