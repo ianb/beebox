@@ -39,6 +39,10 @@ searchable. Both are first-class input expecting a reply, and both have their
 own card instructions in these docs (`card-upload-batch.md`,
 `card-capture-session.md`).
 
+For an ongoing stream from an iPhone album, scan-uploader can export new
+photos from an iCloud-synced album on the user's Mac; see [Apple Photos
+setup](phone-photos.md).
+
 **Photograph and talk at the same time.** Capture is the box's own input, and
 the one to show first. The person opens it, takes pictures, and talks while
 they do, in as many takes as they like: stop recording, take more photos,
