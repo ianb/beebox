@@ -413,9 +413,9 @@ tests:
   # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
   # direct orientation questions below used no reads or searches. user-adds-item
   # also passed, but inspected the frontend to verify its exact UI instructions.
-  # Status (2026-09-24, Claude): iphone-photos-album-setup passed and explained
-  # the Mac setup, token boundary, and command. test1 lacks installed package
-  # docs, so it found the source doc after first checking the broken test-box link.
+  # Status (2026-09-24, Claude): iphone-photos-album-setup passed twice and
+  # explained the Mac setup, token boundary, and command. test1 lacks installed
+  # package docs, so it found the source doc after checking the broken test-box link.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"

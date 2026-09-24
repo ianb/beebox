@@ -19,10 +19,6 @@ with it and why they might want to.
 Three entry points, one arc. This is the input most people try first, so it
 gets the most detail.
 
-If they want new iPhone photos to flow in automatically, there is also an
-optional Apple Photos album source through scan-uploader on a Mac. Read
-`node_modules/beebox/box-docs/phone-photos.md` for setup and its limits.
-
 **Photograph.** A photo attached to a chat message is not a card yet: it
 arrives as a file under `_tmp/` (an `[file#N]` token with its
 `<attachments>` path), and `_tmp/` is swept after a week. You read it and
@@ -42,6 +38,8 @@ each page carries its OCR text and a description, so the stack becomes
 searchable. Both are first-class input expecting a reply, and both have their
 own card instructions in these docs (`card-upload-batch.md`,
 `card-capture-session.md`).
+
+For an ongoing stream from an iPhone album, see [Apple Photos setup](phone-photos.md).
 
 **Photograph and talk at the same time.** Capture is the box's own input, and
 the one to show first. The person opens it, takes pictures, and talks while
