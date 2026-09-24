@@ -15,7 +15,7 @@ discovered-in: main — boxholder noticing the hint is missing on the phone
 > 2. It has no translucent background.
 > 3. It sometimes takes up space when the textarea is empty.
 >
-> The manual-testing gate is removed until a fix lands. The earlier status line follows as history.
+> The manual-testing gate was removed while the fix was pending; it is restored below for phone verification.
 
 > **⏳ Awaiting manual testing** — layout fix landed in `09ef3f025`. Confirm on a
 > real iPhone that the hint stays above the editor, remains legible, and rotates
