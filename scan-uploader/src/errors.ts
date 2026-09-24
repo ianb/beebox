@@ -68,7 +68,7 @@ export class PhotosExportError extends Error {
 }
 export class PhotosAccessError extends Error {
   constructor(album: string) {
-    super(`Apple Photos access denied for album "${album}"; grant Full Disk Access to the launchd app used to run scan-uploader in System Settings → Privacy & Security → Full Disk Access`);
+    super(`Apple Photos access denied for album "${album}"; grant Full Disk Access to the app running scan-uploader and allow the requesting app listed under System Settings → Privacy & Security → Automation to control Photos. Run one export manually first to approve any macOS permission prompts.`);
     this.name = "PhotosAccessError";
   }
 }
