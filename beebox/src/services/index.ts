@@ -20,10 +20,14 @@ import type { GoogleDriveService } from "./google-drive.js";
 import type { WakeupRunner } from "../core/commands/wakeup-runner.js";
 import type { GwsRunner } from "../connectors/gmail-gws.js";
 import type { FetchLike } from "../core/secrets/probe-registry.js";
+import type { CloudflarePublishTokenVerifier } from "./cloudflare-publish-token-verifier.js";
+import type { ManagedPublicationRuntime } from "./managed-publication-runtime.js";
 
 // ─── Services container ──────────────────────────────────────────────────────
 
 export interface Services {
+  cloudflarePublishTokenVerifier?: CloudflarePublishTokenVerifier | undefined;
+  managedPublicationRuntime?: ManagedPublicationRuntime | undefined;
   jev?: JevService | undefined;
   telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;

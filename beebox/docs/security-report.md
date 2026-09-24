@@ -1,12 +1,21 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-21
+date: 2026-09-24
 model: gpt-6-astra
-reviewed-by: Ian
+reviewed-by: DRAFT — unreviewed
 ---
 
 # Security report — structured version
+
+**Scoped amendment (2026-09-24; DRAFT — unreviewed):** Adds the managed
+static-site publishing credential, server/member procedure boundary, project
+build egress and privileges, and isolated Worker serving controls. The full
+inventory anchor remains `67f4d34ea59c91840d6444b907dc31ed937f8e21`; this
+scoped amendment covers changes through `aa084d01ebdee12e2e88d210c2c5a5c85b7cc294`
+plus the uncommitted publish-pages worktree. This is a targeted update, not a full inventory of the many
+unrelated changes since the prior anchor or of the private security tier.
+Review the current diff before treating it as complete.
 
 **Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
 `34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
@@ -138,6 +147,9 @@ Notable abilities, and the items that are more than routine:
 | `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
 | `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `_config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
+| tRPC `cloudflarePublishConnections.*` | Save/verify/revoke host Cloudflare API credentials and grant/revoke a named connection for a box | mitigated | high | owner | Credentials are saved server-side; box agents never receive them. A grant scopes server-mediated publication operations, not arbitrary same-user code. |
+| tRPC `publications.list`, `publications.prepare` | Read managed publication status; prepare/refresh a named site from this box | mitigated | med | authed/member | `prepare` takes only the publication name. The server derives the box, pubId, Worker, bucket, and connection grant. Same-approved-scope refresh may publish immediately; scope changes become candidates. |
+| tRPC `publications.approve`, `previewFile`, `enable`, `disable`, `revoke` | Review candidate metadata/text and mutate publication serving authority | mitigated | high | member | Requires a signed-in member who can access this box; global Cloudflare administration is not required. Agent config and CLI cannot approve audience or destination. |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
 | tRPC `clerk.*` (Chrome extension) | Page capture/commentary, tab arrangement | ok | — | authed | Rides the session cookie + per-origin CORS reflection for `chrome-extension://`; no separate extension credential |
@@ -210,6 +222,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | **OpenAI** (`openai-audio.ts`, `openai-embeddings.ts`) | When configured: Whisper is the default HQ re-transcription pass; embeddings run on the automatic index refresh | Raw audio + context prompt; **each card's searchable text** + literal search queries; TTS reply text | Separate keys (transcription ≠ embeddings, deliberate) | Switch transcription service; omit embeddings key → text-only search | ok |
 | **Deepgram / OpenAI Realtime — browser-direct** (`deepgram-key.ts`, `openai-realtime-key.ts`) | Live dictation when selected | Raw microphone audio streamed **from the browser straight to the vendor** | Server-minted ephemeral key (≤20 min); long-lived key stays server-side | Per-box transcription config | ok — distinct risk shape, named in SECURITY.md |
 | **Google Gemini** (`scan-vision.ts:79-106`) | Only when `BBX_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `gemini` secret-store entry, per-box grant | Env opt-in (`BBX_SCAN_VISION`) selects the backend; the key itself is store-only | ok |
+| **Cloudflare publishing API token** (`src/core/secrets/cloudflare-publish.ts`, `src/webapp/trpc/routers/cloudflare-publish-connections.ts`) | Server machine secret store (`~/.config/beebox/secrets.json` by default; `BBX_SECRETS_FILE` override; atomic mode 0600) | R2 buckets/objects and Worker scripts/settings in the selected account | Admin-managed connection plus per-box grant and server-derived publication binding | Admin can revoke the token/grant; this blocks future server operations but does not unpublish already-live sites. Same-OS-user processes can read machine state; no hostile-local-code boundary is claimed | accepted (§8) |
 | **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm. Quick chat has a separate TypeSafe row below | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
 | **OpenRouter → TypeSafe Jev** (`src/services/jev.ts:89,119`; `src/webapp/trpc/routers/quick-chat.ts:62`) | User presses Quick chat Send; judgment runs before automatic chat dispatch | Captured text; candidate session IDs, context directories, landmark paths/labels, activity timestamps, authored routing rules/examples, and bounded recent user/assistant text. No tool outputs, image or audio bytes | Existing `openrouter` secret, resolved at server access for this box; never sent to the browser | Do not use Quick chat, or omit its box grant; direct chat still works. This service has no direct TypeSafe-key fallback | mitigated; medium / authed — fixed Decisions URL, `only: ["TypeSafe"]`, `allow_fallbacks: false`, `data_collection: "deny"`. These are requested provider policy controls, not a verified zero-retention promise. Request cap 80,000 characters; 30-second timeout; response keys/probabilities validated before selection. |
 | **Google Gmail** (`gmail.ts`, `gmail-drafts.ts`) | Automatic sync | IN: full messages/attachments. OUT: **drafts only — no `gmail.send` scope exists**; autonomous sending is architecturally impossible today | Shared fleet OAuth token | `googleServices.gmail` per-box flag (default off) | ok |
@@ -218,7 +231,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token (`telegram-bot/<box>` in the secret store) | Presence of the granted secret | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
-| **Cloudflare (publish)** (`publish/setup.ts`, `go.ts`) | Human-gated CLI only. `bbx pub setup` itself calls Cloudflare's API (buckets, subdomain, Access provisioning, worker deploy — `setup.ts:165-207`) with no confirm beyond running it; **content** uploads only on `bbx pub go`'s interactive TTY confirm | Provisioning: static config, no content. Publish: the rendered bundle + a stripped edge manifest (no box identifiers) | Operator's wrangler OAuth (never stored on the box); box holds only the ingestion-scoped token | Never run `bbx pub setup` → fully inert | ok |
+| **Cloudflare (managed static sites)** (`src/publish/managed-publications.ts`, `src/services/managed-publication-runtime.ts`) | Agent `bbx pub prepare <name>` after an admin configures a connection/grant; first enable and scope changes require a signed-in box member; same-approved-scope refresh may update live content immediately | Static release files and serving manifest; Workers and R2 operations use server-side API token | Machine secret-store Cloudflare token, never returned by box API; server validates connection grant and per-box publication binding | Member can disable; removing token/grant blocks new mutations but does not itself disable deployed sites. Legacy `bbx pub go` retains its TTY guard and cannot mutate managed sites | mitigated |
 | **Tailscale** (`tailscale-setup.ts`) | Manual CLI | Traffic to the tailnet via `tailscale serve` — **never `funnel`** (a discovered funnel grant is a hard failure); control-plane traffic belongs to the OS daemon | — | `bbx tailscale stop` / don't install | ok |
 | **Adapter proxy** (`api-adapters.ts:33-104`) | Box-local code calling `/api/adapters/:adapter/*` (never automatic) | The authed request body, forwarded to **Replicate**, Mistral, Anthropic, or OpenAI with the box's stored key injected server-side | Per-box stored keys | Only reachable behind the wall; inert without a stored key | ok |
 | **Outbound URL fetches** (`proxy-image.ts`, `url-fetch.ts`) | Image proxy per render; link check on validate | The URL itself (query strings can carry data) | None forwarded | — | mitigated — SSRF guards, §4 |
@@ -245,6 +258,8 @@ wakeup cycle or routine use without a per-action confirmation.
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
+| Published project preparation | `src/publish/prepare-project.ts`, `src/publish/prepare-files.ts` | accepted | Site-local `pnpm install --frozen-lockfile` and `pnpm run build` execute as trusted box code with existing same-OS filesystem privileges. A reduced child environment removes server credential variables, but this is not a sandbox. Registry/network access is possible during installation/build. Only validated `dist/` output is staged; failures before activation do not promote a partial release. |
+| Published-site browser policy | `pub-worker/src/headers.ts`, `pub-worker/src/site.ts` | mitigated | Isolated Worker origin per publication; enforced CSP permits author-chosen HTTPS scripts/styles/fonts/images, `connect-src 'self'`, no inline JS, same-origin CORP, no permissive CORS, `nosniff`, and `no-referrer`. This limits cross-publication reads, but is not a confidentiality guarantee against malicious approved JavaScript. |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
 | **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user, plus root package installs through the §5 wrapper (distro-only, service-free). This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
 | Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
@@ -268,25 +283,28 @@ wakeup cycle or routine use without a per-action confirmation.
 
 ### 6a. Publishing
 
-The flow: `bbx pub draft` renders a single named doc to a static bundle
-and **leak-scans it before anything enters git history**
-(`draft.ts:250-255`); `bbx pub go` re-scans, shows a full file-by-file
-preview, and requires an interactive TTY confirmation that refuses on a
-non-TTY (`go.ts:115-132`) — agents cannot flip a publication live through
-the blessed path. The control is **procedural, not cryptographic**
-(`go.ts:11-19`, stated in-code): an agent with box shell access could
-script around the confirm; the real controls are the Cloudflare
-credential living outside the box, the interactive confirm, and the git +
-`bbx pub ls` audit trail.
+Two publishing systems coexist. Legacy rendered-document commands preserve
+their TTY-only `bbx pub go` confirmation (`src/publish/go.ts`); legacy
+account-tier and submission behavior is not evidence that managed sites are
+ready for those capabilities. Managed static sites use `bbx pub prepare
+<name>` through the authenticated box API. A signed-in box member approves
+first enablement and every audience/destination change. After that, a prepare
+inside the approved scope may immediately replace the live content. This is
+an ongoing publication permission, not a per-snapshot review. The server-side
+Cloudflare credential is outside the box API response, but build scripts run
+as trusted box code under the same OS user and can read machine state; this is
+an accepted host-trust tradeoff, not cryptographic agent isolation.
 
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
-| Leak scan (`leak-scan.ts`) | Scans text entries for home paths, non-owner emails, credential shapes, absolute URLs. **A backstop, not a gate**: stated blind spots are prose PII in the inlined card JSON and **binary/image assets (skipped entirely — a screenshot of a key ships clean)**; the human preview is the only real gate | accepted | med | — |
+| Leak scan (`leak-scan.ts`) | Scans text entries for likely leaks, with blind spots including contextual prose and image content. A signed-in member reviews findings and file summary for first enablement/scope change; same-scope updates after approval do not receive a snapshot approval | mitigated | med | — |
 | Bundles are fully public regardless of tier | Tier gates *who can reach the page*, not what a viewer does after saving it; `public` and `secret` bundles are stored and scanned identically | accepted | — | — |
 | `secret` tier = capability URL | `/s/<pub-id>` has **zero authentication** — the ≥128-bit CSPRNG pub-id is the credential (`manifest.ts:77-94`, `index.ts:141-143`) | accepted | med | public | The name invites misreading as access-controlled; SECURITY.md states it plainly |
-| `accounts` / `any-account` tiers | Cloudflare Access JWT, RS256 pinned (no `alg` downgrade), fail-closed on every axis (unconfigured Access → 404, empty allowlist → nobody, JWKS failure → 401) | ok | — | — |
-| Submissions (`submit.ts`) | Form-urlencoded only, 1MiB cap, manifest re-validated, no-public-submit twice-enforced; per-day cap best-effort; per-IP limit optional | ok | low | public |
-| Bucket split | `PUB_STORE` (content — worker read-only, laptop-written) vs `PUB_INGEST` (submissions — worker-written, box-readable); a stolen box connector token cannot touch published content | mitigated | — | — |
+| `accounts` / `any-account` tiers | Legacy Worker paths have Access JWT validation. Managed publication enablement is hard-blocked until per-host Access setup/readiness integration and live browser checks are complete | mitigated | — | unreachable | Follow-up feature work remains; the current managed path fails closed and does not expose an unprotected public route |
+| Managed publication binding and URLs | Server pins each publication id to its owning box, Worker host handle, account and storage target. Secret PubIds are path capabilities; randomized host handles are not capabilities. A moved account requires a new publication identity, member enablement, and disabling the old site | mitigated | high | public | Per-publication origins limit cross-site browser access; `__release/` resources remain subject to current serving state |
+| Machine credential / build trust | API token stays in server secret store and is never sent to agent API. Site install/build runs with reduced environment but same OS user and filesystem privileges | accepted | high | local | A hostile or compromised same-user process can read host secrets; managed publication does not claim that boundary |
+| Submissions (`submit.ts`) | Legacy form-urlencoded endpoint only, 1MiB cap, manifest re-validated, no-public-submit twice-enforced; per-day cap best-effort; per-IP limit optional. Submission pull-back is not part of the managed static-site flow | ok | low | public |
+| Legacy submission/content bucket split | `PUB_STORE` (legacy content — Worker read-only, laptop-written) vs `PUB_INGEST` (submissions — Worker-written, box-readable); the connector token cannot touch published content. Managed sites instead use server-held Cloudflare API credentials and per-box publication bindings | mitigated | — | — |
 | Edge manifest hygiene | Provenance/box identifiers stripped from everything edge-side (`manifest.ts:10-12`) | ok | — | — |
 | Revoke (`lifecycle.ts:253-298`) | Tombstone written first, synchronously (R2 strongly consistent — next request 410s); bundle deletion best-effort after; `Cache-Control: no-store` throughout so revoked URLs can't serve from cache; partial cleanup risks orphaned bytes, never re-exposure | ok | — | — |
 | Pre-auth oracle + log flood on `/a/` routes | Manifest status readable before Access verification; `any-account` access-log writes before asset validation | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
@@ -437,9 +455,12 @@ Every `accepted` item, with its rationale:
    >5-min mid-critical-section suspension against a sub-millisecond
    synchronous RMW; effectively unreachable on the server deploy path.
    Accepted 2026-07-21 over fencing-token CAS. (§4)
-9. **Leak-scan blind spots + bundles-are-public** — the human
-   file-by-file preview is the real publish gate; binaries ship
-   unscanned; tier gates viewers, not content. (§6a)
+9. **Leak-scan blind spots + bundles-are-public** — members review the
+   file summary and findings for first enablement/scope changes, but an
+   already-approved scope permits immediate content refresh without
+   snapshot approval; binaries and contextual appropriateness remain
+   scan limitations. Public and secret-link content is fully readable by
+   anyone who can reach its URL. (§6a)
 10. **`secret`-tier publications are capability URLs** — unguessability
     (≥128-bit) is the entire access control. (§6a)
 11. **Prompt injection is unmitigated by containment** — accepted for now
@@ -463,6 +484,16 @@ Every `accepted` item, with its rationale:
    and the install is host-wide. Accepted 2026-09-17 on the boxholder's
    judgment that distro packages are safe, over asking the boxholder for
    each install. (§5)
+
+14. **Managed publication shares host trust with the box agent** — the
+   Cloudflare API token stays in the server's machine secret store and is
+   never returned by the box API, but box project install/build code runs
+   under the same OS user and existing filesystem privileges. A reduced
+   child environment is credential hygiene, not a sandbox. This is the
+   accepted trust boundary for the first managed publisher; per-publication
+   member approval protects audience/destination changes, not each content
+   update. Accepted 2026-09-24 in the
+   [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being

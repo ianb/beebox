@@ -31,6 +31,20 @@ const CSP = [
   "connect-src 'none'",
 ].join("; ");
 
+const SITE_CSP = [
+  "default-src 'none'",
+  "script-src 'self' https:",
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' data: https:",
+  "font-src 'self' data: https:",
+  "connect-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'none'",
+].join("; ");
+
 const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "X-Robots-Tag": "noindex",
   "Referrer-Policy": "no-referrer",
@@ -45,10 +59,15 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
  * includes `Content-Type`, so an asset's already-set content type survives.
  * Every response the Worker returns passes through here exactly once.
  */
-export function withSecurityHeaders(res: Response): Response {
+export function withSecurityHeaders(res: Response, mode?: "legacy" | "site"): Response {
   const headers = new Headers(res.headers);
-  for (const name of Object.keys(SECURITY_HEADERS)) {
-    const value = SECURITY_HEADERS[name];
+  const effectiveMode = mode ?? "legacy";
+  const securityHeaders =
+    effectiveMode === "site"
+      ? { ...SECURITY_HEADERS, "Content-Security-Policy": SITE_CSP, "Cross-Origin-Resource-Policy": "same-origin" }
+      : SECURITY_HEADERS;
+  for (const name of Object.keys(securityHeaders)) {
+    const value = securityHeaders[name];
     if (value !== undefined) headers.set(name, value);
   }
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });

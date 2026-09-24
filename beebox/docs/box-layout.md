@@ -71,6 +71,7 @@ dependency.
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
 │   ├── views/                      custom view definitions
+│   ├── publications/               box-authored static publication sources + private notes
 │   └── tricks/                     agent-authored scripts (keeps its own nested package.json)
 │                                                       ── box namespace (underscore) ──
 ├── _content/                      ONLY user content — the layout below
@@ -248,12 +249,13 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 |------|---------|
 | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md. |
 | `src/views/` | Custom view definitions (rendering customization). |
+| `src/publications/` | Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here. |
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `src/tricks/lib/` | Shared helpers used by `src/tricks/scripts/`. |
 
 ## What's *not* in a box
 
-- **No app code.** A box stores state and config; behaviour lives in the beebox repo.
+- **No Bee Box application/server code.** A box stores state and config and may contain authored publication source under `src/publications/`; those site projects build to static files and never run inside the Bee Box server.
 - **No global secrets file inside a box.** Connector credentials live in the machine-level secret store (`docs/secrets.md`), outside every box tree, with a per-box grant deciding who may resolve what; secrets do not commute between boxes without an explicit grant. A handful of not-yet-migrated connectors still keep a box-local `_config/connectors/*.secret.json`.
 - **No cross-box references.** Boxes are self-contained — one box never reads from another's filesystem.
 

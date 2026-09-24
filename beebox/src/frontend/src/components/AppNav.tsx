@@ -57,6 +57,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
   const activePath = workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path;
   const isOnSettings = activePath === SYSTEM_CARD_PATHS.settings;
   const isOnAdmin = activePath === SYSTEM_CARD_PATHS.admin;
+  const isOnPublications = location.pathname === `${base}/publications`;
 
   return (
     <Dropdown
@@ -89,6 +90,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="bbx-profile-menu-publications" to={href(`${base}/publications`)} active={isOnPublications}>Publications</MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>

@@ -36,6 +36,8 @@ import { voiceRecordingRouter } from "./routers/voice-recording.js";
 import { wakeupRouter } from "./routers/wakeup.js";
 import { gmailRouter } from "./routers/gmail.js";
 import { searchRouter } from "./routers/search.js";
+import { cloudflarePublishConnectionsRouter } from "./routers/cloudflare-publish-connections.js";
+import { publicationsRouter } from "./routers/publications.js";
 
 export const appRouter = router({
   quickChat: quickChatRouter,
@@ -70,6 +72,8 @@ export const appRouter = router({
   share: shareRouter,
   inventory: inventoryRouter,
   secrets: secretsRouter,
+  cloudflarePublishConnections: cloudflarePublishConnectionsRouter,
+  publications: publicationsRouter,
   presentation: presentationRouter,
   voiceRecording: voiceRecordingRouter,
   wakeup: wakeupRouter,

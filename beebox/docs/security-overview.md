@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-21
+date: 2026-09-24
 model: gpt-6-astra
-reviewed-by: Ian
+reviewed-by: DRAFT — unreviewed
 ---
 
 # Security overview
@@ -12,6 +12,11 @@ reviewed-by: Ian
 `34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
 previous full-inventory anchor. Unrelated historical changes, the private
 security tier, and the complete surface map were not re-audited.
+
+**Scoped amendment (2026-09-24; DRAFT — unreviewed):** Updates managed site
+publishing authority and Cloudflare credential custody against
+`aa084d01ebdee12e2e88d210c2c5a5c85b7cc294` plus the uncommitted publish-pages
+worktree. This is not a full security-report refresh.
 
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
@@ -90,10 +95,12 @@ We're telling you this plainly because the honest mitigations today are
 thin. There is no injection filter and no containment sandbox. What
 actually reduces the risk is the shape of how you run it: it's your own
 single-operator box (the blast radius is your data, not a stranger's),
-scheduled processing is off until you enable it, and the few dangerous
-actions — publishing, changing credentials — refuse to happen without a
-human present. That's a real posture, but it's mitigation-by-how-you-
-deploy, not a guarantee the agent can't be turned against you. Tighter
+scheduled processing is off until you enable it, and account credentials
+are managed outside the box agent's API. A signed-in box member approves a
+site's first enable and any audience or destination change; after that the
+agent may publish content updates within the approved scope. This is a real
+permission boundary at the app API, not a sandbox against hostile code running
+as the same OS user. Tighter
 containment is
 [tracked](../../issues/features/2026-07-20-agent-containment-allowed-directories.md)
 and not yet built. Until it is, be deliberate about which untrusted
@@ -140,10 +147,11 @@ The summary:
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
   the remote *you* configured; no remote, no push.
-- **Cloudflare** — only if you set up publishing. `bbx pub setup` itself
-  calls Cloudflare's API to provision buckets and deploy the worker (no
-  box content); box content uploads only when you interactively confirm
-  a publish (below).
+- **Cloudflare** — if configured, the server uses its machine-held API token
+  to provision per-publication Workers/storage and upload release files after
+  `bbx pub prepare <name>`. A member enables a new site or approves a scope
+  change; same-scope content refreshes can publish immediately. Managed
+  account-restricted sites remain blocked pending Access setup and live proof.
 - **Nothing else.** The running system sends no telemetry, analytics,
   crash reports, or update checks — verified absent, not just
   unpromised. (The monorepo's developer maintenance scripts in `bin/`
@@ -176,18 +184,18 @@ The full route-by-route table is
 
 ## Publishing
 
-Publishing a document is the one flow that deliberately makes box
-content public, so it gets its own controls: a leak scan runs before
-anything enters git history, and flipping a publication live requires a
-human typing a confirmation at an interactive terminal — an agent can't
-do it through the blessed path. Be clear about two things the design
-says out loud: the leak scan is a **backstop, not a gate** (it can't
-read prose or the inside of images — the file-by-file preview you
-confirm is the real control), and a published bundle is **fully public
-content** regardless of tier. Tiers gate who can *reach* a page —
-`secret` means an unguessable capability URL with no login, `accounts`
-means Cloudflare Access with an email allowlist — not what a viewer does
-with it after loading it.
+Managed static-site publishing deliberately exposes selected box content.
+Before first enablement or a scope change, a signed-in member reviews the
+requested audience, destination, file summary, and leak-scan findings in the
+app. That grant permits subsequent content updates in the same scope without
+per-snapshot approval. The agent can build and prepare; a changed audience or
+destination cannot go live until a member approves it. The legacy rendered-doc
+`bbx pub go` remains TTY-gated. Leak scanning is a backstop, not a guarantee
+that content is appropriate or free of secrets. Public and secret-link
+bundles are fully public to anyone with the URL; a secret URL is a bearer
+capability, not a login. Managed account-restricted publication is not ready
+until Access provisioning and browser isolation are implemented and live
+verified.
 
 ## Known limitations and accepted risks
 
@@ -206,6 +214,14 @@ The ones you should actually weigh:
   The owner's own recovery is still `bbx auth set-password` on the host;
   full email self-service reset was rejected as operationally complex,
   and MFA/passkeys are deferred.
+- **Managed-site code and same-user trust**: project install/build scripts
+  run as trusted box code with existing filesystem privileges. The child
+  process environment omits server credentials, but a same-OS-user process
+  can read the machine secret store. Site JavaScript may load author-chosen
+  HTTPS modules/resources; CSP and cross-origin response policy reduce
+  cross-publication reads but do not guarantee confidentiality against
+  malicious approved code. See the accepted publishing trust tradeoff in
+  [§8 of the structured report](security-report.md#8-accepted-risks-roll-up).
 - **One Google token, broad scopes, all boxes**: per-box service policy
   is enforced in application code, not by Google. Compromise of the
   token file is fleet-wide Google access

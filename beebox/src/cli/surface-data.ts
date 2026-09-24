@@ -131,7 +131,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "pub",
-    subcommands: ["draft", "ls", "status"],
+    subcommands: ["draft", "ls", "status", "prepare", "sites", "id"],
     audience: "agent",
     smoke: { run: ["pub", "ls"] },
   },

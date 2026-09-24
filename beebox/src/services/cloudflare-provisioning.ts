@@ -62,6 +62,7 @@ export interface DeployedBinding {
   name: string;
   /** Plain-text var value, when the binding is a var. */
   text?: string | undefined;
+  bucketName?: string | undefined;
 }
 
 /** The deployed script's settings slice status inspects (bindings incl. plain-text vars). */
@@ -111,7 +112,7 @@ const subdomainResultSchema = z.object({ subdomain: z.string() });
 const scriptSubdomainResultSchema = z.object({ enabled: z.boolean(), previews_enabled: z.boolean().optional() });
 const scriptSettingsResultSchema = z.object({
   bindings: z
-    .array(z.object({ type: z.string(), name: z.string(), text: z.string().optional() }))
+    .array(z.object({ type: z.string(), name: z.string(), text: z.string().optional(), bucket_name: z.string().optional() }))
     .optional(),
 });
 
@@ -195,7 +196,12 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
     async getScriptSettings(scriptName: string): Promise<DeployedScriptSettings | null> {
       const result = await getResult("script settings probe", { url: `${base}/workers/scripts/${encodeURIComponent(scriptName)}/settings`, resultSchema: scriptSettingsResultSchema });
       if (result === null) return null;
-      return { bindings: result.bindings ?? [] };
+      return { bindings: (result.bindings ?? []).map((binding) => ({
+        type: binding.type,
+        name: binding.name,
+        ...(binding.text !== undefined ? { text: binding.text } : {}),
+        ...(binding.bucket_name !== undefined ? { bucketName: binding.bucket_name } : {}),
+      })) };
     },
     async getScriptSubdomain(scriptName: string): Promise<ScriptSubdomainSettings | null> {
       const result = await getResult("script subdomain probe", { url: `${base}/workers/scripts/${encodeURIComponent(scriptName)}/subdomain`, resultSchema: scriptSubdomainResultSchema });
