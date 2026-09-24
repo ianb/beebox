@@ -306,10 +306,6 @@
   publish: dev/testing/knowledge-audits.md
   description: "Tests that prompt a real box agent and check what it knows."
 
-- source: beebox/docs/knowledge-taxonomy.md
-  publish: dev/knowledge-taxonomy.md
-  description: "Where each kind of box knowledge lives."
-
 - source: beebox/docs/composer-states.md
   publish: dev/composer-states.md
   description: "The chat input state machine."

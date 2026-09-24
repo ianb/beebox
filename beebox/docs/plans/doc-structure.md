@@ -336,9 +336,20 @@ Dispositions:
   they are repaired by hand since `--fix` cannot resolve a deleted file.
   **Boxholder decision** at pilot review: remove the page, or keep it as a
   pointer-only narrative (a page that says less than the parent's table).
-- `knowledge-taxonomy.md` (492 lines): dispositioned section by section,
-  and the table of dispositions is written into this plan before any of it
-  moves (chunk 2). Known so far: "Knowledge Taxonomy" and "Context shifts
+- `knowledge-taxonomy.md` (492 lines): dispositioned section by section
+  (table below, applied in chunk 2). Written before the move:
+
+  | Section | Disposition |
+  |---|---|
+  | Knowledge Taxonomy (nine levels), Context shifts knowledge levels, How the knowledge chain works | `testing/knowledge-audits.md`, the "Knowledge levels" aspect |
+  | Prompt Style Effects | `testing/knowledge-audits.md`, "Writing one" |
+  | Test Prompt Guide (the watch-for list) | `testing/knowledge-audits.md`, "Reading results" |
+  | Areas 1 to 9 prompt lists, Extension test prompts, Chat-specific view knowledge, Expected levels summary | superseded by `src/dev/knowledge-audits.yaml` (60 sections, 336 entries, every area present); frozen in `reports/knowledge-taxonomy-catalog-2026-02-23.md` |
+  | Extending the Box (can / cannot / box-local schemas) | 2026-02 capability notes, unverified since; frozen in the report, not promoted to reference |
+  | Future Test Categories | frozen in the report |
+  | Test Run Notes and Personality Test Run Notes (2026-02-23) | frozen in the report; they date it |
+
+  The earlier draft of this disposition read: "Knowledge Taxonomy" and "Context shifts
   knowledge levels" become the "Knowledge levels" aspect of
   `knowledge-audits.md`; "Prompt Style Effects" and "Test Prompt Guide" go
   under "Writing one"; the nine numbered per-area sections mix candidate

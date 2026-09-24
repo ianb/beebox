@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-24T23:46:54Z
+Generated: 2026-09-24T23:53:40Z
 Total documents: 416
 
 ## Issues
@@ -54,7 +54,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure.md** — "Documentation structured like code" (596 lines) · proposal · draft
+- **docs/plans/doc-structure.md** — "Documentation structured like code" (607 lines) · proposal · draft
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -190,7 +190,6 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:38 (mention) — - `CLAUDE.md:107-110`: read before writing, prefer doctests, and retain raw
 - docs/implemented-plans/websocket-chat-transport.md:236 (mention) — and it reuses the framework we're already deep in (CLAUDE.md's "tRPC by
 - docs/implemented-plans/workstreams.md:751 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
-- docs/knowledge-taxonomy.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
 - docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/migrations.md:550 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
 - docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
@@ -224,6 +223,7 @@ Referenced by:
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
+- docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:62 (mention) — - **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but the schemas dir's
 - docs/reports/prompt-calibration-pilot-2026-09-12.md:27 (mention) — - Authority: the same five requests with complete root CLAUDE.md, launch skill,
 - docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/testing/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
@@ -566,6 +566,7 @@ Referenced by:
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/refresh-maps-correctness.md:190 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
+- docs/testing/knowledge-audits.md:189 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - user-stories/catalog/2026-08-21.md:2637 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:123 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
@@ -1041,7 +1042,7 @@ Referenced by:
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/chat-scroll-model.md:199 (mention) — Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
 - docs/plans/chat-scroll-model.md:227 (link) — opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
-- docs/plans/doc-structure.md:356 (mention) — - `chat-scroll-testing.md`: **not moved**. It is a test procedure for one
+- docs/plans/doc-structure.md:367 (mention) — - `chat-scroll-testing.md`: **not moved**. It is a test procedure for one
 - docs/testing/dev-stubs.md:43 (link) — [chat-scroll-testing.md](../chat-scroll-testing.md). Note that `/fakestream`
 - src/frontend/src/components/chat/CLAUDE.md:82 (mention) — PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:43 (link) — [chat scroll testing](../../beebox/docs/chat-scroll-testing.md).
@@ -1129,9 +1130,9 @@ Referenced by:
 - docs/implemented-plans/gmail-explicit-action.md:111 (mention) — `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
-- docs/knowledge-taxonomy.md:205 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
+- docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - user-stories/catalog/2026-08-21.md:6005 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
@@ -1228,7 +1229,7 @@ Referenced by:
 - docs/agent-testing.md:7 (mention) — workflow](development-workflow.md).
 - docs/development-process.md:27 (link) — **[The development workflow](development-workflow.md)** covers how a piece of
 - docs/guides.md:19 (link) — | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-wo
-- docs/plans/doc-structure.md:586 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
+- docs/plans/doc-structure.md:597 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
 - docs/technologies.md:5 (mention) — workflow](development-workflow.md), and [testing what agents know and
 
 References:
@@ -1546,7 +1547,7 @@ Title: "Guide index" | 69 lines | current reference
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:304 (link) — Manual review restored the on-demand [guide index](../guides.md), the atomic-write
-- docs/plans/doc-structure.md:521 (mention) — - `guides.md`, the hand-maintained topic index: once subjects are
+- docs/plans/doc-structure.md:532 (mention) — - `guides.md`, the hand-maintained topic index: once subjects are
 
 References:
 - → docs/README.md (link)
@@ -1660,27 +1661,6 @@ Title: "On-demand image transforms" | 33 lines | current reference
 
 Referenced by:
 - docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](image-transforms.md))
-
-#### docs/knowledge-taxonomy.md
-
-Title: "Agent Knowledge Audit: What It Should Know and How to Verify" | 493 lines | current reference
-
-Referenced by:
-- docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
-- docs/implemented-plans/card-view-widgets.md:580 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
-- docs/implemented-plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
-- docs/plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
-- docs/plans/source-available-release.md:178 (mention) — test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
-- docs/testing/knowledge-audits.md:122 (link) — See [knowledge-taxonomy.md](../knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
-- ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** bbx's always-loaded/conditionally-loaded/referenced-but-n
-- ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
-- ../research/pai/information-layout.md:9 (mention) — bbx's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
-
-References:
-- → CLAUDE.md (mention)
-- → docs/README.md (mention)
-- → docs/connectors.md (mention)
-- → docs/triage.md (mention)
 
 #### docs/landmarks.md
 
@@ -2053,7 +2033,7 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:465 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/implemented-plans/todo-annotation.md:65 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
-- docs/plans/doc-structure.md:535 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
+- docs/plans/doc-structure.md:546 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:15 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
@@ -2089,7 +2069,6 @@ Referenced by:
 - docs/guides.md:5 (link) — for operating instructions. [Documentation organization](README.md) describes
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
-- docs/knowledge-taxonomy.md:43 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - docs/plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
@@ -2466,11 +2445,11 @@ Referenced by:
 - docs/implemented-plans/one-root-box-layout.md:465 (mention) — (`docs/triage.md`).
 - docs/implemented-plans/questions-end-to-end.md:37 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
 - docs/implemented-plans/scanner-ingest.md:606 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
-- docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:34 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
+- docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:181 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/reports/plan-directory-migration-history-2026-09-13.md:23 (mention) — operation is in `docs/triage.md` and the mixed design record is in
 - docs/reports/triage-design-2026-09-13.md:4 (link) — instructions, see [the triage guide](../triage.md).
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
@@ -3032,7 +3011,6 @@ References:
 - → README.md (mention)
 - → docs/prompt-logging.md (mention)
 - → docs/box-layout.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
 
 #### docs/implemented-plans/box-git-lock.md
 
@@ -3375,7 +3353,6 @@ References:
 - → code-style.md (mention)
 - → frontend.md (mention)
 - → CLAUDE.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
 - → docs/testing.md (mention)
 
 #### docs/implemented-plans/cards-as-markdown-rfc.md
@@ -3918,7 +3895,6 @@ References:
 - → docs/implemented-plans/mvp-implementation-guide.md (mention)
 - → docs/triage.md (mention)
 - → docs/event-bus.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
 - → docs/README.md (mention)
 - → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
 - → docs/maintenance.md (mention)
@@ -6036,7 +6012,7 @@ No references in or out.
 
 #### docs/plans/doc-structure.md **[ORPHAN]**
 
-Title: "Documentation structured like code" | 596 lines | proposal | draft
+Title: "Documentation structured like code" | 607 lines | proposal | draft
 
 References:
 - → ../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md (frontmatter)
@@ -6055,7 +6031,6 @@ References:
 - → docs/testing.md (mention)
 - → docs/testing/tours.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
 - → docs/maintenance.md (mention)
 - → CLAUDE.md (mention)
 - → docs/mobile-contract.md (mention)
@@ -6066,6 +6041,7 @@ References:
 - → docs/testing/smoke.md (mention)
 - → docs/testing/field-testing.md (mention)
 - → docs/card-validation.md (mention)
+- → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
 - → docs/chat-scroll-testing.md (mention)
 - → docs/guides.md (mention)
 - → docs/questions.md (mention)
@@ -6759,7 +6735,7 @@ References:
 - → docs/example-names.md (mention)
 - → docs/architecture/family.md (mention)
 - → docs/plans/README.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
+- → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
 - → user-stories/catalog/2026-06-26.md (mention)
 - → docs/implemented-plans/box-migration.subplan.md (mention)
 - → docs/plans/installation-story.md (mention)
@@ -6972,6 +6948,22 @@ References:
 - → docs/triage.md (mention)
 - → docs/box/landmark-curation.md (mention)
 
+#### docs/reports/knowledge-taxonomy-catalog-2026-02-23.md
+
+Title: "Knowledge audit prompt catalog and run notes (frozen 2026-02-23)" | 431 lines | dated report
+
+Referenced by:
+- docs/plans/doc-structure.md:347 (mention) — | Areas 1 to 9 prompt lists, Extension test prompts, Chat-specific view knowledge, Expected levels summary | superseded
+- docs/plans/source-available-release.md:178 (mention) — test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the rea
+- docs/testing/knowledge-audits.md:122 (link) — The knowledge levels and prompt-style guidance are below; the 2026-02 prompt catalog is frozen in [a report](../reports/
+- ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/reports/knowledge-taxonomy-catalog-2026-02-23.md`). There is no plugin manifest, no
+
+References:
+- → docs/testing/knowledge-audits.md (link)
+- → CLAUDE.md (mention)
+- → docs/connectors.md (mention)
+- → docs/triage.md (mention)
+
 #### docs/reports/plan-directory-migration-history-2026-09-13.md
 
 Title: "Plan-directory migration history" | 48 lines | dated report
@@ -7104,7 +7096,7 @@ References:
 
 #### docs/testing/knowledge-audits.md
 
-Title: "Knowledge Audits" | 146 lines | current reference
+Title: "Knowledge Audits" | 218 lines | current reference
 
 Referenced by:
 - docs/agent-testing.md:43 (link) — [knowledge-audits.md](testing/knowledge-audits.md).
@@ -7118,6 +7110,7 @@ Referenced by:
 - docs/plans/document-comments.md:839 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
+- docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:6 (link) — [knowledge audits](../testing/knowledge-audits.md). What remains here is the
 - docs/testing.md:27 (link) — - [Knowledge audits](testing/knowledge-audits.md): does the box agent know X?
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
 - user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
@@ -7131,6 +7124,8 @@ Referenced by:
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:53 (link) — ([docs](../../../beebox/docs/testing/knowledge-audits.md)) and the doc-generation
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:67 (link) — ([`docs/knowledge-audits.md`](../../beebox/docs/testing/knowledge-audits.md)) when the
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:11 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
+- ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** bbx's always-loaded/conditionally-loaded/referenced-but-n
+- ../research/pai/information-layout.md:9 (mention) — bbx's comparable thinking is `docs/testing/knowledge-audits.md` (the knows-directly /
 
 References:
 - → CLAUDE.md (mention)
@@ -7138,7 +7133,8 @@ References:
 - → docs/reports/knowledge-audit-rerun-2026-07-03.md (mention)
 - → MAP.md (at-include) **[BROKEN]**
 - → docs/testing.md (mention)
-- → docs/knowledge-taxonomy.md (link)
+- → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (link)
+- → README.md (mention)
 
 #### docs/testing/session-critiques.md
 

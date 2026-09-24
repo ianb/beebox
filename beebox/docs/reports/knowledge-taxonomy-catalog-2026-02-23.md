@@ -1,74 +1,12 @@
-# Agent Knowledge Audit: What It Should Know and How to Verify
+# Knowledge audit prompt catalog and run notes (frozen 2026-02-23)
 
-## Knowledge Taxonomy
-
-When we talk about what the agent "knows," there are distinct phenomena worth naming. These categories mix together where information lives, what retrieval strategy is needed, and what failure modes look like — but that's because they describe the distinct behaviors agents actually exhibit. Some are about the knowledge architecture (knows directly, knows about), some about retrieval effort (discoverable, deducible, researchable), and some about what goes wrong when retrieval doesn't happen (guessable, improvised). They don't form a tidy linear spectrum — each is a phenomenon you might encounter when testing or observing an agent, and a starting point for further investigation.
-
-1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CLAUDE.md` → `.beebox/agent-guide.md`, plus any `.claude/rules/` files triggered by the current task. These answers should be immediate and accurate.
-
-2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `node_modules/beebox/box-docs/card-memo.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
-
-3. **Discoverable** — Information is available locally but requires search or exploration to locate. For example, grepping docs for a keyword, listing directory contents, or reading config files. The agent isn't told where to look — it has to figure that out. Success depends on search strategy and how discoverable the information is.
-
-4. **Deducible** — Requires investigation and reasoning from local artifacts. For instance, reading beebox source code to understand how a feature works, or examining multiple files to piece together a procedure. The agent may not always succeed, and different agents might reach different (plausible) conclusions from the same evidence.
-
-5. **Researchable** — The information exists somewhere on the internet but not locally. The agent would need to use web search to find it. Examples: how a third-party API works, what format a particular standard uses, best practices for something the codebase doesn't document. Distinct from deducible because the answer can't be found by reading local files — it requires going outside the environment.
-
-6. **Guessable** — Appears to be answerable from general knowledge, but the correct answer for beebox may differ from the common/default answer. Dangerous because the agent will sound confident. Example: guessing how the agentic loop works based on general knowledge of agent systems, when beebox has specific conventions.
-
-7. **Improvised** — The agent constructs a plausible approach without checking if there's an established one. Unlike guessing (which is about facts), this is about strategy: the agent builds something that works but misses patterns or tools it should have used. Example: hand-parsing frontmatter with string splitting when `beebox/cards` already has a parser, or hand-rolling a card file instead of using `bbx create`. The result may actually function, which makes it harder to catch than a wrong guess — the problem is that it's not the *right* way, and it'll diverge from conventions. Often a fallback when the agent decides it can figure things out as it goes rather than looking up how things are done.
-
-8. **Knows it doesn't know** — The agent is aware of the gap. Something is acknowledged to exist but the agent genuinely lacks access to the information. Better than guessing — the agent can say "I don't have that information" or ask. Example: connector auth secrets live in `_config/connectors/*.secret.*` — ideally these would be inaccessible to the agent (not just forbidden), so the agent knows connectors need credentials but can't read the actual values. (Today the agent *can* read these files, which makes this "deducible" rather than true "doesn't know" — a gap in the access model.) Relatedly, a box's `.claude/settings.json` permission rules don't gate engine-spawned agents at all — `runAgent` hardcodes `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`) — so those rules only shape a human's interactive Claude Code session in the box, not the wakeup/procedure/chat runs the engine drives.
-
-9. **Does not know** — Beyond the agent's knowledge boundaries. Pursuing the question yields no answer. The agent may have given up while the information was still deducible.
-
-### Context shifts knowledge levels
-
-The same information can sit at different levels depending on what the agent is currently doing. In Claude Code, this happens concretely through conditional rules:
-
-- `src/schemas/CLAUDE.md` is **knows directly** when the agent is editing files in `src/schemas/` (Claude Code auto-loads directory CLAUDE.md files). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
-
-- `.claude/rules/card-memo.md` is **knows directly** when the agent reads or edits a `*.memo.card` file (the `paths:` glob triggers loading). When working on other card types, memo-specific knowledge is **discoverable** at best.
-
-- A guide card's compiled rules (e.g., `_content/docs/generated/intake-guide.md`) are **knows directly** when processing an intake job (the job-specific rule file references them). Outside that context, the same information is **knows about** (referenced in the agent guide's card type list) or **discoverable** (via directory listing).
-
-This means testing should consider: what was the agent *doing* when it answered? A question about memo card structure might be "knows directly" mid-procedure but "knows about" in a cold prompt.
-
-### How the knowledge chain works in Claude Code
-
-The agent's context is built in layers, each corresponding to a knowledge level:
-
-- **Always loaded** → *knows directly*: `CLAUDE.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
-- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `src/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
-- **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card type specs, command reference, procedure authoring guide, domain guides — see its `README.md` index) and box-compiled docs in `_content/docs/generated/*.md` (guide compilations, personality, box-local card type specs). The agent guide points to these by path.
-- **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
-- **Outside the box** → *deducible*: beebox source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/beebox` from inside the box). Accessible if the agent knows where to look, but outside the box.
-- **On the internet** → *researchable*: Third-party API docs, standards, libraries the codebase depends on but doesn't document locally.
-
-## Prompt Style Effects
-
-How you phrase a prompt changes which knowledge level the agent actually operates at. The same question can produce different behavior depending on whether the prompt encourages speed or thoroughness:
-
-- **No qualifier** (default) — The agent decides how much effort to spend. Fine for "knows directly" and usually fine for "knows about" — the agent will typically follow a reference when it has one. Less predictable for discoverable or researchable questions, but that's not purely a downside — it also gives the agent room to judge what level of effort the specific prompt warrants. Sometimes the agent correctly decides a quick answer is fine; sometimes it correctly decides to dig deeper.
-
-- **"Give me a quick answer"** / **"Be brief"** — Pushes the agent toward answering from what it already has in context. Lower latency, which matters for interactive experiences. Also good for testing whether something is truly "knows directly" — if the agent gets it right without reading files, the knowledge is well-placed. But increases guessing: the agent may confidently answer a "knows about" question without reading the doc, getting details wrong.
-
-- **"Think it through"** / **"Take your time"** — Encourages the agent to follow references and reason more carefully. "Knows about" questions should reliably get doc reads. But may still not trigger exploration for discoverable questions — the agent thinks harder about what it already has rather than going looking for new information.
-
-- **"Research this"** / **"Investigate thoroughly"** — Most likely to push the agent into exploration mode. Discoverable and even deducible questions have a better shot. But also the most expensive in tokens and time, and may lead the agent down irrelevant paths.
-
-When testing, try the same question with different styles to see where the boundary is between "knows directly" and "knows about" — does adding "be brief" cause the agent to guess instead of looking things up? That reveals which knowledge is genuinely in context vs. just referenced.
-
-## Test Prompt Guide
-
-Each test prompt below is annotated with its **expected knowledge level** — what level the agent *should* be at for that question. This tells us what to look for in the response: an immediate answer (knows directly), a file read then answer (knows about), or exploration (discoverable).
-
-When running `bbx prompt`, watch for:
-- **Knows directly**: Agent answers directly without reading files → good
-- **Knows about**: Agent reads the right referenced doc, then answers → good
-- **Knows about but guesses**: Agent answers without reading the doc → risky, may be wrong on details
-- **Discoverable**: Agent searches/explores, finds the answer → good but slow
-- **Guessable**: Agent answers confidently but incorrectly → bad, indicates a documentation gap
+Frozen 2026-09-24 from `docs/knowledge-taxonomy.md`. The live audit catalog is
+`src/dev/knowledge-audits.yaml`; the knowledge levels and prompt-style guidance
+that were in this file now live in
+[knowledge audits](../testing/knowledge-audits.md). What remains here is the
+2026-02 per-area prompt list, the extension capability notes of that date, the
+"future test categories" list, and the first run notes. Do not update in
+place.
 
 ## 1. Box Structure and Navigation
 

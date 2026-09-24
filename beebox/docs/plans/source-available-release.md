@@ -175,7 +175,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   boxholder/`example-names` convention.
 - **Why.** `beebox/CLAUDE.md:103` requires generic shared text; these
   violate it: `test/schemas/personality-boxholder.doctest.md:20` (real name as
-  test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
+  test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
   name), `user-stories/catalog/2026-06-26.md` (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The
   `agent-doctest/LICENSE` + `agent-doctest/README.md` real-name uses are
