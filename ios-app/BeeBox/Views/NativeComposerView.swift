@@ -314,9 +314,9 @@ struct NativeComposerView: View {
                 )
                 .disabled(isSending)
 
-                textEntry
+                textEntryWithKeywordHint
 
-                trailingControlWithKeywordHint
+                trailingControl
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -325,22 +325,24 @@ struct NativeComposerView: View {
         }
     }
 
-    private var trailingControlWithKeywordHint: some View {
-        trailingControl
-            .overlay(alignment: .bottomTrailing) {
-                if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
-                    Text(currentKeywordHint)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.thinMaterial, in: Capsule())
-                        .fixedSize()
-                        .offset(y: -64)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
+    private var textEntryWithKeywordHint: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+                Text(currentKeywordHint)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
+            textEntry
+        }
+        .frame(minWidth: 0, maxWidth: .infinity)
     }
 
     private var hasKeywordHintText: Bool {
