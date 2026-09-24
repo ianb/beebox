@@ -18,7 +18,8 @@ tour(
     await t.go("/chat?session=new");
     await t.checkpoint("fresh-chat");
 
-    await t.expect.heading("Chat", { level: 1 });
+    await t.expect.heading("Workspace", { level: 1 });
+    await t.expect.landmark("Compose message");
     await t.expect.button("Add");
     await t.expect.noPageErrors();
 
