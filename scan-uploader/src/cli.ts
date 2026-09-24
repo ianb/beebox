@@ -82,7 +82,7 @@ async function main(): Promise<number> {
     // a test or a future caller drives `runAllTargets` directly.
     const result = await runAllTargets(config, { retryRejected });
     reportDrift(result.boxes);
-    await notifySweep(result.boxes);
+    await notifySweep(result.boxes, { photosFound: result.photosFound });
     return result.exitCode;
   } catch (e) {
     console.error(`scan-uploader: ${errorMessage(e)}`);

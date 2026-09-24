@@ -11,6 +11,7 @@ import { errorMessage } from "./error-guards.js";
 import { runTarget, type RunOptions, type RunSummary } from "./run-target.js";
 import { SETTLE_WINDOW_MS } from "./settle.js";
 import { sleep } from "./sleep.js";
+import { exportPhotos } from "./photos-export.js";
 
 /**
  * How many times a run comes back for files the settle gate skipped, and how
@@ -64,6 +65,7 @@ export interface RunAllResult {
   /** Only boxes that produced a summary — a target that threw before its sweep
    * contributes nothing here, and is reported on stderr and in `exitCode`. */
   readonly boxes: readonly BoxSummary[];
+  readonly photosFound: readonly { readonly album: string; readonly count: number }[];
 }
 
 export function printSummary(target: TargetConfig, summary: RunSummary): void {
@@ -92,12 +94,21 @@ export async function runAllTargets(config: UploaderConfig, options: RunAllOptio
   // Keyed by server + box; `BoxSummary.box` carries the display label.
   const totals = new Map<string, { box: string; summary: RunSummary }>();
   let exitCode = 0;
+  const photosFound: { album: string; count: number }[] = [];
+  const exported = new Set<TargetConfig>();
   let pending: readonly TargetConfig[] = config.targets;
   for (let round = 0; ; round++) {
     const unsettled: TargetConfig[] = [];
     for (const target of pending) {
       let summary: RunSummary;
       try {
+        if (!exported.has(target)) {
+          exported.add(target);
+          if (target.photos !== undefined) {
+            const count = await exportPhotos(target);
+            if (count > 0) photosFound.push({ album: target.photos.album, count });
+          }
+        }
         summary = await deps.runOne(target, runOptions);
       } catch (e) {
         console.error(`${target.folder}: ${errorMessage(e)}`);
@@ -111,7 +122,7 @@ export async function runAllTargets(config: UploaderConfig, options: RunAllOptio
       if (summary.skippedUnsettled > 0) unsettled.push(target);
     }
     if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) {
-      return { exitCode, boxes: Array.from(totals.values()) };
+      return { exitCode, boxes: Array.from(totals.values()), photosFound };
     }
     await deps.wait(SETTLE_RETRY_WAIT_MS);
     pending = unsettled;
