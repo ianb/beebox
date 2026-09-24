@@ -30,6 +30,7 @@ import {
 } from "../../publish/lifecycle.js";
 import { goPublication } from "../../publish/go.js";
 import { pubSetupCommand, pubStatusCommand } from "./pub-setup.js";
+import { pubManagedIdCommand, pubManagedPrepareCommand, pubManagedSitesCommand } from "./pub-managed.js";
 
 /** Commander accumulator for repeatable options (e.g. `--accept-leak`). */
 function collect(val: string, acc: string[]): string[] {
@@ -191,6 +192,7 @@ const revokeCommand = new Command("revoke")
         case "unconfigured":
         case "not-found":
         case "invalid-manifest":
+        case "managed-publication":
           console.error(`Error: ${result.message}`);
           break;
         default:
@@ -234,6 +236,7 @@ const goCommand = new Command("go")
         case "invalid-manifest":
         case "not-draft":
         case "not-confirmed":
+        case "managed-publication":
           console.error(`${result.reason === "not-confirmed" ? "" : "Error: "}${result.message}`);
           break;
         default:
@@ -257,4 +260,7 @@ export const pubCommand = new Command("pub")
   .addCommand(lsCommand)
   .addCommand(revokeCommand)
   .addCommand(goCommand)
+  .addCommand(pubManagedPrepareCommand)
+  .addCommand(pubManagedSitesCommand)
+  .addCommand(pubManagedIdCommand)
   .addCommand(pubStatusCommand);

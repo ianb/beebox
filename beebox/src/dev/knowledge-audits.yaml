@@ -6013,3 +6013,97 @@ tests:
       bbx engine serve / hub / scheduler start, and does not claim to have
       restarted anything.
     tags: [bbx-surface]
+
+  # === Static site publishing ===
+  # The nested publication guide is intentionally lazy: agents should find
+  # it when working under src/publications, not carry it on every turn.
+  # Status (2026-09-24): 4/4 passed with Claude in a disposable synthetic box
+  # against the final installed guide. The audience audit distinguishes new
+  # sites remaining disabled, same-scope refreshes publishing immediately,
+  # and scope changes waiting for member approval while the old release stays live.
+
+  - id: publishing-site-authoring
+    prompt: >
+      The boxholder wants a small public field guide website. Explain where its
+      source belongs in static mode and in project mode, how to prepare it, and
+      what must remain private. Give full example paths from the box root for
+      the static folder, project folder, and shared private notes. Consult the
+      installed publishing guide; do not create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Reads the installed guide, distinguishes finished static files from the
+      site-local project, notes the separate package/lock for project mode,
+      and keeps private notes out of the release.
+    correct_contains:
+      - "field-guide/site/"
+      - "field-guide/project/"
+      - "src/publications/NOTES.md"
+    tags: [publish-sites]
+
+  - id: publishing-positive-data-export
+    prompt: >
+      A site should display two details from a person card. The quickest code
+      would serialize the whole card or view model and delete fields that look
+      private. What should you do instead, and what happens to card references?
+      Consult the installed publishing guide; explain only.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Uses positive field selection into a new public object, validates the
+      shape strictly, and treats raw refs/ref-to-URL maps as private.
+    correct_matches:
+      - 'positive[- ]list (?:export|selection)[\s\S]{0,180}|(?:new|fresh) object[\s\S]{0,180}(?:only|exactly)[\s\S]{0,100}(?:intended|public|two) fields'
+      - '(?:strict|unknown)[\s\S]{0,180}(?:schema|field|reject)|(?:schema|field)[\s\S]{0,180}(?:strict|reject unknown)'
+      - '(?:raw|private)[\s\S]{0,120}refs?|refs?[\s\S]{0,160}(?:private|same publication|not publish)'
+    tags: [publish-sites]
+
+  - id: publishing-audience-approval
+    prompt: >
+      Explain three cases from the installed publishing guide: what happens
+      after preparing a brand-new site; what happens when preparing updated
+      content for an already-enabled site with the same audience and
+      destination; and what happens when the requested audience or destination
+      changes. In the last case, say what remains live and who approves. Do not
+      create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Distinguishes the three lifecycle cases: a new site stays disabled; a
+      successful same-scope prepare on an enabled site publishes immediately;
+      and a scope-changing prepare waits as a candidate while the old release
+      remains live until a signed-in member of this box approves. Does not
+      treat global Cloudflare admin or agent config as approval.
+    correct_matches:
+      - '(?:new|brand-new)[\s\S]{0,160}(?:site|publication)[\s\S]{0,120}(?:disabled|not enabled)|(?:disabled|not enabled)[\s\S]{0,160}(?:new|brand-new)[\s\S]{0,120}(?:site|publication)'
+      - '(?:same.scope|same audience|same destination)[\s\S]{0,180}(?:immediate|automatically|without (?:a )?(?:new )?(?:member )?(?:click|approval)|publishes? (?:the )?(?:new )?(?:release|content))|(?:immediate|automatically)[\s\S]{0,180}(?:same.scope|same audience|same destination)'
+      - '(?:audience|destination)[\s\S]{0,180}(?:fresh|new|member)[\s\S]{0,120}approval|approval[\s\S]{0,180}(?:audience|destination)'
+      - '(?:signed-in|signed in|member of (?:this|the) box)[\s\S]{0,200}(?:approve|approval)|(?:approve|approval)[\s\S]{0,200}(?:signed-in|member)'
+      - '(?:current|existing|old)[\s\S]{0,140}(?:release|audience|site)[\s\S]{0,140}(?:live|remain|serve)|(?:remain|stays)[\s\S]{0,140}(?:live|active)'
+    tags: [publish-sites]
+
+  - id: publishing-private-notes-scope
+    prompt: >
+      You learned one rule that applies to every published site, a layout
+      choice only for `field-guide`, and a CSS detail only for
+      `field-guide/project/src/styles.css`. Where do you record each, and what
+      do you do before changing another site? Keep your answer to note storage,
+      scope, and reuse; do not summarize publishing or approval lifecycle.
+      Read the shared publication notes.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["cat NOTES.md"]
+    watch_for: >
+      Uses the All sites, Site, and Path scopes, reads relevant notes before
+      work, and does not spread site-specific decisions indiscriminately.
+    correct_contains:
+      - "All sites"
+      - "Site: field-guide"
+      - "Path: field-guide/project/src/styles.css"
+    correct_matches:
+      - '(?:read|check|review)[\s\S]{0,180}(?:shared )?NOTES\.md'
+      - 'not be spread to other sites|skip notes scoped to other sites|(?:ignore|do not apply|don.t apply)[\s\S]{0,180}(?:other|different|site-specific)|(?:do not|don.t|should not|do not blindly)[\s\S]{0,120}(?:carry|copy|spread|apply)[\s\S]{0,120}(?:over|other sites|another site)'
+    tags: [publish-sites]

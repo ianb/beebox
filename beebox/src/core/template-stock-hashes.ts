@@ -37,6 +37,12 @@ export const TEMPLATE_STOCK_HASHES = {
       "4e5fc48a9fe8a7e100201b1a3b9efad33fccc1c204334af2543282e13d3bbcfe",
     ],
   },
+  "publications-guide-v1": {
+    current: "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
+    superseded: [
+
+    ],
+  },
   "schemas-guide-v2": {
     current: "d0021bd9506ab4255818d9246019471a5ef0ca7627a8f6a1544305bf8033ae37",
     superseded: [

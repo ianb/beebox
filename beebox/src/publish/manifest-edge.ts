@@ -111,3 +111,84 @@ export const edgeManifestSchema = z.discriminatedUnion("tier", [
 ]);
 
 export type EdgeManifest = z.infer<typeof edgeManifestSchema>;
+
+/** Immutable release identity: SHA-256 of the canonical release inventory. */
+export const releaseIdSchema = z.string().regex(/^[\da-f]{64}$/);
+
+class ReleaseInventoryMutationError extends Error {
+  constructor() {
+    super("release inventory changed while hashing");
+    this.name = "ReleaseInventoryMutationError";
+  }
+}
+
+/**
+ * Hash a file inventory in a runtime-stable order. The id identifies the
+ * inventory of content hashes, not a second copy of each asset's bytes.
+ */
+export async function releaseIdForFiles(files: z.infer<typeof filesSchema>): Promise<string> {
+  const canonicalInventory = Object.fromEntries(
+    Object.keys(files)
+      .toSorted()
+      .map((filePath) => {
+        const entry = files[filePath];
+        if (entry === undefined) throw new ReleaseInventoryMutationError();
+        return [filePath, { bytes: entry.bytes, sha256: entry.sha256 }];
+      }),
+  );
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(canonicalInventory)));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+const siteFilesSchema = filesSchema.refine((files) => Object.prototype.hasOwnProperty.call(files, "index.html"), {
+  message: "site release inventory must include index.html",
+});
+
+const siteReleaseSchema = z.object({ id: releaseIdSchema, files: siteFilesSchema }).strict();
+
+const previousSiteReleaseSchema = z
+  .object({
+    id: releaseIdSchema,
+    files: siteFilesSchema,
+    expiresAt: z.string().datetime({ offset: true }),
+  })
+  .strict();
+
+const siteCommonFields = {
+  kind: z.literal("site"),
+  hostHandle: z.string().regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/),
+  status: z.enum(["disabled", "live", "revoked"]),
+  expiresAt: z.string().datetime({ offset: true }).nullable(),
+  activeRelease: siteReleaseSchema,
+  previousRelease: previousSiteReleaseSchema.optional(),
+} as const;
+
+const sitePublicEdgeSchema = z
+  .object({
+    tier: z.literal("public"),
+    slug: z.string().min(1).max(80).regex(/^[\da-z]+(?:-[\da-z]+)*$/).optional(),
+    ...siteCommonFields,
+  })
+  .strict();
+
+const siteSecretEdgeSchema = z.object({ tier: z.literal("secret"), ...siteCommonFields }).strict();
+
+const siteAccountsEdgeSchema = z
+  .object({ tier: z.literal("accounts"), allowedEmails: z.array(z.string().email()).min(1), ...siteCommonFields })
+  .strict();
+
+const siteAnyAccountEdgeSchema = z.object({ tier: z.literal("any-account"), ...siteCommonFields }).strict();
+
+/** Per-publication Worker authority. `kind` keeps this separate from legacy serving. */
+export const siteEdgeManifestSchema = z.discriminatedUnion("tier", [
+  sitePublicEdgeSchema,
+  siteSecretEdgeSchema,
+  siteAccountsEdgeSchema,
+  siteAnyAccountEdgeSchema,
+]);
+
+/** All accepted edge manifests. Legacy shape remains unchanged and strict. */
+export const storedEdgeManifestSchema = z.union([edgeManifestSchema, siteEdgeManifestSchema]);
+
+export type SiteEdgeManifest = z.infer<typeof siteEdgeManifestSchema>;
+export type StoredEdgeManifest = EdgeManifest | SiteEdgeManifest;

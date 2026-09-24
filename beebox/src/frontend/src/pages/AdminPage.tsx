@@ -13,6 +13,7 @@ import { GoogleServicesSection } from "../components/admin/GoogleServicesSection
 import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
 import { TelegramSection } from "../components/admin/TelegramSection";
 import { SecretsSection } from "../components/admin/SecretsSection";
+import { CloudflarePublishConnectionsSection } from "../components/admin/CloudflarePublishConnectionsSection";
 import { NotificationsSection } from "../components/admin/NotificationsSection";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { BackupSection } from "../components/admin/BackupSection";
@@ -40,6 +41,7 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { 
           <InviteSection />
           <GoogleServicesSection arrival={arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={onArrivalConsumed} />
           <SecretsSection />
+          <CloudflarePublishConnectionsSection />
           <TailscaleSection />
         </Stack>
       </Stack>

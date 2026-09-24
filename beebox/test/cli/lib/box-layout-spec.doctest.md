@@ -105,7 +105,7 @@ without updating the doc, this fails.
 rows — only their sub-paths get rows), so they're excluded here:
 
 ```ts
-const docRelevantAreas = new Set(["content", "bookkeeping", "config", "publish", "tmp", "tricks", "agent-config"]);
+const docRelevantAreas = new Set(["content", "bookkeeping", "config", "publish", "tmp", "tricks", "publishing", "agent-config"]);
 const sectionHeaderKeys = new Set(["config", "claude"]);
 const docEntries = keyedEntries.filter(
   (entry) => docRelevantAreas.has(entry.area) && !sectionHeaderKeys.has(entry.boxDirsKey)

@@ -5007,3 +5007,211 @@ quick-chat-audit:
       peak: 22940
       added: 0
       turns: 1
+publishing-audit-RCBhzs:
+  publishing-site-authoring:
+    - date: 2026-09-24T18:19:03.257Z
+      boxCommit: fb8509886f684812572511873310bc9848a03dd5
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35028
+      added: 11036
+      turns: 4
+    - date: 2026-09-24T18:20:38.876Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35033
+      added: 11041
+      turns: 4
+    - date: 2026-09-24T18:21:36.195Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35031
+      added: 11039
+      turns: 4
+    - date: 2026-09-24T18:38:12.027Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35239
+      added: 11247
+      turns: 4
+    - date: 2026-09-24T18:40:14.983Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35284
+      added: 11292
+      turns: 4
+    - date: 2026-09-24T18:45:10.523Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23992
+      peak: 35243
+      added: 11251
+      turns: 4
+    - date: 2026-09-24T18:46:47.555Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 24019
+      peak: 35289
+      added: 11270
+      turns: 4
+    - date: 2026-09-24T18:48:22.981Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 24019
+      peak: 35313
+      added: 11294
+      turns: 4
+  publishing-positive-data-export:
+    - date: 2026-09-24T18:19:03.257Z
+      boxCommit: fb8509886f684812572511873310bc9848a03dd5
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23568
+      peak: 34363
+      added: 10795
+      turns: 4
+    - date: 2026-09-24T18:38:12.027Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23742
+      peak: 35258
+      added: 11516
+      turns: 4
+    - date: 2026-09-24T18:40:14.983Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23742
+      peak: 34786
+      added: 11044
+      turns: 4
+    - date: 2026-09-24T18:45:10.523Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23742
+      peak: 34750
+      added: 11008
+      turns: 3
+    - date: 2026-09-24T18:46:47.555Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23742
+      peak: 34438
+      added: 10696
+      turns: 4
+    - date: 2026-09-24T18:48:22.981Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23742
+      peak: 34791
+      added: 11049
+      turns: 4
+  publishing-audience-approval:
+    - date: 2026-09-24T18:19:03.257Z
+      boxCommit: fb8509886f684812572511873310bc9848a03dd5
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23576
+      peak: 34364
+      added: 10788
+      turns: 3
+    - date: 2026-09-24T18:38:12.027Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23771
+      peak: 34450
+      added: 10679
+      turns: 3
+    - date: 2026-09-24T18:40:14.983Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23771
+      peak: 34453
+      added: 10682
+      turns: 3
+    - date: 2026-09-24T18:45:10.523Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23771
+      peak: 34457
+      added: 10686
+      turns: 3
+    - date: 2026-09-24T18:46:47.555Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23771
+      peak: 34453
+      added: 10682
+      turns: 3
+    - date: 2026-09-24T18:48:22.981Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23771
+      peak: 34450
+      added: 10679
+      turns: 3
+    - date: 2026-09-24T18:49:46.403Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 24021
+      peak: 34822
+      added: 10801
+      turns: 3
+  publishing-private-notes-scope:
+    - date: 2026-09-24T18:19:03.257Z
+      boxCommit: fb8509886f684812572511873310bc9848a03dd5
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23582
+      peak: 29438
+      added: 5856
+      turns: 4
+    - date: 2026-09-24T18:23:29.856Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 24006
+      peak: 28050
+      added: 4044
+      turns: 4
+    - date: 2026-09-24T18:24:10.827Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 24006
+      peak: 29929
+      added: 5923
+      turns: 4
+    - date: 2026-09-24T18:38:12.027Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23582
+      peak: 29493
+      added: 5911
+      turns: 4
+    - date: 2026-09-24T18:40:14.983Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23792
+      peak: 27446
+      added: 3654
+      turns: 4
+    - date: 2026-09-24T18:45:10.523Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23792
+      peak: 28843
+      added: 5051
+      turns: 5
+    - date: 2026-09-24T18:46:47.555Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23792
+      peak: 27705
+      added: 3913
+      turns: 4
+    - date: 2026-09-24T18:48:22.981Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: aa084d01ebdee12e2e88d210c2c5a5c85b7cc294
+      initial: 23792
+      peak: 27822
+      added: 4030
+      turns: 4

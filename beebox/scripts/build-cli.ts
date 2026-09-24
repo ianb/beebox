@@ -12,6 +12,7 @@
 // both files in, so a concurrent `bbx` invocation (bin/bbx self-heals on
 // staleness) never sees a half-written bundle.
 import { build } from "esbuild";
+import { buildPublicationWorker } from "./build-pub-worker.mjs";
 import { copyFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -128,6 +129,9 @@ await copyFile(
   join(root, "src/exports/view-widgets.d.ts"),
   join(distDir, "view-widgets", "index.d.ts"),
 );
+
+// Package the exact module Worker uploaded by server-managed publications.
+await buildPublicationWorker();
 
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);

@@ -18,6 +18,7 @@ import { legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacyS
 import { trpcClient } from "./lib/trpc";
 import { QuickChatPage } from "./pages/quick-chat/QuickChatPage";
 import { ChatPage } from "./pages/ChatPage";
+import { PublicationsPage } from "./pages/PublicationsPage";
 import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
@@ -226,8 +227,7 @@ const adminRoute = createRoute({
     reconnect: z.string().optional(),
   }),
 });
-
-const cardRoute = createRoute({
+const publicationsRoute = createRoute({ staticData: { title: "Publications" }, getParentRoute: () => productLayoutRoute, path: "/publications", component: PublicationsPage }); const cardRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => productLayoutRoute,
   path: "/card/$",
@@ -318,12 +318,10 @@ const boxCatchAllRoute = createRoute({
 });
 
 const quickChatRoute = createRoute({ staticData: { title: "Quick chat" }, getParentRoute: () => boxLayoutRoute, path: "/quick-chat", component: QuickChatPage });
-
 // --- Route tree ---
 
 const routeTree = rootRoute.addChildren([
-  indexRoute, loginRoute, setupRoute,
-  boxLayoutRoute.addChildren([
+  indexRoute, loginRoute, setupRoute, boxLayoutRoute.addChildren([
     quickChatRoute,
     productLayoutRoute.addChildren([
     boxIndexRoute,
@@ -337,6 +335,7 @@ const routeTree = rootRoute.addChildren([
     captureRoute,
     settingsRoute,
     adminRoute,
+    publicationsRoute,
     cardRoute,
     viewRoute,
     landmarksRoute,
@@ -357,8 +356,6 @@ const routeTree = rootRoute.addChildren([
     ]),
   ]),
 ]);
-
-// --- Router factory ---
 
 export function createAppRouter(opts?: { history?: Parameters<typeof createRouter>[0]["history"] }) {
   // When this app is served under a path prefix (e.g. /main/ when behind the

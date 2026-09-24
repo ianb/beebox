@@ -309,6 +309,12 @@ export const BOX_LAYOUT = [
     area: "tricks",
     description: "Shared helpers used by `src/tricks/scripts/`.",
   },
+  {
+    path: "src/publications",
+    area: "publishing",
+    description:
+      "Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here.",
+  },
 
   // .claude/ — agent configuration
   {
@@ -331,4 +337,3 @@ export type BoxDirsEntry = Extract<BoxLayoutEntryType, { boxDirsKey: string }>;
 
 /** The type of `BOX_DIRS` (paths.ts), derived from this spec's keyed entries. */
 export type BoxDirs = { [E in BoxDirsEntry as E["boxDirsKey"]]: E["path"] };
-
