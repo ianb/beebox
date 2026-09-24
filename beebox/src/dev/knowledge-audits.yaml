@@ -413,9 +413,8 @@ tests:
   # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
   # direct orientation questions below used no reads or searches. user-adds-item
   # also passed, but inspected the frontend to verify its exact UI instructions.
-  # Status (2026-09-24, Claude): iphone-photos-album-setup passed twice and
-  # explained the Mac setup, token boundary, and command. test1 lacks installed
-  # package docs, so it found the source doc after checking the broken test-box link.
+  # Status (2026-09-24, Claude): on-demand path passed with a fixture simulating
+  # the installed package docs; the agent read both docs and explained the setup.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -440,14 +439,37 @@ tests:
       "put the voice memo in store/documents/".
 
   - id: iphone-photos-album-setup
-    prompt: "Can I have new photos from an Apple Photos album on my iPhone sent into this box automatically? How would I set that up?"
+    prompt: "I'm thinking about ways to add photos to the box. Can new photos from an Apple Photos album on my iPhone come in automatically? How would I set that up?"
     expected_level: knows_about
     watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token minting and local setup to the boxholder"
     correct_contains_any: ["scan-uploader", "scan uploader"]
     correct_matches:
       - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
       - '(mint|create).{0,60}token'
-    should_read: ["node_modules/beebox/box-docs/phone-photos.md"]
+    fixture:
+      node_modules/beebox/box-docs/README.md: |
+        # Bee Box reference docs
+        | Doc | Read when |
+        |-----|------------|
+        | `what-you-could-do.md` | The user asks what the box can do, what to try, or how to get started. |
+        | `phone-photos.md` | The user asks how to send new photos from an iPhone Apple Photos album into this box. |
+      node_modules/beebox/box-docs/what-you-could-do.md: |
+        # What you could do with your box
+
+        For an ongoing stream from an iPhone album, scan-uploader can export new
+        photos from an iCloud-synced album on the user's Mac; see [Apple Photos
+        setup](phone-photos.md).
+      node_modules/beebox/box-docs/phone-photos.md: |
+        # Add iPhone photos through an Apple Photos album
+
+        Install osxphotos on the Mac (`uv tool install osxphotos`, or `pipx install osxphotos`).
+        Grant Full Disk Access to the app running the launchd uploader job. The boxholder
+        mints a scan-upload token in Settings → Scan uploaders and configures the Mac
+        uploader with `--photos-album "<album name>"`. The normal scan-uploader schedule
+        exports new JPEGs into the existing scan-import flow. Keep disposition is required.
+    should_read:
+      - "node_modules/beebox/box-docs/what-you-could-do.md"
+      - "node_modules/beebox/box-docs/phone-photos.md"
     tags: [intake, photos]
     notes: >
       Agent-guide awareness should route into the concise package doc, which
