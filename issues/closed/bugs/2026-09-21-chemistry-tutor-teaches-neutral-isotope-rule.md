@@ -5,11 +5,14 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D chemistry study
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 as invalid (boxholder): the particulars of one bad lesson are model output, not a defect in beebox. The grounding guidance it cites is unchanged; a recurring pattern of ungrounded teaching would be a new issue about that guidance.
 
 A learner confused isotopes with ions. The tutor gave them a memorable but
 false rule: “isotopes are neutral, ions are not.” It also said “an isotope
-has no charge.” Screenshot 05 in the [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
+has no charge.” Screenshot 05 in the [journey D report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
 independently shows both sentences. The learner latched onto this as a useful
 rule before the tutor corrected it in its next response.
 
