@@ -6,7 +6,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
-next-action: discuss
 ---
 
 `bbx validate --hook` (`beebox/src/cli/commands/validate-hook.ts`) is wired as
@@ -98,7 +97,7 @@ invocation logs.
 `additionalContext` in both harnesses. Results containing real errors should
 keep exit 2 and stderr. Neither harness delivered plain stderr on exit 0.
 
-## Proposed repeat suppression (decision pending)
+## Repeat suppression (approved 2026-09-24)
 
 Suppress the recurring `CLAUDE.md` size warning once per agent session and
 file. Both harnesses include `session_id` in the hook input. Keep a small cache
@@ -113,5 +112,6 @@ this first pass.
 
 This design prevents every small character-count change from producing a new
 warning. It also gives a new agent session its own notice about an existing
-oversized file. The boxholder has been asked to choose this behavior before it
-is implemented.
+oversized file. The boxholder chose this design. The first implementation
+applies it to `CLAUDE.md` size warnings; other warning classes still run on
+every relevant edit.

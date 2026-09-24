@@ -16,6 +16,10 @@ Three hooks are installed per box:
   warning while the completed edit remains successful. Errors use exit 2
   with stderr; the edit has already happened, and pre-commit blocks invalid
   commits. The Codex plugin uses the same command after `apply_patch`.
+  A box `CLAUDE.md` size warning appears once per file and size tier in each
+  agent session. The bounded notice cache is gitignored at
+  `.beebox/validate-hook-warnings.json`; a clean edit resets that file's
+  notice, and a new session gets its own warning.
 - `.git/hooks/pre-commit` — runs `bbx validate --pre-commit`; blocks commits
   that include cards failing validation. That one invocation is the whole
   commit-time suite (it replaced three separate `bbx` calls, each of which
