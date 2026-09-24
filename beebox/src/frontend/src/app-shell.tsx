@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
+import { reportPreviousAdminHang } from "./lib/admin-hang-probe";
 import { startVoiceStagingDrainer } from "./lib/audio/voice-staging-queue";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
@@ -41,6 +42,7 @@ export { BoxRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();
+reportPreviousAdminHang();
 
 // Drain any voice-recording ops left over from a reload or a prior visit
 // (docs/plans/resilient-voice-recording.md, Track 2) even before any

@@ -1,6 +1,6 @@
 ---
 title: "Loading the admin page intermittently hangs the browser tab; a reload clears it"
-workstream: unattached
+workstream: admin-hang-probe
 area: beebox
 labels: [ui, admin]
 filed-by: agent
