@@ -20,6 +20,7 @@ import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { chatModelForEngine } from "../../../shared/chat-models.js";
+import { normalizeModelId } from "../../../shared/model-ids.js";
 import type { AgentEngine } from "../../box/config.js";
 import { composerToken } from "../../../shared/composer-tokens.js";
 
@@ -61,15 +62,15 @@ export function chatModelFileForSession(sessionId: string): string {
 }
 
 /**
- * Read the persisted model override for a session, or null if absent or
- * unreadable. `modelFile` is relative to `boxRoot`.
+ * Read and normalize the persisted model override for a session, or null if
+ * absent or unreadable. `modelFile` is relative to `boxRoot`.
  */
 export function loadCurrentModel(boxRoot: string, modelFile: string): string | null {
   const filePath = path.join(boxRoot, modelFile);
   try {
     if (fs.existsSync(filePath)) {
       const data: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-      return isRecord(data) && typeof data.model === "string" ? data.model : null;
+      return isRecord(data) && typeof data.model === "string" ? normalizeModelId(data.model) : null;
     }
   } catch (e) {
     log("model", `Failed to load model file: ${e}`);

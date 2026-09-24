@@ -27,6 +27,7 @@ import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
 import { getLoginGoogleClientCreds } from "../../../connectors/google-auth.js";
+import { normalizeModelId } from "../../../shared/model-ids.js";
 
 /**
  * Shape of `_config/box.json`, validated on read (config is untrusted input).
@@ -224,7 +225,7 @@ export const adminRouter = router({
       googleLoginConfigured: getLoginGoogleClientCreds() !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
-      agentModel: config.agentModel ?? null,
+      agentModel: config.agentModel === undefined ? null : normalizeModelId(config.agentModel),
       openrouterModels: await loadAddedModels(ctx.boxRoot),
       // Absent means "only the default engine", the same rule loadEnabledEngines
       // applies — resolved here so the UI never has to re-derive it.

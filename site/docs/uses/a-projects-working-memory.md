@@ -19,8 +19,9 @@ you can jump to and as a destination triage may file into. A briefing card holds
 what every agent working there needs to know: the key people (each linked to
 their person card), the subjects involved, and the questions offered on an empty
 chat. A todo-view card is a live, self-updating list gathering every todo
-written anywhere beneath the directory, so the plate is assembled rather than
-maintained. Prose becomes
+written anywhere beneath the directory, plus todos elsewhere that link into it,
+grouped by the card and heading each was written under, so the plate is
+assembled rather than maintained. Prose becomes
 doc cards. A chat opened at the landmark starts knowing what the area is about,
 and the agent can still look anywhere else in the box.
 
@@ -34,8 +35,10 @@ and the agent can still look anywhere else in the box.
 landmarks page and to triage, so an area you never marked is not an area yet, and
 a first-time user read "landmark" as meaning physical places. The box will not
 notice on its own that a project has gone quiet: it keeps track, reminds you, and
-runs what you asked for, and it does not anticipate. Open questions and
-outstanding todos are not badged in the navigation, so you find them by looking.
+runs what you asked for, and it does not anticipate. Where a todo sits is what it
+means, so one written under the wrong heading is grouped with the wrong thing.
+The navigation shows a count of waiting questions and of todos on the plate, but
+the plate count is a bare number beside an icon and can read as a wrong total.
 
 **What makes it possible**
 

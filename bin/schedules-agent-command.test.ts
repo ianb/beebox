@@ -89,14 +89,14 @@ test("a persistent claude session mints an id on the first run and resumes it af
 
 test("the codex command maps the sandbox and refuses constraints it cannot honor", async () => {
   const bypass = await headlessArgv({
-    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_MODEL: "gpt-5.6-sol",
+    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_MODEL: "gpt-6-sol",
     LH_PERMISSION_MODE: "bypassPermissions", LH_SESSION: "fresh", LH_CWD: "/tmp/wt",
   });
   assert.equal(bypass.exitCode, 0, bypass.stderr);
   assert.deepEqual(bypass.argv, [
     "codex", "exec", "-s", "danger-full-access",
     "-c", 'projects."/tmp/wt".trust_level="trusted"', "-c", "project_doc_max_bytes=131072",
-    "-m", "gpt-5.6-sol",
+    "-m", "gpt-6-sol",
   ]);
 
   const resumed = await headlessArgv({

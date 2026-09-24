@@ -22,7 +22,7 @@ Stronger and weaker than the default.
 modelDrift({ model: "claude-fable-5-1", boxDefault: "claude-sonnet-5" })
 => above
 
-modelDrift({ model: "claude-haiku-4-5-20251001", boxDefault: "claude-opus-5" })
+modelDrift({ model: "claude-haiku-4-5-20251001", boxDefault: "claude-opus-5-5" })
 => below
 ```
 
@@ -32,7 +32,7 @@ tier comparison is what makes cross-engine talk meaningful at all.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "claude-opus-5", boxDefault: "claude-opus-5" }),
+  modelDrift({ model: "claude-opus-5-5", boxDefault: "claude-opus-5-5" }),
   modelDrift({ model: "gpt-5.6-terra", boxDefault: "claude-sonnet-5" }),
   modelDrift({ model: "gpt-6-astra", boxDefault: "claude-fable-5-1" }),
 ])
@@ -46,9 +46,9 @@ would be the confidently wrong answer.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "claude-opus-5", boxDefault: null }),
-  modelDrift({ model: null, boxDefault: "claude-opus-5" }),
-  modelDrift({ model: "some-unreleased-model", boxDefault: "claude-opus-5" }),
+  modelDrift({ model: "claude-opus-5-5", boxDefault: null }),
+  modelDrift({ model: null, boxDefault: "claude-opus-5-5" }),
+  modelDrift({ model: "some-unreleased-model", boxDefault: "claude-opus-5-5" }),
 ])
 => [null,null,null]
 ```
@@ -58,8 +58,8 @@ a Claude flagship.
 
 ```ts
 JSON.stringify([
-  modelDrift({ model: "gpt-5.6-sol", boxDefault: "gpt-5.6-terra" }),
-  modelDrift({ model: "gpt-5.6-sol", boxDefault: "claude-fable-5-1" }),
+  modelDrift({ model: "gpt-6-sol", boxDefault: "gpt-5.6-terra" }),
+  modelDrift({ model: "gpt-6-sol", boxDefault: "claude-fable-5-1" }),
 ])
 => ["above","below"]
 ```

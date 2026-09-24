@@ -72,10 +72,10 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 - **`0.156.1`** adds GPT-6 Sol and GPT-6 Luna to the model picker and makes the
   rate-limit switch prompt recommend GPT-6 Luna. beebox names its Codex models
-  itself — `luna`, `terra` and `sol` resolve to `gpt-5.6-*` in
-  `beebox/src/shared/model-ids.ts` — so the same staleness question as the Opus
-  5.5 alias applies; folded into
-  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
+  itself: `luna` and `sol` now resolve to their GPT-6 IDs in
+  `beebox/src/shared/model-ids.ts`, while `terra` intentionally remains on
+  `gpt-5.6-terra` because GPT-6 has no Terra model. Tracked with the Opus 5.5
+  update in `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`.
 - **`0.156.0`, relevant:** worktree support is now **enabled by default** in the
   agent command center, and worktree sessions can be created from it. Codex
   worker sessions here get their worktrees from `bin/workstreams create` and run
@@ -150,9 +150,9 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   `askSideQuestion()` now seeing the running turn, and `rate_limit_event` emitted
   when an unattended retry starts a usage-limit wait.
 - **2.1.280 — Opus 5.5.** *"Added Claude Opus 5.5 (`claude-opus-5-5`), now the
-  default Opus model."* beebox resolves `opus` itself, to `claude-opus-5`
-  (`beebox/src/shared/model-ids.ts`), whose header says the alias "tracks the
-  current Opus flagship" — stale by its own contract. Filed:
+  default Opus model."* beebox's `opus` alias now resolves to
+  `claude-opus-5-5` (`beebox/src/shared/model-ids.ts`), and retired Opus IDs
+  normalize forward. Tracked in:
   `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`. 2.1.280 also
   moves Pro and Team Standard plans' default from Sonnet to Opus, which reaches
   beebox only on paths that leave the model unset.

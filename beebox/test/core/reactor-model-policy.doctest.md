@@ -64,7 +64,7 @@ reading as "no policy".
 ```ts continue
 await pin(box.root, { agentModel: "claude-opus-4-8" });
 await modelUsedBy(box.root)
-=> claude-opus-5
+=> claude-opus-5-5
 
 await pin(box.root, { agentModel: "not-a-model" });
 await modelUsedBy(box.root)
