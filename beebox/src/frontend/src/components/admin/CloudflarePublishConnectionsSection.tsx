@@ -138,16 +138,42 @@ function ConnectionEditor({
     <form onSubmit={onSubmit}>
       <Stack gap="sm">
         <Heading level={3}>{rotateTarget === null ? "Add a connection" : `Rotate ${rotateTarget}`}</Heading>
-        <Hint>Use an account-scoped token with the permissions shown in the setup guide. Saving verifies the account and replaces the stored value; it is never shown again.</Hint>
-        <TextField id="bbx-admin-cf-publish-name" label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Lowercase letters, digits, and hyphens; starts with a letter." />
-        <TextField id="bbx-admin-cf-publish-account" label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" />
+        <Hint>Saving checks that the token is active and can identify the selected account. It does not test publishing permissions; the first site setup checks those.</Hint>
+        <TextField id="bbx-admin-cf-publish-name" label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Choose a Bee Box label, such as makers. Lowercase letters, digits, and hyphens; starts with a letter." />
+        <TextField id="bbx-admin-cf-publish-account" label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" helper={<span>Find it in Cloudflare under <Text weight="medium">Workers & Pages → Account Details</Text>, or follow <ExternalLink id="bbx-admin-cf-publish-account-help" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" variant="inline">Cloudflare&apos;s account ID instructions</ExternalLink>.</span>} />
         <TextField id="bbx-admin-cf-publish-token" label="API token" type="password" autoComplete="new-password" value={apiToken} onChange={setApiToken} required maxLength={4096} />
+        <TokenSetupGuidance />
         <Row gap="sm" wrap>
           <Button id="bbx-admin-cf-publish-save" type="submit" intent="primary" loading={pending} loadingLabel="Verifying…">{rotateTarget === null ? "Verify and save" : "Verify and rotate"}</Button>
           {rotateTarget !== null ? <Button id="bbx-admin-cf-publish-cancel-rotate" type="button" intent="secondary" onClick={onCancelRotation}>Cancel rotation</Button> : null}
         </Row>
       </Stack>
     </form>
+  );
+}
+
+function TokenSetupGuidance() {
+  return (
+    <Stack gap="xs">
+      <Text size="sm" weight="medium">Create a Cloudflare API token</Text>
+      <ol className="list-decimal space-y-2 pl-5">
+        <li><Text size="sm">Open <ExternalLink id="bbx-admin-cf-publish-token-create" href="https://dash.cloudflare.com/profile/api-tokens" variant="inline">My Profile → API Tokens</ExternalLink> and choose <Text weight="medium">Create Token → Create Custom Token</Text> for a user API token.</Text></li>
+        <li><TokenPermissionList /></li>
+        <li><Text size="sm">Create the token, copy its value once, and paste it here. Do not use the separate R2 S3 Access Key and Secret.</Text></li>
+      </ol>
+      <Text size="sm">For account resources, select only the Cloudflare account whose ID you entered above. Cloudflare&apos;s <ExternalLink id="bbx-admin-cf-publish-token-permissions" href="https://developers.cloudflare.com/fundamentals/api/reference/permissions/" variant="inline">permission reference</ExternalLink> has details. Before the first publication, make sure <ExternalLink id="bbx-admin-cf-publish-r2-setup" href="https://developers.cloudflare.com/r2/get-started/" variant="inline">R2 is enabled</ExternalLink> and a <ExternalLink id="bbx-admin-cf-publish-workers-dev" href="https://developers.cloudflare.com/workers/configuration/routing/workers-dev/" variant="inline">workers.dev account subdomain</ExternalLink> exists.</Text>
+    </Stack>
+  );
+}
+
+function TokenPermissionList() {
+  return (
+    <Stack gap="xs">
+      <Text size="sm">Add these account permissions:</Text>
+      <Text size="sm">Account Settings: <Text weight="medium">Read</Text></Text>
+      <Text size="sm">Workers R2 Storage: <Text weight="medium">Edit</Text> (called <Text mono>Workers R2 Storage Write</Text> in the API permission reference)</Text>
+      <Text size="sm">Workers Scripts: <Text weight="medium">Edit</Text> (called <Text mono>Workers Scripts Write</Text> in the API permission reference)</Text>
+    </Stack>
   );
 }
 
