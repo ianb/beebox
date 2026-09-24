@@ -28,16 +28,28 @@ export function CloudflarePublishConnectionsSection() {
   const [rotateTarget, setRotateTarget] = useState<string | null>(null);
   const [revokeAcknowledged, setRevokeAcknowledged] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   const refresh = () => utils.cloudflarePublishConnections.list.invalidate();
   const save = trpc.cloudflarePublishConnections.save.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (_connection, variables) => {
       setApiToken("");
       setRotateTarget(null);
-      setActionError(null);
-      await refresh();
+      setSaveError(null);
+      setSaveStatus(`Saved “${variables.name}”. Refreshing saved connections…`);
+      try {
+        await refresh();
+        setSaveStatus(`Saved “${variables.name}”.`);
+      } catch (refreshError) {
+        void refreshError;
+        setSaveStatus(`Saved “${variables.name}”, but the saved connections list could not be refreshed. Reload the page to check it.`);
+      }
     },
-    onError: (error) => setActionError(error.message),
+    onError: (error, variables) => {
+      setSaveStatus(null);
+      setSaveError(redactToken(error.message, variables.apiToken));
+    },
   });
   const grant = trpc.cloudflarePublishConnections.grant.useMutation({ onSuccess: refresh, onError: (error) => setActionError(error.message) });
   const revokeGrant = trpc.cloudflarePublishConnections.revokeGrant.useMutation({ onSuccess: refresh, onError: (error) => setActionError(error.message) });
@@ -52,6 +64,8 @@ export function CloudflarePublishConnectionsSection() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError(null);
+    setSaveError(null);
+    setSaveStatus(null);
     save.mutate({ name: name.trim(), accountId: accountId.trim(), apiToken });
   }
 
@@ -79,6 +93,8 @@ export function CloudflarePublishConnectionsSection() {
           setName={setName}
           setAccountId={setAccountId}
           setApiToken={setApiToken}
+          saveError={saveError}
+          saveStatus={saveStatus}
           onSubmit={submit}
           onCancelRotation={() => { setRotateTarget(null); setApiToken(""); }}
         />
@@ -111,12 +127,14 @@ export function CloudflarePublishConnectionsSection() {
   );
 }
 
-function ConnectionEditor({
+export function ConnectionEditor({
   name,
   accountId,
   apiToken,
   rotateTarget,
   pending,
+  saveError,
+  saveStatus,
   setName,
   setAccountId,
   setApiToken,
@@ -128,6 +146,8 @@ function ConnectionEditor({
   apiToken: string;
   rotateTarget: string | null;
   pending: boolean;
+  saveError: string | null;
+  saveStatus: string | null;
   setName: (value: string) => void;
   setAccountId: (value: string) => void;
   setApiToken: (value: string) => void;
@@ -147,9 +167,21 @@ function ConnectionEditor({
           <Button id="bbx-admin-cf-publish-save" type="submit" intent="primary" loading={pending} loadingLabel="Verifying…">{rotateTarget === null ? "Verify and save" : "Verify and rotate"}</Button>
           {rotateTarget !== null ? <Button id="bbx-admin-cf-publish-cancel-rotate" type="button" intent="secondary" onClick={onCancelRotation}>Cancel rotation</Button> : null}
         </Row>
+        <CloudflarePublishSaveFeedback error={saveError} status={saveStatus} />
       </Stack>
     </form>
   );
+}
+
+function CloudflarePublishSaveFeedback({ error, status }: { error: string | null; status: string | null }) {
+  if (error !== null) return <div role="alert"><ErrorText>{error}</ErrorText></div>;
+  if (status !== null) return <div role="status" aria-live="polite"><Text size="sm" tone="muted">{status}</Text></div>;
+  return null;
+}
+
+function redactToken(message: string, token: string): string {
+  const candidates = [...new Set([token, token.trim()].filter(Boolean))];
+  return candidates.reduce((safe, candidate) => safe.split(candidate).join("[redacted]"), message);
 }
 
 function TokenSetupGuidance() {
