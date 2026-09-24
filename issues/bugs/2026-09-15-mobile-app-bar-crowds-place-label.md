@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chip-icon-design — verifying the revised chat properties chip
+priority: normal
 ---
 
 > **Re-encountered 2026-09-23 after the fix (weekly tour check).** At 375px
@@ -118,3 +119,7 @@ and on-plate todos so both counts show.
    a caret, and both still open their own menus.
 4. The three counts read as one pill with dividers, and each segment still goes
    to its own destination.
+
+## Next-action check (2026-09-24)
+
+Reconfirmed 2026-09-24 with `bin/browse` at 375×800 on `test1` Browse with 39 question and 15 todo badges showing: still reproduces. The place pill renders 41.8px wide and shows only "B" for "Box"; the right-hand group takes 262px of the 375px row. The accessible name is intact. The 2026-09-20 fix (`c97f04dd9`, `23333c33e`, `114c6b367`) reduced the crowding but did not remove it. Chromium only; real-device rendering was not checked.

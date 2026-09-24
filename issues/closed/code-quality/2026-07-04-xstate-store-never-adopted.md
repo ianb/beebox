@@ -1,8 +1,10 @@
 ---
 title: "@xstate/store: recorded as adopted, never installed"
 workstream: unknown
-next-action: invalid
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 as moot: no living document claims `@xstate/store` is adopted. `stack-decisions.md` became a frozen report (`beebox/docs/reports/stack-decisions-2026-09-04.md`, `dcc1778a7`), and `docs-reorg.md` is an implemented plan. The package was never installed. Adopting it for simple-page state would be a new proposal.
 
 2026-07-04 · decision needed.
 

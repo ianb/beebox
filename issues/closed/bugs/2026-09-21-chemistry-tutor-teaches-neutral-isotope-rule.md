@@ -5,11 +5,14 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D chemistry study
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 as invalid (boxholder): the particulars of one bad lesson are model output, not a defect in beebox. The grounding guidance it cites is unchanged; a recurring pattern of ungrounded teaching would be a new issue about that guidance.
 
 A learner confused isotopes with ions. The tutor gave them a memorable but
 false rule: “isotopes are neutral, ions are not.” It also said “an isotope
-has no charge.” Screenshot 05 in the [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
+has no charge.” Screenshot 05 in the [journey D report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
 independently shows both sentences. The learner latched onto this as a useful
 rule before the tutor corrected it in its next response.
 
@@ -47,3 +50,7 @@ This is related grounding evidence, not evidence that the ice-core claim is
 false. No citation was added to that saved claim before the walk ended. Whether to
 change the guidance or enforce it through another mechanism remains a product
 choice; no enforcement subsystem is implied by this issue.
+
+## Next-action check (2026-09-24)
+
+Checked 2026-09-24 for `invalid`: still holds. The grounding guidance it cites (`beebox/src/core/box/skills-content.ts:134-139`) is unchanged, and no commit references the issue. The issue is a case record for teaching-output evaluation, not a code-fix request, so "no fix landed" does not make it invalid.

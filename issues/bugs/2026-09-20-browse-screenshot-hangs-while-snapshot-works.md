@@ -6,6 +6,7 @@ labels: [browse, dev-tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-collection-views — visual check of the rewritten todo list
+priority: normal
 ---
 
 On 2026-09-20, `bin/browse screenshot` did not return on any page of the

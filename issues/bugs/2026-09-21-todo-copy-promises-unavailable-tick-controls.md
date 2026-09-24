@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — F newcomer journey
+priority: important
 ---
 
 The authored todo card says “Tick them off as they're done”, but the current

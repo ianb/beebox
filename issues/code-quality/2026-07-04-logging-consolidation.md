@@ -2,7 +2,6 @@
 title: "One way to log everywhere"
 workstream: unknown
 priority: normal
-next-action: reconfirm
 ---
 
 2026-07-04 · boxholder-ruled direction: "there should be one way to log
@@ -24,3 +23,7 @@ The task:
 Related: the noisy-output policy in the root CLAUDE.md (routine-success
 diagnostics shouldn't print at all) — the migration is the moment to delete
 logs rather than convert them.
+
+## Next-action check (2026-09-24)
+
+Reconfirmed 2026-09-24: still open, and larger. `makeLog` is still chat-local (`beebox/src/core/chat/session/log.ts`, 15 users). Raw `console.*` calls in `beebox/src` are now about 1,788 (about 900 at filing). No `no-console` rule exists in `beebox/eslint.config.ts` or the preset. None of the three steps has happened.

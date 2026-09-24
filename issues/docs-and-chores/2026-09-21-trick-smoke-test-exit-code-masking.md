@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: normal
 ---
 
 While testing a new generator trick outside of `bbx trick`'s own auto-commit

@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D authoring timeline
+priority: backlog
 ---
 
 While the assistant built a course, its visible Lesson Plan link opened a
