@@ -86,7 +86,8 @@ quota. Do not silently promote a task because it looks difficult.
   needs little discernment or discussion: a bug fix with a clear cause, a
   mechanical change, a well-specified implementation. Choose it without asking.
 - Claude requires an explicit `--model`; otherwise it inherits the human's
-  saved CLI default. `opus` is the usual harder-work option.
+  saved CLI default. Opus 5.5 (`claude-opus-5-5`) is the usual harder-work
+  option; whenever Opus is chosen, use 5.5.
 - `claude-fable-5-1` and Codex `gpt-6-astra` are the top choices for genuinely
   difficult architecture, unresolved design, or judgment-heavy work. Use them
   when the human selected them, or ask first.
