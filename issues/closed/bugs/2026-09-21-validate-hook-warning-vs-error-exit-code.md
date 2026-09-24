@@ -1,12 +1,19 @@
 ---
 title: "bbx validate --hook exits 2 for both warnings and real errors, so a harness that treats nonzero exit as failure reports a successful write as failed"
 workstream: validate-hook-channels
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
 ---
+
+**Closed (implemented).** Commit `8ee48c4b6` delivers warning-only feedback as
+PostToolUse JSON context with exit 0, keeps real errors on exit 2, and suppresses
+repeated CLAUDE.md size warnings per session and size tier. This follows the
+issue's suggested direction, using JSON context instead of stderr for warnings
+based on the harness experiments recorded below.
 
 `bbx validate --hook` (`beebox/src/cli/commands/validate-hook.ts`) is wired as
 the agent harness's PostToolUse hook (`beebox/docs/card-validation.md:13`):
