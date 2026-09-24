@@ -8,7 +8,7 @@ import {
   revokeCloudflarePublishGrant,
   saveCloudflarePublishConnection,
 } from "../../../core/secrets/cloudflare-publish.js";
-import { createCloudflarePublishTokenVerifier } from "../../../services/cloudflare-publish-token-verifier.js";
+import { CloudflarePublishTokenVerificationError, createCloudflarePublishTokenVerifier } from "../../../services/cloudflare-publish-token-verifier.js";
 import { authenticatedOwnerProcedure, router } from "../trpc.js";
 
 const nameSchema = z.string().trim().regex(/^[a-z][\da-z-]{0,39}$/);
@@ -43,9 +43,13 @@ export const cloudflarePublishConnectionsRouter = router({
       let verified: { tokenId: string; status: "active"; tokenType: "account-api-token" | "user-api-token" };
       try {
         verified = await verifier.verify({ accountId: input.accountId, apiToken: input.apiToken });
-      } catch (_error) {
-        // Do not return provider response bodies or request details to the UI.
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cloudflare did not verify an active token for this account. Check the account ID and token permissions, then try again." });
+      } catch (error) {
+        // Only surface our fixed, sanitized diagnoses. Never return provider
+        // response bodies, request details, or arbitrary fetch errors.
+        const message = error instanceof CloudflarePublishTokenVerificationError
+          ? error.message
+          : "Cloudflare token verification could not be completed. Try again.";
+        throw new TRPCError({ code: "BAD_REQUEST", message });
       }
       return lifecycle(() => saveCloudflarePublishConnection({
         name: input.name,

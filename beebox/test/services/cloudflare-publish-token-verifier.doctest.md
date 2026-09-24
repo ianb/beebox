@@ -31,13 +31,47 @@ const userVerifier = createCloudflarePublishTokenVerifier({
   fetch: async (url, init) => {
     userRequests.push({ url, method: init?.method });
     if (url.endsWith("/user/tokens/verify")) return Response.json({ success: true, result: { id: "user-token-id", status: "active" } });
-    if (url.includes("/r2/buckets?")) return Response.json({ success: true, result: [] });
+    if (url.includes("/r2/buckets?")) return Response.json({ success: true, result: { buckets: [] } });
     return new Response("not available", { status: 403 });
   },
 });
 const userResult = await userVerifier.verify({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder-user-token" });
 JSON.stringify({ type: userResult.tokenType, calls: userRequests.map((r) => r.url.includes("/user/tokens/verify") ? "user-verify" : r.url.includes("/r2/buckets?") ? "r2-list" : "account-verify") })
 => {"type":"user-api-token","calls":["account-verify","user-verify","r2-list"]}
+```
+
+An active user token without R2 access gets a distinct, actionable diagnosis.
+
+```ts continue
+const noR2Access = createCloudflarePublishTokenVerifier({
+  fetch: async (url) => {
+    if (url.endsWith("/user/tokens/verify")) return Response.json({ success: true, result: { id: "user-token-id", status: "active" } });
+    if (url.includes("/r2/buckets?")) return new Response("provider details are not shown", { status: 403 });
+    return new Response("not available", { status: 403 });
+  },
+});
+await noR2Access.verify({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder-user-token" }).then(
+  () => "accepted",
+  (error) => error.message,
+)
+=> Cloudflare verified the active token, but it cannot read R2 in the selected account. Check the account ID and R2 Storage Read or Write permission.
+```
+
+A successful HTTP response with an unrecognized shape is reported as a response problem, not a credential problem.
+
+```ts continue
+const unexpectedR2Response = createCloudflarePublishTokenVerifier({
+  fetch: async (url) => {
+    if (url.endsWith("/user/tokens/verify")) return Response.json({ success: true, result: { id: "user-token-id", status: "active" } });
+    if (url.includes("/r2/buckets?")) return Response.json({ success: true, result: [] });
+    return new Response("not available", { status: 403 });
+  },
+});
+await unexpectedR2Response.verify({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder-user-token" }).then(
+  () => "accepted",
+  (error) => error.message,
+)
+=> Cloudflare verified the active token, but returned an unexpected response while checking R2 access. Try again.
 ```
 
 Invalid credentials are rejected without echoing the token.
@@ -50,5 +84,5 @@ await disabled.verify({ accountId: "0123456789abcdef0123456789abcdef", apiToken:
   () => "accepted",
   (error) => `${error.message} / leaks token=${error.message.includes("placeholder-token")}`,
 )
-=> Cloudflare did not verify an active API token. / leaks token=false
+=> Cloudflare could not verify an active API token. Check that this is an active Cloudflare API token, then try again. / leaks token=false
 ```
