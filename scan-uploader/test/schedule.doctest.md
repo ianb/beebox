@@ -177,20 +177,25 @@ detectRunMode("/Users/A B & C/scan-uploader.mjs")
 => bundle
 ```
 
-## `resolveLaunchdInvocation` — bundle mode is unchanged; source mode needs the repo-root wrapper
+## `resolveLaunchdInvocation` — bundle and source modes carry tool paths
 
-Bundle mode: `[execPath, entryPath, configPath]`, no working directory or
-env — this never touches the filesystem, so a nonexistent path is fine to
-pass here.
+Bundle mode: `[execPath, entryPath, configPath]` and a PATH for Node plus
+user-installed command line tools.
 
 ```
 const bundleInvocation = await resolveLaunchdInvocation({
   entryPath: "/path/to/scan-uploader.mjs",
   execPath: "/usr/local/bin/node",
   configPath: "/path/to/scan-uploader.json",
+  homeDir: join(dir, "home-test"),
 });
-JSON.stringify(bundleInvocation)
-=> {"programArguments":["/usr/local/bin/node","/path/to/scan-uploader.mjs","/path/to/scan-uploader.json"]}
+bundleInvocation.programArguments.join("|")
+=> /usr/local/bin/node|/path/to/scan-uploader.mjs|/path/to/scan-uploader.json
+```
+
+```continue
+bundleInvocation.environmentVariables?.PATH.includes(join(dir, "home-test", ".local", "bin"))
+=> true
 ```
 
 Source mode derives the repo root from `entryPath` (`<repoRoot>/scan-uploader/src/cli.ts`) and requires `<repoRoot>/bin/scan-uploader` to actually exist:
@@ -199,7 +204,7 @@ Source mode derives the repo root from `entryPath` (`<repoRoot>/scan-uploader/sr
 const repoRootG = join(dir, "repoG");
 const entryPathG = join(repoRootG, "scan-uploader", "src", "cli.ts");
 const missingWrapper = await rejected(
-  resolveLaunchdInvocation({ entryPath: entryPathG, execPath: "/usr/local/bin/node", configPath: "/x/scan-uploader.json" }),
+  resolveLaunchdInvocation({ entryPath: entryPathG, execPath: "/usr/local/bin/node", configPath: "/x/scan-uploader.json", homeDir: join(dir, "home-test") }),
 );
 missingWrapper.name
 => ScheduleError
@@ -221,6 +226,7 @@ const sourceInvocation = await resolveLaunchdInvocation({
   entryPath: entryPathG,
   execPath: "/usr/local/bin/node",
   configPath: "/x/scan-uploader.json",
+  homeDir: join(dir, "home-test"),
 });
 sourceInvocation.programArguments.length
 => 2
@@ -242,8 +248,8 @@ sourceInvocation.workingDirectory === repoRootG
 ```
 
 ```continue
-JSON.stringify(sourceInvocation.environmentVariables)
-=> {"PATH":"/usr/local/bin:/usr/bin:/bin"}
+sourceInvocation.environmentVariables?.PATH.includes(join(dir, "home-test", ".local", "bin"))
+=> true
 ```
 
 ## `parseIntervalMinutes` — positive-integer validation, default 15
@@ -422,8 +428,8 @@ runnerB.calls[1]?.[2] === installResult.plistPath
 => true
 ```
 
-The written plist has exactly bundle mode's shape: no `WorkingDirectory`,
-no `EnvironmentVariables`:
+The written plist has no `WorkingDirectory`; it sets PATH for optional
+external tools:
 
 ```continue
 writtenPlist.includes("WorkingDirectory")
@@ -432,7 +438,12 @@ writtenPlist.includes("WorkingDirectory")
 
 ```continue
 writtenPlist.includes("EnvironmentVariables")
-=> false
+=> true
+```
+
+```continue
+writtenPlist.includes(`${homeDirB}/.local/bin:/opt/homebrew/bin`)
+=> true
 ```
 
 ## `install` in SOURCE mode — the plist runs through the repo-root wrapper
@@ -489,7 +500,7 @@ writtenPlistH.includes(`<key>WorkingDirectory</key>\n\t<string>${repoRootH}</str
 
 ```continue
 writtenPlistH.includes(
-  "<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:/usr/bin:/bin</string>",
+  `<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:${homeDirH}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>`,
 )
 => true
 ```

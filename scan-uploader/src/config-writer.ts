@@ -33,6 +33,7 @@ export interface RawTarget {
   readonly box: string;
   readonly tokenPath: string;
   readonly disposition: Disposition;
+  readonly photos?: { readonly album: string };
 }
 
 export interface WriteUploaderTargetParams {
@@ -103,4 +104,6 @@ function upsertTarget(configPath: string, params: { targets: unknown[]; target: 
   existing.folder = target.folder;
   existing.tokenPath = target.tokenPath;
   existing.disposition = target.disposition;
+  if (target.photos === undefined) delete existing.photos;
+  else existing.photos = target.photos;
 }

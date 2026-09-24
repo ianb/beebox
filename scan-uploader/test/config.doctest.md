@@ -30,6 +30,22 @@ async function rejectedErrorName(promise: Promise<unknown>): Promise<string> {
 }
 ```
 
+An optional Photos album is retained in the typed config and requires keep:
+
+```ts
+const photosPath = await writeConfig({ targets: [{ folder: "/photos", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", photos: { album: "Bee Box" } }] });
+JSON.stringify((await loadConfig(photosPath)).targets[0])
+=> {"folder":"/photos","serverUrl":"https://beebox.run","box":"family","tokenPath":"/t","disposition":"keep","photos":{"album":"Bee Box"}}
+```
+
+Archiving Photos exports is refused:
+
+```ts
+const photosArchivePath = await writeConfig({ targets: [{ folder: "/photos", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", disposition: "archive", photos: { album: "Bee Box" } }] });
+await rejectedErrorName(loadConfig(photosArchivePath))
+=> ConfigError
+```
+
 A well-formed config with one target loads cleanly; an omitted `disposition`
 defaults to `keep`:
 
