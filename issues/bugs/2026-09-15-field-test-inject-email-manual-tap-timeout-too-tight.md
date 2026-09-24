@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: weekly manual-test triage — run 20260915-204151, commit 7894bba8f on main
 labels: [manual-tests]
+priority: normal
 ---
 
 Weekly `test:manual` (log
