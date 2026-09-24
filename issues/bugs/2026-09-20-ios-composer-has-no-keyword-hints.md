@@ -17,10 +17,10 @@ discovered-in: main — boxholder noticing the hint is missing on the phone
 >
 > The manual-testing gate was removed while the fix was pending; it is restored below for phone verification.
 
-> **⏳ Awaiting manual testing** — layout fix landed in `09ef3f025`. Confirm on a
-> real iPhone that the hint stays above the editor, remains legible, and rotates
-> during live dictation without reserving space when dictation is off. Only the
-> boxholder clears this gate.
+> **⏳ Awaiting manual testing** — layout fix landed in `aa34a8cf9`. Confirm on a
+> real iPhone that the hint sits above the mic button at the right, stays clear
+> of editor text, remains legible, and rotates during live dictation without
+> reserving space when dictation is off. Only the boxholder clears this gate.
 
 Earlier status: the native hint surface landed in `f48ae9256`; exercise the live iOS composer on a simulator or device to confirm its placement, rotation, and accessibility hint. The native list remains local to `SpeechKeywords.swift`, and the HQ phrase is still not represented.
 
