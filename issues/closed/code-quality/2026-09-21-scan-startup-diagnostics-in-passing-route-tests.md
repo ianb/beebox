@@ -1,10 +1,17 @@
 ---
 title: "Passing route tests emit scan startup shape errors"
-workstream: unattached
+workstream: chat-routing
 area: beebox
 filed-by: agent
 discovered-in: chat-routing — change-selected test run
+resolution: implemented
 ---
+
+Resolved by `380395bfb`: scan promotion now tracks in-flight startup and
+debounced passes and the server waits for them during close, so temporary route
+test boxes are not removed while a pass is validating them. The focused teardown
+regression and isolated scan-upload route suite pass without startup-failure
+diagnostics; the deliberate non-annex fixture warning remains.
 
 A passing `pnpm --dir beebox test:changed` run emitted a stack trace beginning
 `[scan] Startup promote pass failed: MissingBeeBoxDependencyError` for a temporary
