@@ -1,6 +1,6 @@
 ---
 title: "Prompts as code: MECE structure against accretion, and whether our instruction surfaces need it"
-workstream: unattached
+workstream: doc-structure
 area: beebox
 next-action: discuss
 filed-by: agent
