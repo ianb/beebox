@@ -6,6 +6,7 @@ labels: [writing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
+priority: normal
 ---
 
 Agent-written docs carry stock phrases that read as model output. Once in a

@@ -5,6 +5,7 @@ area: schedules
 filed-by: agent
 discovered-by: agent
 discovered-in: main — investigating the 2026-09-23 knip-sweep failure
+priority: important
 ---
 
 A worktree schedule merges `main` into its branch before it starts a session

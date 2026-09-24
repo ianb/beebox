@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: important
 ---
 
 `bbx validate` flagged a plain `https://` URL as leaking an "absolute machine

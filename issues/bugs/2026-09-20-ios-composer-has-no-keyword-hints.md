@@ -7,6 +7,7 @@ labels: [voice, ios, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder noticing the hint is missing on the phone
+next-action: discuss
 ---
 
 > **⏳ Awaiting manual testing** — the native hint surface landed in `f48ae9256`; exercise the live iOS composer on a simulator or device to confirm its placement, rotation, and accessibility hint. The native list remains local to `SpeechKeywords.swift`, and the HQ phrase is still not represented.

@@ -5,6 +5,8 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: important
+next-action: discuss
 ---
 
 The generated agent-guide landmarks section tells every box agent: "Read

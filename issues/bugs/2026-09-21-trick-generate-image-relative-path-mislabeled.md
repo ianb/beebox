@@ -5,6 +5,8 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: important
+next-action: discuss
 ---
 
 The `generate-image` trick accepts a relative output path and prints a banner

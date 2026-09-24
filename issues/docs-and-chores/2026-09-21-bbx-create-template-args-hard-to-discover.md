@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: important
 ---
 
 An agent reflexively wrote `bbx create path -t browser-task --title X --source

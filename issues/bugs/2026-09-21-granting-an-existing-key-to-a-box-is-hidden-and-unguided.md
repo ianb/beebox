@@ -6,6 +6,7 @@ labels: [admin, secrets, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder working in the admin Secrets section
+priority: normal
 ---
 
 Three complaints about one flow, from the boxholder:

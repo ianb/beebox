@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey F review
+priority: normal
 ---
 
 Opening a fresh box through its ordinary root URL showed only “Start a

@@ -6,6 +6,7 @@ labels: [plugins, architecture]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder found agent-plugins.org, 2026-09-24
+priority: backlog
 ---
 
 The boxholder found [Agent Plugins](https://agent-plugins.org/), an open,

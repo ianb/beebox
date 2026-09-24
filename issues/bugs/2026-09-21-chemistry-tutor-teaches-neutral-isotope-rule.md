@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey D chemistry study
+next-action: invalid
 ---
 
 A learner confused isotopes with ions. The tutor gave them a memorable but

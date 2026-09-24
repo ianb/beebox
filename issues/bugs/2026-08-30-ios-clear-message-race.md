@@ -7,6 +7,7 @@ labels: [ios, voice]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sometimes doesn't work; seems like a race somewhere"
+priority: backlog
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `9fc27f00e`; while iOS voice

@@ -6,6 +6,7 @@ labels: [voice, chat, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder describing it from their own use
+priority: normal
 ---
 
 Start a recording. The recording errors and stops. The composer is usable

@@ -5,6 +5,8 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chip-icon-design — verifying the revised chat properties chip
+priority: normal
+next-action: reconfirm
 ---
 
 > **Re-encountered 2026-09-23 after the fix (weekly tour check).** At 375px

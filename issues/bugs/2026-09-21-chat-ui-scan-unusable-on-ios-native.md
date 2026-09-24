@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: normal
 ---
 
 On a chat session with `channel="ios-native"`, running `bbx chat ui` returned

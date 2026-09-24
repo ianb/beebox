@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+next-action: discuss
 ---
 
 An agent wrote a markdown link from a card to a package doc (a `box-docs/*.md`

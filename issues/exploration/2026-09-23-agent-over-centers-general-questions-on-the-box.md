@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report, 2026-09-23
+priority: backlog
 ---
 
 The boxholder asked the box agent an ordinary question. It asked for a

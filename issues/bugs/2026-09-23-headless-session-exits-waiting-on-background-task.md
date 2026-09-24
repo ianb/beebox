@@ -5,6 +5,7 @@ area: schedules
 filed-by: agent
 discovered-by: agent
 discovered-in: main — investigating the 2026-09-23 knip-sweep failure
+priority: important
 ---
 
 A scheduled session runs headless and single-shot. If the agent starts a

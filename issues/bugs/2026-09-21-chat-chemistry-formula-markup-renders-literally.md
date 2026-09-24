@@ -6,6 +6,7 @@ labels: [journey-findings, ui-error]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey, 2026-09-21
+priority: normal
 ---
 
 Chat messages containing chemistry formula markup show the source notation
