@@ -1,6 +1,6 @@
 ---
 title: "Static site publishing with admin setup and human approval"
-status: active
+status: partial
 workstream: publish-pages
 issues:
   - ../../../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md
