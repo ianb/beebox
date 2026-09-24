@@ -1,6 +1,6 @@
 ---
 title: "bbx validate --hook exits 2 for both warnings and real errors, so a harness that treats nonzero exit as failure reports a successful write as failed"
-workstream: unattached
+workstream: validate-hook-channels
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -63,3 +63,36 @@ Boxholder's disposition:
   (for example, CLAUDE.md over its soft size limit) fires on every edit.
   Repeats should be suppressed in some way.
 
+## Research (2026-09-24)
+
+I ran real one-turn agent sessions with a throwaway `PostToolUse` command hook.
+Each hook consumed its stdin, logged that it ran, and emitted a unique marker;
+the agent edited `target.txt` from `original` to `changed` and then reported
+what it saw. Every counted run had a matching hook invocation and the file was
+`changed` afterward. Claude Code used `claude -p` with a temporary settings
+file and `Edit`; Codex used the workspace's pinned `node_modules/.bin/codex`
+0.155.1 with a temporary project hook and `apply_patch`. Each channel was
+tested twice, with a fresh target file and marker each time.
+
+| Harness | Hook output | Marker reached model | Edit reported failed? |
+| --- | --- | --- | --- |
+| Claude Code | exit 0, stderr | No (0/2) | No (0/2) |
+| Claude Code | exit 0, JSON `hookSpecificOutput.additionalContext` on stdout | Yes (2/2) | No (0/2) |
+| Claude Code | exit 2, stderr | Yes (2/2) | Edit tool reported success, followed by a blocking hook error (2/2) |
+| Codex 0.155.1 | exit 0, stderr | No (0/2) | No (0/2) |
+| Codex 0.155.1 | exit 0, JSON `hookSpecificOutput.additionalContext` on stdout | Yes (2/2) | No (0/2) |
+| Codex 0.155.1 | exit 2, stderr | Yes (2/2) | Yes (2/2), although the file had changed |
+
+The JSON was `{"hookSpecificOutput":{"hookEventName":"PostToolUse",
+"additionalContext":"<marker>: informational warning"}}`. Codex's
+[hook documentation](https://learn.chatgpt.com/docs/hooks) specifies that
+`PostToolUse` JSON `additionalContext` becomes model-visible developer context,
+while exit 2 replaces or rejects the completed tool result. The real runs
+confirmed that contract for this pinned binary. The first two Codex attempts
+were excluded because the throwaway hook never fired; removing
+`--ignore-user-config` let the project hook load. The later runs all had hook
+invocation logs.
+
+**Implementation consequence:** warning-only results can use exit 0 with JSON
+`additionalContext` in both harnesses. Results containing real errors should
+keep exit 2 and stderr. Neither harness delivered plain stderr on exit 0.

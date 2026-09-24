@@ -1,8 +1,9 @@
 /**
  * Hook mode for `bbx validate --hook`: the PostToolUse entry point. Reads the
  * touched file path from a Claude Code hook payload on stdin, validates just
- * that file, and exits — errors AND warnings exit 2 so the agent sees feedback
- * (the hook is a nudge, not a gate; pre-commit blocks only on errors). Split out
+ * that file, and exits. Errors use exit 2 and stderr; warning-only results use
+ * PostToolUse JSON context on stdout with exit 0 so the edit stays successful.
+ * Pre-commit blocks only on errors. Split out
  * of validate.ts so the interactive command and the hook stay separate files.
  */
 
@@ -201,22 +202,22 @@ export async function validateHookPathsResult(paths: string[]): Promise<HookVali
   return { feedback: feedback.length === 0 ? null : feedback.join("\n"), hasErrors };
 }
 
-/** Validate paths reported by a hook and return combined agent feedback. */
-async function validateHookPaths(paths: string[]): Promise<string | null> {
-  return (await validateHookPathsResult(paths)).feedback;
-}
-
 /**
  * Hook mode: read the touched file path from stdin, validate it, and exit.
- * Non-card paths exit 0 silently; errors AND warnings exit 2 so the agent
- * sees feedback. This always exits the process and never returns.
+ * Clean paths exit 0 silently, warning-only paths exit 0 with model-visible
+ * PostToolUse context, and errors exit 2 with stderr. This always exits.
  */
 export async function runHookMode(): Promise<never> {
   const paths = await readHookFilePaths();
-  const feedback = await validateHookPaths(paths);
-  if (feedback !== null) {
+  const { feedback, hasErrors } = await validateHookPathsResult(paths);
+  if (feedback !== null && hasErrors) {
     process.stderr.write(`${feedback}\n`);
     process.exit(2);
+  }
+  if (feedback !== null) {
+    process.stdout.write(`${JSON.stringify({
+      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: feedback },
+    })}\n`);
   }
   process.exit(0);
 }

@@ -11,9 +11,11 @@ validate on load (`src/core/card-io.ts`).
 Three hooks are installed per box:
 
 - `.claude/settings.json` — PostToolUse hook running `bbx validate --hook`
-  after Edit/Write/MultiEdit. On a card path with errors it exits 2 with
-  the error on stderr so Claude Code surfaces it to the agent (warning,
-  not blocking).
+  after Edit/Write/MultiEdit. Warning-only results use exit 0 with JSON
+  `hookSpecificOutput.additionalContext` on stdout, so the agent sees the
+  warning while the completed edit remains successful. Errors use exit 2
+  with stderr; the edit has already happened, and pre-commit blocks invalid
+  commits. The Codex plugin uses the same command after `apply_patch`.
 - `.git/hooks/pre-commit` — runs `bbx validate --pre-commit`; blocks commits
   that include cards failing validation. That one invocation is the whole
   commit-time suite (it replaced three separate `bbx` calls, each of which

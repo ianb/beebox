@@ -35,13 +35,15 @@ async function makeViews() {
 }
 
 // Run the real CLI (prebuilt by pretest) in hook mode with a PostToolUse
-// payload on stdin; resolve its exit code + stderr.
+// payload on stdin; resolve its exit code and output channels.
 function runShellHook(filePath) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "validate", "--hook"], { cwd: dirname(filePath) });
+    let stdout = "";
     let stderr = "";
+    child.stdout.on("data", (d) => { stdout += String(d); });
     child.stderr.on("data", (d) => { stderr += String(d); });
-    child.on("close", (code) => resolve({ code, stderr }));
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
     child.stdin.end(JSON.stringify({ tool_input: { file_path: filePath } }));
   });
 }
@@ -149,4 +151,24 @@ good.code
 
 ```ts cleanup
 await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
+```
+
+A soft instruction-size warning exits 0 and reaches the agent through the
+`PostToolUse` JSON context channel, without a failing tool result:
+
+```ts
+const warningBox = await makeTmpBox();
+const instructions = join(warningBox.root, "CLAUDE.md");
+await writeFile(instructions, "x".repeat(13000));
+const warning = await runShellHook(instructions);
+JSON.stringify({
+  code: warning.code,
+  context: JSON.parse(warning.stdout).hookSpecificOutput.additionalContext.includes("claude-md-size"),
+  stderr: warning.stderr,
+})
+=> {"code":0,"context":true,"stderr":""}
+```
+
+```ts cleanup
+await warningBox.cleanup();
 ```
