@@ -25,6 +25,9 @@ export async function ensureAuditPackageDocs(boxRoot: string, test: AuditTest): 
   const referencedFiles = [...(test.should_read ?? []), ...(test.should_read_any ?? [])];
   if (!referencedFiles.some((file) => file.includes(packageDocsPrefix))) return;
 
+  // The destination can itself be a package symlink in an installed box.
+  // Never let audit setup generate files through it into the checkout.
+  await assertFixturePathInBox(boxRoot, `${packageDocsPrefix}README.md`);
   const packageRoot = path.join(boxRoot, "node_modules", "beebox");
   // Generate the real engine docs into the audit box instead of faking their
   // contents with fixtures under a package symlink.
