@@ -1,12 +1,33 @@
 ---
 title: "An rrule/ical field convention with ref-like universal treatment — every consumer knows what a recurrence value is"
-workstream: unattached
+workstream: recurrence-fields
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "not 100% sure we should do this"
 priority: normal
+resolution: wontfix
 ---
+
+**Closed 2026-09-23: not yet.** This is not a veto. Reopen it if a use case
+appears. No revisit criteria are fixed in advance.
+
+The purpose analysis found no operation that needs a shared convention. `ref`
+has one because tools act on refs in every card type without knowing the
+schema: `bbx mv` rewrites them, validation walks them, and prompt inlining
+collects them. No such query or fixup exists for recurrence values. The
+candidate uses were examined and rejected:
+
+- Validation and prose rendering are per-schema needs. A schema that wants a
+  recurrence field can import `RruleField`
+  (`beebox/src/schemas/scheduled-script-fields.ts`) and the `rrulestr().toText()`
+  path in `beebox/src/core/schedule/describe.ts`.
+- A box-wide "upcoming" query had no concrete user or meaning.
+- Calendar reconciliation, reminders, and ical export all depend on that query.
+
+A second schema with a recurrence field does not by itself justify the
+convention, which reverses the trigger stated below.
+
 
 Boxholder idea, explicitly tentative ("not 100% sure we should do this"):
 the way `ref` is *always* a reference — one name, one meaning, and every
