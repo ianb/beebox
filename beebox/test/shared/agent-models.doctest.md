@@ -28,7 +28,7 @@ JSON.stringify([
   resolveProcedureModel({engine: "codex", model: "strong"}),
   resolveProcedureModel({engine: "codex", model: "strongest"}),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-6-astra"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5-5","claude-fable-5-1","gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"]
 ```
 
 ## Legacy aliases
@@ -44,7 +44,7 @@ JSON.stringify([
   resolveProcedureModel({engine: "codex", model: "opus"}),
   resolveProcedureModel({engine: "codex", model: "fable"}),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-6-astra"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5-5","claude-fable-5-1","gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"]
 ```
 
 The schema vocabulary contains both sets exactly once.
@@ -63,8 +63,8 @@ across the four tiers by design. The default (no provider) stays first-party.
 JSON.stringify([
   providerOf("glm-5.3"),
   providerOf("glm-5.3-flash"),
-  providerOf("claude-opus-5"),
-  providerOf("gpt-5.6-sol"),
+  providerOf("claude-opus-5-5"),
+  providerOf("gpt-6-sol"),
 ])
 => ["glm","glm","anthropic","openai"]
 ```
@@ -79,7 +79,7 @@ JSON.stringify([
   // codex has no GLM column — the request falls back to its own provider.
   resolveProcedureModel({engine: "codex", model: "strong", provider: "glm"}),
 ])
-=> ["glm-5.3-flash","glm-5.3-flash","glm-5.3","glm-5.3","claude-opus-5","gpt-5.6-sol"]
+=> ["glm-5.3-flash","glm-5.3-flash","glm-5.3","glm-5.3","claude-opus-5-5","gpt-6-sol"]
 ```
 
 GLM ids carry tiers, so box-config admission and cross-engine degradation

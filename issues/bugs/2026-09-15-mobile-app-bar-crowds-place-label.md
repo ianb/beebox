@@ -1,14 +1,22 @@
 ---
 title: "Mobile app bar crowds the place label when count badges are visible"
 workstream: mobile-app-bar
-needs: [manual-testing]
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chip-icon-design — verifying the revised chat properties chip
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `c97f04dd9` + `23333c33e`; open a chat on your phone with both counts showing and check that the place pill names where you are and the voice icon reads clearly. Only the developer clears this.
+> **Re-encountered 2026-09-23 after the fix (weekly tour check).** At 375px
+> with both count badges showing (39 questions, 15 todos), the place pill
+> label still collapses to one letter: "B" for "Box". The fix in
+> `c97f04dd9` + `23333c33e` gave the label a few pixels, not enough to name
+> the place. The manual-testing gate is removed because this re-encounter
+> shows the fix is incomplete. Artifacts: `nav-pages` tour, checkpoints
+> `chat` and `browse`, mobile viewport —
+> `beebox/test/tours/.artifacts/nav-pages/2026-09-24T00-46-26-931Z/chat.mobile.png`.
+> The other routed pages show a "Chat" button in that position, so the
+> clipping shows on the chat and Browse views.
 
 > **Re-encountered 2026-09-20 on a phone, worse than filed.** The boxholder,
 > sending a screenshot: "The top bar as you can see the icons are all wrong,

@@ -34,7 +34,7 @@ pinned nothing reports the `strong` tier for its engine rather than `null`.
 ```ts
 const server = await makeTestServer();
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5","source":"default","boxDefault":"claude-opus-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-opus-5-5","source":"default","boxDefault":"claude-opus-5-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude","glmAvailable":false,"addedModels":[]}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
@@ -52,15 +52,15 @@ understand"*).
 await caller(server).chat.setDefaultModel({ model: null });
 clearBoxConfigCache(server.boxRoot);
 (await caller(server).chat.status({})).boxDefault
-=> claude-opus-5
+=> claude-opus-5-5
 ```
 
 A model the box's engine cannot run is refused at the boundary rather than
 stored and silently ignored later.
 
 ```ts continue
-await caller(server).chat.setDefaultModel({ model: "gpt-5.6-sol" }).catch((e) => e.message)
-=> Model gpt-5.6-sol is unavailable for claude chats
+await caller(server).chat.setDefaultModel({ model: "gpt-6-sol" }).catch((e) => e.message)
+=> Model gpt-6-sol is unavailable for claude chats
 ```
 
 A model no engine offers is refused by the settings path too, rather than being

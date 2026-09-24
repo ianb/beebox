@@ -33,7 +33,7 @@ A chat with no choice of its own follows the box; one with a choice keeps it.
 ```ts
 const box = await makeTmpBox();
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
-=> {"model":"claude-opus-5","source":"default"}
+=> {"model":"claude-opus-5-5","source":"default"}
 
 await pin(box.root, { agentModel: "claude-sonnet-5" });
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
@@ -74,7 +74,7 @@ clearBoxConfigCache(legacyBox.root);
 
 // A retired id is carried forward, not copied verbatim.
 JSON.stringify(await resolveSessionModel(legacyBox.root, FOLLOW))
-=> {"model":"claude-opus-5","source":"default"}
+=> {"model":"claude-opus-5-5","source":"default"}
 
 await fs.access(legacyPath).then(() => "present", () => "gone")
 => gone
@@ -87,13 +87,13 @@ overwritten by a staler pointer.
 await migrate();
 clearBoxConfigCache(legacyBox.root);
 JSON.stringify(await resolveSessionModel(legacyBox.root, FOLLOW))
-=> {"model":"claude-opus-5","source":"default"}
+=> {"model":"claude-opus-5-5","source":"default"}
 
 await fs.writeFile(legacyPath, JSON.stringify({ model: "claude-haiku-4-5-20251001" }));
 await migrate();
 clearBoxConfigCache(legacyBox.root);
 JSON.stringify(await resolveSessionModel(legacyBox.root, FOLLOW))
-=> {"model":"claude-opus-5","source":"default"}
+=> {"model":"claude-opus-5-5","source":"default"}
 
 await legacyBox.cleanup();
 ```

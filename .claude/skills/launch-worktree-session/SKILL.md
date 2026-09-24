@@ -75,15 +75,19 @@ turning your own guesses into instructions.
 ## Choose the agent and model
 
 For launches driven by this skill, the default is Codex: `--agent codex`.
-With no `--model`, the Codex launcher pins `gpt-5.6-sol`. Do not confuse this
+With no `--model`, the Codex launcher pins `gpt-6-sol`. Do not confuse this
 skill policy with the executable's bare default, which is Claude.
 
 The human's explicit choice or standing preference always wins. Ask when the
 agent or model is materially ambiguous; model selection affects capability and
 quota. Do not silently promote a task because it looks difficult.
 
+- Prefer Codex Luna (`--model gpt-6-luna`) for straightforward work that
+  needs little discernment or discussion: a bug fix with a clear cause, a
+  mechanical change, a well-specified implementation. Choose it without asking.
 - Claude requires an explicit `--model`; otherwise it inherits the human's
-  saved CLI default. `opus` is the usual harder-work option.
+  saved CLI default. Opus 5.5 (`claude-opus-5-5`) is the usual harder-work
+  option; whenever Opus is chosen, use 5.5.
 - `claude-fable-5-1` and Codex `gpt-6-astra` are the top choices for genuinely
   difficult architecture, unresolved design, or judgment-heavy work. Use them
   when the human selected them, or ask first.
