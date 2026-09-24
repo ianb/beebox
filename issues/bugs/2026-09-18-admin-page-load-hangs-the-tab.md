@@ -6,7 +6,6 @@ labels: [ui, admin]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder reporting it right after it happened
-next-action: discuss
 priority: normal
 ---
 
@@ -57,3 +56,13 @@ component instead of looping forever) and wait for it to fire.
 `issues/closed/bugs/2026-08-21-secrets-section-shows-the-same-error-twice.md`
 is the last bug in this area; the Secrets section is the largest part of the
 page and the one with the most conditional state.
+
+## Discussion (2026-09-24)
+
+The boxholder sees this on iOS, so there is no DevTools, Performance recording,
+or Network tab to capture from. Disposition: ship bounded instrumentation
+(the field-probe approach) and wait for it to fire. A frozen main thread cannot
+send its own report, so the probe must either catch the loop before it locks
+up, or report from somewhere the main thread does not own (a Web Worker
+watchdog, or a breadcrumb that the next page load sends).
+
