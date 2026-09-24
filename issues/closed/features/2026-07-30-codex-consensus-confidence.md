@@ -4,14 +4,16 @@ workstream: elixir-skills-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
-next-action: discuss
 priority: backlog
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 (boxholder): cross-model review is a back-and-forth between the driver and one reviewer from the other family, not a consensus of parallel reviewers, and that is how it should stay. Re-litigation within a piece of work is already bounded by the cross-model skill's two-round cap and verification-only follow-ups.
 
 `.claude/skills/cross-model/` runs a cross-model review as a standalone manual pass.
 Its findings are never cross-referenced against anything, and it has no memory of
 what it told us last time. Two cheap improvements, both from
-[research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/workflow-and-orchestration.md).
+[research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/workflow-and-orchestration.md).
 
 ## 1. Agreement as signal
 
