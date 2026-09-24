@@ -4709,6 +4709,14 @@ test1:
       peak: 48929
       added: 0
       turns: 1
+  iphone-photos-album-setup:
+    - date: 2026-09-24T22:50:43.911Z
+      boxCommit: 64bbee98d54cdb4e6c8152db70cc00fc86a533b2
+      repoCommit: 13921368dae56dabfa6eb8a398fb25d0b31ca5bf
+      initial: 50559
+      peak: 57355
+      added: 6796
+      turns: 13
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

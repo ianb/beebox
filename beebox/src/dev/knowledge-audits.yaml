@@ -413,6 +413,9 @@ tests:
   # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
   # direct orientation questions below used no reads or searches. user-adds-item
   # also passed, but inspected the frontend to verify its exact UI instructions.
+  # Status (2026-09-24, Claude): iphone-photos-album-setup passed and explained
+  # the Mac setup, token boundary, and command. test1 lacks installed package
+  # docs, so it found the source doc after first checking the broken test-box link.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -435,6 +438,21 @@ tests:
       The agent should know that users interact through the web UI.
       The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
+
+  - id: iphone-photos-album-setup
+    prompt: "Can I have new photos from an Apple Photos album on my iPhone sent into this box automatically? How would I set that up?"
+    expected_level: knows_about
+    watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token minting and local setup to the boxholder"
+    correct_contains_any: ["scan-uploader", "scan uploader"]
+    correct_matches:
+      - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
+      - '(mint|create).{0,60}token'
+    should_read: ["node_modules/beebox/box-docs/phone-photos.md"]
+    tags: [intake, photos]
+    notes: >
+      Agent-guide awareness should route into the concise package doc, which
+      explains the Mac export setup and keeps token/local-machine actions with
+      the boxholder.
 
   - id: dont-tell-user-to-place-files
     prompt: "I have some documents I want to add to the box. Where should I put them?"
