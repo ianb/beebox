@@ -46,6 +46,12 @@ Uncertainty does not stop delivery. Jev favors a plausible recent or general
 chat, with a new general chat at the root as the fallback when no other
 destination fits.
 
+Recent messages are the primary routing evidence. Total history entries and
+the latest available message timestamp provide supporting context; a longer
+conversation does not outweigh a better match in recent messages. History
+entries are not a count of user turns. Results show these facts beneath existing
+chat titles when available, so identically named chats can be distinguished.
+
 ## Maintain the rubric
 
 Box agents have [packaged rubric instructions](box/quick-chat.md).
@@ -87,8 +93,10 @@ and recent conversation text. See [security report §3](security-report.md#3-dat
 The current bounds are:
 
 - Captured message: 12,000 characters; text only, with no attachments.
-- Candidate context: the last 12 parsed transcript entries, user/assistant text
-  only, capped at 2,000 characters per chat and 32,000 across chats. Serialized
+- Candidate context: a recent history window covering at least two real user
+  messages when available, user/assistant text only, capped at 2,000 characters
+  per chat and 32,000 across chats. Labeled excerpts prioritize the latest user
+  message and recent reply before older text. Serialized
   candidates stay within 60,000 characters. Shortened excerpts are disclosed in
   the result; labels are capped at 300 characters. The candidate budget also
   shrinks to fit the complete serialized message, choices, and instructions.

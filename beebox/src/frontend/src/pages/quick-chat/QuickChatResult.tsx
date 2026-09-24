@@ -32,9 +32,16 @@ export function QuickChatResult({ result, boxSlug }: { result: RouterOutput["qui
       {result.candidates.some(candidate => candidate.contextTruncated) && <Text as="p" size="sm" tone="muted">Conversation excerpts were shortened to fit this routing request.</Text>}
       <Text as="p" size="sm" tone="muted">Jev’s top choices (experimental estimates):</Text>
       {ranked.slice(0, 3).map(({ candidate, probability }) => <Row key={candidate.id} justify="between">
+        <Stack gap="xs">
         <TextLink id={`bbx-quick-chat-destination-${candidate.id}`} to={href(`/${boxSlug}/chat`)} search={destinationSearch(candidate)} onClick={openDestination}>
           {candidate.label}
         </TextLink>
+        {candidate.target.kind === "existing-session" && (candidate.totalEntries !== undefined || candidate.lastMessageAt !== undefined) &&
+          <Text size="sm" tone="muted">{[
+            candidate.totalEntries === undefined ? null : `${candidate.totalEntries.toLocaleString()} history entries`,
+            candidate.lastMessageAt === undefined ? null : `Last message ${new Date(candidate.lastMessageAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`,
+          ].filter(Boolean).join(" · ")}</Text>}
+        </Stack>
         <Text>{Math.round(probability * 100)}%</Text>
       </Row>)}
       <Text as="p" size="sm" tone="muted">Choose a destination to open that chat with this message in its composer. It will not send again automatically.</Text>
