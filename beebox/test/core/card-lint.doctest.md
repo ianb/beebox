@@ -276,6 +276,25 @@ result2.results[0]!.warnings.find((w) => w.type === "reference")!.message
 => Broken reference at body:1:source.ref: nowhere/at/all.card does not exist
 ```
 
+A ref the box namespace fence refuses says so instead. A package doc exists on
+disk under `node_modules/`, but no ref can reach it, and "does not exist" would
+send the author looking for a missing file:
+
+```ts
+const boxFence = await makeTmpBox();
+await boxFence.write("node_modules/beebox/box-docs/card-doc.md", "# doc\n");
+await boxFence.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/node_modules/beebox/box-docs/card-doc.md\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const resultFence = await lintCardsDispatch(
+  [boxFence.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: boxFence.root, ctx },
+);
+resultFence.results[0]!.warnings.find((w) => w.type === "reference")!.message
+=> Broken reference at body:1:source.ref: /node_modules/beebox/box-docs/card-doc.md points outside the box — a ref reaches only the box's areas (`_content`, `_config`, `_bookkeeping`, `_publish`, `_tmp`); package docs under `node_modules/` can't be linked, so name them in plain text
+```
+
 An `attach/…` ref never gets the content-form suggestion — it's a legitimate,
 different relative form, not the display vocabulary:
 
