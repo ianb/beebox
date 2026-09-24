@@ -17,9 +17,13 @@ const verificationResponseSchema = z.object({
   result: z.object({ id: z.string().min(1), status: z.enum(["active", "disabled", "expired"]) }).optional(),
 });
 
-const bucketListResponseSchema = z.object({ success: z.boolean(), result: z.array(z.unknown()).optional() });
+// The R2 List Buckets endpoint wraps the array in `result.buckets`.
+const bucketListResponseSchema = z.object({
+  success: z.boolean(),
+  result: z.object({ buckets: z.array(z.unknown()).optional() }).optional(),
+});
 
-class CloudflarePublishTokenVerificationError extends Error {
+export class CloudflarePublishTokenVerificationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "CloudflarePublishTokenVerificationError";
@@ -59,7 +63,7 @@ export function createCloudflarePublishTokenVerifier(deps?: { fetch?: Cloudflare
 
       const userUrl = "https://api.cloudflare.com/client/v4/user/tokens/verify";
       const userToken = await getVerification(userUrl, apiToken);
-      if (userToken === null) throw verificationError("Cloudflare did not verify an active API token.");
+      if (userToken === null) throw verificationError("Cloudflare could not verify an active API token. Check that this is an active Cloudflare API token, then try again.");
 
       // User tokens are not account-bound. Confirm that this token can access
       // the account the admin selected using the R2 read permission publishing
@@ -68,10 +72,15 @@ export function createCloudflarePublishTokenVerifier(deps?: { fetch?: Cloudflare
         `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets?per_page=1`,
         { method: "GET", headers: authorization(apiToken) },
       );
-      if (!accountAccess.ok) throw verificationError("The active Cloudflare user token cannot read R2 in the selected account.");
+      if (!accountAccess.ok) {
+        if (accountAccess.status === 401 || accountAccess.status === 403) {
+          throw verificationError("Cloudflare verified the active token, but it cannot read R2 in the selected account. Check the account ID and R2 Storage Read or Write permission.");
+        }
+        throw verificationError("Cloudflare verified the active token, but could not complete the R2 access check. Try again.");
+      }
       const buckets = bucketListResponseSchema.safeParse(await accountAccess.json());
       if (!buckets.success || !buckets.data.success || buckets.data.result === undefined) {
-        throw verificationError("Cloudflare could not verify the token's access to the selected account.");
+        throw verificationError("Cloudflare verified the active token, but returned an unexpected response while checking R2 access. Try again.");
       }
       return { ...userToken, tokenType: "user-api-token" };
     },
