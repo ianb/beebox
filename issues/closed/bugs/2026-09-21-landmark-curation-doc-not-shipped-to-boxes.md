@@ -6,8 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
-next-action: discuss
+resolution: implemented
 ---
+
+> Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/beebox/box-docs/landmark-curation.md`; the agent guide now points there, and the dev-only `docs/landmarks.md` reference was dropped. No other generated guide text points at an unshipped `docs/*.md`. The `landmarks-recurrence-signal` audit has `should_read` again, and the agent reads the doc.
 
 The generated agent-guide landmarks section tells every box agent: "Read
 `docs/landmark-curation.md` before suggesting or editing one"
