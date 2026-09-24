@@ -6,8 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
-next-action: discuss
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 (boxholder): `generate-image` is a box-authored trick, not part of beebox, and the box copy already resolves relative paths against the box root (dated 2026-07-23) with a `BBX_GENERATE_IMAGE_NO_COMMIT` switch. The two beebox-side points moved to [trick auto-commit](../../bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md): auto-commit makes a misplaced output permanent, and relative path arguments to tricks have no shared convention.
 
 The `generate-image` trick accepts a relative output path and prints a banner
 claiming the resolved path is box-root-relative. In practice the path is

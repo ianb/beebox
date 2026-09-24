@@ -1,8 +1,11 @@
+---
+read-when: Before suggesting, creating, or editing a landmark — deciding whether a place is landmark-worthy.
+---
 # Landmark Curation
 
 How to decide what becomes a landmark. The decision is a user-facing one, not a tidying-up exercise. The box's file layout exists to keep things organized for the system; landmarks exist to orient that organization toward the *user's* mental model — the places they actually inhabit.
 
-For the design and schema of the card itself, see `docs/landmarks.md` and `node_modules/beebox/box-docs/card-landmark.md`.
+For the schema of the card itself, see `node_modules/beebox/box-docs/card-landmark.md`.
 
 ## What landmarks are for
 

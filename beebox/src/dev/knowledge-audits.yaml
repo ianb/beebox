@@ -2705,8 +2705,17 @@ tests:
   # Landmarks are the user-navigation overlay on the box's filesystem.
   # The agent should know they exist and what they're for, but should
   # NOT freelance creation. Curation criteria live in
-  # docs/landmark-curation.md; the schema reference is at
-  # node_modules/beebox/box-docs/card-landmark.md.
+  # node_modules/beebox/box-docs/landmark-curation.md (moved from the dev-repo
+  # docs/ into docs/box/ 2026-09-24, so it now ships); the schema reference is
+  # at node_modules/beebox/box-docs/card-landmark.md.
+  #
+  # Status (2026-09-24): landmarks-recurrence-signal re-run with should_read
+  # restored — passes both automated checks and the agent did read
+  # landmark-curation.md. But it then created and committed Recipes.landmark.card
+  # and announced it, where the doc says to raise it as a question first. The
+  # user's "should you do something?" invites action, and the guide also says to
+  # "drop a landmark" on new structures, so the result is ambiguous. The keyword
+  # check cannot tell a proposal from a done deed.
   #
   # Status (2026-07-03): all 8 pass. The curation trio + dont-create-quietly had
   # should_read pointing at docs/landmark-curation.md, which is a DEV-REPO doc not
@@ -2753,6 +2762,7 @@ tests:
       proposes one to the user as a question — does NOT silently create one.
       Does NOT treat the question as purely about the recipes themselves.
     correct_contains_any: ["landmark"]
+    should_read: ["box-docs/landmark-curation.md"]
     tags: [landmarks, curation]
     notes: >
       The agent should propose a landmark rather than creating one quietly.
