@@ -141,3 +141,7 @@ What does not transfer: no isolation and no dependency resolution (a `dependents
 list, a `core-version`, a numeric priority, and later-wins precedence is the
 whole system). The public-specifier boundary — `beebox/{cards,schema,view-widgets}`
 — is already a stronger contract and should stay the plugin API.
+
+## Prior art (2026-09-24)
+
+[Agent Plugins spec](2026-09-24-agent-plugins-spec.md): an external packaging format with rules worth borrowing (root containment, skip-invalid-components, no credentials in the package), though probably not the format itself.
