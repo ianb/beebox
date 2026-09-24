@@ -145,3 +145,20 @@ whole system). The public-specifier boundary — `beebox/{cards,schema,view-widg
 ## Prior art (2026-09-24)
 
 [Agent Plugins spec](2026-09-24-agent-plugins-spec.md): an external packaging format with rules worth borrowing (root containment, skip-invalid-components, no credentials in the package), though probably not the format itself.
+
+## What a plugin should carry (boxholder, 2026-09-24)
+
+While reviewing the Agent Plugins spec, the boxholder listed what a beebox
+plugin should ship:
+
+- documentation;
+- maybe a trigger skill, mostly a pointer to the documentation;
+- command-line tools;
+- maybe views;
+- schemas, often as a stub that the box agent extends.
+
+The last item has no counterpart in the plugin formats reviewed. They all
+treat a plugin as read-only code. A stub that the agent grows after install is
+closer to a template. It meets the template-update problem: an upstream change
+to a template that the box has edited must not overwrite the box's edits.
+Today a changed template parks for approval (`_config/template-versions.json`).

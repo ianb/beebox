@@ -87,3 +87,26 @@ live in a reverse-domain extension directory that only beebox reads.
 
 The lean is to borrow the rules. The evaluation belongs with the design of
 the medium/content plugins issue, not before it.
+
+## Examples and verdict (2026-09-24)
+
+The boxholder's verdict after reviewing the surface: "not very interesting."
+The portable surface is instructions plus MCP. The only executable part is an
+MCP server, and the spec does not sandbox it.
+
+Real examples are thin:
+
+- The official [agent-plugins-example](https://github.com/agentplugins/agent-plugins-example)
+  contains one skill, `migrate-agent-plugin`, whose `references/` holds a
+  migration guide and checklist. Its advice is additive: add a root
+  `plugin.json` beside existing platform files and delete nothing.
+- [antonbabenko/agent-plugins](https://github.com/antonbabenko/agent-plugins)
+  ships parallel manifests per client (`.claude-plugin`, `.agents/plugins`,
+  `.kiro/plugins`). Only the `SKILL.md` files are shared. Commands and
+  subagents are client-specific.
+- The client-extensions page shows only a placeholder
+  (`com.example.client/hooks/hooks.json`) and names no real client namespace.
+
+In practice the ecosystem converges on `SKILL.md`, not on the plugin
+envelope. What the boxholder wants a beebox plugin to carry is recorded in
+[plugins and the medium/content line](2026-08-19-plugins-and-the-medium-content-line.md).
