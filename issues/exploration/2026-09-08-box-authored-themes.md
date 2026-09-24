@@ -24,7 +24,7 @@ The boundary must remain explicit. A box-authored theme should not inject
 arbitrary CSS, JavaScript, network requests, or markup into the application.
 Theme data should have a stable fallback when it is invalid or unavailable.
 The format should also work with landmark-level preferences and theme refs;
-see [system-theme preferences as refs](2026-09-08-system-theme-preferences-as-refs.md).
+see [system-theme preferences as refs](../closed/exploration/2026-09-08-system-theme-preferences-as-refs.md).
 
 ## Design questions
 

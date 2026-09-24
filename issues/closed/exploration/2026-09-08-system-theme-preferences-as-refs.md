@@ -1,12 +1,13 @@
 ---
 title: "Explore system-theme preferences as refs"
 workstream: unattached
-needs: [design, decision]
-next-action: discuss
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-paper-cards — discussing landmark system-theme preferences
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 (boxholder): not adding the complexity now. Reopen if a real need for shared or reusable theme preferences comes up; the open questions below are the starting point.
 
 The current landmark system-theme preference stores a built-in theme choice
 inline in landmark frontmatter:
