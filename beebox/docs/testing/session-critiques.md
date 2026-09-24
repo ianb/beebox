@@ -1,6 +1,11 @@
 # Session critiques
-**Location:** Report generator in `src/dev/lib/session-report.ts`, subagent in `.claude/agents.json`
-**Run:** `@session-critique <session-id>` (or `@session-critique latest`)
+
+A real agent session, reviewed for whether the CLI tools served the agent.
+
+## What it is
+
+Report generator in `src/dev/lib/session-report.ts`; subagent in
+`.claude/agents.json`.
 
 Session critiques evaluate whether CLI tools helped or hindered the agent during real agentic sessions. Unlike knowledge audits (which test what the agent knows), session critiques test whether the tools the agent used gave it good output.
 
@@ -23,7 +28,7 @@ Session critiques evaluate whether CLI tools helped or hindered the agent during
 
 3. **Output:** Structured findings with evidence, impact, and concrete suggestions (CLI format changes, new commands, `.claude/rules/` hints).
 
-## Running a critique
+## Running it
 
 ```bash
 # From within a box directory:
@@ -38,7 +43,7 @@ bbx session --latest --tool-report   # most recent session
 
 The subagent runs `bbx session` itself, so it needs a box directory context.
 
-## Acting on findings
+## Reading results
 
 Session critiques produce actionable suggestions. The typical workflow:
 
@@ -51,13 +56,3 @@ Session critiques produce actionable suggestions. The typical workflow:
 7. **For wasted-effort:** Usually a prompting issue. Check if the system prompt or agent guide is missing guidance for this task type.
 
 Not every session has problems. If the critique comes back clean, that's a positive signal that the tools are working.
-
-## Comparison with other test types
-
-| Aspect | Knowledge audit | Session critique |
-|--------|----------------|-----------------|
-| Tests | What the agent knows | How well tools serve the agent |
-| Input | Controlled prompts | Real session logs |
-| Automated? | Yes (run suite) | Semi-manual (pick sessions to review) |
-| Frequency | Periodic suite runs | After observing issues |
-| Fixes | Documentation, agent guide, rules | CLI output, error messages, rules |

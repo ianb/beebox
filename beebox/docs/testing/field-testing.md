@@ -1,15 +1,18 @@
 # Field tests
 
-**Status:** current operational guide. Design history and rationale live in
-[the implemented plan](../implemented-plans/agent-field-tests.md).
+A persona operator drives a disposable real box through the real web UI to
+test discoverability and end-to-end use.
+
+## What it is
 
 Field tests exercise realistic discoverability and end-to-end use through a
 persona operator, a disposable real box, its real agents, and the real web UI.
 They are expensive, run weekly or on demand, and are never a CI or merge gate.
 The harness lives in `src/field-test/`; checked-in scenarios live in
-`field-tests/<scenario>/`.
+`field-tests/<scenario>/`. Design history and rationale live in
+[the implemented plan](../implemented-plans/agent-field-tests.md).
 
-## Run a scenario
+## Running it
 
 ```bash
 bbx engine field-test list
@@ -34,7 +37,12 @@ The default run root is `~/src/boxes/field-runs/`. Each run directory contains:
 Use `bbx engine field-test report <run-dir>` to regenerate `report.md` from the saved
 results after a run directory is moved or copied.
 
-## Review findings
+`bbx engine field-test inject-email <fixture> --state <path>` appends a YAML email
+fixture to fake-Gmail state for manual scenario work. Run `bbx field-test
+inject-email --help` for the fixture schema. This helper does not replace a
+full scenario run.
+
+## Reading results
 
 Treat **Visual flags (unvetted)** as operator observations only. A human must
 open the linked screenshots before accepting a visual claim. Other report
@@ -44,19 +52,3 @@ unanswered questionnaire entries, and unresolved screenshot references.
 A field run never files issues automatically. A human or triage agent decides
 which evidence warrants an issue and applies the repository's normal public or
 private issue rules.
-
-## Scenario support
-
-`bbx engine field-test inject-email <fixture> --state <path>` appends a YAML email
-fixture to fake-Gmail state for manual scenario work. Run `bbx field-test
-inject-email --help` for the fixture schema. This helper does not replace a
-full scenario run.
-
-## From testing.md (to reconcile)
-
-Field tests use a persona operator, a disposable real box, its agents, and the
-real web UI to test realistic discoverability and end-to-end use. They run
-weekly or on demand and never gate CI or a merge. See the current
-[field-testing runbook](field-testing.md) for commands, artifacts, visual-review
-rules, and issue-triage boundaries. The
-[implemented plan](../implemented-plans/agent-field-tests.md) is design history.

@@ -45,7 +45,8 @@ Periodic tasks that still wait for someone to remember them. Each needs its own
 
 | Task | Command | Cadence it wants |
 |------|---------|------------------|
-| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/knowledge-audits.md` |
+| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/testing/knowledge-audits.md` |
+| Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically otherwise. Guide: `docs/testing/session-critiques.md` |
 | Security overview regeneration | `/security-report` (skill) | At release boundaries, and when the staleness diff over the surface map is non-empty |
 | Doc / prompt refresh | `pnpm prompt-report`, `pnpm prompt-viewer`, `pnpm doc-graph` | The standing tension in `issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md` |
 | Feedback collection | `feedback-review/collect.ts` | `issues/docs-and-chores/2026-07-14-feedback-collection-cadence.md` — items rot before review |
@@ -82,25 +83,3 @@ comments). When the output diff is non-trivial:
 3. **Status notes are durable; reports are ephemeral.** Knowledge-audit reports
    live in a gitignored directory; the durable record is the YAML status comment.
    Prefer a small in-place note over a large report file nobody reads later.
-
-## Periodic checks (from testing.md, to reconcile)
-
-Not automated — run these occasionally and fix what they find.
-
-### Session critiques
-
-Review recent agentic sessions (intake triage, capture processing, chat handling) for tool quality issues. Pick sessions that seemed slow or where the agent used workarounds. Run `@session-critique <id>` and act on findings. See § Session Critiques above.
-
-### Documentation graph
-
-`npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans and broken links. Review description quality at each reference site. Fix issues, regenerate, commit.
-
-### Supplemental linters
-
-These catch issues the pre-commit hook doesn't:
-
-```bash
-pnpm lint:oxlint    # Ambiguous constructors, useless spreads, identical branches
-pnpm lint:knip      # Unused files, exports, dependencies
-pnpm lint:circular  # Value-import circular dependencies (type-only cycles are OK)
-```

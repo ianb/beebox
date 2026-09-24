@@ -1,18 +1,22 @@
 # TAP tests
+
+Traditional `.test.ts` files for what a doctest cannot test without
+circularity.
+
+## What it is
+
 **Location:** `test/*.test.ts`
 **Runner:** [tap](https://node-tap.org/) v21 with tsx
 **Run:** `pnpm test`
 
 Reserved for things that would be circular as doctests: testing the test infrastructure itself.
 
-**Current files:**
+The files themselves are the catalog: `ls test/*.test.ts`. Create
+`test/<name>.test.ts` and import from `tap`.
 
-| File | Tests |
-|------|-------|
-| `test/check.test.ts` | Wildcard matching, extractions, diff output, serializers, inspect() |
-| `test/doctest.test.ts` | Doctest parser and generator (meta-testing) |
+## Failure modes
 
-# The tap plugin set is built at install time
+**The tap plugin set is built at install time.**
 
 `.taprc` disables `@tapjs/typescript` (`plugin: - "!@tapjs/typescript"`) because
 tsx and the doctest loader resolve TypeScript here, and the typescript plugin's

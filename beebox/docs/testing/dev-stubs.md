@@ -1,11 +1,26 @@
 # Dev stubs
+
+Deterministic stand-ins for the backend so streaming UI and component states
+can be checked by hand in a browser.
+
+## What it is
+
 Some frontend bugs only manifest against real layout and measurement — scroll
 behavior, virtualization, streaming-driven reflow — and can't be reproduced in a
 doctest. For these, drive the running app with `bin/browse` (see
 `.claude/skills/browse/SKILL.md`, monorepo root) and use a dev stub to make the
 input deterministic instead of depending on a live agent response.
 
-## `/fakestream` — deterministic chat streaming
+Two kinds. A **stub** replaces one input to the real app (`/fakestream`
+replaces the agent's reply). A **dev harness** is a DEV-only route that mounts
+real components over injectable fake services so every state is reachable:
+`/dev/capture-mode`, `/dev/composer-states` (states catalogued in
+[composer states](../composer-states.md)), `/dev/chat-scroll`. Tours walk the
+real app; harnesses fabricate states.
+
+## Running it
+
+### `/fakestream`
 
 **Location:** `src/frontend/src/machines/chat-actors.ts` (`runFakeStream`)
 **Trigger:** Send a chat message beginning with `/fakestream`.
