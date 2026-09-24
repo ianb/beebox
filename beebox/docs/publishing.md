@@ -36,25 +36,37 @@ verification. No human-side `bbx` command is required.
    subdomain, configure one in the Cloudflare dashboard. Bee Box checks that
    these prerequisites exist; its API path does not claim to create the
    account subdomain or complete first-use enrollment.
-2. Create a **Cloudflare API token**, not the S3-compatible R2 Access Key ID
-   and secret. Prefer a token scoped to this one account. The current API
-   operations need R2 bucket/object read and write access and Workers script
-   upload/settings access. Cloudflare documents `Workers R2 Storage Write` for
-   bucket creation/listing and object read/write/list, and `Workers Scripts
-   Write` for Worker module upload. The server also reads account and Worker
-   settings and checks the workers.dev hostname. The Bee Box verifier confirms
-   that a token is active for the selected account; for a user token it also
-   performs a read-only R2 bucket-list check. It does **not** prove write
-   permissions. First successful bucket/object and Worker operations verify
-   those capabilities in the app. If Cloudflare rejects a required operation,
-   adjust the token policy in the dashboard and retry; do not paste a global
-   API key into Bee Box.
-3. In Bee Box, open **Admin → Cloudflare publishing**. Add a short lowercase
-   connection name, the 32-character Cloudflare account ID, and the API token.
+2. Create a **user Cloudflare API token** (not the separate S3-compatible R2
+   Access Key ID and secret). Open
+   [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens),
+   choose **Create Token → Create Custom Token**, and add these **Account**
+   permissions. For account resources, select only the Cloudflare account
+   whose ID you entered above:
+   - **Account Settings: Read** — read account settings and the workers.dev
+     account subdomain.
+   - **Workers R2 Storage: Edit** (called **Workers R2 Storage Write** in the
+     API permission reference) — create/list buckets and read, write, list,
+     and delete objects.
+   - **Workers Scripts: Edit** (called **Workers Scripts Write** in the API
+     permission reference) — upload Workers and read/update their settings.
+
+   The permissions must be account-scoped because Bee Box creates distinct buckets
+   and Workers for publications later. Cloudflare's
+   [token creation instructions](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
+   explain custom tokens, resource scoping, and copying the secret. Copy the
+   token value once. Do not paste an R2 S3 credential or a global API key into
+   Bee Box.
+
+3. In Bee Box, open **Admin → Cloudflare publishing**. Choose a short lowercase
+   connection name for Bee Box, such as `makers`; it is just a local label and
+   does not have to match a Cloudflare name. Enter the 32-character Cloudflare
+   account ID and the API token.
    Choose **Verify and save**. The token is stored in the host's machine secret
    store and is never shown again. The server records the token type and active
-   verification result; the permission display remains unverified until real
-   writes succeed.
+   verification result. Saving verifies that the token is active and identifies
+   the selected account; it does not prove write permissions. The capability
+   display remains unverified until actual bucket/object and Worker operations
+   succeed.
 4. Grant that connection to the box that will publish. This is a server-only
    grant: the box agent receives neither the token nor account-level Cloudflare
    credentials. The same account connection may be granted to multiple boxes;
@@ -153,6 +165,7 @@ URLs through chat, logs, or a report.
    For the stable entry path, confirm the redirect target includes the active
    release id. Do not print or retain a secret-tier capability URL if the
    smoke test uses one.
+
 6. The agent changes one harmless sentence and runs `bbx pub prepare <name>`
    again. Confirm the active release changes without a new member click and
    the page's relative asset still comes from the matching release.
@@ -186,6 +199,7 @@ rotate any remaining legacy credential separately.
 ## References
 
 - [Cloudflare API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/)
+- [Find your Cloudflare account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)
 - [Cloudflare Workers script upload permission](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/)
 - [Cloudflare R2 token types and permissions](https://developers.cloudflare.com/r2/api/tokens/) — the S3-compatible R2 credentials on this page are not the Cloudflare API bearer used by Bee Box.
 - [Cloudflare R2 setup](https://developers.cloudflare.com/r2/get-started/)
