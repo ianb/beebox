@@ -109,3 +109,37 @@ Common failure patterns and what they mean:
 - **Reads wrong files** — `should_read` is wrong, or the doc structure changed and the agent is following a stale pointer.
 
 When fixing failures, prefer changing docs/prompts to changing the test — the test is asserting an expectation about agent behavior, and silently weakening it defeats the point.
+
+## From testing.md (to reconcile)
+
+**Location:** Tests in `src/dev/knowledge-audits.yaml`, runner in `src/dev/knowledge-audit.ts`, reports in `src/dev/reports/`
+**Run:** `pnpm knowledge-audit run [--filter <id-or-tag>]`
+
+Knowledge audits test what the agent _knows_ rather than what the system _does_. They run prompts against a Claude agent in a box and check whether the agent answered from loaded context (knows directly), followed a doc reference (knows about), or had to search (discoverable).
+
+**When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior.
+
+See [knowledge-taxonomy.md](../knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
+
+### Test Definition
+
+```yaml
+tests:
+  - id: box-structure-inbox
+    prompt: "Where would you look for unprocessed incoming items?"
+    expected_level: knows_directly
+    watch_for: "Names _content/inbox/ directly without searching"
+    correct_contains: ["_content/inbox"]
+    should_read: ["node_modules/beebox/box-docs/card-memo.md"]   # optional
+    should_not_read: ["some/file.md"]              # optional
+    tags: [navigation]
+```
+
+### How It Works
+
+1. Runs the prompt via `bbx prompt` in the test box
+2. Parses the session transcript to extract: files read, searches, bash commands, response text
+3. Automated checks: `correct_contains` (substring match), `should_read`/`should_not_read` (file access)
+4. Generates a Markdown report with results + blank assessment field for human review
+
+Reports go to `src/dev/reports/audit-report-<timestamp>.md`.

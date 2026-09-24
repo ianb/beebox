@@ -26,7 +26,7 @@ pre-commit runs them. A gate has one response to intended UI change —
 go red — so a soft-finding instrument makes a permanently red gate that
 gets ignored; the weekly session asks the other question, *drift or new
 truth?*, which a gate cannot. Behavior belongs in doctests
-([testing.md](testing.md)); "does the app boot at all" is the smoke tier
+([testing.md](../testing.md)); "does the app boot at all" is the smoke tier
 (`bin/smoke`, a merge gate — same browser library, different failure
 semantics, deliberately not the same walk).
 
@@ -158,3 +158,18 @@ Each tour runs as two full passes (desktop, then mobile). Expectations
 are soft — a miss records a ❌ finding and the tour continues; only a
 thrown error (unresolvable locator, browser failure) aborts a pass,
 and even then the other pass still runs and reports.
+
+## From testing.md (to reconcile)
+
+Scripted browser walks (`bin/tour <name>`, scripts in `test/tours/`)
+that produce review artifacts: desktop+mobile screenshots, AX-tree
+snapshots, axe-core reports, and soft-assertion findings per
+checkpoint. Ungated — findings never fail an exit code and artifacts
+are gitignored — but not unrun: `schedules/tour-check/` walks every
+tour weekly, *edits* a tour when a miss is explained by a deliberate
+change (a landing, plan, or issue), and files an issue for anything
+else. That asymmetry with `smoke-review` (which files and never edits)
+is by design: a gate goes red on every intended UI change, so tours
+need a session with judgment rather than a threshold. Full reference —
+running, reviewing artifacts, writing conventions, the edit-vs-finding
+rule, and when NOT to use them: [tours.md](tours.md).

@@ -82,3 +82,25 @@ comments). When the output diff is non-trivial:
 3. **Status notes are durable; reports are ephemeral.** Knowledge-audit reports
    live in a gitignored directory; the durable record is the YAML status comment.
    Prefer a small in-place note over a large report file nobody reads later.
+
+## Periodic checks (from testing.md, to reconcile)
+
+Not automated — run these occasionally and fix what they find.
+
+### Session critiques
+
+Review recent agentic sessions (intake triage, capture processing, chat handling) for tool quality issues. Pick sessions that seemed slow or where the agent used workarounds. Run `@session-critique <id>` and act on findings. See § Session Critiques above.
+
+### Documentation graph
+
+`npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans and broken links. Review description quality at each reference site. Fix issues, regenerate, commit.
+
+### Supplemental linters
+
+These catch issues the pre-commit hook doesn't:
+
+```bash
+pnpm lint:oxlint    # Ambiguous constructors, useless spreads, identical branches
+pnpm lint:knip      # Unused files, exports, dependencies
+pnpm lint:circular  # Value-import circular dependencies (type-only cycles are OK)
+```

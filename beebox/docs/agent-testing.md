@@ -31,7 +31,7 @@ Tours are scripted browser walks producing screenshots at two viewports plus
 accessibility and axe reports. A tour is the app's walk written down. They are
 deliberately not a gate, because a gate's only response to intended UI change is
 to go red; a weekly session walks them and keeps them true. Details are in
-[tours.md](tours.md).
+[tours.md](testing/tours.md).
 
 ## Testing the agents
 
@@ -40,7 +40,7 @@ agent absorbed from the guidance a box loads: its `CLAUDE.md`, generated agent
 guide, schema instructions, and prompts. It prompts a real agent, watches its
 tool use, and checks the answer against an expected level: knows it, knows what
 to read, or can discover it by exploring. The harness is documented in
-[knowledge-audits.md](knowledge-audits.md).
+[knowledge-audits.md](testing/knowledge-audits.md).
 
 The user-stories catalog is a verified list of what the software can do,
 produced by agents reading the source. A discovery stage writes claims from the

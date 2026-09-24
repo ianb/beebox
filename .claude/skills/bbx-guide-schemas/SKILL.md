@@ -66,4 +66,4 @@ boxes already hold — rename/remove a field, change type/format/
 extension, split/merge fields, move data between cards — **invoke
 bbx-migration**; that's a data migration even when the diff only touches
 a schema. New agent-facing conventions also want a knowledge-audit entry
-(`docs/knowledge-audits.md`).
+(`docs/testing/knowledge-audits.md`).

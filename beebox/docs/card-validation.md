@@ -80,3 +80,12 @@ bury the broken-ref signal that actually needs acting on. It is a whole-box chec
 Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
 Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`
 (noisy-mode field-loss detection).
+
+## Card validator hook (from testing.md, to reconcile)
+
+**Location:** `src/core/sdk-hooks.ts` (`cardValidatorHook`)
+**Trigger:** Runs automatically during agent sessions on `PostToolUse` of `Write`/`Edit`
+
+Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls the card linter (`src/core/card-lint.ts`, built on the card primitives absorbed from the former `cardworks` package into `src/cards/`) in-process and feeds any issues back as `additionalContext`. This catches frontmatter/schema issues during agent work rather than after.
+
+Also enforces directory structure rules (e.g., trick scripts must be in subdirectories of `tricks/scripts/`).
