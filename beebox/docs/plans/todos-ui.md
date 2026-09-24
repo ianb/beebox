@@ -74,8 +74,9 @@ guide, `docs/todos`-area reference, this plan) add about 300.
 > **BIG CHANGE.** The size comes from two platform pieces that the
 > walkthrough showed the todo experience depends on: a write path for one
 > todo (Track 3) and a `Markdown` export for box views with its enforcement
-> (Track 6). Each can ship alone. Tracks 1, 2, 4, 5 are the UI unification proper, about 1,350
-> lines. **Needs the boxholder's approval at this size.**
+> (Track 6). Each can ship alone. Tracks 1, 2, 4, 5 are the UI
+> unification proper, about 1,350 lines. **Approved by the boxholder,
+> 2026-09-24 ("Yes, okay this is a big change").**
 
 What the fuller design buys over the smallest fix: todos that can be acted on
 where they are read; todos that appear in every card type; a summary at every
@@ -257,6 +258,7 @@ appears nowhere on the plate (issue: plate badge).
   card is still reported, but a card whose text cannot hold a todo is no
   longer schema-loaded, so its unknown type or bad frontmatter is not
   reported here. That is not a todo problem; `bbx validate` reports it.
+  Boxholder, 2026-09-24: accepted ("seems super obscure").
 - The stock plate and every todo-view card with no `assigned` field show
   boxholder scope. `TodoViewSchema.assigned` keeps its exact-match meaning
   when set. `TodoParamsSchema` gains `scope: "boxholder" | "all"` (default
@@ -524,9 +526,8 @@ boxes (finding 3), which stays open.
 **Direction.**
 
 - A stock procedure `todo-review.procedure.card` and a stock scheduled
-  script `todo-review`, daily at 06:30, seeded enabled (**boxholder decision
-  pending**: this starts daily agent runs on boxes that have escalated or
-  newly started todos and no connectors), like
+  script `todo-review`, daily at 06:30, seeded enabled (boxholder,
+  2026-09-24: "Yes turn on todo-review"), like
   `process-retrospective`: its precheck computes the sets
   (`bbx engine todo-review check`, the existing `computeSets` logic) and
   exits `CHECK_SKIP` when all are empty, so no agent runs.
@@ -656,9 +657,10 @@ None. The agent-todos procedure, split out, gets its own plan.
   model as they are.
 - **Where "3 open" leads from a box-view card.** Lean: the directory's
   todo-view card if one exists, else the plate filtered to that card.
-- **Seeding `todo-review` enabled** (Track 7). Lean: enabled, since boxes with
-  connectors already run it on every wakeup; the new cost falls on boxes
-  without connectors, and only when a set is non-empty.
+- **How often a todo is reviewed.** Boxholder, 2026-09-24: "if a todo is
+  ignored I feel like it should require the agent to say when it should
+  check again, not just on the next tick of the review." Under discussion;
+  Track 7 does not ship until it is settled.
 
 ## Knowledge audits
 
