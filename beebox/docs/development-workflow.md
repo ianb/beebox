@@ -1,8 +1,7 @@
 # The development workflow
 
 Part of [how development happens here](development-process.md). See also
-[agent coding and the checks around it](agent-coding.md), [testing what agents
-know and do](agent-testing.md), and [technologies and AI
+[agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
 services](technologies.md).
 
 ## Workstreams

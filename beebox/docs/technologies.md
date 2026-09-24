@@ -2,8 +2,7 @@
 
 Part of [how development happens here](development-process.md). See also [agent
 coding and the checks around it](agent-coding.md), [the development
-workflow](development-workflow.md), and [testing what agents know and
-do](agent-testing.md).
+workflow](development-workflow.md), and [testing](testing.md).
 
 ## Specific technologies
 

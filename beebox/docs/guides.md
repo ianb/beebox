@@ -17,7 +17,6 @@ where to put new material.
 | How development happens (overview) | [docs/development-process.md](development-process.md) |
 | Agent coding, and the checks around it | [docs/agent-coding.md](agent-coding.md) |
 | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-workflow.md) |
-| Testing what agents know and do | [docs/agent-testing.md](agent-testing.md) |
 | Technologies and AI services | [docs/technologies.md](technologies.md) |
 | Testing philosophy | [docs/testing.md](testing.md) |
 | Field tests (current runbook) | [docs/field-testing.md](testing/field-testing.md) |

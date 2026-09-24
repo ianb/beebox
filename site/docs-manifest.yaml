@@ -182,10 +182,6 @@
   publish: dev/development-workflow.md
   description: "Workstreams in their own worktrees and sessions, the issue queue, planning, recurring work, document comments, and exhibits."
 
-- source: beebox/docs/agent-testing.md
-  publish: dev/agent-testing.md
-  description: "Testing what agents know and do: knowledge audits, the verified capability catalog, fakes, smoke, tours."
-
 - source: beebox/docs/technologies.md
   publish: dev/technologies.md
   description: "The stack, and every outside AI service the system can be configured to use."
