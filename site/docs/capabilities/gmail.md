@@ -18,6 +18,10 @@ tracked slice of your mailbox into the box.
   an unbounded number of threads.
 - Drafts replies for you to send yourself: the agent writes the reply, and it
   is uploaded to Gmail as a draft, not sent.
+- Warns you when a connector that steadily brought in new items goes quiet, or
+  keeps failing: one alert per episode and a warning on the dashboard, which you
+  can dismiss as expected. This applies to every connector, not only Gmail, and
+  a connector with less than about three weeks of history is never called quiet.
 - Surfaces mail as ordinary cards you can read, search, and file alongside
   everything else, without turning your whole mailbox into git history.
 

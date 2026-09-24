@@ -34,7 +34,11 @@ bespoke framework. `bbx` is the agent's own tool, not a user surface.
 
 **Where it is thin.** Two engines is not many; the swap is a design intent
 with one exercised alternative, not a plugin interface. Claude requires a
-subscription login, not an API key.
+subscription login, not an API key. The Claude engine can also be pointed at
+other vendors' models (GLM through Z.ai, and OpenRouter models the owner adds
+one by one), which loosens the tie to one model vendor. It is pay-per-use, only
+three OpenRouter models are recorded as tested through a full agent turn, and
+tool-using turns can fail on others.
 
 **Pages.** `03-why-not-just-a-chatbot.md`, `07-how-it-works.md`,
 `08-what-it-requires.md`, `12-compared-to-alternatives.md`.
@@ -186,11 +190,14 @@ with the box staying quiet and filing rather than chatting back. A capture
 session that groups a burst of photos and spoken remarks into one timeline.
 Scanned paper. A browser extension for the page you are reading. Connectors
 that sync email, calendar, and documents, and act as triggers as well as
-sources.
+sources. Quick chat, one text box that a routing model sends to the fitting
+conversation, is the newest path.
 
 **Where it is thin.** Telling speakers apart in a recording is not solved.
 The Telegram path is rough. Several capture paths are code-verified rather
-than exercised end to end.
+than exercised end to end. Quick chat is described in its own doc as an
+evaluation surface, and it sends the message and recent conversation text to a
+routing model through OpenRouter.
 
 **Pages.** `capabilities/voice.md`, `capabilities/phone-capture.md`,
 `capabilities/web-clipping.md`, `uses/an-inbox-for-your-thoughts.md`,
@@ -207,7 +214,8 @@ to an agent. A confidence vocabulary in triage that decides what a level
 permits. Corrections that become rules, guides, and beliefs.
 
 **Where it is thin.** Rewriting a rule from a single low-confidence answer is
-future work. The question queue has no badge in the interface.
+future work. The nav bar badges the question count and the plate count; the
+plate count is a bare number beside an icon and reads as a wrong total.
 
 **Pages.** `capabilities/questions.md`, `capabilities/triage.md`,
 `design/trust.md`, `design/teaching.md`.

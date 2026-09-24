@@ -90,7 +90,8 @@ the ones that bear on what the person is asking and open the pages named.
 
 - **A coding agent is the engine.** Claude Code or Codex does the work, on the
   subscription the person already has, and the engine that hosts it is kept
-  separate so a different agent can be swapped in later.
+  separate so a different agent can be swapped in later. The Claude engine can
+  also run other vendors' models, pay per use, with less testing behind them.
   ([why not just a chatbot](03-why-not-just-a-chatbot.md),
   [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md))
 - **A knowledge base you own, wiki-like.** What goes in accumulates as
