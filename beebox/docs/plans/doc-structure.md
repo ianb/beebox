@@ -42,8 +42,8 @@ Chosen design, three tracks:
 | Track | Source lines | Authored doc lines (adds + deletes) |
 |---|---|---|
 | 1. Principles in `docs/README.md` | 0 | ~120 |
-| 2. Pilot: testing cluster into `docs/testing/` | ~10 (two allowlists) | ~1,600 moved or rewritten |
-| 3. Measurement: find-the-fact before and after | 0 | ~80 (results, in this plan) |
+| 2. Pilot: testing cluster into `docs/testing/` | ~10 (manifest allowlist and its test) | ~1,600 moved or rewritten, plus ~20 hand-repaired links |
+| 3. Measurement: find-the-fact before and after | 0 | ~120 (protocol and results, in this plan) |
 
 No generated output changes except `docs/doc-graph.md`, regenerated. Not a BIG
 CHANGE by source; the doc churn is the point and is reported separately. The
@@ -213,8 +213,10 @@ cluster (2026-09-24):
      `reports/`, `design/`, `box/`, `architecture/`.
    - reference, by **subject**: one file or one directory per subsystem or
      activity (testing, secrets, connectors, chat). A subject gets a directory
-     when it has more than one child file; the directory's `README.md` is the
-     parent.
+     when it has more than one child file. The parent is `<subject>.md` beside
+     `<subject>/`, not a `README.md` inside it: the flat file keeps its
+     basename, so every inbound link, the manifest entry, and `doc-check
+     --fix` (which never rewrites the non-unique `README.md`) keep working.
    - a subject directory, by **member**: the parts of the subject that a
      reader operates separately (the test tiers; the connectors).
    - a reference file, by **aspect**: *What it is* (scope and the question it
@@ -233,7 +235,12 @@ cluster (2026-09-24):
 7. **A fact lives at the lowest node whose scope contains all its uses.** A
    fact used by one tier lives in that tier's file. A fact about choosing
    among tiers lives in the parent. A fact used across subjects lives in its
-   own subject, and other subjects point to it.
+   own subject, and other subjects point to it. Tie-breaker for a fact with
+   both a subject owner and a cross-cutting catalog (cadence in
+   `maintenance.md`, schedules under `schedules/`): the subject owns *what*
+   runs and *how*; the catalog owns *when* and is an index of pointers. When
+   the catalog is derived from code (`bin/schedules list`), the code is the
+   home and the catalog doc points at it.
 8. **The parent is an index plus what is true of the whole.** A subject
    directory's `README.md` states scope, the axis, a one-line description
    per child, and the facts that belong to no single child (philosophy,
@@ -269,35 +276,49 @@ subsystem coupling), the Google cluster (`google-setup`, `gmail-setup`,
 show little), the install cluster (three install docs by audience, a
 different axis question).
 
-**Direction.** Target tree:
+**Direction.** The parent's axis is **verification instrument**: each child
+is one way of answering one question about the system, which is how the
+existing "Choosing the Right Approach" table in `testing.md` already frames
+them. "Test tier" is too narrow for tours and field tests, which the docs
+themselves say are not gates; "instrument" covers gates and non-gates alike.
+Target tree, with the question each child answers:
 
 ```
+docs/testing.md          the parent (same path as today): what verification
+                         is here; philosophy; the instruments table (name,
+                         question it answers, gate?, cost); choosing; adding
+                         one of each (one line each, linking)
 docs/testing/
-  README.md            what testing is here; philosophy; the tiers table
-                       (name, question it answers, gate?, cost); choosing;
-                       adding a test of each kind (one line each, linking)
-  doctests.md          tier 1: what it is, syntax pointer, creating a box,
-                       service fakes, injecting into routes, call logging,
-                       available fakes, connector pattern, limitations
-  tap-tests.md         tier 2
-  knowledge-audits.md  tier 3: what it is; knowledge levels (the nine
-                       phenomena, and which three the YAML asserts);
-                       running; test structure (fields); recording results;
-                       context size; interpreting failures
-  session-critiques.md tier 4
-  card-validator-hook.md   tier 5 (or fold into card-validation.md; decided
-                       in the first chunk, see below)
-  frontend-dev-stubs.md    tier 6: /fakestream and the dev harness routes
-  smoke.md             the merge gate
-  tours.md             moved as is, minus the restatement in the old parent
-  field-tests.md       renamed from field-testing.md
+  doctests.md            does this function, route, or box operation behave?
+                         (syntax pointer, creating a box, service fakes,
+                         injecting into routes, call logging, available
+                         fakes, connector pattern, limitations)
+  tap-tests.md           what a doctest cannot test without circularity
+                         (plus: the tap plugin set is built at install time)
+  knowledge-audits.md    does the box agent know X? (knowledge levels: the
+                         nine phenomena and the three the YAML asserts;
+                         running; test structure; recording results;
+                         context size; interpreting failures)
+  session-critiques.md   did the tools serve the agent in a real session?
+  dev-stubs.md           does the streaming UI behave, checked by hand?
+                         (/fakestream, dev harness routes)
+  smoke.md               does the app boot and walk at all? (the merge gate)
+  tours.md               does each page render and pass axe at both viewports?
+  field-testing.md       is it discoverable end to end through the real UI?
 ```
+
+The card validator hook (tier 5 today, nine lines) is not an instrument a
+developer runs; it is a validation hook, and `card-validation.md` already
+owns hooks. It folds there and the instruments table links to it.
+`field-testing.md` keeps its name (four inbound links; a rename buys
+nothing under principle 6, which asks names to distinguish, not to rhyme).
 
 Dispositions:
 
-- `testing.md` (578 lines): becomes `testing/README.md` plus per-tier files.
-  Its "Testing Philosophy", "Choosing the Right Approach", "Adding New Tests",
-  and "Future Directions" stay in the parent (facts about the whole).
+- `testing.md` (578 lines): stays as the parent, shrunk to facts about the
+  whole: "Testing Philosophy", "Choosing the Right Approach" (as the
+  instruments table), "Adding New Tests", "Future Directions". Every
+  instrument section moves to its child file.
   "Periodic Checks" moves to `maintenance.md`, which already owns the
   periodic-work axis ("What runs on its own", "Run when you touch the
   thing"); `testing/README.md` points there. "The tap plugin set is built at
@@ -306,22 +327,28 @@ Dispositions:
 - `agent-testing.md` (51 lines): its content is descriptions of tiers plus
   restated facts. The tier descriptions become the tiers table in
   `testing/README.md`; the restated facts are deleted. The file is removed.
-  `development-process.md` links to `testing/README.md` in its place. The
-  manifest entry `dev/agent-testing.md` is removed and `dev/testing.md`
-  points at `beebox/docs/testing/README.md`. `site/docs/dev/README.md`
-  `start-here:` drops it. This is the one place the pilot changes a public
-  page's existence; the boxholder can veto in the pilot review.
-- `knowledge-taxonomy.md` (492 lines): "Knowledge Taxonomy" and "Context
-  shifts knowledge levels" become the "Knowledge levels" aspect of
-  `knowledge-audits.md`. "Prompt Style Effects" and "Test Prompt Guide" are
-  guidance on writing audits and go under "Writing one". The nine numbered
-  per-area sections (Box Structure … Views) are a catalog of candidate
-  prompts that duplicates and has drifted from `src/dev/knowledge-audits.yaml`,
-  the real catalog. They move to `docs/reports/knowledge-taxonomy-2026-09-24.md`
-  as a frozen snapshot with a pointer to the YAML, unless the first chunk
-  finds prompts there that the YAML lacks and still wants, in which case
-  those are added to the YAML. The manifest entry `dev/knowledge-taxonomy.md`
-  is removed.
+  `development-process.md` links to `testing.md` in its place. The manifest
+  entry `dev/agent-testing.md` is removed; `dev/testing.md` is unchanged.
+  `site/docs/dev/README.md` `start-here:` drops it. The site has no
+  redirect or alias mechanism (searched `site/*.ts` for redirect, alias,
+  tombstone: none), so the public URL stops resolving and the generated
+  `dev/index.md` drops the row. Seven repo files link to `agent-testing.md`;
+  they are repaired by hand since `--fix` cannot resolve a deleted file.
+  **Boxholder decision** at pilot review: remove the page, or keep it as a
+  pointer-only narrative (a page that says less than the parent's table).
+- `knowledge-taxonomy.md` (492 lines): dispositioned section by section,
+  and the table of dispositions is written into this plan before any of it
+  moves (chunk 2). Known so far: "Knowledge Taxonomy" and "Context shifts
+  knowledge levels" become the "Knowledge levels" aspect of
+  `knowledge-audits.md`; "Prompt Style Effects" and "Test Prompt Guide" go
+  under "Writing one"; the nine numbered per-area sections mix candidate
+  prompts (the live catalog is `src/dev/knowledge-audits.yaml`, which has
+  evolved past them), capability notes ("Extending the Box"), and dated run
+  notes. Default per section: a prompt the YAML lacks and still wants is
+  added to the YAML; a capability note that is current moves to the doc that
+  owns the capability; run notes and the rest freeze as
+  `docs/reports/knowledge-taxonomy-2026-09-24.md`. The manifest entry
+  `dev/knowledge-taxonomy.md` is removed (same no-redirect caveat as above).
 - `knowledge-audits.md` (111 lines): moves; gains the levels and writing
   guidance; loses "When to run" cadence (a pointer to `maintenance.md`).
 - `tours.md`, `field-testing.md`: move and rename; headings aligned to the
@@ -335,24 +362,35 @@ Dispositions:
 Code changes: `site/docs-manifest.ts:63` gains
 `if (source.startsWith("beebox/docs/testing/")) return true;` (and its test in
 `site/docs-manifest.test.ts`). `doc-check` needs nothing (`docs/testing/` is
-already inside the checked area). `beebox/CLAUDE.md:17` and `:67` links to
-`docs/testing.md` are repaired by `doc-check --fix` or by hand.
+already inside the checked area). Link repair: `testing.md` keeps its path,
+so its inbound links (including `beebox/CLAUDE.md:17` and `:67`) need
+nothing. `knowledge-audits.md` and `tours.md` move with unique basenames,
+so `doc-check --fix` rewrites their inbound links. `agent-testing.md` (seven
+inbound) and `knowledge-taxonomy.md` (nine inbound) are deleted, which
+`--fix` reports and does not rewrite; those links are repointed by hand to
+the section that now holds the fact.
 
 **Vocabulary lock-ins.** Directory name `docs/testing/`; file names above;
 the tier names as the parent's table uses them.
 
-**First implementation chunk.** One commit: the directory, the parent, and
+**First implementation chunk.** One commit: `docs/testing/` with
 `doctests.md`, `tap-tests.md`, `smoke.md`, `session-critiques.md`,
-`frontend-dev-stubs.md`, `tours.md`, `field-tests.md` created by moving
-sections verbatim (no rewording), with old `testing.md` deleted and every
-inbound link repaired, manifest and `start-here` updated, `doc-check` green,
-doc-graph regenerated. Decision made here, not left open: tier 5 (the card
-validator hook, 9 lines) is folded into `card-validation.md`, which already
-owns validation hooks; the parent's tiers table links there. The second
-commit handles `knowledge-audits.md` and `knowledge-taxonomy.md`; the third
-removes `agent-testing.md`; the fourth applies the aspect headings and
-deletes restatements. Separating "move verbatim" from "rewrite" keeps the
-diff reviewable.
+`dev-stubs.md`, and the moved `tours.md` and `field-testing.md`, each
+created by moving sections verbatim (no rewording); `testing.md` shrunk to
+the parent; the card validator hook folded into `card-validation.md`;
+manifest prefix added; inbound links repaired; `doc-check` green; doc-graph
+regenerated. A file-level rename check (`git diff -M`) does not prove a
+section split survived, so the chunk carries its own check: before the
+move, a script records every heading and a hash of every section body in
+the six source files; after it, the same script runs over the parent, the
+new directory, `card-validation.md`, and `maintenance.md`, and every
+pre-move body hash must appear exactly once. The script and both listings
+are scratch artifacts referenced from the commit message. The second commit
+handles `knowledge-audits.md` and `knowledge-taxonomy.md` (with the
+per-section disposition table added to this plan first); the third removes
+`agent-testing.md`; the fourth applies the aspect headings and deletes
+restatements. Rewording happens only in the fourth commit, so the earlier
+diffs are pure moves.
 
 ### Track 3: measurement, find-the-fact
 
@@ -366,10 +404,46 @@ fact (counted by the planner with grep, since the navigator must not).
 and the fact is stated once (one home). The first is measured by the walk,
 the second by the location count.
 
-**Direction.** Protocol text and questions are in
-`scratch/doc-structure/find-the-fact-protocol.md` during the work and copied
-into this plan's "Results" section when the after-run completes. Before-run
-results (2026-09-24) are recorded below in *Rollout shape*.
+**Direction.** The protocol, questions, model class, and location-count
+method are frozen here so the after-run is comparable. Navigator: one fresh
+Claude Sonnet 5 general-purpose agent per question, prompt = the protocol
+plus the question, nothing else. Location count: the planner greps
+`beebox/docs/` (tracked `.md`, excluding `doc-graph.md`, `plans/`,
+`implemented-plans/`, `unimplemented-plans/`, `reports/`) for the key string
+listed per question, then reads each hit and counts only sections that
+state the fact in full (a pointer or a partial mention is listed but not
+counted). Before-run results are in *Rollout shape*.
+
+Protocol (verbatim, given to each navigator):
+
+> You are testing whether a documentation tree can be navigated by NAMES
+> alone. Work only inside `beebox/docs/`. Allowed moves (each costs one step;
+> log every one in order): (1) `ls <dir>`; (2) `grep -n '^#' <file>` to list
+> headings, optionally with `head -6` of the file in the same step; (3) read
+> ONE section, from one heading to the next heading of the same or higher
+> level. Forbidden: grep or search for content words; reading a whole file;
+> reading anything outside `beebox/docs`; answering from prior knowledge (if
+> you already know the answer, you must still find and cite the section).
+> Stop after 15 steps and report "gave up". Start with `ls` of `beebox/docs`.
+> Choose the next move by NAME only. Report: ANSWER, CITED (file#heading),
+> STEPS, PATH (every step), ALSO SEEN (other sections that stated the fact,
+> agreeing or conflicting), NAME FAILURES (steps where the chosen name led
+> somewhere the fact was not).
+
+Questions and key strings:
+
+| # | Question | Key string |
+|---|---|---|
+| 1 | Which values can the `expected_level` field of a knowledge-audit test entry take? | `knows_directly` |
+| 2 | After running knowledge audits, where is the durable record of the results kept? | `Status (YYYY` |
+| 3 | Which command runs the smoke test tier, and roughly how long does a run take? | `bin/smoke` |
+| 4 | Which five criteria does a session critique evaluate an agent session against? | `Wasted effort` |
+| 5 | At which two viewport sizes (pixels) do tours take their screenshots? | `1280` |
+| 6 | What is the default run root directory for field-test runs? | `field-runs` |
+| 7 | Which flag makes a knowledge audit run against Codex instead of the box's engine? | `--engine` |
+| 8 | What does the `context_dir` field on a knowledge-audit entry do? | `context_dir` |
+| 9 | How often does the full test suite run, and on which branch? | `hourly` |
+| 10 | When the weekly tour session finds a tour that misses because the app changed on purpose, does it edit the tour or file an issue? | `edits the tour` |
 
 **First implementation chunk.** The before-run, already executed; results
 below.
@@ -405,15 +479,16 @@ readers, loading mechanism, and test harness (knowledge audits) differ.
 | A moved doc's inbound link is left broken | yes, `doc-check` in pre-commit | `--fix` rewrites unique basenames | clear |
 | A moved doc's basename is not unique repo-wide, `--fix` refuses | yes, reported by `--fix` | manual | clear |
 | Manifest source under `docs/testing/` refused by the loader | yes, `site/docs-manifest.test.ts` | track 2 adds the prefix | clear (build fails) |
-| Public page `dev/agent-testing.md` disappears from the site | no automated test | manifest edit is deliberate; noted for review | silent to external readers |
-| A fact is dropped during the move (present in old, absent in new) | no | the "move verbatim first" chunking makes the diff show it | silent |
+| Public pages `dev/agent-testing.md` and `dev/knowledge-taxonomy.md` disappear from the site; no redirect mechanism exists | no automated test; `doc-check` skips `site/docs/` | boxholder decision at pilot review | silent to external readers |
+| A fact is dropped during the move (present in old, absent in new) | section-body hash check, chunk 1 | the hash listing must match before the commit | clear once the check runs; silent without it |
 | `start-here:` in `site/docs/dev/README.md` names a removed page | unknown; checked in first chunk | edit | to be determined |
 | A restatement is deleted whose reader could not follow the link (always-loaded file) | no | principle 3 exception; the pilot touches no always-loaded file | not applicable in pilot |
 
-> **Critical gap:** a fact dropped during the move. Handled in the plan by
-> chunking: the first commit moves sections verbatim so `git diff -M` shows
-> moves as moves, and the rewrite commits are small enough to read. Accepted
-> as a documented risk with the cross-model review of the diff as the check.
+> **Critical gap:** a fact dropped during the move. `git diff -M` detects
+> file renames, not section splits, so chunk 1 carries the section-body hash
+> check described in track 2, and rewording is confined to the last commit
+> so its diff is readable. The cross-model review of the final diff is the
+> second check.
 
 ## Agent-flow / user-flow edge cases
 
@@ -452,9 +527,10 @@ readers, loading mechanism, and test harness (knowledge audits) differ.
 ## Open design questions
 
 - Should `agent-testing.md` survive as a public narrative page even though it
-  restates? Lean: no; the tiers table in `testing/README.md` is the same
-  content with links, and the site's `dev/testing.md` serves the reader.
-  The boxholder decides at pilot review.
+  restates? Lean: no; the instruments table in `testing.md` is the same
+  content with links, and the site's `dev/testing.md` serves the reader. No
+  redirect exists, so the old URL stops resolving. The boxholder decides at
+  pilot review.
 - Does the aspect axis (What it is / How it works / Running / Writing /
   Results) fit subsystem docs like `questions.md` as well as it fits tiers?
   Lean: yes for reference docs; contracts keep numbered clauses. Tested only
@@ -476,8 +552,8 @@ next cluster moves.
 
 1. Track 3 before-run (done 2026-09-24).
 2. Track 1: principles in `docs/README.md`.
-3. Track 2 chunk 1: directory, parent, verbatim moves, manifest prefix,
-   links, doc-graph.
+3. Track 2 chunk 1: directory, parent, verbatim moves with the section-hash
+   check, manifest prefix, links, doc-graph.
 4. Track 2 chunk 2: knowledge audits and taxonomy merge; report snapshot.
 5. Track 2 chunk 3: remove `agent-testing.md`; update
    `development-process.md`, manifest, `start-here`.
@@ -495,9 +571,7 @@ steps, and every fact's location count is 1.
 
 ### Find-the-fact, before (2026-09-24)
 
-Ten questions, one fresh Sonnet agent each, protocol as above. Location count
-is the number of sections in `beebox/docs/` (excluding `doc-graph.md`,
-plans, and reports) that state the fact in full, counted by grep.
+Ten questions, protocol and counting method as in track 3.
 
 | # | Question | Found | Steps | Cited | Locations |
 |---|---|---|---|---|---|
