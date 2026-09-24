@@ -1,5 +1,5 @@
 ---
-title: "Evaluate the Agent Plugins spec (agent-plugins.org) as the package shape for box plugins"
+title: "Learn from the Agent Plugins spec (agent-plugins.org) for box plugins"
 workstream: unattached
 area: beebox
 labels: [plugins, architecture]
@@ -9,10 +9,21 @@ discovered-in: main — boxholder found agent-plugins.org, 2026-09-24
 ---
 
 The boxholder found [Agent Plugins](https://agent-plugins.org/), an open,
-vendor-neutral format for packaging agent extensions. It bears on our own
-plugin design ([plugins and the medium/content line](2026-08-19-plugins-and-the-medium-content-line.md)),
-especially the idea that every box starts with its own plugin, and that
-extracting personal work to share it becomes a packaging question.
+vendor-neutral format for packaging agent extensions. The boxholder doubts
+that beebox wants this format. The purpose here is to learn from its choices,
+not to adopt it.
+
+Related plugin issues:
+
+- [Plugins and the medium/content line](2026-08-19-plugins-and-the-medium-content-line.md):
+  the design this informs, including the idea that every box starts with its
+  own plugin.
+- [Canonical wisdom corpus (in lieu of plugins)](2026-05-11-canonical-wisdom-corpus.md):
+  the counter-position that an agentic system needs shared knowledge more
+  than installable code.
+- [Claude Code Mods](2026-09-18-claude-code-mods.md): Claude Code's own plugin
+  format (`.claude-plugin/plugin.json` plus hooks), which is a different
+  layout from this spec's root `plugin.json`.
 
 ## Research (2026-09-24)
 
@@ -59,7 +70,7 @@ skills and MCP servers are portable in this spec. Everything that makes a box
 plugin a beebox plugin (schemas, views, procedures, templates, guidance) would
 live in a reverse-domain extension directory that only beebox reads.
 
-## Tension
+## What to learn from it
 
 - **Adopt the envelope.** `plugin.json`, `skills/`, and `mcp.json` as
   specified, with beebox parts in a namespaced directory. The benefits: a
@@ -74,5 +85,5 @@ live in a reverse-domain extension directory that only beebox reads.
   its own plugin format, and the spec does not say whether that format is
   converging with this one. Check that before deciding.
 
-The evaluation belongs with the design of the parent plugins issue, not before
-it. Its value depends on where the medium/content line falls.
+The lean is to borrow the rules. The evaluation belongs with the design of
+the medium/content plugins issue, not before it.
