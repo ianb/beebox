@@ -5,7 +5,7 @@ workstream: unknown
 issues: []
 ---
 > Frozen record of the XML→YAML/Markdoc RFC — implemented 2026-05. Kept verbatim for the design reasoning and migration history; not maintained.
-> The living format reference is `docs/cards-as-markdown.md`.
+> The living format reference is `docs/cards/format.md`.
 
 # RFC: Cards as Markdown + YAML Frontmatter
 
@@ -48,7 +48,7 @@ Each of these has cases where a YAML array of items would either lose inline-pro
 
 **Migration infrastructure:** `scripts/migrate/*.ts` per schema, plus `scripts/migrate/_warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
 
-**Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only manifest `config/migrations.jsonl`, compared to the canonical `MIGRATIONS` array in `src/core/migrations.ts`. New migrators get appended there; new boxes seed the manifest as all-applied via `bbx init`. Full author guide + runbook in `docs/migrations.md`.
+**Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only manifest `config/migrations.jsonl`, compared to the canonical `MIGRATIONS` array in `src/core/migrations.ts`. New migrators get appended there; new boxes seed the manifest as all-applied via `bbx init`. Full author guide + runbook in `docs/cards/migrations.md`.
 
 ---
 

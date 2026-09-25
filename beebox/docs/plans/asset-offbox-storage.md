@@ -574,7 +574,7 @@ verify` on `personal-test` reports zero unclaimed.
 
 **Migration.** No on-disk data shape changes — manifests keep their
 current schema (`asset-manifest.ts:24-38`), so no `bbx migrate` step and
-nothing in `docs/migrations.md`. The only state change is Track A2
+nothing in `docs/cards/migrations.md`. The only state change is Track A2
 writing manifest entries that should have existed all along, which is
 `bbx attachments migrate` — an existing, idempotent command
 (`commands/attachments.ts:118`).

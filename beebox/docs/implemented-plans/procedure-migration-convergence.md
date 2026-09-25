@@ -148,7 +148,7 @@ CLI exit code stays 1 so the deploy log still prints the warning
 
 ### 3. Docs
 
-Amend `migration-reliability.md:311` and `:522-524`, `docs/migrations.md:40-41`
+Amend `migration-reliability.md:311` and `:522-524`, `docs/cards/migrations.md:40-41`
 ("`--sweep` permits only deterministic scripts unless `--repair` is explicit"
 becomes accurate: `--repair` runs procedures too), and the deploy paragraph.
 

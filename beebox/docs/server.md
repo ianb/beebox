@@ -21,6 +21,6 @@ gitignored `deploy/target.env` names a server.
 ## Owned elsewhere
 
 - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
-- Box data migrations and recovery: [migrations](migrations.md).
+- Box data migrations and recovery: [migrations](cards/migrations.md).
 - Google OAuth credentials: [Google setup](connectors/google-auth.md).
 - The security posture of the whole: [security overview](security-overview.md).

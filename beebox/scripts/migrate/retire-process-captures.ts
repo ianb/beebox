@@ -38,7 +38,7 @@
  * gone, so it is removed whenever present.
  *
  * **Legacy inbox capture-session cards are NOT touched** — they stay as
- * ordinary cards for normal triage (see docs/migrations.md).
+ * ordinary cards for normal triage (see docs/cards/migrations.md).
  *
  * Idempotent: a box with neither file (already retired, or one that never had
  * the pipeline) is a clean no-op.

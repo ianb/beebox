@@ -19,7 +19,7 @@ only.
 Where shell lives in cards today:
 
 - procedure cards — step `validate.shells` gate commands (the only enforced
-  gate for agent-applied migrations, per `docs/migrations.md`), and any `runs:`
+  gate for agent-applied migrations, per `docs/cards/migrations.md`), and any `runs:`
   in steps;
 - `*.scheduled-script.card` — the `runs:` command `bbx tick` executes
   (`src/cli/commands/tick.ts`, `tick-helpers.ts`);

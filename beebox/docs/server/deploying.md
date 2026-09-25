@@ -25,7 +25,7 @@ Dirty input is accepted; deployment does not start a repair agent. Its separate
 ten-minute command limit remains. A box needing repair is reported and stays
 closed; restarting its process does not clear failed convergence. The hourly
 `box-convergence` schedule retries with bounded repair authority. See
-[migrations](../migrations.md) for recovery, questions, and timeout limits.
+[migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older
 code needs an explicitly quiesced fleet; a new controller alone cannot register
@@ -91,7 +91,7 @@ drain limit is ten minutes. A drain timeout does not force active work to stop.
 After changes begin, an owner crash or failed conversion keeps admission closed
 until recovery verifies completion; deleting a lock or phase file does not
 repair the box. Recovery snapshots and unanswered migration questions are
-explained in [migrations](../migrations.md).
+explained in [migrations](../cards/migrations.md).
 
 The deployment controller outlives the hub and scheduler it replaces. For a
 supervised development bundle reload, the child asks the hub supervisor to own

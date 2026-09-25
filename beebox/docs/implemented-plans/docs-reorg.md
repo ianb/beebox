@@ -315,7 +315,7 @@ design sections are written)*
 2. **Corrections + non-obvious-conventions batch** — DONE (86cc902a).
    38 items: all confirmed-wrong claims fixed; 13 undocumented
    conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
-   `docs/card-validation.md`); findability quick wins (Guides rows,
+   `docs/cards/validation.md`); findability quick wins (Guides rows,
    orphan links, prompt-audits ↔ bbx-prompt-review cross-refs).
 3. **CLAUDE.md slimming** — DONE. Root 47→34 lines (mechanism →
    `bin/CLAUDE.md`); beebox CLAUDE.md deduped/trimmed with

@@ -92,7 +92,7 @@ dependency), so it is more foundation than conflict.
   parts removed. That is judgment, not mechanism — the same problem as the
   public/private issue split, which might be prior art worth reading.
 - **Migration.** Moving a schema out of core changes where existing cards'
-  definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
+  definitions come from. `docs/cards/migrations.md` step 7 applies: whatever moves,
   file the legacy-removal issue at the same time.
 
 ## Read: TiddlyWiki's plugin system (2026-08-19)

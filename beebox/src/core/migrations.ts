@@ -10,13 +10,13 @@
  * Adding an entry here? File the legacy-removal issue too — whatever code now
  * exists only to tolerate the pre-migration shape should be named, with
  * `file:line`, while you still know which branches those are (step 7 of
- * "Writing a new migration" in docs/migrations.md). Applies to both kinds
+ * "Writing a new migration" in docs/cards/migrations.md). Applies to both kinds
  * below.
  *
  * A migration is one of two kinds:
  *   - script:    a deterministic migrator under `scripts/` invoked with the box
  *                root and `--apply`. Idempotent, noisy about data loss (see
- *                scripts/migrate/_warnings.ts, docs/migrations.md).
+ *                scripts/migrate/_warnings.ts, docs/cards/migrations.md).
  *   - procedure: an agent-applied migration — runs a procedure definition (which
  *                typically drives an agent through a checklist and gates on a
  *                `validate.shells` check). See docs/plans/agent-applied-migrations.md.

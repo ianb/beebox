@@ -243,7 +243,7 @@ file row, initials for a tab), because the four current copies disagreeing about
 **This is not a one-edit change.** Four places move together: the runtime
 declaration (`GLOBAL_CARD_FIELDS`), the hand-written type list in
 `InferCardFields` (`schema.ts:286-296`) or every typed reader silently cannot
-see the fields, the enumerations in `docs/adding-schemas.md:72` and the
+see the fields, the enumerations in `docs/cards/schemas.md:72` and the
 `bbx-guide-schemas` skill, and `test/core/search/contains-evidence.doctest.md:31`,
 which asserts today's global-key set.
 
@@ -603,7 +603,7 @@ at least two pinned tabs sharing a symbol; the knowledge audits have been run
 and their status recorded; `bin/smoke` passes at `/finish`.
 
 **Migration.** One scripted, idempotent pass over landmark cards, per
-`docs/migrations.md` — it runs to completion or not at all, and reports both what
+`docs/cards/migrations.md` — it runs to completion or not at all, and reports both what
 it moved and what it skipped, because the skip list is the only way an
 unexpected landmark form on the server becomes visible. Every other field is
 additive: a card with no symbol is exactly a card as it is today.

@@ -16,7 +16,7 @@ issue's suggested direction, using JSON context instead of stderr for warnings
 based on the harness experiments recorded below.
 
 `bbx validate --hook` (`beebox/src/cli/commands/validate-hook.ts`) is wired as
-the agent harness's PostToolUse hook (`beebox/docs/card-validation.md:13`):
+the agent harness's PostToolUse hook (`beebox/docs/cards/validation.md:13`):
 the file write has already happened by the time this hook runs. Its own
 comment says: "Non-card paths exit 0 silently; errors AND warnings exit 2 so
 the agent sees feedback" (`validate-hook.ts:206-207`), and `runHookMode`

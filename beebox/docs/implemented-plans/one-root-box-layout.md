@@ -140,7 +140,7 @@ lives at the edges where a raw string arrives. One root removes the edge.
 | Dir lookup | `src/lib/paths.ts:184` `getBoxDir`, `BOX_DIRS` | **Reuse**, table re-pointed at the new vocabulary |
 | Ref parsing, fail-closed | `src/shared/ref-path.ts` (3-form rule, `..` escape → `null`), `src/shared/box-path.ts` | **Reuse unchanged mechanics**; the root the forms resolve against moves; relative refs tighten (Track B) |
 | Ref rewriting machinery | `canonical-refs.ts` (prefers leading-`/` form), `link-repair.ts` (writes box-root-absolute replacements), `rewrite-card-refs.ts` (preserves original absolute-vs-relative style; explicitly skips YAML inline-map forms, `rewrite-card-refs.ts:29-33`) | **Patterns only — the migration needs its own rewriter.** The existing three each do a narrower job than the migration needs (cross-model review, 2026-09-04); Track E builds a dedicated rewriter on `resolveRefPath` that covers markdown links, YAML ref fields (inline maps included), embeds, and attach scopes |
-| Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-packages-v2.md` Track H) | **Reuse**: `one-root` lands as a registry migration, scratch-clone tested first |
+| Migration registry + runbook | `src/core/migrations.ts`, `docs/cards/migrations.md`, precedent `box-packageify` (`boxes-as-packages-v2.md` Track H) | **Reuse**: `one-root` lands as a registry migration, scratch-clone tested first |
 | Agent guide generation | `src/core/agent-guide/` (`REF_PATH_RULE` `source.ts:14-17`, `box-shape.ts:58-81` teaches the `../src` climb) | **Reuse**; the climb section is deleted (src is under the root now); ref rule text updated |
 | Session spawn plumbing | `src/core/agent/run.ts:74` (`cwd: options.cwd ?? options.boxRoot`), landmark scoping `src/core/chat/session/start.ts:122,157-159` | **Reuse**: `boxRoot` just becomes the one root; landmark pattern generalizes unchanged |
 | Slug derivation | `defaultSlugFor` (`src/cli/commands/serve.ts`) from the **package root** basename; single helper `src/lib/box-slug.ts` | **Reuse unchanged** — the root basename is the same directory, so every slug is stable across the migration |
@@ -365,7 +365,7 @@ migration-pointing message.
 
 Rollback per box: rename `.beebox` back, `git reset --hard` to the
 pre-migration SHA, manifest revert, remove the migrations.jsonl line
-(`docs/migrations.md` pattern).
+(`docs/cards/migrations.md` pattern).
 
 **Fleet rollout and the deploy-ordering trap:** the server deploys the
 engine by rsync on main commits (`boxes-as-packages-v2.md:535-540`), and the

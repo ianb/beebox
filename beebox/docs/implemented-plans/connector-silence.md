@@ -124,7 +124,7 @@ only part of the cluster with no workaround today.
   replies on tracked threads hide the anchor incident. The plan therefore
   counts **new items** = `created` paths with no `.attach/` segment, that is,
   new top-level cards. This uses the card format's attachment-scope rule
-  (`docs/cards-as-markdown.md`), not per-connector knowledge. For Telegram
+  (`docs/cards/format.md`), not per-connector knowledge. For Telegram
   `created` holds new chats only (`src/connectors/telegram.ts:215`, *"if
   (result.newThread) created.push(...)"*), so Telegram will rarely qualify as
   a steady producer. That means no false alarms for Telegram, not a wrong

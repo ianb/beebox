@@ -14,7 +14,7 @@ where to put new material.
 | Engineering principles | [docs/engineering-principles.md](engineering-principles.md) |
 | Module map (lib/shared/types boundary) | [docs/module-map.md](module-map.md) |
 | Design rationale | [docs/design/README.md](design/README.md) |
-| Card examples | [docs/cards-as-markdown.md](cards-as-markdown.md) (format), [docs/adding-schemas.md](adding-schemas.md) (worked example), `src/schemas/templates*.ts` (template registry) |
+| Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked example), `src/schemas/templates*.ts` (template registry) |
 | How development happens (overview) | [docs/development-process.md](development-process.md) |
 | Agent coding, and the checks around it | [docs/agent-coding.md](agent-coding.md) |
 | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-workflow.md) |
@@ -23,15 +23,15 @@ where to put new material.
 | Field tests (current runbook) | [docs/testing/field-testing.md](testing/field-testing.md) |
 | Tours (browser walks for UI/a11y review) | [docs/testing/tours.md](testing/tours.md) |
 | Doctest syntax | [Doctest syntax](../../agent-doctest/docs/syntax.md) |
-| Adding a card type | [docs/adding-schemas.md](adding-schemas.md) |
-| Card format reference | [docs/cards-as-markdown.md](cards-as-markdown.md) |
+| Adding a card type | [docs/cards/schemas.md](cards/schemas.md) |
+| Card format reference | [docs/cards/format.md](cards/format.md) |
 | Card format design history (RFC) | [docs/implemented-plans/cards-as-markdown-rfc.md](implemented-plans/cards-as-markdown-rfc.md) |
-| Box migration runbook | [docs/migrations.md](migrations.md) |
+| Box migration runbook | [docs/cards/migrations.md](cards/migrations.md) |
 | Cross-platform mobile contract (iOS/Android ↔ box) | [docs/mobile-contract.md](mobile-contract.md) |
 | Image orientation (EXIF) contract | [docs/image-orientation.md](image-orientation.md) |
 | Mobile parity matrix (iOS vs Android capabilities) | [docs/mobile-parity.md](mobile-parity.md) |
 | Assets (git-annex) | [docs/assets.md](assets.md) |
-| Card validation hooks | [docs/card-validation.md](card-validation.md) |
+| Card validation hooks | [docs/cards/validation.md](cards/validation.md) |
 | Adding API endpoints | [docs/adding-api-endpoints.md](adding-api-endpoints.md) |
 | Connectors | [docs/connectors.md](connectors.md) |
 | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |

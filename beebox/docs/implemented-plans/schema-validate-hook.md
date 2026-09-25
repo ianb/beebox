@@ -7,7 +7,7 @@ issues: []
 # Schema `validate` hook — co-locate non-Zod card validation with its schema
 
 > **Status: implemented (2026-06-18).** Frozen historical record. The shipped
-> convention lives in `docs/adding-schemas.md`, the box-local schema guide
+> convention lives in `docs/cards/schemas.md`, the box-local schema guide
 > (`src/core/box-templates.ts` → `config/schemas/CLAUDE.md`), and the
 > `commentary.tsx` / `extfile.tsx` schema modules. As-shipped deviations from
 > the original plan are flagged inline in the Rollout / Knowledge-audits
@@ -27,7 +27,7 @@ loader) stays centralized in `card-lint.ts`.
   formats, XML structures, or API shapes."* This plan is grounded in the
   actual `card-lint.ts` / `card-schema.ts` source, cited below.
 - `beebox/CLAUDE.md` (Improving These Instructions / Guides table) — the
-  schema-authoring doc (`docs/adding-schemas.md`) and schema-module headers are
+  schema-authoring doc (`docs/cards/schemas.md`) and schema-module headers are
   the canonical places a future agent learns "where does validation go"; this
   plan must update them or it leaves false guidance behind.
 - `cardworks/conventions.md` — *"Only export what's needed"* (knip-enforced),
@@ -344,7 +344,7 @@ so it runs in Chunk 5, after docs.
    `pnpm --filter beebox typecheck && lint && test`. Depends on Chunk 2
    (schemas must define `validate` before the ternary is removed, else the rules
    vanish).
-4. **Docs** — update `docs/adding-schemas.md` (add a "Validation beyond Zod"
+4. **Docs** — update `docs/cards/schemas.md` (add a "Validation beyond Zod"
    subsection documenting the `validate` hook, self-contained, returns
    `LintIssue[]`); check/refresh any CLAUDE.md card-section or `.claude/rules`
    wording that points validation at card-lint.ts (grep found none in
