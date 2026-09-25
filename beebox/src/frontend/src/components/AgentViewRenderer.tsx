@@ -43,6 +43,8 @@ interface ViewCard {
   frontmatter?: Record<string, unknown>;
   /** Markdown body. */
   body?: string;
+  /** File lines before the body; `Markdown` takes it with `path`. */
+  bodyLineOffset: number;
   /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
   attachments?: ViewFile[];
 }
