@@ -72,6 +72,10 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
       ...(options.glob !== undefined && { glob: options.glob }),
       params: {
         status: [status],
+        // The agent's own surface: it must see every todo it always has,
+        // agent-assigned included, regardless of the boxholder-scope default
+        // (Track 1).
+        scope: "all",
         ...(options.assigned !== undefined && { assigned: options.assigned }),
         ...(options.onPlate === true && { onPlate: true }),
       },

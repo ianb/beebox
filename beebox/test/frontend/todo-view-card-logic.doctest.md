@@ -12,6 +12,8 @@ import {
   buildTodoTree,
   datedTodos,
   hereForCard,
+  matchingItemCount,
+  plateHeadline,
   progressOf,
   clampAnnotation,
   needsExpand,
@@ -214,6 +216,51 @@ counting it either way would misstate the section.
 ```ts continue
 JSON.stringify(progressOf(reduction({ open: 2, done: 5, parked: 0, dropped: 3 })))
 => {"done":5,"total":7}
+```
+
+## The plate headline: two numbers off the reduction, one off the matches
+
+`later` is `open` minus `onPlate` — the reduction carries no separate `quiet`
+field because it doesn't need one.
+
+```ts
+JSON.stringify(plateHeadline(reduction({ open: 7, onPlate: 5 })))
+=> {"onPlate":5,"later":2}
+```
+
+The agent count is read off `matching`, not the reduction: an `all`-scope,
+`assigned: "agent"` query's reduction counts every item scope admitted
+(boxholder items included), so only the matching subset is the agent's own.
+
+```ts continue
+const agentResult = {
+  query: { here: "", glob: "**/*.card", includeReferring: false, group: "place" },
+  reduction: reduction({ open: 9 }),
+  issues: [],
+  groups: [
+    {
+      key: "place",
+      label: "By place",
+      reduction: reduction({ open: 2 }),
+      rows: [
+        {
+          card: { path: "_content/a.doc.card", title: "A" },
+          via: "scope",
+          reduction: reduction({ open: 3 }),
+          sections: [],
+          items: [
+            item(1, "Boxholder's own", { matching: false }),
+            item(2, "Agent follow-up one"),
+            item(3, "Agent follow-up two"),
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+matchingItemCount(agentResult)
+=> 2
 ```
 
 ## The dated strip

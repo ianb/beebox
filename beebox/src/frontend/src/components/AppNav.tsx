@@ -118,6 +118,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.navStatus.useQuery();
   const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
+  const escalatedTodos = statusQuery.data ? statusQuery.data.counts.escalatedTodos : 0;
   const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
 
   // A burst of card-created/file-change events (e.g. a bulk upload) would
@@ -161,7 +162,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />
-          <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} onToggleDebugLog={onToggleDebugLog} />
+          <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>

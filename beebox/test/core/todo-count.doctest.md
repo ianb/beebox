@@ -12,10 +12,10 @@ import { runTodoQuery } from "../../src/core/todo/query.js";
 import { isBoxholderTodo, TODO_AGENT } from "../../src/shared/todo-model.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-/** Every todo in the box, whatever its status — the collection runner, box-wide. */
+/** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
 async function collectTodos(boxRoot) {
   const result = await runTodoQuery(boxRoot, {
-    query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+    query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "all" } },
     since: null,
   });
   return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
@@ -110,4 +110,54 @@ JSON.stringify((await collectTodos(box.root)).todos.filter((t) => t.plateState =
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## The badge equals the plate's boxholder `onPlate` reduction, by construction
+
+Both read the boxholder-scope predicate (`isBoxholderTodo`) — `count.ts`
+applies it directly on its fast path, `runTodoQuery`'s default `scope:
+"boxholder"` applies it as the collection's `inScope` hook — so a fixture with
+one of everything (agent-assigned, parked, quiet, done, escalated) must land
+on the same number both ways.
+
+```ts
+const scopeBox = await makeTmpBox();
+process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
+
+await scopeBox.write("_content/notes/Everything.memo.card", memo(`
+{% todo %}Undated, on the plate{% /todo %}
+
+{% todo due="2026-07-01" %}Escalated{% /todo %}
+
+{% todo start="2026-09-01" %}Quiet, not yet started{% /todo %}
+
+{% todo status="parked" %}Parked{% /todo %}
+
+{% todo status="done" %}Already finished{% /todo %}
+
+{% todo assigned="agent" by="agent" created="2026-07-28" %}Agent's own follow-up{% /todo %}
+
+{% todo assigned="agent" by="agent" created="2026-07-01" due="2026-07-02" %}
+Agent's own follow-up, escalated
+{% /todo %}
+`));
+
+const badge = await countOnPlateTodos(scopeBox.root);
+const plate = await runTodoQuery(scopeBox.root, {
+  query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+  since: null,
+});
+
+badge
+=> 2
+
+plate.reduction.onPlate
+=> 2
+
+badge === plate.reduction.onPlate
+=> true
+```
+
+```ts cleanup
+await scopeBox.cleanup();
 ```

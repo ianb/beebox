@@ -16,13 +16,15 @@ import { getBoxDir } from "../lib/paths.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { mapInBatches } from "../lib/map-batched.js";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
-import { countOnPlateTodos } from "./todo/count.js";
+import { countPlateTodos } from "./todo/count.js";
 
 export interface NavCounts {
   /** Question cards still awaiting an answer (`status: pending`). */
   pendingQuestions: number;
   /** Open todos on the plate now — `escalated` (past due) plus `on-plate`. */
   onPlateTodos: number;
+  /** Of `onPlateTodos`, how many are past `due` — what puts a dot on the nav badge. */
+  escalatedTodos: number;
 }
 
 /** Question cards read at once — see {@link mapInBatches}. */
@@ -60,9 +62,9 @@ async function countPendingQuestions(boxRoot: string): Promise<number> {
 
 /** Both nav badge counts, computed concurrently. */
 export async function getNavCounts(boxRoot: string): Promise<NavCounts> {
-  const [pendingQuestions, onPlateTodos] = await Promise.all([
+  const [pendingQuestions, plate] = await Promise.all([
     countPendingQuestions(boxRoot),
-    countOnPlateTodos(boxRoot),
+    countPlateTodos(boxRoot),
   ]);
-  return { pendingQuestions, onPlateTodos };
+  return { pendingQuestions, onPlateTodos: plate.onPlate, escalatedTodos: plate.escalated };
 }

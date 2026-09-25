@@ -55,10 +55,12 @@ function SegmentDivider() {
 // in the shared chip pill switched to `ring-inset`.
 const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40";
 
-export function AttentionBadges({ base, pendingQuestions, onPlateTodos, onToggleDebugLog }: {
+export function AttentionBadges({ base, pendingQuestions, onPlateTodos, escalatedTodos, onToggleDebugLog }: {
   base: string;
   pendingQuestions: number;
   onPlateTodos: number;
+  /** Of `onPlateTodos`, how many are past due — draws a small dot on the plate segment. */
+  escalatedTodos: number;
   onToggleDebugLog: () => void;
 }) {
   const errorCount = useErrorCount();
@@ -87,12 +89,25 @@ export function AttentionBadges({ base, pendingQuestions, onPlateTodos, onToggle
         key="plate"
         id="bbx-nav-todo"
         to={href(`${base}/browse/_content/plate.todo-view.card`)}
-        className={SEGMENT}
-        title={`${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`}
-        aria-label={`${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`}
+        className={`${SEGMENT} relative`}
+        title={
+          escalatedTodos > 0
+            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} escalated`
+            : `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`
+        }
+        aria-label={
+          escalatedTodos > 0
+            ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate, ${escalatedTodos} escalated`
+            : `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} on the plate`
+        }
       >
         <PlateIcon />
         {onPlateTodos}
+        {/* A dot, not a second number: the badge stays one number (boxholder:
+            "Badge is fine") and the dot is what says some of it is overdue. */}
+        {escalatedTodos > 0 ? (
+          <span aria-hidden="true" className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-danger" />
+        ) : null}
       </Link>
     ) : null,
     showErrors ? (
