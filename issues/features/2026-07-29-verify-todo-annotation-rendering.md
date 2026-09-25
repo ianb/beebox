@@ -39,32 +39,31 @@ didn't look at pixels.
 
 ## Manual testing
 
-The todo-view list was rewritten by
-[Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
-(2026-09-20). The steps above describe the earlier rendering; check the new
-list instead. Inline `{% todo %}` rendering inside a card body (the `Todo`
-component) is unchanged by that work and still worth the earlier spot-check.
+The [todos-ui plan](../../beebox/docs/plans/todos-ui.md) (2026-09-25) replaced
+the rendering this issue gates: one `TodoItem` component now renders a todo in
+a card body, in frontmatter, and in the list, and todos can be ticked. The
+steps below describe the current behaviour. Use the worktree or main test1 box
+on the shared dev router; card URLs need the `_content/` segment.
 
-Open a todo-view card and expect:
+1. Open `/browse/_content/projects/porch-rebuild/Plan.doc.card`. Expect a
+   quiet line under the title, "N open · N overdue · N parked · N done";
+   each todo has a checkbox (no `todo` pill); "Order the decking" reads
+   "overdue · Sep 15" in the warning style; the agent's permit todo is quiet
+   with an "agent" chip; finished agent todos do not appear.
+2. Tick an open todo. Expect it to strike through at once, the summary count
+   to drop, and the card file to gain `status="done"` with a box commit
+   "Mark todo done: …". Untick it: the attribute is removed.
+3. Hover a todo and press "+". Expect the todo to appear in the chat
+   composer as a selection, with the cursor in the composer.
+4. Open `/browse/_content/projects/porch-rebuild/Tomas.person.card`. Expect
+   its frontmatter todos to render as todos, not as `text:`/`due:` rows.
+5. Open `/browse/_content/plate.todo-view.card`. Expect a headline "N on
+   your plate · N later · N for the agent" whose first number equals the
+   nav badge; the badge has a dot when something is overdue; an "N done"
+   action at the bottom reveals finished todos; clicking a card header or
+   a todo opens the card in the other pane.
+6. Open the directory `/browse/_content/projects/porch-rebuild`. Expect the
+   same summary line; "N open" opens the project's todo list beside it.
 
-- A scope line at the top naming what the collection covers.
-- A dated strip when any open todo has a `start` or `due` date.
-- One block per card that has matching todos, each with a header naming the
-  card, and an "N open · M done" summary.
-- Within a card, sections with their own "x of y" count.
-- Nested items showing the note after the item's closing tag, not before it.
-- A card that only refers to this place (via `{% see-also %}` or a ref, not
-  physically here) marked "refers here" and sorted after the place's own
-  cards.
-- A By place / By date toggle and a Show finished switch, both keeping their
-  state in the URL across reload.
-
-Fixture content for a walkthrough (a project with open todos across several
-sections) landed on `main`'s test1 (`~/src/boxes/test1`, commit `526e68c3`,
-carried over from the `keep` branch of this workstream's isolated clone):
-`_content/projects/porch-rebuild/Porch.todo-view.card`. Try
-`/main/test1/browse/projects/porch-rebuild/Porch.todo-view.card` on the
-shared dev router.
-
-Confirm the observed result matches the expected behavior above before
+Confirm the observed result matches the expected behaviour above before
 clearing the manual-testing flag.
