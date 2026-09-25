@@ -63,7 +63,44 @@ and CLAUDE.md files.
 
 ## Research (incomplete)
 
-Questions to answer:
+### Hacker News discussion (read 2026-09-25)
+
+Sources: [December 2024 thread](https://news.ycombinator.com/item?id=42325011)
+and [a 2026 thread](https://news.ycombinator.com/item?id=49138188). The
+substantive points, with generic praise and complaints left out:
+
+- **Tutorial versus how-to is the fuzzy boundary.** The author (DanieleProcida)
+  says his own teams argue about which is which. The clarification that holds
+  up: a tutorial uses a contrived example for learning, and a how-to is a real
+  task. This is the boundary least relevant to us, since tutorials barely
+  apply to agents.
+- **Applied literally, it hurts.** One report: a colleague allowed "not a single
+  sentence of explanation in any tutorial". Another: a docs page with "literally
+  only these four categories" never works. The consensus is that it succeeds as
+  a thinking tool and fails as dogma. This bears on the rule-and-its-reason
+  question below.
+- **Repetition across kinds creates drift** (smeej). Readers are helped when
+  the same fact appears in several kinds, but updates miss some copies.
+  Diátaxis says what to write, not how to keep copies consistent. This matches
+  the doc-structure plan's one-home-per-fact rule.
+- **Link one way, toward reference** (CompoundEyes, who runs agents with
+  Diátaxis guidance): how-to and explanation pages link to the reference page
+  that holds a fact instead of restating it. That keeps the docs DRY. It is a
+  concrete rule we could adopt.
+- **Don't bury the reference.** Restructuring into categories can add clicks
+  before the API docs people need most (rjmill: "Do not hide those from me").
+  For agents, the equivalent is a longer path to the fact.
+- **Structure alone is not enough.** The team that reported docs "on a whole
+  other level" also had page ownership and periodic reviews (agile-gift0262).
+- **LLMs already know it.** Several people report that telling a model "do
+  diataxis" gives a decent first draft, so the vocabulary costs nothing to
+  teach an agent.
+- **Adjacent frameworks named:** DITA topic types (task, reference, concept),
+  and *Every Page Is Page One* for pages that must stand alone. The second
+  matches how agents arrive at a doc: from a pointer, mid-task, with no
+  surrounding context.
+
+### Questions still open
 
 - Does "one kind per page" help an agent reader, or does an agent benefit from
   a rule and its reason sitting together? Rules usually come with a short why,
