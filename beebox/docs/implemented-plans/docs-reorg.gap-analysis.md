@@ -44,7 +44,7 @@ Data-loss / corruption tier:
    `docs/box-layout.md`.
 6. **Every card schema silently gets optional `title` and `contains`
    (`GLOBAL_CARD_FIELDS`).** `src/cards/schema.ts:63-77`; `contains` is the
-   prime retrieval field. `docs/adding-schemas.md` never mentions it and
+   prime retrieval field. `docs/cards/schemas.md` never mentions it and
    its example redeclares `title`, hiding the mechanism — new card types
    end up invisible to search.
 7. **`bypassPermissions` is hardcoded for every SDK-spawned box agent.**
@@ -161,5 +161,5 @@ answered — remain open questions in `docs-reorg.md`.
 
 Verified-solid (no action): `lib/trpc.ts` self-docs,
 `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-`docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
+`docs/cards/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 the self-explaining `template-stock-hashes` doctest failure message.

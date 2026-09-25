@@ -16,12 +16,16 @@ import { useCardVisible } from "../chat/everywhere/card-context";
 import { CheckboxField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { useGoogleServices } from "./useGoogleServices";
+import { AdminSectionCard } from "./AdminSectionCard";
+import { adminSectionElementId } from "./admin-sections";
 
 const GOOGLE_SERVICE_LABELS: Record<string, string> = {
   calendar: "Calendar",
   gmail: "Gmail",
   drive: "Drive",
 };
+
+const DESCRIPTION = "Google account connection is shared across all boxes. Enable specific services per box below.";
 
 export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsumed }: { arrival: AdminArrivalState; arrivalReceipt: string; onArrivalConsumed: () => void }) {
   const {
@@ -37,7 +41,6 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     refreshStatus,
   } = useGoogleServices();
 
-  const sectionRef = useRef<HTMLDivElement>(null);
   const visible = useCardVisible();
   const processedArrival = useRef<string | null>(null);
   const historyIndex = useRouterState({ select: state => state.location.state.__TSR_index });
@@ -60,7 +63,9 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     processedArrival.current = arrivalReceipt;
     setArrivalNotice(arrival);
     if (arrival.google === "connected") void refreshStatus();
-    if (arrival.reconnect === "google") sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (arrival.reconnect === "google") {
+      document.getElementById(adminSectionElementId("google-services"))?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     onArrivalConsumed();
   }, [arrival, arrivalKey, arrivalReceipt, historyIndex, loading, onArrivalConsumed, refreshStatus, visible]);
 
@@ -68,28 +73,24 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
 
   if (loading) {
     return (
-      <div ref={sectionRef} className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">Google Services</h2>
+      <AdminSectionCard id="google-services" description={DESCRIPTION} busy>
         <ArrivalNotice arrival={notice} />
         <p className="text-sm text-warm-600">Checking status...</p>
-      </div>
+      </AdminSectionCard>
     );
   }
 
   if (status && !status.available) {
-    return <div ref={sectionRef} className="bg-white rounded-lg shadow p-6"><h2 className="text-lg font-semibold text-warm-800 mb-4">Google Services</h2><ArrivalNotice arrival={notice} /><p className="text-sm text-warm-600">Google OAuth is not configured on this host.</p></div>;
+    return (
+      <AdminSectionCard id="google-services" description={DESCRIPTION}>
+        <ArrivalNotice arrival={notice} />
+        <p className="text-sm text-warm-600">Google OAuth is not configured on this host.</p>
+      </AdminSectionCard>
+    );
   }
 
   return (
-    <div ref={sectionRef} className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-warm-800">Google Services</h2>
-        <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">Server-wide</span>
-      </div>
-      <p className="text-sm text-warm-700 mb-4">
-        Google account connection is shared across all boxes. Enable specific services per box below.
-      </p>
-
+    <AdminSectionCard id="google-services" description={DESCRIPTION}>
       <ArrivalNotice arrival={notice} />
 
       {status && status.hasTokens ? (
@@ -162,7 +163,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
           {error}
         </div>
       ) : null}
-    </div>
+    </AdminSectionCard>
   );
 }
 

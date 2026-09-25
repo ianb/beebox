@@ -8,7 +8,7 @@
   publish: concepts/glossary.md
   description: "Bee Box terms, one line each."
 
-- source: beebox/docs/cards-as-markdown.md
+- source: beebox/docs/cards/format.md
   publish: concepts/cards.md
   description: "The card format: YAML frontmatter plus a markdown body."
 
@@ -150,7 +150,7 @@
   description: "The HTTP contract a scanner uploader uses to send documents into a box."
 
 
-- source: beebox/docs/card-validation.md
+- source: beebox/docs/cards/validation.md
   publish: contracts/card-validation.md
   description: "How card validation reaches agents and blocks bad commits."
 
@@ -246,11 +246,11 @@
   publish: dev/adding-api-endpoints.md
   description: "Adding an HTTP endpoint: tRPC by default, raw Fastify for the exceptions."
 
-- source: beebox/docs/adding-schemas.md
+- source: beebox/docs/cards/schemas.md
   publish: dev/adding-a-card-type.md
   description: "How a new card type is defined, worked example included."
 
-- source: beebox/docs/migrations.md
+- source: beebox/docs/cards/migrations.md
   publish: dev/migrations.md
   description: "How box data migrations are applied and written."
 

@@ -42,7 +42,7 @@ Chosen design, five tracks:
 | E. Migration + lint warning | ~300 | ~250 |
 
 Total about 800 changed lines, well under the BIG CHANGE threshold. Authored
-docs (the `docs/migrations.md` table entry, this plan) are about 60 lines on
+docs (the `docs/cards/migrations.md` table entry, this plan) are about 60 lines on
 top.
 
 ## Stated preferences this plan trades against
@@ -353,7 +353,7 @@ All doctest tier:
 3. Track C.
 4. Track D.
 5. Track E: classifier + doctest, then apply path, then registration and
-   `docs/migrations.md` entry, then lint warning.
+   `docs/cards/migrations.md` entry, then lint warning.
 6. Run the migration against this worktree's `test1` clone with fixture cards
    written into it: dry-run, `--apply`, `bbx validate`, manifest entry.
 7. Cross-model review of the branch.

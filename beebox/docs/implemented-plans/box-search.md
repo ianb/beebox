@@ -48,7 +48,7 @@ pass.)
   errors, fail before side effects, correct invocation in the error text,
   bounded output with navigable truncation, vocabulary menu (`--json`,
   `--limit`, `get`/`list`/`create`/`update`/`delete`).
-- `docs/adding-schemas.md`: the checklist any schema-surface change follows
+- `docs/cards/schemas.md`: the checklist any schema-surface change follows
   (registry, index.ts, templates, generated docs, verification).
 - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — search and
   validate output must stay quiet and structured.
@@ -355,7 +355,7 @@ is independent of Track 3 once Track 1 lands.
   - **CLI**: `bbx contains list [--missing|--stale] [--json]` (searchable
     kinds only, bounded output with hint) and
     `bbx contains update <card> --text "..."` (splitCardContent + YAML
-    mutation per `docs/adding-schemas.md:155`, then re-bases the sidecar).
+    mutation per `docs/cards/schemas.md:155`, then re-bases the sidecar).
   - **Backfill**: a job-card creator in the `createIntakeJobsForUnjobbed`
     mold (`wakeup-steps.ts:179`) batching ~25 missing-`contains` cards per
     job. Connector-owned kinds enter the backfill pool only after the

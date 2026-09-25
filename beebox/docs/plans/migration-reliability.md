@@ -756,7 +756,7 @@ recovery tests, and the repair-policy knowledge audit pass.
 
 Implementation and automated verification are complete. Deployment and live
 convergence evidence remain open. Current operational instructions live in
-[migrations](../migrations.md), [server operations](../server/operations.md),
+[migrations](../cards/migrations.md), [server operations](../server/operations.md),
 and the [deployment guide](../../deploy/README.md).
 
 Real-process fixtures cover shared closure/draining, retained descendants,

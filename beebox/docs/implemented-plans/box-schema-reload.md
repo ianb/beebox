@@ -247,7 +247,7 @@ auto-deploy).
   or Modifying Schemas"): replace "a running dev server needs a restart" with the real
   split — the server now **hot-reloads** box schemas on save; `bbx init` is for
   regenerating **agent-facing** rules/docs, not server registration.
-- Mirror in `docs/adding-schemas.md` if it implies `bbx init` re-registers.
+- Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 
 ## The "bbx init split" (corrected per Codex #3)
 
@@ -312,7 +312,7 @@ Three *distinct* things, not two — conflating them was an error:
   capped). Covers chat + scripts + procedures, so no scheduler special-casing.
 - `deploy/setup-server.sh` — quiet-hour recycle timer + `.service` reusing the same
   `bbx activity` wait.
-- `src/core/box-templates.ts` + `docs/adding-schemas.md` — cargo-cult correction.
+- `src/core/box-templates.ts` + `docs/cards/schemas.md` — cargo-cult correction.
 - Doctests / tests:
   - **`?v=hash` regression (make-or-break, Codex "Checked OK"):** a `config/schemas/X.ts`
     imported as `X.ts?v=<hash>` still resolves `beebox/cards`, `zod`, `yaml` — run

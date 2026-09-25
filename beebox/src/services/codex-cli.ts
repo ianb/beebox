@@ -45,6 +45,8 @@ export function classifyCodexAuthStatus(params: {
   };
 }
 
+const AUTH_STATUS_TIMEOUT_MS = 10_000;
+
 export function createCodexCliService(options?: { binaryPath?: string | undefined }): CodexCliService {
   const resolveBinary = (): string => options?.binaryPath ?? codexBinaryPath();
   return {
@@ -78,8 +80,12 @@ export function createCodexCliService(options?: { binaryPath?: string | undefine
         });
         const timer = setTimeout(() => {
           child.kill();
-          finish({ kind: "inconclusive", detail: "codex login status timed out" });
-        }, 10_000);
+          // The probe normally answers in well under a second. A timeout is
+          // worth a line of evidence: whether the CLI printed anything at all
+          // separates a hung process from a slow one.
+          console.warn(`[codex-auth] codex login status did not exit within ${String(AUTH_STATUS_TIMEOUT_MS)}ms; killed it (output so far: ${String(output.length)} bytes)`);
+          finish({ kind: "inconclusive", detail: "Codex did not answer within 10 seconds. Refresh to check again." });
+        }, AUTH_STATUS_TIMEOUT_MS);
       });
     },
     async authLogin() {

@@ -22,7 +22,7 @@ Two coupled tensions, boxholder-raised 2026-07-20:
    family as the
    [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
    a statement of what "updating" means for existing boxes
-   (`docs/migrations.md` is currently a maintainer runbook, not an
+   (`docs/cards/migrations.md` is currently a maintainer runbook, not an
    operator answer).
 
 To settle: does the soft launch track `main` or tagged releases; minimum
