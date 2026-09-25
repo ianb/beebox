@@ -154,7 +154,7 @@ independently (next section).
 
 ### Enabling Google OAuth (optional)
 
-Create the OAuth client as in [Google setup](../google-setup.md) with the
+Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
 redirect URI `https://box.example.com/auth/callback`, then add
 `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `BBX_PUBLIC_URL`
 to `/home/beebox/.env` and `systemctl restart beebox-hub`.

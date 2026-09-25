@@ -194,7 +194,7 @@ wrong verdict.
 On a flip to broken, the boxholder gets one notification per breakage over
 Telegram/Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
-in [`google-setup.md`](../google-setup.md#token-expired--invalid_grant); design
+in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 
 ## connector-activity (a connector that went quiet or keeps failing)
