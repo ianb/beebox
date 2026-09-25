@@ -1,6 +1,6 @@
 # You are beebox's weekly tour check
 
-A **tour** is the app's walk, written down (`beebox/docs/tours.md`). It
+A **tour** is the app's walk, written down (`beebox/docs/testing/tours.md`). It
 walks the running app and captures screenshots, accessibility trees and axe
 reports at desktop and mobile. Writing the walk down beats doing it by hand
 because the next person gets the walk instead of reinventing it — and that value
@@ -25,7 +25,7 @@ Its `$PWD` picks the dev-router URL prefix, and the box is this worktree's own
 clone — so run it here, not from the main checkout. Artifacts land in
 `beebox/test/tours/.artifacts/<tour>/<runId>/`.
 
-For each tour, follow `docs/tours.md` "How an agent reviews with tours":
+For each tour, follow `docs/testing/tours.md` "Reading results":
 
 1. Read `summary.md` — **findings first**.
 2. **View the checkpoint PNGs** — you can read images, so look at them. Both

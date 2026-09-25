@@ -45,7 +45,8 @@ Periodic tasks that still wait for someone to remember them. Each needs its own
 
 | Task | Command | Cadence it wants |
 |------|---------|------------------|
-| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/knowledge-audits.md` |
+| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/testing/knowledge-audits.md` |
+| Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically otherwise. Guide: `docs/testing/session-critiques.md` |
 | Security overview regeneration | `/security-report` (skill) | At release boundaries, and when the staleness diff over the surface map is non-empty |
 | Doc / prompt refresh | `pnpm prompt-report`, `pnpm prompt-viewer`, `pnpm doc-graph` | The standing tension in `issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md` |
 | Feedback collection | `feedback-review/collect.ts` | `issues/docs-and-chores/2026-07-14-feedback-collection-cadence.md` — items rot before review |

@@ -182,10 +182,6 @@
   publish: dev/development-workflow.md
   description: "Workstreams in their own worktrees and sessions, the issue queue, planning, recurring work, document comments, and exhibits."
 
-- source: beebox/docs/agent-testing.md
-  publish: dev/agent-testing.md
-  description: "Testing what agents know and do: knowledge audits, the verified capability catalog, fakes, smoke, tours."
-
 - source: beebox/docs/technologies.md
   publish: dev/technologies.md
   description: "The stack, and every outside AI service the system can be configured to use."
@@ -212,7 +208,31 @@
 
 - source: beebox/docs/testing.md
   publish: dev/testing.md
-  description: "Testing philosophy and the doctest tiers."
+  description: "Testing philosophy and the verification instruments, one per question about the system."
+
+- source: beebox/docs/testing/doctests.md
+  publish: dev/testing/doctests.md
+  description: "Doctests: executable markdown, the default test form, with service fakes."
+
+- source: beebox/docs/testing/tap-tests.md
+  publish: dev/testing/tap-tests.md
+  description: "TAP tests for what a doctest cannot test without circularity."
+
+- source: beebox/docs/testing/session-critiques.md
+  publish: dev/testing/session-critiques.md
+  description: "Reviewing a real agent session for whether the CLI tools served it."
+
+- source: beebox/docs/testing/dev-stubs.md
+  publish: dev/testing/dev-stubs.md
+  description: "Deterministic frontend stubs for checking streaming UI by hand."
+
+- source: beebox/docs/testing/smoke.md
+  publish: dev/testing/smoke.md
+  description: "The smoke walk: a real box boots and is walked before a merge."
+
+- source: beebox/docs/testing/field-testing.md
+  publish: dev/testing/field-testing.md
+  description: "Field tests: a persona operator drives a disposable real box through the real UI."
 
 - source: beebox/docs/engineering-principles.md
   publish: dev/engineering-principles.md
@@ -234,8 +254,8 @@
   publish: dev/migrations.md
   description: "How box data migrations are applied and written."
 
-- source: beebox/docs/tours.md
-  publish: dev/tours.md
+- source: beebox/docs/testing/tours.md
+  publish: dev/testing/tours.md
   description: "Browser walk-throughs for UI and accessibility review."
 
 - source: beebox/docs/maintenance.md
@@ -278,13 +298,9 @@
   publish: dev/prompt-surface-review.md
   description: "Workflow for auditing agent context."
 
-- source: beebox/docs/knowledge-audits.md
-  publish: dev/knowledge-audits.md
+- source: beebox/docs/testing/knowledge-audits.md
+  publish: dev/testing/knowledge-audits.md
   description: "Tests that prompt a real box agent and check what it knows."
-
-- source: beebox/docs/knowledge-taxonomy.md
-  publish: dev/knowledge-taxonomy.md
-  description: "Where each kind of box knowledge lives."
 
 - source: beebox/docs/composer-states.md
   publish: dev/composer-states.md

@@ -1,4 +1,9 @@
-# Tours — scripted browser walks for rendering + a11y review
+# Tours
+
+Scripted browser walks through the running app that produce review artifacts
+for rendering and accessibility review.
+
+## What it is
 
 A **tour** is a scripted walk through the running app that produces
 review artifacts: screenshots at desktop (1280×800) and mobile
@@ -18,19 +23,46 @@ axe violation, a page error, visible breakage in a screenshot) it files
 as an issue and reports. Its report is the one thing that has to be
 read: a walk nobody runs rots, and a report nobody reads is the same
 failure one level up (three of five tours had been silently failing
-for months before this existed — 2026-08-26).
+for months before this existed — 2026-08-26). That asymmetry with the
+[smoke review](smoke.md), which files and never edits, is by design.
 
-**Tours are still not a test gate.** Findings and axe violations never
+**Tours are not a test gate.** Findings and axe violations never
 affect the exit code, artifacts are gitignored, and neither CI nor
 pre-commit runs them. A gate has one response to intended UI change —
 go red — so a soft-finding instrument makes a permanently red gate that
 gets ignored; the weekly session asks the other question, *drift or new
-truth?*, which a gate cannot. Behavior belongs in doctests
-([testing.md](testing.md)); "does the app boot at all" is the smoke tier
-(`bin/smoke`, a merge gate — same browser library, different failure
-semantics, deliberately not the same walk).
+truth?*, which a gate cannot. Behavior belongs in
+[doctests](doctests.md); "does the app boot at all" is the
+[smoke walk](smoke.md), a merge gate on the same browser library with
+different failure semantics, deliberately not the same walk.
 
-## Running
+### When to use tours
+
+- **Verifying UI-touching work.** After changing a surface, run its
+  tour and review `summary.md` before calling the work done — the
+  visual/a11y counterpart to running tests. This catches
+  "renders broken at mobile width", "lost its h1", "landmark
+  disappeared" — things no doctest can see.
+- **A11y sweeps.** The axe reports across `bin/tour --all` are the
+  box's accessibility audit surface (a real sweep once fixed four
+  structural violation classes across the app).
+- **Review evidence.** When an agent builds UI, its tour artifacts are
+  how a human (or another agent) audits the result without driving the
+  browser themselves.
+
+### When not to use tours
+
+- **Not as a gate** — see above.
+- **Not for logic or state-machine behavior** — doctests own that.
+- **Not for states that need fabricated backend conditions** — that is
+  the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
+  **tours walk the real app; harnesses fabricate states.** A tour shows
+  you what a fresh visitor sees; a harness shows you every state a
+  component can be in.
+- **Not for pixel-level regression** — there's no baseline/diff
+  mechanism; screenshots are for human/agent eyes.
+
+## Running it
 
 ```bash
 bin/tour              # list available tours
@@ -51,67 +83,12 @@ interactive `bin/browse` session in the same worktree. Keep a tour's own
 session name stable when debugging its walk; different sessions have separate
 cookies and tabs.
 
-## Artifacts
+Each tour runs as two full passes (desktop, then mobile). Expectations
+are soft — a miss records a ❌ finding and the tour continues; only a
+thrown error (unresolvable locator, browser failure) aborts a pass,
+and even then the other pass still runs and reports.
 
-Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
-
-- `summary.md` — open this first. Findings are listed at the top
-  (❌ fail / ⚠️ warn / ℹ️ info), then one section per checkpoint with
-  the desktop and mobile screenshots inlined and per-viewport axe
-  violation counts.
-- `<checkpoint>.<viewport>.png` — screenshot.
-- `<checkpoint>.<viewport>.ax.txt` — full accessibility-tree snapshot.
-- `<checkpoint>.<viewport>.axe.json` — axe violations (color-contrast
-  is suppressed at run time pending
-  `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
-  `tour-lib/axe.ts` `SUPPRESS_RULES` to re-enable).
-
-A capture-time degradation (page-readiness timeout, axe crash) is
-recorded as a ⚠️ finding rather than silently producing a
-loading-state screenshot or a fake "0 violations".
-
-## When to use tours
-
-- **Verifying UI-touching work.** After changing a surface, run its
-  tour and review `summary.md` before calling the work done — the
-  visual/a11y counterpart to running tests. This catches
-  "renders broken at mobile width", "lost its h1", "landmark
-  disappeared" — things no doctest can see.
-- **A11y sweeps.** The axe reports across `bin/tour --all` are the
-  box's accessibility audit surface (a real sweep once fixed four
-  structural violation classes across the app).
-- **Review evidence.** When an agent builds UI, its tour artifacts are
-  how a human (or another agent) audits the result without driving the
-  browser themselves.
-
-## When NOT to use tours
-
-- **Not as a gate** — see above.
-- **Not for logic or state-machine behavior** — doctests own that.
-- **Not for states that need fabricated backend conditions** — that's
-  the dev-harness pattern (`/dev/capture-mode`,
-  `/dev/composer-states`: DEV-only routes mounting real components
-  over injectable fake services). The line: **tours walk the real app;
-  harnesses fabricate states.** A tour shows you what a fresh visitor
-  sees; a harness shows you every state a component can be in.
-- **Not for pixel-level regression** — there's no baseline/diff
-  mechanism; screenshots are for human/agent eyes.
-
-## How an agent reviews with tours
-
-1. `bin/tour <name>`; note the console counts.
-2. Read `summary.md` — findings first.
-3. **View the checkpoint PNGs directly** (agents can read images):
-   compare desktop vs mobile, look for clipped/overlapping/empty
-   states, and report any visible breakage even when tangential to the
-   task at hand.
-4. Where a checkpoint shows nonzero axe violations, open its
-   `.axe.json` for the nodes and failure summaries.
-5. Treat ❌ findings and visible breakage as work items; ⚠️ capture
-   degradations mean the artifact itself may be unreliable — re-run
-   before drawing conclusions from it.
-
-## Writing and organizing tours
+## Writing one
 
 - **`nav-pages` is the skeleton sweep; the rest are journeys.**
   `nav-pages` visits every route and asserts each page's h1/landmarks
@@ -140,7 +117,7 @@ loading-state screenshot or a fake "0 violations".
 - Keep tours short — tens of seconds. A data-driven page sweep
   (`nav-pages.tour.ts`) is fine; a ten-minute odyssey is not.
 
-## API sketch
+### API sketch
 
 ```ts
 tour({ name, description }, async (t) => {
@@ -154,7 +131,35 @@ tour({ name, description }, async (t) => {
 });
 ```
 
-Each tour runs as two full passes (desktop, then mobile). Expectations
-are soft — a miss records a ❌ finding and the tour continues; only a
-thrown error (unresolvable locator, browser failure) aborts a pass,
-and even then the other pass still runs and reports.
+## Reading results
+
+Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
+
+- `summary.md` — open this first. Findings are listed at the top
+  (❌ fail / ⚠️ warn / ℹ️ info), then one section per checkpoint with
+  the desktop and mobile screenshots inlined and per-viewport axe
+  violation counts.
+- `<checkpoint>.<viewport>.png` — screenshot.
+- `<checkpoint>.<viewport>.ax.txt` — full accessibility-tree snapshot.
+- `<checkpoint>.<viewport>.axe.json` — axe violations (color-contrast
+  is suppressed at run time pending
+  `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
+  `tour-lib/axe.ts` `SUPPRESS_RULES` to re-enable).
+
+A capture-time degradation (page-readiness timeout, axe crash) is
+recorded as a ⚠️ finding rather than silently producing a
+loading-state screenshot or a fake "0 violations".
+
+How an agent reviews with tours:
+
+1. `bin/tour <name>`; note the console counts.
+2. Read `summary.md` — findings first.
+3. **View the checkpoint PNGs directly** (agents can read images):
+   compare desktop vs mobile, look for clipped/overlapping/empty
+   states, and report any visible breakage even when tangential to the
+   task at hand.
+4. Where a checkpoint shows nonzero axe violations, open its
+   `.axe.json` for the nodes and failure summaries.
+5. Treat ❌ findings and visible breakage as work items; ⚠️ capture
+   degradations mean the artifact itself may be unreliable — re-run
+   before drawing conclusions from it.
