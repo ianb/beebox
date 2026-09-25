@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T19:31:07Z
+Generated: 2026-09-25T19:57:04Z
 Total documents: 429
 
 ## Issues
@@ -22,6 +22,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-lifecycle-clarity.md** — "Make current documentation and historical records distinguishable" (125 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-cards.md** — "Documentation structured like code: cards" (159 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
@@ -57,7 +58,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-cards.md** — "Documentation structured like code: cards" (159 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -779,6 +779,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:40 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
 - docs/implemented-plans/design-reconciliation.md:594 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
+- docs/implemented-plans/doc-structure-cards.md:85 (mention) — `box-layout.md` (its own subject), `docs/box/` card docs (box-facing),
 - docs/implemented-plans/docs-reorg.gap-analysis.md:44 (mention) — `docs/box-layout.md`.
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/model-engine-policy.md:742 (mention) — `chat-models/<sessionId>.json` named in `docs/box-layout.md`. The plan itself
@@ -791,7 +792,6 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/doc-structure-cards.md:85 (mention) — `box-layout.md` (its own subject), `docs/box/` card docs (box-facing),
 - docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-cleanup-evaluation.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
@@ -825,7 +825,7 @@ References:
 Title: "Cards" | 21 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure-cards.md:57 (mention) — | (new) | `cards.md`: what a card is; members; owned elsewhere (box layout, the box-facing card docs, the schemas agent
+- docs/implemented-plans/doc-structure-cards.md:57 (mention) — | (new) | `cards.md`: what a card is; members; owned elsewhere (box layout, the box-facing card docs, the schemas agent
 
 References:
 - → docs/cards/format.md (link)
@@ -1635,6 +1635,7 @@ Referenced by:
 - docs/README.md:26 (mention) — Each entry in the directory's `README.md` disposition table says what
 - docs/guides.md:5 (link) — for operating instructions. [Documentation organization](README.md) describes
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
+- docs/implemented-plans/doc-structure-cards.md:9 (link) — Fifth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
 - docs/implemented-plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
 - docs/implemented-plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
@@ -1642,7 +1643,6 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure-cards.md:9 (link) — Fifth cluster under the [organizing principles](../README.md#organizing-principles):
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -2195,10 +2195,10 @@ Referenced by:
 - docs/implemented-plans/box-root-paths.md:269 (mention) — `docs/cards/format.md`). Add the link rule to reactor/procedure prompt
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > The living format reference is `docs/cards/format.md`.
 - docs/implemented-plans/connector-silence.md:127 (mention) — (`docs/cards/format.md`), not per-connector knowledge. For Telegram
+- docs/implemented-plans/doc-structure-cards.md:58 (mention) — | `cards-as-markdown.md` | `cards/format.md` |
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards/format.md` gains the tag reference; the issue file closes
 - docs/implemented-plans/todo-collection.md:535 (mention) — schema instructions, `docs/cards/format.md:80-88`, and the two audits that
-- docs/plans/doc-structure-cards.md:58 (mention) — | `cards-as-markdown.md` | `cards/format.md` |
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/reports/stack-decisions-2026-09-04.md:20 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -2233,6 +2233,7 @@ Referenced by:
 - docs/implemented-plans/card-self-refs.md:45 (mention) — docs (the `docs/cards/migrations.md` table entry, this plan) are about 60 lines on
 - docs/implemented-plans/card-symbol.md:606 (mention) — `docs/cards/migrations.md` — it runs to completion or not at all, and reports both what
 - docs/implemented-plans/cards-as-markdown-rfc.md:51 (mention) — **Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only mani
+- docs/implemented-plans/doc-structure-cards.md:61 (mention) — | `migrations.md` (current parts) | `cards/migrations.md` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/cards/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/migration-admission-cost.md:326 (mention) — (`docs/cards/migrations.md` admission section) updated.
@@ -2249,7 +2250,6 @@ Referenced by:
 - docs/plans/agent-docs.md:381 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
 - docs/plans/asset-annex.md:761 (mention) — since it accurately records a system that existed. `docs/cards/migrations.md`
 - docs/plans/asset-offbox-storage.md:577 (mention) — nothing in `docs/cards/migrations.md`. The only state change is Track A2
-- docs/plans/doc-structure-cards.md:61 (mention) — | `migrations.md` (current parts) | `cards/migrations.md` |
 - docs/plans/migration-reliability.md:759 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
 - docs/plans/scan-guide-card.md:88 (mention) — script + procedure kinds; `docs/cards/migrations.md`). NOT used — see
 - docs/reports/migration-rollout-2026-05-23.md:3 (mention) — Frozen 2026-09-25 from `docs/migrations.md`. The 2026-05-23 production
@@ -2296,6 +2296,7 @@ Referenced by:
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
+- docs/implemented-plans/doc-structure-cards.md:59 (mention) — | `adding-schemas.md` | `cards/schemas.md` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
 - docs/implemented-plans/mvp-implementation-guide.md:418 (link) — See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
@@ -2303,7 +2304,6 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/cards/schemas.md`, the box-local schema guide
 - docs/implemented-plans/todo-collection.md:680 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
-- docs/plans/doc-structure-cards.md:59 (mention) — | `adding-schemas.md` | `cards/schemas.md` |
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/cards/schemas.md`
 - user-stories/catalog/2026-08-21.md:9050 (mention) — - **Agent-added card fields survive a connector rewrite** — The mechanism is real, unconditional on the rewrite paths, a
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:9 (mention) — and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
@@ -2325,8 +2325,8 @@ Referenced by:
 - docs/cards.md:12 (link) — | [Validation](cards/validation.md) | How `bbx validate` reaches agents and commits: the hooks and the canonical ref rew
 - docs/cards/format.md:144 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/guides.md:34 (link) — | Card validation hooks | [docs/cards/validation.md](cards/validation.md) |
+- docs/implemented-plans/doc-structure-cards.md:60 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
-- docs/plans/doc-structure-cards.md:60 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/testing.md:42 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:19 (mention) — the agent harness's PostToolUse hook (`beebox/docs/cards/validation.md:13`):
 
@@ -3723,6 +3723,20 @@ References:
 - → docs/README.md (mention)
 - → docs/plans/README.md (mention)
 - → ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
+
+#### docs/implemented-plans/doc-structure-cards.md **[ORPHAN]**
+
+Title: "Documentation structured like code: cards" | 159 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → docs/cards.md (mention)
+- → docs/cards/format.md (mention)
+- → docs/cards/schemas.md (mention)
+- → docs/cards/validation.md (mention)
+- → docs/cards/migrations.md (mention)
+- → docs/reports/migration-rollout-2026-05-23.md (mention)
+- → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/doc-structure-chat.md **[ORPHAN]**
 
@@ -6137,20 +6151,6 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
-#### docs/plans/doc-structure-cards.md **[ORPHAN]**
-
-Title: "Documentation structured like code: cards" | 159 lines | proposal | active
-
-References:
-- → docs/README.md (link)
-- → docs/cards.md (mention)
-- → docs/cards/format.md (mention)
-- → docs/cards/schemas.md (mention)
-- → docs/cards/validation.md (mention)
-- → docs/cards/migrations.md (mention)
-- → docs/reports/migration-rollout-2026-05-23.md (mention)
-- → docs/box-layout.md (mention)
-
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -7086,7 +7086,7 @@ Title: "Migration rollout, May 2026, and retired migrators" | 80 lines | dated r
 
 Referenced by:
 - docs/cards/migrations.md:395 (link) — what they did is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
-- docs/plans/doc-structure-cards.md:62 (mention) — | `migrations.md` "Production rollout history" and the two retired migrators | `reports/migration-rollout-2026-05-23.md`
+- docs/implemented-plans/doc-structure-cards.md:62 (mention) — | `migrations.md` "Production rollout history" and the two retired migrators | `reports/migration-rollout-2026-05-23.md`
 
 References:
 - → docs/cards/migrations.md (mention)

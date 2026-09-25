@@ -19,7 +19,7 @@ function tmpRepoRoot(): string {
 
 test("rewritePromotedLinks: a link into the published set rewrites to an absolute published URL", () => {
   const repoRoot = tmpRepoRoot();
-  const body = rewritePromotedLinks("see [cards](cards-as-markdown.md) for the format", {
+  const body = rewritePromotedLinks("see [cards](cards/format.md) for the format", {
     repoRoot,
     repoDocPath: "beebox/docs/glossary.md",
     manifestByRepoPath: new Map([
