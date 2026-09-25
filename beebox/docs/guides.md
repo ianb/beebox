@@ -58,7 +58,7 @@ where to put new material.
 | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 | Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
 | Docs shipped to box agents ([box-docs/](../box-docs)) | [docs/box/](box) (prose sources) + [src/core/docs-gen/package-docs.ts](../src/core/docs-gen/package-docs.ts) (generated reference) |
-| Calendar integration | [docs/calendar.md](calendar.md) |
+| Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
 | PDF intake partial design history | [docs/plans/pdf-intake-design.md](plans/pdf-intake-design.md) |
 | Source editor proposal (unimplemented) | [docs/plans/source-editor.md](plans/source-editor.md) |
 | Interface-as-cards design | [docs/plans/interface-as-cards.md](plans/interface-as-cards.md) |

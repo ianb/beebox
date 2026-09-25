@@ -287,7 +287,7 @@ An agent that assumes local card search covers all Gmail will answer incorrectly
 
 **Direction**
 
-- Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
+- Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - Update the generated agent command guide and Gmail schema instructions.
 - State plainly: tracked cards are a selected subset; Gmail is authoritative for untracked mail; deleting a card never deletes remote mail.
 - Show label-based automatic tracking as one rule example, not the definition of Gmail ingestion.

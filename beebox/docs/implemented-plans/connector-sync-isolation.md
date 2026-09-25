@@ -285,7 +285,7 @@ adversarial recheck confirms the implementation.
 
 **Direction:**
 
-1. Update `docs/google-drive.md` and the Drive skill text in
+1. Update `docs/connectors/drive.md` and the Drive skill text in
    `src/core/box/skills-content.ts`: `bbx rm <card>` stops sync without deleting
    the remote file; restoring/recreating it resumes sync; a raw hard delete of
    a folder child does not override the still-configured folder mount.

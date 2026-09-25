@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T18:41:59Z
-Total documents: 425
+Generated: 2026-09-25T18:55:30Z
+Total documents: 426
 
 ## Issues
 
@@ -56,6 +56,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
+- **docs/plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (136 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -849,23 +850,6 @@ References:
 - → docs/plans/tts-backend-selection.md (mention)
 - → docs/client-debug-log.md (mention)
 
-#### docs/calendar.md
-
-Title: "Calendar Integration" | 106 lines | current reference
-
-Referenced by:
-- docs/connectors.md:33 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
-- docs/design/README.md:31 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
-- docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
-- docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
-- docs/guides.md:61 (link) — | Calendar integration | [docs/calendar.md](calendar.md) |
-- docs/implemented-plans/mvp-implementation-guide.md:692 (mention) — calendar.md          # Rules for calendar operations
-- docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/calendar.md` updated ([46]).
-- docs/plans/agent-docs.md:374 (mention) — `telegram-setup.md`, `calendar.md`.
-- user-stories/catalog/2026-06-26.md:2278 (mention) — Key limitation from docs/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed back to Googl
-- ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
-- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:60 (mention) — `beebox/docs/calendar.md`: **no existing file is ever renamed, so no rename
-
 #### docs/card-validation.md
 
 Title: "Card validation hooks" | 91 lines | current reference
@@ -979,7 +963,8 @@ Referenced by:
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
-- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
+- docs/plans/doc-structure-connectors.md:51 (mention) — | connectors.md inventory | Drive card types: `sheet` | `gsheet`, `gdoc` (handlers), `gfolder`, `glink` |
+- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
@@ -989,10 +974,10 @@ Referenced by:
 
 References:
 - → docs/secrets.md (link)
-- → docs/telegram-setup.md (link)
-- → docs/calendar.md (link)
-- → docs/gmail-setup.md (link)
-- → docs/google-drive.md (link)
+- → docs/connectors/telegram.md (link)
+- → docs/connectors/calendar.md (link)
+- → docs/connectors/gmail.md (link)
+- → docs/connectors/drive.md (link)
 - → docs/server/health-checks.md (link)
 - → src/services/CLAUDE.md (mention)
 - → docs/triage.md (mention)
@@ -1280,61 +1265,6 @@ References:
 - → docs/chat/sessions.md (mention)
 - → docs/landmarks.md (mention)
 
-#### docs/gmail-setup.md
-
-Title: "Gmail Connector Setup" | 181 lines | current reference
-
-Referenced by:
-- docs/connectors.md:34 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
-- docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
-- docs/implemented-plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
-- docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/gmail-setup.md` (the shorthand section currently describes it as legacy),
-- docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
-- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
-- user-stories/catalog/2026-06-26.md:2054 (mention) — - docs/gmail-setup.md lines 37-41 (user documentation with examples)
-
-References:
-- → docs/google-setup.md (link)
-- → docs/implemented-plans/agent-capability-delegation.md (mention)
-
-#### docs/google-drive.md
-
-Title: "Google Drive Integration" | 263 lines | current reference
-
-Referenced by:
-- docs/connectors.md:35 (link) — | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
-- docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
-- docs/implemented-plans/connector-sync-isolation.md:288 (mention) — 1. Update `docs/google-drive.md` and the Drive skill text in
-- docs/implemented-plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
-- docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/google-drive.md:141-150` "Folder Mounts" section.
-- docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
-- user-stories/catalog/2026-06-26.md:2713 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
-
-References:
-- → docs/google-setup.md (link)
-
-#### docs/google-setup.md
-
-Title: "Google Cloud Console Setup" | 171 lines | current reference
-
-Referenced by:
-- docs/gmail-setup.md:11 (link) — in [google-setup.md](google-setup.md).
-- docs/google-drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
-- docs/implemented-plans/doc-structure-install-server.md:113 (mention) — daemon), `secrets.md`, `publishing.md`, `google-setup.md` and the connector
-- docs/implemented-plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
-- docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/server/health-checks.md`.
-- docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
-- docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](google-setup.md).
-- docs/server/configuration.md:157 (link) — Create the OAuth client as in [Google setup](../google-setup.md) with the
-- docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../google-setup.md#token-expired--invalid_grant); design
-- ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/google-setup.md` already walks an operator through consent screen +
-
-References:
-- → docs/gmail-setup.md (mention)
-- → docs/google-drive.md (mention)
-- → docs/calendar.md (mention)
-- → docs/implemented-plans/google-auth-reauth-health.md (link)
-
 #### docs/guides.md
 
 Title: "Guide index" | 70 lines | current reference
@@ -1397,7 +1327,7 @@ References:
 - → docs/content-security-policy.md (link)
 - → docs/maintenance.md (link)
 - → docs/testing/knowledge-audits.md (link)
-- → docs/calendar.md (link)
+- → docs/connectors/calendar.md (link)
 - → docs/plans/pdf-intake-design.md (link)
 - → docs/plans/source-editor.md (link)
 - → docs/plans/interface-as-cards.md (link)
@@ -1847,6 +1777,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
+- docs/plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -1889,7 +1820,7 @@ Title: "Scheduler" | 118 lines | current reference
 
 Referenced by:
 - CLAUDE.md:49 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
-- docs/design/README.md:31 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
+- docs/design/README.md:31 (link) — [`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
 - docs/design/processing.md:21 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
 - docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
@@ -1922,12 +1853,14 @@ Referenced by:
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:207 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
+- docs/connectors/telegram.md:39 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
 - docs/guides.md:37 (link) — | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
 - docs/implemented-plans/secret-trick-runtime-delivery.md:172 (mention) — Update `beebox/docs/secrets.md` to retain the HTTP route only as a low-level
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
+- docs/plans/doc-structure-connectors.md:86 (mention) — `secrets.md` (the store is its own subject), `src/connectors/CLAUDE.md`,
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
 - docs/security-report.md:177 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
@@ -1935,7 +1868,6 @@ Referenced by:
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:45 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
 - docs/technologies.md:31 (link) — documented in [secrets.md](secrets.md).
-- docs/telegram-setup.md:39 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
 - docs/testing/doctests.md:135 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -1984,7 +1916,7 @@ References:
 Title: "Security report — structured version" | 504 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:86 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
+- docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
@@ -2049,7 +1981,7 @@ References:
 - → docs/server/health-checks.md (link)
 - → docs/secrets.md (link)
 - → docs/migrations.md (link)
-- → docs/google-setup.md (link)
+- → docs/connectors/google-auth.md (link)
 - → docs/security-overview.md (link)
 
 #### docs/technologies.md
@@ -2069,18 +2001,6 @@ References:
 - → docs/testing.md (link)
 - → docs/development-workflow.md (mention)
 - → docs/secrets.md (link)
-
-#### docs/telegram-setup.md
-
-Title: "Telegram Connector Setup" | 120 lines | current reference
-
-Referenced by:
-- docs/connectors.md:32 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](telegram-setup.md) |
-- docs/implemented-plans/docs-reorg.md:174 (mention) — `telegram-setup.md`, `todo-security.md`,
-- docs/plans/agent-docs.md:374 (mention) — `telegram-setup.md`, `calendar.md`.
-
-References:
-- → docs/secrets.md (mention)
 
 #### docs/testing.md
 
@@ -2377,7 +2297,7 @@ References:
 Title: "Quick chat routing rules" | 45 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:51 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- docs/chat/quick-chat.md:57 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
 
 #### docs/box/what-you-could-do.md
 
@@ -2419,7 +2339,7 @@ Referenced by:
 
 #### docs/chat/quick-chat.md
 
-Title: "Quick chat" | 113 lines | current reference
+Title: "Quick chat" | 121 lines | current reference
 
 Referenced by:
 - docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
@@ -2510,6 +2430,84 @@ Referenced by:
 References:
 - → docs/chat/composer.md (link)
 
+### docs/connectors/
+
+#### docs/connectors/calendar.md
+
+Title: "Calendar Integration" | 106 lines | current reference
+
+Referenced by:
+- docs/connectors.md:33 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](connectors/calendar.md) |
+- docs/connectors/google-auth.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
+- docs/design/README.md:31 (link) — [`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
+- docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../connectors/calendar.md).
+- docs/guides.md:61 (link) — | Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
+- docs/implemented-plans/mvp-implementation-guide.md:692 (mention) — calendar.md          # Rules for calendar operations
+- docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
+- docs/plans/agent-docs.md:374 (mention) — `telegram-setup.md`, `calendar.md`.
+- docs/plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
+- user-stories/catalog/2026-06-26.md:2278 (mention) — Key limitation from docs/connectors/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed ba
+- ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
+- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:60 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
+
+#### docs/connectors/drive.md
+
+Title: "Google Drive Integration" | 263 lines | current reference
+
+Referenced by:
+- docs/connectors.md:35 (link) — | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](connectors/drive.md) |
+- docs/implemented-plans/connector-sync-isolation.md:288 (mention) — 1. Update `docs/connectors/drive.md` and the Drive skill text in
+- docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
+- docs/plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
+- user-stories/catalog/2026-06-26.md:2713 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
+
+References:
+- → docs/connectors/google-auth.md (link)
+
+#### docs/connectors/gmail.md
+
+Title: "Gmail Connector Setup" | 181 lines | current reference
+
+Referenced by:
+- docs/connectors.md:34 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
+- docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
+- docs/plans/doc-structure-connectors.md:60 (mention) — | `gmail-setup.md` | `connectors/gmail.md` |
+- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
+- user-stories/catalog/2026-06-26.md:2054 (mention) — - docs/connectors/gmail.md lines 37-41 (user documentation with examples)
+
+References:
+- → docs/connectors/google-auth.md (link)
+- → docs/implemented-plans/agent-capability-delegation.md (mention)
+
+#### docs/connectors/google-auth.md
+
+Title: "Google Cloud Console Setup" | 171 lines | current reference
+
+Referenced by:
+- docs/connectors/drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-auth.md))
+- docs/connectors/gmail.md:11 (link) — in [google-setup.md](google-auth.md).
+- docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
+- docs/plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
+- docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](connectors/google-auth.md).
+- docs/server/configuration.md:157 (link) — Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
+- docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
+- ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/connectors/google-auth.md` already walks an operator through consent screen +
+
+References:
+- → docs/connectors/calendar.md (mention)
+- → docs/implemented-plans/google-auth-reauth-health.md (link)
+
+#### docs/connectors/telegram.md
+
+Title: "Telegram Connector Setup" | 120 lines | current reference
+
+Referenced by:
+- docs/connectors.md:32 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](connectors/telegram.md) |
+- docs/plans/doc-structure-connectors.md:62 (mention) — | `telegram-setup.md` | `connectors/telegram.md` |
+
+References:
+- → docs/secrets.md (mention)
+
 ### docs/design/
 
 #### docs/design/durability-and-provenance.md
@@ -2572,7 +2570,7 @@ References:
 - → src/core/reactor/DESIGN.md (mention)
 - → docs/plans/interface-as-cards.md (link)
 - → docs/connectors.md (link)
-- → docs/calendar.md (link)
+- → docs/connectors/calendar.md (link)
 
 #### docs/design/interface-as-cards-background.md
 
@@ -2630,7 +2628,7 @@ References:
 - → docs/design/teaching.md (link)
 - → docs/design/extensibility.md (link)
 - → docs/triage.md (link)
-- → docs/calendar.md (link)
+- → docs/connectors/calendar.md (link)
 - → docs/scheduler.md (link)
 - → docs/chat/schedules.md (link)
 - → docs/implemented-plans/design-md-retired-sections.md (link)
@@ -2712,7 +2710,7 @@ References:
 Title: "Agent self-configuration of credentialed connectors (Drive first)" | 441 lines | shipped history | implemented
 
 Referenced by:
-- docs/gmail-setup.md:144 (mention) — further (`docs/plans/agent-capability-delegation.md`).
+- docs/connectors/gmail.md:144 (mention) — further (`docs/plans/agent-capability-delegation.md`).
 - docs/implemented-plans/bbx-agent-surface.md:95 (mention) — - **Shipped precedent:** `docs/implemented-plans/agent-capability-delegation.md`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:60 (mention) — `beebox/docs/plans/agent-capability-delegation.md`. `wakeup` stays here as
 
@@ -3557,7 +3555,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
-- → docs/google-drive.md (mention)
+- → docs/connectors/drive.md (mention)
 
 #### docs/implemented-plans/courseware-lesson-plan.md **[ORPHAN]**
 
@@ -3741,7 +3739,6 @@ References:
 - → docs/testing.md (mention)
 - → docs/maintenance.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/google-setup.md (mention)
 - → deploy/CLAUDE.md (mention)
 - → docs/technologies.md (mention)
 - → docs/security-report.md (mention)
@@ -3857,7 +3854,6 @@ References:
 - → docs/testing/knowledge-audits.md (mention)
 - → deploy/README.md (mention)
 - → docs/adding-api-endpoints.md (mention)
-- → docs/telegram-setup.md (mention)
 - → docs/prompt-logging.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/server/health-checks.md (mention)
@@ -3866,9 +3862,6 @@ References:
 - → docs/scheduled/csp-violation-review.md (mention)
 - → src/core/reactor/DESIGN.md (mention)
 - → docs/implemented-plans/webpage-card-and-commentary.md (mention)
-- → docs/google-setup.md (mention)
-- → docs/gmail-setup.md (mention)
-- → docs/google-drive.md (mention)
 - → docs/reports/activities-design-2026-04-19.md (mention)
 - → docs/reports/activities-retrospective-2026-05-14.md (mention)
 - → src/hub/CLAUDE.md (mention)
@@ -3893,7 +3886,7 @@ Referenced by:
 References:
 - → ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md (frontmatter)
 - → ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md (frontmatter)
-- → docs/google-drive.md (mention)
+- → docs/connectors/drive.md (mention)
 
 #### docs/implemented-plans/emission-model.md
 
@@ -4011,7 +4004,7 @@ References:
 - → ../issues/closed/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md (frontmatter)
 - → ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md (frontmatter)
 - → docs/plans/email-tracking.md (link)
-- → docs/gmail-setup.md (mention)
+- → docs/connectors/gmail.md (mention)
 - → docs/connectors.md (mention)
 - → ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md (link)
 - → ../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md (link)
@@ -4033,7 +4026,7 @@ References:
 Title: "Dead Google auth as a first-class health + notify condition" | 140 lines | shipped history | implemented
 
 Referenced by:
-- docs/google-setup.md:156 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+- docs/connectors/google-auth.md:156 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:14 (link) — [google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
@@ -4041,7 +4034,7 @@ Referenced by:
 References:
 - → ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md (link)
 - → ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md (link)
-- → docs/google-setup.md (mention)
+- → docs/connectors/google-auth.md (mention)
 - → docs/server/health-checks.md (mention)
 
 #### docs/implemented-plans/hq-dictation-switch.md
@@ -4373,7 +4366,7 @@ References:
 - → docs/chat/schedules.md (mention)
 - → docs/connectors.md (link)
 - → docs/adding-schemas.md (link)
-- → docs/calendar.md (mention)
+- → docs/connectors/calendar.md (mention)
 
 #### docs/implemented-plans/named-places.md **[ORPHAN]**
 
@@ -5391,7 +5384,7 @@ Referenced by:
 
 References:
 - → user-stories/catalog/2026-06-26.md (mention)
-- → docs/calendar.md (mention)
+- → docs/connectors/calendar.md (mention)
 - → docs/plans/pdf-intake-design.md (mention)
 
 #### docs/implemented-plans/view-render-testing.md
@@ -5660,11 +5653,7 @@ References:
 - → docs/landmarks.md (mention)
 - → docs/procedure-implementation.md (mention)
 - → docs/model-policy.md (mention)
-- → docs/google-setup.md (mention)
-- → docs/gmail-setup.md (mention)
-- → docs/google-drive.md (mention)
-- → docs/telegram-setup.md (mention)
-- → docs/calendar.md (mention)
+- → docs/connectors/calendar.md (mention)
 - → docs/architecture/01-what-is-this.md (mention)
 - → docs/architecture/02-cards-and-memory.md (mention)
 - → docs/box-layout.md (mention)
@@ -5920,7 +5909,7 @@ References:
 
 #### docs/plans/chat-routing.md
 
-Title: "Quick chat destination routing" | 186 lines | proposal | partial
+Title: "Quick chat destination routing" | 224 lines | proposal | partial
 
 Referenced by:
 - ../issues/closed/features/2026-06-28-triage-agent-session-routing.md:57 (link) — The [Quick chat plan](../../../beebox/docs/plans/chat-routing.md) owns the active
@@ -6107,6 +6096,23 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
+#### docs/plans/doc-structure-connectors.md **[ORPHAN]**
+
+Title: "Documentation structured like code: connectors" | 136 lines | proposal | active
+
+References:
+- → docs/README.md (link)
+- → docs/connectors/calendar.md (mention)
+- → src/connectors/CLAUDE.md (mention)
+- → docs/connectors.md (mention)
+- → docs/connectors/google-auth.md (mention)
+- → docs/connectors/gmail.md (mention)
+- → docs/connectors/drive.md (mention)
+- → docs/connectors/telegram.md (mention)
+- → docs/secrets.md (mention)
+- → docs/server/configuration.md (mention)
+- → docs/server/boxes.md (mention)
+
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -6146,7 +6152,7 @@ References:
 - → docs/procedure-implementation.md (mention)
 - → docs/plans/cli-restructure.md (mention)
 - → docs/connectors.md (mention)
-- → docs/gmail-setup.md (mention)
+- → docs/connectors/gmail.md (mention)
 
 #### docs/plans/general-browser.md
 
@@ -7140,6 +7146,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
 - docs/implemented-plans/secret-custody.md:540 (mention) — "copy the grant list", not the files. Update `docs/server/boxes.md`. New-box
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/server/boxes.md`), `bbx upgrade` is the per-box engine-upgrade
+- docs/plans/doc-structure-connectors.md:127 (mention) — | 2 | yes | 13 | server/boxes.md#Connector secrets (the carve-out sentence) | 2; the home, google-setup.md#5, has no hea
 - docs/plans/source-available-release.md:68 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
 - docs/server.md:17 (link) — | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troublesh
 - docs/server/operations.md:115 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
@@ -7162,13 +7169,14 @@ Title: "Server configuration" | 180 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
+- docs/plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 
 References:
 - → docs/secrets.md (link)
 - → docs/install/docker.md (link)
-- → docs/google-setup.md (link)
+- → docs/connectors/google-auth.md (link)
 
 #### docs/server/deploying.md
 
@@ -7199,7 +7207,7 @@ Referenced by:
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/doc-structure-install-server.md:14 (mention) — and `health-checks.md`, and they disagree with each other in three places.
 - docs/implemented-plans/docs-reorg.md:178 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
-- docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/server/health-checks.md`.
+- docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:448 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
@@ -7218,7 +7226,7 @@ References:
 - → docs/server/deploying.md (link)
 - → docs/procedure-implementation.md (mention)
 - → docs/server/operations.md (link)
-- → docs/google-setup.md (link)
+- → docs/connectors/google-auth.md (link)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
 - → docs/connectors.md (link)
 
@@ -7568,6 +7576,7 @@ Referenced by:
 - docs/implemented-plans/chat-review.md:207 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:23 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
 - docs/implemented-plans/web-push-notifications.md:490 (mention) — (service-injection pattern, `src/services/CLAUDE.md` / `src/connectors/CLAUDE.md`)
+- docs/plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - ../.claude/skills/bbx-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
 References:
@@ -7762,9 +7771,9 @@ References:
 - → CLAUDE.md (mention)
 - → docs/plans/narration-mode.md (mention)
 - → docs/triage.md (mention)
-- → docs/gmail-setup.md (mention)
-- → docs/calendar.md (mention)
-- → docs/google-drive.md (mention)
+- → docs/connectors/gmail.md (mention)
+- → docs/connectors/calendar.md (mention)
+- → docs/connectors/drive.md (mention)
 - → docs/implemented-plans/figure-card-type.md (mention)
 - → docs/box-layout.md (mention)
 - → MAP.md (at-include) **[BROKEN]**

@@ -153,7 +153,7 @@ Either way, the new grant clears the condition automatically.
 The state is stored with the credential, so on a server sharing one
 `BBX_GOOGLE_TOKENS_FILE` across boxes, reconnecting once fixes every box.
 
-Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 
 ### Adding more calendars
 

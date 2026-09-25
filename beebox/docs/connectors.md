@@ -29,10 +29,10 @@ Sync rebuilds a connector-managed card's content wholesale from its template; an
 
 | Connector | File | Card types | Direction | Service-injected | Setup doc |
 |-----------|------|-----------|-----------|-----------------|-----------|
-| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](telegram-setup.md) |
-| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
-| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-setup.md](gmail-setup.md) |
-| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
+| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](connectors/telegram.md) |
+| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](connectors/calendar.md) |
+| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-setup.md](connectors/gmail.md) |
+| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](connectors/drive.md) |
 
 ## Lifecycle
 
@@ -85,7 +85,7 @@ Each connector reads its non-credential config from `_config/connectors/`:
   cursor, budgets, and bounded pending summaries live in gitignored
   `_bookkeeping/connectors/gmail.state.json`.
   A live email-thread card is the sole tracking registry; deleting it untracks
-  the thread without changing Gmail. See [gmail-setup.md](gmail-setup.md).
+  the thread without changing Gmail. See [gmail-setup.md](connectors/gmail.md).
 
 Telegram's credentials (`{ botToken, webhookSecret }`) are the store's
 `telegram-bot/<box>` secret, resolved by `connectors/telegram-helpers.ts` —

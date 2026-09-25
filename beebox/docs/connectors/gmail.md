@@ -8,7 +8,7 @@ It shares the Google OAuth connection used by Calendar and Drive.
 
 On the box admin page, connect a Google account and enable Gmail for the box.
 If Google Services is absent, configure the server-wide OAuth client described
-in [google-setup.md](google-setup.md).
+in [google-setup.md](google-auth.md).
 
 ## Track a thread explicitly
 
