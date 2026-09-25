@@ -17,6 +17,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { isCardFile } from "../../lib/paths.js";
 
 class AttachDirRenameError extends Error {
   readonly from: string;
@@ -41,11 +42,13 @@ export async function movePhase2CardFiles(
   destPath: string,
 ): Promise<Array<{ from: string; to: string }>> {
   const moved: Array<{ from: string; to: string }> = [];
-  const oldAttach = attachDirFor(sourcePath);
-  const newAttach = attachDirFor(destPath);
   await fs.mkdir(path.dirname(destPath), { recursive: true });
   await fs.rename(sourcePath, destPath);
   moved.push({ from: sourcePath, to: destPath });
+  // Only a card has an attach scope; a plain `.md` file moves alone.
+  if (!isCardFile(sourcePath)) return moved;
+  const oldAttach = attachDirFor(sourcePath);
+  const newAttach = attachDirFor(destPath);
   if (oldAttach !== newAttach) {
     try {
       await fs.rename(oldAttach, newAttach);

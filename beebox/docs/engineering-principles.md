@@ -6,7 +6,7 @@ They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 shape of the code is what it is*. When a design decision, a review finding, or
 a plan needs a reason, it traces to one of these.
 
-Twelve principles, in rough dependency order — the earlier ones are about the
+Thirteen principles, in rough dependency order — the earlier ones are about the
 types and boundaries everything else leans on.
 
 ## 1. Types are structure

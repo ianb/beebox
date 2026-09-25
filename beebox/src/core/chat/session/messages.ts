@@ -9,6 +9,7 @@
  * `buildContentBlocks`) so existing importers are unaffected.
  */
 
+import { isThirdPartyModel } from "../../../shared/agent-models.js";
 import type { AttentionSnapshot } from "../../../shared/chat-composer-binding.js";
 import { assertNever } from "../../../lib/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
@@ -277,9 +278,21 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
   }
 }
 
-/** Adapt either Claude SDK events or a provider-normalized backend event. */
-export function adaptBackendMessage(msg: ChatBackendMessage): ChatMessage | null {
-  return "provider" in msg ? msg.message : adaptSdkMessage(msg);
+/**
+ * Adapt either Claude SDK events or a provider-normalized backend event, for a
+ * run on `model`.
+ *
+ * A run on a third-party model (GLM, an added OpenRouter model) loses its
+ * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
+ * OpenRouter spend 5–20× when measured (`docs/plans/openrouter-chat-models.md`,
+ * Track 1 (h)). No figure is better than a wrong one; the real spend is the
+ * provider's own.
+ */
+export function adaptBackendMessage(msg: ChatBackendMessage, { model }: { model: string | null | undefined }): ChatMessage | null {
+  const adapted = "provider" in msg ? msg.message : adaptSdkMessage(msg);
+  if (adapted?.type !== "result" || !isThirdPartyModel(model)) return adapted;
+  const { total_cost_usd: _misreported, ...rest } = adapted;
+  return rest;
 }
 
 /**

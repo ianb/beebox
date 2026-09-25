@@ -20,6 +20,7 @@ import { relative, resolve, sep } from "node:path";
 import { parseRef, resolveRefPath } from "../shared/ref-path.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { BOX_ROOT_VOCABULARY } from "../lib/box-root-vocabulary.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -70,6 +71,19 @@ export function resolveContainedRef(input: RefExistsInput): BoxRelativePath | nu
   // `BoxRelativePath` brand — kept even though the shared algebra already
   // refuses escapes, so the branded type still traces to one checked producer.
   return abs === null ? null : containWithinBox(input.boxRoot, abs);
+}
+
+const AREA_NAMES = BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry) => `\`${entry.name}\``);
+
+/**
+ * The tail of a broken-ref lint message, after the ref itself. A ref the box
+ * namespace fence refuses (`node_modules/`, `src/`, a `..` escape) is a
+ * different problem from a missing file, and "does not exist" sent authors
+ * looking for a file that was never the issue — so say which it is.
+ */
+export function brokenRefReason(input: RefExistsInput): string {
+  if (parseRef(input.ref).path === "" || resolveContainedRef(input) !== null) return "does not exist";
+  return `points outside the box — a ref reaches only the box's areas (${AREA_NAMES.join(", ")}); package docs under \`node_modules/\` can't be linked, so name them in plain text`;
 }
 
 /**

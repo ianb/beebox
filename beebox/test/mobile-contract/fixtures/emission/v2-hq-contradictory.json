@@ -1,0 +1,16 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-hq-contradictory-1",
+    "origin": "voice",
+    "text": "impossible provenance",
+    "diarized": false,
+    "hqText": true,
+    "hqFallback": true,
+    "images": [],
+    "files": [],
+    "selections": []
+  },
+  "expected": null,
+  "expectedReason": "Invalid native emission V2: HQ success and fallback are mutually exclusive"
+}

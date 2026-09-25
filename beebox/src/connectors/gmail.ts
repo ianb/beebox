@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
+import { truncateTitle } from "../core/file-summary.js";
 import { errorMessage, errnoCode } from "../lib/error-guards.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { BOX_DIRS, getBoxDir } from "../lib/paths.js";
@@ -23,6 +24,8 @@ import { discoverGmailChanges } from "./gmail-discovery.js";
 import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { resolveFakeGmailService } from "../field-test/fake-gmail-gate.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "./sync-skipped.js";
+import { ok, err, type Result } from "../lib/result.js";
 import { evaluateGmailRules } from "./gmail-rules.js";
 import { parseGmailTransientState, type GmailTransientState } from "./gmail-state.js";
 import {
@@ -32,8 +35,11 @@ import {
 } from "./gmail-track.js";
 import { findTrackedGmailThreads } from "./gmail-tracking.js";
 import { writeThreadCards, type WriteThreadsResult } from "./gmail-threads.js";
-import { registerConnector, type Connector, type SyncResult } from "./index.js";
+import { registerConnector, type Connector, type SyncResult, type SyncSkipped } from "./index.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
+
+/** A MIME or API error can be long; the sync result is read by a person. */
+const DRAFT_ERROR_MAX_CHARS = 200;
 
 interface SyncWork {
   config: GmailConnectorConfig;
@@ -151,18 +157,18 @@ class GmailConnector implements Connector {
    * the env var unset the sequence is exactly what it was: allowlist, then
    * stored OAuth, then the real service.
    */
-  private async resolveService(): Promise<GoogleGmailService | null> {
+  private async resolveService(): Promise<Result<GoogleGmailService, SyncSkipped>> {
     // An explicitly injected service wins over the ambient env var, and is not
     // gated: the caller already chose which mailbox this connector talks to,
     // in-process, so `BBX_FAKE_GMAIL` cannot divert it anywhere. The gate exists
     // for the case injection cannot reach — a spawned subprocess.
-    if (this.injectedService !== undefined) return this.injectedService;
+    if (this.injectedService !== undefined) return ok(this.injectedService);
     const fake = await resolveFakeGmailService(this.boxRoot);
-    if (fake !== null) return fake;
-    if (!await isGoogleServiceAllowed(this.boxRoot, "gmail")) return null;
+    if (fake !== null) return ok(fake);
+    if (!await isGoogleServiceAllowed(this.boxRoot, "gmail")) return err(serviceNotAllowed("gmail"));
     const auth = await getGoogleAuth(this.boxRoot);
-    if (!auth) return null;
-    return createGoogleGmailService(createGoogleAuthService(auth, { boxRoot: this.boxRoot }));
+    if (!auth) return err(await serviceNotConfigured(this.boxRoot));
+    return ok(createGoogleGmailService(createGoogleAuthService(auth, { boxRoot: this.boxRoot })));
   }
 
   private async cleanupLegacySecret(): Promise<void> {
@@ -245,17 +251,33 @@ class GmailConnector implements Connector {
   }
 
   private async uploadDrafts(service: GoogleGmailService, result: SyncResult): Promise<void> {
-    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service });
-    if (drafts.updated.length === 0) return;
+    const drafts = await uploadPendingDrafts({ boxRoot: this.boxRoot, service, now: getBoxTime(this.boxRoot) });
+    if (drafts.errors.length > 0) {
+      // Inbound sync still succeeded, so `success` stays true; the error makes
+      // the failure reach the wakeup/finalize output and the activity record
+      // instead of vanishing (a stuck draft used to be undiagnosable).
+      const detail = drafts.errors
+        .map(({ path: cardPath, error }) => `${cardPath}: ${truncateTitle(error, DRAFT_ERROR_MAX_CHARS)}`)
+        .join("; ");
+      const message = `Draft upload failed for ${drafts.errors.length} card${drafts.errors.length === 1 ? "" : "s"}: ${detail}`;
+      result.error = result.error === undefined ? message : `${result.error}; ${message}`;
+    }
+    const changed = [...drafts.updated, ...drafts.stranded, ...drafts.marked];
+    if (changed.length === 0) return;
+    const parts = [
+      ...(drafts.updated.length === 0 ? [] : [`Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`]),
+      ...(drafts.stranded.length === 0 ? [] : [`stop retrying ${drafts.stranded.length} failed draft${drafts.stranded.length === 1 ? "" : "s"}`]),
+      ...(drafts.marked.length === 0 ? [] : [`record ${drafts.marked.length} draft upload failure${drafts.marked.length === 1 ? "" : "s"}`]),
+    ];
     await stageAndCommitPaths(this.boxRoot, {
-      paths: drafts.updated,
-      message: `Upload ${drafts.updated.length} draft${drafts.updated.length === 1 ? "" : "s"} to Gmail`,
+      paths: changed,
+      message: parts.join("; "),
       trailers: {
         "Pushed-By": "gmail-connector",
         ...(this.triggeredBy === undefined ? {} : { "Triggered-By": this.triggeredBy }),
       },
     });
-    result.updated.push(...drafts.updated);
+    result.updated.push(...changed);
   }
 
   private async syncUnderLock(service: GoogleGmailService): Promise<SyncResult> {
@@ -272,8 +294,9 @@ class GmailConnector implements Connector {
   // Deliberately outside the try: a `BBX_FAKE_GMAIL` misconfiguration is a
     // harness error, not a sync failure, and must not be flattened into a
     // `{ success: false }` a wakeup would print and move past.
-    const service = await this.resolveService();
-    if (service === null) return { success: true, created: [], updated: [] };
+    const resolved = await this.resolveService();
+    if (!resolved.ok) return skippedSync(resolved.error);
+    const service = resolved.value;
     try {
       await this.cleanupLegacySecret();
       return await withGmailTrackingLock({

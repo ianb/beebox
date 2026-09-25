@@ -3,7 +3,13 @@ title: "v1-removal residue: stale legacy-box src comments + flat scenario boxes"
 workstream: unknown
 
 area: beebox
+priority: important
 ---
+
+> **⚠ Partly overtaken** (full-embrace-annex, 2026-09-14): the
+> `core/asset-manifest-scan.ts` site listed below is gone — the whole file was
+> deleted with the manifest scheme, so that stale comment cannot be fixed and
+> needs no fix. The other sites still stand.
 
 Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
 steps 1a–1d). Step 1e (docs + layout-spec cleanup) handled the docs and the

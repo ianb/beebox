@@ -24,6 +24,22 @@ export interface PutRequestRecord {
   readonly filename: string;
   readonly authorization: string | undefined;
   readonly body: Buffer;
+  readonly identity: ClientIdentityHeaders;
+}
+
+/** The one-way identity headers the client sends on both routes
+ * (`wire-client.ts`'s `identityHeaders`). Recorded rather than acted on: the
+ * real box does not refuse on them either. */
+export interface ClientIdentityHeaders {
+  readonly contract: string | undefined;
+  readonly build: string | undefined;
+  readonly builtAt: string | undefined;
+}
+
+export interface CheckRequestRecord {
+  readonly hashes: string[];
+  readonly authorization: string | undefined;
+  readonly identity: ClientIdentityHeaders;
 }
 
 export interface FakeScanServerHandlers {
@@ -31,6 +47,11 @@ export interface FakeScanServerHandlers {
   checkState: (hash: string) => CheckStateEntry;
   /** Returns the PUT outcome for a given hash; receives the full request record. */
   putOutcome: (record: PutRequestRecord) => PutOutcome;
+  /** Optional: the contract version this fake box reports on the check
+   * response. Omitted means the response carries no `contractVersion` at all —
+   * a box predating the field, which is what every real box looks like until
+   * it deploys. */
+  contractVersion?: () => number;
   /** Optional: gates `POST /api/scan/check` on the request's `authorization`
    * header, responding 401 when it returns `false`. Omitted means every
    * request is authorized — the default every existing test relies on. */
@@ -58,6 +79,7 @@ export type PutOutcome =
 export interface FakeScanServer {
   readonly url: string;
   readonly putRequests: PutRequestRecord[];
+  readonly checkRequests: CheckRequestRecord[];
   close(): Promise<void>;
 }
 
@@ -76,8 +98,9 @@ export async function startFakeScanServer(
   handlers: FakeScanServerHandlers,
 ): Promise<FakeScanServer> {
   const putRequests: PutRequestRecord[] = [];
+  const checkRequests: CheckRequestRecord[] = [];
   const server = createServer((req, res) => {
-    handleRequest({ req, res, handlers, putRequests }).catch((e: unknown) => {
+    handleRequest({ req, res, handlers, putRequests, checkRequests }).catch((e: unknown) => {
       res.writeHead(500).end(String(e));
     });
   });
@@ -89,6 +112,7 @@ export async function startFakeScanServer(
   return {
     url: `http://127.0.0.1:${String(address.port)}`,
     putRequests,
+    checkRequests,
     close: () => closeServer(server),
   };
 }
@@ -113,6 +137,7 @@ interface RequestContext {
   readonly res: ServerResponse;
   readonly handlers: FakeScanServerHandlers;
   readonly putRequests: PutRequestRecord[];
+  readonly checkRequests: CheckRequestRecord[];
 }
 
 async function handleRequest(ctx: RequestContext): Promise<void> {
@@ -162,13 +187,35 @@ async function handleCheck(ctx: RequestContext): Promise<void> {
   }
   const raw = await readBody(ctx.req);
   const body: unknown = JSON.parse(raw.toString("utf-8"));
+  const hashes = requestedHashes(body);
+  ctx.checkRequests.push({
+    hashes,
+    authorization: ctx.req.headers.authorization,
+    identity: identityOf(ctx.req),
+  });
   const states: Record<string, CheckStateEntry> = {};
-  for (const requestedHash of requestedHashes(body)) {
+  for (const requestedHash of hashes) {
     states[requestedHash] = ctx.handlers.checkState(requestedHash);
   }
+  const contractVersion = ctx.handlers.contractVersion?.();
+  const payload =
+    contractVersion === undefined ? { states } : { states, contractVersion };
   ctx.res
     .writeHead(200, { "content-type": "application/json" })
-    .end(JSON.stringify({ states }));
+    .end(JSON.stringify(payload));
+}
+
+function identityOf(req: IncomingMessage): ClientIdentityHeaders {
+  return {
+    contract: headerValue(req, "x-scan-contract"),
+    build: headerValue(req, "x-scan-client-build"),
+    builtAt: headerValue(req, "x-scan-client-built-at"),
+  };
+}
+
+function headerValue(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name];
+  return typeof value === "string" ? value : undefined;
 }
 
 async function handlePut(ctx: RequestContext, pathHash: string): Promise<void> {
@@ -179,6 +226,7 @@ async function handlePut(ctx: RequestContext, pathHash: string): Promise<void> {
     filename: typeof filenameHeader === "string" ? filenameHeader : "",
     authorization: ctx.req.headers.authorization,
     body,
+    identity: identityOf(ctx.req),
   };
   ctx.putRequests.push(record);
   const outcome = ctx.handlers.putOutcome(record);

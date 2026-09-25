@@ -5,6 +5,12 @@
  * with phase badges, relative times, and duration between commits.
  */
 
+import {
+  commitStep,
+  commitTriggers,
+  trailerString,
+  triggerLabel,
+} from "@shared/commit-trailers";
 import { type HistoryCommit } from "../../api";
 import { bbxSource } from "../../lib/source-tag";
 import { Badge, type BadgeTone } from "../ui/Badge";
@@ -20,14 +26,7 @@ interface CommitTimelineProps {
   onFilterSession?: (sessionId: string) => void;
   /** Currently active session filter; used to suppress the filter affordance when already scoped. */
   activeSession?: string | null;
-}
-
-/**
- * Get trailer value as string (first value if array).
- */
-function trailerString(value: string | string[] | undefined): string | undefined {
-  if (!value) return undefined;
-  return Array.isArray(value) ? value[0] : value;
+  idPrefix: string;
 }
 
 const PHASE_TONE: Record<string, BadgeTone> = {
@@ -154,7 +153,11 @@ function CommitRow({
   prevCommitDate?: string;
 }) {
   const phase = trailerString(commit.trailers?.Phase);
-  const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
+  // Every trigger convention, not just `Triggered-By`: a procedure or trick
+  // commit that badged nothing read as a hand edit, which is the one
+  // distinction this timeline exists to draw.
+  const triggers = commitTriggers(commit.trailers);
+  const step = commitStep(commit.trailers);
   const duration = prevCommitDate ? formatDuration(prevCommitDate, commit.date) : null;
 
   const ariaLabel = [
@@ -162,7 +165,8 @@ function CommitRow({
     commit.subject,
     relativeTime(commit.date),
     phase ? `phase ${phase}` : null,
-    triggeredBy ? `triggered by ${triggeredBy}` : null,
+    ...triggers.map((trigger) => `triggered by ${triggerLabel(trigger)}`),
+    step === undefined ? null : `step ${step}`,
   ].filter((v): v is string => v !== null).join(", ");
 
   return (
@@ -190,9 +194,14 @@ function CommitRow({
       </div>
       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
         {commit.fileStat ? <FileStatBadges stat={commit.fileStat} /> : null}
-        {triggeredBy ? <span className="text-[10px] text-warm-500">
-            {triggeredBy}
-          </span> : null}
+        {triggers.map((trigger) => (
+          <span key={trigger.id} className="text-[10px] text-warm-500">
+            {triggerLabel(trigger)}
+          </span>
+        ))}
+        {step === undefined ? null : (
+          <span className="text-[10px] text-warm-500">step {step}</span>
+        )}
       </div>
     </button>
   );
@@ -207,6 +216,7 @@ export function CommitTimeline({
   loading,
   onFilterSession,
   activeSession,
+  idPrefix,
 }: CommitTimelineProps) {
   const groups = groupBySession(commits);
 
@@ -277,7 +287,7 @@ export function CommitTimeline({
       {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
 
       {hasMore && !loading ? <button
-          id="bbx-history-load-more"
+          id={`${idPrefix}-load-more`}
           onClick={onLoadMore}
           className="w-full p-2 text-sm text-primary hover:bg-info-50"
         >

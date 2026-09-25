@@ -3,13 +3,18 @@ import { TRPCError } from "@trpc/server";
 import * as fs from "node:fs";
 import { router, publicProcedure } from "../trpc.js";
 import {
-  CONNECTOR_TRAILER_KEYS,
-  FEEDBACK_TRAILER_KEYS,
-  TOUCHPOINT_TRAILER_KEYS,
   getCommitDiff,
   getLogPaginated,
   getTrailerFacets,
 } from "../../../lib/git.js";
+import {
+  CONNECTOR_TRAILER_KEYS,
+  FEEDBACK_TRAILER_KEYS,
+  TOUCHPOINT_TRAILER_KEYS,
+  TRIGGER_ID_PATTERN,
+  buildTriggerGrep,
+  escapeGrep,
+} from "../../../shared/commit-trailers.js";
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
@@ -19,28 +24,22 @@ import { boxRelativePath } from "../../../shared/box-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";
 
-/** Escape values so they can be interpolated into a git --grep ERE pattern. */
-function escapeRegex(value: string): string {
-  return value.replaceAll(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-}
-
 /**
  * Compose the list of `--grep` regexes that express the selected filter.
  * Each returned pattern is one axis; git's `--all-match` AND-joins them.
  * Within a single pattern, alternation (`|`) expresses OR for that axis.
  */
-function buildGreps(filter: HistoryFilter): string[] {
+export function buildGreps(filter: HistoryFilter): string[] {
   const greps: string[] = [];
 
   if (filter.connectors && filter.connectors.length > 0) {
     const keys = CONNECTOR_TRAILER_KEYS.join("|");
-    const values = filter.connectors.map(escapeRegex).join("|");
+    const values = filter.connectors.map(escapeGrep).join("|");
     greps.push(`^(${keys}): (${values})$`);
   }
 
-  if (filter.workflows && filter.workflows.length > 0) {
-    const values = filter.workflows.map(escapeRegex).join("|");
-    greps.push(`^Workflow: (${values})$`);
+  if (filter.triggers && filter.triggers.length > 0) {
+    greps.push(buildTriggerGrep(filter.triggers));
   }
 
   if (filter.touchpoint) {
@@ -52,7 +51,7 @@ function buildGreps(filter: HistoryFilter): string[] {
   }
 
   if (filter.session) {
-    greps.push(`^Session: ${escapeRegex(filter.session)}$`);
+    greps.push(`^Session: ${escapeGrep(filter.session)}$`);
   }
 
   return greps;
@@ -60,7 +59,7 @@ function buildGreps(filter: HistoryFilter): string[] {
 
 const filterSchema = z.object({
   connectors: z.array(z.string()).optional(),
-  workflows: z.array(z.string()).optional(),
+  triggers: z.array(z.string().regex(TRIGGER_ID_PATTERN)).optional(),
   touchpoint: z.boolean().optional(),
   feedback: z.boolean().optional(),
   session: z.string().optional(),

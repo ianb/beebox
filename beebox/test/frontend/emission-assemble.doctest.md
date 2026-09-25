@@ -666,3 +666,58 @@ const b = createTypedEmission({ text: "x", images: [], files: [], selections: []
 a.id !== b.id && a.id.startsWith("msg-")
 => true
 ```
+
+## An inline image's original file is listed like a file
+
+An image whose original landed gets an `[image#N]: <path>` line after the
+file lines, spelled the way the body spells the token. An image without a
+path (its upload failed, or the client predates originals) gets no line at
+all: the absence is the signal. The wire `images` carry only what the server
+keys the image blocks on — the path reaches it through the text.
+
+```ts
+const e = createTypedEmission({
+  text: "receipt [image#1] and the older [image2], plus [file#1]",
+  images: [
+    { id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" },
+    { id: 2, mimeType: "image/png", dataBase64: "BB", path: "_tmp/2026-09-16T10-00-01.000Z_shot.png" },
+    { id: 3, mimeType: "image/png", dataBase64: "CC" },
+  ],
+  files: [{ id: 1, path: "_tmp/2026-09-16T10-00-02.000Z_notes.txt" }],
+  selections: [],
+});
+const out = assembleChatMessage(e, W);
+JSON.stringify(out.message)
+=> "<typed local-time=\"14:23\">receipt [image#1] and the older [image2], plus [file#1]</typed>\n<attachments>\n[file#1]: _tmp/2026-09-16T10-00-02.000Z_notes.txt\n[image#1]: _tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg\n[image2]: _tmp/2026-09-16T10-00-01.000Z_shot.png\n</attachments>"
+
+JSON.stringify(out.images)
+=> [{"id":1,"mimeType":"image/jpeg","dataBase64":"AA"},{"id":2,"mimeType":"image/png","dataBase64":"BB"},{"id":3,"mimeType":"image/png","dataBase64":"CC"}]
+```
+
+Images alone (no files) still open the block; an image whose token was edited
+out of the body is labelled in the current form.
+
+```ts
+const e = createTypedEmission({
+  text: "what is this",
+  images: [{ id: 1, mimeType: "image/png", dataBase64: "AA", path: "_tmp/x.png" }],
+  files: [],
+  selections: [],
+});
+JSON.stringify(assembleChatMessage(e, W).message)
+=> "<typed local-time=\"14:23\">what is this</typed>\n<attachments>\n[image#1]: _tmp/x.png\n</attachments>"
+```
+
+Nothing landed, nothing listed — the message is byte-identical to one sent
+before originals existed.
+
+```ts
+const e = createTypedEmission({
+  text: "look [image#1]",
+  images: [{ id: 1, mimeType: "image/png", dataBase64: "AA" }],
+  files: [],
+  selections: [],
+});
+JSON.stringify(assembleChatMessage(e, W).message)
+=> "<typed local-time=\"14:23\">look [image#1]</typed>"
+```

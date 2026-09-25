@@ -1,0 +1,36 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-v2-transcript-selection-1",
+    "origin": "typed",
+    "text": "Why [selection1]?",
+    "diarized": false,
+    "images": [],
+    "files": [],
+    "selections": [
+      {
+        "id": 1,
+        "text": "Proof it overnight in the fridge",
+        "position": "chat transcript; assistant message"
+      }
+    ]
+  },
+  "expected": {
+    "id": "ios-v2-transcript-selection-1",
+    "origin": "typed",
+    "text": "Why [selection1]?",
+    "images": [],
+    "files": [],
+    "selections": [
+      {
+        "id": 1,
+        "ref": null,
+        "text": "Proof it overnight in the fridge",
+        "position": "chat transcript; assistant message",
+        "anchor": null,
+        "spokenWords": null
+      }
+    ],
+    "diarized": false
+  }
+}

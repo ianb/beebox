@@ -12,7 +12,7 @@ import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { listViews } from "../../src/webapp/views/compiler.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
@@ -27,6 +27,7 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
  */
 async function makeV3Box() {
   const root = await mkdtemp(join(tmpdir(), "bbx-v3box-"));
+  execFileSync("git", ["init", "--quiet", root]);
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" } }),

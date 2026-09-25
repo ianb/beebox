@@ -1,3 +1,4 @@
+import { quickChatRouter } from "./routers/quick-chat.js";
 import { router } from "./trpc.js";
 import { historyRouter } from "./routers/history.js";
 import { statusRouter } from "./routers/status.js";
@@ -8,12 +9,13 @@ import { actionsRouter } from "./routers/actions.js";
 import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
-import { todosRouter } from "./routers/todos.js";
+import { collectionsRouter } from "./routers/collections.js";
 import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
 import { transcriptionRouter } from "./routers/transcription.js";
 import { ttsRouter } from "./routers/tts.js";
+import { voiceRouter } from "./routers/voice.js";
 import { landmarksRouter } from "./routers/landmarks.js";
 import { navRouter } from "./routers/nav.js";
 import { chatRouter } from "./routers/chat.js";
@@ -22,6 +24,7 @@ import { locationRouter } from "./routers/location.js";
 import { pushRouter } from "./routers/push.js";
 import { viewsRouter } from "./routers/views.js";
 import { clerkRouter } from "./routers/clerk.js";
+import { browserTaskRouter } from "./routers/browser-task.js";
 import { pairingRouter } from "./routers/pairing.js";
 import { captureRouter } from "./routers/capture.js";
 import { scanTokensRouter } from "./routers/scan-tokens.js";
@@ -30,8 +33,14 @@ import { inventoryRouter } from "./routers/inventory.js";
 import { secretsRouter } from "./routers/secrets.js";
 import { presentationRouter } from "./routers/presentation.js";
 import { voiceRecordingRouter } from "./routers/voice-recording.js";
+import { wakeupRouter } from "./routers/wakeup.js";
+import { gmailRouter } from "./routers/gmail.js";
+import { searchRouter } from "./routers/search.js";
+import { cloudflarePublishConnectionsRouter } from "./routers/cloudflare-publish-connections.js";
+import { publicationsRouter } from "./routers/publications.js";
 
 export const appRouter = router({
+  quickChat: quickChatRouter,
   history: historyRouter,
   status: statusRouter,
   card: cardRouter,
@@ -41,12 +50,13 @@ export const appRouter = router({
   commands: commandsRouter,
   debugLog: debugLogRouter,
   admin: adminRouter,
-  todos: todosRouter,
+  collections: collectionsRouter,
   health: healthRouter,
   drive: driveRouter,
   files: filesRouter,
   transcription: transcriptionRouter,
   tts: ttsRouter,
+  voice: voiceRouter,
   landmarks: landmarksRouter,
   nav: navRouter,
   chat: chatRouter,
@@ -55,14 +65,20 @@ export const appRouter = router({
   push: pushRouter,
   views: viewsRouter,
   clerk: clerkRouter,
+  browserTask: browserTaskRouter,
   pairing: pairingRouter,
   capture: captureRouter,
   scanTokens: scanTokensRouter,
   share: shareRouter,
   inventory: inventoryRouter,
   secrets: secretsRouter,
+  cloudflarePublishConnections: cloudflarePublishConnectionsRouter,
+  publications: publicationsRouter,
   presentation: presentationRouter,
   voiceRecording: voiceRecordingRouter,
+  wakeup: wakeupRouter,
+  gmail: gmailRouter,
+  search: searchRouter,
 });
 
 export type AppRouter = typeof appRouter;

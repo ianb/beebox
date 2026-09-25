@@ -14,7 +14,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { classifyRouterRoute } from "../../../workstreams-app/src/router/router-auth.js";
 import { prepareWorkstreamsAppHeaders } from "../../../workstreams-app/src/router/router-proxy.js";
 import { renderWorkstreamsAppFallback } from "../../../workstreams-app/src/router/router-pages.js";
-import { writeDeny } from "../../../workstreams-app/src/router/router.js";
+import { writeDeny } from "../../../workstreams-app/src/router/router-deny-log.js";
 import {
   EXHIBITS_DEFAULT_PORT,
   createWorkstreamsAppSupervisor,

@@ -5,7 +5,7 @@
  * with custom record-separated formats, recovers per-commit file stats in a
  * second pass, parses multi-value trailers, and collects distinct trailer
  * values for the filter bar. Depends only on leaf modules (git-internal,
- * git-trailers) and simple-git — no value cycle back to git.ts.
+ * shared/commit-trailers) and simple-git — no value cycle back to git.ts.
  */
 
 import { simpleGit } from "simple-git";
@@ -14,7 +14,12 @@ import * as pathModule from "node:path";
 
 import type { GitLogFormat } from "./git-internal.js";
 import { LOG_FORMAT } from "./git-internal.js";
-import { CONNECTOR_TRAILER_KEYS, parseTrailersMulti } from "./git-trailers.js";
+import {
+  collectTrailerFacets,
+  compareTriggers,
+  parseTrailersMulti,
+  type CommitTrigger,
+} from "../shared/commit-trailers.js";
 import { invariant } from "./invariant.js";
 
 /**
@@ -64,7 +69,8 @@ export interface LogFilter {
  */
 export interface TrailerFacets {
   connectors: string[];
-  workflows: string[];
+  /** Distinct triggers (procedure/trick/command runs), ordered by kind then name. */
+  triggers: CommitTrigger[];
 }
 
 /** Build a zeroed file-stat accumulator. */
@@ -207,9 +213,7 @@ export async function getLogPaginated(
  * stable UI ordering.
  */
 export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> {
-  const connectorKeys = new Set<string>(CONNECTOR_TRAILER_KEYS);
-  const connectors = new Set<string>();
-  const workflows = new Set<string>();
+  const into = { connectors: new Set<string>(), triggers: new Map<string, CommitTrigger>() };
 
   try {
     const raw = await simpleGit(boxRoot).raw([
@@ -217,21 +221,7 @@ export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> 
       "--format=%(trailers:only,unfold)%x00",
     ]);
 
-    for (const commitBlock of raw.split("\u0000")) {
-      for (const line of commitBlock.split("\n")) {
-        const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
-        if (!match) continue;
-        const [, key, rawValue] = match;
-        invariant(key !== undefined && rawValue !== undefined, "regex capture groups missing on a successful match");
-        const value = rawValue.trim();
-        if (!value) continue;
-        if (connectorKeys.has(key)) {
-          connectors.add(value);
-        } else if (key === "Workflow") {
-          workflows.add(value);
-        }
-      }
-    }
+    for (const commitBlock of raw.split("\u0000")) collectTrailerFacets(commitBlock, into);
   } catch (e) {
     // A repo with no commits yields empty facets legitimately; any other
     // git failure is worth surfacing rather than silently showing no filters.
@@ -239,8 +229,8 @@ export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> 
   }
 
   return {
-    connectors: [...connectors].toSorted(),
-    workflows: [...workflows].toSorted(),
+    connectors: [...into.connectors].toSorted(),
+    triggers: [...into.triggers.values()].toSorted(compareTriggers),
   };
 }
 

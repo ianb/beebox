@@ -51,7 +51,7 @@ async function readConfig(configPath: string): Promise<Record<string, unknown>> 
   }
 }
 
-async function mutateConfig(options: {
+export async function mutateConfig(options: {
   boxRoot: string;
   message: string;
   mutate: (config: Record<string, unknown>) => void;

@@ -27,7 +27,7 @@ const outside = await fs.mkdtemp(path.join(os.tmpdir(), "browse-outside-"));
 
 await fs.mkdir(path.join(mainRoot, "beebox/docs/plans"), { recursive: true });
 await fs.mkdir(path.join(mainRoot, "src"), { recursive: true });
-await fs.writeFile(path.join(mainRoot, "beebox/docs/plans/foo.md"), "# Foo\n\nA plan.\n");
+await fs.writeFile(path.join(mainRoot, "beebox/docs/plans/foo.md"), "---\nstatus: active\n---\n# Foo\n\nA plan.\n");
 await fs.writeFile(path.join(mainRoot, "src/run.ts"), "export const x = 1;\n");
 await fs.writeFile(path.join(mainRoot, "page.html"), "<h1>hi</h1>\n");
 await fs.writeFile(path.join(mainRoot, "data.json"), '{"a":1}\n');
@@ -35,7 +35,7 @@ await fs.writeFile(path.join(outside, "secret.txt"), "not yours\n");
 
 // The worktree holds a DIFFERENT version of the same address — the lens case.
 await fs.mkdir(path.join(wtRoot, "beebox/docs/plans"), { recursive: true });
-await fs.writeFile(path.join(wtRoot, "beebox/docs/plans/foo.md"), "# Foo\n\nEdited on a branch.\n");
+await fs.writeFile(path.join(wtRoot, "beebox/docs/plans/foo.md"), "---\nstatus: draft\n---\n# Foo\n\nEdited on a branch.\n");
 
 // Only main is a git repo, so `tracked` has something real to answer.
 await execa("git", ["init", "-q"], { cwd: mainRoot });
@@ -71,9 +71,11 @@ const lens = {
   branchWorkstream: onBranch.workstream,
   differs: onMain.text !== onBranch.text,
   mainTracked: onMain.tracked,
+  mainLifecycle: onMain.lifecycle,
+  branchStatus: onBranch.lifecycle?.status,
 };
 JSON.stringify(lens)
-=> {"sameAddress":true,"mainWorkstream":null,"branchWorkstream":"demo","differs":true,"mainTracked":true}
+=> {"sameAddress":true,"mainWorkstream":null,"branchWorkstream":"demo","differs":true,"mainTracked":true,"mainLifecycle":{"role":"proposal","label":"proposal","status":"active"},"branchStatus":"draft"}
 ```
 
 An unknown workstream is refused by name — the browser can say which worktree it
@@ -117,7 +119,7 @@ the browser links to — so a listing is navigable rather than a dead end.
 ```ts
 const dir = await read("beebox/docs");
 JSON.stringify({ kind: dir.kind, entries: dir.entries, text: dir.text })
-=> {"kind":"directory","entries":[{"name":"plans","relPath":"beebox/docs/plans","kind":"directory"}],"text":null}
+=> {"kind":"directory","entries":[{"name":"plans","relPath":"beebox/docs/plans","kind":"directory","lifecycle":null}],"text":null}
 ```
 
 The repository root is a legal address, spelled `""`.

@@ -21,7 +21,6 @@ export {
   apiRawImageUrl,
   apiTransformedImageUrl,
   getApiBase,
-  getWebSocketUrl,
   joinBaseAndPath,
   withBase,
 } from "./api-core";

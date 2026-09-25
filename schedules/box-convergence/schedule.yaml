@@ -1,0 +1,3 @@
+description: "Hourly: apply migrations and generated guidance, report unresolved box convergence"
+cadence: 1h
+timeout: 4h

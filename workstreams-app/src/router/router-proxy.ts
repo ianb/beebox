@@ -233,23 +233,37 @@ export async function proxyWithRetry(
     let err: (Error & { code?: string }) | null = null;
     if (ready) {
       if (bootstrapPending) {
-        const target = bootstrapPending;
-        bootstrapPending = null;
-        try {
-          const cookies = await bootstrapMobileSessionCookie({
-            ...target,
-            backendPort: ready.backendPort,
-          });
-          if (!cookies) {
-            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
-            res.end("Mobile session bootstrap failed.\n");
-            return;
-          }
-          res.setHeader("set-cookie", cookies);
-        } catch (error) {
-          log(`[${name}] mobile session bootstrap failed: ${errMessage(error)}`);
-          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-          res.end("Mobile session bootstrap failed.\n");
+        const outcome = await bootstrapMobileSessionCookie({
+          ...bootstrapPending,
+          backendPort: ready.backendPort,
+        });
+        if (outcome.ok) {
+          // Cleared only on success. It used to be cleared BEFORE the attempt,
+          // so any retry proxied on with no session cookie at all — failing
+          // more quietly than the error it was trying to recover from.
+          bootstrapPending = null;
+          res.setHeader("set-cookie", outcome.cookies);
+        } else if (outcome.kind === "rejected") {
+          // The box itself said no. Retrying asks the same question, and the
+          // device genuinely needs re-pairing — so say what the box said
+          // instead of one flattened message for every failure.
+          log(`[${name}] mobile session rejected by box (${String(outcome.status)}): ${outcome.reason}`);
+          res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+          res.end(`Mobile session rejected: ${outcome.reason}\n`);
+          return;
+        } else if (retriesLeft > 0) {
+          // Transient: a dying port from a kill/restart race, or the wrong
+          // process on the port. Fall back into the loop, which re-resolves
+          // the handle — the machinery this bootstrap always sat inside and
+          // never used.
+          retriesLeft--;
+          log(`[${name}] mobile session bootstrap transient (${outcome.detail}), retry (${retriesLeft} left)`);
+          await sleep(600);
+          continue;
+        } else {
+          log(`[${name}] mobile session bootstrap gave up: ${outcome.detail}`);
+          res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+          res.end(`Mobile session bootstrap failed: ${outcome.detail}\n`);
           return;
         }
       }

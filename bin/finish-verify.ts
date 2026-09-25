@@ -46,7 +46,7 @@ class PreflightFailedError extends Error {
 
 class BadOnlyKindError extends Error {
   constructor() {
-    super("--only takes tests, typecheck, lint or smoke");
+    super("--only takes tests, typecheck, lint, smoke or site");
     this.name = "BadOnlyKindError";
   }
 }
@@ -68,15 +68,28 @@ export interface CommandResult {
 }
 
 /**
- * Failing files named by TAP output. Both suites here speak TAP (`tap`, and
- * `node --test` when its output is piped), and both name paths in the
- * description — so a description is taken only when it exists on disk, which
- * keeps test *names* out of the list.
+ * Failing files named by a test run's output, in either of the two shapes the
+ * suites here produce.
+ *
+ * `tap` speaks TAP: the path is the `not ok` description. `node --test` speaks
+ * its SPEC reporter — piping does not switch it to TAP (it did on Node 20;
+ * verified on Node 24 that piped output is still spec), so the root
+ * `bin/*.test.ts` suite was invisible to a TAP-only matcher. Every failure from
+ * it came back unattributed, which finish-verify treats as real and so never
+ * reran in isolation: a named flake in that suite blocked a finish with no way
+ * for the verifier to say which file to retry.
+ *
+ * Spec names the file in a `test at <path>:<line>:<col>` header per failing
+ * test. That header is matched anchored and whole, so the `at … (file:///…)`
+ * frames of the stack trace below it cannot contribute a path.
+ *
+ * Both shapes put test NAMES in the same position as paths, so a candidate
+ * counts only when it exists on disk.
  */
 export function parseFailingFiles(output: string, exists: (path: string) => boolean): string[] {
   const files = new Set<string>();
   for (const line of output.split("\n")) {
-    const match = /^\s*not ok \d+ - (\S+)/.exec(line);
+    const match = /^\s*not ok \d+ - (\S+)/.exec(line) ?? /^\s*test at (\S+?):\d+:\d+\s*$/.exec(line);
     const candidate = match?.[1];
     if (candidate === undefined) continue;
     if (exists(candidate)) files.add(candidate);
@@ -213,7 +226,7 @@ export function main(argv: string[]): number {
   const sheet = readSheet(argv);
   const onlyIndex = argv.indexOf("--only");
   const only = onlyIndex === -1 ? null : argv[onlyIndex + 1];
-  if (only !== null && !["tests", "typecheck", "lint", "smoke"].includes(only ?? "")) {
+  if (only !== null && !["tests", "typecheck", "lint", "smoke", "site"].includes(only ?? "")) {
     throw new BadOnlyKindError();
   }
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));

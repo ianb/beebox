@@ -9,11 +9,12 @@
  * live with each of them.
  */
 
+import { boxWorkEnvironment } from "../lib/box-maintenance.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
+import { runMigrationProcess } from "./migration-process.js";
 import { assertSystemCardsComplete } from "./system-cards.js";
-import { SYSTEM_CARD_MIGRATION } from "../shared/system-card-paths.js";
+import { isSystemCardMigration } from "../shared/system-card-paths.js";
 import { isRecord } from "../lib/is-record.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -38,7 +39,7 @@ class ManifestReadError extends Error {
  * one-root-specific, so every caller of `appendManifestEntry` gets it, not
  * just the migration that first found the gap.
  */
-export class SymlinkedManifestError extends Error {
+class SymlinkedManifestError extends Error {
   readonly manifestPath: string;
   constructor(manifestPath: string) {
     super(
@@ -111,7 +112,7 @@ export async function restoreManifest(boxRoot: string, snapshot: string | null):
 }
 
 export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry): Promise<void> {
-  if (entry.name === SYSTEM_CARD_MIGRATION) await assertSystemCardsComplete(boxRoot);
+  if (isSystemCardMigration(entry.name)) await assertSystemCardsComplete(boxRoot, entry.name);
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await assertManifestNotSymlink(abs);
@@ -119,7 +120,7 @@ export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry)
 }
 
 export async function writeManifest(boxRoot: string, entries: ManifestEntry[]): Promise<void> {
-  if (entries.some((entry) => entry.name === SYSTEM_CARD_MIGRATION)) await assertSystemCardsComplete(boxRoot);
+  for (const entry of entries) if (isSystemCardMigration(entry.name)) await assertSystemCardsComplete(boxRoot, entry.name);
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   const text = entries.map((e) => JSON.stringify(e)).join("\n") + (entries.length > 0 ? "\n" : "");
@@ -141,16 +142,11 @@ export function computePending(applied: ManifestEntry[]): Migration[] {
  * `bbx validate` surfaces them), anything else is a hard failure that stops the
  * queue.
  */
-export function runMigrationScript(args: { script: string; boxRoot: string }): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.join(PACKAGE_ROOT, args.script);
-    const child = spawn(
-      process.execPath,
-      ["--import", "tsx", scriptPath, args.boxRoot, "--apply"],
-      { cwd: PACKAGE_ROOT, stdio: "inherit" }
-    );
-    child.on("error", reject);
-    child.on("close", (code) => resolve(code ?? 1));
+export function runMigrationScript(args: { script: string; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
+  return runMigrationProcess({
+    file: process.execPath, args: ["--import", "tsx", path.join(PACKAGE_ROOT, args.script), args.boxRoot, "--apply"],
+    cwd: PACKAGE_ROOT, env: { ...process.env, ...boxWorkEnvironment() },
+    signal: args.signal, diagnosticsToStderr: args.diagnosticsToStderr, onOutput: args.onOutput,
   });
 }
 

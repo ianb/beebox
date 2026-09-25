@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
 import { getApiBase } from "../../../api-core";
-import { conversationStorageScope } from "../conversation/storage-scope";
+import { storageScopeFor } from "../../../lib/storage-scope";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
 import { trpc } from "../../../lib/trpc";
@@ -13,7 +13,7 @@ import { ReservationReceipts } from "./reservation-receipts";
 import { createReservationRecovery } from "./reservation-recovery";
 
 export function useConversationSelection(boxSlug: string) {
-  const storageScope = conversationStorageScope(getApiBase());
+  const storageScope = storageScopeFor(getApiBase());
   const utils = trpc.useUtils();
   const { mutateAsync: reserve } = trpc.chat.reserveSession.useMutation();
   const receipts = useMemo(() => {

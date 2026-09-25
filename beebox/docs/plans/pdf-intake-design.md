@@ -6,6 +6,24 @@ issues: []
 ---
 # PDF Intake
 
+> **⚠ Its asset-tracking half is retired** (full-embrace-annex, 2026-09-14).
+> Where this plan says the PDF, the extraction JSON, the page renders, and the
+> figures are "committed via manifest, not git", that is inverted now: they are
+> committed to git, which records annex pointers, and the annex holds the bytes.
+> There is no `manifest.json` in the layout below. The extraction and card
+> design are live. Current model: [`../assets.md`](../assets.md).
+
+**Lifecycle:** partial historical plan. Current behavior is owned by
+`src/schemas/pdf.ts`, `src/core/commands/scan-import-pdf.ts`,
+`src/core/commands/pdf-extract.ts`, and
+`src/core/commands/pdf-reanalyze.ts`. `bbx scan-import` accepts one PDF per
+session; a PDF with a usable text layer becomes a `pdf` card, and
+`bbx pdf reanalyze <card>` refreshes extraction. Read those sources and the
+generated `pdf` card instructions for current operation; the
+[scan-upload contract](../scan-upload-contract.md) covers scanner clients. The sections below
+retain the original design rationale and must be read with the supersession
+notes that follow.
+
 Three things here are **superseded**; they are marked SUPERSEDED inline below:
 
 1. The card type is **`document`**, not `.pdf.card` — with a `format:` field

@@ -363,7 +363,7 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
       status: 410,
       jsonBody: {
         error: "Setup token expired",
-        message: "Restart the server to print a fresh setup link, or run `bbx auth create-user` on the host.",
+        message: "Restart the server to print a fresh setup link, or run `bbx engine auth create-user` on the host.",
       },
     });
   }

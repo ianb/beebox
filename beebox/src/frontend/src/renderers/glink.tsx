@@ -16,6 +16,8 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { Hint } from "../components/ui/Hint";
+import { Heading } from "../components/ui/Heading";
 import { driveMimeLabel } from "../lib/drive-card-display";
 import { registerFileType, type RendererProps } from "./index";
 
@@ -48,13 +50,13 @@ function GlinkView({ data, onNavigate }: RendererProps) {
     <Stack gap="md" className="p-4">
       <Stack gap="xs">
         <Row gap="sm" align="center" wrap>
-          <Text as="h2" size="lg" weight="semibold">{name ?? "Drive item"}</Text>
+          <Heading level={2}>{name ?? "Drive item"}</Heading>
           <Badge tone="neutral">{driveMimeLabel(mime ?? "")}</Badge>
           <OriginBadge origin={origin} />
         </Row>
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           Not copied into the box — the card records where this lives and what it is for.
-        </Text>
+        </Hint>
         <Row gap="sm" align="center" wrap>
           {link === null ? (
             <Text size="sm" tone="danger">No Drive link on this card yet.</Text>

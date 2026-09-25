@@ -1,10 +1,14 @@
 /**
- * `bbx todos` — read/query-only surface over the todo collector
- * (`core/todo/collect.ts`, `docs/implemented-plans/todo-annotation.md` Track 3).
+ * `bbx todos` — read/query-only surface over the todo collection
+ * (`docs/implemented-plans/todo-annotation.md` Track 3).
  *
- * Designed for agent consumption (the plan's boxholder call): deterministic,
- * locator-carrying rows; a human-compact-but-parseable default listing
- * grouped by plate-state; `--json` for the full structured records.
+ * **Superseded by `bbx query todos`** (`docs/plans/todo-collection.md`,
+ * Track 4). It stays for now with its flags and its output unchanged, and is
+ * scheduled for removal; the agent guide, the ambient line, and the knowledge
+ * audits all teach `bbx query` instead. What changed underneath is that it
+ * runs on the same collection runner as every other consumer, so there is one
+ * code path rather than two that can disagree.
+ *
  * Mutation is NOT a command here — an agent edits the `{% todo %}` tag or
  * frontmatter `todos:` entry directly (the normal card-edit path, with its
  * usual validation/git-history/lock guarantees).
@@ -17,10 +21,11 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { collectTodos } from "../../core/todo/collect.js";
-import { formatTodoLocation, type CollectedTodo, type TodoCollectionResult } from "../../core/todo/collect-types.js";
-import { isTodoStatus, type TodoPlateState, type TodoStatus } from "../../shared/todo-model.js";
+import { runTodoQuery } from "../../core/todo/query.js";
+import type { DerivedTodo } from "../../core/todo/collection.js";
+import { isTodoStatus, type TodoPlateState } from "../../shared/todo-model.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { formatIssues, formatTodoRow } from "./query-format.js";
 
 interface TodosCliOptions {
   status?: string;
@@ -58,27 +63,37 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
     console.error(`Error: --status must be one of open, done, dropped, parked (got "${status}")`);
     process.exit(1);
   }
-  const result = await collectTodos(boxRoot, options.glob === undefined ? undefined : { glob: options.glob });
-  const filtered = result.todos.filter((todo) => matchesFilters(todo, { status, assigned: options.assigned, onPlate: options.onPlate === true }));
+
+  const result = await runTodoQuery(boxRoot, {
+    query: {
+      // The box, with the glob as the only scope control: this command never
+      // had a `here`, so it must never pick up a reference pass either.
+      here: "",
+      ...(options.glob !== undefined && { glob: options.glob }),
+      params: {
+        status: [status],
+        ...(options.assigned !== undefined && { assigned: options.assigned }),
+        ...(options.onPlate === true && { onPlate: true }),
+      },
+    },
+    since: null,
+  });
+
+  // The runner groups by card and keeps non-matching ancestors for context;
+  // this command's contract is a flat list of matches, in the same path-then-
+  // locator order the rows already carry.
+  const todos = result.groups
+    .flatMap((group) => group.rows)
+    .flatMap((row) => row.items)
+    .filter((item) => item.matching);
 
   if (options.json === true) {
-    const payload: TodoCollectionResult = { todos: filtered, issues: result.issues };
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(JSON.stringify({ todos, issues: result.issues }, null, 2));
     return;
   }
 
-  printListing(filtered);
-  printIssues(result.issues);
-}
-
-function matchesFilters(
-  todo: CollectedTodo,
-  filters: { status: TodoStatus; assigned: string | undefined; onPlate: boolean }
-): boolean {
-  if (todo.status !== filters.status) return false;
-  if (filters.assigned !== undefined && todo.assigned !== filters.assigned) return false;
-  if (filters.onPlate && todo.plateState !== "escalated" && todo.plateState !== "on-plate") return false;
-  return true;
+  printListing(todos);
+  for (const line of formatIssues(result.issues)) console.log(line);
 }
 
 /** Section order for the default human listing — only non-empty groups print. */
@@ -91,7 +106,7 @@ const PLATE_GROUPS: { state: TodoPlateState; label: string }[] = [
   { state: "dropped", label: "DROPPED" },
 ];
 
-function printListing(todos: CollectedTodo[]): void {
+function printListing(todos: DerivedTodo[]): void {
   if (todos.length === 0) {
     console.log("No todos match.");
     return;
@@ -101,27 +116,7 @@ function printListing(todos: CollectedTodo[]): void {
     if (group.length === 0) continue;
     console.log(`${label} (${String(group.length)})`);
     for (const todo of group) {
-      console.log(formatRow(todo));
+      console.log(formatTodoRow(todo));
     }
-  }
-}
-
-function formatRow(todo: CollectedTodo): string {
-  const loc = formatTodoLocation(todo);
-  const idPart = todo.id === undefined ? "" : `[${todo.id}] `;
-  const meta: string[] = [];
-  if (todo.assigned !== undefined) meta.push(`assigned=${todo.assigned}`);
-  if (todo.due !== undefined) meta.push(`due=${todo.due}`);
-  if (todo.start !== undefined) meta.push(`start=${todo.start}`);
-  const metaStr = meta.length === 0 ? "" : `  (${meta.join(" ")})`;
-  return `  ${loc}  ${idPart}${todo.text}${metaStr}`;
-}
-
-function printIssues(issues: TodoCollectionResult["issues"]): void {
-  if (issues.length === 0) return;
-  console.log("");
-  console.log(`${String(issues.length)} cards could not be read for todos:`);
-  for (const issue of issues) {
-    console.log(`  [${issue.kind}] ${issue.path}: ${issue.message}`);
   }
 }

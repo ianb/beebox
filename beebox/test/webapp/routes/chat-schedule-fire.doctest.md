@@ -64,7 +64,7 @@ Session `B` is most-active, but the schedule was created in session `A`. The
 fire resumes `A`, not `B`.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box.root, backend);
 const eventBus = createEventBus(box.root);
@@ -101,7 +101,7 @@ An entry persisted before `sessionId` existed keeps the old behavior: it
 resolves the target from the most-active pointer.
 
 ```ts
-const box2 = await makeTmpBox();
+const box2 = await makeTmpBox({ git: true });
 const backend2 = createFakeChatBackend();
 const registry2 = makeRegistry(box2.root, backend2);
 const eventBus2 = createEventBus(box2.root);
@@ -132,7 +132,7 @@ the reminder is re-sent once into a brand-new session — a second run with no
 resume id.
 
 ```ts
-const box3 = await makeTmpBox();
+const box3 = await makeTmpBox({ git: true });
 const backend3 = createFakeChatBackend();
 const registry3 = makeRegistry(box3.root, backend3);
 const eventBus3 = createEventBus(box3.root);
@@ -161,4 +161,33 @@ JSON.stringify({
 ```ts cleanup
 registry3.shutdown();
 eventBus3.close();
+```
+
+## A chat whose model was removed drops the schedule
+
+A chat that explicitly picked an OpenRouter model the owner has since removed
+refuses its turn. The fired schedule goes nowhere — no fresh-session retry on
+the box default. Scheduled messages are low priority, and a retry would change
+which model answers (boxholder, 2026-09-19).
+
+```ts
+const box4 = await makeTmpBox({ git: true });
+const backend4 = createFakeChatBackend();
+const registry4 = makeRegistry(box4.root, backend4);
+const eventBus4 = createEventBus(box4.root);
+await makeTranscript(box4.root, SESSION_A);
+// The chat's own pick; the box config has no openrouterModels, as after removal.
+registry4.getOrCreate(SESSION_A).setModel("moonshotai/kimi-k2-0905:exacto");
+
+await fireChatSchedule(
+  { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
+  makeSchedule({ sessionId: SESSION_A }),
+);
+backend4.runs.length
+=> 0
+```
+
+```ts cleanup
+registry4.shutdown();
+eventBus4.close();
 ```

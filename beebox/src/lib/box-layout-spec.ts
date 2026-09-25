@@ -101,7 +101,7 @@ export const BOX_LAYOUT = [
     path: "_content/drive",
     area: "content",
     description: "Google Drive sync (spreadsheets as JSON, docs as markdown).",
-    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync",
+    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync. The `bbx drive` verbs work from your shell; the connectors doc says how",
   },
   {
     boxDirsKey: "calendar",
@@ -263,7 +263,7 @@ export const BOX_LAYOUT = [
   {
     path: "_config/interface",
     area: "config",
-    description: "Canonical dashboard.card, settings.card, and browse.card interface instruments. Keep their paths; the body holds source notes, not live UI state.",
+    description: "Canonical dashboard.card, settings.card, browse.card, questions.card, landmarks.card, history.card, inventory.card, and admin.card interface instruments. Keep their paths; the body holds source notes, not live UI state.",
   },
   {
     boxDirsKey: "connectors",
@@ -309,6 +309,12 @@ export const BOX_LAYOUT = [
     area: "tricks",
     description: "Shared helpers used by `src/tricks/scripts/`.",
   },
+  {
+    path: "src/publications",
+    area: "publishing",
+    description:
+      "Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here.",
+  },
 
   // .claude/ — agent configuration
   {
@@ -331,4 +337,3 @@ export type BoxDirsEntry = Extract<BoxLayoutEntryType, { boxDirsKey: string }>;
 
 /** The type of `BOX_DIRS` (paths.ts), derived from this spec's keyed entries. */
 export type BoxDirs = { [E in BoxDirsEntry as E["boxDirsKey"]]: E["path"] };
-

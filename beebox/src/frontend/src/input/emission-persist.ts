@@ -19,13 +19,16 @@
  * Images are size-gated: base64 payloads persist only while the total
  * serialized size stays under PERSIST_BYTE_BUDGET — text, files, and
  * selections always fit and always persist. Restored file attachments
- * point at `tmp/…` uploads that housekeeping sweeps after 7 days; the
+ * point at `_tmp/…` uploads that housekeeping sweeps after 7 days; the
  * pure `partitionFiles` supports the restore-time validation the React
- * layer performs (drop dead ones with a visible note).
+ * layer performs (drop dead ones with a visible note). An image's original
+ * upload (`ImageItem.original`) restores through `restoredImageOriginal`:
+ * a landed path comes back as-is, anything still moving is `failed` — the
+ * `File` handle died with the page, so it can be removed but not retried.
  */
 
 import { uploadedPath } from "./emission-store";
-import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
+import type { EmissionDraft, ImageItem, FileItem, FileTransferState } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -43,7 +46,10 @@ export interface KeyValueStorage {
 export interface PersistedEmission {
   version: 1;
   text: string;
-  images: ImageItem[];
+  /** The draft's upload batch (`EmissionDraft.uploadBatch`); absent in older drafts. */
+  uploadBatch?: string;
+  /** `original` is absent in drafts written before originals were kept. */
+  images: Array<Omit<ImageItem, "original"> & Partial<Pick<ImageItem, "original">>>;
   files: FileItem[];
   selections: SelectionItem[];
   updatedAt: number;
@@ -57,8 +63,20 @@ const KEY_PREFIX = "bbx-input-emission";
 // the new singleton key above is always written with the bbx prefix.
 const LEGACY_COMPOSER_PREFIX = "bbx-composer-draft";
 
-export function emissionKey(boxSlug: string | undefined): string {
-  return `${KEY_PREFIX}:${boxSlug ?? "default"}`;
+/**
+ * The draft slot for one box instance.
+ *
+ * `scope` is `storageScopeFor(apiBase)` — empty in production, `main/test1` or
+ * `worktree-foo/test1` behind the dev router. Production therefore keeps the
+ * exact key it has always written, so a real unsent draft is never orphaned by
+ * a dev-only fix; a dev checkout gets a key of its own, because the router
+ * serves every checkout from one origin and two worktrees can each have a
+ * `test1`. Sharing that slot handed one clone the other's text AND its
+ * `tmp/…` attachment paths, which the receiving clone then reported as expired
+ * (issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
+ */
+export function emissionKey(input: { boxSlug: string | undefined; scope: string }): string {
+  return `${KEY_PREFIX}:${input.scope === "" ? input.boxSlug ?? "default" : input.scope}`;
 }
 
 function warn(what: string, e: unknown): void {
@@ -72,12 +90,13 @@ function warn(what: string, e: unknown): void {
  * design's best-effort stance on blobs).
  */
 export function serializePersistedEmission(
-  draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">,
+  draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">,
   opts: { updatedAt: number },
 ): { payload: string; imagesDropped: boolean } {
   const full: PersistedEmission = {
     version: 1,
     text: draft.text,
+    ...(draft.uploadBatch === null ? {} : { uploadBatch: draft.uploadBatch }),
     images: [...draft.images],
     // Unfinished uploads are persisted too, even though they can never be
     // resumed (the `File` handle dies with the page). Filtering them out here
@@ -98,12 +117,40 @@ export function serializePersistedEmission(
   return { payload, imagesDropped: true };
 }
 
+/**
+ * The original-upload state an image comes back with after a restore (a
+ * reload, or a rejected send handed back). `uploaded` survives as it was
+ * when the file is still there. Everything else is `failed`, silently: an
+ * upload that was still moving or had failed has no `File` to retry from
+ * once the page that held it is gone, a draft written before originals were
+ * kept has no state at all, and a landed file the sweep has since removed is
+ * a path the agent cannot open. The message then lists no file for that
+ * image. `existingPaths` is the restore-time existence check; `null` skips
+ * it, for a same-tab restore where the file was just written.
+ */
+export function restoredImageOriginal(
+  original: FileTransferState | undefined,
+  opts: { existingPaths: ReadonlySet<string> | null },
+): FileTransferState {
+  if (original?.status === "uploaded") {
+    if (opts.existingPaths === null || opts.existingPaths.has(original.path)) return original;
+    return { status: "failed", message: RESTORED_ORIGINAL_SWEPT };
+  }
+  return { status: "failed", message: RESTORED_ORIGINAL_LOST };
+}
+
+/** Why a restored image has no original: the page reloaded before it landed. Internal. */
+export const RESTORED_ORIGINAL_LOST = "Original not uploaded — the agent sees the reduced copy only";
+/** Why a restored image has no original: its `_tmp/` file was swept meanwhile. Internal. */
+export const RESTORED_ORIGINAL_SWEPT = "Original was swept from _tmp/ — the agent sees the reduced copy only";
+
 function isPersistedEmission(value: unknown): value is PersistedEmission {
   if (!isRecord(value)) return false;
   const v = value;
   return (
     v["version"] === 1 &&
     typeof v["text"] === "string" &&
+    (v["uploadBatch"] === undefined || typeof v["uploadBatch"] === "string") &&
     Array.isArray(v["images"]) &&
     Array.isArray(v["files"]) &&
     Array.isArray(v["selections"]) &&
@@ -124,10 +171,10 @@ export function parsePersistedEmission(raw: string | null): PersistedEmission | 
 
 export function loadPersistedEmission(
   storage: KeyValueStorage,
-  boxSlug: string | undefined,
+  instance: { boxSlug: string | undefined; scope: string },
 ): PersistedEmission | null {
   try {
-    return parsePersistedEmission(storage.getItem(emissionKey(boxSlug)));
+    return parsePersistedEmission(storage.getItem(emissionKey(instance)));
   } catch (e) {
     warn("could not read persisted emission", e);
     return null;
@@ -138,7 +185,8 @@ export function savePersistedEmission(
   storage: KeyValueStorage,
   input: {
     boxSlug: string | undefined;
-    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
+    scope: string;
+    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
     updatedAt: number;
   },
 ): void {
@@ -149,7 +197,7 @@ export function savePersistedEmission(
     console.warn("[input-persist] images exceed the persistence budget — kept in memory only");
   }
   try {
-    storage.setItem(emissionKey(input.boxSlug), payload);
+    storage.setItem(emissionKey({ boxSlug: input.boxSlug, scope: input.scope }), payload);
   } catch (e) {
     warn("could not persist emission", e);
   }
@@ -179,20 +227,24 @@ export function commitPersistedEmission(
   storage: KeyValueStorage,
   input: {
     boxSlug: string | undefined;
-    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
+    scope: string;
+    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
     updatedAt: number;
   },
 ): void {
   if (isEmptyEmissionDraft(input.draft)) {
-    removePersistedEmission(storage, input.boxSlug);
+    removePersistedEmission(storage, { boxSlug: input.boxSlug, scope: input.scope });
     return;
   }
   savePersistedEmission(storage, input);
 }
 
-function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | undefined): void {
+function removePersistedEmission(
+  storage: KeyValueStorage,
+  instance: { boxSlug: string | undefined; scope: string },
+): void {
   try {
-    storage.removeItem(emissionKey(boxSlug));
+    storage.removeItem(emissionKey(instance));
   } catch (e) {
     warn("could not remove persisted emission", e);
   }
@@ -205,12 +257,20 @@ function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | und
  * text; ALL of the box's legacy keys are removed. Returns the adopted
  * text (or null) plus how many drafts were discarded — the caller logs
  * the named behavior change.
+ *
+ * Legacy keys were written with the box slug alone, so behind the dev router
+ * they cannot be attributed to a checkout: two worktrees can each have a
+ * `test1`. Adoption therefore only runs in production (`scope === ""`). In a
+ * dev checkout the keys are left exactly as they are — not adopted into a clone
+ * that may not own them, and not deleted either, since deleting is the one
+ * outcome that cannot be undone.
  */
 export function adoptLegacyComposerDrafts(
   storage: KeyValueStorage,
-  boxSlug: string | undefined,
+  instance: { boxSlug: string | undefined; scope: string },
 ): { adoptedText: string | null; discarded: number } {
-  const prefix = `${LEGACY_COMPOSER_PREFIX}:${boxSlug ?? "default"}:`;
+  if (instance.scope !== "") return { adoptedText: null, discarded: 0 };
+  const prefix = `${LEGACY_COMPOSER_PREFIX}:${instance.boxSlug ?? "default"}:`;
   const keys: string[] = [];
   try {
     for (let i = 0; i < storage.length; i++) {

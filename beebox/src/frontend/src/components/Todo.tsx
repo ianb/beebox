@@ -22,7 +22,8 @@ function resolveStatus(status: string | undefined): TodoStatus {
   return status !== undefined && isTodoStatus(status) ? status : "open";
 }
 
-const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
+/** Status treatment for a todo's own words. Shared with the todo list (`todo-view/ItemTree.tsx`) so an item reads the same in a list as it does in the card it was written in. */
+export const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
   open: "text-warm-800",
   done: "text-warm-400 line-through",
   parked: "text-warm-400",

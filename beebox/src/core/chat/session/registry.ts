@@ -24,7 +24,7 @@ import { createChatBackend, type ChatBackend } from "../../../services/claude-ch
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
 import { ChatReservationStore, type ChatReservation, type ReserveResult } from "./reserve.js";
 import type { AgentEngine } from "../../box/config.js";
-import { reserveAndWarm, sweepExpiredReservations } from "./registry-reservations.js";
+import { createReservationFeatureHandoff, reserveAndWarm, sweepExpiredReservations } from "./registry-reservations.js";
 import { recordSessionStart } from "./session-start-record.js";
 import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
@@ -32,8 +32,7 @@ import { pinEntry, pinSessionObject } from "./registry-pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
 import { stopChatSessionsAndWait } from "./registry-shutdown.js";
 
-export { SessionDeletingError } from "./deletion-state.js";
-export type { ChatSessionRegistryOptions } from "./registry-options.js";
+export { SessionDeletingError } from "./deletion-state.js"; export type { ChatSessionRegistryOptions } from "./registry-options.js";
 
 const DEFAULT_MAX_LIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -60,7 +59,7 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private lastUse: number;
   /** True once `prewarm()` has been requested, so the sweep re-warms later. */
-  private prewarmRequested = false;
+  private prewarmRequested = false; private readonly maintenance = { paused: false };
   /**
    * Tracks pre-id "new" sessions whose Claude assignment hasn't arrived yet.
    * Once `onSessionIdAssigned` fires, they're moved into `entries` under
@@ -112,7 +111,7 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private noteActivity(): void {
     this.lastUse = this.now();
-    if (this.prewarmRequested && this.backend.hasWarm?.() === false) void this.prewarm();
+    if (!this.maintenance.paused && this.prewarmRequested && this.backend.hasWarm?.() === false) void this.prewarm();
   }
 
   /**
@@ -120,14 +119,13 @@ export class ChatSessionRegistry extends EventEmitter {
    * the next "new chat" send doesn't pay spawn + initialize latency.
    */
   async prewarm(): Promise<void> {
-    this.prewarmRequested = true;
+    if (this.maintenance.paused) return; this.prewarmRequested = true;
     this.lastUse = this.now();
-    await prewarmBackend({
-      boxRoot: this.boxRoot,
-      backend: this.backend,
-      baseOptions: this.buildSessionOptions(null),
-    });
+    await prewarmBackend({ boxRoot: this.boxRoot, backend: this.backend, baseOptions: this.buildSessionOptions(null) });
+    this.closeWarmIfPaused();
   }
+
+  private closeWarmIfPaused(): void { if (this.maintenance.paused) this.backend.closeWarm?.(); }
 
   /**
    * Accept a client-coined chat id so the chat becomes addressable before its
@@ -222,6 +220,9 @@ export class ChatSessionRegistry extends EventEmitter {
     return entry.session;
   }
 
+  /** Read an existing session without extending its idle lifetime. */
+  peek(sessionId: string): ChatSession | null { return this.deletion.isBlocked(sessionId) ? null : this.entries.get(sessionId)?.session ?? null; }
+
   /**
    * Get an existing session, or build one bound to that id (resumes from
    * the on-disk JSONL on first send).
@@ -240,6 +241,7 @@ export class ChatSessionRegistry extends EventEmitter {
     // captured at reserve time ride with it (nothing else carries them — the
     // send only forwards those for a `"new"` session).
     const reservation = this.reservations.get(sessionId);
+    const reservationFeatures = createReservationFeatureHandoff(reservation?.seedFeatures ?? {});
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
@@ -258,13 +260,14 @@ export class ChatSessionRegistry extends EventEmitter {
             // addressability TTL later expires. A pre-start feature toggle can
             // therefore never fall through to started-chat history and mint a
             // second engine answer.
-            persistPendingFeatures: (updates) => { Object.assign(reservation.seedFeatures, updates); return true; },
+            persistPendingFeatures: reservationFeatures.persist,
             ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
             ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {
               ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
               seedFeatures: reservation.seedFeatures,
               engine: reservation.engine,
+              onFeaturesWritten: reservationFeatures.markWritten,
             }),
           }
         : {}),
@@ -393,7 +396,7 @@ export class ChatSessionRegistry extends EventEmitter {
     params: {
       contextDir?: string | undefined;
       seedFeatures?: Record<string, string> | undefined;
-      engine?: AgentEngine | undefined;
+      engine?: AgentEngine | undefined; onFeaturesWritten?: (() => void) | undefined;
     },
   ): Promise<void> {
     // Released on the history write, not before it: until that row exists the
@@ -469,6 +472,12 @@ export class ChatSessionRegistry extends EventEmitter {
       this.backend.closeWarm();
     }
   }
+
+  /** Preserve entries/queued input while closing idle SDK runs for maintenance. */
+  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); this.backend.closeWarm?.();
+    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(); }
+
+  resumeAfterMaintenance(): void { this.maintenance.paused = false; for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.resumeAfterMaintenance(); this.startCleanup(); }
 
   /** Tear down all entries AND the backend's warm slot (a subprocess too).
    *  Call on server shutdown. */

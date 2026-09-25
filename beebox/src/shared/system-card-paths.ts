@@ -5,16 +5,38 @@ export const SYSTEM_CARD_PATHS = {
   dashboard: "_config/interface/dashboard.card",
   settings: "_config/interface/settings.card",
   browse: "_config/interface/browse.card",
+  questions: "_config/interface/questions.card",
+  landmarks: "_config/interface/landmarks.card",
+  history: "_config/interface/history.card",
+  inventory: "_config/interface/inventory.card",
+  admin: "_config/interface/admin.card",
+  search: "_config/interface/search.card",
 } as const;
 
 export type SystemCardType = keyof typeof SYSTEM_CARD_PATHS;
 export const SYSTEM_CARD_MIGRATION = "canonical-interface-cards";
+export const REMAINING_SYSTEM_CARD_MIGRATION = "remaining-interface-cards";
+export const SEARCH_SYSTEM_CARD_MIGRATION = "search-interface-card";
+export type SystemCardMigration = typeof SYSTEM_CARD_MIGRATION | typeof REMAINING_SYSTEM_CARD_MIGRATION | typeof SEARCH_SYSTEM_CARD_MIGRATION;
+
+export const SYSTEM_CARD_COHORTS: Record<SystemCardMigration, readonly SystemCardType[]> = {
+  [SYSTEM_CARD_MIGRATION]: ["dashboard", "settings", "browse"],
+  [REMAINING_SYSTEM_CARD_MIGRATION]: ["dashboard", "settings", "browse", "questions", "landmarks", "history", "inventory", "admin"],
+  [SEARCH_SYSTEM_CARD_MIGRATION]: ["search"],
+};
 
 export function isSystemCardType(type: string): type is SystemCardType {
-  return type === "dashboard" || type === "settings" || type === "browse";
+  return Object.hasOwn(SYSTEM_CARD_PATHS, type);
+}
+
+export function isSystemCardMigration(name: string): name is SystemCardMigration {
+  return name === SYSTEM_CARD_MIGRATION || name === REMAINING_SYSTEM_CARD_MIGRATION || name === SEARCH_SYSTEM_CARD_MIGRATION;
 }
 
 export function systemCardLocationError(type: SystemCardType, path: string): string | null {
+  // Search is a copyable authored instrument. Its canonical instance is
+  // required by the Search cohort, but the type itself is not singleton-only.
+  if (type === "search") return null;
   const normalized = resolveRefPath({ ref: path, fromPath: "", kind: "write-target" });
   const expected = SYSTEM_CARD_PATHS[type];
   return normalized === expected ? null : `The ${type} card at ${path} must be at ${expected}. Open or restore the canonical card; do not create another instance.`;

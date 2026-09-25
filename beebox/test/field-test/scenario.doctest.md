@@ -116,7 +116,7 @@ const dir = await makeScenario(HEADER + [
 ].join("\n") + "\n", {});
 const scenario = await loadFieldScenario(dir);
 [scenario.models.operator, scenario.models.chat, scenario.checklist[0]!.cleanup].join(" | ")
-=> opus | claude-opus-5 | keep
+=> opus | claude-opus-5-5 | keep
 ```
 
 ```ts cleanup

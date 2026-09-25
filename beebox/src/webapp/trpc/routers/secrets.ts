@@ -27,22 +27,29 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { listSecretFormats, secretFormatWarnings } from "../../../core/secrets/format-registry.js";
 import { SecretLifecycleError } from "../../../core/secrets/errors.js";
+import { listSecretGuides } from "../../../core/secrets/guide-registry.js";
 import {
   boxSecretStatus,
   grantSecret,
   listSecrets,
   removeSecret,
   revokeSecret,
+  setAndGrantSecret,
   setSecret,
   type SecretListing,
 } from "../../../core/secrets/lifecycle.js";
+import { builtinSecretUses } from "../../../core/secrets/uses.js";
 import { describeSecretProbe, probeSecret, type SecretVerified } from "../../../core/secrets/probe-registry.js";
 import { loadSecretStore, secretAccessLevelSchema } from "../../../core/secrets/store.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 import { authenticatedOwnerProcedure, router } from "../trpc.js";
 
-/** Store names are flat identifiers; `name/<box>` is the per-box form. */
-const secretNameSchema = z.string().min(1).max(200);
+/**
+ * Store names are flat identifiers; `name/<box>` is the per-box form. Trimmed
+ * at the boundary: a pasted `" openrouter "` would otherwise be stored under a
+ * name every consumer's exact lookup misses.
+ */
+const secretNameSchema = z.string().trim().min(1).max(200);
 
 /**
  * Run a lifecycle mutation, turning its refusal into a client error that keeps
@@ -120,6 +127,16 @@ export const secretsRouter = router({
   formatHints: authenticatedOwnerProcedure.query(() => listSecretFormats()),
 
   /**
+   * What each built-in name is and where to get one, with what the engine
+   * spends it on joined in from `uses.ts` here — on the server, because
+   * `uses.ts` reaches into the store and cannot go to the client. Together
+   * these are the three things a person needs before pasting a key.
+   */
+  guides: authenticatedOwnerProcedure.query(() =>
+    listSecretGuides().map(({ key, guide }) => ({ key, ...guide, uses: builtinSecretUses(key) })),
+  ),
+
+  /**
    * Store or rotate a value, then verify it.
    *
    * Format warnings are returned WITH the success, never instead of it: the
@@ -139,22 +156,39 @@ export const secretsRouter = router({
         /** Reasons this secret exists — APPENDED to whatever it already states,
          *  so rotating a key never quietly erases why it was granted. */
         uses: z.array(z.string().min(1).max(200)).max(12).optional(),
+        /**
+         * Make the value THIS box's in the same write. From a box's own admin
+         * page, adding a key means "and use it here" — the case the boxholder
+         * hit twice was a verified key granted to nothing, reported as saved.
+         * Absent (the machine-wide view) the value is stored and granted to
+         * no one.
+         */
+        grant: z.object({ box: z.string().min(1), access: secretAccessLevelSchema }).optional(),
       }),
     )
-    .mutation(async ({ input }): Promise<{ warnings: string[]; verified: SecretVerified }> => {
-      const warnings = secretFormatWarnings({ name: input.name, value: input.value, formatHint: input.formatHint });
-      await lifecycle(() =>
-        setSecret({
-          name: input.name,
-          value: input.value,
-          note: input.note,
-          formatHint: input.formatHint,
-          uses: input.uses,
-        }),
-      );
-      const verified = await probeSecret({ name: input.name });
-      return { warnings, verified };
-    }),
+    .mutation(
+      async ({
+        input,
+      }): Promise<{
+        warnings: string[];
+        verified: SecretVerified;
+        /** From the committed write, never echoed from the request. */
+        granted: { box: string; access: "server" | "agent" } | null;
+      }> => {
+        const warnings = secretFormatWarnings({ name: input.name, value: input.value, formatHint: input.formatHint });
+        const common = { name: input.name, value: input.value, note: input.note, formatHint: input.formatHint, uses: input.uses };
+        if (input.grant === undefined) {
+          await lifecycle(() => setSecret(common));
+        } else {
+          // One locked write for both, so there is no moment in which the value
+          // exists ungranted — `setAndGrantSecret` rather than set-then-grant.
+          const { box, access } = input.grant;
+          await lifecycle(() => setAndGrantSecret({ ...common, slug: box, access }));
+        }
+        const verified = await probeSecret({ name: input.name });
+        return { warnings, verified, granted: input.grant === undefined ? null : { ...input.grant } };
+      },
+    ),
 
   /** Grant a name to a box, or raise/lower an existing grant's access level. */
   grant: authenticatedOwnerProcedure

@@ -174,6 +174,16 @@ case "$cmd" in
     done
     [ -n "$name" ] || { echo "usage: workstreams create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
 
+    # A workstream name is durable in a way a staged line is not: it becomes the
+    # branch, the worktree path, the registry record, the `Workstream:` trailer
+    # on every commit of that branch, and a row in the workstreams app. None of
+    # those is a staged addition, so the commit blocklist never sees it. Check
+    # the name itself, before anything is created — a no-op for anyone without a
+    # blocklist, same as the commit check.
+    if [ -x "$REPO_DIR/node_modules/.bin/tsx" ]; then
+      "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/commit-blocklist-check.ts" --check-text "$name" || exit 1
+    fi
+
     # Stdout carries exactly one thing: the resulting worktree path. Claude
     # Code's WorktreeCreate hook contract requires it, and every other caller
     # wants it too.
@@ -495,13 +505,11 @@ case "$cmd" in
       printf '\n' >> "$prompt_file"
       workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" >> "$prompt_file"
     fi
-    emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
-    [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
     # The recorded model belongs to the recorded agent's namespace. When
     # --agent overrides to a different agent, drop it — otherwise a workstream
     # launched on Claude and resumed with --agent codex runs
     # `codex --model claude-fable-5` (2026-08-27). Empty is safe: the codex
-    # path pins gpt-5.6-sol itself, the claude path falls back to the saved
+    # path pins gpt-6-sol itself, the claude path falls back to the saved
     # default.
     recorded_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
     model=""
@@ -510,12 +518,11 @@ case "$cmd" in
     fi
     LS_MONO="$WT_MONO"
     LS_WORKSTREAM="$name"
-    LS_SESSION_NAME="$emoji $name"
+    LS_SESSION_NAME="$name"
     LS_AGENT="$resolved_agent"
     LS_MODEL="$model"
     LS_REMOTE_CONTROL=1
     LS_PROMPT_FILE="$prompt_file"
-    LS_EMOJI="$emoji"
     LS_LAUNCH_DIR="$launch_dir"
     LS_WORKTREE_PATH="$target"
     LS_CODEX_RESUME=0
@@ -525,7 +532,7 @@ case "$cmd" in
       LS_CODEX_RESUME=1
     fi
     export LS_MONO LS_WORKSTREAM LS_SESSION_NAME LS_AGENT LS_MODEL LS_REMOTE_CONTROL
-    export LS_PROMPT_FILE LS_EMOJI LS_LAUNCH_DIR LS_WORKTREE_PATH LS_CODEX_RESUME
+    export LS_PROMPT_FILE LS_LAUNCH_DIR LS_WORKTREE_PATH LS_CODEX_RESUME
     export LS_CLAUDE_RESUME_SESSION LS_DESCRIPTION_FILE
     launch_session_build || exit 1
     workstream_resume_status opening-terminal

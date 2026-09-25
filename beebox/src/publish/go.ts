@@ -46,6 +46,7 @@ import {
   slugKey,
 } from "./lifecycle.js";
 import type { PublishRemoteStore } from "../services/publish-remote-store.js";
+import { isServerManagedPublication } from "../core/secrets/cloudflare-publish.js";
 
 /** Extensions read back as text (scanned by the leak scan); everything else is binary. */
 const TEXT_EXTENSIONS = new Set([".html", ".htm", ".css", ".js", ".mjs", ".json", ".svg", ".txt", ".md", ".xml"]);
@@ -90,7 +91,8 @@ export type GoResult =
   | { ok: false; reason: "invalid-manifest"; message: string }
   | { ok: false; reason: "not-draft"; message: string; status: string }
   | { ok: false; reason: "leaks-blocked"; files: FilePreview[]; scan: LeakScanResult; blocking: LeakFinding[] }
-  | { ok: false; reason: "not-confirmed"; message: string };
+  | { ok: false; reason: "not-confirmed"; message: string }
+  | { ok: false; reason: "managed-publication"; message: string };
 
 /** Read a bundle tree off disk into a scan/upload map (text as string, else binary). */
 async function readBundle(bundleDir: string): Promise<Map<string, string | Uint8Array>> {
@@ -141,6 +143,9 @@ export async function goPublication(
   { boxRoot, pubId }: { boxRoot: string; pubId: string },
   deps: GoDeps,
 ): Promise<GoResult> {
+  if (await isServerManagedPublication(pubId)) {
+    return { ok: false, reason: "managed-publication", message: "This publication is managed by the server. Use the signed-in Publications page to update or enable it." };
+  }
   const { store, ownerEmail } = deps;
   if (!store) {
     return { ok: false, reason: "unconfigured", message: "publishing is not configured on this box — run 'bbx pub setup' first" };

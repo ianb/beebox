@@ -15,6 +15,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
+import { buildDocsCorpus, type SitePageSummary } from "./docs.js";
+import { writeEntryPages } from "./docs-html.js";
+import { docsOrigin } from "./docs-origin.js";
 import { baseFromBranch, normalizeBase, resolveInternalHref } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
@@ -23,12 +26,14 @@ import { NAVIGATION_SCRIPT } from "./navigation-script.js";
 import { headingIds, prepareWorkspace, type SitePage } from "./workspace-model.js";
 import { workspaceShell } from "./workspace.js";
 import { twinCardLinks } from "./twin-links.js";
+import { writeStaticFiles } from "./docs-static.js";
 import { publishedPageBody } from "./page-publication.js";
 
 const SITE_DIR = import.meta.dirname;
 const CARDS_DIR = path.join(SITE_DIR, "cards");
 const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
 const REPO_ROOT = path.resolve(SITE_DIR, "..");
+const BEEBOX_DIR = path.join(REPO_ROOT, "beebox");
 const DIST_DIR = path.join(SITE_DIR, "dist");
 
 class BuildError extends Error {
@@ -40,6 +45,20 @@ class BuildError extends Error {
 
 interface CliArgs {
   base: string | undefined;
+}
+
+export interface BuildSiteOptions {
+  cardsDir: string;
+  distDir: string;
+  base: string;
+  writeSourceManifest?: boolean;
+  /** The agent-docs corpus (dist/docs/, llms.txt sections). Off for box-export dry-runs. */
+  buildAgentDocs?: boolean;
+}
+
+export interface BuildSiteResult {
+  pageCount: number;
+  nuggetSummary: string[];
 }
 
 function parseArgs(argv: readonly string[]): CliArgs {
@@ -70,6 +89,8 @@ function resolveBase(args: CliArgs): string {
 interface BuiltPage {
   stem: string;
   frontmatter: PageFrontmatter;
+  /** Base-prefixed href of the rendered page itself, for llms.txt's "Site pages" section. */
+  href: string;
   /** Site-root-relative internal link targets found on the page. */
   linkTargets: { target: string; href: string }[];
 }
@@ -101,6 +122,10 @@ export function twinMarkdown(
       // which may itself carry a {% nugget %} tag — the nugget pass must run
       // after it, or the catch-all strip below silently deletes that nugget.
       return part
+        // An agent-prompt's title is the only thing that says what its code
+        // block is for; the generic tag strip below would leave three
+        // unlabeled prompts on the home page's twin.
+        .replace(/{%\s*agent-prompt\s+title="([^"]*)"[^%]*%}/g, (_m, title: string) => `**${title}** (paste into your agent or AI chat):`)
         .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
         .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
         .replace(/{%[\S\s]*?%}/g, "");
@@ -109,12 +134,14 @@ export function twinMarkdown(
   return `${flat.trimStart().trimEnd()}\n`;
 }
 
-function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base: string }): string {
-  const lines = [`# ${params.home.title}`, "", `> ${params.home.summary}`, "", "## Pages", ""];
-  for (const page of params.pages.filter((p) => p.frontmatter.unlisted !== true)) {
-    lines.push(`- [${page.frontmatter.title}](${params.base}${page.stem}.md): ${page.frontmatter.summary}`);
-  }
-  return `${lines.join("\n")}\n`;
+function sitePageSummaries(pages: BuiltPage[], base: string): SitePageSummary[] {
+  const origin = docsOrigin(base);
+  return pages.map((p) => ({
+    title: p.frontmatter.title,
+    href: `${origin}${p.href}`,
+    summary: p.frontmatter.summary,
+    unlisted: p.frontmatter.unlisted === true,
+  }));
 }
 
 // Nugget enforcement at build: `proposed` nuggets are refused (never rendered,
@@ -141,15 +168,17 @@ function checkNuggets(nuggets: readonly Nugget[], base: string): string[] {
   return lines;
 }
 
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
-  const base = resolveBase(args);
+export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteResult> {
+  const cardsDir = path.resolve(options.cardsDir);
+  const distDir = path.resolve(options.distDir);
+  const base = normalizeBase(options.base);
+  const cardsParent = path.dirname(cardsDir);
+  const cardsPrefix = `${path.basename(cardsDir)}/`;
+  const cards = await listCardFiles({ cardsDir, siteDir: cardsParent });
+  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${cardsDir}`);
 
-  const cards = await listCardFiles({ cardsDir: CARDS_DIR, siteDir: SITE_DIR });
-  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${CARDS_DIR}`);
-
-  await fs.rm(DIST_DIR, { recursive: true, force: true });
-  await fs.mkdir(DIST_DIR, { recursive: true });
+  await fs.rm(distDir, { recursive: true, force: true });
+  await fs.mkdir(distDir, { recursive: true });
 
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
@@ -164,7 +193,7 @@ async function main(): Promise<void> {
   for (const card of cards.pages) {
     const src = await fs.readFile(card.abs, "utf8");
     const { frontmatter, body: authoredBody } = parseSource(src, card.file);
-    const id = card.file.slice("cards/".length);
+    const id = card.file.slice(cardsPrefix.length);
     const body = publishedPageBody({ id, frontmatter, body: authoredBody });
     const route = resolveInternalHref({ href: `/${id}`, pageSitePath: id, base });
     const pageSitePath = route.target;
@@ -174,7 +203,7 @@ async function main(): Promise<void> {
     const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath: id, linkTargets: nuggetTargets });
     const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets, ...nuggetTargets];
 
-    const twinOut = path.join(DIST_DIR, `${card.slug}.md`);
+    const twinOut = path.join(distDir, `${card.slug}.md`);
     if (built.some((page) => page.stem === card.slug)) throw new BuildError(`${card.file}: duplicate Markdown twin ${card.slug}.md`);
     await fs.mkdir(path.dirname(twinOut), { recursive: true });
     pages.push({ id, output: route.target, href: route.href, html: headingIds(html), frontmatter });
@@ -184,18 +213,19 @@ async function main(): Promise<void> {
     built.push({
       stem: card.slug,
       frontmatter,
+      href: route.href,
       linkTargets: linkTargets.map((target) => ({ target, href: target })),
     });
   }
 
   const workspace = prepareWorkspace({ pages, base });
   for (const page of pages) {
-    const output = path.join(DIST_DIR, page.output);
+    const output = path.join(distDir, page.output);
     await fs.mkdir(path.dirname(output), { recursive: true });
     await fs.writeFile(output, workspaceShell(workspace, page), "utf8");
   }
-  await fs.cp(path.join(SITE_DIR, "assets"), path.join(DIST_DIR, "assets"), { recursive: true });
-  await fs.writeFile(path.join(DIST_DIR, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
+  await fs.cp(path.join(SITE_DIR, "assets"), path.join(distDir, "assets"), { recursive: true });
+  await fs.writeFile(path.join(distDir, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
 
   // Link-check: every internal link target must correspond to an emitted page.
   const broken: string[] = [];
@@ -212,19 +242,38 @@ async function main(): Promise<void> {
 
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
-  await fs.writeFile(
-    path.join(DIST_DIR, "llms.txt"),
-    renderLlmsTxt({ home: home.frontmatter, pages: built, base }),
-    "utf8",
-  );
+
+  // Agent-docs corpus (site/docs.ts): dist/docs/ plus the three entry points
+  // (llms.txt, llms-dev.txt, llms-install.txt). Off for box-export dry-runs,
+  // which validate a temporary workbench card export and have no bearing on
+  // the docs corpus.
+  const docsSummary: string[] = [];
+  let entryStems: string[] = [];
+  if (options.buildAgentDocs !== false) {
+    const docsResult = await buildDocsCorpus({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, beeboxDir: BEEBOX_DIR, distDir, base });
+    docsSummary.push(docsResult.summaryLine);
+    entryStems = await writeEntryPages({ docsResult, distDir, base, sitePages: sitePageSummaries(built, base) });
+  }
+
+  // Cloudflare Pages control files: plain-text content type for every
+  // machine-facing file, a real 404, a permissive robots.txt (docs-static.ts).
+  await writeStaticFiles({ distDir, base, twinStems: built.map((page) => page.stem), entryStems });
 
   // Input manifest LAST, once all output exists: the dev router compares it
   // against the current sources to decide whether to auto-rebuild. A partial
   // build never leaves a manifest that could mask staleness.
-  await writeManifest(SITE_DIR, DIST_DIR);
+  if (options.writeSourceManifest !== false) await writeManifest(SITE_DIR, distDir);
+
+  return { pageCount: built.length, nuggetSummary: [...nuggetSummary, ...docsSummary] };
+}
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+  const base = resolveBase(args);
+  const result = await buildSite({ cardsDir: CARDS_DIR, distDir: DIST_DIR, base });
 
   process.stdout.write(
-    [`site: built ${built.length} page(s) → dist/ (base ${base})`, ...nuggetSummary].join("\n") + "\n",
+    [`site: built ${result.pageCount} page(s) → dist/ (base ${base})`, ...result.nuggetSummary].join("\n") + "\n",
   );
 }
 

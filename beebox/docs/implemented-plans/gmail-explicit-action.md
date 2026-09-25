@@ -127,7 +127,7 @@ all is unconfigured in every other respect too.
 The orphan-reporting command
 ([reconcile tracked set](../../../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md))
 is a separate deliverable and still needs design. So is
-[detecting a connector that stopped producing](../../../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md),
+[detecting a connector that stopped producing](../../../issues/closed/features/2026-08-10-detect-a-connector-that-stopped-producing.md),
 the generic version of the failure this plan's specific cause created.
 
 ## Follow-up: the `stage` action (2026-08-10, same day)

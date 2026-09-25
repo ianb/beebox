@@ -62,7 +62,7 @@ function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; 
     <li className="workstream-row">
       <div className="workstream-row-main">
         <Link to="/$name" params={{ name: row.name }} className="workstream-name">
-          <span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}
+          {row.name}
         </Link>
         <span className="workstream-description">{row.session.description ?? "No description"}</span>
         <span className="schedule-facts">
@@ -105,6 +105,7 @@ export function ScheduledSection({ rows, issues, now }: { rows: Workstream[]; is
         <span className={heartbeat.stale ? "schedule-heartbeat schedule-heartbeat-stale" : "schedule-heartbeat"}>
           {heartbeat.text}
         </span>
+        <Link to="/alerts" className="schedule-all-alerts">all alerts</Link>
       </h2>
       <ul>
         {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} now={now} />)}

@@ -37,8 +37,15 @@ exclude:
 # A 2026-08 loaded-machine probe measured 1.0s cold boot and 0.39s mean warm
 # boot. Under full-core parallelism, concurrent app boots and test work have
 # historically thrashed the machine into non-deterministic SIGALRM timeouts.
-# Half the cores bounds that contention while keeping the suite reasonably fast;
-# the loaded-machine parallelism probe did not revalidate this setting.
+# Half the cores bounds that contention while keeping the suite reasonably fast.
+# The loaded-machine probe has now been run (2026-09-15), from the ledger's own
+# records: with a second run holding a semaphore slot, a full-mode file takes
+# 1.69x longer at the median, 3.05x at p90 and 6.03x at worst, across 805 files.
+# This number is right for ONE run and wrong for two — two slots at 6 jobs is
+# twelve tap processes on twelve logical cores, leaving nothing for the dev
+# router, the hubs, or the agent sessions. Rather than lowering it for everyone
+# (642 of 756 recorded runs were solo), `capJobs` in bin/test-tiers.ts halves
+# the fan-out for a FULL run that starts while another holds a slot.
 jobs: 6
 # Per-file timeout. In the 2026-08 sample, routes-api took 6.3s solo and the
 # slowest sampled solo file took 24.9s, while loaded timings inflated sharply

@@ -14,7 +14,8 @@ import { SECTION } from "./sections.js";
 export const REF_PATH_RULE =
   "**Always write a leading `/` — the path resolves from the box root.** " +
   "The one exception is `attach/…`, the card's own attach scope. Never `../`. " +
-  "A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write.";
+  "A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write. " +
+  "A ref reaches only the box's own areas (`_content`, `_config`, …): package docs under `node_modules/` can be read but not linked, so name them in plain text.";
 
 export function sourceSection(): string {
   return `## ${SECTION.PROVENANCE} — the \`{% source %}\` tag

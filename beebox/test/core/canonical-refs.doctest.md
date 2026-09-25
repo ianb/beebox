@@ -252,6 +252,44 @@ JSON.stringify({ refs: again.refsRewritten, links: again.dossierLinksRewritten, 
 await box.cleanup();
 ```
 
+## A wrapped link label
+
+`inlineLinkPattern`'s label class matches newlines, so validate — which runs it
+over the whole body — reports a link whose label wraps mid-sentence. The rewrite
+scan used to run the same pattern one line at a time and therefore never saw
+those links: `--fix` reported a ref it could not rewrite, and `bbx mv` left the
+same link dangling when its target moved. The scan now runs over contiguous runs
+of scannable lines, so both agree on the set.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
+await box.write(
+  "_content/store/notes/Wrapped.doc.card",
+  "---\ntype: doc\ntitle: Wrapped\n---\nSee [the long-awaited\nplan](Plan.doc.card) for details.\n",
+);
+const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
+JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, skipped: fixed.skipped })
+=> {"refs":1,"files":1,"skipped":0}
+```
+
+The label's line break survives the rewrite — only the ref is replaced:
+
+```ts continue
+await box.read("_content/store/notes/Wrapped.doc.card")
+=>
+---
+type: doc
+title: Wrapped
+---
+See [the long-awaited
+plan](/_content/store/notes/Plan.doc.card) for details.
+```
+
+```ts continue
+await box.cleanup();
+```
+
 ## What `--fix` refuses to touch: fenced examples, block-scalar prose, comments
 
 The fixer shares `bbx mv`'s text-surgical scan but not all of its posture. Three

@@ -47,13 +47,16 @@ interface PendingSendsLocation { boxSlug: string; storageScope: string }
 const emissionSchema = z.object({
   id: z.string().min(1), origin: z.enum(["typed", "voice"]), text: z.string(),
   diarized: z.boolean(),
-  images: z.array(z.object({ id: z.number(), mimeType: z.string(), dataBase64: z.string() })),
+  // `path`: the uploaded original's box path; without it a recovered retry
+  // would silently send the image with no file line (zod strips unknown keys).
+  images: z.array(z.object({ id: z.number(), mimeType: z.string(), dataBase64: z.string(), path: z.string().optional() })),
   files: z.array(z.object({
     id: z.number(), path: z.string(), originalName: z.string().optional(),
     size: z.number().optional(), mimetype: z.string().optional(),
   })),
   selections: z.array(z.object({
-    id: z.number(), ref: z.string(), text: z.string(), position: z.string(),
+    // ref is null for text quoted from the chat transcript.
+    id: z.number(), ref: z.string().nullable(), text: z.string(), position: z.string(),
     anchor: z.string().nullable().optional(), spokenWords: z.number().nullable().optional(),
   })),
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),

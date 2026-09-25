@@ -39,8 +39,37 @@ Sync rebuilds a connector-managed card's content wholesale from its template; an
 Connectors are called during `bbx wakeup`:
 1. `wakeup.ts` loads connector configs for the box
 2. Creates connector instances (with optional service injection)
-3. Calls `sync()` on each
+3. Calls `syncConnector(connector, { boxRoot })` on each, which runs `sync()`
+   and records the attempt (see *Activity record* below)
 4. Reports results
+
+Every caller that syncs a connector (wakeup, `bbx finalize`, the `sync`
+command, `bbx drive sync`) goes through `syncConnector`, never `sync()`
+directly, so each attempt is recorded once.
+
+### Activity record
+
+`connectors/activity.ts` keeps, per connector and box-local day, the number of
+sync attempts and how many succeeded, errored or skipped, plus the counts of new
+items, raw `created` paths and `updated` paths. It lives in machine-local
+transient state (`_bookkeeping/connectors/connector-activity.state.json`) and
+keeps 60 days.
+
+A **new item** is a `created` path outside any `.attach/` scope, that is, a new
+top-level card. Files inside a card's attachment scope belong to a card that
+already counted: Gmail lists every new message file in `created`, including
+replies on threads the box already tracks, so raw `created` would count a
+connector that only refreshes old threads as productive.
+
+A connector reports what it did through `SyncResult` as before. To be counted
+correctly it must put new top-level cards in `created`, and set `error` when
+part of the sync failed even if the rest succeeded (Gmail does this for a draft
+that fails to upload).
+
+`connectors/activity-verdict.ts` reads the record and decides whether a
+connector has gone quiet or keeps failing; the scheduler alerts once per
+episode and the dashboard shows a warning. See
+[health-checks.md](health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 
 Telegram also has a webhook route (`routes/telegram.ts`) for real-time message delivery, separate from the polling in `sync()`.
 

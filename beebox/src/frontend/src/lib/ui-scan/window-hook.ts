@@ -5,11 +5,14 @@
  * controls in an accessibility snapshot carry a `bbx-` address, so an automated
  * driver can act by id instead of by a positional ref that renumbers on every
  * re-render (browse/src/controls.ts). It is the same walk the box agent's
- * `bbx chat ui` dump uses, so the driver and the agent see one inventory.
+ * `bbx chat ui` dump uses, over a wider scope.
  *
- * Read-only and content-free by construction (`data-bbx-scan="exclude"` prunes
- * user content from the walk), so exposing it unconditionally costs nothing
- * that a DevTools console could not already read.
+ * It answers for the whole document, card contents included, which is what a
+ * driver needs: a control the walk skipped is one the snapshot prints with no
+ * id and `bin/browse` cannot act on. Read-only, and it reports what is already
+ * in the DOM, so exposing it unconditionally costs nothing a DevTools console
+ * could not read. The narrowed `chrome` scope belongs to the `bbx chat ui`
+ * dump, which calls `scanLiveDocument` directly.
  */
 
 import { scanLiveDocument } from "./live-dom.js";
@@ -22,5 +25,5 @@ declare global {
 }
 
 export function installUiScanHook(): void {
-  window.__bbxUiScan = scanLiveDocument;
+  window.__bbxUiScan = () => scanLiveDocument("document");
 }

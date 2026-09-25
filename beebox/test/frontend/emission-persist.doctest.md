@@ -14,6 +14,9 @@ import {
   commitPersistedEmission,
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
+  restoredImageOriginal,
+  RESTORED_ORIGINAL_LOST,
+  RESTORED_ORIGINAL_SWEPT,
   partitionFiles,
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
@@ -43,19 +46,65 @@ const draft = {
 
 ```ts
 const s = fakeStorage();
-savePersistedEmission(s, { boxSlug: "test1", draft, updatedAt: 1000 });
-const loaded = loadPersistedEmission(s, "test1");
+savePersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 1000 });
+const loaded = loadPersistedEmission(s, { boxSlug: "test1", scope: "" });
 loaded?.text
 => half a thought [file1]
 
 JSON.stringify(loaded?.files[0]?.state)
 => {"status":"uploaded","path":"_tmp/2026-07-04_report.pdf"}
 
-emissionKey("test1")
+emissionKey({ boxSlug: "test1", scope: "" })
 => bbx-input-emission:test1
 
-emissionKey(undefined)
+emissionKey({ boxSlug: undefined, scope: "" })
 => bbx-input-emission:default
+```
+
+## One slot per box INSTANCE, not per box slug
+
+The dev router serves every checkout from one origin at
+`/<main|worktree>/<box>/…`, so two worktrees can each have a `test1` and the
+slug alone does not tell them apart. They shared a draft — including its `tmp/…`
+attachment paths, which the receiving clone then reported as expired
+(`issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md`).
+
+Production's scope is empty, and there the key is exactly what it always was, so
+a real unsent draft is not orphaned by a dev-only fix.
+
+```ts
+JSON.stringify([
+  emissionKey({ boxSlug: "test1", scope: "main/test1" }),
+  emissionKey({ boxSlug: "test1", scope: "worktree-drafts/test1" }),
+  emissionKey({ boxSlug: "test1", scope: "" }),
+])
+=> ["bbx-input-emission:main/test1","bbx-input-emission:worktree-drafts/test1","bbx-input-emission:test1"]
+```
+
+Two checkouts writing at once keep their own text:
+
+```ts continue
+const shared = fakeStorage();
+savePersistedEmission(shared, { boxSlug: "test1", scope: "main/test1", draft: { ...draft, text: "from main" }, updatedAt: 1000 });
+savePersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1", draft: { ...draft, text: "from the worktree" }, updatedAt: 1001 });
+JSON.stringify([
+  loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" })?.text,
+  loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" })?.text,
+])
+=> ["from main","from the worktree"]
+```
+
+A legacy per-session draft carries the slug alone, so in a dev checkout it
+cannot be attributed to one. Adoption there takes nothing — and, just as
+importantly, deletes nothing, since deleting is the outcome that cannot be
+undone.
+
+```ts continue
+const legacy = fakeStorage();
+legacy.setItem("bbx-composer-draft:test1:sess-a", JSON.stringify({ text: "whose is this?", updatedAt: 5 }));
+const skipped = adoptLegacyComposerDrafts(legacy, { boxSlug: "test1", scope: "worktree-drafts/test1" });
+JSON.stringify([skipped, Object.keys(legacy.dump())])
+=> [{"adoptedText":null,"discarded":0},["bbx-composer-draft:test1:sess-a"]]
 ```
 
 ## A send empties the composer, and the key goes with it
@@ -74,13 +123,13 @@ const s = fakeStorage();
 const empty = { text: "", images: [], files: [], selections: [] };
 
 // Dictating persists a draft…
-commitPersistedEmission(s, { boxSlug: "test1", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
 Object.keys(s.dump()).join(",")
 => bbx-input-emission:test1
 
 // …and the send that empties the store takes the key with it. No window.
-commitPersistedEmission(s, { boxSlug: "test1", draft: empty, updatedAt: 2000 });
-Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, "test1"))
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: empty, updatedAt: 2000 });
+Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, { boxSlug: "test1", scope: "" }))
 => 0 keys | recovery offers: null
 
 // Emptiness is all four slices, not just the text.
@@ -88,15 +137,15 @@ isEmptyEmissionDraft(empty) + "," + isEmptyEmissionDraft({ ...empty, text: "x" }
 => true,false,false
 
 // A non-empty draft still saves normally (that's the debounced typing path).
-commitPersistedEmission(s, { boxSlug: "test1", draft, updatedAt: 3000 });
-loadPersistedEmission(s, "test1")?.text
+commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 3000 });
+loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text
 => half a thought [file1]
 ```
 
 ## Oversized images are dropped from persistence, not from memory
 
 ```ts
-const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET }] };
+const big = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
 const { payload, imagesDropped } = serializePersistedEmission(big, { updatedAt: 1 });
 imagesDropped
 => true
@@ -130,7 +179,7 @@ s.setItem("bbx-composer-draft:test1:sess-a", JSON.stringify({ text: "older draft
 s.setItem("bbx-composer-draft:test1:sess-b", JSON.stringify({ text: "newest draft", updatedAt: 300 }));
 s.setItem("bbx-composer-draft:test1:sess-c", JSON.stringify({ text: "   ", updatedAt: 900 }));
 s.setItem("bbx-composer-draft:otherbox:sess-z", JSON.stringify({ text: "not ours", updatedAt: 999 }));
-const result = adoptLegacyComposerDrafts(s, "test1");
+const result = adoptLegacyComposerDrafts(s, { boxSlug: "test1", scope: "" });
 result.adoptedText
 => newest draft
 
@@ -156,14 +205,14 @@ what strips the token on the way back in.
 const uploading = { id: 2, originalName: "big.pdf", size: 9, mimetype: "application/pdf", state: { status: "uploading", progress: 0.4 } } as const;
 const midUpload = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
 const s2 = fakeStorage();
-savePersistedEmission(s2, { boxSlug: "test1", draft: midUpload, updatedAt: 2000 });
-JSON.stringify(loadPersistedEmission(s2, "test1")?.files.map((f) => [f.id, f.state.status]))
+savePersistedEmission(s2, { boxSlug: "test1", scope: "", draft: midUpload, updatedAt: 2000 });
+JSON.stringify(loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files.map((f) => [f.id, f.state.status]))
 => [[1,"uploaded"],[2,"uploading"]]
 ```
 
 ```ts continue
 const { live, dead } = partitionFiles(
-  loadPersistedEmission(s2, "test1")?.files ?? [],
+  loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files ?? [],
   new Set(["_tmp/2026-07-04_report.pdf"]),
 );
 JSON.stringify({ live: live.map((f) => f.id), dead: dead.map((f) => f.id) })
@@ -179,4 +228,56 @@ const files = [uploaded(1, "_tmp/alive.pdf"), uploaded(2, "_tmp/swept.pdf")];
 const { live, dead } = partitionFiles(files, new Set(["_tmp/alive.pdf"]));
 live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2
+```
+
+## An image's original comes back landed, or failed — never resumable
+
+The `File` behind an upload dies with the page, so a persisted `uploading` or
+`failed` original — and a draft from before originals were kept, which has no
+state at all — restores as `failed`, silently: the message just lists no file
+for that image. A landed path survives when the restore-time existence check
+still finds it, and is `failed` with its own message when the sweep took it,
+so a swept path is never listed as a usable file.
+
+```ts
+const present = new Set(["_tmp/a.png"]);
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/a.png" }, { existingPaths: present }))
+=> {"status":"uploaded","path":"_tmp/a.png"}
+
+restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present }).message === RESTORED_ORIGINAL_SWEPT
+=> true
+
+// A same-tab restore (a rejected send handed back) skips the check.
+JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.png" }, { existingPaths: null }))
+=> {"status":"uploaded","path":"_tmp/just-now.png"}
+
+JSON.stringify([
+  restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }).status,
+  restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
+  restoredImageOriginal(undefined, { existingPaths: present }).message === RESTORED_ORIGINAL_LOST,
+])
+=> ["failed","failed",true]
+```
+
+The state itself rides through persistence with the image, so a landed path
+is still there after a reload.
+
+```ts
+const withOriginal = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
+const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
+JSON.stringify(parsePersistedEmission(payload)?.images[0]?.original)
+=> {"status":"uploaded","path":"_tmp/a.png"}
+```
+
+The draft's upload batch persists with it, so attachments added after a
+reload join the same `_tmp/chat/<batch>/` directory; a draft saved before
+batches existed simply has none.
+
+```ts
+const batched = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
+parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch
+=> m1abcd-x9y8z7w6
+
+parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload)?.uploadBatch
+=> undefined
 ```

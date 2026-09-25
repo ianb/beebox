@@ -6,6 +6,7 @@ labels: [ios, navigation, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-chat-everywhere — physical-device acceptance after chat input everywhere landed
+priority: normal
 ---
 
 The boxholder selected the chat Here menu's Open directory action in the iOS

@@ -19,6 +19,7 @@ export interface NativeEmissionV2 {
   diarized: boolean;
   hqText?: boolean;
   hqService?: string;
+  hqFallback?: boolean;
   images: ChatImageAttachment[];
   files: Array<Required<EmissionFile>>;
   selections: Array<Required<Pick<SelectionItem, "id" | "ref" | "text" | "position" | "anchor" | "spokenWords">>>;
@@ -67,8 +68,12 @@ function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult 
     return reject(candidate, "Invalid native emission V2: text and diarized are required");
   }
   if ((candidate.hqText !== undefined && typeof candidate.hqText !== "boolean")
+    || (candidate.hqFallback !== undefined && typeof candidate.hqFallback !== "boolean")
     || (candidate.hqService !== undefined && typeof candidate.hqService !== "string")) {
     return reject(candidate, "Invalid native emission V2: malformed HQ provenance");
+  }
+  if (candidate.hqText === true && candidate.hqFallback === true) {
+    return reject(candidate, "Invalid native emission V2: HQ success and fallback are mutually exclusive");
   }
   const images = parseV2Array(candidate.images, parseNativeImage);
   const files = parseV2Array(candidate.files, parseNativeFile);
@@ -87,6 +92,7 @@ function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult 
       diarized: candidate.diarized,
       hqText: candidate.hqText === true ? true : undefined,
       hqService: candidate.hqText === true ? candidate.hqService : undefined,
+      hqFallback: candidate.hqFallback === true ? true : undefined,
     })
     : createTypedEmission(common);
   return { ok: true, emission: { ...emission, id } };
@@ -151,10 +157,18 @@ function parseNativeImage(value: unknown): ChatImageAttachment | null {
     typeof value.id !== "number"
     || typeof value.mimeType !== "string"
     || typeof value.dataBase64 !== "string"
+    // `path`: the uploaded original's box path (contract §4.1). Optional — an
+    // older build never sends it — but when present it must be a string.
+    || (value.path !== undefined && typeof value.path !== "string")
   ) {
     return null;
   }
-  return { id: value.id, mimeType: value.mimeType, dataBase64: value.dataBase64 };
+  return {
+    id: value.id,
+    mimeType: value.mimeType,
+    dataBase64: value.dataBase64,
+    ...(value.path === undefined ? {} : { path: value.path }),
+  };
 }
 
 function parseNativeFile(value: unknown): Required<EmissionFile> | null {
@@ -183,20 +197,23 @@ function parseNativeSelection(value: unknown): NativeEmissionV2["selections"][nu
   if (!isRecord(value)) return null;
   if (
     typeof value.id !== "number"
-    || typeof value.ref !== "string"
+    // Swift's synthesized encoder omits a nil Optional, so `ref` (null for
+    // chat-transcript text), `anchor` and `spokenWords` (null for a typed
+    // selection) may each be absent or null. Both normalize to null.
+    || (value.ref !== undefined && value.ref !== null && typeof value.ref !== "string")
     || typeof value.text !== "string"
     || typeof value.position !== "string"
-    || (value.anchor !== null && typeof value.anchor !== "string")
-    || (value.spokenWords !== null && typeof value.spokenWords !== "number")
+    || (value.anchor !== undefined && value.anchor !== null && typeof value.anchor !== "string")
+    || (value.spokenWords !== undefined && value.spokenWords !== null && typeof value.spokenWords !== "number")
   ) {
     return null;
   }
   return {
     id: value.id,
-    ref: value.ref,
+    ref: typeof value.ref === "string" ? value.ref : null,
     text: value.text,
     position: value.position,
-    anchor: value.anchor,
-    spokenWords: value.spokenWords,
+    anchor: typeof value.anchor === "string" ? value.anchor : null,
+    spokenWords: typeof value.spokenWords === "number" ? value.spokenWords : null,
   };
 }

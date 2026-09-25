@@ -2,37 +2,20 @@
  * CommitDetail — commit-metadata tab and its trailer-chip building blocks.
  */
 
+import {
+  CONNECTOR_TRAILER_KEYS,
+  commitStep,
+  commitTriggers,
+  trailerString,
+  triggerLabel,
+} from "@shared/commit-trailers";
 import { Markdown } from "../Markdown";
 import type { HistoryCommit } from "../../api";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 
-const CONNECTOR_KEYS = [
-  "Pulled-By",
-  "Created-By",
-  "Fetched-By",
-  "Pushed-By",
-  "Sent-By",
-] as const;
-
 function trailerValues(value: string | string[] | undefined): string[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
-}
-
-/**
- * Get trailer value as string (first value if array).
- */
-export function trailerString(value: string | string[] | undefined): string | undefined {
-  if (!value) return undefined;
-  return Array.isArray(value) ? value[0] : value;
-}
-
-export function stripTrailers(body: string): string {
-  const lines = body.split("\n");
-  const filtered = lines.filter(
-    (line) => !/^(Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed):\s/.test(line)
-  );
-  return filtered.join("\n").trim();
 }
 
 /**
@@ -89,7 +72,8 @@ interface CommitTabProps {
   bodyText: string;
   onFilterSession?: (sessionId: string) => void;
   onFilterConnector?: (connector: string) => void;
-  onFilterWorkflow?: (workflow: string) => void;
+  /** Scope the list to one trigger, by its `<kind>/<name>` id. */
+  onFilterTrigger?: (triggerId: string) => void;
 }
 
 export function CommitTab({
@@ -97,18 +81,18 @@ export function CommitTab({
   bodyText,
   onFilterSession,
   onFilterConnector,
-  onFilterWorkflow,
+  onFilterTrigger,
 }: CommitTabProps) {
   const handleNavigate = useViewNavigate();
   const trailers = commit.trailers;
   const phase = trailerString(trailers?.Phase);
-  const triggeredBy = trailerString(trailers?.["Triggered-By"]);
+  const triggers = commitTriggers(trailers);
+  const step = commitStep(trailers);
   const sessionId = trailerString(trailers?.Session);
-  const workflow = trailerString(trailers?.Workflow);
 
   const connectorChips: { key: string; value: string }[] = [];
   if (trailers) {
-    for (const key of CONNECTOR_KEYS) {
+    for (const key of CONNECTOR_TRAILER_KEYS) {
       for (const value of trailerValues(trailers[key])) {
         connectorChips.push({ key, value });
       }
@@ -125,9 +109,8 @@ export function CommitTab({
           {new Date(commit.date).toLocaleString()}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
-        {triggeredBy ? <TrailerChip label="" value={triggeredBy} /> : null}
       </div>
-      {sessionId || workflow || connectorChips.length > 0 ? (
+      {sessionId || triggers.length > 0 || step !== undefined || connectorChips.length > 0 ? (
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {sessionId ? (
             <TrailerChip
@@ -137,14 +120,16 @@ export function CommitTab({
               onClick={onFilterSession ? () => onFilterSession(sessionId) : undefined}
             />
           ) : null}
-          {workflow ? (
+          {triggers.map((trigger) => (
             <TrailerChip
-              label="workflow"
-              value={workflow}
-              title={onFilterWorkflow ? `Filter to workflow "${workflow}"` : undefined}
-              onClick={onFilterWorkflow ? () => onFilterWorkflow(workflow) : undefined}
+              key={trigger.id}
+              label="triggered by"
+              value={triggerLabel(trigger)}
+              title={onFilterTrigger ? `Filter to ${triggerLabel(trigger)}` : undefined}
+              onClick={onFilterTrigger ? () => onFilterTrigger(trigger.id) : undefined}
             />
-          ) : null}
+          ))}
+          {step === undefined ? null : <TrailerChip label="step" value={step} />}
           {connectorChips.map((c) => (
             <TrailerChip
               key={`${c.key}:${c.value}`}

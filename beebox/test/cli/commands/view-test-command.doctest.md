@@ -16,10 +16,10 @@ const PKG = process.cwd();
 const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 
 // A v2 box renders views by resolving react from its OWN `node_modules`.
-// `makeTmpBox({ deps: true })` only symlinks `beebox`, so simulate a
+// `makeTmpBox({ deps: true, git: true })` only symlinks `beebox`, so simulate a
 // real box's `react` dependency by symlinking the engine's copy beside it.
 async function makeViewBox() {
-  const box = await makeTmpBox({ deps: true });
+  const box = await makeTmpBox({ deps: true, git: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
   await symlink(join(reactNodeModules, "react"), join(box.root, "node_modules", "react"), "dir");
   return box;

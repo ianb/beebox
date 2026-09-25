@@ -15,11 +15,22 @@
  * (build scratch, one-off subprocess IPC) may still use the host temp dir.
  */
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { getBoxDir } from "./paths.js";
 
 /** Path of the box's swept temp dir (`<boxRoot>/_tmp`). Pure — touches no disk. */
 export function boxTmpDir(boxRoot: string): string {
   return getBoxDir(boxRoot, "tmp");
+}
+
+/**
+ * Where the chat composer's uploads are grouped, one directory per message:
+ * `<boxRoot>/_tmp/chat/<batch>/` (`webapp/routes/chat-uploads.ts` writes,
+ * `core/housekeeping.ts` sweeps a batch whole once its newest file is stale).
+ * Pure — touches no disk.
+ */
+export function chatUploadBatchesDir(boxRoot: string): string {
+  return path.join(boxTmpDir(boxRoot), "chat");
 }
 
 /** Ensure `<boxRoot>/_tmp/` exists and return its absolute-under-box path. */

@@ -1,8 +1,8 @@
 ---
-title: "Resumed chat threads and agents run without beebox's system prompt: the append is omitted on resume and the SDK does not retain it"
+title: "thread.ts and run.ts omit the system prompt on resume and rely on the SDK retaining it — a default that flipped twice in a week"
 workstream: unattached
 area: beebox
-priority: important
+priority: normal
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Agent SDK 0.3.267's system-prompt recording change
@@ -79,3 +79,44 @@ a compaction instead of applying on the next run.
 Step 1 does not depend on the pin, which is why this is filed as a bug to fix now
 rather than something to wait out: the settled path would not reach `0.3.267`
 before 2026-09-12, and the table's first two rows are the behavior until then.
+
+## Corrected 2026-09-12 — the loss was already fixed upstream; priority lowered
+
+Re-probing on the newer pins shows the retention failure was specific to
+`0.3.263` and earlier. Same two-turn codename probe, extended:
+
+| SDK | resume passes | turn-2 answer |
+|---|---|---|
+| `0.3.263` | no `systemPrompt` option | `NONE` |
+| `0.3.263` | `append: ""` | `NONE` |
+| `0.3.266` | no `systemPrompt` option | `ZEBRA-7` |
+| `0.3.266` | `append: ""` | `ZEBRA-7` |
+| `0.3.267` | no `systemPrompt` option | `ZEBRA-7` |
+| `0.3.267` | `append: ""` | `ZEBRA-7` |
+
+So the first append is retained from `0.3.266` on — before `0.3.267`'s
+documented default change, which points at 2.1.265's *"sessions started with
+`--system-prompt` or `--append-system-prompt` now record the system prompt …
+once"* as where it actually landed. The pin passed `0.3.266` on 2026-09-11 and
+`0.3.267` on 2026-09-12, so **resumed chat threads and resumed agents do get
+their system prompt today**. The original report was accurate when the pin was
+`0.3.263`; it stopped being accurate a day later, and the 2026-09-11 run report
+repeated the stale claim.
+
+**What still stands, and why this stays open at `normal`:**
+
+1. `thread.ts:145` and `run.ts:264` depend on the SDK retaining a prompt they
+   deliberately stop sending. That dependency is undocumented in both files and
+   is on a default that upstream turned **off → on** within a week. Passing the
+   prompt on resume, as `start.ts` already does, removes the dependency and
+   costs nothing.
+2. A **changed** append on resume does not take effect. Probed on `0.3.266` and
+   `0.3.267`: resuming with a different codename still answers with the first
+   one. beebox's warm-run reuse check compares `systemPrompt`
+   (`claude-chat.ts:160`) so a changed prompt starts a new run — but for a
+   *resumed* session that new prompt is ignored, so the web chat's varying parts
+   (timezone context, `buildLandmarkSessionNote`) cannot reach an existing
+   session. `snapshot: false` restores per-request rendering; that is the
+   decision to make alongside step 1.
+3. The `thread.ts:331` reminder's comment still blames compaction for a loss
+   that was the resume. Worth correcting or retiring with step 1.

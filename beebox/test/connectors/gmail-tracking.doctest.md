@@ -28,7 +28,7 @@ import {
   discoverGmailChanges,
   GMAIL_HISTORY_REF_LIMIT,
 } from "../../src/connectors/gmail-discovery.js";
-import { assertReadOnlyGwsArgs } from "../../src/connectors/gmail-gws.js";
+import { assertReadOnlyGwsArgs, boundedCapture } from "../../src/connectors/gmail-gws.js";
 
 async function writeThread(root: string, relPath: string, threadId: string): Promise<void> {
   const absPath = join(root, relPath);
@@ -685,4 +685,30 @@ try {
 };
 nonGmail.includes("Rejected")
 => true
+```
+
+## A captured gws stream is bounded, and says so only when it dropped something
+
+The server runs `gws` on behalf of a delegating caller, so a command that prints
+a mailbox's worth of output must not become the box server's memory problem.
+What it must not do either is announce a truncation that never happened — output
+that fits comes back exactly as the child wrote it.
+
+```ts
+const small = boundedCapture(100);
+small.add("one ");
+small.add("two");
+small.text()
+=> one two
+```
+
+Past the limit the overflow is counted rather than kept, across however many
+chunks the child's stream arrived in.
+
+```ts continue
+const tight = boundedCapture(5);
+tight.add("abcd");
+tight.add("efgh");
+tight.text().split("\n").join(" | ")
+=> abcde | …(3 further characters dropped)
 ```

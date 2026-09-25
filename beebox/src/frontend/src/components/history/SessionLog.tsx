@@ -8,6 +8,7 @@ import { trpc } from "../../lib/trpc";
 
 interface SessionLogProps {
   sessionId: string;
+  idPrefix: string;
 }
 
 /**
@@ -93,7 +94,7 @@ function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: 
   );
 }
 
-export function SessionLog({ sessionId }: SessionLogProps) {
+export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
     trpc.history.sessionLog.useInfiniteQuery(
       { sessionId, limit: 100 },
@@ -133,7 +134,7 @@ export function SessionLog({ sessionId }: SessionLogProps) {
       </div>
       {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
       {hasNextPage && !loading ? <button
-          id="bbx-history-session-log-load-more"
+          id={`${idPrefix}-session-log-load-more`}
           // fetchNextPage's failure surfaces via the query's own error state.
           onClick={() => void fetchNextPage()}
           className="w-full p-2 text-sm text-primary hover:bg-info-50 border-t"

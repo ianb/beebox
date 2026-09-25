@@ -13,6 +13,7 @@ import {
   getFeaturesForSession,
   updateFeaturesForSession,
 } from "./history.js";
+import { resolveRecordedChatEngine } from "./engine.js";
 import {
   isKnownFeature,
   isValidValue,
@@ -100,10 +101,30 @@ export class FeatureStore {
 
   private async persist(updates: Record<string, string>): Promise<void> {
     const sessionId = this.deps.getSessionId();
-    if (sessionId !== null) {
-      if (this.deps.persistPending?.(updates) === true) return;
-      await updateFeaturesForSession(this.deps.boxRoot, { sessionId, updates });
+    if (sessionId === null) return;
+    if (this.deps.persistPending?.(updates) === true) return;
+
+    // Persisting features can CREATE the session's history entry, and creating
+    // it WRITES the session's engine — so this needs an engine it actually
+    // knows, never the box default. The box default here is how a chat reserved
+    // as `claude` on a codex-default box got recorded as `codex` on its first
+    // toggle, permanently, since a history row outranks a reservation.
+    //
+    // A healthy session always has one: `recordSessionStart` writes its history
+    // row when the run starts, so the create branch below is only ever reached
+    // for a session whose records are gone.
+    const engine = await resolveRecordedChatEngine(this.deps.boxRoot, { sessionId });
+
+    // Nothing recorded this session's engine: an id the box has no record of.
+    // Creating a row for it would invent the engine —
+    // the defect above, one layer up — and the row would then outrank the real
+    // answer if the session's records ever came back. The flags stay in memory
+    // for this session rather than being written under a guess.
+    if (engine === null) {
+      log("features", `No recorded engine for ${sessionId}; keeping features in memory rather than recording a guess`);
+      return;
     }
+    await updateFeaturesForSession(this.deps.boxRoot, { sessionId, updates, engine });
   }
 
   /**

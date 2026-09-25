@@ -1,6 +1,6 @@
 ---
 name: knowledge-audit
-description: Explains beebox's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what it actually knows. Use after touching what a BOX agent loads — a box CLAUDE.md, the generated agent guide, schema instructions, or box prompts/rules — to verify agents absorbed it. (Dev-repo guidance like this repo's CLAUDE.md or .claude/skills/ is invisible to box agents; audits can't test it.) Triggers include "knowledge audit", "did the agent absorb this doc", "audit the guidance", "test what the agent knows", "run the knowledge audits". Full guide in beebox/docs/knowledge-audits.md.
+description: Test what a real box agent learned from box-loaded guidance such as a box CLAUDE.md, generated agent guide, schema instructions, prompts, or rules. Use after changing those surfaces; dev-repo CLAUDE.md files and skills are invisible to box agents and cannot be audited this way.
 ---
 
 # Knowledge audits: verifying what agents actually know

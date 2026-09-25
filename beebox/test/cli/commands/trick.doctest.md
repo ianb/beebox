@@ -38,6 +38,11 @@ async function writeTrick(box, name, content) {
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "index.ts"), content);
 }
+
+async function writeTrickSecrets(box, name, declarations) {
+  const dir = box.path(join("src", "tricks", "scripts", name));
+  await writeFile(join(dir, "secrets.json"), JSON.stringify(declarations));
+}
 ```
 
 ## Runs from `boxRoot/src/tricks`, with `BBX_BOX_ROOT` set to the box root
@@ -58,6 +63,27 @@ r.stdout.includes("cwd:" + expectedCwd)
 
 r.stdout.includes("boxRoot:" + (await realpath(box.root)))
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Secret declarations can be checked without running a trick
+
+The migration and CI can validate the author-provided declarations without
+resolving or printing any secret values.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await writeTrick(box, "needs-key", PROBE_TRICK);
+await writeTrickSecrets(box, "needs-key", [
+  { name: "image-generation", reason: "image-generation", env: "IMAGE_API_KEY" },
+]);
+
+const checked = await runTrickCli(box.root, ["--check-secrets"]);
+JSON.stringify({ code: checked.code, stdout: checked.stdout.trim() })
+=> {"code":0,"stdout":"Validated secret declarations for 1 trick(s)."}
 ```
 
 ```ts cleanup

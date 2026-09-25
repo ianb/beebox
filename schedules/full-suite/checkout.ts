@@ -14,6 +14,7 @@ import * as path from "node:path";
 
 import { execa } from "execa";
 
+import { readMemoryPressure } from "../../bin/host-pressure.js";
 import { parseTapFiles } from "../../bin/test-ledger-lib.js";
 import { LEDGER_SOURCE } from "./lib.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
@@ -117,9 +118,17 @@ export interface SuiteRun {
 
 export async function runTier(input: { checkout: Checkout; tier: "ordinary" | "careful"; base: string }): Promise<SuiteRun> {
   process.stdout.write(`\n=== full suite (${input.tier}) ===\n`);
+  const pressure = readMemoryPressure();
+  process.stdout.write(`full-suite: tier start (pressure ${String(pressure.level)}, pageouts ${String(pressure.pageouts)}).\n`);
   const result = await execa("pnpm", ["--dir", path.join(input.checkout.dir, "beebox"), ...tierArgs(input)], {
     reject: false,
     all: true,
+    // The schedule already gated on memory pressure in `waitForQuietHost`
+    // before this checkout was even created; the wrapper's own gate (mode
+    // defaults to "full") would otherwise refuse with no TAP output if
+    // pressure spiked again during `pnpm install`, and a refusal reads as a
+    // clean, empty-failures run to `failingFiles` — a false green.
+    env: { ...process.env, BBX_TEST_IGNORE_LOAD: "1" },
   });
   process.stdout.write(result.all ?? "");
   return { output: result.all ?? "", exitCode: result.exitCode ?? null };

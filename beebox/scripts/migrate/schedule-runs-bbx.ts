@@ -25,7 +25,6 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { getBoxShape } from "../../src/lib/box-shape.js";
 import { errnoCode, errorMessage } from "../../src/lib/error-guards.js";
 
@@ -74,7 +73,7 @@ async function main(): Promise<number> {
 // A doctest imports `rewriteRuns`; only a direct run migrates. Compared by
 // exact filename: the doctest that imports this is also named
 // `schedule-runs-bbx…`, so a prefix test would run the migration under tap.
-if (process.argv[1] !== undefined && path.basename(process.argv[1]) === path.basename(fileURLToPath(import.meta.url))) {
+if (process.argv[1] !== undefined && path.basename(process.argv[1]) === path.basename(import.meta.filename)) {
   try {
     process.exit(await main());
   } catch (e) {

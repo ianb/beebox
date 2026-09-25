@@ -19,10 +19,10 @@ import { writeManifest } from "../../../site/sources.js";
 async function mkBuiltSite(): Promise<{ repoRoot: string; siteDir: string; distRoot: string }> {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "router-site-test-"));
   const siteDir = path.join(repoRoot, "site");
-  await fs.mkdir(path.join(siteDir, "content"), { recursive: true });
+  await fs.mkdir(path.join(siteDir, "cards"), { recursive: true });
   await fs.writeFile(path.join(siteDir, "build.ts"), "// generator stub\n", "utf8");
   await fs.writeFile(path.join(siteDir, "package.json"), JSON.stringify({ name: "site" }), "utf8");
-  await fs.writeFile(path.join(siteDir, "content", "index.md"), "---\ntitle: T\nsummary: S\n---\nbody\n", "utf8");
+  await fs.writeFile(path.join(siteDir, "cards", "index.md"), "---\ntitle: T\nsummary: S\n---\nbody\n", "utf8");
   const distRoot = path.join(siteDir, "dist");
   await fs.mkdir(path.join(distRoot, "sub"), { recursive: true });
   await fs.writeFile(path.join(distRoot, "index.html"), "<!doctype html><title>home</title>", "utf8");
@@ -185,7 +185,7 @@ test("serveSite: a changed source (same set) triggers a rebuild", async () => {
   await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 0); // fresh
 
-  await fs.writeFile(path.join(siteDir, "content", "index.md"), "---\ntitle: T2\nsummary: S2\n---\nedited\n", "utf8");
+  await fs.writeFile(path.join(siteDir, "cards", "index.md"), "---\ntitle: T2\nsummary: S2\n---\nedited\n", "utf8");
   await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 1); // content hash changed → rebuild
   await fs.rm(repoRoot, { recursive: true, force: true });
@@ -199,7 +199,7 @@ test("serveSite: a deleted source triggers a rebuild (content-based, not mtime)"
   await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 0); // fresh
 
-  await fs.rm(path.join(siteDir, "content", "index.md"));
+  await fs.rm(path.join(siteDir, "cards", "index.md"));
   await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 1); // source set shrank → manifest differs → rebuild
   await fs.rm(repoRoot, { recursive: true, force: true });

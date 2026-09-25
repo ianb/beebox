@@ -5,7 +5,7 @@
  */
 
 /** Which section of `docs/box-layout.md` (and, for a subset, the agent guide) an entry belongs under. */
-export type BoxLayoutArea = "content" | "bookkeeping" | "config" | "publish" | "tmp" | "tricks" | "agent-config";
+export type BoxLayoutArea = "content" | "bookkeeping" | "config" | "publish" | "tmp" | "tricks" | "publishing" | "agent-config";
 
 export interface BoxLayoutEntry {
   /** Path relative to the box root (the one root — see `docs/box-layout.md`). */

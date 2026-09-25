@@ -111,6 +111,10 @@ const baseEnvSchema = z.object({
   // Machine-level secret store (see core/secrets/store.ts). Like BBX_AUTH_FILE,
   // one file behind every box on the machine — not per-box state.
   BBX_SECRETS_FILE: optionalString,
+  // "1" asserts BBX_SECRETS_FILE is a throwaway store (a worktree box under
+  // the dev router, a doctest) — the only state in which agent browsing may
+  // reach the Secrets panel. Never set on main or in production.
+  BBX_SECRETS_STORE_ISOLATED: optionalString,
   // Public base URL cascade (see lib/public-url.ts). Both are optional; the
   // resolver picks BBX_PUBLIC_URL over PUBLIC_URL over a caller fallback.
   BBX_PUBLIC_URL: optionalString,

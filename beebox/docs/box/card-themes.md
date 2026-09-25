@@ -97,8 +97,8 @@ override uses the box default, not another landmark's override.
 
 Inside a workspace, the selected conversation's context determines the landmark.
 Opening or moving a card does not change the system theme; switching to a different
-landmark does. Browse uses its current directory. Global pages such as Settings
-use the box default. Existing `_config/box.json` files keep using
+landmark does. Browse uses its current directory. Canonical interface cards such
+as Settings use the box default. Existing `_config/box.json` files keep using
 `presentation.chrome`; no rename or migration is required.
 
 ## Quotes and linked cards

@@ -8,14 +8,15 @@
  * `bbx chat self-note` without each spawn site re-implementing the
  * derivation.
  *
- * Source of truth is `_config/box.json`'s `publicUrl` field (which may
- * also come from the `PUBLIC_URL` env var as a fallback). `publicUrl`
+ * Source of truth is the live server's machine-owned endpoint registration,
+ * then `_config/box.json`'s `publicUrl` field (which may also come from the
+ * `PUBLIC_URL` env var as a fallback). `publicUrl`
  * encodes both the server base URL and the box slug in one string,
  * e.g. `https://bbx.example.org/test1` → server `https://bbx.example.org`,
  * name `test1`.
  *
- * When `publicUrl` is not configured the env vars are left unset —
- * child processes that need them will fail cleanly with a
+ * When no live registration or configured URL exists the env vars are left
+ * unset — child processes that need them will fail cleanly with a
  * "BBX_SERVER_URL is not set" error.
  *
  * What a subprocess inherits from the spawning server process is a
@@ -25,6 +26,7 @@
  * (adds connector credentials, for spawning the box's own `bbx` tooling).
  */
 
+import { boxWorkEnvironment } from "../lib/box-maintenance.js";
 import * as path from "node:path";
 import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
@@ -32,6 +34,8 @@ import { loadBoxConfig } from "./box/config.js";
 import { getOrCreateAgentToken } from "./agent/token.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { pickBoxSubprocessEnv } from "./script-env-allowlist.js";
+import type { SpawnProfile } from "../lib/spawn-profile.js";
+import { readServeEndpoint } from "./serve-endpoint.js";
 
 // Path to Bee Box's own bin/ so subprocesses can find `bbx`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
@@ -113,23 +117,37 @@ export function parsePublicUrl(publicUrl: string | undefined | null): BoxEnvPiec
 
 async function buildEnv(
   boxRoot: string,
-  { additions, connectorCreds }: {
+  { additions, connectorCreds, profile }: {
     additions: Record<string, string | undefined> | undefined;
     connectorCreds: boolean;
+    profile: Exclude<SpawnProfile, "unset">;
   }
 ): Promise<NodeJS.ProcessEnv> {
   const env = pickBoxSubprocessEnv(process.env, { connectorCreds });
+  Object.assign(env, boxWorkEnvironment());
+
+  // Which profile this child runs under, stated rather than inferred. It is
+  // SET here, never inherited, so it is deliberately absent from the
+  // allowlist: a child cannot be handed a parent's `tooling` marker by
+  // accident. Credentialed `bbx` verbs run in-process only when this says
+  // `tooling`; anything else delegates to the box's server or refuses
+  // (`lib/spawn-profile.ts`). `additions` can still override it, which is how
+  // a caller spawns a differently-profiled grandchild on purpose.
+  env.BBX_SPAWN_PROFILE = profile;
 
   // Prepend Bee Box's bin/ so scripts can find `bbx` regardless of
   // how the parent process's PATH was set up.
   env.PATH = await prependBbxBinToPath(env.PATH);
 
-  // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
+  // Priority: live ambient > the serving process's disk registration >
+  // box.json publicUrl > PUBLIC_URL env. The disk registration crosses the
+  // process boundary for CLI invocations while retaining the box-root key.
   // The live ambient lets a local dev server supply the env vars without
   // requiring publicUrl to be configured in box.json.
   const ambient = ambientPublicUrls.get(boxRoot);
   const config = await loadBoxConfig(boxRoot);
-  const publicUrl = ambient ?? config.publicUrl ?? process.env.BBX_PUBLIC_URL ?? process.env.PUBLIC_URL;
+  const endpoint = ambient === undefined ? await readServeEndpoint(boxRoot) : undefined;
+  const publicUrl = ambient ?? endpoint?.publicUrl ?? config.publicUrl ?? process.env.BBX_PUBLIC_URL ?? process.env.PUBLIC_URL;
   const { serverUrl, boxName } = parsePublicUrl(publicUrl);
   if (serverUrl) env.BBX_SERVER_URL = serverUrl;
   if (boxName) env.BBX_BOX_NAME = boxName;
@@ -162,10 +180,12 @@ async function buildEnv(
  *
  * - Starts from `SCRIPT_ENV_ALLOWLIST` applied to `process.env`; nothing else
  *   is inherited, connector credentials included.
- * - Adds `BBX_BOX_NAME` and `BBX_SERVER_URL` when derivable from
- *   `_config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
+ * - Adds `BBX_BOX_NAME` and `BBX_SERVER_URL` when derivable from the live
+ *   endpoint registration, `_config/box.json#publicUrl`, or `PUBLIC_URL` env.
  * - Adds `BBX_AGENT_TOKEN` so the subprocess's `bbx chat …` calls get through
  *   its own box's auth wall.
+ * - Sets `BBX_SPAWN_PROFILE=agent`, so credentialed `bbx` verbs delegate to the
+ *   server rather than looking for a credential this profile withholds.
  * - Applies any caller-provided `additions` last (callers can override
  *   or explicitly unset — pass `undefined` to delete a key).
  */
@@ -173,7 +193,7 @@ export async function buildScriptEnv(
   boxRoot: string,
   additions?: Record<string, string | undefined>
 ): Promise<NodeJS.ProcessEnv> {
-  return buildEnv(boxRoot, { additions, connectorCreds: false });
+  return buildEnv(boxRoot, { additions, connectorCreds: false, profile: "agent" });
 }
 
 /**
@@ -188,10 +208,13 @@ export async function buildScriptEnv(
  * card and waiting for it to fire. What Track 1 closes is the trivial path —
  * the agent's own process env — not every path; Track 3 closes this one by
  * retiring env-var credentials for the store.
+ *
+ * Sets `BBX_SPAWN_PROFILE=tooling`, the one value that lets a credentialed
+ * `bbx` verb do its work in-process.
  */
 export async function buildToolingScriptEnv(
   boxRoot: string,
   additions?: Record<string, string | undefined>
 ): Promise<NodeJS.ProcessEnv> {
-  return buildEnv(boxRoot, { additions, connectorCreds: true });
+  return buildEnv(boxRoot, { additions, connectorCreds: true, profile: "tooling" });
 }

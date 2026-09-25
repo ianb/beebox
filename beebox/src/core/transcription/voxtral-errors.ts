@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { TranscriptionError } from "./index.js";
-import { truncateUpstreamBody } from "./index.js";
+import { truncateUpstreamBody } from "./upstream-body.js";
 
 const voxtralErrorBodySchema = z.object({
   error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),

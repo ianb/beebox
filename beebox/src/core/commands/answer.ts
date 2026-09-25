@@ -6,6 +6,7 @@
  * atomic commit (see `question-transition.ts`).
  */
 
+import { withBoxWork } from "../../lib/box-maintenance.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
@@ -304,6 +305,16 @@ async function executeAnswer(
       selectedId: resolved?.selectedId,
     },
   };
+}
+
+/** HTTP and CLI answers share one admitted span; a migration's question is answered like any other once its owner is gone. */
+export function answerWithAdmission(opts: { ctx: CommandContext; args: Record<string, unknown>; onAnswered?: () => void }): Promise<CommandResult> {
+  const { ctx, args } = opts;
+  return withBoxWork({ boxRoot: ctx.boxRoot, reason: "answer" }, async () => {
+    const result = await executeAnswer(ctx, args);
+    if (result.success) opts.onAnswered?.();
+    return result;
+  });
 }
 
 registerCommand({

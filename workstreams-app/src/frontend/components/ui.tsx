@@ -4,8 +4,8 @@ export function Button({ intent, className, children, ...props }: ButtonHTMLAttr
   return <button className={`button button-${intent ?? "secondary"} ${className ?? ""}`} {...props}>{children}</button>;
 }
 
-export function Pill({ tone, children }: { tone?: "neutral" | "info" | "success" | "warning" | "danger" | "accent" | "manual"; children: ReactNode }) {
-  return <span className={`pill pill-${tone ?? "neutral"}`}>{children}</span>;
+export function Pill({ tone, title, children }: { tone?: "neutral" | "info" | "success" | "warning" | "danger" | "accent" | "manual"; title?: string | undefined; children: ReactNode }) {
+  return <span className={`pill pill-${tone ?? "neutral"}`} title={title}>{children}</span>;
 }
 
 export function CopyIcon() {

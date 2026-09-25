@@ -9,6 +9,7 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
 export function GoogleConnectLink({ id }: { id: string }) {
   const { boxSlug } = useParams({ strict: false });
@@ -16,7 +17,7 @@ export function GoogleConnectLink({ id }: { id: string }) {
     <div className="mt-3">
       <Link
         id={id}
-        to={href(`/${boxSlug}/admin`)}
+        to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.admin}`)}
         className="text-sm text-primary hover:text-primary-dark underline"
       >
         Set up Google connection in Admin

@@ -12,7 +12,7 @@
 # checkout stays current with no rebuild step — see the wrapper's own header
 # comment and README "Setup" step 1.
 #
-# Measured 2026-08-01: the workspace's `node-linker=hoisted` (.npmrc,
+# Measured 2026-08-01: the workspace's `nodeLinker: hoisted` (pnpm-workspace.yaml,
 # necessarily workspace-wide) means the filtered install still materializes
 # the full hoisted tree (~1.3 GB incl. better-sqlite3/sharp) — filtering does
 # NOT make the install lighter here, it only scopes which projects' scripts
@@ -53,5 +53,15 @@ node scan-uploader.mjs --help > help.out
 grep -q "configure" help.out || { echo "FAIL: --help does not mention configure"; exit 1; }
 node scan-uploader.mjs configure --help > configure-help.out 2>&1 \
   || { echo "FAIL: configure --help errored"; exit 1; }
+
+# The build stamp exists ONLY in a built bundle — esbuild's `define` is what
+# puts it there — so this is the only place bundle mode can be asserted for
+# real. A bundle that reports "source" would be a bundle the box cannot age.
+node scan-uploader.mjs --version > version.out 2>&1 \
+  || { echo "FAIL: --version errored"; exit 1; }
+grep -q "^bundle " version.out \
+  || { cat version.out; echo "FAIL: --version does not report bundle mode"; exit 1; }
+grep -q "wire contract v" version.out \
+  || { cat version.out; echo "FAIL: --version does not report the wire contract version"; exit 1; }
 
 echo "PASS: clean clone -> filtered install -> build -> self-contained bundle run"

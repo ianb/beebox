@@ -9,7 +9,7 @@ the saved fields.
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { simpleGit } from "simple-git";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { addInvitedMember, addUser, createFirstUser } from "../../src/webapp/local-users.js";
@@ -162,6 +162,18 @@ JSON.stringify({ returned: engineResult.agentEngine, saved: engineConfig.agentEn
 => codex
 ```
 
+Retired model pins are shown as the current model in Admin, matching the model
+the runtime will use instead of presenting a working pin as unavailable.
+
+```ts continue
+await box.write("_config/box.json", JSON.stringify({
+  agentEngine: "codex",
+  agentModel: "gpt-5.6-sol",
+}));
+(await caller(box.root).admin.boxConfig()).agentModel
+=> gpt-6-sol
+```
+
 An invalid configured engine is not presented as a valid Claude default. The
 runtime rejects this value too, so Admin must surface the same configuration
 failure instead of fabricating a usable-looking payload.
@@ -288,24 +300,26 @@ BAD_REQUEST
 ## A Git failure does not falsely report that the saved config rolled back
 
 ```ts
-const noGitBox = await makeTmpBox();
+const rejectedCommitBox = await makeTmpBox({ git: true });
+await rejectedCommitBox.write(".git/hooks/pre-commit", "#!/bin/sh\nexit 1\n");
+await chmod(join(rejectedCommitBox.root, ".git/hooks/pre-commit"), 0o755);
 const originalConsoleError = console.error;
 const commitErrors = [];
 console.error = (...args) => commitErrors.push(args);
-const degraded = await caller(noGitBox.root).admin.updateBoxConfig({
+const degraded = await caller(rejectedCommitBox.root).admin.updateBoxConfig({
   allowedEmails: ["member@example.com"],
 });
 console.error = originalConsoleError;
-const savedWithoutGit = JSON.parse(await noGitBox.read("_config/box.json"));
+const savedAfterRejection = JSON.parse(await rejectedCommitBox.read("_config/box.json"));
 JSON.stringify({
   success: degraded.success,
   warning: degraded.commitWarning,
-  saved: savedWithoutGit.allowedEmails,
+  saved: savedAfterRejection.allowedEmails,
   logged: commitErrors.length,
 })
 => {"success":true,"warning":"Saved, but the Git commit failed.","saved":["member@example.com"],"logged":1}
 ```
 
 ```ts cleanup
-await noGitBox.cleanup();
+await rejectedCommitBox.cleanup();
 ```

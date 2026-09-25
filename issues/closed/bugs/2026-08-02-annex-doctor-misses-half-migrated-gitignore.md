@@ -7,6 +7,13 @@ discovered-in: main session — a clerk page-save 500'd; several boxes found hal
 resolution: implemented
 ---
 
+> **⚠ Its "half-migrated" framing is retired** (full-embrace-annex,
+> 2026-09-14). There is no migration and no second scheme: a box is annex-shaped
+> from its first commit. The doctor's gitignore check is still live and still
+> matters — a hand-edited `.gitignore` can still hide assets — but it now reports
+> a broken invariant rather than an incomplete migration, and check 2 reports an
+> un-annexed box as `failed` rather than `ok`.
+
 Resolved by `7084030e`. `bbx doctor annex` now uses the annex gate's shared
 `.gitignore` predicate and reports the half-migrated state with the existing
 `bbx attachments unignore` repair. The secondary hardening ideas below were not

@@ -128,7 +128,7 @@ export async function baselineGmailSync(options: BaselineGmailSyncOptions): Prom
   const { statePath, boxRoot, env } = options;
   await saveFakeGmailState(statePath, emptyFakeGmailState());
   await runBbx({
-    args: ["wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
+    args: ["engine", "wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
     boxRoot,
     env: { ...env, BBX_FAKE_GMAIL: statePath },
     action: "gmail baseline sync",
@@ -170,7 +170,7 @@ export async function injectEmail(options: InjectEmailOptions): Promise<string> 
   await saveFakeGmailState(statePath, state);
   const wakeupEnv = { ...env, BBX_FAKE_GMAIL: statePath };
   await runBbx({
-    args: ["wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
+    args: ["engine", "wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
     boxRoot,
     env: wakeupEnv,
     action: `inject-email ${fixture}`,
@@ -200,7 +200,7 @@ export async function advanceDays(options: AdvanceDaysOptions): Promise<Date> {
   const { days, from, boxRoot, env } = options;
   const to = new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
   const dayEnv = { ...env, BBX_TIME: to.toISOString() };
-  await runBbx({ args: ["wakeup", "--skip-push"], boxRoot, env: dayEnv, action: `advance-days ${String(days)}` });
+  await runBbx({ args: ["engine", "wakeup", "--skip-push"], boxRoot, env: dayEnv, action: `advance-days ${String(days)}` });
   await runBbx({ args: ["tick"], boxRoot, env: dayEnv, action: `advance-days ${String(days)}` });
   // The wakeup and tick each run one reactor cycle; drain any jobs they queued
   // (a new day's scheduled work, mail refreshed overnight) so the next item does

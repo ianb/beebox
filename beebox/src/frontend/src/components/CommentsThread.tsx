@@ -152,7 +152,7 @@ function CommentItem({ comment }: { comment: ThreadComment }) {
         <Body content={comment.content} />
 
         {comment.replies.length > 0 ? (
-          <Stack gap="sm" className="mt-1">
+          <Stack gap="sm">
             {comment.replies.map((reply, i) => (
               <Reply key={reply.id || i} reply={reply} />
             ))}

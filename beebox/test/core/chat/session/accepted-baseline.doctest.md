@@ -116,3 +116,29 @@ const [undated] = readAcceptedMessages(bus, {
 JSON.stringify(undated.reconcileKnownUuids)
 => ["item-100"]
 ```
+
+## The bus copy strips `[image#N]` from the body only
+
+The bus carries the message text without its image bytes, so the body's
+`[image#N]` anchors are stripped to match the transcript, where they became
+image blocks. The same token inside the trailing `<attachments>` block is the
+line naming the image's original file; the transcript keeps that as text
+(`shared/chat-content-blocks.ts`), so the bus copy must keep it too, or the
+two texts stop comparing equal and the message renders twice.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root);
+accept(bus, "2026-08-26T12:54:34.000Z",
+  "<typed>look [image#1]</typed>\n<attachments>\n[image#1]: _tmp/shot.png\n</attachments>");
+const [accepted] = readAcceptedMessages(bus, { sessionId: SESSION, now: NOW, viewerEmail: null, history: [] });
+textOf(accepted)
+=> <typed>look </typed>
+<attachments>
+[image#1]: _tmp/shot.png
+</attachments>
+```
+
+```ts cleanup
+await box.cleanup();
+```

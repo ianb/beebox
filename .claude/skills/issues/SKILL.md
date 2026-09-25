@@ -1,6 +1,6 @@
 ---
 name: issues
-description: Explains the monorepo's issue/idea queue at issues/ (and the private-issues/ counterpart) — what it's for, when to file, and how filing works. Use when you notice a bug, idea, or tension outside your current task worth keeping; when the human says "file an issue", "add this to the queue", "track this", or "worth keeping"; or when closing/reclassifying an existing item. Triggers include "file this", "add to the issue queue", "close this issue", "is there already an issue for X". Full conventions in issues/CLAUDE.md.
+description: File, find, amend, close, or reclassify items in the monorepo's public or private issue queue. Use when an out-of-scope bug, idea, or tension should be preserved, or when the human asks to manage an issue.
 ---
 
 # The issue queue

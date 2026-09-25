@@ -26,9 +26,11 @@ import { createServer } from "../../src/webapp/server.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
-import { makeBoxAnnexShaped } from "./annex-box.js";
+import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
+import { createGitAnnexService } from "../../src/services/git-annex.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { signSession, type SessionUser } from "../../src/webapp/auth.js";
+import { hideAssetsAgain } from "./legacy-ignore-block.js";
 
 export const TEST_SLUG = "test";
 
@@ -69,15 +71,15 @@ export interface TestServerOptions {
    */
   openAccess?: boolean | undefined;
   /**
-   * Serve a box that has been converted to git-annex (assets visible to git,
-   * annex holds the bytes). Defaults to `false` — the template box is on the
-   * manifest scheme, like a box that has not run `bbx attachments to-annex`.
+   * Hand-edit the box `.gitignore` back to hiding its assets, BEFORE the server
+   * boots — the scan routes probe the box's shape at registration.
    *
-   * Routes that write asset bytes gate on this shape: the scan-upload routes
-   * refuse with a 503 on a manifest-scheme box, so their doctests declare which
-   * side they are testing rather than inheriting it.
+   * Nothing produces this state any more; a box is annex-shaped from creation.
+   * It is built deliberately here because the guards that answer it — the scan
+   * routes' retryable 503 above all — still have to be tested, and a guard
+   * whose condition no test can reach is a guard nobody knows works.
    */
-  annexBox?: boolean | undefined;
+  assetsHiddenAgain?: boolean | undefined;
   /**
    * Chat backend for every session this server creates. Pass
    * `createFakeChatBackend()` to exercise the chat-send path (including a run
@@ -96,18 +98,6 @@ console.log = (...args: unknown[]) => {
   const first = args[0];
   if (typeof first === "string" && first.startsWith("[chat-history:")) return;
   _origLog(...args);
-};
-
-// Same treatment for the scan-upload routes' registration refusal. Every
-// makeTestServer() boots a manifest-scheme box unless it asks for
-// `annexBox: true`, and the scan routes correctly log one line per boot saying
-// they are disabled. Useful on a real box, pure noise across hundreds of route
-// tests that never touch scan. Narrow on purpose — only this exact message.
-const _origError = console.error;
-console.error = (...args: unknown[]) => {
-  const first = args[0];
-  if (typeof first === "string" && first.startsWith("[scan] Box ") && first.includes("not annex-converted")) return;
-  _origError(...args);
 };
 
 // A fully-initialized box (directories + git repo + initial commit) is
@@ -141,10 +131,12 @@ function getTemplateBox(): Promise<string> {
       for (const mod of ["react", "react-dom"]) {
         await symlink(join(reactNodeModules, mod), join(dir, "node_modules", mod), "dir");
       }
-      execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
-        cwd: dir,
-        stdio: "pipe",
-      });
+      // Annex between `git init` and the initial commit, as real `bbx init`
+      // does. Every clone of this template inherits the shape, because there is
+      // no other box shape.
+      execSync("git init -q -b main", { cwd: dir, stdio: "pipe" });
+      await annexNewBox(createGitAnnexService(), dir);
+      execSync("git add -A && git commit --allow-empty -m init -q", { cwd: dir, stdio: "pipe" });
       templateDir = dir;
       return dir;
     })();
@@ -158,6 +150,12 @@ function getTemplateBox(): Promise<string> {
 process.on("exit", () => {
   if (templateDir !== null) {
     try {
+      // Same read-only annex objects as rmBoxDir, in the sync exit handler.
+      try {
+        execSync(`chmod -R u+w ${JSON.stringify(templateDir)}`, { stdio: "pipe" });
+      } catch (_e) {
+        /* best-effort: the rmSync below is what matters */
+      }
       rmSync(templateDir, { recursive: true, force: true });
     } catch (_e) {
       // best-effort; the OS reaps the temp dir anyway
@@ -172,7 +170,23 @@ process.on("exit", () => {
  * (two independent boxes on one server) get their box(es) from, so the clone
  * + annex-conversion steps live in exactly one place.
  */
-async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir: string; boxRoot: string }> {
+/**
+ * Remove a temp box directory.
+ *
+ * git-annex marks object files and their parent directories read-only so
+ * content cannot be modified in place, which makes `rm` fail with EACCES on
+ * any box that annexed something. Restore write permission first.
+ */
+async function rmBoxDir(dir: string): Promise<void> {
+  try {
+    execSync(`chmod -R u+w ${JSON.stringify(dir)}`, { stdio: "pipe" });
+  } catch (_e) {
+    /* best-effort: the rm below reports anything that actually matters */
+  }
+  await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+}
+
+async function cloneTemplateBox(): Promise<{ tmpDir: string; boxRoot: string }> {
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "bbx-route-test-"));
 
@@ -182,17 +196,12 @@ async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir
   await cp(template, tmpDir, { recursive: true });
   const boxRoot = tmpDir;
 
-  // Before the server boots: registration-time probes read this shape, so
-  // converting after `createServer` would be too late.
-  if (opts?.annexBox === true) {
-    await makeBoxAnnexShaped(boxRoot);
-  }
-
   return { tmpDir, boxRoot };
 }
 
 export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
-  const { tmpDir, boxRoot } = await cloneTemplateBox({ annexBox: opts?.annexBox === true });
+  const { tmpDir, boxRoot } = await cloneTemplateBox();
+  if (opts?.assetsHiddenAgain === true) await hideAssetsAgain(boxRoot);
 
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).
@@ -219,7 +228,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
       // maxRetries handles benign ENOTEMPTY races on macOS when background
       // writes (chat-history backfill, scheduler tick) finish just as we walk.
       // Remove the whole package clone (tmpDir), not just content/.
-      await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      await rmBoxDir(tmpDir);
     },
   };
 }
@@ -331,8 +340,8 @@ export async function createTwoBoxTestServer(opts?: TwoBoxTestServerOptions): Pr
       eventBusA.close();
       eventBusB.close();
       await Promise.all([
-        rm(cloneA.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
-        rm(cloneB.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
+        rmBoxDir(cloneA.tmpDir),
+        rmBoxDir(cloneB.tmpDir),
       ]);
     },
   };

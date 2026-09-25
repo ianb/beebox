@@ -12,7 +12,10 @@ import { buildTimezoneContext } from "../box/config.js";
 import { buildScriptEnv } from "../script-env.js";
 import { gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
-import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
+import { startPromptLogger, stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
+import { providerEnvAdditions } from "../provider-env.js";
+import { isThirdPartyModel } from "../../shared/agent-models.js";
+import { ProviderSetupError } from "../provider-setup-error.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
@@ -22,6 +25,7 @@ import type { AgentResult, AgentResultBase } from "./types.js";
 import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
+  signal?: AbortSignal | undefined;
   boxRoot: string;
   systemPrompt: string;
   prompt: string;
@@ -199,7 +203,18 @@ async function setupRunEnv(
 ): Promise<{ logger: PromptLogger | null; env: Record<string, string> }> {
   const { boxRoot, onOutput } = options;
   const shouldLog = process.env.BBX_LOG_PROMPTS === "1";
-  const logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
+  let logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
+
+  // A third-party run (GLM, an added OpenRouter model) bypasses the logging
+  // proxy: the proxy forwards to first-party, and the two features claim the
+  // same ANTHROPIC_BASE_URL slot. Warn and disable rather than teach the proxy
+  // other upstreams (docs/plans/box-glm-provider.md, Track 3).
+  const thirdParty = isThirdPartyModel(options.model);
+  if (thirdParty && logger) {
+    stopPromptLogger(logger);
+    logger = null;
+    onOutput?.("Prompt logging disabled for this run: third-party model runs bypass the logging proxy.\n");
+  }
 
   if (shouldLog && logger) {
     onOutput?.(`Prompt logging enabled → .beebox/logs/${filenameHint}.log\n`);
@@ -214,6 +229,10 @@ async function setupRunEnv(
     ...(logger ? { ANTHROPIC_BASE_URL: `http://localhost:${logger.port}/` } : {}),
   });
 
+  // Endpoint and key for a third-party model; a refusal throws
+  // ProviderSetupError, which the preflight in runAgent already shaped.
+  await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run", env });
+
   return { logger, env: dropUndefined(env) };
 }
 
@@ -221,6 +240,7 @@ async function setupRunEnv(
  * Run a single agent turn (or session-resume turn) via the SDK.
  */
 export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
+  options.signal?.throwIfAborted();
   const { boxRoot, systemPrompt, prompt, dryRun = false, maxTurns = 20 } = options;
 
   const isResume = options.resumeSessionId !== undefined;
@@ -241,9 +261,16 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   // Fakes replace `createAgent`, so this real SDK path (and its probe) is never
   // reached by fake-injecting tests.
   try {
-    await checkClaudeAuth();
+    // Provider-aware preflight: a third-party model is gated on its provider
+    // setup, not on a Claude login — `claude auth status` reports token
+    // presence and says nothing about whether that endpoint will accept it.
+    if (isThirdPartyModel(options.model)) {
+      await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run" });
+    } else {
+      await checkClaudeAuth();
+    }
   } catch (e) {
-    if (e instanceof ClaudeAuthError) {
+    if (e instanceof ClaudeAuthError || e instanceof ProviderSetupError) {
       return {
         success: false,
         output: "",
@@ -270,16 +297,24 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     binaryPath,
     appendedSystem,
   });
-  const outcome = await consumeAgentStream({
-    prompt: options.prompt,
-    queryOptions,
-    onOutput: options.onOutput,
-    onSessionId: options.onSessionId,
-    logger,
-  });
+  const controller = new AbortController();
+  const onAbort = (): void => controller.abort(options.signal?.reason);
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  if (options.signal?.aborted) onAbort();
+  let outcome: RunStreamOutcome;
+  try {
+    outcome = await consumeAgentStream({
+      prompt: options.prompt, queryOptions: { ...queryOptions, abortController: controller },
+      onOutput: options.onOutput, onSessionId: options.onSessionId, logger,
+    });
+  } finally {
+    options.signal?.removeEventListener("abort", onAbort);
+  }
 
-  return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
-    provider: "claude",
-    boxRoot,
-  });
+  const result = buildAgentResult(outcome, options.resumeSessionId);
+  // Quota classification reads Claude's own limit messages and parks the
+  // whole claude engine. A third-party provider's failure is not Claude's, so
+  // it stays an ordinary failure rather than pausing first-party work.
+  if (isThirdPartyModel(options.model)) return result;
+  return applyEngineUnavailability(result, { provider: "claude", boxRoot });
 }

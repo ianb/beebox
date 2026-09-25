@@ -91,7 +91,7 @@ subprocess was least recently used — the entry stays (resumable later), only
 its subprocess stops.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 
@@ -204,7 +204,7 @@ await box.cleanup();
 ## Deletion reservation stops and tombstones a live session
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 const sessionId = "11111111-1111-4111-8111-111111111111";
@@ -237,7 +237,7 @@ re-warms. (The backend clock and the registry's `lastUse` share the injected
 `now`.)
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 
@@ -299,7 +299,7 @@ const path = await import("node:path");
 const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
 const { randomUUID } = await import("node:crypto");
 
-const codexBox = await makeTmpBox();
+const codexBox = await makeTmpBox({ git: true });
 await fs.mkdir(path.join(codexBox.root, "_config"), { recursive: true });
 await fs.writeFile(
   path.join(codexBox.root, "_config/box.json"),
@@ -361,5 +361,29 @@ registry.shutdown();
 
 ```ts cleanup
 registry.shutdown();
+await box.cleanup();
+```
+
+## Maintenance cannot be undone by a read warming a session
+
+```ts
+const box = await makeTmpBox({ git: true });
+const backend = createFakeChatBackend();
+const registry = new ChatSessionRegistry(box.root, { backend });
+await registry.prewarm();
+registry.quiesceForMaintenance();
+registry.getOrCreate("maintenance-read");
+await registry.prewarm();
+JSON.stringify({ warm: backend.hasWarm(), starts: backend.prewarmCount })
+=> {"warm":false,"starts":1}
+
+registry.resumeAfterMaintenance();
+await registry.prewarm();
+JSON.stringify({ warm: backend.hasWarm(), starts: backend.prewarmCount })
+=> {"warm":true,"starts":2}
+```
+
+```ts cleanup
+await registry.shutdown();
 await box.cleanup();
 ```

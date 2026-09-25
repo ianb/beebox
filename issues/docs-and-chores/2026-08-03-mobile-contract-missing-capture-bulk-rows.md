@@ -4,6 +4,7 @@ workstream: skill-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-skill-review — codex review of the new bbx-ios-overlap skill
+priority: normal
 ---
 
 `docs/mobile-contract.md` presents itself as the canonical Contract Surface

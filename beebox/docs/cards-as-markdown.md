@@ -77,16 +77,23 @@ todos:
     status: parked
 ```
 
-**Querying and surfacing.** `bbx todos` is the read/query path (deterministic,
-locator-carrying, grouped by plate-state — escalated / on-plate / quiet /
-parked); it's designed for agent consumption, not human browsing directly.
-Mutating a todo is an ordinary card edit — there is no `bbx todos` write
-subcommand. A `todo-view` card (see `src/schemas/todo-view.ts`) is the
-human-facing display surface: it's a live query (a `glob` plus optional
-`status`/`assigned` filters) rendered as plate-state groups, and — per "views
-attach to cards" — dropping one in a directory gives that subtree its own
-plate. `_content/plate.todo-view.card` is the box-wide instance. Full design
-record: `docs/implemented-plans/todo-annotation.md`.
+**Querying and surfacing.** `bbx query todos` is the read/query path
+(deterministic, locator-carrying, scoped by `--here` to one place and the
+todos elsewhere that link into it); it's designed for agent consumption, not
+human browsing directly. Mutating a todo is an ordinary card edit — there is
+no write subcommand. A `todo-view` card (see `src/schemas/todo-view.ts`) is
+the human-facing display surface: it's the same query (a `glob` plus optional
+`status`/`assigned` filters), and — per "views attach to cards" — dropping one
+in a directory gives that subtree its own plate.
+`_content/plate.todo-view.card` is the box-wide instance. Design record:
+`docs/implemented-plans/todo-annotation.md` and
+`docs/plans/todo-collection.md`.
+
+**Where a todo sits is what it means.** Both surfaces group todos by the card
+they were written in, then by the heading above them, then under the todo
+they nest beneath — so put a todo under the heading it belongs to. A note
+written after the closing tag travels with the todo, and a link inside a todo
+makes it surface on the linked place too.
 
 The suggested way to make a todo list at all is a simple `.doc.card` with
 embedded `{% todo %}` items — there is no dedicated todo-list card type.

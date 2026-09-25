@@ -13,6 +13,7 @@ import type { Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { loadManifestEntries } from "./docs-manifest.js";
 import { listNuggetSourceRefs } from "./nuggets.js";
 
 /** One input file: path relative to site/ (posix), and a short content hash. */
@@ -44,7 +45,7 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   for (const entry of top) {
     if (entry.isFile() && entry.name.endsWith(".ts")) rels.push(entry.name);
   }
-  for (const dir of ["cards", "nuggets", "assets"]) {
+  for (const dir of ["cards", "nuggets", "assets", "docs"]) {
     for (const entry of await readdirDirents(path.join(siteDir, dir))) {
       if (!entry.isFile() || entry.name.startsWith(".")) continue;
       const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name));
@@ -54,7 +55,37 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   for (const source of await listNuggetSourceRefs(path.join(siteDir, "nuggets"))) {
     rels.push(`../${source}`);
   }
+
+  // Agent-docs corpus inputs: the manifest itself, every repo file it
+  // promotes, and the generator's own content fingerprint (folded in via
+  // beebox/box-docs/.hash, which `ensurePackageDocs` refreshes on any
+  // `generateDocs` run — tolerated absent, since a fresh checkout may not
+  // have run it yet).
+  // The manifest is tolerated absent for the same reason `loadManifestEntries`
+  // returns [] for a missing file: a site dir without one simply promotes no
+  // repo docs. Listing it unconditionally made `hashSources` — which throws on
+  // a listed file it cannot read, by contract — fail every build and every
+  // router site test in a checkout that has no manifest.
+  const manifestPath = path.join(siteDir, "docs-manifest.yaml");
+  if (await fileExists(manifestPath)) rels.push("docs-manifest.yaml");
+  for (const entry of loadManifestEntries(manifestPath)) {
+    rels.push(`../${entry.source}`);
+  }
+  if (await fileExists(path.join(siteDir, "..", "beebox", "box-docs", ".hash"))) {
+    rels.push("../beebox/box-docs/.hash");
+  }
+
   return rels.toSorted((a, b) => a.localeCompare(b));
+}
+
+/** Whether an optional source input is present; absent inputs are left off the list. */
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 async function readdirDirents(dir: string): Promise<Dirent[]> {

@@ -136,10 +136,24 @@ export async function execChild(command: { file: string; args: string[] }, optio
   child.stderr?.on("data", collect);
 
   let timedOut = false;
+  let interrupted: "SIGTERM" | "SIGINT" | undefined;
+  let termination: Promise<void> | undefined;
+  const terminate = (graceMs: number): void => {
+    if (termination) return;
+    killGroup(child.pid, "SIGTERM");
+    // Wait for the full shutdown interval even if the direct child exits.
+    termination = new Promise((resolve) => {
+      setTimeout(() => { killGroup(child.pid, "SIGKILL"); resolve(); }, graceMs);
+    });
+  };
+  // Finish forwarding before an enclosing runner reaches its own kill deadline.
+  const onTerm = (): void => { interrupted = "SIGTERM"; terminate(KILL_GRACE_MS / 2); };
+  const onInt = (): void => { interrupted = "SIGINT"; terminate(KILL_GRACE_MS / 2); };
+  process.once("SIGTERM", onTerm);
+  process.once("SIGINT", onInt);
   const timer = setTimeout(() => {
     timedOut = true;
-    killGroup(child.pid, "SIGTERM");
-    setTimeout(() => { killGroup(child.pid, "SIGKILL"); }, KILL_GRACE_MS).unref();
+    terminate(KILL_GRACE_MS);
   }, options.timeoutMs);
 
   const exitCode = await new Promise<number | null>((resolve) => {
@@ -154,10 +168,14 @@ export async function execChild(command: { file: string; args: string[] }, optio
     child.on("close", (code) => { resolve(code); });
   });
   clearTimeout(timer);
+  await termination;
+  process.removeListener("SIGTERM", onTerm);
+  process.removeListener("SIGINT", onInt);
   await new Promise<void>((resolve) => {
     if (stream === null) { resolve(); return; }
     stream.end(() => { resolve(); });
   });
+  if (interrupted) process.exit(interrupted === "SIGTERM" ? 143 : 130);
   return { exitCode: timedOut ? null : exitCode, timedOut, output: tail.text(), logTruncated };
 }
 

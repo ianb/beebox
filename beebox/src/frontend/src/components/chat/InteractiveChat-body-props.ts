@@ -25,9 +25,6 @@ export interface ChatBodyProps {
   conversationKey?: string;
   transcriptVisible?: boolean;
   sendDisabledReason?: string;
-  routeContent?: ReactNode;
-  onShowConversation?: () => void;
-  onHideConversation?: () => void;
   ambientRegion?: ReactNode;
   selectionNotice?: ReactNode;
   failedRegion?: ReactNode;
@@ -82,7 +79,6 @@ export interface ChatBodyProps {
    * Native shell modes: embed also suppresses the header, while nativeComposer
    * keeps the normal web chrome. Both suppress the web input surface.
    */
-  embedded: boolean;
   nativeComposer: boolean;
   /** Pending capture bubbles (Track 4), and the two verbs a failed one offers. */
   captureBubbles: CaptureBubbleModel[];

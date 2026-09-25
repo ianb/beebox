@@ -63,7 +63,7 @@ The reporting half of this issue is fixed: the two paths now say which phase
 failed, the result frame carries a `phase` field, and `[codex-chat]` logs the
 full stack at the throw site. The retry decision and the construction-rate
 question moved to
-[codex session start is intermittent](../../deferred/2026-08-24-codex-thread-start-failure-is-intermittent.md).
+[codex session start is intermittent](../../bugs/2026-08-24-codex-thread-start-failure-is-intermittent.md).
 
 ## It is intermittent, which rules out the obvious causes
 

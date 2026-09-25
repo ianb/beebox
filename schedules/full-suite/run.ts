@@ -16,17 +16,18 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { readMemoryPressure } from "../../bin/host-pressure.js";
 import { gitCommonDir } from "../../bin/test-git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
 import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import type { Batch } from "./attribution.js";
-import { TIERS, batchExit, completionMarker, workstreamOf } from "./lib.js";
+import { TIERS, batchExit, completionMarker, isHostQuiet, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
-import { report } from "./reporting.js";
+import { raiseCondition, report } from "./reporting.js";
 import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
-import { readPending, writeKnownRed, writeLastAlert, writePending } from "./state.js";
+import { readPending, writeKnownRed, writePending } from "./state.js";
 import { currentDurations, deferRed, handleRed } from "./red.js";
 
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
@@ -68,22 +69,34 @@ const QUIET_WAIT_BUDGET_MS = 40 * 60 * 1000;
 /**
  * The tick fires on the hour whatever the host is doing; a run that starts
  * into a thrashed machine wastes the whole batch (its verdicts are withheld
- * anyway). Waiting is cheap and bounded — and if the host never goes quiet,
- * the run proceeds and the slowdown gate protects the verdicts.
+ * anyway) and, under memory pressure specifically, is a predetermined loss —
+ * tap kills files at its 300s budget instead of finishing slow (2026-09-11).
+ * So a host still loaded after the budget is a deferral, not a run: see
+ * `main`'s handling of a `false` return.
  */
-async function waitForQuietHost(): Promise<void> {
+async function waitForQuietHost(): Promise<boolean> {
   const bar = os.availableParallelism() * QUIET_LOAD_PER_CORE;
   for (let waited = 0; ; waited += QUIET_POLL_MS) {
     const load = os.loadavg()[0] ?? 0;
-    if (load <= bar) {
-      if (waited > 0) process.stdout.write(`full-suite: host quiet after ${String(Math.round(waited / 60000))}m.\n`);
-      return;
+    const { level, pageouts } = readMemoryPressure();
+    if (isHostQuiet({ load1: load, bar, level })) {
+      const detail = `load1 ${load.toFixed(1)}, pressure ${String(level)}, pageouts ${String(pageouts)}`;
+      process.stdout.write(
+        waited > 0
+          ? `full-suite: host quiet after ${String(Math.round(waited / 60000))}m (${detail}).\n`
+          : `full-suite: host quiet (${detail}).\n`,
+      );
+      return true;
     }
     if (waited >= QUIET_WAIT_BUDGET_MS) {
-      process.stdout.write(`full-suite: still loaded (load1 ${load.toFixed(1)} > ${String(bar)}) after the wait budget; running anyway.\n`);
-      return;
+      process.stdout.write(
+        `full-suite: still loaded (load1 ${load.toFixed(1)} > ${String(bar)}, pressure ${String(level)}, pageouts ${String(pageouts)}) after the wait budget.\n`,
+      );
+      return false;
     }
-    process.stdout.write(`full-suite: load1 ${load.toFixed(1)} > ${String(bar)}; waiting for a quiet host.\n`);
+    process.stdout.write(
+      `full-suite: load1 ${load.toFixed(1)} > ${String(bar)} (pressure ${String(level)}, pageouts ${String(pageouts)}); waiting for a quiet host.\n`,
+    );
     await delay(QUIET_POLL_MS);
   }
 }
@@ -146,21 +159,47 @@ async function main(): Promise<void> {
 
   // Duration history must predate this run's own tier records.
   const histories = durationHistories({ records: readRecords(ledgerPaths(gitCommonDir(REPO_ROOT)).ledger) });
-  await waitForQuietHost();
+  if (!(await waitForQuietHost())) {
+    // Never run into a host that stayed loaded: under memory pressure the
+    // outcome is predetermined (tap kills files at 300s), and the batch/
+    // pending state is left untouched so the next hourly tick retries the
+    // same pinned commit rather than skipping ahead.
+    process.stdout.write("full-suite: host still loaded after 40m; deferred to the next tick.\n");
+    // No verdict: earlier conditions stand, and this one says the run was
+    // skipped. It is the run's one report.
+    await raiseCondition({
+      kind: "deferred",
+      culprits: [],
+      verdict: false,
+      priority: "fyi",
+      title: "full suite: deferred, host still loaded after the wait budget",
+      message: `The full-suite run at \`${batch.pinned.slice(0, 8)}\` skipped: the host was still loaded after ` +
+        "the 40-minute wait budget. Nothing was tested; the same commit will be retried on the next tick.",
+    });
+    return;
+  }
 
   let checkout: Checkout | null = null;
   try {
     checkout = await createCheckout(batch.pinned);
     const base = batch.base ?? batch.pinned;
     const ordinary = await runTier({ checkout, tier: "ordinary", base });
+    if (!tierProducedResults(ordinary)) refuse(`ordinary tier produced no TAP results (exit ${String(ordinary.exitCode)}):\n${ordinary.output}`);
     const careful = await runTier({ checkout, tier: "careful", base });
+    if (!tierProducedResults(careful)) refuse(`careful tier produced no TAP results (exit ${String(careful.exitCode)}):\n${careful.output}`);
     const output = `${ordinary.output}\n${careful.output}`;
     const runs = [ordinary, careful];
     const failures = failingFiles(runs);
     // An untrusted run yields NO verdicts in either direction: red is
-    // deferred, and green neither clears known-red/pending nor resets alert
-    // suppression — a pass at 5× usual speed is as unmeasured as a failure.
+    // deferred, and green neither clears known-red/pending nor resolves alert
+    // conditions — a pass at 5× usual speed is as unmeasured as a failure.
     const slowdown = batchSlowdown({ current: currentDurations(runs), histories });
+    const endPressure = readMemoryPressure();
+    const factorLabel = slowdown.factor === null ? "n/a" : `${slowdown.factor.toFixed(1)}×`;
+    process.stdout.write(
+      `full-suite: end of run (pressure ${String(endPressure.level)}, pageouts ${String(endPressure.pageouts)}); ` +
+        `slowdown factor ${factorLabel} over ${String(slowdown.samples)} files.\n`,
+    );
     if (runIsUntrusted(slowdown) && slowdown.factor !== null) {
       process.stdout.write(
         `full-suite: ran at ${slowdown.factor.toFixed(1)}× usual durations (${String(slowdown.samples)} files); withholding verdicts.\n`,
@@ -179,8 +218,9 @@ async function main(): Promise<void> {
       process.stdout.write("full-suite: green.\n");
       await writeKnownRed([]);
       await writePending({});
-      await writeLastAlert(null);
       await markComplete({ batch, runs });
+      // Green is a verdict: every condition this schedule raised has cleared.
+      await report(["resolve"]);
       await report(["done"]);
       return;
     }

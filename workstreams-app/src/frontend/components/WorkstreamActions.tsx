@@ -20,15 +20,38 @@ export function isScheduled(row: Workstream): boolean {
  * under way gets Focus like any live row. The boxholder's way into a schedule
  * is to go into the workstream and chat.
  */
+/**
+ * Archive hides a settled row; unarchive brings it back. Mirrors the CLI's own
+ * rules (`bin/workstreams archive`), which refuses in exactly two cases:
+ *
+ * - a SCHEDULED record — the way to stop one is `enabled: false` in its
+ *   `schedule.yaml`, not hiding the row;
+ * - a row removed with UNMERGED work — archiving would hide recovery state.
+ *
+ * So the verb belongs on settled rows: dormant, stale, and culled-and-merged.
+ * An in-progress or live row is not offered it; there is nothing settled to
+ * hide yet.
+ */
+function archivable(row: Workstream): boolean {
+  if (row.session.archived) return false;
+  if (isScheduled(row)) return false;
+  if (row.session.removed) return row.session.removed.merged === true;
+  return row.routing.state === "dormant" || row.routing.state === "stale";
+}
+
 export function workstreamActionVerbs(row: Workstream): ActionVerb[] {
   if (row.routing.action === "wait-for-launch") return [];
+  // An archived row's one move is to come back: it sits in its own section and
+  // the other verbs act on a row the boxholder has deliberately put away.
+  if (row.session.archived) return ["unarchive"];
   if (isScheduled(row)) return row.agent.state === "live" ? ["focus"] : ["resume"];
-  if (row.session.removed) return ["resume"];
+  const settled: ActionVerb[] = archivable(row) ? ["archive"] : [];
+  if (row.session.removed) return ["resume", ...settled];
   if (row.git === null) return row.session.agent && (row.session.launch.state === "failed" || row.session.launch.state === "expired") ? ["resume"] : [];
   // Focus and close both need a live Terminal tab (`bin/workstreams focus` and
   // `close` refuse otherwise, telling the caller to resume). A row with no
   // live agent gets the one verb that can actually act on it.
-  return row.agent.state === "live" ? ["focus", "close"] : ["resume"];
+  return row.agent.state === "live" ? ["focus", "close"] : ["resume", ...settled];
 }
 
 const resumeLabels: Record<LifecycleJob["stage"], string> = { queued: "Request accepted", checking: "Checking workstream", restoring: "Restoring worktree", preparing: "Preparing session", "opening-terminal": "Opening Terminal", opened: "Terminal opened", ready: "Session ready", failed: "Resume failed" };
@@ -45,5 +68,5 @@ export function WorkstreamActions({ row, children }: { row: Workstream; children
   const [job, setJob] = useState<LifecycleJob | null>(null);
   function run(verb: ActionVerb): void { action.mutate({ verb, name: row.name }, { onSuccess(result) { if (result.status === "started") setJob(result.job); } }); }
   const verbs = workstreamActionVerbs(row);
-  return <div className="workstream-actions">{verbs.includes("focus") ? <Button type="button" disabled={action.isPending} onClick={() => run("focus")}>Focus</Button> : null}{verbs.includes("resume") ? <Button type="button" intent="primary" disabled={action.isPending} onClick={() => run("resume")}>{row.git === null && !isScheduled(row) ? "Retry" : "Resume"}</Button> : null}{verbs.includes("close") ? <Button type="button" disabled={action.isPending} onClick={() => run("close")}>Close</Button> : null}{children}{job ? <ResumeProgress job={job} /> : null}{action.isError ? <span className="action-error" role="alert">{action.error.message}</span> : null}</div>;
+  return <div className="workstream-actions">{verbs.includes("focus") ? <Button type="button" disabled={action.isPending} onClick={() => run("focus")}>Focus</Button> : null}{verbs.includes("resume") ? <Button type="button" intent="primary" disabled={action.isPending} onClick={() => run("resume")}>{row.git === null && !isScheduled(row) ? "Retry" : "Resume"}</Button> : null}{verbs.includes("close") ? <Button type="button" disabled={action.isPending} onClick={() => run("close")}>Close</Button> : null}{verbs.includes("archive") ? <Button type="button" disabled={action.isPending} onClick={() => run("archive")}>Archive</Button> : null}{verbs.includes("unarchive") ? <Button type="button" disabled={action.isPending} onClick={() => run("unarchive")}>Unarchive</Button> : null}{children}{job ? <ResumeProgress job={job} /> : null}{action.isError ? <span className="action-error" role="alert">{action.error.message}</span> : null}</div>;
 }

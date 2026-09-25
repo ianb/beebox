@@ -44,7 +44,7 @@ export const ALLOWED_FILES = new Set<string>();
 
 // A real home path: `/Users/<name>/` or `/home/<name>/`, capturing the name.
 // Requires the trailing slash so a bare web route like `/home` never matches.
-const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
+export const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
 
 // The `git grep` prefilter: any line mentioning either home prefix. Precise
 // matching + allowlisting happens in findLeaks so it stays pure and testable.

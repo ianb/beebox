@@ -137,11 +137,15 @@ function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
 }
 
-/** `{ref,text,position}`, all required strings — the V1 and V2 selection payload. */
+/**
+ * `{ref,text,position}` — the V1 and V2 selection payload. `text`/`position`
+ * are required strings; `ref` is a string or null (chat-transcript text).
+ */
 function selectionFrom(value: unknown): AddSelectionInput | null {
   if (!isRecord(value)) return null;
   const { ref, text, position } = value;
-  if (typeof ref !== "string" || typeof text !== "string" || typeof position !== "string") {
+  if (ref !== null && typeof ref !== "string") return null;
+  if (typeof text !== "string" || typeof position !== "string") {
     return null;
   }
   return { ref, text, position };

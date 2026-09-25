@@ -3,7 +3,7 @@
  * with a New-chat button per landmark, and a trailing "Other chats" card for
  * chats bound to a directory with no landmark. Self-sufficient (fetches its
  * own data). Card-embedded only now — it serves `view: chat-picker` cards
- * (docs/plans/interface-as-cards.md); the /chats page redirects to the
+ * (docs/plans/interface-as-cards.md); the /chats route redirects to the
  * merged Landmarks surface (docs/plans/top-nav-ia.md Track D).
  */
 
@@ -11,6 +11,8 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { StatusMessage } from "../ui/StatusMessage";
 import { ChatsLandmarkCard } from "./ChatsLandmarkCard";
 
 export function ChatsPicker() {
@@ -19,13 +21,13 @@ export function ChatsPicker() {
   const { data, isLoading, error } = trpc.chat.byLandmark.useQuery();
 
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading…</Text>;
+    return <StatusMessage>Loading…</StatusMessage>;
   }
   if (error) {
     return (
-      <Text as="div" tone="subtle" className="p-8">
+      <ErrorText className="p-8">
         Failed to load chats: {error.message}
-      </Text>
+      </ErrorText>
     );
   }
 

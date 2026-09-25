@@ -142,6 +142,12 @@ const resubRequired = await authServer.rootRequest({ method: "POST", url: "/api/
 resubRequired.statusCode
 => 401
 
+// `files.kind` is a `publicProcedure`: the transport wall, not the procedure, is its auth.
+const kindUrl = `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`;
+const kindRequired = await authServer.request({ method: "GET", url: kindUrl });
+kindRequired.statusCode
+=> 401
+
 await authServer.cleanup();
 ```
 
@@ -150,10 +156,12 @@ await authServer.cleanup();
 `createContext` (`server-box-scope.ts`) resolves identity through
 `resolveBoxIdentity`, so on a box that declares `agentBrowsing: "owner"` the
 machine-wide browse key arrives as a `user` and clears `ownerProcedure`. The one
-owner surface it must NOT clear is the machine-level secret store: its grants are
-shared across every box on the machine, so one test box's opt-in cannot unlock
-them (`docs/implemented-plans/secret-custody.md`) — `authenticatedOwnerProcedure` excludes
-`source: "browse"`.
+owner surface it must NOT clear **on the shared store** is the secret panel:
+the machine-level store holds every box's real keys, so one test box's opt-in
+cannot unlock them (`docs/implemented-plans/secret-custody.md`) —
+`authenticatedOwnerProcedure` excludes `source: "browse"` there. Earlier
+sections gave themselves a tmp store, so this block explicitly clears the
+override to stand on the default, shared path — and puts it back after.
 
 ```ts
 const BROWSE_KEY = "browse-key-for-auth-required-doctest";
@@ -164,18 +172,43 @@ process.env.BBX_OWNER_EMAIL = "owner@example.com";
 const authDir = await mkdtemp(join(tmpdir(), "bbx-auth-required-browse-"));
 process.env.BBX_AUTH_FILE = join(authDir, "no-such-auth.json");
 const browseHeaders = { authorization: `Bearer ${BROWSE_KEY}` };
+const PRIOR_STORE = process.env.BBX_SECRETS_FILE;
+delete process.env.BBX_SECRETS_FILE;
 
 const optedIn = await makeTestServer({ openAccess: false });
 await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
-const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
 
+if (PRIOR_STORE !== undefined) process.env.BBX_SECRETS_FILE = PRIOR_STORE;
 print(`ownerProcedure: ${asOwner.statusCode}`);
 print(`authenticatedOwnerProcedure: ${atSecrets.statusCode} ${atSecrets.body.error.data.code}`);
 =>
 ownerProcedure: 200
 authenticatedOwnerProcedure: 403 FORBIDDEN
+```
+
+On an ISOLATED store — what every worktree box under the dev router runs on —
+there is nothing of the boxholder's to protect, and refusing browse there only
+made the Secrets panel the one owner surface an agent could never exercise.
+Isolation is asserted, not inferred: an override path alone (which `main`
+inherits from any shell or `.env`) still refuses; the router's
+`BBX_SECRETS_STORE_ISOLATED=1` beside a non-default path opens the panel.
+
+```ts continue
+const isolatedStore = await mkdtemp(join(tmpdir(), "bbx-isolated-secrets-"));
+process.env.BBX_SECRETS_FILE = join(isolatedStore, "secrets.json");
+const overrideOnly = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
+process.env.BBX_SECRETS_STORE_ISOLATED = "1";
+const atIsolatedSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
+delete process.env.BBX_SECRETS_STORE_ISOLATED;
+if (PRIOR_STORE === undefined) delete process.env.BBX_SECRETS_FILE; else process.env.BBX_SECRETS_FILE = PRIOR_STORE;
+print(`authenticatedOwnerProcedure, override path only: ${overrideOnly.statusCode}`);
+print(`authenticatedOwnerProcedure, asserted isolated store: ${atIsolatedSecrets.statusCode}`);
+=>
+authenticatedOwnerProcedure, override path only: 403
+authenticatedOwnerProcedure, asserted isolated store: 200
 ```
 
 On a box that never opted in, the key means what it always did: it clears the
@@ -185,12 +218,19 @@ wall and reaches an authenticated procedure, and nothing owner-gated.
 const plain = await makeTestServer({ openAccess: false });
 
 const authedCall = await plain.request({ method: "GET", url: "/api/trpc/inventory.summary", headers: browseHeaders });
-const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+const kindCall = await plain.request({
+  method: "GET",
+  url: `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`,
+  headers: browseHeaders,
+});
+const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
 print(`authedProcedure: ${authedCall.statusCode}`);
+print(`files.kind with a credential: ${kindCall.statusCode} ${kindCall.body.result?.data?.kind}`);
 print(`ownerProcedure: ${ownerCall.statusCode} ${ownerCall.body.error.data.code}`);
 =>
 authedProcedure: 200
+files.kind with a credential: 200 directory
 ownerProcedure: 403 FORBIDDEN
 ```
 

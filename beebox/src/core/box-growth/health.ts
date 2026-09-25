@@ -18,7 +18,8 @@ import {
   type GrowthMeasurement,
 } from "./model.js";
 import { scanBoxGrowth } from "./scan.js";
-import { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
+import { describeFinding, failedSampleParts, failedSamples } from "./describe.js";
+import { evaluateBoxGrowth } from "./policy.js";
 
 export { BOX_GROWTH_THRESHOLDS, evaluateBoxGrowth } from "./policy.js";
 
@@ -116,13 +117,6 @@ export async function measureBoxGrowth(
   return scanBoxGrowth(boxRoot, { now: options.now, maxDurationMs: options.maxDurationMs ?? 10_000 });
 }
 
-function isAboveGlobalThreshold(measurement: GrowthMeasurement): boolean {
-  return (
-    measurement.counts.directories > BOX_GROWTH_THRESHOLDS.absoluteDirectories ||
-    measurement.counts.files > BOX_GROWTH_THRESHOLDS.absoluteFiles
-  );
-}
-
 function persistedAttemptTime(state: BoxGrowthStateRead): number | null {
   if (state.status !== "measured" && state.status !== "unmeasured") return null;
   return state.lastAttemptAt === null ? null : Date.parse(state.lastAttemptAt);
@@ -196,10 +190,8 @@ export async function measureBoxGrowthIfDue(
         : {
             version: 1,
             status: "measured",
-            accepted: measurement,
             previous: measurement,
             current: measurement,
-            acknowledgedAt: isAboveGlobalThreshold(measurement) ? null : measurement.measuredAt,
             lastAttemptAt: measurement.measuredAt,
             lastError: null,
             lastNotice: notice,
@@ -218,13 +210,10 @@ export async function measureBoxGrowthIfDue(
   }
 }
 
-export async function acknowledgeCurrentBoxGrowth(
-  boxRoot: string,
-  options: { now: Date },
-): Promise<BoxGrowthState> {
+export async function acknowledgeCurrentBoxGrowth(boxRoot: string): Promise<BoxGrowthState> {
   return updateState(boxRoot, async (latest) => {
     if (latest.status !== "measured") throw new BoxGrowthAcceptanceError();
-    const state = acknowledgedGrowthState(latest, options.now);
+    const state = acknowledgedGrowthState(latest);
     await writeState(boxRoot, state);
     return state;
   });
@@ -259,29 +248,6 @@ function warning(
   };
 }
 
-function count(value: number): string {
-  return Math.round(value).toLocaleString("en-US");
-}
-
-function describeFinding(finding: GrowthFinding, lowerBound: boolean): string {
-  const actual = `${lowerBound ? "at least " : ""}${count(finding.actual)}`;
-  const pathDetail = finding.path === undefined ? "" : `; largest contributor: ${finding.path}`;
-  if (finding.kind === "absolute-directories") {
-    return `${actual} directories total (limit ${count(finding.threshold)})${pathDetail}`;
-  }
-  if (finding.kind === "absolute-files") {
-    return `${actual} files total (limit ${count(finding.threshold)})${pathDetail}`;
-  }
-  if (finding.kind === "rate-commits") {
-    return `${count(finding.actual)} commits/hour (limit ${count(finding.threshold)})`;
-  }
-  const unit = finding.kind.endsWith("directories") ? "directories" : "files";
-  const connector = finding.kind.startsWith("rate-connector");
-  const scope = connector ? finding.path ?? "connector subtree" : "box";
-  const detail = connector || finding.path === undefined ? "" : `; fastest subtree: ${finding.path}`;
-  return `${scope} grew by ${count(finding.actual)} ${unit}/hour (limit ${count(finding.threshold)})${detail}`;
-}
-
 export async function boxGrowthHealthCheck(
   boxRoot: string,
   options: { now: Date; schedulerStatus: "running" | "stale" | "never" },
@@ -301,22 +267,26 @@ export async function boxGrowthHealthCheck(
   }
   const findings = evaluateBoxGrowth({ ...state });
   const incomplete = !state.current.complete;
-  const historyError = !incomplete && state.current.history.status === "unavailable" ? state.current.history.error : null;
+  const failed = failedSamples(state.current, incomplete);
   if (findings.length === 0 && state.lastError === null && state.lastNotice === null && !incomplete) {
+    const unavailable = [
+      ...(failed.history === null ? [] : ["Git history"]),
+      ...(failed.bytes === null ? [] : [`disk use (${failed.bytes})`]),
+    ];
     return healthy(
-      historyError === null
+      unavailable.length === 0
         ? "Box growth is within accepted limits"
-        : "Box growth is within accepted limits; Git history measurement is unavailable",
+        : `Box growth is within accepted limits; not measured: ${unavailable.join(", ")}`,
     );
   }
-  const parts = findings.map((finding) => describeFinding(finding, incomplete));
+  const parts = findings.map((finding) => describeFinding(finding));
   if (incomplete) {
     const reason = state.current.filesystemError === null ? "" : ` (${state.current.filesystemError})`;
     parts.push(`filesystem scan incomplete${reason}; counts are lower bounds`);
   }
   if (state.lastError !== null) parts.push(`latest scan failed: ${state.lastError}`);
   if (state.lastNotice !== null) parts.push(state.lastNotice);
-  if (historyError !== null && findings.length > 0) parts.push(`history measurement failed: ${historyError}`);
+  if (findings.length > 0) parts.push(...failedSampleParts(failed));
   const actions: NonNullable<BoxGrowthHealthResult["actions"]> = [];
   if (findings.length > 0 || state.lastNotice !== null) actions.push("acknowledge-box-growth");
   if (findings.some((finding) => isRateFindingKind(finding.kind))) {

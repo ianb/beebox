@@ -30,7 +30,7 @@ function caller(boxRoot) {
 ## The good landmarks load; the broken one is named
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 
 await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
@@ -79,7 +79,7 @@ await box.cleanup();
 ## A box with nothing broken reports an empty list
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 // The v3 root landmark lives at `_content/Box.landmark.card`, not at the
 // literal box root (`root-dir.ts`) — a card sitting directly at the box
 // root is outside every underscore area and, since the namespace fence
@@ -103,7 +103,7 @@ scope. `forDir` must resolve it there, not answer `null`/fall back to a
 placeholder.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
 
 const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
@@ -142,7 +142,7 @@ function ownerCaller(boxRoot) {
   return appRouter.createCaller(ctx);
 }
 
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 await mkdir(box.path("src/templates"), { recursive: true });
 await box.write("src/templates/Private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
 
@@ -198,7 +198,7 @@ bytes belong to a file outside the namespace, so it must never be read
 through. A normal (non-symlinked) landmark elsewhere in the box still loads.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 await box.write("src/private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
 await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
 await mkdir(box.path("_content/escape"), { recursive: true });
@@ -231,7 +231,7 @@ means there is no landmark to render — `forDir` has no `problems` channel and
 doesn't need one; the page-level surface is where the warning belongs.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 await box.write("_content/trips/Trips.landmark.card", "not a card\n");
 
 const { landmark } = await caller(box.root).landmarks.forDir({ dir: "_content/trips" });

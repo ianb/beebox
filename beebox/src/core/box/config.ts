@@ -11,6 +11,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { getBoxDir } from "../../lib/paths.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
+import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
 import type { PresentationConfig } from "../../shared/card-theme.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
@@ -34,6 +35,13 @@ export interface BoxConfig {
    * engine the invocation runs on.
    */
   smallModel?: string;
+  /**
+   * OpenRouter models the owner added in admin. The only way one becomes
+   * selectable: they bill per use, and holding an `openrouter` key enables
+   * nothing for chat on its own (`docs/plans/openrouter-chat-models.md`).
+   * Missing means none.
+   */
+  openrouterModels?: AddedModel[];
   /**
    * Which native harnesses this box may offer at all — a box with no Codex
    * subscription should not be offered Codex chats. Missing means only
@@ -144,7 +152,7 @@ function isValidTimeZone(timeZone: string): boolean {
  * A typo'd zone (e.g. `"America/Chciago"`) makes `Intl.DateTimeFormat`
  * throw `RangeError` the moment anything tries to use it — and every
  * plate-state/timezone-aware call site in the todo system (the collector,
- * `bbx todos`, `todos.list`, the review sweep, session-context's ambient
+ * `bbx query todos`, `collections.query`, the review sweep, session-context's ambient
  * timezone line) does exactly that. Validating HERE, at the one place the
  * raw config value enters the system, means a bad value degrades to the
  * host's own timezone (still wrong, but visibly so — via the warning below
@@ -210,6 +218,11 @@ async function readConfiguredModel(
   const config = await loadBoxConfig(boxRoot);
   const model = config[field];
   if (model === undefined) return null;
+  // An added OpenRouter model may be the box default, never the small-pass
+  // model: cheap structured passes stay on a tier (boxholder, 2026-09-19).
+  if (field === "agentModel" && typeof model === "string" && (await isConfigurableModel(boxRoot, model))) {
+    return normalizeModelId(model);
+  }
   if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {
     console.warn(
       `Box config ${field} ${JSON.stringify(model)} is not a model any engine offers — ignoring it.`,
@@ -217,6 +230,54 @@ async function readConfiguredModel(
     return null;
   }
   return normalizeModelId(model);
+}
+
+/**
+ * Can this id be the box's default model? Any id with a tier, or an
+ * OpenRouter model the owner added. The one rule behind both the config
+ * loader and the admin write, so the two cannot disagree about what "Saved"
+ * means.
+ */
+export async function isConfigurableModel(boxRoot: string, model: string): Promise<boolean> {
+  if (modelTier(normalizeModelId(model)) !== null) return true;
+  return (await loadAddedModels(boxRoot)).some((m) => m.id === model);
+}
+
+/**
+ * The box's added OpenRouter models, in the owner's order. A malformed entry
+ * is dropped with a warning rather than failing the whole list: a hand edit
+ * that breaks one row should not take the others away. Duplicate ids keep the
+ * first. A chat whose pick was dropped refuses at spawn, naming admin.
+ */
+export async function loadAddedModels(boxRoot: string): Promise<AddedModel[]> {
+  const raw: unknown = (await loadBoxConfig(boxRoot)).openrouterModels;
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    console.warn(`Box config openrouterModels must be a list — ignoring ${JSON.stringify(raw)}.`);
+    return [];
+  }
+  const models: AddedModel[] = [];
+  const entries: readonly unknown[] = raw;
+  for (const entry of entries) {
+    const parsed = parseAddedModel(entry);
+    if (parsed === null) {
+      console.warn(`Box config openrouterModels entry ${JSON.stringify(entry)} is not {id, label} with an OpenRouter id — ignoring it.`);
+    } else if (!models.some((m) => m.id === parsed.id)) {
+      models.push(parsed);
+    }
+  }
+  return models;
+}
+
+/** One `{id, label}` entry, or null when it is not a valid added model. */
+export function parseAddedModel(entry: unknown): AddedModel | null {
+  if (!isRecord(entry)) return null;
+  const { id, label } = entry;
+  if (typeof id !== "string" || !isOpenRouterModelId(id)) return null;
+  if (typeof label !== "string") return null;
+  const trimmed = label.trim();
+  if (trimmed === "" || trimmed.length > ADDED_MODEL_LABEL_MAX) return null;
+  return { id, label: trimmed };
 }
 
 /**

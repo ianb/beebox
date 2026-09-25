@@ -68,7 +68,7 @@ async function readPdfCard(box) {
 ## A successful extraction lands an `analyzed` pdf card
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const docling = createFakeDocling({
   markdown: "## Invoice 2026-04\n\n![Image](out/source_artifacts/image_000000_fake.png)\n",
   pageCount: 2,
@@ -174,7 +174,7 @@ frontmatter points at it; the schema instructions name the convention, the same
 way they do for the page renders.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await importPdf(box, createFakeDocling({ markdown: "rendered", pageCount: 1 }));
 const dir = await sessionDir(box);
 const names = await readdir(join(box.root, "_content/inbox", dir, "source.attach"));
@@ -237,7 +237,7 @@ the generic `scan-import`) and on the session card — so a batch that looks wro
 identifies the device that produced it.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
@@ -254,7 +254,7 @@ carries no `source` at all — the field means "came from somewhere identifiable
 so an absent one is the honest answer:
 
 ```ts continue
-const plain = await makeTmpBox({ git: true, annex: true });
+const plain = await makeTmpBox({ git: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
@@ -276,7 +276,7 @@ Nothing is lost: the original PDF is the card's only asset, the reason is on the
 card rather than only in a log, and intake proceeds.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
 const result = await importPdf(box, docling);
 result.success
@@ -318,7 +318,7 @@ A document with no readable text is a real answer. The card says `analyzed`
 there to look at.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount: 1 }));
 result.data.status
 => analyzed
@@ -345,7 +345,7 @@ The card is re-extracted in place. `description` (and anything else an agent
 wrote) survives; the body, `docling`, and the page assets are replaced.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 await importPdf(box, createFakeDocling({ markdown: "first pass", pageCount: 3 }));
 const dir = await sessionDir(box);
 const cardRel = `_content/inbox/${dir}/source.pdf.card`;
@@ -398,7 +398,7 @@ await box.cleanup();
 ## Reanalyze refuses clearly on a card it cannot work with
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const { ctx } = createCollectorContext(box.root);
 const missing = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.pdf.card" } });
 JSON.stringify([missing.success, missing.error])

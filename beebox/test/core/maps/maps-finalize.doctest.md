@@ -204,8 +204,9 @@ await box.cleanup();
 
 An `update` task's MAP.md already exists before the agent runs, so its mere
 existence proves nothing. Finalize compares each map against the brief-time
-HEAD and leaves untouched ones unstamped, so a run that got through only part
-of its brief doesn't mark the rest current.
+HEAD and leaves untouched ones unstamped unless they pass the coverage check
+(next section), so a run that got through only part of its brief doesn't mark
+the rest current. Here inbox's map does not list its new `triage/`.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -221,7 +222,7 @@ const result = await finalize({
   boxRoot: box.root,
   tasks: [
     { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
-    { map: "inbox/MAP.md", dir: "inbox", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
+    { map: "inbox/MAP.md", dir: "inbox", action: "update", asOf: head, head, added: ["triage/"], deleted: [], children: ["triage/"] },
   ],
 });
 
@@ -271,6 +272,119 @@ const result = await finalize({
 print(`applied: ${result.applied.join(",")}`);
 =>
 applied: store
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A map that is already correct is stamped without a change
+
+A map with no state entry is a `create` task, and a correct one needs no
+rewrite. Finalize used to stamp only rewritten maps, so such a map came back
+as `create` in every run. It now stamps any map that passes the coverage
+check (`maps-verify.doctest.md`). The same holds for an update whose only
+addition is a plain file, which the map should not list.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/MAP.md", "# Map: store\n\n- `notes/` — meeting notes\n- `refs/`\n");
+await box.write("inbox/MAP.md", "# Map: store/inbox\n\n- `triage/`\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+
+const result = await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "create", head, added: [], deleted: [], children: ["notes/", "plain.md", "refs/"] },
+    { map: "inbox/MAP.md", dir: "inbox", action: "create", head, added: [], deleted: [], children: ["triage/"] },
+  ],
+});
+print(`applied: ${result.applied.join(",")}`);
+print(`verified: ${result.verified.join(",")}`);
+print(`unchanged: ${result.skippedUnchanged.join(",")}`);
+print(JSON.stringify(result.coverageFailures));
+=>
+applied: 
+verified: store
+unchanged: inbox
+[{"dir":"inbox","problems":["header is \"# Map: store/inbox\", expected \"# Map: inbox\""]}]
+```
+
+The verified map is stamped and gets its CLAUDE.md include; the stale-header
+one is left for the agent to rewrite:
+
+```ts continue
+const state = await loadMapState(box.root);
+print(`store stamped: ${state.maps["store"] !== undefined}`);
+print(`inbox stamped: ${state.maps["inbox"] !== undefined}`);
+print((await box.read("store/CLAUDE.md")).trim());
+=>
+store stamped: true
+inbox stamped: false
+@MAP.md
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A rewritten map that fails the check is stamped and reported
+
+A rewrite is still evidence the agent reached the map, so it is stamped as
+before. The coverage failure is reported so the run log shows it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/MAP.md", "# Map: store\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+await box.write("store/MAP.md", "# Map: store\n\n- `notes/`\n");
+
+const result = await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: ["refs/"], deleted: [], children: ["notes/", "refs/"] },
+  ],
+});
+print(`applied: ${result.applied.join(",")}`);
+print(JSON.stringify(result.coverageFailures));
+=>
+applied: store
+[{"dir":"store","problems":["does not list refs/"]}]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Stamps the brief's HEAD, not the HEAD at finalize time
+
+The map was verified against the brief's listing. If another writer commits a
+new child while the agent runs, stamping the later HEAD would hide that child
+from every future diff. Stamping the brief's HEAD leaves it visible as an
+addition on the next run.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/notes/a.md", "a");
+await box.write("store/refs/b.md", "b");
+await box.write("store/MAP.md", "# Map: store\n\n- `notes/`\n- `refs/`\n");
+box.commitAll("seed");
+const briefHead = await getHead(box.root);
+
+await box.write("store/urgent/c.md", "c");
+box.commitAll("another writer adds store/urgent/");
+
+await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "create", head: briefHead, added: [], deleted: [], children: ["notes/", "refs/"] },
+  ],
+});
+const state = await loadMapState(box.root);
+print(`stamped at brief head: ${state.maps["store"]?.asOf === briefHead}`);
+=> stamped at brief head: true
 ```
 
 ```ts cleanup

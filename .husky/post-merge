@@ -36,6 +36,17 @@ else
 fi
 
 if [ "$BRANCH" = "main" ]; then
+  # The public site (beebox.run) deploys from GitHub on push, not from this
+  # machine. Say so, loudly, whenever main has landed work that origin has not
+  # seen: on 2026-09-12 six merges sat unpushed for two hours while the site
+  # served stale docs and nothing said a word.
+  if git -C "$REPO_DIR" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    ahead=$(git -C "$REPO_DIR" rev-list --count origin/main..main 2>/dev/null || echo 0)
+    if [ "${ahead:-0}" -gt 0 ]; then
+      echo "[post-merge] main is $ahead commit(s) ahead of origin/main. beebox.run rebuilds only on push: git push origin main" >&2
+    fi
+  fi
+
   # Only deploy when the merge actually changed something deploy.sh ships (see
   # post-commit / beebox/deploy/deploy.sh): beebox, agent-doctest,
   # personal-vibe-check, patches/, root pnpm files. A merge confined to issues/,

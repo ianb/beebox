@@ -12,6 +12,7 @@
 // drives it lives in ./router-core.ts.
 
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { execa } from "execa";
@@ -276,7 +277,7 @@ async function waitForHttp(
  * while walking `beebox/src`, plus the entry count.
  *
  * Why not the git commit, which was the first idea: the hub is spawned as
- * `node --import tsx ./src/cli/index.ts hub` and therefore executes the
+ * `node --import tsx ./src/cli/index.ts engine hub` and therefore executes the
  * TypeScript on disk. `HEAD` misses an uncommitted edit entirely and moves for
  * commits touching nothing the hub loads. Filesystem state is what the hub
  * actually reads, so filesystem state is what the token is made of.
@@ -354,6 +355,7 @@ export function createRealEffects(): RouterEffects {
     clearTimer: (handle) => handle.cancel(),
     now: () => Date.now(),
     sleep,
+    load1: () => os.loadavg()[0] ?? 0,
     pidStore,
     writeHubConfig: writeWorktreeHubConfig,
     getPort: () => getPorts(),

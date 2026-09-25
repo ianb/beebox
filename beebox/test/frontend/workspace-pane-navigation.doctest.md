@@ -11,12 +11,95 @@ import {
   workspaceDisplayReady,
   workspaceRouteBound,
   workspaceOpenShouldReplace,
+  explicitConversationHistoryState, legacyOverlayActions,
+  revealConversationActions,
+  workspaceHistoryTarget,
 } from "../../src/frontend/src/components/chat/workspace/workspace-history.js";
-import { createEmptyWorkspaceState, reduceWorkspace } from "../../src/frontend/src/components/chat/workspace/workspace-state.js";
+import { createEmptyWorkspaceState, projectWorkspace, reduceWorkspace } from "../../src/frontend/src/components/chat/workspace/workspace-state.js";
 import { serializeWorkspaceState } from "../../src/frontend/src/components/chat/workspace/workspace-storage.js";
 
 const snapshot = serializeWorkspaceState(createEmptyWorkspaceState());
 const entry = { scope: "paper-cards/test1", identity: "session-1", snapshot, revision: 8 };
+```
+
+Legacy overlay conversion opens the incoming card before revealing chat. It
+does not invent return metadata, so Show cards restores in place while browser
+Back remains available for a genuine preceding legacy entry.
+
+```ts
+const legacyCard = { path: "_content/legacy.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+const legacyActions = legacyOverlayActions({ state: createEmptyWorkspaceState(), incoming: legacyCard, viewport: "mobile", at: 9 });
+legacyActions.map(action => action.type)
+=> [
+  "openCard",
+  "showChat"
+]
+
+shouldRestoreMobileWithBack(undefined, 12)
+=> false
+```
+
+## Explicit chat-about intent reveals the conversation once
+
+The router state preserves unrelated history metadata. The workspace then uses
+ordinary pane actions to reveal chat after the selected card has opened.
+
+```ts
+JSON.stringify(explicitConversationHistoryState({ inherited: "sentinel", bbxConversation: { kind: "old" } }))
+=> {"inherited":"sentinel","bbxWorkspaceRevealConversation":true}
+
+const detailed = { path: "dashboard.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+let focused = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard", target: detailed, label: "Dashboard", at: 1, viewport: "desktop",
+}).state;
+focused = reduceWorkspace(focused, { type: "focusPane", pane: focused.lastCardPane }).state;
+const focusActions = revealConversationActions({ state: focused, cardPath: detailed.path, viewport: "desktop" });
+focusActions.map((action) => action.type).join(",")
+=> backToSplit
+
+const revealed = focusActions.reduce((state, action) => reduceWorkspace(state, action).state, focused);
+projectWorkspace(revealed, "desktop").transcript
+=> right
+
+JSON.stringify(revealed.tabs[detailed.path]?.target)
+=> {"path":"dashboard.card","viewer":"Source","params":{"page":"2"},"viewState":{"cursor":4}}
+```
+
+When both desktop panes contain cards, the selected card stays visible and the
+other pane becomes chat. Mobile retains the selected card as the return target.
+
+```ts continue
+let twoCards = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard", target: detailed, label: "Dashboard", at: 1, viewport: "desktop",
+}).state;
+twoCards = reduceWorkspace(twoCards, {
+  type: "openCard", target: { ...detailed, path: "notes.card" }, label: "Notes", at: 2, viewport: "desktop",
+}).state;
+twoCards = reduceWorkspace(twoCards, { type: "moveActive", pane: "left" }).state;
+const desktopActions = revealConversationActions({ state: twoCards, cardPath: "notes.card", viewport: "desktop" });
+JSON.stringify(desktopActions)
+=> [{"type":"showChat","pane":"left","viewport":"desktop"}]
+
+const desktopRevealed = desktopActions.reduce((state, action) => reduceWorkspace(state, action).state, twoCards);
+JSON.stringify(projectWorkspace(desktopRevealed, "desktop"))
+=> {"visiblePanes":[{"pane":"right","path":"notes.card"}],"visiblePaths":{"right":"notes.card"},"transcript":"left","foregroundPath":"notes.card","restorePane":"left"}
+
+const mobileCard = reduceWorkspace(twoCards, {
+  type: "openCard", target: { ...detailed, path: "notes.card" }, label: "Notes", at: 3, viewport: "mobile",
+}).state;
+decideWorkspaceNavigation({ history: undefined, scope: entry.scope, identity: entry.identity, freshCard: null, cardEntry: true }).kind
+=> keep-current
+
+const mobileActions = revealConversationActions({ state: mobileCard, cardPath: "notes.card", viewport: "mobile" });
+const mobileRevealed = mobileActions.reduce((state, action) => reduceWorkspace(state, action).state, mobileCard);
+JSON.stringify(projectWorkspace(mobileRevealed, "mobile"))
+=> {"visiblePanes":[],"visiblePaths":{},"transcript":"full","foregroundPath":null,"restorePane":"left"}
+
+JSON.stringify(mobileRevealed.mobileView)
+=> {"kind":"chat","returnPath":"notes.card"}
+
+JSON.stringify(workspaceHistoryTarget({ state: mobileRevealed, viewport: "mobile", retainedTarget: { ...detailed, path: "notes.card" } }))
+=> {"path":"notes.card","viewer":"Source","params":{"page":"2"},"viewState":{"cursor":4}}
 ```
 
 ## Workspace effects wait for the route's authoritative conversation
@@ -126,6 +209,9 @@ would run opposite-pane routing a second time.
 ```ts
 decideWorkspaceNavigation({ history: entry, scope: entry.scope, identity: entry.identity, freshCard: "a.card" }).kind
 => restore-snapshot
+
+JSON.stringify(decideWorkspaceNavigation({ history: entry, scope: entry.scope, identity: entry.identity, freshCard: "nested.card?view=Source", cardEntry: true }))
+=> {"kind":"open-url","card":"nested.card?view=Source"}
 
 JSON.stringify(decideWorkspaceNavigation({ history: undefined, scope: entry.scope, identity: entry.identity, freshCard: "a.card" }))
 => {"kind":"open-url","card":"a.card"}

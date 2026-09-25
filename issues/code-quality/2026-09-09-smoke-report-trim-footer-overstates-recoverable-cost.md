@@ -6,6 +6,7 @@ labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-09
+priority: normal
 ---
 
 `formatSmokeReport` (`bin/smoke-lib.ts:262-275`) ends every report with a

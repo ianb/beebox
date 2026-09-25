@@ -371,17 +371,23 @@ export async function getFeaturesForSession(boxRoot: string, sessionId: string):
  * doesn't exist yet — handy when features are toggled before the first
  * message has assigned a session id. Caller passes only the keys it
  * wants to change; existing keys not in `updates` are preserved.
+ *
+ * `engine` is required because creating an entry WRITES a session's engine, and
+ * this function cannot know it. It used to use the box default, overwriting the
+ * answer the session already had: a chat reserved as `claude` on a codex-default
+ * box became `codex` forever on its first feature toggle, since history outranks
+ * the reservation in `resolveRecordedChatEngine`. The caller resolves it.
  */
-export async function updateFeaturesForSession(boxRoot: string, opts: { sessionId: string; updates: Record<string, string> }): Promise<void> {
+export async function updateFeaturesForSession(boxRoot: string, opts: { sessionId: string; updates: Record<string, string>; engine: AgentEngine }): Promise<void> {
   await withHistoryLock(boxRoot, async () => {
-    const { sessionId, updates } = opts;
+    const { sessionId, updates, engine } = opts;
     const file = (await readHistoryFile(boxRoot)) ?? {
       sessions: [],
       migrated: false,
     };
     let entry = file.sessions.find((s) => s.id === sessionId);
     if (!entry) {
-      entry = { id: sessionId, engine: await loadAgentEngine(boxRoot) };
+      entry = { id: sessionId, engine };
       file.sessions.push(entry);
     }
     const merged: Record<string, string> = { ...entry.features };

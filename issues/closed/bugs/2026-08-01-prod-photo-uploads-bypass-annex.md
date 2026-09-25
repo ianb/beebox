@@ -5,6 +5,12 @@ priority: important
 resolution: wontfix
 ---
 
+> **⚠ Partly retired framing** (full-embrace-annex, 2026-09-14). The
+> "manifest-scheme files post-conversion" half of this report describes a state
+> that can no longer exist — the scheme is deleted and nothing writes
+> `manifest.json`. The annex-bypass concern itself is live, and is now guarded
+> by `assertAnnexBox` before any asset write.
+
 **Closed 2026-08-18 — the photo-batch premise does not hold.** Photo batches
 annex correctly, and did so from the first post-conversion batch onward. Scope
 the claim carefully: this closes *photos bypassing annex*, not *nothing bypasses
@@ -13,7 +19,7 @@ investigation had missed, both since verified — non-asset file types inside a
 bulk batch, and mixed-case extensions anywhere. Three items carry the live work:
 [the filter-scope / largefiles disagreement](2026-08-18-annex-filter-scope-and-largefiles-disagree.md),
 [stale `annex.largefiles` never re-applies](2026-08-18-stale-annex-largefiles-never-reapplies.md),
-and [retire the remaining asset-manifest writers](../../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
+and [retire the remaining asset-manifest writers](../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
 
 ## What was checked, and how (2026-08-18)
 
@@ -63,7 +69,7 @@ covered by the evidence below.
 
 - **Old-scheme asset manifests are still written** — confirmed, and the only
   code defect the issue named that is still true. Split out to
-  [retire the remaining asset-manifest writers](../../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
+  [retire the remaining asset-manifest writers](../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
 - **The `manifest.json` name collision** — confirmed in production: 62 files of
   the asset-manifest shape (`files`/`size`/`mtime`) and 16 of the
   `filename`/`captured`/`source` shape. The second shape is **not written by our

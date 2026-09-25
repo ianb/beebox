@@ -48,6 +48,7 @@ export interface SecretFormatEntry {
  * (`json-secret.ts`), so their hint describes the JSON, not a bare key.
  */
 const secretFormats: Record<string, SecretFormat> = {
+  glm: { hint: "A Z.ai API key — one long token, no spaces.", minLength: 20, maxLength: 200 },
   mistral: { hint: "A Mistral API key — one long token, no spaces.", minLength: 16, maxLength: 200 },
   openai: { hint: "An OpenAI API key, starting with `sk-`.", prefix: "sk-", minLength: 20, maxLength: 300 },
   "openai-thinking": {
@@ -58,6 +59,7 @@ const secretFormats: Record<string, SecretFormat> = {
   },
   anthropic: { hint: "An Anthropic API key, starting with `sk-ant-`.", prefix: "sk-ant-", minLength: 20, maxLength: 300 },
   gemini: { hint: "A Google AI Studio key, usually starting with `AIza`.", prefix: "AIza", minLength: 20, maxLength: 200 },
+  openrouter: { hint: "An OpenRouter API key, starting with `sk-or-v1-`.", prefix: "sk-or-v1-", minLength: 40, maxLength: 200 },
   deepgram: {
     hint: 'JSON with the management key and project: {"apiKey": "…", "projectId": "…"}.',
     pattern: /^{/,

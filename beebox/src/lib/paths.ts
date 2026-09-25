@@ -2,17 +2,18 @@
  * Path utilities for finding and working with Bee Box directories.
  */
 
+import { withBoxWork } from "./box-maintenance.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "./invariant.js";
-import { LEGACY_BOX_MARKER, migrateBoxState } from "./state-migration.js";
+import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "./state-migration.js";
 import { PreV3ShapeError } from "./box-shape-errors.js";
 import { isRecord } from "./is-record.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
-class NotInBoxError extends Error {
+export class NotInBoxError extends Error {
   constructor() {
     super("Not in a Bee Box. Run 'bbx init' to create one, or navigate to an existing box.");
     this.name = "NotInBoxError";
@@ -108,10 +109,9 @@ const MIN_ACCEPTED_SHAPE_VERSION = 3;
  * marker must not be handed back as if it were a valid v3 root: a caller that
  * then read `_content/` or `_config/` under it would find nothing there and
  * report false success (the original bug — `bbx tick` inside a v2 `content/`
- * dir silently found zero jobs). The migration bootstrap probe
- * (`cli/commands/migrate-bootstrap.ts` → `probeV2Box`) is the one place
- * allowed to tolerate a v2 marker, and it reads the marker directly rather
- * than going through this function.
+ * dir silently found zero jobs). Nothing tolerates a v2 marker any more: the
+ * bootstrap probe that did was deleted with the conversion, so throwing is now
+ * the only outcome.
  *
  * @param startPath - Directory to start searching from
  * @returns The box root path, or null if no marker exists anywhere above it
@@ -157,7 +157,9 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // State directory names are persisted identity. Migrate before callers
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
-  await migrateBoxState(root);
+  if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
+    await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
+  }
   return root;
 }
 

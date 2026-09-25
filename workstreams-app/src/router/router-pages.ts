@@ -5,14 +5,13 @@
 // Presentation only — nothing here starts, stops, or proxies anything; it reads
 // the core's snapshot and the checkout on disk.
 
-import path from "node:path";
 import fs from "node:fs/promises";
 import { execa } from "execa";
 import { escapeHtml } from "./router-markdown.js";
-import { isServing, readyLifecycle, failedLifecycle, type WorktreeHandle, type CapturedError } from "./router-lifecycle.js";
+import { isServing, readyLifecycle, failedLifecycle, type WorktreeHandle } from "./router-lifecycle.js";
 import type { RouterCore } from "./router-core.js";
 import type { WorkstreamsAppState } from "./workstreams-app-supervisor.js";
-import { IDLE_TIMEOUT_MS, LOG_DIR, ROUTER_PORT, WORKTREES_ROOT, worktreeRoot } from "./router-config.js";
+import { IDLE_TIMEOUT_MS, ROUTER_PORT, WORKTREES_ROOT, worktreeRoot } from "./router-config.js";
 
 interface DiscoveredWorktree {
   name: string;
@@ -201,62 +200,6 @@ export async function renderIndex(core: RouterCore): Promise<string> {
  * `/__router/retry/<name>`. Replaces the previous plain-text 502 so
  * the failure is actually debuggable from the browser.
  */
-export function renderFailedPage(name: string, err: CapturedError): string {
-  const logPath = path.join(LOG_DIR, `${name}.log`);
-  const sinceMs = Date.now() - err.at;
-  const viteSection = err.viteOutput.trim()
-    ? `<h2>vite output (last ${err.viteOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.viteOutput)}</pre>`
-    : "<h2>vite output</h2><p class=\"muted\">(empty)</p>";
-  const fastifySection = err.fastifyOutput.trim()
-    ? `<h2>fastify output (last ${err.fastifyOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.fastifyOutput)}</pre>`
-    : "<h2>fastify output</h2><p class=\"muted\">(empty)</p>";
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Worktree ${escapeHtml(name)} — failed to start</title>
-<style>
-  body { font: 14px/1.5 system-ui, sans-serif; max-width: 920px; margin: 2em auto; padding: 0 1em; color: #222; }
-  h1 { font-size: 1.2em; margin-bottom: 0.2em; color: #a22; }
-  h2 { font-size: 0.95em; margin: 1.5em 0 0.3em; color: #555; }
-  p.sub { color: #666; margin-top: 0; }
-  p.muted { color: #999; font-style: italic; }
-  .err { margin: 1em 0; padding: 0.8em 1em; background: #fff5f5; border-left: 4px solid #c33; border-radius: 3px; font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; white-space: pre-wrap; }
-  pre { background: #f7f7f7; padding: 0.8em 1em; border-radius: 4px; overflow-x: auto; font-size: 0.8em; line-height: 1.4; max-height: 24em; }
-  form { display: inline; }
-  button { font: 14px/1 system-ui; padding: 0.5em 1em; background: #2255aa; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
-  button:hover { background: #1a4490; }
-  a { color: #2255aa; }
-  .actions { margin: 1.5em 0; display: flex; gap: 0.8em; align-items: center; }
-  .meta { font-size: 0.85em; color: #888; }
-  code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
-</style>
-</head>
-<body>
-<h1>Worktree <code>${escapeHtml(name)}</code> failed to start</h1>
-<p class="sub">Phase: <code>${escapeHtml(err.phase)}</code> · <span class="meta">${Math.round(sinceMs / 1000)}s ago</span></p>
-
-<div class="err">${escapeHtml(err.message)}</div>
-
-<div class="actions">
-  <form method="POST" action="/__router/retry/${escapeHtml(name)}">
-    <button type="submit">Retry startup</button>
-  </form>
-  <a href="/">← back to router index</a>
-</div>
-
-${viteSection}
-${fastifySection}
-
-<h2>Per-worktree log</h2>
-<p class="meta">Full output (both children, all attempts) lives at <code>${escapeHtml(logPath)}</code>.</p>
-
-</body>
-</html>
-`;
-}
-
 export function renderWorkstreamsAppFallback(state: WorkstreamsAppState, logPath: string): string {
   const detail = state.phase === "failed"
     ? `<div class="err">${escapeHtml(state.message)}</div>`

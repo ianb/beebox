@@ -16,6 +16,8 @@ import { JsonView } from "../components/ui/JsonView";
 import { Stack } from "../components/ui/Stack";
 import { Row } from "../components/ui/Row";
 import { Text } from "../components/ui/Text";
+import { StatusMessage } from "../components/ui/StatusMessage";
+import { ErrorText } from "../components/ui/ErrorText";
 import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
@@ -80,11 +82,11 @@ function JsonRenderer({ data }: RendererProps) {
   }, [text]);
 
   if (metaLoading) {
-    return <Text as="div" tone="subtle" className="p-4">Loading file info…</Text>;
+    return <StatusMessage className="p-4">Loading file info…</StatusMessage>;
   }
   if (metaError || meta === undefined) {
     const message = metaError instanceof Error ? metaError.message : "unknown error";
-    return <Text as="div" tone="danger" className="p-4">Couldn’t read {basename}: {message}</Text>;
+    return <ErrorText className="p-4">Couldn’t read {basename}: {message}</ErrorText>;
   }
 
   // Large + not yet requested: show metadata and let the user opt in.
@@ -98,7 +100,7 @@ function JsonRenderer({ data }: RendererProps) {
           <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>
         </Stack>
         <Text as="div" tone="subtle" size="sm">This file is large and isn’t loaded automatically.</Text>
-        <Row gap="sm" className="mt-2">
+        <Row gap="sm">
           <Button intent="primary" size="sm" onClick={() => setLoadRequested(true)}>
             Load JSON ({formatBytes(meta.size)})
           </Button>
@@ -109,17 +111,17 @@ function JsonRenderer({ data }: RendererProps) {
   }
 
   if (bodyLoading || parsed === null) {
-    return <Text as="div" tone="subtle" className="p-4">Loading JSON…</Text>;
+    return <StatusMessage className="p-4">Loading JSON…</StatusMessage>;
   }
   if (bodyError) {
     const message = bodyError instanceof Error ? bodyError.message : "error";
-    return <Text as="div" tone="danger" className="p-4">Failed to load {basename}: {message}</Text>;
+    return <ErrorText className="p-4">Failed to load {basename}: {message}</ErrorText>;
   }
   if (!parsed.ok) {
     // Not valid JSON — show the parse error and the raw text so it's still useful.
     return (
       <Stack gap="sm" className="p-4">
-        <Text as="div" tone="danger" size="sm">Not valid JSON: {parsed.error}</Text>
+        <ErrorText>Not valid JSON: {parsed.error}</ErrorText>
         <Pre size="xs">{text}</Pre>
       </Stack>
     );

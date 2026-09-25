@@ -28,7 +28,7 @@ the reactor read frontmatter, and delete the XML-regex paths — so "cards are n
 XML" is true in code, not just in prose.
 
 Discovered while working the prompt-surface plan
-(`prompt-surface-ia-review.md`, Track 1). The parent plan's original Track 1
+(`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
 note claimed "job cards genuinely are still XML"; that is **wrong** and this
 subplan supersedes it.
 

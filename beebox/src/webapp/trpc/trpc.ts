@@ -1,3 +1,5 @@
+import { withBoxWork } from "../../lib/box-maintenance.js";
+import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context.js";
 import { movedCardRecoveryFromCause } from "../../core/moved-card-recovery.js";
@@ -20,8 +22,20 @@ const t = initTRPC.context<TrpcContext>().create({
   },
 });
 
+// WebSocket mutations arrive after the handshake and need their own root
+// admission; HTTP mutations inherit the request lease through async context.
+// Queries (including bootstrap and schema-cache reads) do not write box files.
+const admission = t.middleware(async ({ ctx, type, path, next }) => {
+  if (type !== "mutation") return next();
+  try { return await withBoxWork({ boxRoot: ctx.boxRoot, reason: `trpc ${path}` }, () => next()); }
+  catch (error) {
+    if (error instanceof BoxMaintenanceError) throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: error.message });
+    throw error;
+  }
+});
+
 export const router = t.router;
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure.use(admission);
 
 /**
  * Requires a box-authorized request: a valid session (or auth disabled).
@@ -33,7 +47,7 @@ export const authedProcedure = t.procedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
   return next();
-});
+}).use(admission);
 
 /**
  * Requires the box owner. Mirrors the raw `addOwnerCheck` gate exactly
@@ -46,7 +60,7 @@ export const ownerProcedure = t.procedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" });
   }
   return next();
-});
+}).use(admission);
 
 /**
  * Requires a REAL authenticated owner — the strict variant of
@@ -65,4 +79,4 @@ export const authenticatedOwnerProcedure = t.procedure.use(({ ctx, next }) => {
     });
   }
   return next();
-});
+}).use(admission);

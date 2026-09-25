@@ -1,16 +1,9 @@
 /**
- * How long the box's agent has kept someone waiting.
+ * Claude root-chat time from a user entry to first assistant text.
  *
- * A journey's wall clock is not the person's experience. Most of a walk's elapsed
- * time is the simulated user composing prose and appending notes — instrument
- * overhead that no real person pays — so measuring the session end to end blames the
- * product for the harness. What a person actually sits through is the gap between
- * sending something and getting an answer, and the box's own transcripts record
- * exactly that, timestamped per entry.
- *
- * Used two ways: `collect.ts` reports it afterwards, and `clock.ts` hands it to the
- * walker *during* the run so its sense of "this is taking ages" is calibrated to what
- * a user would feel rather than to how long it spent writing.
+ * This is a partial latency metric: scoped chats use another transcript directory,
+ * other engines are unsupported, and the first text may precede the final answer.
+ * collect.ts records its provenance; clock.ts exposes the same limits to a walker.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
@@ -20,7 +13,7 @@ import { isRecord } from "../../src/lib/is-record.ts";
 import { parseJsonLine } from "../pipeline/json-io.ts";
 
 export interface AgentTiming {
-  /** One entry per completed turn, in seconds. */
+  /** One entry per observed first-text interval, in seconds. */
   turns: number[]
   totalSeconds: number
   medianSeconds: number

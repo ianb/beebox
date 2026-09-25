@@ -14,6 +14,21 @@
  *
  *   pnpm template-stock:update            # apply
  *   pnpm template-stock:update --check    # exit 1 if out of date (no writes)
+ *   pnpm template-stock:update --adopt <name>=<sha256>   # record a version
+ *                                         # that shipped before the ledger saw it
+ *
+ * `--adopt` exists because the forward-only path above cannot see its own past.
+ * The ledger only ever learns a hash by retiring a `current` it recorded, so a
+ * version that shipped BEFORE the ledger covered that template — or under a
+ * different constant, as the 2026-08 rename produced — is unknown to it
+ * forever. A box carrying one looks customized to `installTemplateFile` and
+ * parks silently, which is the exact bug this mechanism exists to prevent
+ * (found 2026-09-12: three boxes holding pre-rename stock copies of the
+ * schemas guide, none of their hashes in the ledger).
+ *
+ * Adopt only a hash you have CONFIRMED is stock — identical across boxes, or
+ * diffing against the current template as pure template evolution. Adopting a
+ * boxholder's customization would overwrite their edit on the next `bbx init`.
  */
 
 import { createHash } from "node:crypto";
@@ -78,8 +93,56 @@ function render(ledger: Record<string, TemplateStockEntry>): string {
   return `${HEADER}\nexport const TEMPLATE_STOCK_HASHES = {\n${entries.join("\n")}\n} satisfies Record<string, TemplateStockEntry>;\n`;
 }
 
+/** A malformed `--adopt` argument. Its detail names the offending value. */
+class AdoptArgumentError extends Error {
+  constructor() {
+    super("--adopt expects <name>=<sha256>");
+    this.name = "AdoptArgumentError";
+  }
+  /** The offending argument, for the operator — not part of the message. */
+  detail = "";
+  static for(detail: string): AdoptArgumentError {
+    const error = new AdoptArgumentError();
+    error.detail = detail;
+    return error;
+  }
+}
+
+/** `--adopt` named a template the ledger does not track. */
+class UnknownTemplateError extends Error {
+  constructor() {
+    super("--adopt names a template that is not in the ledger");
+    this.name = "UnknownTemplateError";
+  }
+  /** The name that was not found. */
+  templateName = "";
+  static for(templateName: string): UnknownTemplateError {
+    const error = new UnknownTemplateError();
+    error.templateName = templateName;
+    return error;
+  }
+}
+
+/** `--adopt name=hash` pairs, validated. Empty when the flag is absent. */
+function parseAdoptions(argv: string[]): Array<{ name: string; hash: string }> {
+  const out: Array<{ name: string; hash: string }> = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] !== "--adopt") continue;
+    const value = argv[i + 1];
+    if (value === undefined) throw AdoptArgumentError.for("missing value");
+    const eq = value.indexOf("=");
+    if (eq === -1) throw AdoptArgumentError.for(value);
+    const name = value.slice(0, eq);
+    const hash = value.slice(eq + 1);
+    if (!/^[\da-f]{64}$/.test(hash)) throw AdoptArgumentError.for(`${name}=${hash}`);
+    out.push({ name, hash });
+  }
+  return out;
+}
+
 async function main(): Promise<void> {
   const check = process.argv.includes("--check");
+  const adoptions = parseAdoptions(process.argv);
 
   // Deep-clone the current ledger so we mutate a copy.
   const next: Record<string, TemplateStockEntry> = {};
@@ -102,6 +165,21 @@ async function main(): Promise<void> {
     entry.current = hash;
     next[tpl.name] = entry;
     changed.push(tpl.name);
+  }
+
+  for (const { name, hash } of adoptions) {
+    const entry = next[name];
+    if (!entry) throw UnknownTemplateError.for(name);
+    if (Object.is(entry.current, hash)) {
+      console.log(`${name}: ${hash.slice(0, 12)} is already \`current\` — nothing to adopt.`);
+      continue;
+    }
+    if (entry.superseded.includes(hash)) {
+      console.log(`${name}: ${hash.slice(0, 12)} is already recorded.`);
+      continue;
+    }
+    entry.superseded.push(hash);
+    changed.push(`${name} (adopted ${hash.slice(0, 12)})`);
   }
 
   const rendered = render(next);

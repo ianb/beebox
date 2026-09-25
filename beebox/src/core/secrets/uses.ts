@@ -46,6 +46,9 @@ import { mutateSecretStore } from "./store.js";
  * has no built-in reasons rather than a guessed one.
  */
 const builtinUses: Record<string, string[]> = {
+  glm: [
+    "agent turns on GLM models — chat, reactor jobs, and procedure steps (the Claude engine via Z.ai's endpoint)",
+  ],
   mistral: [
     "audio transcription (Voxtral — recordings and live chat dictation)",
     "Mistral API calls from box views, through the server-side adapter",
@@ -72,12 +75,14 @@ const builtinUses: Record<string, string[]> = {
   ],
   replicate: ["Replicate model calls from box views, through the server-side adapter"],
   openrouter: [
+    "choosing a conversation for Quick chat with TypeSafe Jev",
     "embeddings for semantic and hybrid card search, when the box has no OpenAI key",
     "answering questions about recordings, and describing scanned images when the Gemini scan backend is selected, when the box has no Gemini key",
     "the Whisper high-quality transcription pass, when the box has no OpenAI key",
     "the MAI-Transcribe-2 high-quality transcription pass, which is reachable no other way",
     "speech generation for chat, when the box's TTS backend is set to Gemini",
     "OpenRouter API calls from box views, through the server-side adapter",
+    "chat and agent turns on OpenRouter models the owner added in admin (never without that step)",
   ],
   "google-oauth-client-id": [
     "the Google OAuth application's identity — the consent flow and token refresh behind Gmail, Calendar, Drive and Google sign-in",
@@ -100,6 +105,16 @@ export interface SecretUses {
   declared: string[];
   /** From the entry's `purposes`: labels real resolves actually passed. */
   observed: string[];
+}
+
+/**
+ * Every name the engine has a built-in reason for — the closed list the guide
+ * registry must cover, and the one the add form offers. Family prefixes
+ * (`telegram-bot/`) are included; callers that want typeable names filter on
+ * the trailing slash.
+ */
+export function builtinSecretNames(): string[] {
+  return Object.keys(builtinUses);
 }
 
 /** The built-in reasons for a name, or an empty list. */

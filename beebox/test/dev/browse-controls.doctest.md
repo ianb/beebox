@@ -66,6 +66,33 @@ assert.deepEqual(out.refs["e12"], { role: "button", name: "Send", id: "bbx-compo
 assert.deepEqual(out.unmatched.sort(), ["e1", "e2", "e4", "e6", "e8", "e9"]);
 ```
 
+## Snapshot escaping and rich names agree with the live DOM check
+
+Snapshot output escapes quotes and backslashes in an accessible name. Decode
+those escapes before matching the live element, whose `textContent` also needs
+spaces inserted between block-level children (for example, a title, type badge,
+path, and snippet in one Search option).
+
+```ts
+const RICH_SNAPSHOT = '- option "A title type path \\\"quoted\\\" \\\\Inbox" [ref=e20]';
+const rich = annotateSnapshot(RICH_SNAPSHOT, [{ id: "bbx-search-result", role: "option", name: 'A title type path "quoted" \\Inbox' }]);
+assert.equal(rich.text, '- option "A title type path \\\"quoted\\\" \\\\Inbox" [ref=e20, id=bbx-search-result]');
+```
+
+Escaped control characters must stay on one snapshot line. An unfamiliar
+upstream escape must leave the snapshot readable rather than throwing.
+
+```ts
+const multilineName = "Line\nwith\ttab";
+const multilineSnapshot = `- button ${JSON.stringify(multilineName)} [ref=e21]`;
+const multiline = annotateSnapshot(multilineSnapshot, []);
+assert.equal(multiline.refs["e21"]?.name, multilineName);
+assert.equal(applyLiveIds(multiline, { e21: "bbx-multiline" }),
+  `- button ${JSON.stringify(multilineName)} [ref=e21, id=bbx-multiline]`);
+const unfamiliarEscape = '- button "Literal \\q" [ref=e22]';
+assert.equal(annotateSnapshot(unfamiliarEscape, []).text, unfamiliarEscape);
+```
+
 ## Annotate: live lookups fill the gaps and update the ref table
 
 ```ts

@@ -18,6 +18,17 @@ print(extractSnippet(raw, 80));
 How long does that usually take?
 ```
 
+The `<attachments>` block that resolves `[file#N]` and `[image#N]` tokens to
+`_tmp/` paths is machine text, not the user's words, and so are the tokens
+themselves; a title built from them read "[file#1] …<attachments> [image#1]:
+_tmp/2026-…png".
+
+```ts
+print(extractSnippet(`<typed user="boxholder">[file#1] file this receipt [image#1]</typed>\n<attachments>\n[file#1]: _tmp/chat/m1abcd-x9y8z7w6/notes.txt\n[image#1]: _tmp/chat/m1abcd-x9y8z7w6/IMG_0001.jpg\n</attachments>`, 80));
+=>
+file this receipt
+```
+
 A message that is only a selection has no words of the user's own, so there is
 no snippet — the husk stays untitled until the nightly review names it:
 

@@ -197,8 +197,11 @@ export async function setAndGrantSecret(opts: {
   slug: string;
   access: SecretAccessLevel;
   note?: string | undefined;
+  formatHint?: string | undefined;
   owningBox?: string | undefined;
   shareable?: boolean | undefined;
+  /** Reasons this secret exists — APPENDED, never replacing what is there. */
+  uses?: string[] | undefined;
 }): Promise<void> {
   if (opts.value === "") throw new EmptySecretValueError();
   await mutateSecretStore({ purpose: "set-and-grant" }, (store) => {
@@ -222,6 +225,8 @@ export async function setAndGrantSecret(opts: {
       value: opts.value,
       updated: getBoxTimeISO(),
       note: opts.note ?? existing?.note,
+      uses: appendSecretUses({ name: opts.name, existing: existing?.uses, added: opts.uses }),
+      formatHint: opts.formatHint ?? existing?.formatHint,
       owningBox,
       shareable: opts.shareable ?? existing?.shareable,
       // A rotated value invalidates whatever the last probe concluded.

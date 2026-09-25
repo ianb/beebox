@@ -103,7 +103,12 @@ export function draftAttachments(draft: { images: ImageItem[]; files: FileItem[]
   files: EmissionFile[];
 } {
   return {
-    images: draft.images.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
+    images: draft.images.map((a) => ({
+      id: a.id,
+      mimeType: a.mimeType,
+      dataBase64: a.dataBase64,
+      ...(a.original.status === "uploaded" ? { path: a.original.path } : {}),
+    })),
     // Only files that finished uploading have a path to reference. The send
     // sites hold until nothing is in flight, so in practice this drops nothing
     // — but a file whose upload FAILED must not become a token pointing at a

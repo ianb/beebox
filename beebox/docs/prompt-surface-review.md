@@ -53,7 +53,7 @@ Every agent's context is a stack; each layer has a loading class:
 5. New conventions get knowledge audits; run them before calling the work done.
 6. Re-run `bbx init` on live boxes so the change actually ships.
 
-Prior art: [plans/prompt-surface-ia-review.md](plans/prompt-surface-ia-review.md) is the worked example of a full-surface review (what was found, what each fix traded against).
+Prior art: [plans/prompt-surface-cleanup-evaluation.md](plans/prompt-surface-cleanup-evaluation.md) is the worked example of a full-surface review (what was found, what each fix traded against).
 
 ## Invariants: session/prompt cache
 

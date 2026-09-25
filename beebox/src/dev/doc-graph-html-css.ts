@@ -147,6 +147,7 @@ export const PAGE_CSS = `
     border-left: 3px solid var(--c);
     transition: transform 0.1s ease;
   }
+  .doc-role { display: block; margin-top: 3px; color: var(--muted); font: 10px/1.2 "Iowan Old Style", Georgia, serif; }
   .chip:hover { text-decoration: none; transform: translateY(-1px); background: #e6dcc0; }
   .empty { color: var(--muted); font-size: 14px; font-style: italic; }
 

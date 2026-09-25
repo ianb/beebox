@@ -112,6 +112,29 @@ jobContent.includes("Done item")
 => 1
 ```
 
+Each item says where it was written — what the card is, and the heading above
+it — so the brief reads in context without the agent opening anything.
+
+```ts continue
+const box3 = await seedBox();
+setTime("2026-07-28T12:00:00.000Z");
+await box3.write(
+  "store/Porch.doc.card",
+  "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
+);
+
+const result3a = await runTodoReviewSweep(box3.root);
+JSON.stringify([result3a.escalated[0].card, result3a.escalated[0].section])
+=> ["Porch rebuild","Decking"]
+
+const jobContent3 = await fs.readFile(path.join(box3.root, result3a.jobPath), "utf-8");
+jobContent3.includes("section: Decking")
+=> true
+```
+
+Both fields are optional on the job card's schema, so a brief queued before
+they existed still validates.
+
 ## Stirring dedups on the next sweep; escalated/stale don't
 
 Once the job is cleared (simulating `bbx finish`), a second sweep at the

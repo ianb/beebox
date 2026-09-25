@@ -3,78 +3,109 @@
  * remove Drive mount cards.
  *
  * Thin wrappers: every decision lives in `connectors/drive-mounts.ts`, which
- * the settings page and chat reach through tRPC. All this layer does is turn a
- * refusal into a non-zero exit and print what changed.
+ * the settings page and chat reach through tRPC. All this layer does is decide
+ * WHERE the operation runs (`drive-dispatch.ts`: in-process only under the
+ * tooling profile, otherwise through this box's own server), turn a refusal
+ * into a non-zero exit, and print what changed.
  */
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { DriveMountError } from "../../connectors/drive-mount-errors.js";
 import {
   linkDriveItem,
   mountDriveFolder,
   unmountDriveFolder,
+  type LinkResult,
+  type MountFolderResult,
+  type UnmountResult,
 } from "../../connectors/drive-mounts.js";
-import { requireDriveService } from "./drive-service.js";
-
-/** A refusal is the user's to fix; anything else is a real failure. */
-function reportAndExit(error: unknown): never {
-  if (error instanceof DriveMountError) console.error(error.message);
-  else console.error(`Drive command failed: ${errorMessage(error)}`);
-  process.exit(1);
-}
+import { jsonFlag, runCredentialedVerb } from "../lib/credentialed-verb.js";
+import { dispatchDrive, localDriveService } from "./drive-dispatch.js";
 
 export const driveMountCommand = new Command("mount")
   .description("Mirror a Drive folder into a directory (the directory is the mount)")
   .argument("<url-or-id>", "Drive folder URL or ID")
   .argument("<dir>", "Directory to mirror it into — required, never guessed")
+  .option("--json", "Print the result as one JSON object")
   .action(async (input: string, dir: string) => {
     const boxRoot = await requireBoxRoot();
-    const service = await requireDriveService(boxRoot);
-    try {
-      const result = await mountDriveFolder({ boxRoot, service, input, dir });
-      console.log(`Mounted "${result.name}" at ${result.cardPath}`);
-      if (result.created.length > 0) {
-        console.log(`  Mirrored ${String(result.created.length)} child card(s)`);
-      }
-      for (const note of result.notes) console.log(`  Note: ${note}`);
-      // The mount exists either way — a child that could not be mirrored is
-      // reported, not rolled back, and the next sync tries it again.
-      for (const failure of result.failures) console.error(`  ${failure}`);
-      if (result.failures.length > 0) process.exit(1);
-    } catch (error) {
-      reportAndExit(error);
-    }
+    await runCredentialedVerb({
+      json: jsonFlag(driveMountCommand),
+      run: () =>
+        dispatchDrive<MountFolderResult>({
+          local: async () =>
+            mountDriveFolder({
+              boxRoot,
+              service: await localDriveService(boxRoot),
+              input,
+              dir,
+              actor: "tooling",
+            }),
+          remote: (client) => client.drive.mount.mutate({ url: input, dir }),
+        }),
+      print: (result) => {
+        console.log(`Mounted "${result.name}" at ${result.cardPath}`);
+        if (result.created.length > 0) {
+          console.log(`  Mirrored ${String(result.created.length)} child card(s)`);
+        }
+        for (const note of result.notes) console.log(`  Note: ${note}`);
+        if (result.scheduleHint !== null) console.log(`  ${result.scheduleHint}`);
+        // The mount exists either way — a child that could not be mirrored is
+        // reported, not rolled back, and the next sync tries it again.
+        for (const failure of result.failures) console.error(`  ${failure}`);
+      },
+      failed: (result) => result.failures.length > 0,
+    });
   });
 
 export const driveLinkCommand = new Command("link")
   .description("Keep a pointer to a Drive item without copying it")
   .argument("<url-or-id>", "Drive URL or ID — any type, folders included")
   .argument("<path>", "Where to write the pointer (.glink.card is added if missing)")
+  .option("--json", "Print the result as one JSON object")
   .action(async (input: string, target: string) => {
     const boxRoot = await requireBoxRoot();
-    const service = await requireDriveService(boxRoot);
-    try {
-      const result = await linkDriveItem({ boxRoot, service, input, target });
-      console.log(`Created ${result.cardPath}`);
-      console.log(`  "${result.name}" (${result.mimeType})`);
-      console.log("  Write what it is for in the card's body — the connector never touches it.");
-    } catch (error) {
-      reportAndExit(error);
-    }
+    await runCredentialedVerb({
+      json: jsonFlag(driveLinkCommand),
+      run: () =>
+        dispatchDrive<LinkResult>({
+          local: async () =>
+            linkDriveItem({
+              boxRoot,
+              service: await localDriveService(boxRoot),
+              input,
+              target,
+              actor: "tooling",
+            }),
+          remote: (client) => client.drive.link.mutate({ url: input, path: target }),
+        }),
+      print: (result) => {
+        console.log(`Created ${result.cardPath}`);
+        console.log(`  "${result.name}" (${result.mimeType})`);
+        console.log("  Write what it is for in the card's body — the connector never touches it.");
+      },
+    });
   });
 
 export const driveUnmountCommand = new Command("unmount")
   .description("Stop mirroring a folder — children stay exactly where they are")
   .argument("<dir-or-card>", "The mount directory, or the .gfolder.card itself")
-  .action(async (target: string) => {
+  .option("--json", "Print the result as one JSON object")
+  .action(async (target: string, options: { json?: boolean }) => {
     const boxRoot = await requireBoxRoot();
-    try {
-      const result = await unmountDriveFolder({ boxRoot, target });
-      console.log(`Unmounted ${result.cardPath} → ${result.trashedTo}`);
-      console.log("  Children kept: synced cards keep syncing, pointers keep pointing.");
-    } catch (error) {
-      reportAndExit(error);
-    }
+    await runCredentialedVerb({
+      json: options.json,
+      // Unmounting needs no Drive service — but it still delegates outside the
+      // tooling profile, so one rule covers the family and the commit lands
+      // with the same attribution as every other mount write.
+      run: () =>
+        dispatchDrive<UnmountResult>({
+          local: () => unmountDriveFolder({ boxRoot, target, actor: "tooling" }),
+          remote: (client) => client.drive.unmount.mutate({ cardPath: target }),
+        }),
+      print: (result) => {
+        console.log(`Unmounted ${result.cardPath} → ${result.trashedTo}`);
+        console.log("  Children kept: synced cards keep syncing, pointers keep pointing.");
+      },
+    });
   });

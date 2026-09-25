@@ -217,8 +217,8 @@ JSON.stringify([
   codexScript.includes('-s danger-full-access -a never'),
   codexScript.includes('-m "gpt-test"'),
   codexScript.includes('bin/codex-session-end'),
-  defaultCodexScript.includes('-m "gpt-5.6-sol"'),
-  defaultCodexScript.includes('--arg model "gpt-5.6-sol"'),
+  defaultCodexScript.includes('-m "gpt-6-sol"'),
+  defaultCodexScript.includes('--arg model "gpt-6-sol"'),
   codexScript.includes('session_registry_complete_launch "seam" "token-seam"'),
   codexScript.indexOf('session_registry_complete_launch "seam" "token-seam"') < codexScript.indexOf('codex "${codex_args[@]}"'),
 ])
@@ -313,6 +313,20 @@ await execFileAsync(codexBoundaryScriptPath, [], {
 const codexCompletedRecord = JSON.parse(await readFile(join(codexBoundaryStateDir, "workstreams/seam.json"), "utf8"));
 JSON.stringify({ whileRunning: JSON.parse(await readFile(codexObservation, "utf8")).state, afterExit: (await launchState(codexBoundaryStateDir, "seam")).state, agent: codexCompletedRecord.agent })
 => {"whileRunning":"none","afterExit":"none","agent":"codex"}
+
+// A tracked Claude subagent without a generated Codex mirror refuses the launch,
+// so a named agent such as `finish` never runs on the session's default model.
+await mkdir(join(validWorktree, ".claude/agents"), { recursive: true });
+await writeFile(join(validWorktree, ".claude/agents/finish.md"), "---\nname: finish\n---\n");
+const unmirroredObservation = join(root, "unmirrored-agent-observation.json");
+await beginLaunch(codexBoundaryStateDir, "seam", "token-seam");
+const unmirrored = await execFileAsync(codexBoundaryScriptPath, [], {
+  env: { ...process.env, AGENT_OBSERVATION: unmirroredObservation, BBX_STATE_DIR: codexBoundaryStateDir, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
+}).catch((error: unknown) => error as { code: number; stderr: string });
+const unmirroredStarted = await readFile(unmirroredObservation).then(() => true, () => false);
+await rm(join(validWorktree, ".claude"), { recursive: true });
+JSON.stringify({ code: unmirrored.code, refused: unmirrored.stderr.includes("missing Codex mirror for agent finish"), agentStarted: unmirroredStarted })
+=> {"code":1,"refused":true,"agentStarted":false}
 
 const ioMono = join(root, "io-mono");
 await mkdir(join(ioMono, "bin/lib"), { recursive: true });

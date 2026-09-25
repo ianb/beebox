@@ -6,6 +6,9 @@ issues: []
 ---
 # Agent field tests — an agent-operator exercising realistic box activities end-to-end
 
+**Current operation:** see the [field-testing runbook](../field-testing.md).
+This implemented plan preserves design rationale and implementation history.
+
 A new top test tier: a persistent Claude "operator" with a persona works through a
 checklist of realistic activities (add a recipe, retrieve it later, upload
 documents, react to an arriving email) against a fresh box through the real web

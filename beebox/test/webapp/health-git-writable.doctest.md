@@ -20,7 +20,7 @@ const claudeCli = createFakeClaudeCli({ loggedIn: true });
 ## No `.git/objects` at the box root fails
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":false,"message":".git/objects is missing — commits will fail; verify the Git repository at «*»","severity":"error"}

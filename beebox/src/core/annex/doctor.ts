@@ -280,26 +280,29 @@ export async function runAnnexDoctor(
 
   // 2. Is this box on git-annex at all?
   //
-  // A box that has not run `bbx attachments to-annex` is still on the manifest
-  // model, and that is a perfectly correct state — not a defect to repair. The
-  // doctor must NOT initialize it: `git annex init` writes `* filter=annex`
-  // into `.git/info/attributes`, the highest-precedence attributes file, which
-  // immediately stops Git LFS from smudging anything in that repository. Every
-  // unmigrated box uses LFS, so an auto-init here would half-break each one —
-  // annexing nothing while making its LFS content unreachable.
+  // It always should be: `bbx init` annexes a box before its first commit, and
+  // the manifest scheme this used to report as an acceptable alternative is
+  // gone. So an uninitialized box is a defect now, where it used to be a
+  // second supported state.
   //
-  // Migration is `bbx attachments to-annex`'s job, which does these steps in an
-  // order that keeps LFS working until it is deliberately retired. So: report
-  // and stop.
+  // Reported, still not repaired. `git annex init` is not the whole job — the
+  // config, the scoped attributes file, and the un-ignored `.gitignore` all
+  // have to land in an order that never leaves a window where `git add` can
+  // see an asset the annex does not yet claim (`./annex-new-box.ts`). A
+  // diagnostic that did half of that would be worse than one that reports.
+  //
+  // This short-circuits: every check below asks about the annex's
+  // configuration, and reporting ten failures with one cause helps nobody.
   if (!(await annex.isInitialized(repoRoot))) {
     checks.push({
       id: "initialized",
-      status: "ok",
+      status: "failed",
       message:
-        "not on git-annex yet (still the manifest model) — nothing to check. " +
-        "Migrate with `bbx attachments to-annex`.",
+        "not annex-initialized. Every box is annex-shaped from its first commit, so this box " +
+        "predates that or was created outside `bbx init`. Asset bytes written to it reach " +
+        "neither git nor the annex. Re-run `bbx init` on it.",
     });
-    return { checks, healthy: true };
+    return { checks, healthy: false };
   }
   checks.push({ id: "initialized", status: "ok", message: "repository is annex-initialized" });
 
@@ -416,7 +419,7 @@ export async function runAnnexDoctor(
   checks.push({ id: "smudge-hooks", ...(await checkAnnexSmudgeHooks(repoRoot, readOnly)) });
 
   // 11. The pre-commit hook actually invokes annex. `git annex init` declines
-  //    to install its own hook when one already exists, and `bbx init` leaves a
+  //    to install its own hook when one already exists, and `bbx engine init` leaves a
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.
   const hook = await readHook(repoRoot, "pre-commit");
@@ -428,9 +431,9 @@ export async function runAnnexDoctor(
       status: "failed",
       message:
         hook === null
-          ? "no pre-commit hook installed; run `bbx init` so annex runs at commit time."
+          ? "no pre-commit hook installed; run `bbx engine init` so annex runs at commit time."
           : "the pre-commit hook does not invoke `git annex pre-commit`. If bbx manages this hook, " +
-            "`bbx init` regenerates it; if it is hand-written, add the line yourself.",
+            "`bbx engine init` regenerates it; if it is hand-written, add the line yourself.",
     });
   }
 

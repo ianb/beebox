@@ -84,7 +84,7 @@ export interface GoogleTokens {
   authCheckedAt?: string;
 }
 
-function legacySecretPath(boxRoot: string): string {
+export function legacySecretPath(boxRoot: string): string {
   return path.join(getBoxDir(boxRoot, "connectors"), "google.secret.json");
 }
 
@@ -92,7 +92,7 @@ function legacySecretPath(boxRoot: string): string {
  * Resolve the centralized token file path.
  * Returns the path from BBX_GOOGLE_TOKENS_FILE env var, or null if not set.
  */
-function centralTokenPath(): string | null {
+export function centralTokenPath(): string | null {
   return process.env.BBX_GOOGLE_TOKENS_FILE || null;
 }
 

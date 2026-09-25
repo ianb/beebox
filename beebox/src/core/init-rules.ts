@@ -33,7 +33,7 @@ export const connectorRules: ConnectorRule[] = [
     paths: ["_content/calendar/**/*.ics"],
     instructions: `# Calendar Event Files (.ics)
 
-These are Google Calendar events synced via \`bbx wakeup\`. Each file is a single VEVENT in iCalendar format.
+These are Google Calendar events synced by the wakeup cycle. Each file is a single VEVENT in iCalendar format.
 
 ## Key properties
 
@@ -46,7 +46,7 @@ Custom properties track the source calendar:
 
 ## Editability
 
-- **owner/writer calendars**: You can edit the event fields (summary, description, location, times, transparency). Modified .ics files are pushed back to Google Calendar on the next \`bbx wakeup\`.
+- **owner/writer calendars**: You can edit the event fields (summary, description, location, times, transparency). Modified .ics files are pushed back to Google Calendar on the next wakeup.
 - **reader calendars**: These are subscribed/read-only calendars (e.g. school calendars). Do NOT edit these files — changes cannot be synced back.
 - **Events organized by others on your own calendar**: You can generally only change your own attendee response (PARTSTAT), not the event details.
 

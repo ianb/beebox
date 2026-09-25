@@ -24,6 +24,9 @@ import { FriendlyDate } from "../components/ui/FriendlyDate";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
+import { ErrorText } from "../components/ui/ErrorText";
+import { Hint } from "../components/ui/Hint";
+import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "./directory";
 import { registerFileType, type RendererProps } from "./index";
@@ -77,7 +80,7 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
   return (
     <Stack gap="xs">
       <Row gap="sm" align="center" wrap>
-        <Text as="h2" size="lg" weight="semibold">{name ?? "Drive folder"}</Text>
+        <Heading level={2}>{name ?? "Drive folder"}</Heading>
         {status === "error" ? <Badge tone="danger">error</Badge> : null}
         {status === "ok" ? <Badge tone="success">mirrored</Badge> : null}
         {status === null ? <Badge tone="neutral">never synced</Badge> : null}
@@ -85,13 +88,13 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}
       </Row>
-      <Text size="sm" tone="muted">
+      <Hint>
         mirrors into {dirOf(path) === "" ? "the box root" : dirOf(path)}
         {problemSummary(frontmatter) === null ? null : <>{" · "}{problemSummary(frontmatter)}</>}
         {lastSync === null ? null : <>{" · last sync "}<FriendlyDate iso={lastSync} /></>}
         {driveId === null ? null : <>{" · "}<Text size="xs" mono tone="muted">{driveId}</Text></>}
-      </Text>
-      {error === null ? null : <Text size="sm" tone="danger">{error}</Text>}
+      </Hint>
+      {error === null ? null : <ErrorText>{error}</ErrorText>}
     </Stack>
   );
 }
@@ -165,9 +168,9 @@ function GfolderView({ data, onNavigate }: RendererProps) {
       </Row>
 
       {syncMutation.error === null ? null : (
-        <Text as="div" size="sm" tone="danger" className="p-2">
+        <ErrorText className="p-2">
           {syncMutation.error.message}
-        </Text>
+        </ErrorText>
       )}
       {syncMutation.data === undefined ? null : (
         <SyncOutcome result={syncMutation.data} />
@@ -177,7 +180,7 @@ function GfolderView({ data, onNavigate }: RendererProps) {
         <Text size="sm" weight="semibold" uppercase tone="muted">Mirrored here</Text>
         {listing.isLoading ? <Text size="sm" tone="subtle">Loading…</Text> : null}
         {listing.error === null ? null : (
-          <Text size="sm" tone="danger">Error: {listing.error.message}</Text>
+          <ErrorText>Error: {listing.error.message}</ErrorText>
         )}
         {listing.data === undefined ? null : (
           <DirectoryListing

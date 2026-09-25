@@ -20,6 +20,7 @@ import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
+import { readTrickSecrets, resolveTrickSecret } from "../lib/trick-secrets.js";
 
 const require = createRequire(import.meta.url);
 
@@ -124,6 +125,14 @@ async function runTrick(opts: RunTrickOptions): Promise<number> {
     BBX_BOX_ROOT: opts.boxRoot,
     BBX_TRICK_NAME: opts.name,
   });
+  const declarations = await readTrickSecrets(path.dirname(opts.entryPoint));
+  for (const declaration of declarations) {
+    const resolved = await resolveTrickSecret({ env, declaration });
+    if (resolved.suspect) {
+      console.warn(`Secret "${declaration.name}" is marked suspect; the trick may receive an authentication failure.`);
+    }
+    env[declaration.env] = resolved.value;
+  }
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [resolveTsx(), opts.entryPoint, ...opts.args], {
       cwd: opts.tricksDir,
@@ -145,6 +154,7 @@ async function runTrick(opts: RunTrickOptions): Promise<number> {
 export const trickCommand = new Command("trick")
   .description("Run box-local agent-authored scripts (tricks)")
   .argument("[name]", "Trick to run")
+  .option("--check-secrets", "Validate all trick secret declarations without running a trick")
   .allowUnknownOption(true)
   .allowExcessArguments(true)
   .action(async function (this: Command, name: string | undefined) {
@@ -155,6 +165,19 @@ export const trickCommand = new Command("trick")
     // package box) shown in user-facing messages below, expressed from the
     // agent's actual cwd (boxRoot).
     const relScriptsDir = `${boxCodePathsRelativeToBoxRoot(shape).tricksDir}/scripts`;
+
+    const options = this.opts<{ checkSecrets?: boolean }>();
+    if (options.checkSecrets) {
+      try {
+        const tricks = await discoverTricks(tricksDir);
+        for (const trick of tricks) await readTrickSecrets(path.dirname(trick.entryPoint));
+        console.log(`Validated secret declarations for ${String(tricks.length)} trick(s).`);
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : "Could not validate trick secrets");
+        process.exitCode = 1;
+      }
+      return;
+    }
 
     if (!name) {
       // List available tricks
@@ -192,7 +215,14 @@ export const trickCommand = new Command("trick")
     // Collect remaining args after the trick name
     const trickArgs = this.args.slice(1);
 
-    const exitCode = await runTrick({ boxRoot, tricksDir, name, entryPoint, args: trickArgs });
+    let exitCode: number;
+    try {
+      exitCode = await runTrick({ boxRoot, tricksDir, name, entryPoint, args: trickArgs });
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : "Could not prepare trick secrets");
+      process.exitCode = 1;
+      return;
+    }
     if (exitCode !== 0) {
       process.exitCode = exitCode;
       return;

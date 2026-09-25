@@ -112,11 +112,10 @@ export function createWorkspaceBrowserStoreWithStorage({
       const key = workspaceStorageKey({ apiBase, logicalConversationId: identity });
       const raw = storage.getItem(key);
       const trusted = trustsLegacyKey(apiBase, boxSlug);
-      const legacy = storage.getItem(sidecarTabsKey({ boxSlug, sessionInput: identity }));
+      const legacy = trusted ? storage.getItem(sidecarTabsKey({ boxSlug, sessionInput: identity })) : null;
       const restored = restoreWorkspaceState({
         v2Raw: raw,
-        trustedLegacyRaw: trusted ? legacy : null,
-        skippedPopulatedLegacy: !trusted && legacy !== null && legacy !== "",
+        trustedLegacyRaw: legacy,
       });
       state = restored.state;
       memory.set(identity, state);

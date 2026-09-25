@@ -4,7 +4,7 @@ import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
  *
- * `.npmrc` sets `node-linker=hoisted`, so every package's dependencies are
+ * `pnpm-workspace.yaml` sets `nodeLinker: hoisted`, so every package's dependencies are
  * installed into the root `node_modules` — `beebox/node_modules` holds
  * two entries. Run per-package, knip cannot map a binary a script invokes
  * (`eslint`, `tsc`, `tap`) back to the package declaring it, and reports the
@@ -47,6 +47,7 @@ const config: KnipConfig = {
       project: [
         "src/**/*.{ts,tsx}",
         "!src/frontend/**",
+        "!src/schemas/**/*.list-entry.tsx",
         "test/**/*.ts",
         "test/**/*.doctest.md",
         "scripts/**/*.ts",
@@ -79,8 +80,13 @@ const config: KnipConfig = {
       ],
     },
     "beebox/src/frontend": {
-      entry: ["src/components/view-widgets/node-entry.tsx"],
-      project: ["src/**/*.{ts,tsx}"],
+      entry: [
+        "src/components/view-widgets/node-entry.tsx",
+        // Bundled on its own into the deploy page by
+        // beebox/scripts/build-deploy-page.ts, which names it by path.
+        "src/deploy-page/deploy-page.ts",
+      ],
+      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;
@@ -120,6 +126,8 @@ const config: KnipConfig = {
     "tar",
     "ps",
     "lsof",
+    // box-growth/bytes.ts measures disk use with `du -sk`.
+    "du",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // A tracked executable in this repo, run by the root `dev` script.

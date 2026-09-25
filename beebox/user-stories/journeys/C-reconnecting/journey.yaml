@@ -1,0 +1,72 @@
+# Fictional people from docs/example-names.md; no real contacts or accounts.
+id: C-reconnecting
+title: I want to reconnect with people I've lost touch with
+
+box:
+  base: empty
+  setup: null
+
+assets: []
+sittings: 1
+budget_actions: 60
+
+situation: |
+  You keep thinking of friends you would like to see, then another month goes by.
+  You don't want friendship to become homework. You just want to remember enough
+  to send a warm, ordinary message and actually follow through.
+
+  Idris Okafor used to work with you. You last had coffee in spring, when he was
+  thinking about changing jobs. You don't know whether he did. You liked your
+  lunchtime walks together and would enjoy another one.
+
+  Noor Haddad moved to another city last year. Your last proper conversation was
+  around the holidays. Her mother was unwell then; you don't know how things are
+  now, and you worry that an over-cheerful message would land badly. You used to
+  swap book recommendations and still think of her when you finish a good one.
+
+  You and Marisol Reyes kept saying you should have dinner. She suggested a
+  Thursday a couple of months ago, you couldn't make it, and you never offered
+  another day. That one is yours to pick up. Next Saturday evening is free.
+
+  Bram Vance is someone you miss from an old hiking group. You think you sent
+  him a message over the summer, but you're not sure whether he replied or
+  whether you only meant to send it. You don't want to treat him as having
+  ignored you when you can't remember what actually happened.
+
+  Tonight you want to choose someone to contact and get as far as words you
+  would really send. Over the next few weeks you want to find your way back to
+  these friendships without repeatedly forgetting what you last meant to do.
+  You send messages yourself from your phone, the way you always do. You aren't
+  ready to connect your accounts to an app you have only just started trying.
+
+closing: |
+  Once you have something useful, carry the evening forward. Whoever you started
+  with, you also message Marisol yourself suggesting dinner next Saturday. She
+  replies that she would love to, but can only do Sunday lunch. Sunday lunch works for you too;
+  you haven't replied to her yet.
+
+  Bring that change back here. Then leave the app and come back through whatever
+  route you would naturally use next time. See where things stand with each of
+  them, and decide who else you would reach out to and what you would say.
+
+# Reader only. prepare must never include this field in the walker prompt.
+watch_for: |
+  Does the person reach an actionable, personally plausible next step, or only
+  acquire a collection of profiles? How much initiative and explanation does
+  the interface require before the person can find what they entrusted to it?
+
+  Keep uncertain memories uncertain: Idris's possible job change, Noor's
+  mother's current situation, and whether Bram was ever contacted. Do proposed
+  messages accidentally assert facts that were never known?
+
+  Marisol's invitation changes from Saturday dinner to possible Sunday lunch.
+  Verify the stored state independently: neither the original suggestion nor
+  her reply means the person has confirmed a plan. Observe whether conflicting
+  versions accumulate and whether the next-action answer respects the change.
+
+  Separate drafted, sent, and agreed. External sending is a stated simulation,
+  not a tested integration. Record any reminder setup independently of actual
+  reminder delivery; one sitting does not establish future follow-through.
+
+  Attend to the return path, visible names, empty states, and what the person
+  believes they could keep using without turning relationships into chores.

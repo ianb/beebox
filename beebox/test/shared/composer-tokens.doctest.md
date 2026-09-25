@@ -6,7 +6,7 @@ pre-2026-08-25 form (`[image1]`) as well, because every stored transcript,
 every persisted draft, and every iOS build that has not updated still uses it.
 
 ```ts setup
-import { composerToken, composerTokenIn, normalizeComposerTokens } from "../../src/shared/composer-tokens.js";
+import { attachmentsBlockStart, composerToken, composerTokenIn, normalizeComposerTokens } from "../../src/shared/composer-tokens.js";
 ```
 
 ## The writer emits one form
@@ -67,4 +67,39 @@ claim that the reference resolves.
 ```ts
 normalizeComposerTokens("see [image] and [file: here] and [selection99]")
 => see [image] and [file: here] and [selection#99]
+```
+
+## `attachmentsBlockStart` finds the trailing block and nothing else
+
+The `<attachments>` block re-spells the tokens it resolves — `[file#1]: _tmp/…`,
+and for an inline image's original file `[image#1]: _tmp/…` — so a reader that
+expands or strips `[image#N]` stops here. Only a block that ends the message
+counts; anything the user typed mid-sentence is body text.
+
+```ts
+const msg = "<typed>see [image#1]</typed>\n<attachments>\n[image#1]: _tmp/a.png\n</attachments>";
+msg.slice(attachmentsBlockStart(msg))
+=> <attachments>
+[image#1]: _tmp/a.png
+</attachments>
+
+// Trailing whitespace after the close tag is tolerated.
+attachmentsBlockStart(msg + "\n") === msg.indexOf("<attachments>")
+=> true
+
+// No block: the whole text is body.
+attachmentsBlockStart("<typed>plain</typed>")
+=> 20
+
+// A block that does not end the message is body text.
+attachmentsBlockStart("<typed>I typed <attachments>x</attachments> by hand</typed>")
+=> 59
+
+// Two blocks (the assembler never writes two, but a body can quote one): the
+// LAST one, which is the real one.
+const two = "<typed><attachments>quoted</attachments></typed>\n<attachments>\n[file#1]: _tmp/b.pdf\n</attachments>";
+two.slice(attachmentsBlockStart(two))
+=> <attachments>
+[file#1]: _tmp/b.pdf
+</attachments>
 ```

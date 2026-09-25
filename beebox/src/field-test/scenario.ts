@@ -51,7 +51,7 @@ const DEFAULT_MODEL = "opus";
  * (`core/model-policy.ts`), so nothing is lost by picking a family here.
  */
 function resolveScenarioChatModel(model: string): string | null {
-  if (isProcedureModelName(model)) return resolveProcedureModel("claude", model);
+  if (isProcedureModelName(model)) return resolveProcedureModel({ engine: "claude", model });
   return modelTier(normalizeModelId(model)) === null ? null : normalizeModelId(model);
 }
 

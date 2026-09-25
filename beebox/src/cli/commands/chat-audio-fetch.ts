@@ -17,6 +17,7 @@ import { resolveAgentToken } from "../../core/agent/token.js";
  */
 export function loopbackHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.BBX_BOX_WORK) headers["x-bbx-box-work"] = process.env.BBX_BOX_WORK;
   const token = resolveAgentToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;

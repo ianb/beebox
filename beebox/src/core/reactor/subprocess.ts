@@ -19,7 +19,7 @@ import { errorMessage } from "../../lib/error-guards.js";
  */
 async function runBbxSubcommand(
   boxRoot: string,
-  { command, label, onLog }: { command: string; label: string; onLog: ((text: string) => void) | undefined }
+  { argv, label, onLog }: { argv: readonly string[]; label: string; onLog: ((text: string) => void) | undefined }
 ): Promise<boolean> {
   // Tooling profile: this child IS `bbx wakeup`/`bbx finalize` — it runs the
   // connectors, so it needs the connector credentials an agent must not see.
@@ -27,7 +27,7 @@ async function runBbxSubcommand(
   try {
     const { code } = await runCollectedChild({
       command: "bbx",
-      args: [command],
+      args: [...argv],
       cwd: boxRoot,
       env,
       ...(onLog !== undefined ? { onChunk: onLog } : {}),
@@ -43,12 +43,12 @@ async function runBbxSubcommand(
  * Run `bbx wakeup` as a subprocess to sync external sources.
  */
 export async function runSync(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
-  return runBbxSubcommand(boxRoot, { command: "wakeup", label: "Sync", onLog });
+  return runBbxSubcommand(boxRoot, { argv: ["engine", "wakeup"], label: "Sync", onLog });
 }
 
 /**
  * Run `bbx finalize` as a subprocess to flush outbound cards.
  */
 export async function runFinalize(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
-  return runBbxSubcommand(boxRoot, { command: "finalize", label: "Finalize", onLog });
+  return runBbxSubcommand(boxRoot, { argv: ["finalize"], label: "Finalize", onLog });
 }

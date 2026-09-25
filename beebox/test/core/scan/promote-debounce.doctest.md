@@ -10,6 +10,8 @@ behavior under test is the re-arming, not the duration.
 
 ```ts setup
 import { createPromoteDebouncer, SCAN_SETTLE_MS } from "../../../src/core/scan/promote-debounce.js";
+import Fastify from "fastify";
+import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-promote-lifecycle.js";
 import { sleep } from "../../../src/lib/sleep.js";
 
 function counting(opts) {
@@ -79,4 +81,36 @@ c.runs
 ```ts
 SCAN_SETTLE_MS
 => 120000
+```
+
+## Server close waits for a pass already in flight
+
+The startup pass is fire-and-forget so a box can serve immediately. Closing the
+server must still wait for that pass before its temporary box is removed.
+
+```ts
+const app = Fastify();
+let release!: () => void;
+let started!: () => void;
+const passStarted = new Promise(resolve => { started = resolve; });
+const passMayFinish = new Promise(resolve => { release = resolve; });
+startScanPromoteLifecycle({
+  server: app,
+  boxRoot: "test-box",
+  run: async () => { started(); await passMayFinish; },
+});
+await app.ready();
+await passStarted;
+let closingSettled = false;
+const closing = app.close().then(() => { closingSettled = true; });
+await sleep(20);
+closingSettled
+=> false
+```
+
+```ts continue
+release();
+await closing;
+closingSettled
+=> true
 ```

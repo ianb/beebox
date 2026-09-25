@@ -139,6 +139,18 @@ export function buildQueryOptions(
 }
 
 /**
+ * Provider credentials are baked into a warm subprocess's env, and a consumed
+ * slot's env wins over the caller's — so a key rotation between prewarm and
+ * send must invalidate the slot rather than silently keep the old credential.
+ */
+function providerEnvMatches(warm: Record<string, string | undefined>, next: Record<string, string | undefined>): boolean {
+  for (const key of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "API_TIMEOUT_MS"] as const) {
+    if ((warm[key] ?? null) !== (next[key] ?? null)) return false;
+  }
+  return true;
+}
+
+/**
  * Whether a `start()` call's options are compatible with a pre-warmed slot.
  * Exported for `test/services/service-claude-chat.doctest.md`: this and
  * `warmSlotKey` are the warm pool's whole decision surface, and getting either
@@ -152,6 +164,8 @@ export function warmCompatible(
   next: ChatBackendStartOptions,
 ): boolean {
   if (next.resumeSessionId !== undefined) return false;
+  if (warm.env.BBX_BOX_WORK !== next.env.BBX_BOX_WORK) return false;
+  if (!providerEnvMatches(warm.env, next.env)) return false;
   // A warm slot's session id is baked into its subprocess at spawn, so a slot
   // may only serve the chat it was warmed for — and a slot warmed with no id
   // may only serve a chat that brings none.

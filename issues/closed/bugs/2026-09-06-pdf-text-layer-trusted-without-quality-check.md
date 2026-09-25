@@ -93,7 +93,7 @@ saying nothing, which is worse than an obvious garble.
 
 ## Correction to a prior conclusion
 
-[`plans/scanner-ingest.md`](../../../beebox/docs/plans/scanner-ingest.md) records
+[`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
 that Docling has no hybrid "OCR only pages without a text layer" mode, citing
 upstream feature requests. That is no longer accurate for 2.117:
 `--ocr-mode pdf_aware_layout_regions` preserves an existing text layer and

@@ -1,6 +1,6 @@
 ---
 name: bbx-guide-testing
-description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding how to test something, writing tests in an unfamiliar tier, or judging what coverage a change needs. Triggers include "how should I test this", "what kind of test", "add tests for X", "is this covered". Instructional (a bbx-guide-* skill) — the debugging discipline is bbx-debug; the full reference is docs/testing.md.
+description: Choose among beebox test tiers and judge appropriate coverage. Use when deciding how to test a change or working in an unfamiliar tier; use bbx-debug for the broader debugging discipline.
 ---
 
 # Testing in beebox: what exists and how to choose
@@ -23,7 +23,7 @@ line (`docs/testing.md` opens with this).
   with executable blocks. Three flavors: pure-function; route
   (`makeTestServer()` — NOTE it prefixes URLs with `/test`;
   `rootRequest()` escapes); filesystem (`makeTmpBox()`). Syntax:
-  `.claude/rules/doctest.md` (loads automatically when editing one);
+  `agent-doctest/docs/syntax.md` (monorepo-relative; the path rule points here);
   deeper reference in the monorepo `agent-doctest/docs/`.
 - **Scenario tests** (`src/scenario/`) — multi-step end-to-end fixtures
   driving a real box through wakeup cycles. For pipeline behavior that

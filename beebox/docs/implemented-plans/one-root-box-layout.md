@@ -7,6 +7,22 @@ issues:
 ---
 # One-root box layout (shapeVersion 3)
 
+> **⚠ The migration it describes is deleted** (full-embrace-annex, 2026-09-14).
+> The one-root LAYOUT is current — shapeVersion 3 is the only shape the engine
+> understands. What is gone is the v2→v3 conversion this plan built:
+> `scripts/migrate/one-root.ts`, the `one-root` migration entry, the
+> `migrate-bootstrap` v2 path, and the whole `src/core/migrations/one-root-*`
+> cluster. Every `bbx migrate` instruction below is stale; a v2 box now throws
+> and names no remedy.
+>
+> It was removed once the v2 population reached zero: every box is
+> shapeVersion 3, and the last two v2 boxes were purged rather than converted.
+> The conversion also never worked cleanly on a real v2 box — four distinct
+> blockers are recorded in
+> `issues/closed/bugs/2026-09-14-one-root-migration-cannot-migrate-a-real-v2-box.md`.
+> One module survives: `one-root-mapping.ts`, whose `mapV2Path` is still a
+> read-time fallback for chat transcripts written before a box was converted.
+
 A box currently has two roots: the package root (`package.json`, `src/`,
 `.claude/`) and the operational root (`content/`, everywhere called `boxRoot`).
 Callers keep picking the wrong one — four filed instances of the bug family,

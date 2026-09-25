@@ -5,8 +5,16 @@
 
 import * as path from "node:path";
 
+/**
+ * What to tell someone holding a v2 box. There is no longer a command that
+ * converts one: every box is shapeVersion 3, the v2 population was emptied on
+ * 2026-09-14, and the conversion was deleted with it. So this names the shape
+ * and stops, rather than pointing at a `bbx migrate` path that would now say
+ * there is nothing to do.
+ */
 const MIGRATION_POINTER =
-  "This box predates the one-root layout (shapeVersion 3). Run `bbx migrate` to convert it. " +
+  "This box predates the one-root layout (shapeVersion 3) and cannot be opened. " +
+  "The v2-to-v3 conversion has been removed — no box was left on that shape. " +
   "See docs/box-layout.md.";
 
 export class BoxShapeError extends Error {

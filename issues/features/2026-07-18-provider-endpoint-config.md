@@ -13,7 +13,7 @@ priority: backlog
 > unchanged in code: `src/core/script-env.ts:103-106` still deletes
 > `env.ANTHROPIC_API_KEY` to force subscription auth, and `src/core/agent/run.ts:196`
 > still documents that. The spike it depends on,
-> [model backend pluggability](../exploration/2026-07-18-model-backend-pluggability.md),
+> [model backend pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md),
 > still carries an unfilled `## Research (incomplete)`.
 >
 > Checked specifically whether the Codex-engine work superseded it. It does not:
@@ -22,6 +22,14 @@ priority: backlog
 > decision doc draws that line itself. This issue's own motivations (billing
 > diversity, vision-capable non-China models, self-hosted vLLM) are independent
 > of the vendor-independence goal Codex addressed, and remain unaddressed.
+
+> **2026-09-19 — OpenRouter chat slice shipped.** The owner can now add
+> specific OpenRouter chat models in Admin, per
+> [openrouter-chat-models](../../beebox/docs/implemented-plans/openrouter-chat-models.md)
+> (resolved
+> [2026-09-19-openrouter-chat-models-added-in-admin](../closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md)).
+> This issue stays open for what that plan did not build: API-billed Anthropic
+> and self-hosted vLLM.
 
 The ADOPT recommendation from the backend deep pass
 ([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)): a
@@ -55,6 +63,6 @@ Design questions:
   (`src/services/claude-cli.ts`).
 
 **Blocked on the empirical spike** in
-[model-backend-pluggability](../exploration/2026-07-18-model-backend-pluggability.md):
+[model-backend-pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md):
 verify the SDK's full loop (tools, images, streaming, caching) against one real
 non-Anthropic endpoint before designing the config surface.

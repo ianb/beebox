@@ -119,7 +119,7 @@ export function renderLoginPage(state: LoginPageState): string {
     : "";
   const hint = setupRequired
     ? "<p class=\"hint\">No account yet? Run the first-run setup (see the server console for the link), " +
-      "or run <code>bbx auth create-user</code> on the host.</p>"
+      "or run <code>bbx engine auth create-user</code> on the host.</p>"
     : "";
   const body =
     "<h1>Sign in</h1>" +
@@ -145,7 +145,7 @@ function setupErrorMessage(kind: SetupErrorKind | null): string | null {
   if (kind === null) return null;
   switch (kind) {
     case "token":
-      return "This setup link is invalid or has expired. Use the exact link printed to the server console, or run `bbx auth create-user` on the host.";
+      return "This setup link is invalid or has expired. Use the exact link printed to the server console, or run `bbx engine auth create-user` on the host.";
     case "exists":
       return "An account already exists — sign in instead.";
     case "mismatch":
@@ -175,7 +175,7 @@ export function renderSetupPage(state: SetupPageState): string {
       "first started (search the output for <code>First-run setup:</code>). If the server has been " +
       "restarted or an account already exists, the link has expired.</p>" +
       "<p class=\"hint\">Alternatively, create the first account directly on the host with " +
-      "<code>bbx auth create-user</code>.</p>";
+      "<code>bbx engine auth create-user</code>.</p>";
     return pageShell({ title: "Bee Box — Setup", body });
   }
   const body =

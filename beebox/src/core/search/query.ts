@@ -98,6 +98,8 @@ export interface SearchBoxOptions {
   kinds?: string[];
   /** Restrict to paths starting with this box-relative prefix. */
   pathPrefix?: string;
+  /** Restrict to paths starting with any of these box-relative prefixes. */
+  pathPrefixes?: string[];
   limit?: number;
   rebuild?: boolean;
   onProgress?: OpenSearchIndexOptions["onProgress"];
@@ -113,6 +115,8 @@ export interface SearchBoxOptions {
    * (hybrid when a service is configured and the corpus is fully embedded).
    */
   mode?: "text" | "hybrid" | undefined;
+  lockRetries?: number;
+  lockRetryMs?: number;
 }
 
 export async function searchBox(
@@ -147,6 +151,8 @@ export async function searchBox(
   const openOpts: OpenSearchIndexOptions = {};
   if (options.rebuild !== undefined) openOpts.rebuild = options.rebuild;
   if (options.onProgress !== undefined) openOpts.onProgress = options.onProgress;
+  if (options.lockRetries !== undefined) openOpts.lockRetries = options.lockRetries;
+  if (options.lockRetryMs !== undefined) openOpts.lockRetryMs = options.lockRetryMs;
   if (service !== undefined) openOpts.embeddings = service;
   const { db, warnings, stale, embeddingsReady } = await openSearchIndex(boxRoot, openOpts);
 
@@ -163,7 +169,8 @@ export async function searchBox(
 
   const where =
     kinds !== undefined && kinds.length > 0 ? { where: { kind: { in: kinds } } } : {};
-  const fetchLimit = pathPrefix !== undefined ? PATH_FILTER_FETCH : limit;
+  const prefixes = options.pathPrefixes ?? (pathPrefix === undefined ? undefined : [pathPrefix]);
+  const fetchLimit = prefixes !== undefined ? PATH_FILTER_FETCH : limit;
   const raw =
     searchMode === "hybrid" && queryVector !== undefined
       ? await search(db, {
@@ -186,10 +193,15 @@ export async function searchBox(
 
   let hits = raw.hits;
   let total = raw.count;
-  if (pathPrefix !== undefined) {
-    hits = hits.filter((h) => hitDoc(h).path.startsWith(pathPrefix));
+  if (prefixes !== undefined) {
+    hits = hits.filter((h) => prefixes.some((prefix) => hitDoc(h).path.startsWith(prefix)));
     total = hits.length;
   }
+  hits.sort((a, b) => {
+    const aContent = hitDoc(a).path.startsWith("_content/") ? 1 : 0;
+    const bContent = hitDoc(b).path.startsWith("_content/") ? 1 : 0;
+    return bContent - aContent || b.score - a.score;
+  });
   hits = hits.slice(0, limit);
 
   const results = hits.map((h): SearchHit => {
@@ -200,7 +212,7 @@ export async function searchBox(
       kind: doc.kind,
       title: doc.title,
       contains: doc.contains,
-      excerpt: generateExcerpt(doc.content !== "" ? doc.content : doc.contains, query),
+      excerpt: generateExcerpt(doc.contains !== "" ? doc.contains : doc.content, query),
       score: h.score,
     };
   });

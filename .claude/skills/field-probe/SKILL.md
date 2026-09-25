@@ -1,6 +1,6 @@
 ---
 name: field-probe
-description: Use when a bug only manifests in an environment the agent can't drive itself — the boxholder's phone (iOS app / mobile Safari), a prod-only condition, real-device gestures or timing — so diagnosis needs instrumentation deployed to the field and the boxholder acting as your hands. Triggers include "it still happens on my phone", "works on desktop but not on device", "can't reproduce it here", "run a field probe", "probe this on device". Not for anything reproducible via bin/browse or a doctest — build the local loop instead (bbx-debug).
+description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures and timing, by deploying bounded instrumentation and having the boxholder run it. Use bbx-debug instead when a browser or doctest can reproduce the bug locally.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 

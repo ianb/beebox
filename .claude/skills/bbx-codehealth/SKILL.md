@@ -1,6 +1,6 @@
 ---
 name: bbx-codehealth
-description: Use for a deliberate codebase-health pass — when cruft has accumulated, an area feels tangled or hard to test, you're about to make a big change in a messy area, or bbx-debug's circuit-breaker flagged the architecture. Surfaces deepening opportunities and dead code; not every-refactor cleanup. Triggers include "codebase health", "health check/checkup on the code", "health pass", "audit the codebase", "find dead code", "tech debt pass", "this feels crufty/tangled", "reduce cruft", "is this architecture okay", "de-cruft X", "what should we clean up".
+description: Run a deliberate codebase-health pass to find cruft, dead code, shallow modules, and hard-to-test seams. Use for accumulated architectural friction, before large changes in messy areas, or when bbx-debug flags the architecture; not for routine refactoring.
 allowed-tools: Bash, Read, Grep, Glob, Agent
 ---
 
@@ -40,19 +40,25 @@ you could delete by smearing its job across callers was shallow.
 
 ## 1. Scan for friction
 
-**Run our tooling first — these are concrete, runnable signals, not vibes.**
-All the `pnpm lint:*` scripts live in `beebox/package.json`, so run them
-from `beebox/`:
+Choose the audit scope first: a named area and its directly coupled seams, or
+an explicitly package-wide health pass. Use existing current results when they
+cover that scope; run the tools needed to answer the question. The `pnpm lint:*`
+scripts run from `beebox/`. Ground each candidate in current tool findings or
+concrete source/caller evidence, not an impression alone:
 
-- `pnpm lint:knip` — **dead code** (unused files, exports, deps). The clearest
-  "code is a liability" hit; removing it is free health. (knip also enforces
-  "only export what's used.")
-- `pnpm lint:circular` — value import cycles (madge). Tangled seams; type-only
-  cycles are fine.
-- `pnpm lint:oxlint` — useless spreads, identical ternary branches, ambiguous
-  constructors, and other structural smells.
-- Files near the 300-line cap / functions near 150 — pressure to split *by
-  responsibility* (things that change together live together), not by layer.
+- `pnpm lint:knip` — unused files, exports, and dependencies. Its reachability
+  analysis needs the whole package; do not restrict its graph to a directory.
+- `pnpm lint:circular` — value-import cycles (madge; `.madgerc` skips type
+  imports). Keep cross-directory edges when inspecting a subsystem's cycles.
+- `pnpm lint:oxlint` — structural smells such as useless spreads and identical
+  ternary branches.
+- Files near the 300-line cap / functions near 150 — inspect responsibility
+  boundaries; do not split solely to satisfy a count.
+
+For a package-wide audit, run all three tools. For a named-area audit, run only
+applicable tools, retaining whole-package analysis where required and triaging
+hits in the requested area or its directly coupled seams. Do not rerun a tool
+later in this checklist if its current result already covers the question.
 
 **Optional deep-scan — near-duplicate detection (slopo).** For a duplication
 pass over a whole package (the "same thing written twice under different names"
@@ -90,19 +96,19 @@ a real home, don't just hoist it into a junk drawer.
 **Recurring-pattern checks (architectural-review regressions).** These are the
 patterns the 2026-07 architectural review found *regrowing in new code* — a
 one-time cleanup didn't hold, so they get a cheap recurring grep instead of a
-17-agent pass. Run them from `beebox/`; each says what healthy looks like
-and what a regression looks like.
+17-agent pass. Use only the probes relevant to the audit scope, from `beebox/`.
+Call something a regression or trend only against a named earlier result or
+commit; otherwise report the current offending sites.
 
 - **Dead code — `pnpm lint:knip`.** Healthy is a small handful of genuine
   unused files; a regression is a jump into the dozens (usually a broken entry
   in `knip.json`, not real dead code) or a newly-orphaned file.
-- **Cycles — `pnpm lint:circular`** (madge). Healthy: only `import type` cycles.
-  A regression is any new value-import cycle.
-- **`as unknown as` trend — `grep -rn "as unknown as" src | wc -l`.** Healthy is
-  flat-or-declining across runs; a regression is the count climbing, or any new
-  site outside the two blessed helpers (`cardFields`, `parseCommandArgs`). Note
-  `as never` evades the count *and* the `.tsx` lint ban — grep it separately
-  (`grep -rn "as never" src`).
+- **Cycles — `pnpm lint:circular`** (madge, type imports skipped). Healthy is
+  zero reported value cycles; any reported value cycle needs investigation.
+- **Unsafe casts — `rg -n "as unknown as|as never" src`.** Inspect sites in
+  scope outside the two blessed helpers (`cardFields`, `parseCommandArgs`).
+  `as never` evades the `as unknown as` count and the `.tsx` lint ban. A raw
+  count without a comparable baseline does not establish a trend.
 - **Silent catches, all forms —**
   `grep -rnE "\.catch\(\s*\(\s*_?\w*\s*\)\s*=>\s*\{\s*\}\s*\)|catch\s*\{\s*\}" src`.
   The arrow form `.catch(() => {})` is the one that slips past the catch-must-log
@@ -112,8 +118,8 @@ and what a regression looks like.
 - **Exhaustiveness inventory.** The `switch-exhaustiveness-check` lint rule
   (live) covers `switch`; `pnpm lint` clean means switches are handled. If-chains
   over a union aren't linted — scan for a union dispatch whose final `else` lacks
-  `assertNever`. Sanity gauge: `grep -rc "assertNever" src | ...` should trend
-  up, never back to zero.
+  `assertNever`. Judge whether each dispatch handles its union, not how many
+  `assertNever` calls exist.
 - **Regrown consolidated helpers.** Each of these was consolidated once and grew
   hand-rolled copies back; grep for the *formula* reappearing outside its home:
   - content-hash: `createHash("sha256")` outside `lib/content-hash.ts`.
@@ -134,9 +140,9 @@ and what a regression looks like.
   resolves — a moved or deleted file leaves a stale prose pointer doc-check can't
   see.
 
-**Then explore organically** — use `Agent` (`subagent_type=Explore`) over the
-suspect subsystems; don't follow rigid heuristics, note where *you* feel
-friction:
+**Explore the unresolved seams** after the tool results. Delegate a bounded
+question when useful; skip a second exploration pass if the evidence already
+answers it. Look for friction in the agreed scope:
 
 - Understanding one concept requires bouncing between many tiny modules.
 - A module is **shallow** — apply the deletion test.
@@ -152,8 +158,8 @@ friction:
   migrate when you touch the area"), duplicated logic, or routinely-noisy command
   output (a bug per CLAUDE.md, not background).
 
-Read `docs/glossary.md` for the domain's real names; don't re-litigate decisions
-already recorded in `docs/implemented-plans/`.
+Consult `docs/glossary.md` when domain vocabulary is relevant, and the specific
+implemented plan when a candidate touches an earlier design decision.
 
 ## 2. Report candidates (Markdown, not a repo artifact)
 
@@ -203,23 +209,3 @@ docs, and config — not just the code.
   with an external ideal.
 - **Maintain balance** — don't over-abstract or simplify clean code; scope to
   what's genuinely crufty.
-
-## Common rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "It works, leave it." | Working ≠ healthy. Cruft compounds silently; this pass is the deliberate paydown before it forces a rewrite. |
-| "I'll extract a pure function for testability." | If the bug hides in *how it's called*, you've added a shallow module and lost locality. Deepen the real seam, don't shave a helper off. |
-| "More files = cleaner." | Not if you bounce between them to understand one concept. Split by responsibility; things that change together live together. |
-| "One adapter, let me add the interface now." | One adapter is a hypothetical seam. Wait for the second before abstracting — premature interfaces are their own cruft. |
-| "While I'm here, I'll simplify all of it." | Scope to the cruft. Churning clean code adds review burden and risk for no health gain. |
-| "Tests pass, the refactor is safe." | Hyrum's Law: a caller may depend on behaviour no test covers. Be intentional about the interface; don't assume green = safe. |
-| "The code is clear, it doesn't need a doc or an index." | If a caller has to read the implementation to use the module correctly, it isn't deep yet. A small *documented* surface (index + a usage doc) is the deepening, not an extra. |
-
-## Red flags — you're shaving, not deepening
-
-"Extract this for testability" (when the bug is in the caller) · proposing an
-interface for a single implementation · splitting a file just to get under the
-line cap (rather than by responsibility) · bundling three refactors into one ·
-"simplifying" code that was already clear · deleting code without deleting its
-tests/docs/config.

@@ -6,6 +6,7 @@
  * Split out of server.ts to keep that file under its line budget.
  */
 
+import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
@@ -21,10 +22,11 @@ import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js"
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
 import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
-import type { TrpcContext } from "./trpc/context.js";
+import type { TrpcActor, TrpcContext } from "./trpc/context.js";
 import {
   isHubMode,
   getOwnerEmail,
@@ -153,6 +155,25 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   });
 }
 
+/**
+ * The actor for a request, from the credentials the context already resolved.
+ * One order, stated once: the most specific mechanism wins, and a request that
+ * proved nothing says so rather than borrowing a friendlier label.
+ */
+function actorFor(options: {
+  bearerOk: boolean;
+  browseOk: boolean;
+  mobileOk: boolean;
+  user: { email: string } | null;
+  open: boolean;
+}): TrpcActor {
+  if (options.bearerOk || options.browseOk) return "agent";
+  if (options.mobileOk) return "device";
+  if (options.user !== null) return "user";
+  if (options.open) return "open";
+  return "none";
+}
+
 interface BoxScopeDeps {
   box: BoxSpec;
   eventBus: EventBus;
@@ -223,7 +244,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         openAccess: instance.openAccess,
       });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
-      const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
+      // Keep the resolved auth, not just a boolean: a paired device records WHO
+      // paired it (`createdBy`), and that person is who the device acts as.
+      const mobileAuth = await resolveMobileRequestAuth(box.boxRoot, req.headers);
+      const mobileOk = mobileAuth !== null;
       // The browse key must be recognized HERE too, not only in the preHandler:
       // a request it let through would otherwise reach a protected procedure
       // with `authed: false`, so the credential would open every public read
@@ -247,10 +271,27 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // construction option), so this reads it instead of re-deriving from the
       // gate (principle #8).
       const identityIsOpen = identity.source === "open";
-      const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
+      // A mobile device carries the identity of whoever paired it. Without this
+      // the device authenticated as a device and as nobody: `user` stayed null,
+      // so the phone could never be its owner — nor correctly NOT be, when a
+      // non-owner paired it. A session identity on the same request still wins;
+      // the device credential only fills in when there is no session.
+      const mobileEmail = mobileAuth?.createdBy ?? null;
+      const email = identity.email ?? mobileEmail;
+      const user = email ? { email, name: identity.name ?? email } : null;
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
+        actor: actorFor({
+          bearerOk,
+          // The browse key is an agent driving a browser — but only when it is
+          // what got the request in. A signed-in person whose request also
+          // carries it is still a person, so a resolved session identity wins.
+          browseOk: identity.source === "browse" || (browseOk && user === null),
+          mobileOk,
+          user,
+          open: identityIsOpen,
+        }),
         eventBus,
         services: options.services ?? {},
         user,
@@ -260,13 +301,20 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // identity like any other.
         authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
-        // Deliberately NOT folding in open access, and deliberately excluding
-        // `source: "browse"`: the machine-level secret store is shared across
-        // every box on the machine, so neither "this box opted out of the auth
-        // wall" nor "this box lets agent browsing act as its owner" may read as
-        // "the boxholder is here" (`docs/implemented-plans/secret-custody.md`).
+        // Deliberately NOT folding in open access, and excluding
+        // `source: "browse"` ON THE SHARED STORE: the machine-level secret
+        // store holds every box's real keys, so neither "this box opted out of
+        // the auth wall" nor "this box lets agent browsing act as its owner"
+        // may read as "the boxholder is here" there
+        // (`docs/implemented-plans/secret-custody.md`). A box on an ISOLATED
+        // store — every worktree box under the dev router, every doctest — has
+        // nothing of the boxholder's to expose, and refusing browse there only
+        // made the Secrets panel the one owner surface an agent could never
+        // exercise (boxholder, 2026-09-10: "it's a bug if you can't").
         isAuthenticatedOwner:
-          user !== null && identity.source !== "browse" && user.email === getOwnerEmail(),
+          user !== null
+          && (identity.source !== "browse" || secretsStoreIsIsolated())
+          && user.email === getOwnerEmail(),
       };
     },
   };
@@ -294,6 +342,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // bearer), because it is the only one that discloses a stored value.
   registerSecretsRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug });
   await registerBulkUploadRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  registerCardSubmissionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
   // The box's own icon and manifest, ahead of the static mount below so the

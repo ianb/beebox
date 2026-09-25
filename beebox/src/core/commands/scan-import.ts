@@ -67,6 +67,7 @@ import {
 import { runPdfMode } from "./scan-import-pdf.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { PdfRenderError, probePdf, renderPdfPages } from "./pdf-probe.js";
+import { assertAnnexBox } from "../annex/assert-annex-box.js";
 import {
   emitPhotoBundle,
   emitOrphanBackQuestion,
@@ -189,6 +190,10 @@ async function runPhotoMode(
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
   const { vision, imagePaths, sourcePdfPath, extraContext, source } = args;
+  // Before the session layout exists: this path copies the user's originals
+  // into a `.scan-archive` inside the session, so a later check would leave
+  // them half-processed.
+  await assertAnnexBox(ctx.boxRoot, "scan import");
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachRelDir,

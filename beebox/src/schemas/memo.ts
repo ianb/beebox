@@ -8,11 +8,15 @@
 
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
-import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
-import { isRecord } from "../lib/is-record.js";
+import { truncateTitle } from "../core/file-summary.js";
 
 const MemoStatus = z.enum(["new", "processing", "processed"]);
 export type MemoStatusType = z.infer<typeof MemoStatus>;
+
+/** What a memo row carries beyond its title. */
+interface MemoAttrs {
+  status: MemoStatusType;
+}
 
 const ContextEntry = z.object({
   url: z.string().url().optional(),
@@ -74,43 +78,26 @@ ABOUT_CARDS. The card needs no explicit pointer to it; the transcribe
 pre-action finds it inside the scope.
 
 Status: \`new\` → \`processing\` → \`processed\`.`,
+  // A memo's title IS its text: the body, or the transcription of a voice
+  // memo that hasn't been processed into one yet.
+  summarize: (card, base) => {
+    const transcribed = card.transcription?.text;
+    let title = "";
+    if (card.body.trim() !== "") {
+      title = card.body.trim();
+    } else if (transcribed !== undefined && transcribed.trim() !== "") {
+      title = transcribed.trim();
+    }
+    const attrs: MemoAttrs = { status: card.status };
+    return {
+      ...base,
+      title: title === "" ? base.title : truncateTitle(title, 80),
+      attrs,
+    };
+  },
 });
 
 export type MemoFields = InferCardFields<typeof MemoSchema>;
-
-export interface MemoAttrs {
-  status: MemoStatusType;
-}
-
-/**
- * Memo loader — title comes from the body (text content of the memo)
- * or the transcription, falling back to the filename.
- */
-export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
-  const fallback = titleFromFilename(raw.path);
-  const fields = raw.fields;
-  if (fields === undefined) {
-    return { path: raw.path, type: "memo", title: fallback, attrs: { status: "new" } };
-  }
-  let title = "";
-  const bodyText = fields["body"];
-  const transcription = fields["transcription"];
-  const transcriptionText = isRecord(transcription) ? transcription["text"] : undefined;
-  if (typeof bodyText === "string" && bodyText.trim() !== "") {
-    title = bodyText.trim();
-  } else if (typeof transcriptionText === "string" && transcriptionText.trim() !== "") {
-    title = transcriptionText.trim();
-  }
-  if (title === "") title = fallback;
-  title = truncateTitle(title, 80);
-  const status = MemoStatus.safeParse(fields["status"]);
-  return {
-    path: raw.path,
-    type: "memo",
-    title,
-    attrs: { status: status.success ? status.data : "new" },
-  };
-};
 
 function buildMemoCard(input: {
   content: string;

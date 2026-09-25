@@ -18,9 +18,12 @@ effect.
 
 **The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.
 It holds a concrete model id (`claude-sonnet-5`, `gpt-5.6-terra`, …). Missing
-means *no policy*: every run takes its harness's own default. It is owner-only
-to change, and the change is committed to the box's git history like any other
-config edit.
+means the **`strong` tier for the box's engine** — Opus on Claude, Sol on Codex
+— not "whatever the harness picks". A box always has a default it can name, so
+the chat UI can say what a follower will run and the model dial has something to
+compare against; deferring to the harness left both blank on every unpinned box
+(boxholder, 2026-09-14). It is owner-only to change, and the change is committed
+to the box's git history like any other config edit.
 
 **A chat's own model** is `.beebox/chat-models/<sessionId>.json`, written
 only when that chat picks one. **Absence is a state, not a gap**: a chat with no
@@ -53,8 +56,11 @@ running engine does not know.
 2. The box default — exactly, if this engine offers it; otherwise the model at
    the same tier (`efficient`/`balanced`/`strong`/`strongest`, from
    `src/shared/agent-models.ts`), so a box that switches harness keeps a policy
-   rather than silently losing one.
-3. Nothing — the harness's own default.
+   rather than silently losing one. A box that pinned nothing takes the `strong`
+   tier here (`boxDefaultModel`).
+3. Nothing — reached only when a pin exists but names no model any engine
+   offers. A box saying something unreadable is not a box saying nothing, so
+   that case is not quietly given the default.
 
 Retired model ids are carried forward (`normalizeModelId`) before any of this,
 and a value no engine offers is rejected at `loadBoxModel` with one warning per
@@ -122,3 +128,54 @@ Claude-only — the Codex harness has no equivalent.
 it had no id yet — which every chat on a Codex box did, since coined ids are
 Claude-only. The `chat-model-to-box-config` migration folds it into `agentModel`
 and removes it.
+
+## GLM (Z.ai) models
+
+The claude engine can also run GLM models — `glm-5.3` and `glm-5.3-flash` —
+through Z.ai's Anthropic-compatible endpoint. A box opts in by pinning one
+(`agentModel`, `smallModel`, or a chat's model dial). Every run on a GLM model
+resolves the machine secret store's `glm` key and injects it into the
+subprocess environment; a missing or ungranted key fails the run with the
+setup commands (`bbx secrets set glm`, `bbx secrets grant <box> glm`) and
+never falls back to first-party.
+
+Z.ai's coding-plan policy inspects request content and flags assistant-style
+use — choosing GLM for a box accepts that posture for its content. Sessions
+may move between providers freely: transcripts are local, so a conversation
+that starts on GLM can continue on Claude and the reverse. The SDK prices GLM
+runs with first-party tables, so their chat results carry no `total_cost_usd`;
+read spend from Z.ai's own usage dashboard.
+
+## OpenRouter models
+
+The claude engine can also run models OpenRouter carries (DeepSeek, Kimi,
+Qwen, and others) through OpenRouter's Anthropic-compatible endpoint. They are
+billed per use, so a box never runs one because a key exists. The owner adds
+each model in **Admin → OpenRouter models**, which writes `openrouterModels:
+[{ id, label }]` to `_config/box.json`. The add is checked against OpenRouter's
+public catalog: the id must exist and support tool calling.
+
+- **Where an added model can run:** a chat's model dial, and `agentModel` (the
+  box default). It cannot be the `smallModel`. It has no tier, so a tiered
+  procedure step (`model: strong`) and the cheap structured passes stay on
+  first-party Claude even when the box default is an OpenRouter model.
+- **The gate at every spawn** (`core/provider-env.ts`): the model must be in
+  the added list, and the box must hold a granted `openrouter` key. Either
+  missing fails the run with the fix. Nothing falls back to first-party.
+- **Removal:** refused while the model is the box default. A chat that picked
+  a model explicitly keeps the pick after removal, and its next turn refuses,
+  including a turn on an already-running subprocess. It does not follow the
+  box default. A scheduled message for that chat is dropped rather than
+  retried in a fresh chat.
+- **Spend:** the admin section shows each model's price per million tokens and
+  the key's own usage figure. That figure covers every use of the key, and
+  OpenRouter updates it a minute or more late. The SDK's `total_cost_usd`
+  prices these runs as Claude and overstated them roughly 5–20×, so chat
+  results on third-party models (OpenRouter and GLM) carry no cost figure.
+- **Data:** Claude Code sends the requests, so the per-request host pin that
+  the optional OpenRouter services use cannot apply. Host choice and data
+  retention follow the OpenRouter account's privacy settings.
+
+Tested through a full agent turn (tools, structured output, resume), 2026-09-19:
+`moonshotai/kimi-k2-0905:exacto`, `deepseek/deepseek-v3.2`, `qwen/qwen3-coder`.
+Other models may fail turns that need tools.

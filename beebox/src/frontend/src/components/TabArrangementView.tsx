@@ -8,6 +8,7 @@ import { Card } from "./ui/Card";
 import { CheckboxField } from "./ui/fields";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
 
 interface CapturedTab {
   id: string;
@@ -26,7 +27,7 @@ interface ArrangementData {
 export function TabArrangementView({ data }: RendererProps) {
   const arrangement = useMemo(() => parseArrangement(data.frontmatter), [data.frontmatter]);
   if (arrangement === null) {
-    return <Text as="div" tone="danger" className="p-4">This tab arrangement card is malformed. Open Source to repair it.</Text>;
+    return <ErrorText className="p-4">This tab arrangement card is malformed. Open Source to repair it.</ErrorText>;
   }
   return (
     <TabArrangementEditor

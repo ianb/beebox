@@ -20,11 +20,11 @@ import type { RouterCore } from "./router-core.js";
 import { errMessage, httpStatusOf } from "./router-effects.js";
 import { proxyWithRetry, proxyWorkstreamsAppOnce } from "./router-proxy.js";
 import {
-  renderFailedPage,
   renderIndex,
   renderStatusJson,
   renderWorkstreamsAppFallback,
 } from "./router-pages.js";
+import { wantsHtmlPage, writeWorktreeUnavailable } from "./router-failed-page.js";
 import {
   REPO_ROOT,
   parseWorktreeName,
@@ -283,14 +283,17 @@ async function handleWorktreeRoutes(
     await core.ensureRunning(name);
   } catch (err) {
     const status = httpStatusOf(err) ?? 502;
-    // If we have a captured failure for this worktree, render the rich HTML
-    // error page (stderr tail + retry button). Otherwise fall back to plain
-    // text (e.g. 404 for unknown worktree name).
+    // A captured failure means the worktree is DOWN, which is a fact about the
+    // server, so it is reported as unavailability rather than through whatever
+    // status the throw carried. Anything else (a 404 for an unknown worktree
+    // name) keeps its own status and falls through to plain text below.
     const failedHandle = core.getHandle(name);
     const failed = failedHandle ? failedLifecycle(failedHandle) : null;
     if (failed) {
-      res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-      res.end(renderFailedPage(name, failed.lastError));
+      // 503, not the old 502, and JSON for a client that did not ask for HTML:
+      // a native caller used to receive a web page describing a problem it had
+      // no way to act on.
+      writeWorktreeUnavailable(res, { name, failed, html: wantsHtmlPage(req.headers.accept) });
       return;
     }
     res.writeHead(status, { "content-type": "text/plain" });

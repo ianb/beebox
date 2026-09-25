@@ -173,8 +173,12 @@ export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetc
    * and retry ONCE — every store op is idempotent. A second 401 propagates.
    */
   async function authedFetch(url: string, init: { method: string; headers?: Record<string, string>; body?: Uint8Array | string }): Promise<Response> {
-    const attempt = async (bearer: string): Promise<Response> =>
-      doFetch(url, { method: init.method, headers: { ...init.headers, authorization: `Bearer ${bearer}` }, ...(init.body === undefined ? {} : { body: init.body }) });
+    const attempt = async (bearer: string): Promise<Response> => {
+      const body = typeof init.body === "string" || init.body === undefined
+        ? init.body
+        : new Uint8Array(init.body);
+      return doFetch(url, { method: init.method, headers: { ...init.headers, authorization: `Bearer ${bearer}` }, ...(body === undefined ? {} : { body }) });
+    };
     const res = await attempt(await config.bearer.get());
     if (res.status !== 401) return res;
     return attempt(await config.bearer.refresh());

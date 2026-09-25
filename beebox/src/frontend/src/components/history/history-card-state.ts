@@ -1,0 +1,124 @@
+import { z } from "zod";
+import { serializeViewUrl, type ViewState, type ViewStateValue, type ViewTarget } from "../../lib/view-url";
+import { EMPTY_FILTER } from "./history-filter";
+import type { HistoryFilterState } from "./HistoryFilterBar";
+import { paramsToFilter } from "./history-filter";
+import { HISTORY_VIEW_PARAMS } from "@shared/named-views";
+import { triggerId } from "@shared/commit-trailers";
+import { isRecord } from "@shared/is-record";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { withoutShellParams } from "../../lib/system-card-navigation";
+import { viewStateSearchValue } from "../../lib/view-url";
+
+const HISTORY_FILTER_STATE = z.object({
+  connectors: z.array(z.string()), triggers: z.array(z.string()),
+  touchpoint: z.boolean(), feedback: z.boolean(),
+  session: z.string().nullable(), path: z.string().nullable(),
+}).strict();
+
+const HISTORY_CARD_STATE = z.object({
+  filter: HISTORY_FILTER_STATE.optional(),
+  /** absent = newest, null = timeline explicitly selected, string = durable detail */
+  commit: z.string().min(1).nullable().optional(),
+}).strict();
+export type HistoryCardState = z.infer<typeof HISTORY_CARD_STATE>;
+
+/**
+ * Pre-rename state spelled the triggered-by axis `workflows`, holding bare run
+ * names. History state is serialized into the URL, so a link saved or shared
+ * before the rename still carries it — migrate it here rather than render the
+ * whole card as invalid state.
+ */
+function migrateLegacyFilter(value: ViewState): ViewState {
+  const filter = value.filter;
+  if (!isRecord(filter) || !("workflows" in filter)) return value;
+  const { workflows, ...rest } = filter;
+  return {
+    ...value,
+    filter: "triggers" in rest ? rest : { ...rest, triggers: triggerIds(workflows) },
+  };
+}
+
+export function parseHistoryCardState(value: ViewState | null) { return HISTORY_CARD_STATE.safeParse(migrateLegacyFilter(value ?? {})); }
+
+function strings(value: unknown): ViewStateValue {
+  if (typeof value === "string") return value === "" ? [] : value.split(",").filter(Boolean);
+  if (Array.isArray(value) && value.every(item => typeof item === "string")) return value;
+  return typeof value === "number" || typeof value === "boolean" || value === null ? value : String(value);
+}
+/** Pre-rename `workflow=` names, as procedure trigger ids. */
+function triggerIds(value: unknown): ViewStateValue {
+  const names = strings(value);
+  if (!Array.isArray(names)) return names;
+  // Invalid values survive verbatim for localized rendering, as in `strings`.
+  return names.map((name) => (typeof name === "string" ? triggerId("procedure", name) : name));
+}
+function bool(value: unknown): ViewStateValue {
+  if (value === true || value === "true" || value === "1") return true;
+  if (value === false || value === "false" || value === "0") return false;
+  return typeof value === "number" || value === null ? value : String(value);
+}
+function scalar(value: unknown): ViewStateValue {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null ? value : String(value);
+}
+
+/** Full legacy-page vocabulary, deliberately including path. Invalid values survive for localized rendering. */
+export function legacyHistoryState(search: Record<string, unknown>, options?: { commit?: string; defaults?: HistoryFilterState }): ViewState {
+  const filter: Record<string, ViewStateValue> = { ...EMPTY_FILTER, ...options?.defaults };
+  if (search.connector !== undefined) filter.connectors = strings(search.connector);
+  // `workflow` is the pre-rename spelling; its bare run names are procedure
+  // trigger ids now, so an old link still selects the same runs.
+  if (search.trigger !== undefined) filter.triggers = strings(search.trigger);
+  else if (search.workflow !== undefined) filter.triggers = triggerIds(search.workflow);
+  if (search.touchpoint !== undefined) filter.touchpoint = bool(search.touchpoint);
+  if (search.feedback !== undefined) filter.feedback = bool(search.feedback);
+  if (search.session !== undefined) filter.session = scalar(search.session);
+  if (search.path !== undefined) filter.path = scalar(search.path);
+  return { filter, ...(options?.commit === undefined ? {} : { commit: options.commit }) };
+}
+
+const HISTORY_LEGACY_QUERY_KEYS = ["connector", "trigger", "workflow", "touchpoint", "feedback", "session", "path"] as const;
+function hasLegacyHistoryQuery(params: Record<string, string>): boolean {
+  return HISTORY_LEGACY_QUERY_KEYS.some(key => params[key] !== undefined);
+}
+
+function normalizeLegacyHistoryTarget(target: ViewTarget, defaults?: HistoryFilterState): ViewTarget {
+  if (!hasLegacyHistoryQuery(target.params)) return target;
+  const params = { ...target.params };
+  for (const key of HISTORY_LEGACY_QUERY_KEYS) delete params[key];
+  const legacy = legacyHistoryState(target.params, { defaults });
+  return { ...target, params, viewState: { ...legacy, ...target.viewState } };
+}
+
+export async function normalizeHistoryViewRouteTarget(
+  target: ViewTarget,
+  load: (path: string) => Promise<{ type?: string; frontmatter?: Record<string, unknown> }>,
+): Promise<ViewTarget | null> {
+  if (!hasLegacyHistoryQuery(target.params)) return null;
+  if (target.path === SYSTEM_CARD_PATHS.history) {
+    return target.viewer === null || target.viewer === "History" ? normalizeLegacyHistoryTarget(target) : null;
+  }
+  const systemPaths: readonly string[] = Object.values(SYSTEM_CARD_PATHS);
+  if (!target.path.endsWith(".card") || systemPaths.includes(target.path)) return null;
+  if (target.viewer !== null && target.viewer !== "View") return null;
+  const card = await load(target.path);
+  if (card.type !== "view" || card.frontmatter?.view !== "history") return null;
+  const parsed = HISTORY_VIEW_PARAMS.safeParse(card.frontmatter.params ?? {});
+  const defaults = parsed.success ? paramsToFilter(parsed.data) : undefined;
+  return normalizeLegacyHistoryTarget(target, defaults);
+}
+
+/** Preserve an unclassified card target without letting its session query select chat. */
+export function historyLookupFailureSearch(target: ViewTarget, search: object): Record<string, unknown> {
+  const params = { ...target.params };
+  for (const key of ["nativeComposer", "contextDir", "capture", "engine", "model"]) delete params[key];
+  const content = { ...target, params };
+  const nativeComposer = "nativeComposer" in search ? search.nativeComposer : undefined;
+  return { nativeComposer, card: serializeViewUrl(content) };
+}
+
+export function historyViewRedirectSearch(target: ViewTarget, search: object): Record<string, unknown> {
+  const content = withoutShellParams(target);
+  const nativeComposer = "nativeComposer" in search ? search.nativeComposer : undefined;
+  return { nativeComposer, view: content.viewer ?? undefined, ...content.params, viewState: viewStateSearchValue(content.viewState) };
+}

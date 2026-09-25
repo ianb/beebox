@@ -31,6 +31,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { draftKey, parseDraft, serializeDraft, adoptLegacyDictationDrafts, type DictationDraft } from "../lib/dictation-draft";
 import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
+import { storageScopeFor } from "../lib/storage-scope";
+import { getApiBase } from "../api-core";
 
 export interface DictationDraftApi {
   /** The persisted draft for this box, or null when none is stored. */
@@ -46,11 +48,11 @@ export interface DictationDraftApi {
  * stale dictation drafts are discarded, not merged — mirrors the composer's
  * singleton-draft adoption.
  */
-function readDraft(key: string, boxSlug: string | undefined): DictationDraft | null {
+function readDraft(key: string, instance: { boxSlug: string | undefined; scope: string }): DictationDraft | null {
   if (typeof window === "undefined") return null;
   const existing = parseDraft(window.localStorage.getItem(key));
   if (existing !== null) return existing;
-  const { adopted, discarded } = adoptLegacyDictationDrafts(window.localStorage, boxSlug);
+  const { adopted, discarded } = adoptLegacyDictationDrafts(window.localStorage, instance);
   if (adopted !== null) {
     window.localStorage.setItem(key, serializeDraft(adopted));
     console.info(
@@ -67,14 +69,16 @@ export function useDictationDraft(opts: {
   narrationEnabled: boolean;
 }): DictationDraftApi {
   const { boxSlug, transcript, isTranscribing, narrationEnabled } = opts;
-  const key = draftKey({ boxSlug });
+  // Per box INSTANCE, not slug: see `draftKey`.
+  const scope = storageScopeFor(getApiBase());
+  const key = draftKey({ boxSlug, scope });
 
   // The recovery candidate: the draft present at mount. Deliberately NOT
   // updated by live writes — see the file header for why surfacing live
   // writes is a false-positive machine. The key is a per-box singleton now
   // (chunk 4), so — unlike the retired per-session key — it doesn't change
   // across a session switch; only a different box changes it.
-  const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key, boxSlug));
+  const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key, { boxSlug, scope }));
   // Whether the user has dictated anything this mount. Once true, the
   // mount-time draft is superseded by live work and must not resurface.
   const startedRef = useRef(false);

@@ -90,3 +90,36 @@ export async function fetchAvailableCalendars(
 
   return calendars;
 }
+
+/** An available calendar, plus whether this box syncs it. */
+export interface AvailableCalendarState extends AvailableCalendar {
+  syncing: boolean;
+  /** For the primary calendar, the real id the `primary` alias resolves to. */
+  resolvedId?: string;
+}
+
+/**
+ * What `bbx calendar calendars` and the settings page both show: every calendar
+ * the grant can see, marked with whether it is in this box's sync list.
+ *
+ * One function because the CLI reaches it two ways — in-process under the
+ * tooling profile, through `calendar.available` from an agent's shell — and a
+ * caller must not be able to tell which one answered
+ * (`docs/plans/agent-capability-delegation.md`).
+ */
+export async function availableCalendarsWithSyncing(options: {
+  boxRoot: string;
+  service: GoogleCalendarService;
+}): Promise<AvailableCalendarState[]> {
+  const available = await fetchAvailableCalendars(options.service);
+  const config = await loadCalendarConfig(options.boxRoot);
+  // An unconfigured box syncs the primary calendar; `primary` is an alias, so a
+  // calendar listed under its real id still counts as synced.
+  const syncing = new Set(config.calendars || ["primary"]);
+  const primaryId = available.find((cal) => cal.primary)?.id;
+  return available.map((cal) => ({
+    ...cal,
+    syncing: syncing.has(cal.id) || (cal.primary === true && syncing.has("primary")),
+    ...(cal.primary && primaryId ? { resolvedId: primaryId } : {}),
+  }));
+}

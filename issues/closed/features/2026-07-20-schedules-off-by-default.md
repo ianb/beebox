@@ -1,0 +1,84 @@
+---
+title: "Seeded schedules stay disabled until the user activates them"
+workstream: open-source-readiness
+area: beebox
+filed-by: agent
+discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
+labels: [soft-launch]
+priority: backlog
+resolution: implemented
+---
+
+> **Closed `implemented` 2026-09-15.** Both recorded decisions are live in
+> `src/core/box/defaults.ts`, verified by reading the seeded values:
+> `check-email`, `check-calendar`, `check-drive` and `chat-review` seed
+> `enabled: false`; `refresh-maps`, `gc-procedure-runs` and
+> `process-retrospective` seed `enabled: true`. `check-drive` post-dates the
+> decision text and follows the same rule. The `discuss` tag was stale — the
+> discussion happened in 2026-08 and produced the decisions below.
+
+> **Decision recorded 2026-08-07** — Fresh boxes enable `refresh-maps` and
+> `gc-procedure-runs`. The other four seeded schedules remain disabled until
+> the boxholder opts in. `refresh-maps` is not purely mechanical: when the
+> directory structure changes, it may invoke a Haiku agent, and its first run
+> on a fresh box can create the full map tree. The boxholder accepts that
+> cost. Existing boxes keep their current box-owned schedule state.
+
+At filing, a fresh `bbx init` box shipped five scheduled scripts with three **enabled**
+(`refresh-maps`, `gc-procedure-runs`, `process-retrospective` —
+`src/core/box/defaults.ts:208-273`). Boxholder decision (2026-07-20):
+**keep schedules down or nil until activated by the user** — including
+activation via the agent ("turn on the retrospective" in chat is fine;
+silent default-on is not).
+
+Why: a brand-new box that runs jobs the user never asked for (a) burns
+their Claude subscription quota invisibly — cost-trust matters for the
+soft-launch audience, (b) fills the dashboard's schedule table with
+unexplained cron/budget internals as the first thing a new user sees
+(see [first-run-experience](../../features/2026-07-20-first-run-experience.md)), and
+(c) contradicts the system's own consent-and-teaching ethos.
+
+The original proposal was to seed all schedules `enabled: false`; activation becomes part of
+onboarding ("want me to turn on the nightly retrospective?") rather than
+a default. Check what actually degrades with housekeeping off
+(`refresh-maps` staleness, procedure-run GC) and whether those two
+should instead run lazily/on-demand rather than on cron, so nothing
+needs to be on by default.
+
+## Resolution details (2026-08-07)
+
+`refresh-maps` keeps directory maps reasonably current, and
+`gc-procedure-runs` bounds expired run-cache retention. The four schedules that
+can sync user services or spend agent quota remain disabled until activated:
+`check-email`, `check-calendar`, `process-retrospective`, and `chat-review`.
+
+The map refresh is the accepted exception to the no-surprise-cost default. It
+may invoke a Haiku agent whenever directory structure changes, with the first
+run on a fresh box creating the whole map tree. The original proposal asked
+whether these schedules should run lazily or on demand; this decision keeps
+their cron scheduling and does not add a lazy execution path.
+
+This resolution applies only to seeded defaults for **new** boxes. Existing
+boxes are grandfathered: `bbx init` and template sync preserve their current
+box-owned `enabled` state rather than retroactively changing it.
+
+## Decision recorded 2026-08-23
+
+`process-retrospective` is now seeded **enabled** on fresh boxes
+(`beebox/docs/implemented-plans/first-run-openers.md`). This isn't a
+reversal of the reasoning above — it's a narrower read of what the schedule
+actually costs. Retro's discovery step only qualifies **human** chat sessions
+(a transcript carrying `<typed>`/`<speech>`-tagged messages, or a session in
+the chat registry); wakeup/job/procedure transcripts classify as non-chat. On
+a box nobody has chatted with yet, discovery finds nothing to retro over, the
+scan step's precheck reports `CHECK_SKIP`, and no agent runs — so the quota
+worry that kept it off doesn't hold until a human has actually used the box,
+at which point spending quota to curate the box's own chat openers is exactly
+the trade the boxholder wants. `chat-review` remains disabled — it does not
+have an equivalent human-activity gate. Existing boxes keep their box-owned
+`enabled` value; this reaches new boxes only.
+
+> 2026-09-03 survey (bbx-pick-issues): both recorded decisions are implemented
+> in `src/core/box/defaults.ts` (refresh-maps, gc-procedure-runs,
+> process-retrospective enabled; check-email, check-calendar, chat-review
+> disabled). Nothing left but closing it.

@@ -7,6 +7,8 @@ under the request's box slug (`subscribe`), removes it from that box
 subscribing under two boxes is stored once with both opt-ins.
 
 ```ts setup
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+const fixtureBox = await makeTmpBox({ git: true });
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -19,7 +21,7 @@ delete process.env.BBX_VAPID_PUBLIC_KEY;
 
 function caller(boxSlug) {
   const ctx = {
-    boxRoot: "/unused",
+    boxRoot: fixtureBox.root,
     boxSlug,
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {},
@@ -65,5 +67,6 @@ JSON.stringify(await caller("alpha").push.vapidPublicKey())
 ```
 
 ```ts cleanup
+await fixtureBox.cleanup();
 await fs.rm(storeDir, { recursive: true, force: true });
 ```

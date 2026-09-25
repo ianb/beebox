@@ -15,6 +15,9 @@ import { trpc } from "../../lib/trpc";
 import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
 
@@ -129,17 +132,17 @@ export function NotificationsSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <Text as="h2" size="lg" weight="semibold">Notifications</Text>
+      <Heading level={2}>Notifications</Heading>
       <Stack gap="sm" className="mt-2">
-        <Text as="p" size="sm" tone="muted">
+        <Hint>
           Get a push notification on this device when the box needs you — health alerts and
           questions waiting for an answer.
-        </Text>
+        </Hint>
 
         {support === null ? null : support.kind === "unsupported" ? (
-          <Text as="p" size="sm" tone="muted">
+          <Hint>
             This browser doesn&apos;t support web push notifications.
-          </Text>
+          </Hint>
         ) : support.kind === "needs-install" ? (
           <Text as="p" size="sm">
             On iPhone or iPad, add this app to your Home Screen first: tap the Share button,
@@ -149,7 +152,7 @@ export function NotificationsSection() {
         ) : endpoint ? (
           <Row gap="sm" align="center">
             <Text as="p" size="sm">Notifications are on for this device.</Text>
-            <Button id="bbx-admin-notifications-disable" intent="secondary" onClick={disable} loading={busy} loadingLabel="Disabling…">
+            <Button id="bbx-admin-notifications-disable" className="self-start" intent="secondary" onClick={disable} loading={busy} loadingLabel="Disabling…">
               Disable
             </Button>
           </Row>
@@ -159,14 +162,14 @@ export function NotificationsSection() {
             settings, then reload.
           </Text>
         ) : (
-          <Button id="bbx-admin-notifications-enable" intent="primary" onClick={enable} loading={busy} loadingLabel="Enabling…">
+          <Button id="bbx-admin-notifications-enable" className="self-start" intent="primary" onClick={enable} loading={busy} loadingLabel="Enabling…">
             Enable notifications
           </Button>
         )}
 
         {error ? (
           <div className="p-3 bg-danger-50 border border-danger-100 rounded">
-            <Text size="sm" tone="danger">{error}</Text>
+            <ErrorText>{error}</ErrorText>
           </div>
         ) : null}
       </Stack>

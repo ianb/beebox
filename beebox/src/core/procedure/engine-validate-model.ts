@@ -18,7 +18,9 @@
 import { z } from "zod";
 import { createAgent as realCreateAgent } from "../agent/index.js";
 import { loadAgentEngine } from "../box/config.js";
+import { loadEffectiveBoxModel } from "../model-policy.js";
 import {
+  providerOf,
   resolveProcedureModel,
   type ProcedureModelName,
 } from "../../shared/agent-models.js";
@@ -143,7 +145,9 @@ export async function evaluateInstructions(
 ): Promise<InstructionEvaluation> {
   const { boxRoot, instructions, whys, diff, name } = params;
   const engine = await loadAgentEngine(boxRoot);
-  const modelId = resolveProcedureModel(engine, params.model ?? DEFAULT_REVIEW_MODEL);
+  // Provider-aware like procedure execute: judge on the provider the box runs.
+  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
+  const modelId = resolveProcedureModel({ engine, model: params.model ?? DEFAULT_REVIEW_MODEL, provider });
   const factory = params.createAgent ?? realCreateAgent;
   const systemPrompt = buildJudgePrompt({ instructions, whys, diff });
 

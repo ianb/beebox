@@ -58,7 +58,7 @@ function BinaryRenderer({ data }: RendererProps) {
         </Stack>
       ) : null}
       {meta?.absent === true ? null : (
-        <ExternalLink href={url} variant="button" download={basename} className="self-start mt-2">
+        <ExternalLink href={url} variant="button" download={basename} className="self-start">
           Download
         </ExternalLink>
       )}

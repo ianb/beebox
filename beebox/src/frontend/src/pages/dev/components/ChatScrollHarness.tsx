@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Text } from "../../../components/ui/Text";
+import { Hint } from "../../../components/ui/Hint";
 import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { scrollTraceSubscribe } from "../../../lib/scroll-diagnostics";
@@ -86,10 +87,10 @@ export function ChatScrollHarness() {
   return (
     <Stack className="p-4 max-w-5xl" gap="md">
       <Text as="h1" size="lg" weight="bold">Chat scroll harness</Text>
-      <Text tone="muted" size="sm">
+      <Hint>
         {entry.description} Drive it from the console with{" "}
         <code>await window.__scrollHarness.run(&quot;fast-growth-hands-off&quot;)</code>.
-      </Text>
+      </Hint>
       <Row gap="sm" align="center">
         <Text size="sm" weight="medium">Controller</Text>
         {CONTROLLERS.map((c) => (

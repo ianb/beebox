@@ -15,6 +15,7 @@ import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
+import { useComposerCaret } from "./composer-caret";
 import type { AddFiles } from "./InteractiveChat-attachments";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 import { segmentCapturing } from "../../machines/transcription-events";
@@ -102,6 +103,7 @@ function DesktopComposerRow({
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
+  const noteTyped = useComposerCaret({ textareaRef, text: input });
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       <TextareaAutosize
@@ -110,7 +112,7 @@ function DesktopComposerRow({
         autoFocus
         enterKeyHint="send"
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
+        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}

@@ -39,7 +39,8 @@ function vsLink(p: string): string {
 function chip(doc: DocInfo, pillar: Pillar | undefined): string {
   const color = pillar ? pillar.color : "#a3a394";
   const title = escapeHtml(`${doc.path} — "${doc.title}" (${doc.lineCount} lines)${pillar ? ` · ${pillar.name}` : ""}`);
-  return `<a class="chip" href="${vsLink(doc.path)}" style="--c:${color}" title="${title}">${escapeHtml(doc.path)}</a>`;
+  const lifecycle = doc.lifecycle === null ? "" : `<span class="doc-role">${escapeHtml(doc.lifecycle.label)}${doc.lifecycle.status === null ? "" : ` · ${escapeHtml(doc.lifecycle.status)}`}</span>`;
+  return `<a class="chip" href="${vsLink(doc.path)}" style="--c:${color}" title="${title}">${escapeHtml(doc.path)}${lifecycle}</a>`;
 }
 
 export function renderRings(
@@ -72,9 +73,10 @@ function renderPillarSupport(supporting: Pillar["supporting"], docs: Map<string,
       const d = docs.get(s.path);
       if (!d) return `<li class="missing"><span class="path">${escapeHtml(s.path)}</span> <span class="muted">(not found)</span></li>`;
       const note = s.note ? `<span class="curator-note">${escapeHtml(s.note)}</span>` : "";
+      const lifecycle = d.lifecycle === null ? "" : `<span class="meta">${escapeHtml(d.lifecycle.label)}${d.lifecycle.status === null ? "" : ` · ${escapeHtml(d.lifecycle.status)}`}</span>`;
       return `<li>
           <a class="path" href="${vsLink(d.path)}">${escapeHtml(d.path)}</a>
-          <span class="meta">${d.lineCount} lines</span>
+          <span class="meta">${d.lineCount} lines</span>${lifecycle}
           ${note}
         </li>`;
     })
@@ -92,11 +94,12 @@ function renderPillarHeaderStyle(p: Pillar): string {
 
 function renderPillarEntry(p: Pillar, entryDoc: DocInfo | undefined): string {
   if (!entryDoc) return `<div class="pillar-entry missing">${escapeHtml(p.entry)} (not found)</div>`;
+  const lifecycle = entryDoc.lifecycle === null ? "" : ` · ${escapeHtml(entryDoc.lifecycle.label)}${entryDoc.lifecycle.status === null ? "" : ` · ${escapeHtml(entryDoc.lifecycle.status)}`}`;
   return `<a class="pillar-entry" href="${vsLink(p.entry)}" style="--c:${p.color}">
           <span class="entry-arrow">→</span>
           <div class="entry-text">
             <span class="entry-path">${escapeHtml(p.entry)}</span>
-            <span class="entry-title">"${escapeHtml(entryDoc.title)}" · ${entryDoc.lineCount} lines</span>
+            <span class="entry-title">"${escapeHtml(entryDoc.title)}" · ${entryDoc.lineCount} lines${lifecycle}</span>
           </div>
         </a>
         <p class="entry-note">${escapeHtml(p.entryNote)}</p>`;
@@ -132,9 +135,10 @@ export function renderCurator(docs: Map<string, DocInfo>): string {
       .map((e) => {
         const d = docs.get(e.path);
         if (!d) return `<li class="missing"><span class="path">${escapeHtml(e.path)}</span> <span class="muted">(not found)</span></li>`;
+        const lifecycle = d.lifecycle === null ? "" : `<span class="meta">${escapeHtml(d.lifecycle.label)}${d.lifecycle.status === null ? "" : ` · ${escapeHtml(d.lifecycle.status)}`}</span>`;
         return `<li>
           <a class="path" href="${vsLink(d.path)}">${escapeHtml(d.path)}</a>
-          <span class="meta">${d.lineCount} lines</span>
+          <span class="meta">${d.lineCount} lines</span>${lifecycle}
           <p class="curator-note">${escapeHtml(e.note)}</p>
         </li>`;
       })

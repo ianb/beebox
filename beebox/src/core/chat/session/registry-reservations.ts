@@ -15,6 +15,22 @@ import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
+/** Keep pre-start edits on the seed until that seed has become durable. */
+export function createReservationFeatureHandoff(seedFeatures: Record<string, string>): {
+  persist: (updates: Record<string, string>) => boolean;
+  markWritten: () => void;
+} {
+  let pending = true;
+  return {
+    persist: (updates) => {
+      if (!pending) return false;
+      Object.assign(seedFeatures, updates);
+      return true;
+    },
+    markWritten: () => { pending = false; },
+  };
+}
+
 /**
  * Expire reservations past their TTL and release what was held for each — a
  * warm subprocess warmed for a chat nobody is going to start would otherwise

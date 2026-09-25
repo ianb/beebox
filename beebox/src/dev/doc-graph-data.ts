@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
 
 export const ROOT = PACKAGE_ROOT;
 
@@ -33,12 +34,10 @@ export interface Reference {
 }
 
 export interface DocInfo {
-  path: string;
-  title: string;
-  lineCount: number;
-  mtimeMs: number;
-  outgoing: Reference[];
+  path: string; title: string; lineCount: number;
+  mtimeMs: number; outgoing: Reference[];
   incoming: Reference[];
+  lifecycle: DocumentLifecycle | null;
 }
 
 function findMarkdownFiles(): string[] {
@@ -94,7 +93,7 @@ function findExternalSourceFiles(monoRoot: string): string[] {
 // "bin/CLAUDE.md"), or relative to the citing file. Internal resolutions
 // return the ROOT-relative path (so incoming counts attach); external
 // resolutions return "../<monorepo-relative>" and just mean "not broken".
-interface ExternalResolveContext {
+export interface ExternalResolveContext {
   fromFile: string;
   internalFiles: string[];
   externalFiles: string[];
@@ -102,7 +101,7 @@ interface ExternalResolveContext {
   externalBasenames: Map<string, string[]>;
 }
 
-function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [string, boolean] {
+export function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [string, boolean] {
   const cleaned = ref.replace(/#.*$/, "").trim().replace(/^\.\//, "");
   if (!cleaned.endsWith(".md")) return [ref, false];
 
@@ -116,6 +115,24 @@ function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [string, 
   if (ctx.externalFiles.includes(asRelative)) return ["../" + asRelative, true];
   const relativeInternal = asRelative.replace(/^beebox\//, "");
   if (ctx.internalFiles.includes(relativeInternal)) return [relativeInternal, true];
+
+  // External sources are deliberately scanned from a small set of roots, but
+  // they may link to any Markdown document in the monorepo. Accept an exact
+  // on-disk relative target without adding that target as another graph source.
+  const monoRoot = path.dirname(ROOT);
+  const abs = path.resolve(monoRoot, asRelative);
+  const relFromMonoRoot = path.relative(monoRoot, abs);
+  const staysWithin = (relative: string) =>
+    relative !== "" && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
+  if (staysWithin(relFromMonoRoot)) {
+    try {
+      const real = fs.realpathSync(abs);
+      const realRelative = path.relative(monoRoot, real);
+      if (staysWithin(realRelative) && fs.statSync(real).isFile()) return ["../" + asRelative, true];
+    } catch (_error) {
+      // Missing targets remain unresolved.
+    }
+  }
 
   const base = path.basename(cleaned);
   const internal = ctx.internalBasenames.get(base);
@@ -298,6 +315,7 @@ export function buildGraphExtended(): { docs: Map<string, DocInfo>; externalRefs
       mtimeMs: stat.mtimeMs,
       outgoing: [],
       incoming: [],
+      lifecycle: documentLifecycle(`beebox/${f}`, planStatusFromSource(content)),
     });
   }
 

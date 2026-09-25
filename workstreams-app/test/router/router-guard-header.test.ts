@@ -12,7 +12,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { routerGuardHeaders, writeDeny, type DenyRequest, type DenyResponse } from "../../src/router/router.js";
+import { routerGuardHeaders, writeDeny, type DenyRequest, type DenyResponse } from "../../src/router/router-deny-log.js";
 import type { RouterAuthDecision } from "../../src/router/router-auth.js";
 
 interface Captured {

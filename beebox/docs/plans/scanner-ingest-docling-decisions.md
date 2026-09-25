@@ -10,7 +10,7 @@ Running log of every Docling-related choice made during implementation, for
 boxholder review. Docling is a big surface with many ways to use it; these
 are first choices made in the ingest context, all revisitable —
 `bbx pdf reanalyze` exists precisely so extraction can be re-run after a
-decision changes. Parent plan: [`scanner-ingest.md`](scanner-ingest.md).
+decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
 
 Format: decision, why, what revisiting would look like. Implementation
 appends as it goes.

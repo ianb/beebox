@@ -17,6 +17,9 @@ await mkdir(join(root, ".claude/skills/calendar"), { recursive: true });
 await mkdir(join(root, ".claude/rules"), { recursive: true });
 await mkdir(join(root, "node_modules/beebox/plugins/beebox-codex/hooks"), { recursive: true });
 await mkdir(join(root, "nested"), { recursive: true });
+// Parked template copies are not active guidance; the walk must skip them.
+await mkdir(join(root, "_config/_template-updates/_config"), { recursive: true });
+await writeFile(join(root, "_config/_template-updates/_config/CLAUDE.md"), "# Parked\n");
 await writeFile(join(root, "CLAUDE.md"), "# Box\n");
 await writeFile(join(root, "nested/CLAUDE.md"), "# Nested\n");
 await writeFile(join(root, ".claude/skills/calendar/SKILL.md"), "# Calendar\n");
@@ -41,7 +44,18 @@ JSON.stringify(await readlink(join(root, "AGENTS.md")))
 
 JSON.stringify(await readlink(join(root, "nested/AGENTS.md")))
 => "CLAUDE.md"
+```
 
+A parked template copy gets no mirror — it is not guidance this box has
+adopted, and the mirror would dangle once the parked copy is accepted or
+discarded:
+
+```ts continue
+await readlink(join(root, "_config/_template-updates/_config/AGENTS.md")).then(() => "mirrored", () => "skipped")
+=> skipped
+```
+
+```ts continue
 JSON.stringify(await readlink(join(root, ".agents/skills/calendar")))
 => "../../.claude/skills/calendar"
 

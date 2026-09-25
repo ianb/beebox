@@ -7,7 +7,7 @@ import type { GoogleAuthService } from "../services/google-auth.js";
 const READ_OPERATIONS = new Set(["get", "list", "getProfile"]);
 const READ_HELPERS = new Set(["+read", "+triage"]);
 
-class UnsafeGwsCommandError extends Error {
+export class UnsafeGwsCommandError extends Error {
   constructor(args: string[]) {
     super(`Rejected non-read-only gws command: ${args.join(" ")}`);
     this.name = "UnsafeGwsCommandError";
@@ -47,26 +47,82 @@ function gwsRunnerPath(): string {
   return createRequire(import.meta.url).resolve("@googleworkspace/cli/run.js");
 }
 
-/** Run gws with inherited stdio and a short-lived token only in child env. */
+/** What one `gws` run produced. `exitCode` is the child's, never invented. */
+export interface GwsRunResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * How a caller runs gws. The tRPC procedure takes one from `ctx.services` so a
+ * test can answer without a real child, the way `wakeupRunner` does.
+ */
+export type GwsRunner = (opts: { args: string[]; auth: GoogleAuthService }) => Promise<GwsRunResult>;
+
+/**
+ * As much of a stream as is worth holding in memory. The server runs this child
+ * on behalf of a delegating caller, so an upstream command that prints a
+ * mailbox's worth of output must not become the box server's memory problem;
+ * past this point the bytes are counted and dropped rather than retained.
+ */
+const MAX_CAPTURE_CHARS = 1_000_000;
+
+/** A bounded string accumulator that says how much it threw away. */
+export function boundedCapture(limit: number) {
+  let kept = "";
+  let dropped = 0;
+  return {
+    add(chunk: string): void {
+      const taken = Math.min(chunk.length, Math.max(limit - kept.length, 0));
+      kept += chunk.slice(0, taken);
+      dropped += chunk.length - taken;
+    },
+    text(): string {
+      if (dropped === 0) return kept;
+      return `${kept}\n…(${String(dropped)} further characters dropped)`;
+    },
+  };
+}
+
+/**
+ * Run gws with a short-lived token only in the child env, and capture what it
+ * said.
+ *
+ * Captured rather than streamed to this process's stdio: the same call has to
+ * answer a person at a terminal and an agent that asked its box's server to run
+ * it, and a server-side child has no terminal to stream to
+ * (`docs/plans/agent-capability-delegation.md`). The CLI writes the captured
+ * streams straight back out, so a person sees what they always saw, at the end
+ * rather than as it arrives.
+ */
 export async function runReadOnlyGws(opts: {
   args: string[];
   auth: GoogleAuthService;
-}): Promise<number> {
+}): Promise<GwsRunResult> {
   assertReadOnlyGwsArgs(opts.args);
   const token = await opts.auth.getAccessToken();
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [gwsRunnerPath(), ...opts.args], {
       // TODO(env-migration) -- gws needs the caller's ambient CLI environment plus its token.
       env: { ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token },
-      stdio: "inherit",
+      stdio: ["ignore", "pipe", "pipe"],
     });
+    const stdout = boundedCapture(MAX_CAPTURE_CHARS);
+    const stderr = boundedCapture(MAX_CAPTURE_CHARS);
+    child.stdout.setEncoding("utf-8");
+    child.stderr.setEncoding("utf-8");
+    child.stdout.on("data", (chunk: string) => { stdout.add(chunk); });
+    child.stderr.on("data", (chunk: string) => { stderr.add(chunk); });
     child.once("error", reject);
-    child.once("exit", (code, signal) => {
+    // `close`, not `exit`: the streams must be drained before the capture is
+    // read, or a fast-exiting child's last output is lost.
+    child.once("close", (code, signal) => {
       if (signal !== null) {
         reject(new GwsSignalExitError(signal));
         return;
       }
-      resolve(code ?? 1);
+      resolve({ exitCode: code ?? 1, stdout: stdout.text(), stderr: stderr.text() });
     });
   });
 }

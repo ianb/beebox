@@ -149,6 +149,19 @@ export function formatRefSuffix(parsed: ParsedRef): string {
 export function isExternalRef(raw: string): boolean {
   if (raw === "") return true;
   if (raw.startsWith("#")) return true;
+  return isUrlRef(raw);
+}
+
+/**
+ * Whether `raw` names a target outside the box BY URL — a scheme (`https:`,
+ * `mailto:`, `file:`) or a protocol-relative `//host`. Narrower than
+ * `isExternalRef`, which also counts a bare `#anchor` and the empty string:
+ * those two are in-box (or absent) targets, and a caller that reports a URL
+ * written where a path belongs must not lump them in. Note a boxholder
+ * display-form path (`Config:box.json`) matches the scheme pattern too — pair
+ * this with `detectDisplayFormPath` where that distinction matters.
+ */
+export function isUrlRef(raw: string): boolean {
   if (raw.startsWith("//")) return true;
   return /^[A-Za-z][\d+.A-Za-z-]*:/.test(raw);
 }

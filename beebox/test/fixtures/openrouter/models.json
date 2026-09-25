@@ -1,0 +1,357 @@
+{
+  "data": [
+    {
+      "id": "deepseek/deepseek-v3.2",
+      "canonical_slug": "deepseek/deepseek-v3.2-20251201",
+      "hugging_face_id": "deepseek-ai/DeepSeek-V3.2",
+      "name": "DeepSeek: DeepSeek V3.2",
+      "created": 1764594642,
+      "description": "DeepSeek-V3.2 is a large language model designed to harmonize high computational efficiency with strong reasoning and agentic tool-use performance. It introduces DeepSeek Sparse Attention (DSA), a fine-grained sparse attention mechanism...",
+      "context_length": 163840,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "DeepSeek",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.000000269",
+        "completion": "0.0000004",
+        "input_cache_read": "0.0000001345"
+      },
+      "top_provider": {
+        "context_length": 163840,
+        "max_completion_tokens": 65536,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "frequency_penalty",
+        "include_reasoning",
+        "logit_bias",
+        "logprobs",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "reasoning",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_logprobs",
+        "top_p"
+      ],
+      "default_parameters": {
+        "temperature": 1,
+        "top_p": 0.95,
+        "top_k": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "repetition_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": null,
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/deepseek/deepseek-v3.2-20251201/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "3d",
+            "elo": 1161,
+            "win_rate": 49.4,
+            "rank": 63
+          },
+          {
+            "arena": "models",
+            "category": "asciiart",
+            "elo": 1101,
+            "win_rate": 40.5,
+            "rank": 60
+          },
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1179,
+            "win_rate": 49.3,
+            "rank": 68
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1173,
+            "win_rate": 48.2,
+            "rank": 68
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1155,
+            "win_rate": 46.5,
+            "rank": 71
+          },
+          {
+            "arena": "models",
+            "category": "svg",
+            "elo": 1056,
+            "win_rate": 40.8,
+            "rank": 71
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1164,
+            "win_rate": 46.8,
+            "rank": 67
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1187,
+            "win_rate": 50.2,
+            "rank": 66
+          }
+        ],
+        "artificial_analysis": {
+          "intelligence_index": null,
+          "coding_index": 44.2,
+          "agentic_index": null
+        }
+      },
+      "reasoning": {
+        "mandatory": false,
+        "default_enabled": false
+      }
+    },
+    {
+      "id": "moonshotai/kimi-k2-0905",
+      "canonical_slug": "moonshotai/kimi-k2-0905",
+      "hugging_face_id": "moonshotai/Kimi-K2-Instruct-0905",
+      "name": "MoonshotAI: Kimi K2 0905",
+      "created": 1757021147,
+      "description": "Kimi K2 0905 is the September update of [Kimi K2 0711](moonshotai/kimi-k2). It is a large-scale Mixture-of-Experts (MoE) language model developed by Moonshot AI, featuring 1 trillion total parameters with 32...",
+      "context_length": 262144,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.0000006",
+        "completion": "0.0000025"
+      },
+      "top_provider": {
+        "context_length": 262144,
+        "max_completion_tokens": 98304,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "frequency_penalty",
+        "max_tokens",
+        "presence_penalty",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_p"
+      ],
+      "default_parameters": {},
+      "supported_voices": null,
+      "knowledge_cutoff": "2024-12-31",
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/moonshotai/kimi-k2-0905/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1113,
+            "win_rate": 48.5,
+            "rank": 91
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1119,
+            "win_rate": 48.3,
+            "rank": 93
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen/qwen3-coder",
+      "canonical_slug": "qwen/qwen3-coder-480b-a35b-07-25",
+      "hugging_face_id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+      "name": "Qwen: Qwen3 Coder 480B A35B",
+      "created": 1753230546,
+      "description": "Qwen3-Coder-480B-A35B-Instruct is a Mixture-of-Experts (MoE) code generation model developed by the Qwen team. It is optimized for agentic coding tasks such as function calling, tool use, and long-context reasoning over...",
+      "context_length": 262144,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Qwen3",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.0000003",
+        "completion": "0.000001",
+        "input_cache_read": "0.0000001"
+      },
+      "top_provider": {
+        "context_length": 262144,
+        "max_completion_tokens": 65536,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_logprobs",
+        "top_p"
+      ],
+      "default_parameters": {},
+      "supported_voices": null,
+      "knowledge_cutoff": "2025-06-30",
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/qwen/qwen3-coder-480b-a35b-07-25/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1158,
+            "win_rate": 61.2,
+            "rank": 73
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1097,
+            "win_rate": 54.9,
+            "rank": 94
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1122,
+            "win_rate": 58.7,
+            "rank": 80
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1128,
+            "win_rate": 61.4,
+            "rank": 77
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1171,
+            "win_rate": 61.7,
+            "rank": 74
+          }
+        ]
+      }
+    },
+    {
+      "id": "inference-net/schematron-v2-turbo",
+      "canonical_slug": "inference-net/schematron-v2-turbo-20260902",
+      "hugging_face_id": "inference-net/schematron-v2-granite-4.0-h-micro",
+      "name": "Inference.net: Schematron V2 Turbo",
+      "created": 1789176949,
+      "description": "Schematron V2 Turbo is a 3B-parameter HTML-to-JSON extraction model from Inference.net. It prioritizes throughput for high-volume extraction workloads. Extraction instructions must be supplied through a JSON schema in response_format rather...",
+      "context_length": 128000,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.00000003",
+        "completion": "0.00000015",
+        "input_cache_read": "0.00000003"
+      },
+      "top_provider": {
+        "context_length": 128000,
+        "max_completion_tokens": 8192,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "top_k",
+        "top_p"
+      ],
+      "default_parameters": {},
+      "supported_voices": null,
+      "knowledge_cutoff": null,
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/inference-net/schematron-v2-turbo-20260902/endpoints"
+      }
+    }
+  ]
+}

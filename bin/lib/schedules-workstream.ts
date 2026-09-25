@@ -24,6 +24,7 @@ import { execa } from "execa";
 import { z } from "zod";
 
 import {
+  PRIORITY_GUIDE,
   type Handoff,
   type LoadedSchedule,
   type Outcome,
@@ -78,8 +79,8 @@ function briefingFor(input: { name: string; runId: string; handoff: Handoff | nu
       "",
       "Finish by filing your report — a run whose session ends without one is recorded as bailed:",
       "",
-      `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<one short paragraph>" \\`,
-      "        [--details @<file>] [--priority important|normal|backlog|fyi]",
+      `    bin/schedules alert --run ${input.runId} --title "<one line>" --message "<Markdown: the finding, then a list>" \\`,
+      `        [--details @<file>] [--priority important|normal|fyi]\n\n${PRIORITY_GUIDE}`,
       "",
       "or, when there is nothing worth saying:",
       "",
@@ -255,8 +256,8 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
   const workstream = schedule.config.workstream;
   if (workstream === null) throw new NoWorkstreamToStartError(schedule.name);
   const logFile = logPath(deps.storeRoot, { name: schedule.name, runId });
-  const alert = async (input: { title: string; message: string; details: string | null; priority: "important" | "normal" }): Promise<void> => {
-    await raiseAlert(deps, { workstream: schedule.name, runId, ...input });
+  const alert = async (input: { title: string; message: string; details: string | null; priority: "important" | "fyi" }): Promise<void> => {
+    await raiseAlert(deps, { workstream: schedule.name, runId, ...input, condition: null });
   };
 
   let cwd = deps.mainRoot;
@@ -283,7 +284,7 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
         title: "work waiting, session already live",
         message: `${schedule.name} has work waiting, but its worktree already has an agent (${state}).`,
         details: null,
-        priority: "normal",
+        priority: "fyi",
       });
       return { kind: "refused", ...NOT_LAUNCHED };
     }
@@ -435,6 +436,7 @@ export async function alertIfBailed(deps: RunnerDeps, run: { name: string; runId
     message: `${run.name} started a session for run ${run.runId} that ended without \`bin/schedules alert\` or \`done\`.`,
     details: tail === "" ? null : `Last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${tail}\n\`\`\``,
     priority: "important",
+    condition: null,
   });
   return true;
 }

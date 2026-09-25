@@ -26,3 +26,39 @@ packages:
   - site
   - browse
   - browse/packages/agent-browser-typed
+
+# pnpm's own settings live here rather than in .npmrc. They used to sit in the
+# root .npmrc, where npm read them too and warned about each one as an unknown
+# config key on every `npx` run inside the checkout — npm 11 announces it will
+# reject unrecognized keys outright in its next major. Only npm-recognized
+# settings (node-options, engine-strict) stay in .npmrc.
+
+# Necessarily workspace-wide — linkers cannot be mixed per package.
+nodeLinker: hoisted
+
+# Import packages from the store as APFS copy-on-write clones instead of
+# copies. With hoisted linking pnpm's default import made every worktree's
+# node_modules a full ~2 GB copy; a clone costs ~25 MB of real disk per
+# worktree (measured 2026-09-04) while `du` still reports the full size.
+# `hardlink` is a little smaller still but lets a package that rewrites its own
+# files corrupt the shared store copy; clone cannot. `clone-or-copy`, not
+# `clone`: the production server's ext4 cannot clone and a bare `clone` fails
+# there with ERR_PNPM_ENOTSUP (probed 2026-09-04); the fallback copies as
+# before on that one machine and clones everywhere APFS is.
+packageImportMethod: clone-or-copy
+
+# Seven days. A brand-new release is the window a compromised publish is caught
+# in, so nothing installs until it has survived one.
+minimumReleaseAge: 10080
+
+minimumReleaseAgeExclude:
+  # The agent SDK (and its version-locked platform-binary subpackages) tracks a
+  # FASTER lane than the 7-day gate above: bin/update-agent-sdk.ts enforces its
+  # own 2-day age for this family, so this exclusion hands the gating to that
+  # script rather than removing it. Everything else stays on 7 days.
+  - "@anthropic-ai/claude-agent-sdk*"
+  # Codex rides the same 2-day lane, for the same reason: the pinned
+  # `@openai/codex` is the binary the box's Codex chats and the production
+  # server's `codex` symlink run, and a model or protocol change lands there
+  # within days. Both `@openai/codex` and `@openai/codex-sdk` (pinned together).
+  - "@openai/codex*"

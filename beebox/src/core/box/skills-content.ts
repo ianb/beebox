@@ -446,7 +446,7 @@ description: Formalize a repeated operation as a reusable script you can rerun w
 
 A **trick** is a reusable script — you package a useful operation once and rerun it with \`bbx trick <name>\`, instead of redoing it by hand each time. The signal to make one is *repetition*: the second time you find yourself running the same multi-step task, that's when it's worth formalizing.
 
-Each trick lives in \`src/tricks/scripts/<name>/\` with an \`index.ts\`. Read \`src/tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one.
+Each trick lives in \`src/tricks/scripts/<name>/\` with an \`index.ts\`. Read \`src/tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one. If it needs a credential, declare it in a \`secrets.json\` beside \`index.ts\`; the normal \`bbx trick <name>\` runner supplies granted values to that process.
 
 Tricks are box-local by default, but the operation itself needn't be box-specific — a general utility (an image generation, a format conversion) is a fine trick if it's something this box does repeatedly.
 `;

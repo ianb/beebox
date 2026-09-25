@@ -37,6 +37,15 @@ const ScanTokenSchema = z.object({
   createdBy: z.string().nullable().default(null),
   lastUsedAt: z.string().optional(),
   revokedAt: z.string().optional(),
+  // What the uploader said it was, last time it called. All optional and all
+  // absent on records written before this existed, and on any uploader too old
+  // to send them — which is why the freshness check treats "not reported" as
+  // "no opinion" rather than as a stale uploader.
+  //
+  // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+  lastClientContract: z.string().optional(),
+  lastClientBuild: z.string().optional(),
+  lastClientBuiltAt: z.string().optional(),
 });
 export type ScanToken = z.infer<typeof ScanTokenSchema>;
 
@@ -100,6 +109,18 @@ export interface ScanTokenSummary {
   createdBy: string | null;
   lastUsedAt: string | null;
   revoked: boolean;
+  /** How the uploader identified itself on its last request, or null if it has
+   * not called since this was recorded. `build` is `"source"` for a checkout,
+   * which cannot drift, or a git revision for a copied bundle. */
+  lastClient: ScanClientIdentity | null;
+}
+
+/** The identity an uploader volunteers on every request. Recorded, never acted
+ * on at the gate: a box does not refuse an old uploader, it reports one. */
+export interface ScanClientIdentity {
+  readonly contract: string | null;
+  readonly build: string | null;
+  readonly builtAt: string | null;
 }
 
 /**
@@ -137,7 +158,20 @@ export function listScanTokens(boxRoot: string): ScanTokenSummary[] {
     createdBy: record.createdBy,
     lastUsedAt: record.lastUsedAt ?? null,
     revoked: record.revokedAt !== undefined,
+    lastClient: identityOf(record),
   }));
+}
+
+/** `null` when the uploader has reported nothing at all — an uploader too old
+ * to send the headers, or a token minted but never used. Distinguishing that
+ * from a reported value is what keeps the freshness check from calling every
+ * pre-existing uploader stale. */
+function identityOf(record: ScanToken): ScanClientIdentity | null {
+  const contract = record.lastClientContract ?? null;
+  const build = record.lastClientBuild ?? null;
+  const builtAt = record.lastClientBuiltAt ?? null;
+  if (contract === null && build === null && builtAt === null) return null;
+  return { contract, build, builtAt };
 }
 
 /** Revoke by name. False when no such token exists or it was already revoked. */
@@ -145,14 +179,72 @@ export async function revokeScanToken(boxRoot: string, name: string): Promise<bo
   return scanTokenStore.revoke(boxRoot, (record) => record.name === name);
 }
 
-/** Verify a raw token against this box's scan store, stamping `lastUsedAt`. */
+/** Verify a raw token against this box's scan store, stamping `lastUsedAt`.
+ * The request path uses `resolveScanRequestAuth` instead, which also records
+ * what the uploader said it was. */
 export async function verifyScanToken(boxRoot: string, token: string | undefined): Promise<ScanToken | null> {
-  return scanTokenStore.verify(boxRoot, token);
+  return scanTokenStore.verify(boxRoot, { token });
 }
 
-/** Headers a scan gate needs, in the shape both Fastify and raw Node give. */
+/**
+ * Stamps what the uploader said it was onto the record, on the write
+ * `lastUsedAt` already performs.
+ *
+ * Runs on EVERY scan request, including one that reported nothing, and in that
+ * case clears the fields. A token can be used by more than one uploader — a
+ * second laptop, or the same laptop after an older bundle is copied over the
+ * newer one — and leaving the previous identity in place would report the
+ * newer uploader's build for a request made by an older one, which is the
+ * stale-uploader question answered backwards.
+ *
+ * Values are capped rather than validated: they are untrusted client strings
+ * whose only use is being shown to a person, so a nonsense value must be
+ * harmless, not fatal.
+ */
+function stampIdentity(record: ScanToken, identity: ScanClientIdentity | undefined): void {
+  record.lastClientContract = capIdentity(identity?.contract ?? null);
+  record.lastClientBuild = capIdentity(identity?.build ?? null);
+  record.lastClientBuiltAt = capIdentity(identity?.builtAt ?? null);
+}
+
+/** Untrusted header text, kept short enough that a hostile or broken client
+ * cannot bloat the credential store. Absent stays absent rather than becoming
+ * an empty string, so "not reported" and "reported as nothing" stay distinct. */
+const MAX_IDENTITY_LENGTH = 100;
+
+function capIdentity(value: string | null): string | undefined {
+  if (value === null || value === "") return undefined;
+  return value.slice(0, MAX_IDENTITY_LENGTH);
+}
+
+/** Headers a scan gate needs, in the shape both Fastify and raw Node give.
+ *
+ * The three `x-scan-client-*`/`x-scan-contract` headers are what the uploader
+ * volunteers about itself. They are NOT a credential and never gate anything;
+ * they are recorded so a person can see that an uploader is old.
+ *
+ * WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+ */
 export interface ScanAuthHeaders {
   authorization?: string | string[] | undefined;
+  "x-scan-contract"?: string | string[] | undefined;
+  "x-scan-client-build"?: string | string[] | undefined;
+  "x-scan-client-built-at"?: string | string[] | undefined;
+}
+
+/** Repeated headers arrive as arrays; only a single value is meaningful. */
+function singleHeader(value: string | string[] | undefined): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/** Reads the uploader's self-reported identity off a request, or `undefined`
+ * when it reported none — an uploader predating these headers. */
+export function readScanClientIdentity(headers: ScanAuthHeaders): ScanClientIdentity | undefined {
+  const contract = singleHeader(headers["x-scan-contract"]);
+  const build = singleHeader(headers["x-scan-client-build"]);
+  const builtAt = singleHeader(headers["x-scan-client-built-at"]);
+  if (contract === null && build === null && builtAt === null) return undefined;
+  return { contract, build, builtAt };
 }
 
 /**
@@ -170,5 +262,11 @@ export async function resolveScanRequestAuth(boxRoot: string, headers: ScanAuthH
   if (authorization === undefined) return null;
   const prefix = "Bearer ";
   if (!authorization.startsWith(prefix)) return null;
-  return verifyScanToken(boxRoot, authorization.slice(prefix.length));
+  // Not `verifyScanToken`: this is the request path, so it also records what
+  // the uploader said it was — on the same locked write, costing no extra lock.
+  const identity = readScanClientIdentity(headers);
+  return scanTokenStore.verify(boxRoot, {
+    token: authorization.slice(prefix.length),
+    onUse: (record) => stampIdentity(record, identity),
+  });
 }

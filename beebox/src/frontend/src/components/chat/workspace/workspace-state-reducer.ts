@@ -29,7 +29,7 @@ function openCard(state: WorkspaceState, action: Action<"openCard">): WorkspaceT
   }
   next = activateWorkspacePath(next, { path: action.target.path, at: action.at });
   if (action.viewport === "desktop") {
-    next = { ...next, layout: state.layout.kind === "focus"
+    next = { ...next, layout: state.layout.kind === "focus" && (action.destinationPane === undefined || destination === state.layout.pane)
       ? { kind: "focus", pane: destination } : { kind: "split" } };
   } else next = { ...next, mobileView: { kind: "card", path: action.target.path } };
   next = normalizeWorkspaceState(evictWorkspaceToCap(next));
@@ -204,8 +204,4 @@ export function reduceWorkspace(state: WorkspaceState, action: WorkspaceAction):
     case "setViewport": return setViewport(state, action);
     case "restoreSnapshot": return restoreSnapshot(action);
   }
-}
-
-export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
-  return reduceWorkspace(state, action).state;
 }

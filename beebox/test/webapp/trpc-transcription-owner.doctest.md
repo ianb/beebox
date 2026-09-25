@@ -8,8 +8,8 @@ Decision 6). Reading `config` stays public: the chat UI shows the current
 service to everyone who can see the chat.
 
 ```ts setup
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm } from "node:fs/promises";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { join } from "node:path";
 import { transcriptionRouter } from "../../src/webapp/trpc/routers/transcription.js";
 
@@ -39,7 +39,8 @@ async function attempt(fn) {
 ## An authenticated non-owner is refused, and nothing is written
 
 ```ts
-const boxRoot = await mkdtemp(join(tmpdir(), "bbx-transcription-owner-"));
+const fixtureBox = await makeTmpBox({ git: true });
+const boxRoot = fixtureBox.root;
 
 print(await attempt(() => caller(boxRoot, { authed: true }).setService({ service: "deepgram" })));
 print(await attempt(() => caller(boxRoot, { authed: true }).setHqService({ hqService: "voxtral" })));
@@ -59,7 +60,7 @@ print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setHqService({ hqS
 print((await readFile(join(boxRoot, "_config/transcription.json"), "utf-8")).trim());
 =>
 {"service":"deepgram"}
-{"hqService":"voxtral-diarized"}
+{"hqService":"voxtral-diarized","warning":"This box has no key for voxtral-diarized yet; grant mistral in Admin → Secrets or it will fail on every pass."}
 {
   "service": "deepgram",
   "hqService": "voxtral-diarized"

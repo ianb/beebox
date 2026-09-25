@@ -5,7 +5,8 @@ import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agen
 import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../lib/format.js";
 import { loadAgentEngine } from "../box/config.js";
-import { resolveProcedureModel } from "../../shared/agent-models.js";
+import { loadEffectiveBoxModel } from "../model-policy.js";
+import { providerOf, resolveProcedureModel } from "../../shared/agent-models.js";
 import type { ExecuteStepParams } from "./engine-step.js";
 import {
   buildContextBlock,
@@ -54,6 +55,8 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   const [agentDef] = step.run.agents;
   invariant(agentDef !== undefined, "review retry requires exactly one run agent");
   const engine = await loadAgentEngine(boxRoot);
+  // Same provider rule as the main pass: the retry resumes the same step.
+  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
   const agentFactory = params.createAgent ?? realCreateAgent;
   ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
   const agent = agentFactory({
@@ -68,7 +71,7 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
     maxTurns: agentDef.maxTurns ?? 20,
     maxBudgetUsd: REVIEW_RETRY_BUDGET_USD,
     ...(agentDef.model !== undefined && {
-      model: resolveProcedureModel(engine, agentDef.model),
+      model: resolveProcedureModel({ engine, model: agentDef.model, provider }),
     }),
   };
   const result = await agent.invoke(invokeOpts);
@@ -93,13 +96,16 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
   invariant(step.run, "runRunAgents requires a run phase");
   const agentFactory = params.createAgent ?? realCreateAgent;
   const engine = await loadAgentEngine(boxRoot);
+  // Tier resolution is provider-aware: a GLM-defaulted box's `model: strong`
+  // step resolves to GLM, not silently to first-party Opus.
+  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
   const relRunCardPath = path.relative(boxRoot, runCardPath);
   let sessionId: string | undefined;
 
   for (const agentDef of step.run.agents) {
     const modelId = agentDef.model === undefined
       ? undefined
-      : resolveProcedureModel(engine, agentDef.model);
+      : resolveProcedureModel({ engine, model: agentDef.model, provider });
     ctx.writeLine(
       fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model} → ${modelId})`}...`),
     );

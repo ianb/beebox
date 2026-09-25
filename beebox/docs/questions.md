@@ -1,9 +1,11 @@
 # Questions
 
-**Status:** implemented — the design doc for the queue-only question
-subsystem; not yet re-verified line-by-line against current code.
+**Status:** current reference for the implemented queue-only question
+subsystem. The schema and guarded lifecycle described below are implemented;
+the final **NOT in scope** section records rejected or unbuilt ideas.
 
-Design and implementation history: `docs/implemented-plans/questions-end-to-end.md`.
+Design and implementation history (not operating instructions):
+`docs/implemented-plans/questions-end-to-end.md`.
 
 ## Purpose
 
@@ -281,9 +283,9 @@ evidence model.
 - **Notifications + nudges** — `checkPendingQuestionsAndNotify`
   (`question-alert.ts`) notifies once per newly-pending question through
   `notifyBoxholder` (push + Telegram); the aging sweep's nudge is a second,
-  one-time reminder at the 7-day/half-window mark. Both are best-effort
-  fan-out on top of the header badge, which is the surface that always
-  works regardless of channel configuration.
+  one-time reminder at the 7-day/half-window mark. Both are best-effort;
+  regardless of notification-channel configuration, pending questions remain
+  visible on the Dashboard attention surface and Questions page.
 
 ## The decision rule for agents
 

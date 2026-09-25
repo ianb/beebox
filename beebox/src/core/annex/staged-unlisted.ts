@@ -1,7 +1,7 @@
 /**
  * The commit-time half of the unlisted-binary guard, reframed from a box-wide
  * filesystem walk (`unlisted-binaries.ts`, still used by `bbx doctor annex` and
- * `attachments verify`) to an **index-based** check.
+ * the retired `attachments verify`) to an **index-based** check.
  *
  * Bytes enter history only via staged blobs, so looking at the index instead of
  * the tree is both faster (no walk — cost scales with the commit, not the box)

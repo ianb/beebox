@@ -21,7 +21,7 @@ client of the same command. Behavior does not change. Who can call it does.
 - [derive public worktree paths](../../../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md)
   — the hardcoded `~/src/…` paths live in exactly the files this plan rewrites.
   Deriving them is folded into Track A, not left as a separate sweep.
-- [dev scripts into bin](../../../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
+- [dev scripts into bin](../../../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
   — `bin/` is the brand for first-class dev tools. This plan applies that
   principle to the single largest piece of dev tooling still outside `bin/`.
 - [sweep's live-agent guard fails open](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
@@ -592,9 +592,11 @@ shape.
   liveness (tri-state) and what code it shares. The eligibility rule —
   merged, clean, no live agent — is unchanged.
 - **The `bin/browse` / `pnpm exec` audit** that
-  [dev-scripts-into-bin](../../../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
-  also asks for. This plan applies that issue's principle to worktree tooling
-  only; the broader audit stays open.
+  [dev-scripts-into-bin](../../../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
+  also asked for. This plan applied that issue's principle to worktree tooling
+  only; the broader audit ran on 2026-09-12 and found the remaining `pnpm exec`
+  calls are runners (tsx/tap/eslint/tsc), not project tools — so that issue is
+  now closed.
 
 ## Open design questions
 

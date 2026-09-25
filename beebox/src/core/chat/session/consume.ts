@@ -51,6 +51,8 @@ export interface ChatRunPumpHost {
   /** Gate that holds a `result` until the transcript flush lands on disk. */
   durability: { observe: (msg: ChatMessage) => void; awaitDurability: () => Promise<void> };
   boxRoot: string;
+  /** The model this run started on — decides what its result may report. */
+  model: string | null;
   getSessionId: () => string | null;
   /** Record the "since my last reply" marker before the queue drains. */
   recordTurnMarker: (sessionId: string) => Promise<void>;
@@ -71,7 +73,7 @@ export interface ChatRunPumpHost {
 export function pumpSessionRun(run: ChatBackendRun, host: ChatRunPumpHost): Promise<void> {
   return pumpChatRun({
     run,
-    adapt: adaptBackendMessage,
+    adapt: (msg) => adaptBackendMessage(msg, { model: host.model }),
     onMessage: async (msg) => {
       host.durability.observe(msg);
       // Hold `result` until the transcript is flushed: consumers refetch history

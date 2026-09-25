@@ -22,8 +22,8 @@ import {
   type SessionLogSlice,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { resolveChatEngine } from "./engine.js";
-import { readCodexSessionHistory } from "./codex-transcript.js";
+import { resolveRecordedChatEngine } from "./engine.js";
+import { readCodexSessionHistoryIfPresent } from "./codex-transcript.js";
 
 // Re-exported so callers of the loader name their slice from the same module.
 export type { SessionLogSlice } from "../../../cli/lib/session.js";
@@ -160,10 +160,28 @@ export async function loadSessionHistory(
     return { sessionId: null, entries: [], total: 0 };
   }
 
-  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
-    const { entries, total } = await readCodexSessionHistory({ boxRoot, sessionId, slice });
-    Object.freeze(entries);
-    return { sessionId, entries, total };
+  // The RECORDED engine, never the box default — and an unrecorded id falls
+  // through to the transcript-file branch below rather than being guessed into
+  // one store or the other.
+  //
+  // Reading history is the case where guessing costs the most. The two branches
+  // are not symmetric in what a wrong guess does: the transcript-file read
+  // treats a missing file as an empty transcript, while a Codex read for a
+  // thread that never existed is an RPC error. So a `codex` guess at an id with
+  // no record turns a chat into an error banner, and a `claude` guess at the
+  // same id turns it into an empty chat. Guessing `codex` for an unrecorded id
+  // is what put "Codex history request failed" on a live chat after a
+  // `git reset --hard` rewound the box's chat registry and husk card
+  // (2026-09-03). Only a RECORDED `codex` reaches the RPC now.
+  const engine = await resolveRecordedChatEngine(boxRoot, { sessionId });
+
+  if (engine === "codex") {
+    const history = await readCodexSessionHistoryIfPresent({ boxRoot, sessionId, slice });
+    // Codex knows the engine but not the thread: the transcript expired or was
+    // deleted out from under the record. Empty, same as a missing Claude log.
+    if (history === null) return { sessionId, entries: [], total: 0 };
+    Object.freeze(history.entries);
+    return { sessionId, entries: history.entries, total: history.total };
   }
 
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);

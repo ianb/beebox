@@ -1,0 +1,7 @@
+{
+  "//": "Type-only cycles erase at compile time and are fine; only value cycles mean a module needs splitting (docs/maintenance.md). Without this, madge reported 41 cycles here, 40 of them type-only back-edges into a barrel.",
+  "detectiveOptions": {
+    "ts": { "skipTypeImports": true },
+    "tsx": { "skipTypeImports": true }
+  }
+}

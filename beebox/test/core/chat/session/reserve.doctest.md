@@ -46,7 +46,7 @@ than the box coining and the client adopting: a retried request or a StrictMode
 double-invoke must land on one chat.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const registry = makeRegistry(box, createFakeChatBackend());
 
 const first = await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
@@ -71,7 +71,7 @@ await box.cleanup();
 ## An id that already names a chat is refused, and a non-UUID never reserves
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const registry = makeRegistry(box, createFakeChatBackend());
 await appendHistory(box.root, { sessionId: OTHER });
 
@@ -93,7 +93,7 @@ The distinction is load-bearing: a coined id names a conversation with no
 transcript, and the harness rejects `--resume` for one it never wrote.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
@@ -130,7 +130,7 @@ early and `onSessionIdAssigned` never fires. The history entry, the most-active
 pointer, and the husk card come from the first run start instead.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: { narration: "on" } });
@@ -167,7 +167,7 @@ and came back to with photos must still be addressable — sweeping stops the
 subprocess, it does not cancel the reservation.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 let clock = 1_000;
 const registry = makeRegistry(box, createFakeChatBackend(), { now: () => clock, idleTimeoutMs: 60_000 });
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
@@ -197,7 +197,7 @@ await box.cleanup();
 ## An unused reservation expires
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 let clock = 1_000;
 const registry = makeRegistry(box, createFakeChatBackend(), { now: () => clock });
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
@@ -219,7 +219,7 @@ A warm slot is warmed for one chat and can serve no other, so a chat nobody
 starts must not keep holding one of the very few slots.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 let clock = 1_000;
 const registry = makeRegistry(box, backend, { now: () => clock });
@@ -243,7 +243,7 @@ await box.cleanup();
 at first-run time, which need not be what created the transcript.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
@@ -271,7 +271,7 @@ coins a *second* one, every time — the switch never returns you to the chat yo
 just left.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const registry = makeRegistry(box, createFakeChatBackend());
 await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
@@ -309,7 +309,7 @@ quiet on failure, a permanent state — in which the chat was bound to a landmar
 and nothing could say which.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
 await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
@@ -334,7 +334,7 @@ await box.cleanup();
 ## An expired reservation is not somewhere you can go back to
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 let clock = 1_000;
 const registry = makeRegistry(box, createFakeChatBackend(), { now: () => clock });
 await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });

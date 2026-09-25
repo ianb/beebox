@@ -1,17 +1,14 @@
 /**
- * bbx attachments — manifest-aware operations on assets (the binary
- * subset of attachments).
+ * bbx attachments — git-annex operations on a box's assets.
  *
  * Subcommands:
- *   bbx attachments verify         # read-only scan, exit non-zero on errors
- *   bbx attachments migrate        # write manifests for every asset in .attach/
- *   bbx attachments overwrite PATH # replace tracked asset contents from stdin
- *   bbx attachments unignore       # drop the asset gitignore block (annex migration)
+ *   bbx attachments unignore         # restore the un-ignore block so git-annex sees assets
+ *   bbx attachments largefiles-expr  # print the annex.largefiles expression
  *   bbx attachments annex-attributes # print the scoped .git/info/attributes
- *   bbx attachments to-annex       # migrate this box onto git-annex
- *   bbx attachments check-unlisted # block unlisted large binaries, box-wide
- *   bbx attachments add PATH       # explicitly claim a file (rarely needed;
- *                                   the pre-commit hook auto-claims)
+ *   bbx attachments check-unlisted   # block unlisted large binaries, box-wide
+ *
+ * The manifest-scheme subcommands (verify, migrate, add, overwrite,
+ * init-gitignore, untrack-assets, to-annex) are gone with the scheme itself.
  */
 
 import { Command } from "commander";
@@ -20,37 +17,13 @@ import { runCommand, createCliContext } from "../../core/commands/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export const attachmentsCommand = new Command("attachments")
-  .description("Manifest-aware operations on assets");
+  .description("git-annex operations on a box's assets");
 
-attachmentsCommand
-  .command("verify")
-  .description("Scan all .attach/ scopes; non-zero exit on errors. Read-only.")
-  .action(async () => dispatch("verify"));
 
-attachmentsCommand
-  .command("migrate")
-  .description("Write manifests for every asset in .attach/. Idempotent.")
-  .action(async () => dispatch("migrate"));
 
-attachmentsCommand
-  .command("overwrite <path>")
-  .description("Replace the contents of a tracked asset. Reads from stdin.")
-  .action(async (relPath: string) => dispatch("overwrite", { relPath }));
 
-attachmentsCommand
-  .command("add <path>")
-  .description("Explicitly claim an on-disk file into its manifest.")
-  .action(async (relPath: string) => dispatch("add", { relPath }));
 
-attachmentsCommand
-  .command("untrack-assets")
-  .description("Migration step: git rm --cached every asset covered by a manifest. Idempotent.")
-  .action(async () => dispatch("untrack-assets"));
 
-attachmentsCommand
-  .command("init-gitignore")
-  .description("Append the asset gitignore patterns to the box's .gitignore. Idempotent.")
-  .action(async () => dispatch("init-gitignore"));
 
 attachmentsCommand
   .command("unignore")
@@ -72,30 +45,12 @@ attachmentsCommand
   .description("Block large attach-scope files git-annex is not configured to annex.")
   .action(async () => dispatch("check-unlisted"));
 
-attachmentsCommand
-  .command("to-annex")
-  .description("Migrate this box from asset manifests to git-annex. Verifies before and after.")
-  .option("--dry-run", "Report what would happen; change nothing")
-  .action(async (opts: { dryRun?: boolean }) =>
-    dispatch("to-annex", { apply: opts.dryRun === true ? false : undefined }),
-  );
 
-interface DispatchOptions {
-  /** Path argument for overwrite / add. */
-  relPath?: string | undefined;
-  /** false selects a dry run for to-annex. */
-  apply?: boolean | undefined;
-}
-
-async function dispatch(subcommand: string, opts?: DispatchOptions): Promise<void> {
-  const relPath = opts?.relPath;
+async function dispatch(subcommand: string): Promise<void> {
   try {
     const boxRoot = await requireBoxRoot();
     const ctx = createCliContext(boxRoot);
-    const args: Record<string, unknown> = { subcommand };
-    if (relPath) args["pathArg"] = relPath;
-    if (opts?.apply !== undefined) args["apply"] = opts.apply;
-    const result = await runCommand({ name: "attachments", args, ctx });
+    const result = await runCommand({ name: "attachments", args: { subcommand }, ctx });
     if (!result.success) {
       if (result.error) console.error(`Error: ${result.error}`);
       process.exit(1);

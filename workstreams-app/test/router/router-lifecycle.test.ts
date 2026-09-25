@@ -87,6 +87,8 @@ test("transitionLifecycle: starting → failed and starting → stopping are leg
   transitionLifecycle(toFailed, {
     phase: "failed",
     lastError: { message: "boom", phase: "waitForHttp", viteOutput: "", fastifyOutput: "", at: 0 },
+    attempts: 0,
+    retryAfter: null,
   });
   assert.equal(toFailed.lifecycle.phase, "failed");
 
@@ -123,6 +125,8 @@ test("transitionLifecycle: terminal failed is a dead end (→ stopping throws)",
   transitionLifecycle(handle, {
     phase: "failed",
     lastError: { message: "x", phase: "waitForHttp", viteOutput: "", fastifyOutput: "", at: 0 },
+    attempts: 0,
+    retryAfter: null,
   });
   assert.throws(() => transitionLifecycle(handle, stoppingVariant("requested")), WorktreeLifecycleError);
   assert.equal(handle.lifecycle.phase, "failed");

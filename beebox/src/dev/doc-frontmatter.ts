@@ -7,6 +7,11 @@ const ISSUE_CATEGORY_SET = new Set<string>(ISSUE_CATEGORIES);
 const ISSUE_RE = /^issues\/(closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[^/]+\.md$/;
 const DEFERRED_ISSUE_RE = /^issues\/deferred\/[^/]+\.md$/;
 const PLAN_STATUSES = new Set(["draft", "active", "partial", "implemented", "superseded", "parked"]);
+const PLAN_STATUSES_BY_DIR: Readonly<Record<string, ReadonlySet<string>>> = {
+  plans: new Set(["draft", "active", "partial"]),
+  "implemented-plans": new Set(["implemented"]),
+  "unimplemented-plans": new Set(["parked", "superseded"]),
+};
 const NEEDS = new Set(["design", "decision", "manual-testing"]);
 const RESOLUTIONS = new Set(["implemented", "wontfix", "superseded"]);
 const PRIORITIES = new Set(["important", "normal", "backlog"]);
@@ -55,21 +60,43 @@ function pathProblem(params: { rel: string; key: string; value: unknown; exists:
 }
 
 function planProblems(params: {
-  rel: string; dir: string; data: Record<string, unknown>; exists: (rel: string) => boolean;
+  rel: string; data: Record<string, unknown>; exists: (rel: string) => boolean;
 }): string[] {
-  const { rel, dir, data, exists } = params;
+  const { rel, data, exists } = params;
   const out: string[] = [];
   const status = data.status;
-  if (typeof status !== "string" || !PLAN_STATUSES.has(status)) out.push(`${rel}: invalid plan status`);
   if (!strings(data.issues)) out.push(`${rel}: frontmatter issues must be a list`);
   else for (const value of data.issues) out.push(...pathProblem({ rel, key: "issues", value, exists }));
   if (data["superseded-by"] !== undefined) {
     if (status !== "superseded") out.push(`${rel}: superseded-by is allowed only with status superseded`);
     out.push(...pathProblem({ rel, key: "superseded-by", value: data["superseded-by"], exists }));
   }
-  if (dir === "implemented-plans" && status !== "implemented") out.push(`${rel}: implemented-plans requires status implemented`);
-  if (dir === "unimplemented-plans" && status !== "superseded" && status !== "parked") out.push(`${rel}: unimplemented-plans requires status superseded or parked`);
   return out;
+}
+
+function planIsExempt(filename: string): boolean {
+  return filename === "README.md" || filename.endsWith(".review.md") || filename.endsWith(".gap-analysis.md");
+}
+
+export function planLifecycleProblems(params: { rel: string; source: string }): string[] {
+  const { rel, source } = params;
+  const plan = PLAN_RE.exec(rel);
+  if (!plan || planIsExempt(plan[2] ?? "")) return [];
+  let parsed: FrontmatterDocument | null;
+  try {
+    parsed = splitFrontmatter(source);
+  } catch (error) {
+    return [`${rel}: invalid YAML frontmatter: ${error instanceof Error ? error.message : String(error)}`];
+  }
+  if (!parsed) return [`${rel}: YAML frontmatter is required`];
+  const status = parsed.data.status;
+  if (typeof status !== "string" || !PLAN_STATUSES.has(status)) return [`${rel}: invalid plan status`];
+  const dir = plan[1] ?? "";
+  const allowedStatuses = PLAN_STATUSES_BY_DIR[dir];
+  if (allowedStatuses && !allowedStatuses.has(status)) {
+    return [`${rel}: status ${status} is not allowed in ${dir}; ${dir} requires ${[...allowedStatuses].join(", ")}`];
+  }
+  return [];
 }
 
 function issueProblems(params: {
@@ -122,7 +149,7 @@ export function frontmatterProblems(params: {
   const issue = ISSUE_RE.exec(rel);
   const deferred = DEFERRED_ISSUE_RE.test(rel);
   if (!plan && !issue && !deferred) return [];
-  if (plan && (plan[2] === "README.md" || plan[2]?.endsWith(".review.md"))) return [];
+  if (plan && planIsExempt(plan[2] ?? "")) return [];
   let parsed: FrontmatterDocument | null;
   try {
     parsed = splitFrontmatter(source);
@@ -134,7 +161,7 @@ export function frontmatterProblems(params: {
   return [
     ...commonProblems(rel, data),
     ...(plan
-      ? planProblems({ rel, dir: plan[1] ?? "", data, exists })
+      ? [...planLifecycleProblems({ rel, source }), ...planProblems({ rel, data, exists })]
       : issueProblems({ rel, closed: issue?.[1] !== undefined, deferred, data, body: parsed.body, exists })),
   ];
 }

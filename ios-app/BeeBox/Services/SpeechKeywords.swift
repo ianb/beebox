@@ -100,6 +100,24 @@ private struct InputMatch {
 /// keyword tag (`isProtected`), so its own output can never be re-consumed as
 /// input. Vocabulary and tag shape are unchanged; only nesting is bounded.
 enum SpeechKeywords {
+    /// Representative phrases shown beside the native microphone while it is
+    /// live. This is presentation guidance, not a second detection contract:
+    /// detection remains local to this Swift implementation and may accept
+    /// alternates that are not shown here.
+    static let keywordHintsWithText = [
+        "\"send message\"",
+        "\"clean up and send\"",
+        "\"send and close\"",
+        "\"erase message\"",
+        "\"cancel message\"",
+        "\"microphone off\"",
+    ]
+
+    /// Before dictation has produced text, only ending the microphone turn is
+    /// useful. Keep this separate so the UI cannot suggest an action with no
+    /// text to act on.
+    static let keywordHintsWithoutText = ["\"microphone off\""]
+
     private static let sendHqPatterns = [
         ["clean", "up", "and", "send"],
         ["send", "and", "clean", "up"],

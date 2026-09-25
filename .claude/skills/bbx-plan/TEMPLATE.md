@@ -19,17 +19,13 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Smallest fix and budget
 
-<!-- The circuit breaker's baseline (bbx-plan skill, "Circuit breaker").
-     1. The smallest change that fixes the problem as reported — often cruder
-        and incident-sized — with its rough size in lines.
-     2. This plan's budget: tracks, subprojects touched, estimated lines of
-        source and of tests.
-     Some budgets exceed ~3× the smallest fix; others add a subproject,
-     protocol, or vocabulary the request did not ask for. Either kind: stop,
-     and let the boxholder choose between the two before you write further.
-     Implementation stops and re-plans when the diff passes 1.5× this budget.
-     *Could this be simpler?* below justifies whatever the budget adds over
-     the smallest fix. -->
+<!-- Name the smallest fix and the chosen design's tracks/subprojects and
+     estimated changed source/test lines (additions plus deletions). Estimates
+     are goals, not automatic cutoffs or human-imposed limits. Explain what the
+     fuller design buys. Report authored docs/generated output separately.
+     Over 2,000 total changed lines is a BIG CHANGE: label it, explain the size,
+     and obtain approval unless that size and scope are already approved.
+     Substantial growth prompts visible reassessment, not an automatic halt. -->
 
 ## Stated preferences this plan trades against
 
@@ -39,8 +35,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
        beyond the task"
      - beebox/code-style.md — the mechanical rules
      - the most recent shipped precedent for this kind of work (denser than docs)
-     Every design choice below must trace to one of these; if it can't, name
-     the missing principle or drop the choice. -->
+     Explain actual tradeoffs against these preferences; ordinary implementation
+     choices need no principle mapping. Do not invent a missing principle. -->
 
 ## What already exists
 
@@ -51,12 +47,26 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Prior art (external)
 
-<!-- Web search is the default. Three kinds: library/framework limitations
+<!-- Research external premises that a design decision depends on. Examples:
+     library/framework limitations
      ("<tool> <thing you want>" — issues, discussions), bugs/surprising
      behaviour you may hit, and named patterns that cover a mechanism you're
      inventing. One line + URL per finding. "No prior art found for X" is a
-     finding; write it. Skip-with-rationale only when nothing external is in
-     play. -->
+     finding when it bears on the decision; write it. If no decision depends
+     on an external premise, state that briefly and skip the search. -->
+
+## Ontology
+
+<!-- Every noun the design needs, one line each: what it is, what identifies
+     it, what it is NOT, and which other nouns it points at. Mark the ones the
+     codebase already has, with file:line, and use THOSE names. Write the
+     tracks below in these terms only.
+     Two names for one thing, one field doing two jobs, and a state that
+     cannot be represented are ontology mistakes; they are cheap here and
+     expensive at implementation, where they surface as a migration.
+     Worth most when the plan introduces a card type or a shared-vocabulary
+     tag — there the ontology IS the design. A plan that adds no nouns says
+     so in a line. -->
 
 ## Tracks / scope
 

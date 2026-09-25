@@ -34,7 +34,7 @@ function caller(boxRoot, { isOwner }) {
 ## create returns the secret once, and it really authenticates
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const owner = caller(box.root, { isOwner: true });
 const created = await owner.scanTokens.create({ name: "laptop-scansnap" });
 

@@ -19,13 +19,15 @@ import { lintCardsDispatch } from "../../src/core/card-lint.js";
 
 function invalidSchemaThrows() {
   try {
+    // A malformed choice — a bare string where the field wants
+    // `{ name, stock? }`. An unfamiliar NAME is fine; a wrong shape is not.
     cardSchema("bad-theme-example", {
       fields: { title: z.string() },
-      theme: { name: "velvet" },
+      theme: "velvet",
     });
     return false;
   } catch (error) {
-    return String(error).includes("unknown theme");
+    return String(error).includes("must be an object");
   }
 }
 ```
@@ -83,22 +85,39 @@ JSON.stringify(resolveCardTheme({
 => {"choice":{"name":"plain","stock":"neutral"},"origin":{"kind":"engine"},"problem":null}
 ```
 
-An explicit bad card choice is visible and falls straight back to plain rather
-than silently continuing down the cascade.
+Themes are an OPEN set. A stock the catalog does not list is the author's
+choice, not an error: it is carried through as written, and the card's own
+choice still wins over the presentation default. The catalog supplies defaults
+and capabilities for the themes the host ships; it is not an allowlist.
 
 ```ts
-const badCard = resolveCardTheme({
+const ownStock = resolveCardTheme({
   path: "_content/One.memo.card",
   type: "memo",
   cardChoice: { name: "paper", stock: "neon" },
   presentation: parsePresentationConfig({ default: { name: "post-it" } }),
 });
-JSON.stringify([badCard.choice, badCard.origin, badCard.problem?.location, badCard.problem?.message.includes("available stocks")])
-=> [{"name":"plain","stock":"neutral"},{"kind":"card"},"card theme",true]
+JSON.stringify([ownStock.choice, ownStock.origin, ownStock.problem])
+=> [{"name":"paper","stock":"neon"},{"kind":"card"},null]
 ```
 
-Presentation config is one validated unit. Unknown names, bad stocks, and bad
-patterns preserve the requested subtree for diagnostics.
+A theme name the host has never heard of is equally fine — a box may author its
+own. With no catalog entry there is no default stock, so it gets the neutral
+one unless the card names its own.
+
+```ts
+const ownTheme = resolveCardTheme({
+  path: "_content/One.memo.card",
+  type: "memo",
+  cardChoice: { name: "velvet" },
+  presentation: { status: "absent" },
+});
+JSON.stringify([ownTheme.choice, ownTheme.problem])
+=> [{"name":"velvet","stock":"neutral"},null]
+```
+
+Presentation config is one validated unit. What still makes it invalid is a
+malformed *shape* — a bad match pattern here — not an unfamiliar theme name.
 
 ```ts
 const badConfig = parsePresentationConfig({
@@ -106,7 +125,7 @@ const badConfig = parsePresentationConfig({
   rules: [{ match: "/absolute/**", theme: { name: "paper" } }],
 });
 JSON.stringify([badConfig.status, badConfig.status === "invalid" ? badConfig.problems.length : 0])
-=> ["invalid",2]
+=> ["invalid",1]
 
 const degraded = resolveCardTheme({
   path: "_content/One.memo.card",
@@ -164,28 +183,34 @@ JSON.stringify([schema.defaultTheme, schema.frontmatterSchema.safeParse({
 => [{"name":"paper","stock":"cream"},true]
 ```
 
-An engine schema cannot publish a default outside the catalog.
+An engine schema may publish any theme name; only a malformed choice throws.
 
 ```ts
 invalidSchemaThrows()
 => true
 ```
 
-Card lint performs the catalog-dependent check that the global Zod field cannot.
+Card lint accepts a stock the catalog does not list — the box may have authored
+it — and still rejects a malformed `theme:` field, which is a shape error no
+open value can excuse.
 
 ```ts
 const lintBox = await makeTmpBox();
 await lintBox.write(
-  "_content/Bad.memo.card",
+  "_content/Own.memo.card",
   "---\ncreated: 2026-09-07T12:00:00Z\ntheme:\n  name: paper\n  stock: purple\n---\nBody\n",
 );
-const lintResult = await lintCardsDispatch([lintBox.path("_content/Bad.memo.card")], {
-  boxRoot: lintBox.root,
-  ctx: await buildLoadContext(lintBox.root),
-});
+await lintBox.write(
+  "_content/Bad.memo.card",
+  "---\ncreated: 2026-09-07T12:00:00Z\ntheme: paper\n---\nBody\n",
+);
+const lintResult = await lintCardsDispatch(
+  [lintBox.path("_content/Own.memo.card"), lintBox.path("_content/Bad.memo.card")],
+  { boxRoot: lintBox.root, ctx: await buildLoadContext(lintBox.root) },
+);
 JSON.stringify([
   lintResult.totalErrors,
-  lintResult.results[0].errors[0].message.includes("available stocks"),
+  lintResult.results.flatMap((r) => r.errors).some((e) => e.message.includes("theme: expected object, got string")),
 ])
 => [1,true]
 ```

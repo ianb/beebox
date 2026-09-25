@@ -22,7 +22,7 @@
 
 import { basename, join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
-import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { parseFrontmatterObject, splitCardContent } from "../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { contentHash } from "../../lib/content-hash.js";
@@ -33,6 +33,7 @@ import { generateViewsDoc } from "../views/doc.js";
 import { generateChatVoiceDoc } from "../chat/voice-doc.js";
 import { generateNarrationModeDoc } from "../narration-mode-doc.js";
 import { generateReducingClaudeMdDoc } from "../reducing-claude-md-doc.js";
+import { generateMigrationRepairDoc } from "../migration-repair-policy.js";
 import { generatePythonToolsDoc } from "../python-tools-doc.js";
 import { CONTAINS_DOC_APPENDIX } from "../agent-guide/search.js";
 import { generateBbxCommands } from "./bbx-commands.js";
@@ -54,6 +55,7 @@ interface StaticDoc {
 }
 
 const STATIC_DOCS: readonly StaticDoc[] = [
+  { filename: "migration-repair.md", readWhen: "Repairing a failed migration or answering its recovery question.", generate: generateMigrationRepairDoc },
   { filename: "bbx-commands.md", readWhen: "Running a `bbx` command beyond the everyday ones, or creating a card from a template.", generate: generateBbxCommands },
   { filename: "connectors.md", readWhen: "Anything about Gmail, Google Drive, Telegram, or calendar sync, or a credential a connector needs.", generate: generateConnectorsDocs },
   { filename: "views.md", readWhen: "Writing or changing a view (a React component that renders a card type).", generate: generateViewsDoc },
@@ -144,13 +146,28 @@ function indexDoc(entries: { filename: string; readWhen: string }[]): string {
   return lines.join("\n");
 }
 
-/** Every engine doc, computed from the running source (and `docs/box/`). */
-export function engineDocs(options?: { packageRoot?: string }): EngineDoc[] {
+export interface EngineDocEntry {
+  doc: EngineDoc;
+  /** One line for an index: when an agent should open this doc. */
+  readWhen: string;
+}
+
+/**
+ * Every engine doc except the index, each with its index row. The public
+ * agent-docs corpus (`site/`) consumes this through `scripts/export-box-docs.ts`
+ * and builds its own index; the package writer adds `README.md` via `engineDocs`.
+ */
+export function engineDocEntries(options?: { packageRoot?: string }): EngineDocEntry[] {
   const packageRoot = options?.packageRoot ?? PACKAGE_ROOT;
   const statics = STATIC_DOCS.map((d) => ({ doc: { filename: d.filename, content: d.generate() }, readWhen: d.readWhen }));
   const prose = proseDocs(packageRoot);
   const cards = builtinCardDocs();
-  const all = [...statics, ...prose, ...cards];
+  return [...statics, ...prose, ...cards];
+}
+
+/** Every engine doc, computed from the running source (and `docs/box/`). */
+export function engineDocs(options?: { packageRoot?: string }): EngineDoc[] {
+  const all = engineDocEntries(options);
   const index: EngineDoc = {
     filename: INDEX_FILE,
     content: indexDoc(all.map((e) => ({ filename: e.doc.filename, readWhen: e.readWhen }))),
@@ -167,7 +184,7 @@ export function engineDocFilenames(): string[] {
   return engineDocs().map((d) => d.filename);
 }
 
-function docsFingerprint(docs: EngineDoc[]): string {
+export function docsFingerprint(docs: EngineDoc[]): string {
   return contentHash(docs.map((d) => `${d.filename}\n${d.content}`).join("\0"));
 }
 
@@ -232,17 +249,46 @@ async function ensurePackageDocsUncontended(packageRoot: string): Promise<Ensure
   }
 }
 
-/** Move the live dir aside (to a fresh unique name), swap the new one in, drop the old. */
+/**
+ * Move the live dir aside (to a fresh unique name), swap the new one in, drop
+ * the old. A directory that came from a lower overlayfs layer (the engine
+ * installed in a container image) cannot be renamed — the kernel answers
+ * EXDEV — so there the contents are replaced in place instead.
+ */
 async function swapIn({ tmp, dir, packageRoot }: { tmp: string; dir: string; packageRoot: string }): Promise<void> {
   const old = await mkdtemp(join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-old-`));
   await rm(old, { recursive: true, force: true }); // mkdtemp reserved the name; rename needs it absent
   try {
     await rename(dir, old);
   } catch (e) {
+    if (errnoCode(e) === "EXDEV") {
+      await replaceDirContents({ from: tmp, to: dir });
+      return;
+    }
     if (errnoCode(e) !== "ENOENT") throw e; // nothing to move aside on first write
   }
   await rename(tmp, dir);
   await rm(old, { recursive: true, force: true });
+}
+
+/**
+ * Make `to` hold exactly the files of `from` (a flat directory), then remove
+ * `from`. Not atomic, so the fingerprint goes first and comes back last: a
+ * reader that sees a half-replaced directory sees no matching fingerprint, and
+ * the next ensure rewrites it.
+ */
+export async function replaceDirContents({ from, to }: { from: string; to: string }): Promise<void> {
+  await rm(join(to, FINGERPRINT_FILE), { force: true });
+  const incoming = await readdir(from);
+  const keep = new Set(incoming);
+  for (const name of await readdir(to)) {
+    if (!keep.has(name)) await rm(join(to, name), { recursive: true, force: true });
+  }
+  for (const name of incoming) {
+    if (name !== FINGERPRINT_FILE) await rename(join(from, name), join(to, name));
+  }
+  if (keep.has(FINGERPRINT_FILE)) await rename(join(from, FINGERPRINT_FILE), join(to, FINGERPRINT_FILE));
+  await rmdir(from);
 }
 
 async function storedFingerprint(dir: string): Promise<string | null> {

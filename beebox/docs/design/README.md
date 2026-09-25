@@ -1,7 +1,7 @@
 # docs/design/ — engineering rationale
 
-Why the system is shaped the way it is. Peer of [`../stack-decisions.md`](../stack-decisions.md)
-(the decisions log): these files answer *why*, never *how to*. The onboarding
+Why the system is shaped the way it is. These files answer *why*, never *how to*. (The former peer, the stack
+decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026-09-04.md).) The onboarding
 narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
 compass is [`../architecture/spirit.md`](../architecture/spirit.md) — **design
 serves the values written there**; spirit.md's "if the architecture contradicts
@@ -9,7 +9,7 @@ this, the architecture is wrong" is meant literally (the boxholder wrote it and
 meant it, then forgot it existed — reasserted 2026-07-04).
 
 This directory replaces the former monolithic `docs/design.md`, rewritten to
-the boxholder's rulings in [`../plans/design-reconciliation.md`](../plans/design-reconciliation.md)
+the boxholder's rulings in [`../implemented-plans/design-reconciliation.md`](../implemented-plans/design-reconciliation.md)
 (2026-07-04). Anything labeled *aspiration* is deliberate design intent the
 code doesn't fill yet — don't read it as description.
 

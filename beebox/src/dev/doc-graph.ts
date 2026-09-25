@@ -16,6 +16,12 @@ function contextPreview(context: string): string {
   return context.slice(0, 120).trimEnd();
 }
 
+function lifecycleSuffix(doc: DocInfo, separator: string): string {
+  if (doc.lifecycle === null) return "";
+  const status = doc.lifecycle.status === null ? "" : `${separator}${doc.lifecycle.status}`;
+  return `${separator}${doc.lifecycle.label}${status}`;
+}
+
 function generateReport(docs: Map<string, DocInfo>): string {
   const lines: string[] = [];
 
@@ -44,7 +50,7 @@ function generateReport(docs: Map<string, DocInfo>): string {
     lines.push("These documents are not referenced by any other document.");
     lines.push("");
     for (const doc of orphans) {
-      lines.push(`- **${doc.path}** — "${doc.title}" (${doc.lineCount} lines)`);
+      lines.push(`- **${doc.path}** — "${doc.title}" (${doc.lineCount} lines)${lifecycleSuffix(doc, " · ")}`);
     }
     lines.push("");
   }
@@ -80,7 +86,7 @@ function generateReport(docs: Map<string, DocInfo>): string {
       const orphanTag = doc.incoming.length === 0 ? " **[ORPHAN]**" : "";
       lines.push(`#### ${doc.path}${orphanTag}`);
       lines.push("");
-      lines.push(`Title: "${doc.title}" | ${doc.lineCount} lines`);
+      lines.push(`Title: "${doc.title}" | ${doc.lineCount} lines${lifecycleSuffix(doc, " | ")}`);
       lines.push("");
 
       if (doc.incoming.length > 0) {

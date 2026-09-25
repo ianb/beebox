@@ -34,11 +34,19 @@ async function ensureRelativeSymlink(linkPath: string, targetPath: string): Prom
   return true;
 }
 
+/** Basename of `_config/_template-updates` (install-template-file.ts owns the full path). */
+const TEMPLATE_UPDATES_DIR_NAME = "_template-updates";
+
 async function findClaudeDocs(root: string): Promise<string[]> {
   const found: string[] = [];
   const visit = async (dir: string): Promise<void> => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
-      if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".agents") continue;
+      // `_template-updates` holds parked copies of templates awaiting review,
+      // not active guidance. Mirroring a parked CLAUDE.md offers a Codex
+      // session a guide the box has not adopted, and the mirror dangles once
+      // the parked copy is accepted or discarded.
+      if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".agents"
+        || entry.name === TEMPLATE_UPDATES_DIR_NAME) continue;
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);

@@ -26,8 +26,23 @@ export interface FileSummary<T = unknown> {
   contains?: string;
   /** The card's mark, `src` resolved to a box-relative path. Most cards have none. */
   symbol?: CardSymbolData;
-  /** Typed attrs — shape depends on the loader */
+  /**
+   * A second line the card type wrote about itself — a status, a count, a
+   * date. Set by the schema's `summarize` hook; most cards have none.
+   */
+  detail?: string;
+  /** Typed attrs — shape depends on the card type's `summarize` (or a path loader) */
   attrs?: T;
+}
+
+/**
+ * The text form of a summary, for agent-facing output and any surface without
+ * a React tree: the title, then the detail after an em dash.
+ */
+export function summaryText(summary: FileSummary<unknown>): string {
+  const detail = summary.detail;
+  if (detail === undefined || detail.trim() === "") return summary.title;
+  return `${summary.title} — ${detail}`;
 }
 
 /**

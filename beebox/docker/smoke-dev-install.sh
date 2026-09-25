@@ -10,7 +10,7 @@
 #
 #   apt prerequisites → Node 24 → corepack/pnpm → git lfs install → the Claude
 #   Code CLI native installer → clone → pnpm install → build:frontend →
-#   bbx init → box-local pnpm install → bbx serve → HTTP probe → pnpm run doctor.
+#   bbx engine init → box-local pnpm install → bbx engine serve → HTTP probe → pnpm run doctor.
 #
 # The doctor assertion is the payoff: EVERY check must pass EXCEPT "Claude
 # auth", which must be present and *failed* with the `claude auth login`
@@ -109,9 +109,9 @@ step "Claude Code CLI native installer" \
 step "claude --version (headless — the binary works without a login)" \
   claude --version
 
-# (container-only) A fresh container has no git identity, but `bbx init` makes a
+# (container-only) A fresh container has no git identity, but `bbx engine init` makes a
 # commit. A real dev machine already has user.name/email set globally.
-step "git identity (container-only: bbx init commits)" \
+step "git identity (container-only: bbx engine init commits)" \
   bash -c 'git config --global user.name "Smoke Test" && git config --global user.email "smoke@box.example.com"'
 
 # ── quickstart (developer-install.md), verbatim ──────────────────────────────
@@ -122,20 +122,20 @@ step "pnpm install (root workspace)" \
   bash -c 'cd /root/beebox-mono && pnpm install'
 step "pnpm --dir beebox build:frontend" \
   bash -c 'cd /root/beebox-mono && pnpm --dir beebox build:frontend'
-step "bbx init /root/boxes/dev1" \
-  bash -c 'cd /root/beebox-mono/beebox && pnpm bbx init /root/boxes/dev1'
+step "bbx engine init /root/boxes/dev1" \
+  bash -c 'cd /root/beebox-mono/beebox && pnpm bbx engine init /root/boxes/dev1'
 step "box-local pnpm install (v2 boxes are packages)" \
   bash -c 'cd /root/boxes/dev1 && pnpm install'
 
-# ── bbx serve + HTTP probe ────────────────────────────────────────────────────
-echo "  ... | starting bbx serve on :3210"
-( cd /root/beebox-mono/beebox && exec pnpm bbx serve /root/boxes/dev1 --port 3210 ) \
+# ── bbx engine serve + HTTP probe ────────────────────────────────────────────────────
+echo "  ... | starting bbx engine serve on :3210"
+( cd /root/beebox-mono/beebox && exec pnpm bbx engine serve /root/boxes/dev1 --port 3210 ) \
   > /tmp/serve.log 2>&1 &
 SERVE_PID=$!
 
 probe_fail() {
   echo "  FAIL| $1" >&2
-  echo "  ---- bbx serve log ----" >&2
+  echo "  ---- bbx engine serve log ----" >&2
   tail -n 80 /tmp/serve.log >&2
   exit 1
 }
@@ -144,7 +144,7 @@ code=""
 deadline=$(( $(date +%s) + 120 ))
 until [[ "$(date +%s)" -ge "$deadline" ]]; do
   if ! kill -0 "$SERVE_PID" 2>/dev/null; then
-    probe_fail "bbx serve exited before it answered"
+    probe_fail "bbx engine serve exited before it answered"
   fi
   code="$(curl -s -o /tmp/body.html -w '%{http_code}' http://127.0.0.1:3210/ 2>/dev/null || true)"
   [[ "$code" == "200" ]] && break

@@ -516,7 +516,7 @@ paragraph, not a design step.
   reviewable change.
 - **Server-side persistence of open tabs (chat feature state)** — considered and
   rejected for this plan: it makes every open a write to the box, and
-  [hq-toggle-blocks-on-a-git-commit](../../../issues/bugs/2026-09-04-hq-toggle-blocks-on-a-git-commit.md)
+  [hq-toggle-blocks-on-a-git-commit](../../../issues/closed/bugs/2026-09-04-hq-toggle-blocks-on-a-git-commit.md)
   is the live warning about what that costs.
 
 ## Open design questions

@@ -78,9 +78,16 @@ export const SystemThemeChoiceSchema = ThemeChoiceSchema.superRefine((choice, ct
   if (checked.problem !== null) ctx.addIssue({ code: "custom", message: checked.problem.message });
 });
 
+/**
+ * A resolved selection. `name`/`stock` are plain strings, NOT catalog unions:
+ * themes are an open set. A box may author its own theme and its own stock,
+ * and the host must carry the value through rather than reject it. The catalog
+ * still supplies defaults and capabilities (`chrome`, quote treatments) for
+ * the themes it knows; an unknown theme simply has none of those.
+ */
 export interface ResolvedThemeChoice {
-  name: ThemeName;
-  stock: ThemeStock;
+  name: string;
+  stock: string;
 }
 
 export const PresentationConfigSchema = z.object({
@@ -129,14 +136,13 @@ export interface ResolvedChromeTheme {
 }
 
 const PLAIN: ResolvedThemeChoice = { name: "plain", stock: "neutral" };
+/** Stock for a theme the catalog does not know, which has no default of its own. */
+const DEFAULT_STOCK = "neutral";
 
 function descriptor(name: string): ThemeDescriptor | undefined {
   return THEME_CATALOG.find((candidate) => candidate.name === name);
 }
 
-function quotedChoices(values: readonly string[]): string {
-  return values.map((value) => JSON.stringify(value)).join(", ");
-}
 
 export function validateThemeChoice(choice: unknown, requestedLocation?: string):
   | { choice: ResolvedThemeChoice; problem: null }
@@ -155,29 +161,21 @@ export function validateThemeChoice(choice: unknown, requestedLocation?: string)
   }
   const requested = parsed.data;
   const theme = descriptor(requested.name);
+  // An unknown theme is NOT an error. Themes are an open set — a box may author
+  // its own — so the value is carried through as written. The catalog is a
+  // source of defaults and capabilities for the themes the host ships, not an
+  // allowlist. The same holds for stock: an unrecognized stock on a known theme
+  // is still the author's choice.
   if (theme === undefined) {
     return {
-      choice: PLAIN,
-      problem: {
-        location,
-        message: `${location} names unknown theme ${JSON.stringify(requested.name)}; available themes: ${quotedChoices(THEME_CATALOG.map((item) => item.name))}`,
-        requested: choice,
-      },
+      choice: { name: requested.name, stock: requested.stock ?? DEFAULT_STOCK },
+      problem: null,
     };
   }
-  const requestedStock = requested.stock ?? theme.defaultStock;
-  const stock = theme.stocks.find((candidate) => candidate === requestedStock);
-  if (stock === undefined) {
-    return {
-      choice: PLAIN,
-      problem: {
-        location,
-        message: `${location} names unknown stock ${JSON.stringify(requestedStock)} for ${JSON.stringify(theme.name)}; available stocks: ${quotedChoices(theme.stocks)}`,
-        requested: choice,
-      },
-    };
-  }
-  return { choice: { name: theme.name, stock }, problem: null };
+  return {
+    choice: { name: theme.name, stock: requested.stock ?? theme.defaultStock },
+    problem: null,
+  };
 }
 
 function invalidPresentationResult(

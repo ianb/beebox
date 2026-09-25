@@ -70,7 +70,7 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
 /**
  * A tag node's authored name and source line span. Exported (alongside
  * `collectTagSpans`/`tagNameFor`) so the todo collector
- * (`core/todo/collect-body.ts`) can reuse the same "which tag does this
+ * (`core/todo/extract-body.ts`) can reuse the same "which tag does this
  * validate error belong to" attribution logic rather than re-deriving it —
  * it needs to tell a `{% todo %}`/`{% see-also %}` validation error apart
  * from an unrelated one in the same body (`docs/implemented-plans/todo-annotation.md`,

@@ -15,6 +15,7 @@ import { proxy, prepareWorkstreamsAppHeaders, stripClientBbxHeaders } from "./ro
 import { errMessage } from "./router-effects.js";
 import { ROUTER_DEBUG, log, parseWorktreeName } from "./router-config.js";
 import type { DispatchContext } from "./router-dispatch.js";
+import { formatDenial, type UpgradeDenialThrottle } from "./router-deny-log.js";
 
 /** State the upgrade path keeps across requests: per-worktree log throttling. */
 export interface UpgradeState {
@@ -23,13 +24,18 @@ export interface UpgradeState {
   trustedLocal: boolean;
   /** Last time a refusal was logged for a worktree (at most one per minute). */
   refusedUpgradeLogAt: Map<string, number>;
+  /** Rate limiter for AUTH-denial lines — a different concern from
+   *  `refusedUpgradeLogAt` above, which throttles the designed refusal of an
+   *  upgrade to a cold worktree (an allowed request). This one throttles a
+   *  request that never got past the gate. */
+  denialThrottle: UpgradeDenialThrottle;
 }
 
 export async function handleRouterUpgrade(
   state: UpgradeState,
   { req, socket, head }: { req: http.IncomingMessage; socket: Duplex; head: Buffer },
 ): Promise<void> {
-  const { ctx, authDeps, trustedLocal, refusedUpgradeLogAt } = state;
+  const { ctx, authDeps, trustedLocal, refusedUpgradeLogAt, denialThrottle } = state;
   const { core, workstreamsApp } = ctx;
   const reqUrl = req.url || "/";
   // WS must authenticate too (2nd-review 2.7): the same chokepoint runs on the
@@ -47,6 +53,13 @@ export async function handleRouterUpgrade(
     return;
   }
   if (!decision.allow) {
+    // Was entirely silent until 2026-09-15: a refused upgrade destroyed the
+    // socket and left no record, so an iOS client reconnecting during an
+    // outage produced nothing to read afterwards. Throttled because that
+    // client retries on a timer (tRPC's wsLink retries forever) and an
+    // unthrottled line would bury the log it is meant to make readable.
+    const line = formatDenial({ method: req.method || "GET", url: reqUrl, decision });
+    if (denialThrottle.admit({ key: line, now: Date.now() })) log(`${line} (ws)`);
     socket.destroy();
     return;
   }

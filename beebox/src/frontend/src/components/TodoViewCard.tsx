@@ -1,115 +1,87 @@
 /**
  * TodoViewCard — card renderer for `todo-view` cards
- * (`docs/implemented-plans/todo-annotation.md` Track 4).
+ * (`docs/plans/todo-collection.md`, Track 4).
  *
- * A `todo-view` card is a live query, not authored content: its frontmatter
- * (`glob`/`status`/`assigned`) drives `trpc.todos.list`, and this component
- * renders whatever that query returns — grouped by plate-state, read-only
- * (no click-to-done in v1), each item linking to its source card at card
- * granularity (no line-anchored deep links yet).
+ * A `todo-view` card is a live query, not authored content: its own directory
+ * is the query's `here`, its frontmatter supplies `glob`/`status`/`assigned`,
+ * and this component renders whatever `collections.query` returns. Read-only
+ * — checking a todo off is editing the card it was written in.
  *
- * When the card's frontmatter omits `status`, the query defaults to
- * `["open", "parked"]` — every plate-state group an `open` todo can land in
- * (escalated/on-plate/quiet) PLUS `parked`, so the parked group is actually
- * reachable on the stock plate without a card author having to list
- * `parked` explicitly (defaulting to `open` alone made it permanently
- * empty — `parked` is a status, not a plate-state, so it was never
- * included). `done`/`dropped` stay excluded by default; a card that
- * explicitly wants those in scope lists them in `status:`.
+ * Two controls change what is shown, and neither is a card field: grouping
+ * and "show finished" are view state, so they ride in the URL, survive
+ * navigation, and never rewrite somebody's card because they looked at it
+ * differently for a minute.
+ *
+ * `place` is the default because in a working box almost nothing is dated:
+ * the heading a todo sits under and the todo it nests beneath are what make
+ * it mean anything. `plate` is there for the days when dates are the question.
  */
 
+import { useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
-import { href } from "../lib/routing";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
+import { ErrorText } from "./ui/ErrorText";
+import { StatusMessage } from "./ui/StatusMessage";
+import { Heading } from "./ui/Heading";
 import { Stack } from "./ui/Stack";
 import { Row } from "./ui/Row";
-import { Badge } from "./ui/Badge";
-import { TextLink } from "./ui/TextLink";
-import { FriendlyDate } from "./ui/FriendlyDate";
-import { bbxSource, bbxSourceItem } from "../lib/source-tag";
-import { resolveTodoViewStatusFilter } from "./todo-view-card-logic";
-import type { RendererProps } from "../renderers";
-import type { RouterOutput } from "../lib/trpc";
-import type { TodoPlateState } from "@shared/todo-model";
+import { Toggle } from "./ui/Toggle";
+import { TabBar } from "./ui/TabBar";
+import { bbxSource } from "../lib/source-tag";
+import { busEventData } from "../lib/bus-events";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { CardRow } from "./todo-view/CardRow";
+import { DatedStrip } from "./todo-view/DatedStrip";
+import {
+  datedTodos,
+  hereForCard,
+  resolveTodoViewStatusFilter,
+  statusFilterWithFinished,
+  type TodoResult,
+} from "./todo-view-card-logic";
+import type { RendererProps } from "../file-type-registry";
 
-type TodoListOutput = RouterOutput["todos"]["list"];
-type CollectedTodo = TodoListOutput["todos"][number];
-type TodoCollectionIssue = TodoListOutput["issues"][number];
-
-const GROUP_ORDER: ReadonlyArray<{ state: TodoPlateState; label: string }> = [
-  { state: "escalated", label: "Escalated" },
-  { state: "on-plate", label: "On the plate" },
-  { state: "quiet", label: "Quiet" },
-  { state: "parked", label: "Parked" },
-  { state: "done", label: "Done" },
-  { state: "dropped", label: "Dropped" },
-];
+type Grouping = "place" | "plate";
 
 function stringField(fm: Record<string, unknown>, key: string): string | undefined {
   const value = fm[key];
   return typeof value === "string" ? value : undefined;
 }
 
-/** Stable React list key for one collected todo: card path + its locator (body line or frontmatter index). */
-function todoKey(todo: CollectedTodo): string {
-  return todo.locator.kind === "body"
-    ? `${todo.path}:${String(todo.locator.line)}`
-    : `${todo.path}#todos[${String(todo.locator.index)}]`;
+interface ViewOptions {
+  group: Grouping;
+  showFinished: boolean;
 }
 
-function groupByPlateState(todos: CollectedTodo[]): Map<TodoPlateState, CollectedTodo[]> {
-  const groups = new Map<TodoPlateState, CollectedTodo[]>();
-  for (const todo of todos) {
-    const bucket = groups.get(todo.plateState) ?? [];
-    bucket.push(todo);
-    groups.set(todo.plateState, bucket);
-  }
-  return groups;
+function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions {
+  const view = viewState ?? {};
+  return {
+    group: view["group"] === "plate" ? "plate" : "place",
+    showFinished: view["showFinished"] === true,
+  };
 }
 
-function TodoRow({ todo, boxSlug }: { todo: CollectedTodo; boxSlug: string | undefined }) {
-  const cardHref = boxSlug ? href(`/${boxSlug}/browse/${todo.path}`) : undefined;
+function ScopeLine({ result }: { result: TodoResult }) {
+  const { here, glob, includeReferring } = result.query;
+  const place = here === "" ? "the whole box" : here;
+  const scope = glob === `${here}/**` || (here === "" && glob === "**/*.card") ? place : `${place} (${glob})`;
   return (
-    <div {...bbxSourceItem(`todo: ${todo.text}`)}>
-      <Row gap="sm" wrap>
-        <Text size="sm">{todo.text}</Text>
-        {todo.due !== undefined ? (
-          <Badge size="sm" tone="warning" title="Due">
-            due <FriendlyDate iso={todo.due} mode="date" />
-          </Badge>
-        ) : null}
-        {todo.start !== undefined ? (
-          <Badge size="sm" tone="info" title="Start">
-            starts <FriendlyDate iso={todo.start} mode="date" />
-          </Badge>
-        ) : null}
-        {todo.assigned !== undefined ? (
-          <Badge size="sm" title="Assigned">{todo.assigned}</Badge>
-        ) : null}
-        {todo.id !== undefined ? (
-          <Badge size="sm" tone="neutral" title="Todo id">#{todo.id}</Badge>
-        ) : null}
-      </Row>
-      {cardHref ? (
-        <TextLink to={cardHref} tone="subtle">
-          <Text size="xs" tone="muted">{todo.path}</Text>
-        </TextLink>
-      ) : (
-        <Text size="xs" tone="muted">{todo.path}</Text>
-      )}
-    </div>
+    <Text as="div" size="xs" tone="muted">
+      Scope: {scope}
+      {includeReferring ? ", plus todos elsewhere that link here" : null}
+    </Text>
   );
 }
 
-function IssuesSection({ issues }: { issues: TodoCollectionIssue[] }) {
+function IssuesSection({ issues }: { issues: TodoResult["issues"] }) {
   if (issues.length === 0) return null;
   return (
     <Card padding="sm" background="warm" border="subtle">
       <Stack gap="xs">
         <Text size="xs" tone="muted" uppercase weight="semibold">
-          {issues.length} card{issues.length !== 1 ? "s" : ""} couldn't be read
+          {issues.length} card{issues.length === 1 ? "" : "s"} couldn&rsquo;t be read
         </Text>
         {issues.map((issue) => (
           <Text key={`${issue.kind}:${issue.path}`} as="div" size="xs" tone="muted">
@@ -121,67 +93,125 @@ function IssuesSection({ issues }: { issues: TodoCollectionIssue[] }) {
   );
 }
 
-export function TodoViewCard({ data }: RendererProps) {
+function Controls({ options, onChange }: { options: ViewOptions; onChange: (next: Partial<ViewOptions>) => void }) {
+  return (
+    <Row gap="md" align="center" justify="between" wrap>
+      <TabBar
+        idPrefix="bbx-todo-view-group"
+        label="Group todos by"
+        value={options.group}
+        onChange={(group: Grouping) => onChange({ group })}
+        tabs={[
+          { value: "place", label: "By place" },
+          { value: "plate", label: "By date" },
+        ]}
+      />
+      <Toggle
+        id="bbx-todo-view-show-finished"
+        checked={options.showFinished}
+        onChange={(showFinished) => onChange({ showFinished })}
+        label="Show finished"
+      />
+    </Row>
+  );
+}
+
+function TodoViewBody({ data, result, options, onChange }: {
+  data: RendererProps["data"];
+  result: TodoResult;
+  options: ViewOptions;
+  onChange: (next: Partial<ViewOptions>) => void;
+}) {
   const { boxSlug } = useParams({ strict: false });
   const fm = data.frontmatter ?? {};
-  const glob = stringField(fm, "glob");
-  const assigned = stringField(fm, "assigned");
-  const status = resolveTodoViewStatusFilter(fm);
-
-  const query = trpc.todos.list.useQuery({
-    cardPath: data.path,
-    ...(glob !== undefined && { glob }),
-    status,
-    ...(assigned !== undefined && { assigned }),
-  });
-
-  if (query.isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading todos…</Text>;
-  }
-  if (query.data === undefined) {
-    return <Text as="div" tone="subtle" className="p-8">Couldn't load todos.</Text>;
-  }
-
-  const { todos, issues, effectiveGlob } = query.data;
-  const groups = groupByPlateState(todos);
   const title = stringField(fm, "title") ?? "Todos";
+  const finished = result.reduction.done + result.reduction.dropped;
+  const hasRows = result.groups.some((group) => group.rows.length > 0);
 
   return (
     <div className="p-4 max-w-2xl mx-auto" {...bbxSource("card", data.path)}>
       <Card padding="md">
         <Stack gap="md">
           <Stack gap="none">
-            <Text as="h2" size="lg" weight="bold">{title}</Text>
-            {/* The box-wide plate's `**` is the default mental model — showing
-                a bare glob under the heading reads as broken markdown to
-                anyone unfamiliar with glob syntax (a field-test operator
-                flagged it as an unparsed `**`). Scoped plates keep their glob,
-                labeled so it reads as configuration rather than debris. */}
-            {effectiveGlob === "**" ? null : (
-              <Text as="div" size="xs" tone="muted" mono>Scope: {effectiveGlob}</Text>
-            )}
+            <Heading level={2}>{title}</Heading>
+            <ScopeLine result={result} />
           </Stack>
 
-          {todos.length === 0 ? (
-            <Text as="div" tone="subtle">No open todos in scope.</Text>
-          ) : (
-            GROUP_ORDER.filter((g) => (groups.get(g.state)?.length ?? 0) > 0).map((g) => (
-              <Stack key={g.state} gap="sm">
+          <Controls options={options} onChange={onChange} />
+
+          <DatedStrip dated={datedTodos(result)} boxSlug={boxSlug} />
+
+          {hasRows ? null : <Text as="div" tone="subtle">No todos in scope.</Text>}
+
+          {result.groups.map((group) => (
+            <Stack key={group.key} gap="sm">
+              {/* `place` is a single group whose label would only repeat the
+                  control above it; `plate` names a real distinction. */}
+              {options.group === "plate" ? (
                 <Text size="xs" tone="muted" uppercase weight="semibold">
-                  {g.label} ({groups.get(g.state)?.length ?? 0})
+                  {group.label} ({group.reduction.open + group.reduction.parked + group.reduction.done + group.reduction.dropped})
                 </Text>
-                <Stack gap="sm">
-                  {(groups.get(g.state) ?? []).map((todo) => (
-                    <TodoRow key={todoKey(todo)} todo={todo} boxSlug={boxSlug} />
-                  ))}
-                </Stack>
-              </Stack>
-            ))
+              ) : null}
+              {group.rows.map((row) => (
+                <CardRow key={row.card.path} row={row} />
+              ))}
+            </Stack>
+          ))}
+
+          {options.showFinished || finished === 0 ? null : (
+            <Text as="div" size="xs" tone="muted">
+              {finished} finished todo{finished === 1 ? "" : "s"} hidden.
+            </Text>
           )}
 
-          <IssuesSection issues={issues} />
+          <IssuesSection issues={result.issues} />
         </Stack>
       </Card>
     </div>
   );
+}
+
+export function TodoViewCard(props: RendererProps) {
+  const { data, viewState, onViewStateChange } = props;
+  const fm = data.frontmatter ?? {};
+  const glob = stringField(fm, "glob");
+  const assigned = stringField(fm, "assigned");
+  const options = optionsFrom(viewState);
+
+  const utils = trpc.useUtils();
+  const query = trpc.collections.query.useQuery({
+    collection: "todos",
+    query: {
+      here: hereForCard(data.path),
+      ...(glob !== undefined && { glob }),
+      group: options.group,
+      params: {
+        status: statusFilterWithFinished(resolveTodoViewStatusFilter(fm), options.showFinished),
+        ...(assigned !== undefined && { assigned }),
+      },
+    },
+  });
+
+  // A todo lives in an ordinary card, so any card edit can change this list.
+  // The scope is a glob rather than one path, so every `.card` write counts.
+  useBusSubscription({
+    onEvent: useCallback(
+      (event: RealtimeEvent) => {
+        const change = busEventData(event, "file-change");
+        if (!change || !change.path.endsWith(".card")) return;
+        void utils.collections.query.invalidate();
+      },
+      [utils],
+    ),
+  });
+
+  const change = (next: Partial<ViewOptions>): void => {
+    onViewStateChange?.({ ...options, ...next }, "replace");
+  };
+
+  if (query.isLoading) return <StatusMessage>Loading todos…</StatusMessage>;
+  if (query.error !== null) return <ErrorText className="p-8">Couldn&rsquo;t load todos: {query.error.message}</ErrorText>;
+  if (query.data === undefined) return <ErrorText className="p-8">Couldn&rsquo;t load todos.</ErrorText>;
+
+  return <TodoViewBody data={data} result={query.data} options={options} onChange={change} />;
 }

@@ -69,6 +69,19 @@ export class NotADriveFolderError extends DriveMountError {
   }
 }
 
+/** A Drive type nothing syncs two-way — a PDF, an image, a folder. */
+export class NoDriveHandlerError extends DriveMountError {
+  readonly mimeType: string;
+  constructor(options: { name: string; mimeType: string }) {
+    super(
+      `${options.name} is a ${options.mimeType}, which nothing syncs two-way — use `
+        + "`bbx drive link` to point at it, or `bbx drive mount` if it is a folder",
+    );
+    this.name = "NoDriveHandlerError";
+    this.mimeType = options.mimeType;
+  }
+}
+
 export class DriveIdClaimedError extends DriveMountError {
   readonly claimedBy: string[];
   constructor(options: { driveId: string; claimedBy: string[] }) {

@@ -78,7 +78,7 @@ export const NAVIGATION_SCRIPT = `
       button.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(prompt.querySelector('code').textContent);
-          status.textContent = 'Copied. Paste this into your agent.';
+          status.textContent = 'Copied. Paste this into your agent or AI chat.';
         } catch { status.textContent = 'Could not copy automatically. Select and copy the prompt above.'; }
       });
     }

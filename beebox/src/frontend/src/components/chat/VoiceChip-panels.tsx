@@ -10,8 +10,40 @@
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import type { RouterOutput } from "../../lib/trpc";
 import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
 import type { TtsBackend } from "@shared/tts-backends.js";
+
+/** `voice.capabilities`' shape — `undefined` while loading or forbidden (a
+ * non-owner viewer), in which case every option renders as usable. */
+export type ServiceCapabilities = RouterOutput["voice"]["capabilities"];
+type ServiceCapability = ServiceCapabilities["hq"][HqTranscriptionService];
+
+/** `needs` joined for display — "openai-thinking or openrouter". */
+function formatSecretNeeds(needs: readonly string[]): string {
+  return needs.join(" or ");
+}
+
+/**
+ * The reason line for an unusable option, or null when it's usable (or the
+ * capability is unknown — loading/forbidden queries never block a picker).
+ * Pure so it's doctestable without rendering: `test/frontend/voice-chip-capability-reason.doctest.md`.
+ */
+export function capabilityReason(state: ServiceCapability | undefined): string | null {
+  if (state === undefined || state.usable) return null;
+  return `needs the ${formatSecretNeeds(state.needs)} secret — Admin → Secrets`;
+}
+
+/** The secondary line under a disabled option's label — mirrors the shape
+ * `TTS_BACKEND_OPTIONS`' `note` already used, reused here rather than
+ * inventing a second rendering. */
+function CapabilityNote({ needs }: { needs: readonly string[] }) {
+  return (
+    <span className="block pl-4 text-xs text-warm-500">
+      needs the <code className="font-mono">{formatSecretNeeds(needs)}</code> secret — Admin → Secrets
+    </span>
+  );
+}
 
 // The vocabulary comes from `shared/`, not a copy: these unions used to be
 // hand-written here and drifted from the engine's the moment a service was
@@ -38,7 +70,7 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Whisper LLM mini", service: "whisper-llm-mini" },
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Voxtral + diarization (labels who's speaking)", service: "voxtral-diarized" },
-  { label: "MAI (Microsoft, needs an OpenRouter key)", service: "mai" },
+  { label: "MAI (Microsoft)", service: "mai" },
   { label: "MAI + diarization (labels who's speaking)", service: "mai-diarized" },
 ];
 
@@ -55,7 +87,7 @@ const TTS_BACKEND_OPTIONS: ReadonlyArray<{
   note?: string;
 }> = [
   { label: "OpenAI (gpt-4o-mini-tts)", backend: "openai" },
-  { label: "Gemini (via OpenRouter)", backend: "gemini", note: "preview model; needs an OpenRouter key. Its voices differ, so a personality-card voice is replaced." },
+  { label: "Gemini (via OpenRouter)", backend: "gemini", note: "preview model. Its voices differ, so a personality-card voice is replaced." },
 ];
 
 function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {
@@ -85,6 +117,7 @@ export function VoicePanel({
   onSelectHqTranscriptionService,
   currentTtsBackend,
   onSelectTtsBackend,
+  capabilities,
 }: {
   onBack: () => void;
   /** Comparison-only — may be "fake" (dev/test service) which never appears in the option lists. */
@@ -95,6 +128,9 @@ export function VoicePanel({
   onSelectHqTranscriptionService: (hqService: HqTranscriptionOption) => void;
   currentTtsBackend: string | null;
   onSelectTtsBackend: (backend: TtsBackendOption) => void;
+  /** Undefined while loading or forbidden (non-owner viewer) — every option
+   * renders as usable rather than blocking the picker on this query. */
+  capabilities?: ServiceCapabilities;
 }) {
   return (
     <>
@@ -110,21 +146,47 @@ export function VoicePanel({
       ))}
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Final transcript (after recording)</div>
-      {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
-        <MenuItem key={opt.service} id={`bbx-voice-hq-${opt.service}`} onClick={() => onSelectHqTranscriptionService(opt.service)} keepOpen>
-          {currentHqService === opt.service ? "✓ " : "  "}{opt.label}
-        </MenuItem>
-      ))}
+      {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {
+        const isSelected = currentHqService === opt.service;
+        const cap = capabilities?.hq[opt.service];
+        const reason = capabilityReason(cap);
+        return (
+          <MenuItem
+            key={opt.service}
+            id={`bbx-voice-hq-${opt.service}`}
+            onClick={() => onSelectHqTranscriptionService(opt.service)}
+            keepOpen
+            disabled={reason !== null && !isSelected}
+          >
+            <span>
+              {isSelected ? "✓ " : "  "}{opt.label}
+              {reason !== null && cap !== undefined && <CapabilityNote needs={cap.needs} />}
+            </span>
+          </MenuItem>
+        );
+      })}
           <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">When the box speaks</div>
-      {TTS_BACKEND_OPTIONS.map((opt) => (
-        <MenuItem key={opt.backend} id={`bbx-voice-tts-${opt.backend}`} onClick={() => onSelectTtsBackend(opt.backend)} keepOpen>
-          <span>
-            {currentTtsBackend === opt.backend ? "✓ " : "  "}{opt.label}
-            {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-500">{opt.note}</span>}
-          </span>
-        </MenuItem>
-      ))}
+      {TTS_BACKEND_OPTIONS.map((opt) => {
+        const isSelected = currentTtsBackend === opt.backend;
+        const cap = capabilities?.tts[opt.backend];
+        const reason = capabilityReason(cap);
+        return (
+          <MenuItem
+            key={opt.backend}
+            id={`bbx-voice-tts-${opt.backend}`}
+            onClick={() => onSelectTtsBackend(opt.backend)}
+            keepOpen
+            disabled={reason !== null && !isSelected}
+          >
+            <span>
+              {isSelected ? "✓ " : "  "}{opt.label}
+              {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-500">{opt.note}</span>}
+              {reason !== null && cap !== undefined && <CapabilityNote needs={cap.needs} />}
+            </span>
+          </MenuItem>
+        );
+      })}
 </>
   );
 }

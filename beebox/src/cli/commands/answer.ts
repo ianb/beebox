@@ -1,3 +1,5 @@
+import { answerWithAdmission } from "../../core/commands/answer.js";
+import { invariant } from "../../lib/invariant.js";
 /**
  * bbx answer - Answer a pending question from CLI
  *
@@ -5,8 +7,8 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
-import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { findBoxRoot } from "../../lib/paths.js";
+import { createCliContext } from "../../core/commands/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**
@@ -16,18 +18,13 @@ async function handleAnswerCommand(
   params: { questionPath: string; answerText: string; via: string }
 ): Promise<void> {
   try {
-    const boxRoot = await requireBoxRoot();
+    const boxRoot = await findBoxRoot(process.cwd());
+    invariant(boxRoot, "Not in a Bee Box");
     const ctx = createCliContext(boxRoot);
 
-    const result = await runCommand({
-      name: "answer",
-      args: {
-        question: params.questionPath,
-        answer: params.answerText,
-        via: params.via,
-      },
-      ctx,
-    });
+    const result = await answerWithAdmission({ ctx, args: {
+      question: params.questionPath, answer: params.answerText, via: params.via,
+    } });
 
     if (!result.success) {
       console.error(`Error: ${result.error}`);

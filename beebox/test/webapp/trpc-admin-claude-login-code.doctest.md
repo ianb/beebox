@@ -13,7 +13,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const claudeCli = createFakeClaudeCli({ loggedIn: false });
 const ctx = {
   boxRoot: box.root,

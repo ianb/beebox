@@ -27,6 +27,7 @@ const summary = (over: Partial<RunSummary>): RunSummary => ({
   uploaded: 0,
   duplicate: 0,
   rejected: 0,
+  rejectedOnUpload: 0,
   skippedUnsettled: 0,
   skippedIdentityChanged: 0,
   errors: 0,
@@ -74,8 +75,8 @@ the settled one is not re-walked:
 
 ```
 const one = scripted({ "/receipts": [summary({ skippedUnsettled: 1 }), summary({ uploaded: 1 })] });
-const oneCode = await runAllTargets(config, { retryRejected: false, deps: one.deps });
-`${one.calls.join(" ")} | waits=${String(one.waits.length)} | exit=${String(oneCode)}`
+const oneResult = await runAllTargets(config, { retryRejected: false, deps: one.deps });
+`${one.calls.join(" ")} | waits=${String(one.waits.length)} | exit=${String(oneResult.exitCode)}`
 => /receipts /family /receipts | waits=1 | exit=0
 ```
 
@@ -109,8 +110,60 @@ exit code stays 0. A rejection still fails the run:
 
 ```
 const rejectedRun = scripted({ "/receipts": [summary({ rejected: 1 })] });
-await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: rejectedRun.deps })
+(await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: rejectedRun.deps })).exitCode
 => 1
+```
+
+## Per-box totals, for the desktop notification
+
+The run also hands back what each box actually took in, which is all
+`src/notify.ts` needs to decide whether to post a banner. Totals sum across
+targets *and* across retry rounds, so a file that was unsettled in round 1 and
+uploaded in round 2 is one upload for the box, not two events to report. Both
+targets in `config` point at box `b`:
+
+```
+const counted = scripted({
+  "/receipts": [summary({ skippedUnsettled: 1 }), summary({ uploaded: 2, rejectedOnUpload: 1, rejected: 1 })],
+  "/family": [summary({ uploaded: 1 })],
+});
+const countedResult = await runAllTargets(config, { retryRejected: false, deps: counted.deps });
+JSON.stringify(countedResult.boxes.map((b) => [b.box, b.summary.uploaded, b.summary.rejectedOnUpload]))
+=> [["b",3,1]]
+```
+
+Two targets can carry the same box slug against *different* servers —
+`configure` appends rather than replaces when the same box is given a new
+`serverUrl` — so grouping is by server AND box. Merging them would have made
+the contract-version verdict depend on target order, one endpoint's answer
+silently overwriting the other's:
+
+```
+const twoServers: UploaderConfig = {
+  targets: [
+    { ...target("/receipts"), serverUrl: "https://old.test", box: "b" },
+    { ...target("/family"), serverUrl: "https://new.test", box: "b" },
+  ],
+};
+const versions = scripted({
+  "/receipts": [summary({ contractVersion: 1 })],
+  "/family": [summary({ contractVersion: 2 })],
+});
+const twoResult = await runAllTargets(twoServers, { retryRejected: false, deps: versions.deps });
+JSON.stringify(twoResult.boxes.map((b) => [b.box, b.summary.contractVersion]))
+=> [["b",1],["b",2]]
+```
+
+A target that threw contributes no entry at all — there is no summary to
+count, and the failure is already on stderr and in the exit code:
+
+```
+const brokenOnly = await runAllTargets(
+  { targets: [target("/gone")] },
+  { retryRejected: false, deps: { runOne: () => Promise.reject(new Error("ENOENT")), wait: () => Promise.resolve() } },
+);
+brokenOnly.boxes.length
+=> 0
 ```
 
 A target whose folder is missing or unreadable fails that target alone.
@@ -128,7 +181,7 @@ const thrown: RunAllDeps = {
   wait: () => Promise.resolve(),
 };
 const swept: string[] = [];
-const code = await runAllTargets(
+const result = await runAllTargets(
   { targets: [target("/gone"), target("/still-here")] },
   {
     retryRejected: false,
@@ -141,7 +194,7 @@ const code = await runAllTargets(
     },
   },
 );
-`${swept.join(" ")} | exit=${String(code)}`
+`${swept.join(" ")} | exit=${String(result.exitCode)}`
 => /gone /still-here | exit=1
 ```
 

@@ -84,6 +84,27 @@ export interface DriveCardTracking {
  * deleted card. A card whose frontmatter is unparseable, or whose `drive-id`
  * is not a non-empty string, reads as no ID at all (callers fail closed).
  */
+/**
+ * Every card claiming `driveId` — live cards first, then the members of an
+ * ambiguous duplicate claim. Empty means the id is unclaimed.
+ *
+ * One list, because "is this already mounted?" is asked from three places (the
+ * mount write's refusal, `bbx drive add`'s refusal, and `drive.inspect`'s
+ * answer) and they must agree about what counts as a claim.
+ */
+export async function driveIdClaimants(opts: {
+  boxRoot: string;
+  driveId: string;
+}): Promise<string[]> {
+  const tracking = await findDriveCardTracking(opts.boxRoot);
+  return [
+    ...tracking.liveCards.filter((card) => card.driveId === opts.driveId).map((card) => card.relPath),
+    ...tracking.duplicates
+      .filter((duplicate) => duplicate.driveId === opts.driveId)
+      .flatMap((duplicate) => duplicate.relPaths),
+  ];
+}
+
 export function driveIdFromCardContent(content: string): string | null {
   const fields = parseFrontmatterObject(content);
   const yamlValue = fields?.["drive-id"];

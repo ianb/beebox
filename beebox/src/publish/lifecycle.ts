@@ -35,6 +35,7 @@ import {
   r2ConfigFromEnv,
   type PublishRemoteStore,
 } from "../services/publish-remote-store.js";
+import { isServerManagedPublication } from "../core/secrets/cloudflare-publish.js";
 import { createWranglerService, type WranglerService } from "../services/wrangler.js";
 import { resolveCloudflareAuth } from "./cloudflare-auth.js";
 import { readPubWorkerConfig } from "./pub-worker-meta.js";
@@ -242,7 +243,8 @@ export type RevokeResult =
   | { ok: true; pubId: string; deletedBundleObjects: number; deletedSlug: boolean }
   | { ok: false; reason: "unconfigured"; message: string }
   | { ok: false; reason: "not-found"; message: string }
-  | { ok: false; reason: "invalid-manifest"; message: string };
+  | { ok: false; reason: "invalid-manifest"; message: string }
+  | { ok: false; reason: "managed-publication"; message: string };
 
 /**
  * Revoke a publication: tombstone the edge manifest FIRST (fail-close), then
@@ -254,6 +256,9 @@ export async function revokePublication(
   { boxRoot, pubId }: { boxRoot: string; pubId: string },
   deps: RevokeDeps,
 ): Promise<RevokeResult> {
+  if (await isServerManagedPublication(pubId)) {
+    return { ok: false, reason: "managed-publication", message: "This publication is managed by the server. Use the signed-in Publications page to disable or revoke it." };
+  }
   const { store } = deps;
   if (!store) {
     return { ok: false, reason: "unconfigured", message: "publishing is not configured on this box — run 'bbx pub setup' first" };

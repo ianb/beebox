@@ -110,7 +110,15 @@ struct ComposerActionsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: onDismiss)
+                    // A checkmark, matching the rows below it — this sheet
+                    // already marks the selected box and active location
+                    // sharing with one. A plain-text bar button is also what
+                    // Accessibility's Button Shapes underlines, which is how
+                    // "Done, underlined" looked to the boxholder.
+                    Button(action: onDismiss) {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
+                    }
                 }
             }
         }

@@ -31,7 +31,6 @@ function cliRow(name = "example") {
       agent: "codex",
       hasSession: true,
       tty: "/dev/ttys001",
-      emoji: "🔧",
       baseSha: "base123",
       removed: null,
       archived: null,

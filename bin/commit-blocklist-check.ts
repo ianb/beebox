@@ -268,7 +268,14 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
   return hits;
 }
 
-function main(): void {
+/**
+ * Load this worktree's blocklist, or null when there is none / it has no block
+ * rules — the opt-out that makes this whole check a no-op for anyone without a
+ * list. Shared by the staged-diff check and `--check-text`; a read or parse
+ * failure exits non-zero rather than returning null, so a malformed list fails
+ * CLOSED in both.
+ */
+function loadBlocklist(): { entries: Entry[]; blocklistPath: string; repoRoot: string } | null {
   const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
   const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
   const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
@@ -289,7 +296,7 @@ function main(): void {
       process.exit(1); // any other read failure => fail closed
     }
   }
-  if (blocklistPath === "") return; // no list in this worktree or main => opt-out
+  if (blocklistPath === "") return null; // no list in this worktree or main => opt-out
 
   let entries: Entry[];
   try {
@@ -298,7 +305,50 @@ function main(): void {
     console.error(`commit-blocklist-check: ${errorMessage(e)}`);
     process.exit(1); // malformed list => fail closed
   }
-  if (entries.every((e) => e.kind !== "block")) return; // no block rules => nothing to enforce
+  if (entries.every((e) => e.kind !== "block")) return null; // no block rules => nothing to enforce
+  return { entries, blocklistPath, repoRoot };
+}
+
+/**
+ * `--check-text <string>`: run ONE string through the same matcher, for callers
+ * that mint a durable name rather than stage a diff.
+ *
+ * A workstream name fans out into a branch, a worktree path, the registry, the
+ * `Workstream:` trailer on every commit of that branch, and the workstreams
+ * app — none of which is a staged addition, so the diff check never sees it.
+ * Stopping the term at the source beats catching it at each of the places it
+ * reaches (issues/features/2026-09-03-workstream-names-bypass-the-commit-blocklist.md).
+ *
+ * Exits 0 when clean or when there is no list; 2 when blocked. As everywhere
+ * else here, the matched value is never printed — that would re-leak it.
+ */
+function checkText(value: string): void {
+  const loaded = loadBlocklist();
+  if (!loaded) return;
+  const hits = findBlocked([{ file: "<name>", lineno: 1, text: value }], loaded.entries);
+  if (hits.length > 0) {
+    console.error("commit-blocklist-check: that name matches your blocklist — pick another.");
+    console.error(`  (matches ${loaded.blocklistPath} line ${hits[0]!.entry})`);
+    console.error(`  To see which term: sed -n '${String(hits[0]!.entry)}p' ${loaded.blocklistPath}`);
+    process.exit(2);
+  }
+}
+
+function main(): void {
+  const textFlag = process.argv.indexOf("--check-text");
+  if (textFlag !== -1) {
+    const value = process.argv[textFlag + 1];
+    if (value === undefined || value === "") {
+      console.error("commit-blocklist-check: --check-text needs a value");
+      process.exit(1);
+    }
+    checkText(value);
+    return;
+  }
+  const loaded = loadBlocklist();
+  if (!loaded) return;
+  const { entries, blocklistPath, repoRoot } = loaded;
+  const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
 
   // The personal list must never be committed — it literally contains the
   // strings you're purging. Refuse if it's tracked.

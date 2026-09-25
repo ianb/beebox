@@ -5,7 +5,7 @@
  * `renderReport` is a pure function over `FieldRunResult` (`results.ts`) —
  * everything it needs is already on disk after `runFieldScenario`, so it never
  * touches the box, the server, or the operator session. That is what makes it
- * regenerable after the fact (`bbx field-test report <run-dir>`) and testable
+ * regenerable after the fact (`bbx engine field-test report <run-dir>`) and testable
  * against a fixture with no real run behind it.
  *
  * Two rules keep the report trustworthy rather than merely readable:

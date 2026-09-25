@@ -1,7 +1,8 @@
 # `bbx todos` — read/query CLI
 
-`src/cli/commands/todos.ts` is a thin presentation layer over the collector
-(`core/todo/collect.ts`): filters (`--status`, `--assigned`, `--glob`,
+`src/cli/commands/todos.ts` is a thin presentation layer over the todo
+collection (`core/todo/query.ts`, the same runner `bbx query todos` and the
+web list use): filters (`--status`, `--assigned`, `--glob`,
 `--on-plate`), a human listing grouped by plate-state, and `--json` for the
 full structured records. `runTodosForBox(boxRoot, options)` is exercised
 directly (same approach as `test/cli/auth-command.doctest.md`) rather than
@@ -132,7 +133,7 @@ PARKED (1)
   _content/plate.memo.card:11  [parked-one] Parked
 «blankline»
 1 cards could not be read for todos:
-  [load] _content/bad.memo.card: /«*»_content/bad.memo.card: invalid memo frontmatter:
+  [load] _content/bad.memo.card: _content/bad.memo.card: invalid memo frontmatter:
   - created: Invalid ISO datetime
 ```
 

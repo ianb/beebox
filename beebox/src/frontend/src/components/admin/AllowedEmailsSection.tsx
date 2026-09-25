@@ -9,6 +9,9 @@ import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { Hint } from "../ui/Hint";
+import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
 
 type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
@@ -31,9 +34,9 @@ function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
   if (status === "ready") return null;
   return (
     <div role="alert">
-      <Text as="p" size="sm" tone="danger">
+      <ErrorText>
         The local password store is unavailable. Password-account details and resets cannot be loaded.
-      </Text>
+      </ErrorText>
     </div>
   );
 }
@@ -50,7 +53,7 @@ function AllowedUserRows(options: {
   if (options.emails.length === 0) {
     return (
       <Card background="warm" border="subtle" padding="sm">
-        <Text size="sm" tone="muted">Owner-only — no additional users can access this box.</Text>
+        <Hint>Owner-only — no additional users can access this box.</Hint>
       </Card>
     );
   }
@@ -101,6 +104,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
         </Text>
         <Button
           id="bbx-admin-reset-link-copy"
+          className="self-start"
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}
@@ -116,7 +120,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 function LoadingAllowedUsers() {
   return (
     <Card as="section" aria-label="Allowed users" shadow>
-      <Text size="sm" tone="muted">Loading allowed users…</Text>
+      <Hint>Loading allowed users…</Hint>
     </Card>
   );
 }
@@ -152,10 +156,10 @@ export function AllowedEmailsSection() {
     <Card as="section" aria-label="Allowed users" shadow>
       <Stack gap="md">
         <Stack gap="xs">
-          <Text as="h2" size="lg" weight="semibold">Allowed Users</Text>
-          <Text size="sm" tone="muted">
+          <Heading level={2}>Allowed Users</Heading>
+          <Hint>
             Email addresses that can access this box. Leave empty to keep the box owner-only.
-          </Text>
+          </Hint>
         </Stack>
 
         {configQuery.data?.ownerEmail ? (
@@ -222,7 +226,7 @@ export function AllowedEmailsSection() {
 
         {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
 
-        {queryError || mutationError ? <Text size="sm" tone="danger">{queryError ?? mutationError}</Text> : null}
+        {queryError || mutationError ? <ErrorText>{queryError ?? mutationError}</ErrorText> : null}
       </Stack>
     </Card>
   );

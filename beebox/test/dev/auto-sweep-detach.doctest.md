@@ -17,6 +17,7 @@ stand-in `bin/workstreams` that just sleeps, so no real worktree is ever at risk
 
 ```ts setup
 import { execFile, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -129,16 +130,26 @@ lock must not turn that into a permanent one.
 
 ```ts continue
 await until((s) => s.includes("END"));
+// An END in the log is not proof the sweep that wrote it has EXITED — and a
+// still-running holder makes the next run log "SKIPPED (sweep N already
+// running)" instead of reclaiming anything. That is how this block failed on
+// 2026-08-24 with noticed:false / ranAnyway:true: the END came from the
+// previous sweep, and the new run skipped rather than reclaiming. Wait for the
+// lock to be RELEASED, so the stale lock planted below is the only one there
+// is.
+await until(() => !existsSync(lock));
 await rm(log, { force: true });
 await mkdir(lock, { recursive: true });
 await writeFile(join(lock, "pid"), "999999\n"); // a pid that cannot be alive
 await fakeSweep(0);
 await execFileAsync(hook, ["session-end"], { env });
 
-const reclaimed = await until((s) => s.includes("END"));
-await until((s) => s.includes("reclaiming stale lock"));
+// One predicate, not two sequential waits: the notice is written BEFORE the
+// sweep runs (auto-sweep.sh), so any log containing END must already contain
+// it. Waiting for them separately let a stale END satisfy the first wait.
+const reclaimed = await until((s) => s.includes("END") && s.includes("reclaiming stale lock"));
 JSON.stringify({
-  noticed: (await readLog()).includes("reclaiming stale lock"),
+  noticed: reclaimed.includes("reclaiming stale lock"),
   ranAnyway: reclaimed.includes("auto-sweep trigger=session-end END"),
 })
 => {"noticed":true,"ranAnyway":true}

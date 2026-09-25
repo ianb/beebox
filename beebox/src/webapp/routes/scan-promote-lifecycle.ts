@@ -140,26 +140,45 @@ function scheduleScanSweep(boxRoot: string): () => void {
  * Wire the startup pass, the debounce trigger, and the GC sweep for a box, and
  * stop the timers when the server closes.
  */
-export function startScanPromoteLifecycle(opts: { server: FastifyInstance; boxRoot: string }): void {
+export function startScanPromoteLifecycle(opts: {
+  server: FastifyInstance;
+  boxRoot: string;
+  run?: () => Promise<void>;
+}): void {
   const { server, boxRoot } = opts;
+  const executePass = opts.run ?? (() => runPass(boxRoot));
+  let closing = false;
+  const activePasses = new Set<Promise<void>>();
+  const runTrackedPass = (): Promise<void> => {
+    if (closing) return Promise.resolve();
+    const pass = executePass();
+    activePasses.add(pass);
+    pass.then(
+      () => activePasses.delete(pass),
+      () => activePasses.delete(pass),
+    );
+    return pass;
+  };
   const debouncer = createPromoteDebouncer({
     settleMs: SCAN_SETTLE_MS,
-    run: () => runPass(boxRoot),
+    run: runTrackedPass,
     label: boxRoot,
   });
   debouncers.set(boxRoot, debouncer);
 
   // Fire-and-forget so a cold box still serves immediately; the pass takes the
   // promotion lock, so it cannot collide with a PUT-triggered one.
-  void runPass(boxRoot).catch((e: unknown) => {
+  void runTrackedPass().catch((e: unknown) => {
     console.error("[scan] Startup promote pass failed:", e);
   });
 
   const cancelSweep = scheduleScanSweep(boxRoot);
   server.addHook("onClose", async () => {
+    closing = true;
     cancelSweep();
     debouncer.cancel();
     debouncers.delete(boxRoot);
     incompletePasses.delete(boxRoot);
+    await Promise.all(activePasses);
   });
 }

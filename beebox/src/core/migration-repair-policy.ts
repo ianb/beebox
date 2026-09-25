@@ -1,0 +1,6 @@
+/** Shared by the repair prompt and the shipped box reference. */
+export const MIGRATION_REPAIR_DIRECTIVE = "Repair only box data relevant to this migration failure. Git recovery preserves the pre-attempt working and staged input. Verify the recovery ref to establish which paths and versions it preserves, including both divergent copies when both were present. Ignored state and annex content bytes need separate coverage. Ordinary reversible edits are allowed. Preserve substantive content. A few failed or pending chat inputs may be discarded incidentally; report the actual count. Ask before substantial deletion, choosing between divergent substantive copies, or meaningful loss outside Git recovery: give paths, count, recovery coverage, and alternatives. Do not edit engine scripts, manifest, hooks or validation; do not run nested migration, commit, reset, clean, rewrite history, or drop annex content. The runner owns commits and verifies completion with the deterministic migrator. Return repaired, needs-human with the concrete decision, or failed with the concrete reason.";
+
+export function generateMigrationRepairDoc(): string {
+  return `# Migration repair\n\n${MIGRATION_REPAIR_DIRECTIVE}\n`;
+}

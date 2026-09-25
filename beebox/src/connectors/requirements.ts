@@ -34,9 +34,9 @@ type Predicate = (boxRoot: string) => Promise<boolean>;
  *
  * The client-credential grant is the one that is easy to forget, and skipping
  * the check here is worse than a missing credential: `getGoogleAuth` returns
- * null without it, so Calendar and Gmail silently no-op and Drive reports a
- * sync failure — a script that ran and did nothing, rather than one the
- * scheduler skipped cleanly with a named reason.
+ * null without it, so every Google connector returns a `skipped:
+ * not-configured` sync — a script that ran and did nothing, rather than one the
+ * scheduler skipped cleanly before spending a run on it.
  */
 function googleServicePredicate(service: GoogleServiceName): Predicate {
   return async (boxRoot) => {

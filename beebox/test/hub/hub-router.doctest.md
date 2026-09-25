@@ -24,6 +24,7 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { Supervisor } from "../../src/hub/supervisor.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { acquireBoxMaintenance } from "../../src/lib/box-maintenance.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
@@ -39,6 +40,7 @@ const HUB_SECRET = "test-hub-secret-for-router-doctest";
 const DIAG_KEY = "test-diag-key-for-router-doctest";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
+const BROWSE_KEY = "test-browse-key-for-router-doctest";
 
 /** A minimal fake "box": echoes back method/url/headers as JSON for plain
  *  HTTP, and completes a bare-bones WebSocket handshake (no framing) for
@@ -180,6 +182,35 @@ const spoofed = await fetch(`${hub.base}/test1/browse/some-card`, {
 const spoofedBody = await spoofed.json();
 JSON.stringify(spoofedBody.headers)
 => {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
+```
+
+## The browse key reaches hub-mode children through the trusted auth contract
+
+The machine-wide dev browse key authenticates at the hub. It must continue as
+the hub's explicit `auth: off` decision when the child is hub-mode; treating it
+as per-box mobile auth would skip those headers and make the child reject the
+request.
+
+```ts continue
+process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
+const browseHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
+  openAccess: false,
+});
+const browseResponse = await fetch(`${browseHub.base}/test1/api/health`, {
+  headers: { cookie: `bbx_browse_key=${BROWSE_KEY}` },
+});
+browseResponse.status
+=> 200
+
+const browseBody = await browseResponse.json();
+JSON.stringify(browseBody.headers)
+=> {"xBbxAuthenticatedEmail":null,"xBbxHubSecret":"test-hub-secret-for-router-doctest","xBbxHubAuth":"off"}
+```
+
+```ts continue
+for (const socket of browseHub.sockets) socket.destroy();
+await new Promise((resolve) => browseHub.server.close(resolve));
+delete process.env.BBX_BROWSE_API_KEY;
 ```
 
 ## A webhook path is proxied unauthenticated, carrying only the hub secret
@@ -674,4 +705,56 @@ for (const socket of hub.sockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hub.server.close(resolve));
 await new Promise((resolve) => box.server.close(resolve));
+```
+
+## A configured box that cannot be served answers 503 with the reason
+
+A known slug with no endpoint is never a 404 (the 2026-09-16 incident's only
+symptom). While a maintenance owner holds the box, the body names the reason
+and the owner; otherwise it carries the provider's last word on the box.
+
+```ts
+const closedBox = await makeTmpBox({ git: true });
+const provider = {
+  get: () => undefined, slugs: () => ["closed", "broken"],
+  unavailable: (slug) => (slug === "broken" ? "child exited with code 1" : undefined),
+};
+const closedHub = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }, { slug: "broken", boxRoot: "/nonexistent/broken" }] });
+const owner = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+const closedResponse = await fetch(`${closedHub.base}/closed/api/x`);
+const closedBody = await closedResponse.json();
+JSON.stringify({ status: closedResponse.status, retryAfter: closedResponse.headers.get("retry-after"), error: closedBody.error, reason: closedBody.reason, ownerIsThisProcess: closedBody.owner.pid === process.pid })
+=> {"status":503,"retryAfter":"600","error":"box_closed","reason":"migration","ownerIsThisProcess":true}
+
+// A page navigation (a browser, the iOS web view) gets the sentence as text.
+const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
+JSON.stringify({ status: page.status, type: page.headers.get("content-type"), text: (await page.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)") })
+=> {"status":503,"type":"text/plain; charset=utf-8","text":"Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits\nRetry in 600 seconds.\n"}
+
+await owner.beginChanges();
+await owner.release();
+const reopened = await fetch(`${closedHub.base}/closed/api/x`);
+JSON.stringify({ status: reopened.status, error: (await reopened.json()).error })
+=> {"status":503,"error":"box_unavailable"}
+
+// Pairing redemption passes the auth wall unauthenticated and learns nothing about the owner.
+const unauthed = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }], openAccess: false });
+const sealed = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
+const redeem = await fetch(`${unauthed.base}/closed/api/pairing/redeem`, { method: "POST" });
+JSON.stringify({ status: redeem.status, body: await redeem.json() })
+=> {"status":503,"body":{"error":"box_unavailable","message":"Box closed is not running"}}
+
+await sealed.complete();
+unauthed.server.close();
+for (const socket of unauthed.sockets) socket.destroy();
+const latchedResponse = await fetch(`${closedHub.base}/broken/api/x`);
+JSON.stringify({ status: latchedResponse.status, body: await latchedResponse.json() })
+=> {"status":503,"body":{"error":"box_unavailable","message":"Box broken is not running: child exited with code 1"}}
+```
+
+```ts cleanup
+await owner.release();
+closedHub.server.close();
+for (const socket of closedHub.sockets) socket.destroy();
+await closedBox.cleanup();
 ```

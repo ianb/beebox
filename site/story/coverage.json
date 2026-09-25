@@ -3,7 +3,7 @@
   "generatedAt": "2026-07-24T13:20:29.407Z",
   "docs": [
     {
-      "doc": "beebox/docs/activities-design.md",
+      "doc": "beebox/docs/reports/activities-design-2026-04-19.md",
       "runs": [
         "run-004"
       ],
@@ -14,10 +14,10 @@
       "nuggetCount": 14,
       "scannedContentHash": "e4a77e47930e2017",
       "hashSource": "scanned-text",
-      "current": true
+      "current": false
     },
     {
-      "doc": "beebox/docs/activities-retrospective.md",
+      "doc": "beebox/docs/reports/activities-retrospective-2026-05-14.md",
       "runs": [
         "run-003"
       ],
@@ -29,7 +29,7 @@
       "nuggetCount": 7,
       "scannedContentHash": "3728364262bc3966",
       "hashSource": "current-file",
-      "current": true
+      "current": false
     },
     {
       "doc": "beebox/docs/design/README.md",

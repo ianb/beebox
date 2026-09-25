@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Open and close a production deploy's downtime window.
+#
+#   bbx-deploy-window open <page template>   before the services stop
+#   bbx-deploy-window down                   as the services stop
+#   bbx-deploy-window close <exit code>      from the activation script's EXIT trap
+#
+# `open` fills the page template (dist/deploy-page.html, built by
+# scripts/build-deploy-page.ts) and writes it where nginx serves it during a
+# 502 (deploy/nginx/beebox.conf). The page's presence is the only signal that a
+# deploy is running, so `close` always removes it. `close` also appends the
+# window to a history file whose recent successful windows give the next page
+# its "updates usually take" estimate.
+#
+# The page sits in /run, which is tmpfs: a reboot during a deploy cannot
+# strand it. A SIGKILLed deploy can; the page's wording ages out, and the next
+# `open` replaces it and records the lost window as "abandoned".
+#
+# History columns (tab-separated, epoch seconds, "-" when unknown):
+#   opened  down  closed  outcome(ok|failed|abandoned)
+set -euo pipefail
+
+run_dir="${BBX_DEPLOY_WINDOW_RUN_DIR:-/run/beebox-deploy}"
+state_dir="${BBX_DEPLOY_WINDOW_STATE_DIR:-/var/lib/beebox-deploy}"
+page="$run_dir/deploy-in-progress.html"
+history="$state_dir/windows.tsv"
+current="$state_dir/current"
+KEEP_LINES=200
+MEDIAN_OF=10
+
+append_history() {  # $1=opened $2=down $3=closed $4=outcome
+  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" >> "$history"
+  local trimmed="$history.tmp.$$"
+  tail -n "$KEEP_LINES" "$history" > "$trimmed" && mv "$trimmed" "$history"
+}
+
+# Median of the last MEDIAN_OF successful windows, in whole seconds; "null"
+# when none is recorded. Malformed lines are skipped, never fatal: the page
+# then says "a few minutes".
+typical_seconds() {
+  [[ -f "$history" ]] || { echo null; return; }
+  awk -F'\t' 'NF == 4 && $4 == "ok" && $2 ~ /^[0-9]+$/ && $3 ~ /^[0-9]+$/ && $3 >= $2 { print $3 - $2 }' "$history" \
+    | tail -n "$MEDIAN_OF" | sort -n \
+    | awk '{ v[NR] = $1 } END { if (NR == 0) print "null"; else if (NR % 2) print v[(NR + 1) / 2]; else print int((v[NR / 2] + v[NR / 2 + 1]) / 2) }'
+}
+
+cmd_open() {
+  local template="${1:?usage: bbx-deploy-window open <page template>}"
+  [[ -s "$template" ]] || { echo "bbx-deploy-window: page template missing or empty: $template" >&2; exit 1; }
+  mkdir -p "$run_dir" "$state_dir"
+  chmod 0755 "$run_dir"
+  if [[ -f "$current" ]]; then
+    local stale_opened stale_down
+    read -r stale_opened stale_down < "$current" || true
+    append_history "${stale_opened:--}" "${stale_down:--}" - abandoned
+  fi
+  local opened started_utc typical tmp
+  opened=$(date -u +%s)
+  started_utc=$(date -u '+%Y-%m-%d %H:%M UTC')
+  typical=$(typical_seconds)
+  printf '%s -\n' "$opened" > "$current"
+  tmp="$page.tmp.$$"
+  sed -e "s/__BBX_STARTED_MS__/${opened}000/" \
+      -e "s/__BBX_STARTED_UTC__/$started_utc/" \
+      -e "s/__BBX_TYPICAL_SECONDS__/$typical/" \
+      "$template" > "$tmp"
+  chmod 0644 "$tmp"
+  mv "$tmp" "$page"
+}
+
+cmd_down() {
+  local opened rest
+  [[ -f "$current" ]] || { echo "bbx-deploy-window: down without open" >&2; exit 1; }
+  read -r opened rest < "$current"
+  printf '%s %s\n' "$opened" "$(date -u +%s)" > "$current"
+}
+
+cmd_close() {
+  local rc="${1:?usage: bbx-deploy-window close <exit code>}"
+  rm -f "$page"
+  # A trap that fires before `open` ran (for example, the nginx install
+  # failed) has no window to record.
+  [[ -f "$current" ]] || return 0
+  local opened down closed outcome=failed
+  read -r opened down < "$current"
+  [[ "$rc" == 0 ]] && outcome=ok
+  closed=$(date -u +%s)
+  append_history "$opened" "$down" "$closed" "$outcome"
+  rm -f "$current"
+  if [[ "$down" =~ ^[0-9]+$ ]]; then
+    echo "Deploy window: down $((closed - down))s ($outcome)"
+  fi
+}
+
+case "${1:-}" in
+  open) shift; cmd_open "$@" ;;
+  down) cmd_down ;;
+  close) shift; cmd_close "$@" ;;
+  *) echo "usage: bbx-deploy-window open <template> | down | close <exit code>" >&2; exit 2 ;;
+esac

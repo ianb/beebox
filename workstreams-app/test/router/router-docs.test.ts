@@ -8,21 +8,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { readDevTools, renderWorktreeToolCards, serveDev, type DevResponse } from "../../src/router/router-docs.js";
-import { appendClosedIssuePills, findClosedIssueLinkHrefs, renderMarkdownToHtml } from "../../src/router/router-markdown.js";
-
-test("closed issue links in docs receive a status pill", () => {
-  const markdown =
-    "[closed](../issues/closed/bugs/example.md) [open](../issues/bugs/example.md)";
-  const hrefs = findClosedIssueLinkHrefs(markdown, "docs");
-  assert.deepEqual([...hrefs], ["../issues/closed/bugs/example.md"]);
-  assert.equal(
-    appendClosedIssuePills(
-      '<a href="../issues/closed/bugs/example.md">closed</a> <a href="../issues/bugs/example.md">open</a>',
-      hrefs,
-    ),
-    '<a href="../issues/closed/bugs/example.md">closed</a><span class="chip chip-closed-link">closed</span> <a href="../issues/bugs/example.md">open</a>',
-  );
-});
+import { renderMarkdownToHtml } from "../../src/router/router-markdown.js";
 
 test("manual testing headings get a stable anchor", () => {
   assert.match(renderMarkdownToHtml("## Manual testing\n\nTry it."), /<h2 id="manual-testing">/);

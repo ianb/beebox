@@ -18,7 +18,7 @@
 import { makeLog } from "./log.js";
 import { appendHistory, setMostActive, updateFeaturesForSession } from "./history.js";
 import { ensureChatHusk } from "../husk.js";
-import type { AgentEngine } from "../../box/config.js";
+import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
@@ -48,9 +48,11 @@ export async function recordSessionStart(
      * bound and nothing can say to what.
      */
     onHistoryWritten?: (() => void) | undefined;
+    /** Called after the initial feature seed is durable. */
+    onFeaturesWritten?: (() => void) | undefined;
   },
 ): Promise<void> {
-  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten } = params;
+  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten, onFeaturesWritten } = params;
   try {
     await appendHistory(boxRoot, {
       sessionId,
@@ -63,8 +65,16 @@ export async function recordSessionStart(
     // seed as the session's starting state. User toggles afterward overwrite
     // specific keys via updateFeaturesForSession.
     if (seedFeatures && Object.keys(seedFeatures).length > 0) {
-      await updateFeaturesForSession(boxRoot, { sessionId, updates: seedFeatures });
+      // `appendHistory` above already created the row (with this same
+      // resolution), so the create branch cannot fire here — but the engine is
+      // required rather than guessed, and the two must not disagree.
+      await updateFeaturesForSession(boxRoot, {
+        sessionId,
+        updates: seedFeatures,
+        engine: engine ?? await loadAgentEngine(boxRoot),
+      });
     }
+    onFeaturesWritten?.();
     await setMostActive(boxRoot, sessionId);
   } catch (e) {
     log("session-start", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

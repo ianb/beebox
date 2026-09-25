@@ -226,13 +226,21 @@ await ctx.inject({ method: "GET", url: "/api/files/_content/images/delete-me.web
 await ctx.cleanup();
 ```
 
-Dirty files get preserved in their own commit before the delete commit:
+Dirty files get preserved in their own commit before the delete commit.
+
+The two versions differ in LENGTH deliberately, and only because of a FIXTURE
+defect: in a `makeTestServer` box a same-size overwrite of a committed asset is
+invisible to `git status`, so `pathsHaveChanges` reads clean and the
+preservation commit never happens. A real box does not behave that way — the
+same sequence on `bbx init` and on `makeTmpBox` reports the change — so this
+line is working around the fixture, not around the route. See
+`issues/bugs/2026-09-14-route-test-fixture-hides-asset-changes-from-git.md`.
 
 ```ts
 const ctx = await makeTestServer();
 await ctx.seed("_content/images/dirty-delete.webp", "version 1");
 ctx.commitAll("seed dirty image");
-await ctx.seed("_content/images/dirty-delete.webp", "version 2");
+await ctx.seed("_content/images/dirty-delete.webp", "version 2 (a different length)");
 const res = await ctx.request({ method: "DELETE", url: "/api/files/_content/images/dirty-delete.webp" });
 res.statusCode
 => 200

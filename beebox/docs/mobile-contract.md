@@ -57,7 +57,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   `BeeBoxApp.onReceive`) can fire for one URL, producing two redeem POSTs; the second fails on
   the single-use token and is swallowed. Carried as an open risk (§9).
 
-### 1.2 Pairing-ticket mint (owner-gated)
+### 1.2 Pairing-ticket mint (any box access)
 
 - **Direction:** box web UI (Settings) → box server. **Not called by native code.**
 - **Wire shape:** output `PairingTicket { token: string; expiresAt: string /* ISO */ }`. Token is
@@ -66,8 +66,13 @@ composer not suppressed, wrong attribution — with no error surfaced).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`ownerProcedure`) |
+  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`authedProcedure`) |
   | box impl | `src/core/mobile/pairing.ts` — `createMobilePairingTicket(boxRoot, { createdBy })`, `pendingPairings`, `DEFAULT_PAIRING_TTL_MS`, `pruneExpiredPairings` |
+- **Who may mint:** anyone with access to the box, not the owner alone — you pair your OWN
+  device (changed 2026-09-12; it was `ownerProcedure`). The ticket records `createdBy`, and the
+  device then acts as that person, so a non-owner's phone gets exactly that person's access.
+  `pairing.devices` and `pairing.revokeDevice` follow the same rule (§1.4): if you can pair a
+  phone you can see it and unpair it.
 - **Drift:** LOUD (tRPC error surfaces in Settings).
 
 ### 1.3 `POST /api/pairing/redeem`
@@ -95,7 +100,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   |---|---|
   | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
-  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,lastUsedAt?,revokedAt? }`, `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
+  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
   | hub wall allowance | `src/hub/hub-server.ts` — `isMobilePairingRedeem` |
   | box-scope allowance | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` |
 - **Drift:** LOUD server-side (401/400); SILENT on iOS (maps to `false`, no toast).
@@ -105,8 +110,16 @@ composer not suppressed, wrong attribution — with no error surfaced).
 ### 1.4 Device listing / revocation (box UI only, not native)
 
 - `pairing.devices` (query) → `listMobileDevices`; `pairing.revokeDevice` (mutation) →
-  `revokeMobileDevice`. Both `ownerProcedure`. UI in `CompanionPairingSection.tsx`. No native
-  participation.
+  `revokeMobileDevice`. Both `authedProcedure`, scoped by `mayManageMobileDevice` (changed
+  2026-09-12; both were `ownerProcedure`, which left a member unable to unpair their own lost
+  phone). UI in `CompanionPairingSection.tsx`. No native participation.
+- **Scope:** the owner reaches every device on the box; anyone else reaches the devices they
+  paired (`createdBy === ctx.user.email`). A device with `createdBy: null` — paired before the
+  pairer was recorded — belongs to nobody and stays owner-only; the rule requires a real address
+  on both sides, so a machine credential that cleared the auth wall as nobody reaches nothing.
+  `devices` returns `{ scope: "box" | "own", devices }` so the UI names the list it got rather
+  than implying a short one is the whole box. `revokeDevice` answers NOT_FOUND, not FORBIDDEN,
+  for somebody else's device: a distinct refusal would confirm the id exists on this box.
 
 ---
 
@@ -169,12 +182,17 @@ cookie** minted from that token.
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
 | `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
-### 2.3 Identity NOT unified (structural)
+### 2.3 Identity: a device acts as whoever paired it
 
-A pure mobile request sets `authed: true` but leaves `user: null` and `isOwner: false` in the tRPC
-context (`server-box-scope.ts` — `createContext`). Native chat sends therefore attribute to nobody.
-This is a known open risk (§9), not an incidental bug — a platform implementer must expect
-authenticated-but-unattributed behavior.
+A mobile request resolves to the person recorded in the device's `createdBy`
+(`server-box-scope.ts` — `createContext` reads `resolveMobileRequestAuth`, not just its
+truthiness). So `user` is that person and `isOwner` is true only when that person is the owner.
+A session identity on the same request still wins; the device credential fills in when there is
+no session.
+
+Changed 2026-09-12. Previously a pure mobile request set `authed: true` but left `user: null` and
+`isOwner: false`, so native chat sends attributed to nobody and a paired phone could never be its
+owner — nor correctly fail to be, when a non-owner paired it.
 
 ### 2.4 Failure semantics
 
@@ -264,12 +282,18 @@ the contract.
   ```json
   { "version": 2, "id": "<UUID string>", "text": "<string>",
     "origin": "typed"|"voice", "diarized": <bool>,
-    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
+    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>", "path"?: "<_tmp/...>" } ],
     "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
-    "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
+    "selections": [ { "id": <int>, "ref": "<string>"?, "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
+  A selection's `ref` is absent or null when the text was quoted from the chat transcript (no file
+  behind it); web normalizes both to `null`.
+  An image's `path` is the box path of its **original** file, uploaded through §5.4 beside the
+  reduced inline copy (`dataBase64`); web lists it in the message's `<attachments>` block as
+  `[image#N]: <path>` (§4.1a). Optional: absent when the original's upload failed or from a build
+  that predates it. When present it must be a string, or the payload is malformed (V2 rule).
 - **V3 destination binding:** updated iOS sends the same V2 content fields with
   `version: 3`, `bindingRevision`, and immutable
   `binding: {boxSlug, target, attention}`. Target is either
@@ -285,9 +309,12 @@ the contract.
   unavailable (contextDir/reason). Attention carries surface, optional in-box
   focusedRef, and visible/hidden transcript. Native acknowledges valid publication
   through `window.beeboxComposerBindingVersion = 1` and the
-  `beebox:composer-binding-ready` event. Until then updated iOS retains its draft
-  and explains that sending requires an updated host. URL-derived session state
-  is only the pre-negotiation fallback; ordinary route movement never retargets.
+  `beebox:composer-binding-ready` event. Until a binding is ready iOS retains its
+  draft and names the state it is actually in — no publication yet, resolving, or
+  unavailable-with-reason — rather than blaming host version skew: the web side
+  always publishes, and its first publication on every load is `resolving`.
+  URL-derived session state is only the pre-negotiation fallback; ordinary route
+  movement never retargets.
 - **Workspace attention:** phone layouts display one card or the transcript.
   Showing the transcript preserves cards and browser Back returns to the card.
   Desktop panes can show two cards with ambient chat. Hidden mounted cards do not
@@ -331,8 +358,9 @@ the contract.
   payload when any image is malformed.
 - **V2 validation:** `native-emission.ts` · `parseNativeEmissionDetail` requires every V2 field
   and rejects the whole payload when an image, file, or selection is malformed. Unknown versions
-  reject with a reason naming that version. File metadata is retained on the `Emission` value even
-  though current chat assembly needs only `id` and `path`.
+  reject with a reason naming that version. `hqText:true` and `hqFallback:true` are mutually
+  exclusive; malformed or contradictory provenance rejects the whole payload. File metadata is
+  retained on the `Emission` value even though current chat assembly needs only `id` and `path`.
 - **Legacy compatibility (intentional boundary leniency):** a payload with no `version` keeps the
   shipped decoder policy: a missing/invalid `id`
   is replaced with a generated emission id (`withNativeId` keeps the native id only when it is a
@@ -341,8 +369,10 @@ the contract.
   synthetic rejection (a `null` parse) occurs **only when neither text nor any valid image
   survives**. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`) pin both policies separately.
 - **Field mapping:** V2 is a complete projection of web
-  `Emission { id, origin, text, images, files, selections, diarized }`. Legacy payloads produce
-  empty `files` and `selections`.
+  `Emission { id, origin, text, images, files, selections, diarized, hqText?, hqService?,
+  hqFallback? }`. `hqText:true` says the text came from the completed HQ pass;
+  `hqFallback:true` says requested HQ failed and realtime text was substituted, which the
+  assembler persists as `hq="failed"`. Legacy payloads produce empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -369,6 +399,11 @@ mint them independently; the ids are per-emission and per-kind.
 - **Within one message the token and whatever resolves it always agree**: a
   body that says `[file1]` gets an `<attachments>` line that says `[file1]`.
   The agent reads either form and is never asked to reconcile two.
+- **An inline image's original file** is listed in the same block, `[image#N]:
+  <path>`, when the emission image carries `path` (§4.1). Readers that expand
+  or strip `[image#N]` stop at the trailing `<attachments>` block
+  (`shared/composer-tokens.ts` · `attachmentsBlockStart`), so the line is never
+  taken for a second anchor. No line means no file.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -473,7 +508,10 @@ mint them independently; the ids are per-emission and per-kind.
   `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
   `send`, `sendKeywordIntent`.
 - **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
-  transcription later fails, the durable preparation visibly falls back to its live transcript.
+  transcription later fails, the durable preparation visibly falls back to its live transcript
+  with `hqFallback:true`. Native holds one bounded UIKit background-task assertion around the
+  one-shot request. A preparation reached while the application is already non-active stays staged
+  until foregrounding; this is best-effort foreground transport, not a background `URLSession`.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -510,10 +548,12 @@ mint them independently; the ids are per-emission and per-kind.
 - **Command wire shape** (web posts on `beeboxComposerCommand`):
   ```json
   { "version": 1, "id": "<UUID string>", "kind": "add-selection",
-    "selection": { "ref": "<card path>", "text": "<selected text>",
+    "selection": { "ref": "<card path>"|null, "text": "<selected text>",
       "position": "<source position>" } }
   ```
-  V1 is strict: every field is required and `kind` has only `add-selection`.
+  V1 is strict: every field is required and `kind` has only `add-selection`. `ref` is `null` for
+  text quoted from the chat transcript; `position` then names it (`chat transcript; assistant
+  message`). An iOS build that predates the null `ref` rejects such a command visibly.
 - **Acknowledgement wire shape** (native → web): accepted is
   `{ "version":1, "id":"<same id>", "accepted":true }`; rejected is
   `{ "version":1, "id":"<same id>", "accepted":false, "reason":"<user-visible reason>" }`.
@@ -765,8 +805,13 @@ is not a substitute for it.
     pause while the box speaks (§4.5) and the reply streaming in before that speech starts. Those
     gaps are exactly when nobody is speaking or touching, and the turn will reopen the microphone at
     the end of them. The turn ends — and the hold with it — when the microphone closes, the message
-    is sent and closed, or dictation fails (denied permission, audio-engine failure, a phone call, a
-    route change), because in each of those the microphone is already down.
+    is sent and closed, dictation fails (denied permission, audio-engine failure, a phone call, a
+    route change), or dictation simply goes idle with no start pending, because in each of those
+    the microphone is already down. That last case exists because not every stop announces itself
+    — an audio session that never associates, a start cancelled below the turn — and without it the
+    turn held the screen awake indefinitely for a recording that was not happening
+    (`NativeVoiceTurnEvent.dictationWentIdle`). The deliberate pause while the box speaks is idle
+    too, and is excluded by name: it is the one idle the turn intends to reopen from.
   - page speech playing (§4.5 `{playing:true}`), which a screen lock would cut off mid-sentence.
   - native capture recording audio — the same open-microphone break on a different surface.
 - **Native does not hold it for** an idle foregrounded chat, or a turn streaming in outside a voice
@@ -815,8 +860,13 @@ See §1.3 (full request/response/errors).
 - **Response 200:** `{ text: string, diarized: boolean, service?: string }`, where
   `service` is the backend resolved by the box (not the client's requested intent).
   Clients accept its absence for compatibility with older boxes.
-- **Errors:** 400 `{ error: "No audio uploaded" }`; 500 `{ error: <msg> }` → iOS
-  `ChatAPIError.server(...)` (surfaces in composer status).
+- **Errors:** 400 `{ error: "No audio uploaded" }`; 500 `{ error: <msg>, permanent: boolean,
+  code?: string }` → iOS `ChatAPIError.server(...)` (surfaces in composer status). `permanent:
+  true` with a `code` (e.g. `missing_openrouter_key`) means the configured HQ service cannot
+  run on this box until its configuration changes — every later segment fails the same way, so
+  a client should say so once rather than retry per segment. The web client shows it on the
+  voice chip; iOS preserves `status`, `permanent`, and `code` for its fallback diagnostic while
+  continuing to show the server's `error` as the localized description.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -841,10 +891,17 @@ See §1.3 (full request/response/errors).
 
 - **Direction:** native → box.
 - **Request:** `POST`; `Content-Type: multipart/form-data`; `User-Agent: BeeBox-iOS/0.1`;
-  `Authorization: Bearer <token>`. One file field named `file` with the original filename and MIME
-  type. Native reports `URLSession` byte progress while uploading.
+  `Authorization: Bearer <token>`. An optional text field `batch` (`[A-Za-z0-9_-]{8,64}`, minted
+  once per draft by the composer, the same value for every attachment of one message) written
+  BEFORE the one file field named `file` with the original filename and MIME type — the route reads
+  text fields off the file stream and sees only those ahead of it. Native reports `URLSession` byte
+  progress while uploading.
 - **Response 200:** `{ path: string, originalName: string, size: number, mimetype: string }`; `path`
-  points under the box's `_tmp/` directory and becomes the Emission V2 file `path`.
+  is `_tmp/chat/<batch>/<name>` (the name as given, `-2`, `-3`… on a repeat within the batch), or
+  `_tmp/<timestamp>_<name>` when no `batch` was sent. It becomes the Emission V2 file `path`, or
+  the image `path` when the upload is an inline image's original (§4.1). Housekeeping removes a
+  batch directory whole once its newest file is 7 days old. Before 2026-09-16 the route answered
+  `tmp/<file>` while writing to `_tmp/`; native round-trips the value unmodified either way.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1088,7 +1145,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `beeboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
+| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,hqFallback?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
 | B12 | Composer destination | web→native | V1 selection/assigned publications via `beeboxComposerBinding`; native acknowledges `beeboxComposerBindingVersion=1` + `beebox:composer-binding-ready` | `NativeComposerContract.swift` · `NativeComposerBinding`; `PendingEmissionStore.swift` · `receiveBinding` | `shared/chat-composer-binding.ts`; `everywhere/BoxConversationShell.tsx` | LOUD: unresolved disables send |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
@@ -1103,12 +1160,12 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
-| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
-| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
+| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}`; 500 `{error,permanent,code?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
-| H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
+| H4 | `POST /api/chat/upload-file` | native→box | multipart `batch`? then `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
@@ -1136,9 +1193,10 @@ without the other is a contract break.
   therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
-- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
-  `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
-  `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
+- **Emission V2 JSON keys** `{version,id,text,origin,diarized,hqText?,hqService?,hqFallback?,images,files,selections}`; image
+  entry keys `{id,mimeType,dataBase64,path?}` — `Models/NativeComposerContract.swift` ·
+  `NativeEmissionV2`, `Models/ChatImageAttachment.swift` ↔ `native-emission.ts` ·
+  `NativeEmissionV2` / `parseNativeEmissionDetail`.
 - **Emission V3 JSON keys** V2 content plus `{binding,bindingRevision}`; binding uses the
   shared target/attention unions in `shared/chat-composer-binding.ts`.
 - **Receipt shape** `{disposition,emissionId,reason?,deduplicated?,definitive?}`, dispositions
@@ -1209,6 +1267,11 @@ without the other is a contract break.
 
   - **inline** — a photo, base64 in the `/chat/send` body, anchored by `[image#N]`, while the
     composer's *total* inline photo count (in-flight encodes included) stays within the limit.
+    The inline copy is reduced (1920px); the photo's **original** is uploaded silently beside it
+    through `/chat/upload-file` and its path rides on the emission image (`path`, §4.1), so the
+    agent has the full file as well as the pixels. Nothing in either composer shows this upload:
+    the user attached one image and sees one. A send waits while it is in flight; a failed
+    original never blocks the send — the message goes out with the pixels and no file line.
   - **upload** — everything else: any **non-image**, and **photos past the limit**. Uploaded ahead
     of the send (`/chat/upload-file`) and anchored by `[file#N]`, which carries only a path — so it
     adds nothing to the send payload however large it is. **No count or size limit applies**, since
@@ -1268,10 +1331,11 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `test/core/mobile/pairing-store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
-- **Identity not fully unified.** Mobile requests are `authed` but the tRPC context still carries
-  `user=null`/`isOwner=false`. Chat sends no longer attribute to nobody, though: `POST /api/chat/send`
-  now falls back to `resolveMobileSender`, resolving the paired device's `createdBy` identity
-  (`test/webapp/routes/chat-mobile-sender.doctest.md`). Unifying the tRPC context itself remains open.
+- **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
+  device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
+  the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
+  `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
+  remaining piece.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
@@ -1377,3 +1441,20 @@ ios-app/BeeBox/Services/LogForwarder.swift
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 beebox/test/mobile-contract/
 ```
+
+## Quick chat evaluation entry
+
+The iOS Quick chat button presents `<baseURL>/quick-chat` in an independent
+webview sheet. It reuses paired-box authentication and same-origin navigation,
+but installs no native composer bridge. The web form owns routing and ordinary
+chat send; the main native conversation, draft, and pending emissions remain
+mounted behind the sheet. Done returns to them. This is an explicit entry, not
+an automatic app cold-start rule. Existing native recording state is not
+transferred to the sheet.
+
+The standalone web route shows the chosen destination and competing probabilities
+after sending. A destination link opens ordinary web chat inside the sheet.
+No emission version, native target type, or binding JSON changes for this trial.
+Owners: `ios-app/BeeBox/Views/RootView.swift`, `ChatWebView.swift`, and
+`src/frontend/src/pages/quick-chat/QuickChatPage.tsx`. Request/authentication and
+absence of the native bridge are covered by `ChatWebViewRequestTests`.

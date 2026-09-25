@@ -151,7 +151,7 @@ Verified 2026-07-21 (URLs fetched):
 
 Settled in conversation with the boxholder after the walkthrough prototype
 (see [the exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md)
-and [the rename decision](../../../issues/decisions/2026-08-19-bee-box-rename.md)).
+and [the rename decision](../../../issues/closed/decisions/2026-08-19-bee-box-rename.md)).
 Three layers:
 
 1. **A box is the CMS.** The box defines its own page/aside card types

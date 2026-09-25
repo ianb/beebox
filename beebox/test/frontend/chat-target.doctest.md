@@ -157,3 +157,26 @@ store.get().images.map((i) => i.id).join(",")
 [store.editor.nextImageId(), store.editor.nextFileId(), store.editor.nextSelectionId()].join(",")
 => 3,2,4
 ```
+
+## applyRestorePlan: a restored image keeps its landed original, or is marked lost
+
+A rejected send hands its images back through the emission, which carries a
+`path` only for an original that landed. That path is restored as `uploaded`,
+so the retry lists the same file line; an image with no path has no `File`
+to retry from, so it comes back `failed` and the message goes out with the
+pixels only.
+
+```ts
+const store = createEmissionStore();
+const e = createTypedEmission({
+  text: "receipt [image#1] and [image#2]",
+  images: [
+    { id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/a.jpg" },
+    { id: 2, mimeType: "image/png", dataBase64: "BB" },
+  ],
+  files: [], selections: [],
+});
+applyRestorePlan(store.editor, planRestore(emptyDraft, e));
+JSON.stringify(store.get().images.map((image) => image.original))
+=> [{"status":"uploaded","path":"_tmp/a.jpg"},{"status":"failed","message":"Original not uploaded — the agent sees the reduced copy only"}]
+```

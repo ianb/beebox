@@ -75,15 +75,55 @@ const secretEntrySchema = z.object({
 });
 export type SecretEntry = z.infer<typeof secretEntrySchema>;
 
+/**
+ * Cloudflare publishing credentials use their own broker slot rather than a
+ * generic named secret. This prevents the generic secrets UI/CLI from raising
+ * the grant to `agent` and exposing an account deployment token to box code.
+ */
+const cloudflarePublishGrantSchema = z.literal("server");
+const cloudflarePublishConnectionSchema = z.object({
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  credentialType: z.enum(["account-api-token", "user-api-token"]),
+  /** Absent after local revocation; never returned from management APIs. */
+  apiToken: z.string().min(1).optional(),
+  tokenId: z.string().min(1).optional(),
+  verifiedAt: z.string().datetime({ offset: true }).optional(),
+  capabilities: z.object({
+    tokenForAccountVerifiedAt: z.string().datetime({ offset: true }),
+    r2ObjectWriteVerifiedAt: z.string().datetime({ offset: true }).optional(),
+    workerDeployVerifiedAt: z.string().datetime({ offset: true }).optional(),
+    accessLiveVerifiedAt: z.string().datetime({ offset: true }).optional(),
+  }).optional(),
+  revokedAt: z.string().datetime({ offset: true }).optional(),
+  grants: z.record(z.string(), cloudflarePublishGrantSchema),
+});
+export type CloudflarePublishConnectionRecord = z.infer<typeof cloudflarePublishConnectionSchema>;
+
+/** Server-owned routing locator only; audience and release authority stay in R2. */
+const cloudflarePublishBindingSchema = z.object({
+  boxSlug: z.string().min(1),
+  connectionName: z.string().min(1),
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  bucketName: z.string().min(1),
+  workerName: z.string().min(1),
+  hostHandle: z.string().min(1),
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type CloudflarePublishBindingRecord = z.infer<typeof cloudflarePublishBindingSchema>;
+
 const secretStoreSchema = z.object({
   secrets: z.record(z.string(), secretEntrySchema),
   grants: z.record(z.string(), z.record(z.string(), secretAccessLevelSchema)),
+  /** Optional for backwards compatibility with existing machine stores. */
+  cloudflarePublishConnections: z.record(z.string(), cloudflarePublishConnectionSchema).optional(),
+  /** Keyed globally by PubId so one box cannot claim another box's publication. */
+  cloudflarePublishBindings: z.record(z.string(), cloudflarePublishBindingSchema).optional(),
 });
 export type SecretStoreData = z.infer<typeof secretStoreSchema>;
 
 /** The empty store — what a machine with no secrets file has. */
 function emptySecretStore(): SecretStoreData {
-  return { secrets: {}, grants: {} };
+  return { secrets: {}, grants: {}, cloudflarePublishConnections: {}, cloudflarePublishBindings: {} };
 }
 
 /**
@@ -94,7 +134,33 @@ function emptySecretStore(): SecretStoreData {
 export function secretsFilePath(): string {
   const override = process.env.BBX_SECRETS_FILE;
   if (override !== undefined && override !== "") return override;
+  return defaultSecretsFilePath();
+}
+
+/** The store's location when nothing overrides it: the boxholder's real keys. */
+function defaultSecretsFilePath(): string {
   return path.join(os.homedir(), ".config", "beebox", "secrets.json");
+}
+
+/**
+ * Whether this process reads a store that is NOT the machine's shared one.
+ * The one thing this decides is whether agent browsing may act as the owner
+ * on the Secrets panel (`server-box-scope.ts`) — a test box on its own store
+ * can, a box on the real store cannot.
+ *
+ * `BBX_SECRETS_FILE` alone is not the signal: it is an override anyone may
+ * set, and `main`'s box inherits the shell and `.env`, so an operator who
+ * pointed it at the real file would otherwise have opened that file to the
+ * browse identity. Isolation is asserted by whoever built the environment —
+ * the dev router for a worktree box (`router-worktree-start.ts`), a doctest
+ * for its tmp store — with `BBX_SECRETS_STORE_ISOLATED=1`, and even then only
+ * counts when the override really is a different file from the default.
+ */
+export function secretsStoreIsIsolated(): boolean {
+  if (process.env.BBX_SECRETS_STORE_ISOLATED !== "1") return false;
+  const override = process.env.BBX_SECRETS_FILE;
+  if (override === undefined || override === "") return false;
+  return path.resolve(override) !== defaultSecretsFilePath();
 }
 
 /** The access log's directory: a `secrets-log/` sibling of the store file. */

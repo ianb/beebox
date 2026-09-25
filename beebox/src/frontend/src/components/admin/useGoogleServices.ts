@@ -24,13 +24,13 @@ export interface GoogleServicesState {
   status: GoogleStatus | null;
   loading: boolean;
   error: string | null;
-  successMessage: string | null;
   connecting: boolean;
   disconnecting: boolean;
   savingServices: boolean;
   handleAuthorize: () => Promise<void>;
   handleDisconnect: () => Promise<void>;
   handleServiceToggle: (service: string, enabled: boolean) => Promise<void>;
+  refreshStatus: () => Promise<GoogleStatus | null>;
 }
 
 function errorMessage(err: unknown): string {
@@ -43,7 +43,6 @@ export function useGoogleServices(): GoogleServicesState {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [savingServices, setSavingServices] = useState(false);
 
   const fetchStatus = useCallback(async () => {
@@ -65,29 +64,9 @@ export function useGoogleServices(): GoogleServicesState {
     void fetchStatus().finally(() => setLoading(false));
   }, [fetchStatus]);
 
-
-  // Handle redirect back from Google OAuth — mount-only state read of
-  // window.location query params.
-  /* eslint-disable react-hooks/exhaustive-deps */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const googleParam = params.get("google");
-    if (googleParam === "connected") {
-      setSuccessMessage("Google services connected successfully.");
-      window.history.replaceState(null, "", window.location.pathname);
-      void fetchStatus();
-    } else if (googleParam === "error") {
-      const message = params.get("message") || "Authorization failed";
-      setError(message);
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-  }, []);
-  /* eslint-enable react-hooks/exhaustive-deps */
-
   const handleAuthorize = async () => {
     setConnecting(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
       const data = await trpcClient.admin.googleSetup.mutate({});
@@ -101,7 +80,6 @@ export function useGoogleServices(): GoogleServicesState {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
       await trpcClient.admin.googleDisconnect.mutate();
@@ -133,12 +111,12 @@ export function useGoogleServices(): GoogleServicesState {
     status,
     loading,
     error,
-    successMessage,
     connecting,
     disconnecting,
     savingServices,
     handleAuthorize,
     handleDisconnect,
     handleServiceToggle,
+    refreshStatus: fetchStatus,
   };
 }

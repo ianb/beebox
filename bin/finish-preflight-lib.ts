@@ -15,7 +15,7 @@ import { touchesDeployedPath } from "./deployed-paths.js";
 
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint" | "smoke";
+  kind: "tests" | "typecheck" | "lint" | "smoke" | "site";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -144,12 +144,22 @@ export function isTestPath(path: string): boolean {
 }
 
 /**
- * The docs-only rule, verbatim from the procedure it replaces: every changed
- * path sits under a `docs/` directory AND none is a `.doctest.md`.
+ * The docs-only rule: every changed path is either a non-doctest `.md`
+ * anywhere (an issue note, README, CONTRIBUTING, a plan) or sits under a
+ * `docs/` directory (which admits images and other doc assets), and none is
+ * a `.doctest.md`. Broadened 2026-09-12 from "under docs/ only": the
+ * checkpoint note finish appends under `issues/` was flipping every
+ * docs-only landing into the full test tier plus the smoke walk. This
+ * matches `hasCodeChange`, which already treats any `.md` as a doc.
  */
 export function isDocsOnly(paths: string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((path) => path.split("/").includes("docs") && !isDoctest(path));
+  return paths.every((path) => isDocPath(path) || (path.split("/").includes("docs") && !isDoctest(path)));
+}
+
+/** Anything the public site build reads: site/ itself, or any markdown (the docs manifest promotes repo docs). */
+export function touchesSiteInput(paths: string[]): boolean {
+  return paths.some((path) => path.startsWith("site/") || isDocPath(path));
 }
 
 /** Any non-test, non-doc source in the diff — what Track O and lint exist for. */
@@ -290,6 +300,22 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   // ios-app/ changes nothing a running box would show.
   if (touchesDeployedPath(input.paths)) {
     add({ kind: "smoke", command: "bin/smoke", cwd: ".", argv: ["bin/smoke"] });
+  }
+
+  // The public site's canonical build: what Cloudflare runs on every push of
+  // main. It consumes site/ AND every markdown the docs manifest promotes
+  // (README, CONTRIBUTING, beebox/docs, the engine's CLAUDE.md), and it fails
+  // closed on a scrub-gate hit or a broken link. It is the one check a
+  // docs-only diff must NOT skip: docs are exactly its input. Without it a
+  // merge that breaks the site build is silent until someone looks at
+  // beebox.run (2026-09-12: six merges shipped nothing for two hours).
+  if (touchesSiteInput(input.paths)) {
+    commands.push({
+      kind: "site",
+      command: "pnpm --dir site build --base /",
+      cwd: ".",
+      argv: ["pnpm", "--dir", "site", "build", "--base", "/"],
+    });
   }
 
   const linting = packages.filter((pkg) => input.hasScript(pkg, "lint"));

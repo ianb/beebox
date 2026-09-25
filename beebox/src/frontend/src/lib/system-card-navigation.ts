@@ -1,7 +1,78 @@
 /** Canonical instruments use ordinary card routes, with semantic cold-entry places. */
-import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { parseViewUrl, serializeViewUrl, type ViewTarget } from "./view-url";
+import { SYSTEM_CARD_PATHS, type SystemCardType } from "@shared/system-card-paths";
+import { parseViewUrl, serializeViewUrl, viewStateSearchValue, type ViewTarget } from "./view-url";
 import { normalizeBrowseTarget, parseBrowseState } from "./browse-card-state";
+import { adminArrivalViewState } from "./admin-card-state";
+
+const SYSTEM_CARD_PATH_SET: ReadonlySet<string> = new Set(Object.values(SYSTEM_CARD_PATHS));
+
+/** Preserve a legacy `/card` entry exactly while adopting the workspace route. */
+export function legacyCardRedirect<TState>(input: {
+  boxSlug: string;
+  cardPath: string;
+  search: Record<string, unknown>;
+  state: TState;
+}) {
+  return {
+    to: `/${input.boxSlug}/views/${input.cardPath}`,
+    search: input.search,
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+/** Preserve shell state while a legacy instrument URL adopts its canonical card target. */
+export function legacySystemCardRedirect<TState>(input: {
+  boxSlug: string;
+  type: SystemCardType;
+  search: Record<string, unknown>;
+  state: TState;
+}) {
+  return {
+    to: `/${input.boxSlug}/views/${SYSTEM_CARD_PATHS[input.type]}`,
+    search: systemCardShellSearch(input.search),
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+export function legacyAdminRedirect<TState>(input: { boxSlug: string; search: Record<string, unknown>; state: TState }) {
+  const viewState = adminArrivalViewState(input.search);
+  return {
+    to: `/${input.boxSlug}/views/${SYSTEM_CARD_PATHS.admin}`,
+    search: { ...systemCardShellSearch(input.search), ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) },
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+export function legacyCaptureRedirect<TState>(input: { boxSlug: string; search: Record<string, unknown>; state: TState }) {
+  return {
+    to: `/${input.boxSlug}/chat`,
+    search: { ...systemCardShellSearch(input.search), capture: "1" as const },
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+/** Search written only by an explicit recent/new chat-about-card action. */
+export function cardChatSearch(input: {
+  mode: "recent" | "new";
+  target: ViewTarget;
+  contextDir: string;
+  sessionId: string | null;
+  nativeComposer?: "1";
+}): Record<string, string> {
+  const card = serializeViewUrl(input.target);
+  if (input.mode === "recent" && input.sessionId) {
+    return input.nativeComposer === undefined
+      ? { session: input.sessionId, card }
+      : { session: input.sessionId, card, nativeComposer: input.nativeComposer };
+  }
+  return input.nativeComposer === undefined
+    ? { session: "new", contextDir: input.contextDir, card }
+    : { session: "new", contextDir: input.contextDir, card, nativeComposer: input.nativeComposer };
+}
 
 export function workspaceRouteTarget(input: {
   pathname: string; splat?: string; searchStr: string; search: Record<string, unknown>;
@@ -32,6 +103,7 @@ export function systemCardEntryContext(target: ViewTarget | null): { cardPath: s
     // Invalid locations remain visible in Browse's error surface, not a guessed directory.
     return { cardPath: null, browseDir: parsed.ok ? parsed.state.directory : null };
   }
+  if (SYSTEM_CARD_PATH_SET.has(target.path)) return { cardPath: null, browseDir: "" };
   return { cardPath: target.path, browseDir: null };
 }
 

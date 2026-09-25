@@ -22,6 +22,7 @@ struct NativeComposerView: View {
     var onInterruptSpeech: () -> Void = {}
     var requiresConversationBinding = false
     var automaticallyResumeVoicePreparations = true
+    var backgroundTaskApplication: any BackgroundTaskApplication = UIApplication.shared
     var voiceStateOverride: VoiceCompositionState?
     var initiallyFocused = false
     var initialDetailedSelection: DraftSelection?
@@ -53,6 +54,10 @@ struct NativeComposerView: View {
     @State private var pendingClockTicker = Timer
         .publish(every: 5, on: .main, in: .common)
         .autoconnect()
+    @State private var keywordHintTicker = Timer
+        .publish(every: 10, on: .main, in: .common)
+        .autoconnect()
+    @State private var keywordHintIndex = 0
     /// When each `isSending` term became true. Wall-clock `Date` rather than a
     /// monotonic reading: a term still held after the phone slept for an hour has
     /// been held for an hour, and that is what the log should say.
@@ -78,6 +83,13 @@ struct NativeComposerView: View {
                 }
                 pendingReferenceDate = date
             }
+            .onReceive(keywordHintTicker) { _ in
+                guard voiceTurn.isActive || isVoiceRecording || isVoiceStarting else {
+                    keywordHintIndex = 0
+                    return
+                }
+                keywordHintIndex += 1
+            }
             .onChange(of: sendBlockers) { previous, current in
                 noteSendBlockerChange(from: previous, to: current)
             }
@@ -86,6 +98,18 @@ struct NativeComposerView: View {
                     return
                 }
                 pendingReferenceDate = Date()
+                if automaticallyResumeVoicePreparations {
+                    resumeVoicePreparations(
+                        pendingStore.voicePreparations,
+                        foregroundTransitionIsAuthoritative: true
+                    )
+                }
+            }
+            .onChange(of: voiceTurn.isActive) { _, _ in
+                keywordHintIndex = 0
+            }
+            .onChange(of: hasKeywordHintText) { _, _ in
+                keywordHintIndex = 0
             }
             .onChange(of: screenAwakeReasons) { _, reasons in
                 applyScreenAwake(reasons)
@@ -111,6 +135,12 @@ struct NativeComposerView: View {
             applyEarcon(.dictationStateChanged(state))
             if case .failed = state {
                 applyVoiceTurn(.dictationFailed)
+            }
+            // Idle with nothing coming up means the recognizer is down. The
+            // hands-free reopen after a send does not trip this: it commands the
+            // next start before this fires, so `isStarting` is already true.
+            if state == .idle, dictation.isStarting == false {
+                applyVoiceTurn(.dictationWentIdle)
             }
         }
         .onChange(of: dictation.interruptionCount) {
@@ -157,6 +187,14 @@ struct NativeComposerView: View {
         .onChange(of: boxLockManager.isLocked(box)) { _, isLocked in
             if isLocked {
                 dismissPresentedContentForLock()
+            }
+        }
+        .onChange(of: draftStore.isReady) { _, isReady in
+            guard isReady else {
+                return
+            }
+            Task {
+                await resumeInterruptedImageOriginals()
             }
         }
         .onChange(of: locationShareResult) { _, result in
@@ -258,8 +296,8 @@ struct NativeComposerView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
 
-            if requiresConversationBinding {
-                Text(composerDestinationText)
+            if requiresConversationBinding, let composerBindingStatusText {
+                Text(composerBindingStatusText)
                     .font(.caption).foregroundStyle(.secondary)
                     .accessibilityIdentifier("bbx-composer-destination")
             }
@@ -276,9 +314,7 @@ struct NativeComposerView: View {
                 )
                 .disabled(isSending)
 
-                textEntry
-
-                trailingControl
+                textEntryAndTrailingControlWithKeywordHint
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -287,13 +323,72 @@ struct NativeComposerView: View {
         }
     }
 
-    private var composerDestinationText: String {
-        if let contextDir = pendingStore.composerBinding?.sendBinding?.target.contextDir {
-            return contextDir.isEmpty ? "Send to: / (box root)" : "Send to: \(contextDir)"
+    private var textEntryAndTrailingControlWithKeywordHint: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+                Text(currentKeywordHint)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            HStack(alignment: .bottom, spacing: 10) {
+                textEntry
+                trailingControl
+            }
         }
-        return pendingStore.composerBinding?.selection?.label
-            ?? pendingStore.composerBinding?.selection?.reason
-            ?? "Waiting for conversation. Sending requires an updated host."
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private var hasKeywordHintText: Bool {
+        hasTextContent
+    }
+
+    private var currentKeywordHint: String {
+        let hints = hasKeywordHintText
+            ? SpeechKeywords.keywordHintsWithText
+            : SpeechKeywords.keywordHintsWithoutText
+        return hints[keywordHintIndex % hints.count]
+    }
+
+    private var voiceKeywordAccessibilityHint: String {
+        "While dictating, say send message, clean up and send, send and close, erase message, cancel message, or microphone off."
+    }
+
+    /// What to say while there is no send binding — one line per state, because
+    /// they are not the same state.
+    ///
+    /// This used to collapse all of them into "Sending requires an updated
+    /// host", written when the web side might not publish a binding at all.
+    /// It does now, and its FIRST publication on every cold load is
+    /// `resolving` (`use-conversation-selection.ts` seeds
+    /// `{kind:"resolving", requestId:"initial"}`), so the common path — a page
+    /// still picking the conversation — accused the host of being out of date.
+    /// Version skew is not what the boxholder is watching for here; say what is
+    /// happening instead of guessing at why.
+    private var composerBindingStatusText: String? {
+        guard pendingStore.composerBinding?.sendBinding == nil else { return nil }
+        guard let selection = pendingStore.composerBinding?.selection else {
+            // No publication has arrived. Ordinarily the page is still loading.
+            return "Waiting for the conversation."
+        }
+        switch selection.kind {
+        case .ready:
+            // `sendBinding` is nil despite a ready selection, so the
+            // publication failed validation. The label is still the most
+            // informative thing on hand.
+            return selection.label ?? "Waiting for the conversation."
+        case .resolving:
+            return "Finding the conversation..."
+        case .unavailable:
+            return selection.reason ?? "No conversation to send to."
+        }
     }
 
     private var composerContext: some View {
@@ -302,6 +397,7 @@ struct NativeComposerView: View {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
                     voicePreparations: pendingStore.voicePreparations,
+                    activeVoicePreparationIDs: activeVoicePreparationIDs,
                     referenceDate: pendingReferenceDate,
                     canRestore: draftIsEmpty,
                     onBindVoice: { preparation in
@@ -453,6 +549,7 @@ struct NativeComposerView: View {
                     foregroundStyle: .red,
                     action: stopMicrophoneWithEarcon
                 )
+                .accessibilityHint(voiceKeywordAccessibilityHint)
             }
         } else if hasTextContent {
             composerButton(
@@ -492,6 +589,7 @@ struct NativeComposerView: View {
             does: "tap to dictate continuously; say a send keyword to send hands-free",
             action: requestMicrophone
         )
+        .accessibilityHint(voiceKeywordAccessibilityHint)
     }
 
     private var isVoiceRecording: Bool {
@@ -518,6 +616,7 @@ struct NativeComposerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Starting dictation — tap to stop")
+        .accessibilityHint(voiceKeywordAccessibilityHint)
     }
 
     private func openCapture() {
@@ -783,15 +882,39 @@ struct NativeComposerView: View {
         }
     }
 
-    private func resumeVoicePreparations(_ preparations: [VoicePreparation]) {
+    private func resumeVoicePreparations(
+        _ preparations: [VoicePreparation],
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) {
         for preparation in preparations where preparation.boxID == box.id {
-            resumeVoicePreparation(preparation, box: box)
+            resumeVoicePreparation(
+                preparation,
+                box: box,
+                foregroundTransitionIsAuthoritative: foregroundTransitionIsAuthoritative
+            )
         }
     }
 
-    private func resumeVoicePreparation(_ preparation: VoicePreparation, box: PairedBox) {
+    private func resumeVoicePreparation(
+        _ preparation: VoicePreparation,
+        box: PairedBox,
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) {
         guard !requiresConversationBinding || preparation.binding != nil else {
             statusText = "Saved voice message needs a conversation. Restore it before sending."
+            return
+        }
+        let applicationState = backgroundTaskApplication.applicationState
+        guard VoicePreparationResumePolicy.shouldStart(
+            applicationState: applicationState,
+            foregroundTransitionIsAuthoritative: foregroundTransitionIsAuthoritative
+        ) else {
+            BoxLog.info(
+                "voice HQ deferred preparation=\(preparation.id.uuidString) applicationState="
+                    + HqFallbackDiagnostics.applicationStateName(applicationState),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
             return
         }
         guard activeVoicePreparationIDs.insert(preparation.id).inserted else {
@@ -803,10 +926,7 @@ struct NativeComposerView: View {
             do {
                 try await pendingStore.finishVoicePreparation(
                     id: preparation.id,
-                    text: prepared.text,
-                    diarized: prepared.diarized,
-                    hqText: prepared.hqText,
-                    hqService: prepared.hqService
+                    outcome: prepared
                 )
                 // The recording was retained at send time with the realtime
                 // transcript, because that was all that existed then; the
@@ -827,21 +947,55 @@ struct NativeComposerView: View {
     private func prepareVoiceMessage(
         _ preparation: VoicePreparation,
         box: PairedBox
-    ) async -> (text: String, diarized: Bool, hqText: Bool, hqService: String?) {
+    ) async -> VoicePreparationOutcome {
         guard let audioURL = await pendingStore.voiceAudioURL(for: preparation) else {
-            return (preparation.liveTranscript, false, false, nil)
+            BoxLog.warn(
+                "voice HQ fallback preparation=\(preparation.id.uuidString) reason=no-recording-reference"
+                    + " applicationState="
+                    + HqFallbackDiagnostics.applicationStateName(backgroundTaskApplication.applicationState),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+            return .fallback(text: preparation.liveTranscript)
         }
+        let startUptime = ProcessInfo.processInfo.systemUptime
+        let startWallTime = Date()
+        let startApplicationState = backgroundTaskApplication.applicationState
+        let audioBytes = (try? audioURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? -1
+        let backgroundHold = BackgroundExecutionHold(application: backgroundTaskApplication)
+        let holdAcquired = backgroundHold.begin(name: "beebox.hq-transcription") {
+            BoxLog.warn(
+                "voice HQ background hold expired preparation=\(preparation.id.uuidString)",
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
+        }
+        defer { backgroundHold.end() }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
-            return (
-                VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
-                hqResult.diarized,
-                true,
-                hqResult.service
+            return .hq(
+                text: VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
+                diarized: hqResult.diarized,
+                service: hqResult.service
             )
         } catch {
+            BoxLog.warn(
+                HqFallbackDiagnostics.message(
+                    preparation: preparation,
+                    audioBytes: audioBytes,
+                    elapsedMilliseconds: Int((ProcessInfo.processInfo.systemUptime - startUptime) * 1_000),
+                    elapsedWallMilliseconds: Int(Date().timeIntervalSince(startWallTime) * 1_000),
+                    startApplicationState: startApplicationState,
+                    failureApplicationState: backgroundTaskApplication.applicationState,
+                    holdAcquired: holdAcquired,
+                    holdExpired: backgroundHold.expired,
+                    error: error
+                ),
+                category: .composer,
+                targetBoxID: preparation.boxID
+            )
             statusText = "HQ transcription failed; sending live dictation."
-            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false, false, nil)
+            return .fallback(text: VoicePreparationResolver.text(for: preparation, hqTranscript: nil))
         }
     }
 
@@ -941,7 +1095,12 @@ struct NativeComposerView: View {
     /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
     /// is expected to be writing the caption while it uploads.
     private var isTextEntryLocked: Bool {
-        isPreparingSend || draftStore.isReady == false
+        // Recording locks it: the live transcript is authoritative over the
+        // whole field, so anything typed mid-turn is overwritten by the next
+        // update with no trace. Scoped to the microphone being live (or coming
+        // up), NOT to `voiceTurn.isActive` — a turn stays open across the box's
+        // reply and its speech, and the composer is ordinary text entry there.
+        isPreparingSend || draftStore.isReady == false || isVoiceRecording || isVoiceStarting
     }
 
     /// Records when each lock term engaged and logs the transitions.
@@ -1070,7 +1229,32 @@ struct NativeComposerView: View {
 
     private func requestMicrophone() {
         applyEarcon(.microphoneRequested)
+        // Put the keyboard away. The transcript OWNS the text field for the
+        // length of the turn (every update replaces the whole text and forces
+        // the caret to the end — see `setDictationTranscript`), so a keyboard
+        // left standing over a field nobody can usefully type into is both a
+        // confusing state and a way to lose characters. `isTextEntryLocked`
+        // keeps it down for the turn.
+        //
+        // Both halves are needed, as the simulator showed: clearing `focused`
+        // alone makes `ComposerTextView` resign — the caret goes — but the
+        // keyboard STAYS ON SCREEN. Asking the window to resign whatever holds
+        // it is what actually dismisses it (the same selector `RootView` uses
+        // for the per-box lock).
+        focused = false
+        dismissKeyboard()
         applyVoiceTurn(.microphoneStarted)
+    }
+
+    /// Dismiss the keyboard whoever owns it. `focused = false` resigns the
+    /// composer's own text view, which is not sufficient on its own.
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func stopMicrophoneWithEarcon() {
@@ -1092,12 +1276,7 @@ struct NativeComposerView: View {
     }
 
     private var hasIncompleteImages: Bool {
-        draftStore.draft.images.contains { image in
-            guard case .local = image.state else {
-                return true
-            }
-            return false
-        }
+        draftStore.draft.hasIncompleteImages
     }
 
     private var hasIncompleteFiles: Bool {
@@ -1461,11 +1640,13 @@ struct NativeComposerView: View {
             )
             return
         }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
         do {
             let uploaded = try await ChatAPI(box: box).uploadFile(
                 data: data,
                 filename: file.originalName,
                 mimeType: file.mimetype,
+                batch: batch,
                 onProgress: { progress in
                     Task {
                         await draftStore.setFileProgress(id: file.id, progress: progress, boxID: box.id)
@@ -1550,13 +1731,151 @@ struct NativeComposerView: View {
             )
             return
         }
-        await draftStore.completeImageImport(
+        // The returned image carries `original`; the local value predates it.
+        guard let imported = await draftStore.completeImageImport(
             id: image.id,
             data: encoded.data,
             mimeType: encoded.mimeType,
             fileExtension: encoded.fileExtension,
             boxID: box.id
+        ) else {
+            return
+        }
+        await uploadImageOriginal(imported)
+    }
+
+    /// Start an original's upload again for every image whose bytes survived an
+    /// interrupted one. The request cannot be resumed, but the payload is still
+    /// on disk, so it can be repeated.
+    private func resumeInterruptedImageOriginals() async {
+        for image in draftStore.resumableImageOriginals() {
+            await uploadImageOriginal(image)
+        }
+    }
+
+    /// Upload the image's ORIGINAL bytes so the agent gets a file, mirroring
+    /// `uploadFile(_:)`. A failure here never blocks the send: the inline copy
+    /// is the primary payload and the message simply carries no path.
+    private func uploadImageOriginal(_ image: DraftImage) async {
+        guard let original = image.original else {
+            return
+        }
+        await draftStore.setImageOriginalState(
+            id: image.id,
+            state: .uploading(progress: 0),
+            boxID: box.id
         )
+        guard let data = await draftStore.imageOriginalData(for: image, boxID: box.id) else {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: "The original image data is missing."),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original payload missing imageID=\(image.id)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        let batch = await draftStore.ensureUploadBatchID(boxID: box.id)
+        do {
+            let uploaded = try await ChatAPI(box: box).uploadFile(
+                data: data,
+                filename: original.filename,
+                mimeType: original.mimeType,
+                batch: batch,
+                onProgress: { progress in
+                    Task {
+                        await draftStore.setImageOriginalProgress(
+                            id: image.id,
+                            progress: progress,
+                            boxID: box.id
+                        )
+                    }
+                }
+            )
+            await draftStore.markImageOriginalUploaded(
+                id: image.id,
+                path: uploaded.path,
+                boxID: box.id
+            )
+        } catch {
+            await draftStore.setImageOriginalState(
+                id: image.id,
+                state: .failed(message: error.localizedDescription),
+                boxID: box.id
+            )
+            BoxLog.warn(
+                "image original upload failed imageID=\(image.id) bytes=\(data.count)"
+                    + " mime=\(original.mimeType): \(error.localizedDescription)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+        }
+    }
+}
+
+enum HqFallbackDiagnostics {
+    static func message(
+        preparation: VoicePreparation,
+        audioBytes: Int,
+        elapsedMilliseconds: Int,
+        elapsedWallMilliseconds: Int,
+        startApplicationState: UIApplication.State,
+        failureApplicationState: UIApplication.State,
+        holdAcquired: Bool,
+        holdExpired: Bool,
+        error: Error,
+        now: Date = Date()
+    ) -> String {
+        let preparationAgeMilliseconds = max(0, Int(now.timeIntervalSince(preparation.createdAt) * 1_000))
+        var fields = [
+            "voice HQ fallback",
+            "preparation=\(preparation.id.uuidString)",
+            "preparationAgeMs=\(preparationAgeMilliseconds)",
+            "audioBytes=\(audioBytes)",
+            "elapsedMs=\(max(0, elapsedMilliseconds))",
+            "elapsedWallMs=\(max(0, elapsedWallMilliseconds))",
+            "startApplicationState=\(applicationStateName(startApplicationState))",
+            "failureApplicationState=\(applicationStateName(failureApplicationState))",
+            "holdAcquired=\(holdAcquired)",
+            "holdExpired=\(holdExpired)",
+            "errorType=\(String(reflecting: type(of: error)))",
+        ]
+        if let urlError = error as? URLError {
+            fields.append("urlErrorCode=\(urlError.code.rawValue)")
+        }
+        if let apiError = error as? ChatAPI.ChatAPIError,
+           case .server(_, let status, let permanent, let code) = apiError {
+            fields.append("httpStatus=\(status.map(String.init) ?? "none")")
+            fields.append("serverCode=\(code ?? "none")")
+            fields.append("permanent=\(permanent.map(String.init) ?? "none")")
+        }
+        if !(error is URLError), !(error is ChatAPI.ChatAPIError) {
+            let nsError = error as NSError
+            fields.append("errorDomain=\(nsError.domain)")
+            fields.append("errorCode=\(nsError.code)")
+        }
+        return fields.joined(separator: " ")
+    }
+
+    static func applicationStateName(_ state: UIApplication.State) -> String {
+        switch state {
+        case .active: "active"
+        case .inactive: "inactive"
+        case .background: "background"
+        @unknown default: "unknown"
+        }
+    }
+}
+
+enum VoicePreparationResumePolicy {
+    static func shouldStart(
+        applicationState: UIApplication.State,
+        foregroundTransitionIsAuthoritative: Bool = false
+    ) -> Bool {
+        foregroundTransitionIsAuthoritative || applicationState == .active
     }
 }
 
@@ -1757,6 +2076,8 @@ private struct DraftImageThumbnail: View {
     }
 
     private var accessibilityStatus: String {
+        // The original's upload is deliberately invisible here: it is a silent
+        // bonus, and a failure costs the message its path, nothing the user acts on.
         switch image.state {
         case .local:
             "Ready"
@@ -1848,6 +2169,7 @@ private struct FileAttachmentList: View {
 private struct PendingEmissionList: View {
     var emissions: [PendingEmission]
     var voicePreparations: [VoicePreparation]
+    var activeVoicePreparationIDs: Set<UUID>
     /// Wall clock the pending rows age against; the owner refreshes it.
     var referenceDate: Date
     var canRestore: Bool
@@ -1862,8 +2184,13 @@ private struct PendingEmissionList: View {
                 HStack(spacing: 8) {
                     if preparation.binding == nil {
                         Button("Send saved voice message to this conversation") { onBindVoice(preparation) }
-                    } else { ProgressView() }
-                    Text(preparation.binding == nil ? "Choose a conversation first." : "Improving voice transcription…")
+                    } else if activeVoicePreparationIDs.contains(preparation.id) {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "clock")
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(voicePreparationStatus(preparation))
                         .font(.caption)
                         .lineLimit(1)
                 }
@@ -1924,6 +2251,16 @@ private struct PendingEmissionList: View {
         .padding(10)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
     }
+
+    private func voicePreparationStatus(_ preparation: VoicePreparation) -> String {
+        if preparation.binding == nil {
+            return "Choose a conversation first."
+        }
+        if activeVoicePreparationIDs.contains(preparation.id) {
+            return "Improving voice transcription…"
+        }
+        return "Voice message saved; transcription will resume in the app."
+    }
 }
 
 private struct SelectionAttachmentList: View {
@@ -1939,13 +2276,13 @@ private struct SelectionAttachmentList: View {
                         Button {
                             onOpen(selection)
                         } label: {
-                            Label(selection.ref, systemImage: "text.quote")
+                            Label(selection.sourceLabel, systemImage: "text.quote")
                                 .font(.caption)
                                 .lineLimit(1)
                         }
                         .buttonStyle(.plain)
                         .frame(minHeight: 44)
-                        .accessibilityLabel("Show selection from \(selection.ref)")
+                        .accessibilityLabel("Show selection from \(selection.sourceLabel)")
                         Button {
                             onRemove(selection)
                         } label: {
@@ -1953,7 +2290,7 @@ private struct SelectionAttachmentList: View {
                         }
                         .buttonStyle(.plain)
                         .frame(width: 44, height: 44)
-                        .accessibilityLabel("Remove selection from \(selection.ref)")
+                        .accessibilityLabel("Remove selection from \(selection.sourceLabel)")
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -1972,7 +2309,7 @@ private struct SelectionDetailView: View {
         NavigationStack {
             List {
                 Section("Source") {
-                    Text(selection.ref)
+                    Text(selection.sourceLabel)
                     Text(selection.position)
                         .foregroundStyle(.secondary)
                 }
@@ -1985,8 +2322,12 @@ private struct SelectionDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    // Same confirm affordance as the app's other sheets.
+                    Button {
                         dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }

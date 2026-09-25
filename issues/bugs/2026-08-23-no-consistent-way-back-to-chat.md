@@ -1,6 +1,6 @@
 ---
 title: "No consistent way back to chat from browse or a card page — worst on iOS, where there is no browser chrome"
-workstream: chat-wayfinding
+workstream: interface-as-cards
 area: beebox
 labels: [navigation, mobile, ios, ui]
 filed-by: agent
@@ -10,13 +10,24 @@ priority: important
 needs: [manual-testing]
 ---
 
+
+> **Awaiting manual testing** — interface-card consolidation (`43f948450`)
+> replaces the retired web Chat chip with the workspace's Minimize cards /
+> Restore cards controls. Physical iPhone return and recording continuity are
+> still unverified; only the developer clears this gate.
+
 ## Manual testing
 
-Both halves shipped in `8d80ef30`, verified so far only in the running app via `bin/browse` (web) and simulator unit tests + a compile (iOS) — the iOS chevron has never run on a physical device, and the original report came from the boxholder's phone. Needs, on an actual iPhone:
+On an actual iPhone, open a card from a known conversation, enter Browse and
+History, then use Minimize cards to return to the same transcript. Confirm the
+recipient and unsent draft remain unchanged. Restore cards and confirm the same
+card and view state return. Repeat while using native dictation/recording and
+with browser Back across a pre-consolidation history entry.
 
-- Tap into a card from chat, confirm a chevron appears on the webview's leading edge.
-- Tap it, confirm it returns to the chat session you left (not the landmark's newest chat).
-- Confirm the web "Chat" chip appears in the app bar on non-chat pages when this tab has been in a chat, and returns to the right session.
+The floating native chevron was withdrawn on September 3 (see history below),
+and `BackToChatChip` was removed by consolidation. Do not expect either control.
+Local browser checks exercised Minimize/Restore, retained card state, and legacy
+history adaptation; they do not establish physical-device behavior.
 
 
 Getting from chat into a card or the browse view is easy and has several

@@ -507,6 +507,23 @@ to be estimated again. One slot was rejected as inviting lockups (a wedged run
 holding the only slot blocks everything); two bounds contention below the
 thrash point measured above while a stale-pid check bounds the wedge.
 
+**Revision 2026-09-15 — the slot count was right and the fan-out was not.**
+The thrash point above was measured per RUN. Each slot hosts a `jobs: 6` tap
+fan-out (`beebox/.taprc`), so two slots is twelve tap processes on a
+twelve-logical-core machine, and the `concurrency` field this mechanism added
+is what finally made that measurable: pairing each file against itself across
+933 recorded runs, a full-mode file under one concurrent run takes 1.69x longer
+at the median, 3.05x at p90 and 6.03x at worst (805 files). Selected-mode runs
+show 1.43x median, so the harm is concentrated in full-run overlap. The fix is
+`capJobs` (`bin/test-tiers.ts`), applied in `runUnderSlot` where `concurrency`
+is known: a FULL run that starts while another holds a slot halves its fan-out,
+while the 642-of-756 solo runs keep the default. Two known limits, both
+accepted: the cap is read at acquire time so it throttles the joining run and
+never the incumbent (worst case falls from twelve to nine, not to six), and
+measuring true overlap would need slot acquire/release timestamps the ledger
+does not record. Filed from the dev-router outage of the same day, whose 30s
+readiness budget was a casualty of this contention.
+
 **B. Selection, permissive.** `bin/test-select` per Track 2, with the rule
 changed:
 

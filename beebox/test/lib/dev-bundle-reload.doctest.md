@@ -6,7 +6,7 @@ older timestamp is still detected, while packed/prod processes without a stamp
 remain opted out.
 
 ```ts setup
-import { abandonDevBundleDrain, beginDevBundleDrain, devBundleWasReplaced, isDevBundleDraining } from "../../src/lib/dev-bundle-reload.js";
+import { abandonDevBundleDrain, devBundleWasReplaced } from "../../src/lib/dev-bundle-reload.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -39,10 +39,9 @@ An unsafe/stuck drain can reopen writes while suppressing repeated attempts for
 the same replacement artifact. A later build identity remains eligible.
 
 ```ts
-beginDevBundleDrain();
 await abandonDevBundleDrain();
-JSON.stringify({ draining: isDevBundleDraining(), replaced: await devBundleWasReplaced() })
-=> {"draining":false,"replaced":false}
+await devBundleWasReplaced()
+=> false
 ```
 
 ```ts cleanup

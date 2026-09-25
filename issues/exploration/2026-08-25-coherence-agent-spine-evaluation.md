@@ -89,7 +89,7 @@ notable difference.
   `--host codex`), which is the same problem the AGENTS.md mirror generator
   solves here. Worth seeing how they handle it.
 
-Related: [proving-it-works](2026-08-14-proving-it-works-demo-video-plugin.md) —
+Related: [proving-it-works](../closed/exploration/2026-08-14-proving-it-works-demo-video-plugin.md) —
 the other outside tool in the queue, and the same shape of question: adopt,
 borrow the idea, or neither. Record the call either way so the link is not
 re-evaluated later.

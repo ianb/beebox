@@ -1,10 +1,11 @@
 # `todo-view` card schema
 
 Frontmatter-only schema for the `todo-view` card
-(`docs/implemented-plans/todo-annotation.md` Track 4): `glob`/`status`/`assigned` are the
+(`docs/plans/todo-collection.md` Track 4): `glob`/`status`/`assigned` are the
 query, no body. `glob` has NO schema default (pinned mechanism detail — see
-`src/schemas/todo-view.ts`'s module doc) — an omitted `glob` is resolved
-server-side by `todos.list`, from the card's own path, not by this schema.
+`src/schemas/todo-view.ts`'s module doc) — an omitted `glob` follows from the
+query's `here`, which the renderer sets to the card's own directory, not from
+this schema.
 
 ```ts setup
 import { TodoViewSchema, createTodoViewTemplate } from "../../src/schemas/todo-view.js";

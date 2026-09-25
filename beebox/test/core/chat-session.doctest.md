@@ -261,3 +261,30 @@ const blocks = buildContentBlocks({ text: "dog [image2] cat [image1]", images: i
 JSON.stringify(blocks.map((b) => b.type === "image" ? b.source?.data : b.text))
 => ["dog ","TWO"," cat ","ONE"]
 ```
+
+## buildContentBlocks — the `<attachments>` block keeps its image lines
+
+An inline image whose original was uploaded is listed in the trailing
+`<attachments>` block as `[image#N]: _tmp/…`, the same way a file is. That
+line re-spells the token, and it is NOT an anchor: expanding it would splice a
+second copy of the image into the block. The body token becomes the image
+block; the line stays text, so the agent reads the path right after the
+pixels.
+
+```ts
+const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
+const text = "<typed>why is this wrong? [image#1]</typed>\n<attachments>\n[image#1]: _tmp/2026-09-16T10-00-00.000Z_shot.png\n</attachments>";
+const blocks = buildContentBlocks({ text, images: imgs });
+JSON.stringify(blocks.map((b) => b.type === "image" ? "<image PX>" : b.text))
+=> ["<typed>why is this wrong? ","<image PX>","</typed>\n<attachments>\n[image#1]: _tmp/2026-09-16T10-00-00.000Z_shot.png\n</attachments>"]
+```
+
+An image referenced ONLY in the block (its body token was edited out) is still
+appended as a block, exactly as an unreferenced image always was:
+
+```ts
+const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
+const text = "<typed>edited out</typed>\n<attachments>\n[image#1]: _tmp/x.png\n</attachments>";
+JSON.stringify(buildContentBlocks({ text, images: imgs }).map((b) => b.type))
+=> ["text","image"]
+```

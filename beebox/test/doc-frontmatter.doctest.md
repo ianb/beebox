@@ -33,8 +33,48 @@ workstream: current
 issues: [missing.md]
 ---
 # Current`).join("\n")
-=> beebox/docs/implemented-plans/current.md: frontmatter issues does not resolve: missing.md
-beebox/docs/implemented-plans/current.md: implemented-plans requires status implemented
+=> beebox/docs/implemented-plans/current.md: status active is not allowed in implemented-plans; implemented-plans requires implemented
+beebox/docs/implemented-plans/current.md: frontmatter issues does not resolve: missing.md
+```
+
+Every plan directory accepts only its lifecycle states. README files and
+companion review documents remain exempt.
+
+```ts
+check("beebox/docs/plans/done.md", `---
+title: Done
+status: implemented
+workstream: done
+issues: []
+---`).join("\n")
+=> beebox/docs/plans/done.md: status implemented is not allowed in plans; plans requires draft, active, partial
+
+check("beebox/docs/unimplemented-plans/later.md", `---
+title: Later
+status: parked
+workstream: later
+issues: []
+---`).length
+=> 0
+
+check("beebox/docs/plans/README.md", "No frontmatter").length
+=> 0
+
+check("beebox/docs/implemented-plans/current.review.md", "No frontmatter").length
+=> 0
+
+check("beebox/docs/implemented-plans/current.gap-analysis.md", `---
+title: Historical review
+---`).length
+=> 0
+
+check("beebox/docs/plans/missing.md", "# Missing").join("\n")
+=> beebox/docs/plans/missing.md: YAML frontmatter is required
+
+check("beebox/docs/plans/malformed.md", `---
+title: [
+---`).join("\n").startsWith("beebox/docs/plans/malformed.md: invalid YAML frontmatter:")
+=> true
 ```
 
 ## Closed issues require a resolution

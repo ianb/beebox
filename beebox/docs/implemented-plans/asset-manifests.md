@@ -6,6 +6,24 @@ issues: []
 ---
 # Asset Manifests
 
+> **⚠ Historical. Every claim about live behaviour in this document is now false.**
+>
+> **The manifest scheme described here no longer exists** (full-embrace-annex,
+> 2026-09-14). Every box is annex-shaped from its first commit; there is no
+> second asset-tracking scheme, no probe that chooses between them, and no
+> `manifest.json` written anywhere. Deleted with it:
+> `src/core/asset-manifest.ts`, `src/core/asset-manifest-scan.ts`,
+> `src/core/annex/to-annex.ts`, and the `bbx attachments` subcommands `verify`,
+> `migrate`, `add`, `overwrite`, `init-gitignore`, `untrack-assets`, and
+> `to-annex`. `bbx init --skip-git` is gone too. Current model:
+> [`assets.md`](../assets.md).
+>
+> Specifically misleading here: this document is the *specification* of the
+> retired scheme, so nothing in it describes anything that runs. The sentence
+> below about boxes "that have not run `bbx attachments to-annex`" describes an
+> empty set — every box was converted and verified with `git check-ignore`
+> before the scheme was deleted.
+
 **Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
 
 This describes the system built in May 2026 and still on disk in every box that

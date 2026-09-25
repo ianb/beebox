@@ -56,7 +56,7 @@ const serverA: FakeScanServer = await startFakeScanServer({
 });
 const summaryA = await runTarget(targetFor({ folder: unsettledFolder, serverUrl: serverA.url, disposition: "keep" }), { retryRejected: false });
 JSON.stringify(summaryA)
-=> {"uploaded":0,"duplicate":0,"rejected":0,"skippedUnsettled":1,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":0,"duplicate":0,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":1,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue
@@ -83,7 +83,7 @@ const serverB: FakeScanServer = await startFakeScanServer({
 });
 const summaryB = await runTarget(targetFor({ folder: archiveFolder, serverUrl: serverB.url, disposition: "archive" }), { retryRejected: false });
 JSON.stringify(summaryB)
-=> {"uploaded":1,"duplicate":0,"rejected":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":1,"duplicate":0,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue
@@ -117,7 +117,7 @@ const serverC: FakeScanServer = await startFakeScanServer({
 });
 const summaryC = await runTarget(targetFor({ folder: keepFolder, serverUrl: serverC.url, disposition: "keep" }), { retryRejected: false });
 JSON.stringify(summaryC)
-=> {"uploaded":0,"duplicate":1,"rejected":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":0,"duplicate":1,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue
@@ -150,7 +150,7 @@ const serverD: FakeScanServer = await startFakeScanServer({
 });
 const summaryD = await runTarget(targetFor({ folder: rejectFolder, serverUrl: serverD.url, disposition: "archive" }), { retryRejected: false });
 JSON.stringify(summaryD)
-=> {"uploaded":0,"duplicate":0,"rejected":1,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":0,"duplicate":0,"rejected":1,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue
@@ -167,7 +167,7 @@ const serverD2: FakeScanServer = await startFakeScanServer({
 });
 const summaryD2 = await runTarget(targetFor({ folder: rejectFolder, serverUrl: serverD2.url, disposition: "archive" }), { retryRejected: true });
 JSON.stringify(summaryD2)
-=> {"uploaded":1,"duplicate":0,"rejected":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":1,"duplicate":0,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue
@@ -178,6 +178,57 @@ serverD2.putRequests.length
 ```cleanup
 await serverD.close();
 await serverD2.close();
+```
+
+## `rejectedOnUpload` separates a new rejection from a remembered one
+
+`summaryD` above counted `rejected: 1` with `rejectedOnUpload: 0` — the
+`check` endpoint reported a verdict the server had already reached on some
+earlier run. A rejection the server reaches on *this* run's PUT counts in
+both. The distinction is what lets the desktop notifier (`src/notify.ts`)
+report a refusal once: the file stays in place and the server keeps
+remembering its hash, so `rejected` is 1 on every sweep from then on, while
+`rejectedOnUpload` is 1 only on the sweep that learned it.
+
+```
+const newRejectFolder = join(dir, "new-reject-target");
+await mkdir(newRejectFolder);
+await writeSettledFile(newRejectFolder, "first-sight.pdf", "<html>not a pdf</html>");
+const serverR: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  putOutcome: () => ({ status: 422, body: { status: "rejected", reason: "magic bytes say text/html" } }),
+});
+const summaryR = await runTarget(targetFor({ folder: newRejectFolder, serverUrl: serverR.url, disposition: "archive" }), { retryRejected: false });
+JSON.stringify(summaryR)
+=> {"uploaded":0,"duplicate":0,"rejected":1,"rejectedOnUpload":1,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+```
+
+Still never dispositioned — a PUT-time rejection is the same "leave it in
+place" outcome as a remembered one:
+
+```continue
+(await readdir(newRejectFolder)).join(",")
+=> first-sight.pdf
+```
+
+`--retry-rejected` re-PUTs a rejection the server already remembers, and that
+refusal is the same fact a second time — so it counts in `rejected` but NOT in
+`rejectedOnUpload`. Without this, a settle retry (which re-walks the whole
+folder in the same sweep) would report one refused file as two:
+
+```continue
+const serverR2: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "rejected", reason: "the server already knows" }),
+  putOutcome: () => ({ status: 422, body: { status: "rejected", reason: "still not a pdf" } }),
+});
+const summaryR2 = await runTarget(targetFor({ folder: newRejectFolder, serverUrl: serverR2.url, disposition: "archive" }), { retryRejected: true });
+JSON.stringify(summaryR2)
+=> {"uploaded":0,"duplicate":0,"rejected":1,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+```
+
+```cleanup
+await serverR.close();
+await serverR2.close();
 ```
 
 ## A file that changes between hash and disposition is left alone
@@ -202,7 +253,7 @@ const serverE: FakeScanServer = await startFakeScanServer({
 });
 const summaryE = await runTarget(targetFor({ folder: raceFolder, serverUrl: serverE.url, disposition: "archive" }), { retryRejected: false });
 JSON.stringify(summaryE)
-=> {"uploaded":1,"duplicate":0,"rejected":0,"skippedUnsettled":0,"skippedIdentityChanged":1,"errors":0}
+=> {"uploaded":1,"duplicate":0,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":1,"errors":0}
 ```
 
 ```continue
@@ -234,7 +285,7 @@ const serverF: FakeScanServer = await startFakeScanServer({
 });
 const summaryF = await runTarget(targetFor({ folder: rateFolder, serverUrl: serverF.url, disposition: "keep" }), { retryRejected: false });
 JSON.stringify(summaryF)
-=> {"uploaded":1,"duplicate":0,"rejected":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
+=> {"uploaded":1,"duplicate":0,"rejected":0,"rejectedOnUpload":0,"skippedUnsettled":0,"skippedIdentityChanged":0,"errors":0}
 ```
 
 ```continue

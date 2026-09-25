@@ -11,6 +11,7 @@
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+import { writeRouterLogLine } from "./router-log-file.js";
 
 export const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 // This module lives at <repo>/workstreams-app/src/router/. Keep the repository
@@ -117,9 +118,13 @@ export function worktreeRoot(name: string): string {
   return name === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, name);
 }
 
-/** Every router module logs through this one line format. */
+/** Every router module logs through this one line format. The same line goes to
+ *  the console and, once `startRouterLogFile` has run at boot, to the durable
+ *  log a post-mortem reads (router-log-file.ts). */
 export function log(msg: string): void {
-  console.log(`[router ${new Date().toISOString()}] ${msg}`);
+  const line = `[router ${new Date().toISOString()}] ${msg}`;
+  console.log(line);
+  writeRouterLogLine(line);
 }
 
 export function sleep(ms: number): Promise<void> {

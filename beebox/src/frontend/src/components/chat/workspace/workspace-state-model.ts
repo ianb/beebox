@@ -30,8 +30,6 @@ export function createEmptyWorkspaceState(): WorkspaceState {
   };
 }
 
-export const EMPTY_WORKSPACE_STATE: WorkspaceState = createEmptyWorkspaceState();
-
 export function oppositePane(pane: PaneId): PaneId {
   return pane === "left" ? "right" : "left";
 }
@@ -192,6 +190,7 @@ export function openWorkspaceDestination(state: WorkspaceState, action: Extract<
     if (state.mobileView.kind === "chat") return oppositePane(state.chatAnchor);
     return existing ?? paneForPath(state, state.mobileView.path) ?? state.lastCardPane;
   }
+  if (action.destinationPane !== undefined) return action.destinationPane;
   if (state.layout.kind === "focus") return existing ?? state.layout.pane;
   const projection = projectWorkspace(state, "desktop");
   if (projection.transcript === "full") return oppositePane(state.chatAnchor);

@@ -1,12 +1,12 @@
 #!/usr/bin/env tsx
 /**
- * `bbx upgrade` end-to-end smoke gate (Track E, chunk E1+E2's "RUN it" item).
+ * `bbx engine upgrade` end-to-end smoke gate (Track E, chunk E1+E2's "RUN it" item).
  *
  * Runs entirely OUTSIDE this repo, the same "stranger sequence" as
  * `smoke-external-box.ts`: pack a release tarball (or reuse the latest one),
  * derive a SECOND tarball with the same code but a different `version` field
  * (no rebuild needed — only `package.json`'s `version` differs), scaffold a
- * fresh box against the first, then `bbx upgrade --to` the second and
+ * fresh box against the first, then `bbx engine upgrade --to` the second and
  * assert the commit trailer + installed version. Then induces a failure
  * (`--to` a nonexistent path — exactly the preflight `assertSpecResolvable`
  * check in `src/cli/commands/upgrade.ts`) and asserts the box is left
@@ -39,9 +39,9 @@ function requireVersion(parsed: unknown): string {
 
 /** A fresh scaffold's `src/` has nothing but the CLAUDE.md guides — no
  *  `.ts`/`.tsx` files — so `tsc -p .` (the box tsconfig's `include: ["src"]`)
- *  fails with TS18003 ("no inputs found") before `bbx upgrade` even runs.
+ *  fails with TS18003 ("no inputs found") before `bbx engine upgrade` even runs.
  *  Real boxes accumulate schemas/views quickly; the smoke test seeds one so
- *  the typecheck step (which `bbx upgrade` also runs) has something real to
+ *  the typecheck step (which `bbx engine upgrade` also runs) has something real to
  *  check, same as `smoke-external-box.ts`'s WIDGET_SCHEMA. */
 const WIDGET_SCHEMA = `import { body, cardSchema } from "beebox/cards";
 import { z } from "beebox/schema";
@@ -172,7 +172,7 @@ async function deriveSecondVersionTarball(args: { firstTarball: string; scratchD
 }
 
 async function scaffoldBox(args: { tarball: string; boxDir: string }): Promise<void> {
-  await step("pnpm dlx <tarball> bbx init . (scaffold)", {
+  await step("pnpm dlx <tarball> bbx engine init . (scaffold)", {
     file: "pnpm",
     args: [
       "dlx",
@@ -196,7 +196,7 @@ async function scaffoldBox(args: { tarball: string; boxDir: string }): Promise<v
   await writeFile(path.join(args.boxDir, "src/schemas/widget.ts"), WIDGET_SCHEMA);
 
   // Commit everything the scaffold + real install produced (notably
-  // pnpm-lock.yaml, which `bbx init`'s own commit predates) — `bbx upgrade`'s
+  // pnpm-lock.yaml, which `bbx engine init`'s own commit predates) — `bbx engine upgrade`'s
   // preflight requires a clean tree to snapshot against, same as any real
   // boxholder would need to commit their `pnpm install` before upgrading.
   await step("git add -A (scaffold + install + widget schema)", { file: "git", args: ["add", "-A"], cwd: args.boxDir });
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
     // every step runs with cwd=boxDir directly — no nested `content/` root.
     const bbxBin = path.join(boxDir, "node_modules/.bin/bbx");
 
-    await step("bbx upgrade --to <second tarball>", {
+    await step("bbx engine upgrade --to <second tarball>", {
       file: bbxBin,
       args: ["upgrade", "--to", "file:" + secondTarball],
       cwd: boxDir,
@@ -269,7 +269,7 @@ async function main(): Promise<void> {
       args: ["status", "--porcelain"],
       cwd: boxDir,
     });
-    const failure = await expectFailure("bbx upgrade --to <nonexistent path> (induced failure)", {
+    const failure = await expectFailure("bbx engine upgrade --to <nonexistent path> (induced failure)", {
       file: bbxBin,
       args: ["upgrade", "--to", "/nonexistent/path/does-not-exist.tgz"],
       cwd: boxDir,

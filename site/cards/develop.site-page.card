@@ -1,0 +1,33 @@
+---
+title: "For developers"
+summary: "The prompt that points an agent at the contributor documentation, and the two files to read first."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: creator
+      contribution: Asked for the developer prompt to live on its own page inside the site.
+  ai:
+    transcription: none
+    drafting: Drafted the page around the contributor prompt and the entry points the documentation already names.
+    editing: Kept it to the prompt and two links.
+theme: paper
+---
+
+# For developers
+
+Bee Box is developed in an unusually agentic way: one maintainer directing
+coding agents, with the instructions those agents work from checked into the
+repository. The contributor documentation describes that process, the repo
+layout, how to run it from source, how tests work, and how a change lands.
+
+{% agent-prompt title="Work on the code" id="develop-with-your-agent" %}
+```
+Read https://beebox.run/llms-dev.txt and follow its links as needed. I'm
+going to work on the Bee Box codebase; answer my questions from those pages.
+```
+{% /agent-prompt %}
+
+Reading it yourself: start at
+[CONTRIBUTING.md](https://github.com/ianb/beebox/blob/main/CONTRIBUTING.md)
+in the repository, or the [contributor entry point](https://beebox.run/llms-dev.txt).
+Bug reports are invited; pull requests are not yet solicited.

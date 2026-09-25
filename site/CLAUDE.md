@@ -9,13 +9,13 @@ the static navigation contract are documented in [card-authoring.md](card-author
 That document describes the current implementation; the earlier fisheye
 experiments below remain supported inside card bodies.
 
-**Cards are the native source format.** A page is a callback-box card
+**Cards are the native source format.** A page is a Bee Box card
 (`<slug>.site-page.card` — YAML frontmatter + markdown body, type carried by
-the filename) in exactly the shape a box authors it, so a page moves box → repo
-as a verbatim file copy. There is no importer and no conversion step; the box →
-repo transfer is a plain file copy today, and *where* these cards should live
-long-term (repo, box export, something else) is an open question — see the
-"Direction shift (2026-08-19)" section of the plan.
+the filename). The repository is canonical; a local box may hold private
+editorial work and expose only selected cards under `_publish/public-site/`.
+`box-export.ts` validates that selected graph and copies it into `site/cards/`,
+mapping the box-only `site-doc` suffix to the public `doc` suffix. See the
+workbench workflow in [card-authoring.md](card-authoring.md).
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
 - Full plan / tracks: `../beebox/docs/plans/public-site.md`
@@ -48,6 +48,8 @@ and needs no box or application server to serve them.
 ```bash
 pnpm --dir site build                    # base derived from the git branch (router view)
 pnpm --dir site build --base /beebox/   # what the Pages workflow runs
+pnpm --dir site box-export --box <path> # dry-run selected workbench cards
+pnpm --dir site box-export --box <path> --apply
 pnpm --dir site lint                     # eslint (roots: ["."] — sources at package root)
 pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
@@ -69,7 +71,12 @@ writes the input manifest last (so a partial build never masks staleness).
 ## Layout
 
 - `build.ts` — CLI entry: reads the page cards, writes HTML + `.md` twins +
-  `llms.txt`, link-checks, resolves the base path.
+  `llms.txt`, link-checks, resolves the base path. Its parameterized
+  `buildSite()` core also validates temporary workbench exports.
+- `box-export.ts` — fail-closed box-workbench export. Reads only
+  `<box>/_publish/public-site/`; dry-runs by default; maps `site-doc` to `doc`;
+  validates with `buildSite()`; `--apply` writes additions and updates but
+  never deletes, commits, pushes, or deploys.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
   markdown rendering. `workspace.ts` supplies the card shell and
   `navigation-script.ts` its optional browser navigation. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose
@@ -131,3 +138,147 @@ writes the input manifest last (so a partial build never masks staleness).
   `story/coverage.json` — which docs were scanned, in which runs/variants, and
   whether the scanned content still matches disk (`--check` reports drift,
   nonzero exit if any). The ledger is the only committed record of the runs.
+
+## Agent docs (`/docs/`, `llms.txt`)
+
+A second, machine-facing corpus at `/docs/` plus a replaced `llms.txt`, for a
+general chatbot fetching on behalf of someone deciding whether to use Bee Box.
+Full design: `../beebox/docs/plans/agent-docs.md`; content conventions for
+authors: `docs-authoring.md`. Built by `docs.ts` (`buildDocsCorpus`, split
+across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-origin.ts`,
+`docs-manifest.ts`, `docs-generated.ts`, `docs-authored.ts`, `docs-compared.ts`,
+`docs-index.ts`, `docs-html.ts`), called once from `build.ts` and skipped for
+box-export dry-runs (`buildAgentDocs: false`).
+
+**Every corpus page is spartan HTML, beside its plain-markdown twin.** A
+chat-agent fetcher handling raw markdown "did dumb stuff" — invented URLs,
+ignored links — so every `.md` file under `dist/docs/` (each published doc,
+plus each generated per-directory `index.md`) gets a same-named `.html`
+rendering: a complete document (doctype, `<title>` from the page's first H1,
+one small inline `<style>`, a one-line `<nav>` of directory/index/root links,
+the rendered body, a footer linking the `.md` twin), rendered through
+`render.ts`'s Markdoc pipeline via `renderCorpusMarkdown` — never `renderBody`
+— so there is no tag schema to validate a corpus page's tag-free markdown
+against. A literal `{% … %}` shown as prose (the generated engine docs quote
+the syntax) is escaped to `&#123;%` outside fenced/inline code before parsing
+(`docs-html.ts`'s `escapeMarkdocBraces`), so it renders as text instead of a
+malformed-tag build failure. Every already-absolute corpus link
+(`<origin><base>docs/<path>.md[#anchor]`) is rewritten to its `.html` form in
+the HTML rendering (`rewriteCorpusLinksToHtml`) — the `.md` twin keeps linking
+`.md` to `.md`, so a fetcher that lands on the plain-text side never needs to
+resolve anything itself, and one already on the HTML side always finds
+another `.html` page. `docs-html.ts` does all of this; `docs.ts` calls it once
+per doc and once per directory index.
+
+**The front page (`llms.txt`) is a complete, deep index.** Built the same way
+as any corpus page — markdown first, rendered through the same pipeline — but
+its markdown (`renderAgentLlmsTxt`, `docs-index.ts`) lists every page under
+the spine plus `uses/`, `capabilities/`, `concepts/`, `security/`,
+`architecture/`, `design/`, `compared/`, `contracts/`, `reference/`, and
+`reference/cards/` (`DEEP_DIRS`, in that display order) — one `<li>` per page,
+`title-or-filename`: description. `dev/` and `install/` are deliberately
+NOT expanded here (too much for a front page); each gets one pointer line
+instead, to its own entry page. The rendered HTML is written to `dist/llms.txt`
+*and* `dist/docs/index.html` (identical bytes), and the plain-markdown
+source additionally to `dist/llms.md` (the front page's own plain-text twin —
+`llms.txt` itself now serves `text/html`, "and that's fine": chat fetchers
+already treat any 200 as fetchable regardless of extension). `## Site pages`
+links each human page by its own rendered URL (`page.href`, already absolute),
+not its `.md` twin — the front page is HTML, so it should link HTML.
+
+**Two entry pages carry what the front page omits: `llms-dev.txt` and
+`llms-install.txt`.** Both are one shape (`renderEntryLlmsTxt`, `docs-index.ts`):
+`# <title>`, a directory's own `README.md` `description:` + body as preamble,
+an optional `## Start here` (`start-here: [filenames]`), `## Files` (every
+other page under that directory, sorted), `## Also` (fixed pointers back into
+the corpus, plus `llms.txt`). `dev/`'s README is required — no
+`site/docs/dev/README.md` means no `llms-dev.txt`, not a build failure.
+`install/`'s README is optional — missing one synthesizes "How to get a box
+running." as the summary with an empty preamble, since every box needs an
+install path. Each writes its own plain-text twin (`llms-dev.md`,
+`llms-install.md`) alongside its HTML `.txt`.
+
+**A directory's own `README.md`** works like the corpus-root one (never
+published, `description:` + optional `start-here:` frontmatter) but scoped to
+that directory — `docs-authored.ts` keys them by directory
+(`AuthoredCorpus.dirReadmes`). `dev/` and `install/` consume theirs (above);
+any other directory's README parses and scrub-gates like every authored file
+but currently goes unused.
+
+**Three source kinds, one published set.** Authored (`docs/**/*.md`, mirroring
+the published tree, frontmatter `description:` and — under `compared/` only —
+a `compared:` block); promoted (`docs-manifest.yaml`, one line per admitted
+repo file — the loader hard-codes both the admissible source prefixes (plus
+three individually admitted files: `beebox/CLAUDE.md`, `beebox/code-style.md`,
+`beebox/frontend.md`) and the admissible publish directories (including
+`dev/`), so a manifest entry outside either fails the build regardless);
+generated (`beebox/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
+exec tsx` on every build — no filesystem side effect, ~1s — producing
+`reference/` and `reference/cards/`).
+
+**The scrub gate** (`docs-scrub.ts`) runs on every doc kind before it reaches
+`dist/docs/`: a real home path (reusing `bin/path-leak-check.ts`'s `HOME_PATH`
+and `ALLOWED_NAMES`), a path or link into `private-issues/` (naming the boundary itself is fine), or a named box under a boxes directory
+(`~/src/boxes/<name>`, `/home/<user>/boxes/<name>`; `test1`, tooling folders,
+the `example-names.md` roster, and placeholders pass) fails the build naming
+file:line. Authored docs are additionally scanned against the developer's
+gitignored `.commit-blocklist` (found the way the commit hook finds it: the
+worktree's copy, else the main checkout's; `!` allows and `file:` ignores
+honored). Promoted and generated docs are not: their text passed the hook's
+staged-addition scan when it entered the repo, and a whole-file rescan trips
+on English words that collide with a personal regex. The gate is mechanical —
+paths and names, not tone — so a hit in a generated doc means the
+*generator's* wording needs to lose the literal, not that the gate should be
+loosened. Cloudflare has no blocklist, so that half of the gate is local-only.
+
+**Links** (`docs-links.ts`): every link this corpus emits is an absolute URL —
+`docsOrigin(base)` (`docs-origin.ts`) plus `base` plus the published path,
+because a chat agent fetching `llms.txt` does not reliably resolve a
+site-relative or page-relative href. `docsOrigin` returns the canonical
+`https://beebox.run` only when `base === "/"` (the Cloudflare build); any
+other base (the dev router) resolves through `http://localhost:3210`. A
+promoted doc's relative link into the published set rewrites to that absolute
+URL; into an excluded root (`plans/`, `issues/`, `research/`, …) flattens to
+its link text; any other tracked repo file rewrites to a GitHub blob URL; a
+nonexistent target fails the build. An authored doc's links (and a root or
+directory `README.md`'s preamble) are already published-relative — the build
+validates they resolve within the published set (including the generated
+per-directory `index.md` files) and then rewrites them absolute. A generated
+doc's link to another engine doc by bare filename resolves the same way when
+that filename is in the generated set; a filename outside it (the engine docs
+are not ours to edit here) is left as-is and counted in the build's summary
+line.
+
+**Adding a doc:** authored — add the `.md` under `docs/` mirroring where it
+should publish, with `description:` frontmatter (and `compared:` if it's under
+`compared/`); a new directory needs a `docs/<dir>/index.md` stub too (frontmatter
+`description:` only — the *published* index.md is always generated, never
+authored). Promoted — add a line to `docs-manifest.yaml`; that line is the
+vetting act. Generated — nothing to do; it tracks the engine.
+
+**Dev-router staleness.** The Cloudflare build always runs the export script,
+so it's never stale. The dev router rebuilds from the input manifest without
+running the export, so its `reference/` set can lag an engine edit until the
+next explicit `pnpm --dir site build` or a `generateDocs` run refreshes
+`beebox/box-docs/.hash` (which `sources.ts` folds into the manifest, tolerating
+its absence). Accepted as dev-only staleness.
+
+**Static control files** (`docs-static.ts`): the build writes `_headers` —
+every `.md` under `/docs/`, each page twin, and each entry point's `.md` twin
+served as `text/plain; charset=utf-8` (because chat-app fetchers reject
+`text/markdown`); each entry point's `.txt` (`llms.txt`, `llms-dev.txt`,
+`llms-install.txt`, whichever were built) served as `text/html; charset=utf-8`
+— a `.html` sibling next to a corpus `.md` needs no rule, Cloudflare already
+serves it as HTML by default. Also a `404.html` (without it Pages answers
+unknown paths with the home page and a 200, which rewards a fetcher's guessed
+URL), and a permissive `robots.txt`. Cloudflare reads them from `dist/`; the
+router ignores them.
+
+**Whose words.** On the authored pages a blockquote is the maintainer's own
+words and nothing else is set as one; the front page states this. See
+`docs-authoring.md`, "Whose words".
+
+**Themes.** `docs-themes.md` is the internal frame the corpus is written
+against (ten themes, how each is expressed, where each is thin). Not
+published; the front page carries a short version. See `docs-authoring.md`.
+

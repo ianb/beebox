@@ -23,6 +23,14 @@ export interface Env {
    */
   PUB_STORE: R2Bucket;
   /**
+   * Pinned publication id for the isolated site Worker. Both this and
+   * {@link Env.HOST_HANDLE} must be configured together; partial/invalid setup
+   * fails closed and never selects legacy shared-worker routing.
+   */
+  PUB_ID?: string;
+  /** Random non-capability Worker identity; checked against the R2 site manifest. */
+  HOST_HANDLE?: string;
+  /**
    * The R2 bucket holding Worker-WRITTEN ingestion data: `submissions/<id>/...`
    * (Track F) and `access-log/<pub-id>/<id>.json` (Track D). Split from
    * {@link Env.PUB_STORE} (Codex cross-review amendment 1, CRITICAL) so the box's

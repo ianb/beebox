@@ -1,19 +1,25 @@
 /**
  * HistoryFilterBar - Filter control strip for the History view.
  *
- * Exposes the browseable trailer axes — connector, workflow, user
- * touchpoint, and feedback signal — plus an active-session chip that
- * can be dismissed to drop the session filter.
+ * Exposes the browseable trailer axes — connector, what triggered the
+ * commit, user touchpoint, and feedback signal — plus an active-session
+ * chip that can be dismissed to drop the session filter.
  */
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import {
+  TRIGGER_KINDS,
+  TRIGGER_KIND_LABELS,
+  type CommitTrigger,
+} from "@shared/commit-trailers";
 import { cn } from "../../lib/cn";
 import { Badge } from "../ui/Badge";
 import { Toggle } from "../ui/Toggle";
 
 export interface HistoryFilterState {
   connectors: string[];
-  workflows: string[];
+  /** `<kind>/<name>` trigger ids — see @shared/commit-trailers. */
+  triggers: string[];
   touchpoint: boolean;
   feedback: boolean;
   session: string | null;
@@ -22,19 +28,30 @@ export interface HistoryFilterState {
 
 export interface HistoryFilterFacets {
   connectors: string[];
-  workflows: string[];
+  triggers: CommitTrigger[];
 }
 
 interface HistoryFilterBarProps {
   filter: HistoryFilterState;
   facets: HistoryFilterFacets | undefined;
   onChange: (next: HistoryFilterState) => void;
+  idPrefix: string;
 }
 
-export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarProps) {
+export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: HistoryFilterBarProps) {
+  const triggerOptions = useMemo(
+    () =>
+      (facets?.triggers ?? []).map((trigger) => ({
+        value: trigger.id,
+        label: trigger.name,
+        group: TRIGGER_KIND_LABELS[trigger.kind].group,
+      })),
+    [facets]
+  );
+
   const activeCount =
     filter.connectors.length +
-    filter.workflows.length +
+    filter.triggers.length +
     (filter.touchpoint ? 1 : 0) +
     (filter.feedback ? 1 : 0) +
     (filter.session ? 1 : 0) +
@@ -43,7 +60,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
   const clearAll = () => {
     onChange({
       connectors: [],
-      workflows: [],
+      triggers: [],
       touchpoint: false,
       feedback: false,
       session: null,
@@ -51,7 +68,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
     });
   };
 
-  const toggleValue = (axis: "connectors" | "workflows", value: string) => {
+  const toggleValue = (axis: "connectors" | "triggers", value: string) => {
     const current = filter[axis];
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -63,34 +80,35 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
     <section aria-label="History filters" className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectPopover
-          id="bbx-history-filter-connector"
+          id={`${idPrefix}-connector`}
           label="Connector"
-          options={facets?.connectors ?? []}
+          options={(facets?.connectors ?? []).map((value) => ({ value, label: value }))}
           selected={filter.connectors}
           onToggle={(v) => toggleValue("connectors", v)}
         />
         <MultiSelectPopover
-          id="bbx-history-filter-workflow"
-          label="Workflow"
-          options={facets?.workflows ?? []}
-          selected={filter.workflows}
-          onToggle={(v) => toggleValue("workflows", v)}
+          id={`${idPrefix}-trigger`}
+          label="Triggered by"
+          options={triggerOptions}
+          groupOrder={TRIGGER_KINDS.map((kind) => TRIGGER_KIND_LABELS[kind].group)}
+          selected={filter.triggers}
+          onToggle={(v) => toggleValue("triggers", v)}
         />
         <ToggleChip
-          id="bbx-history-filter-touchpoint"
+          id={`${idPrefix}-touchpoint`}
           label="Touchpoint"
           checked={filter.touchpoint}
           onChange={(v) => onChange({ ...filter, touchpoint: v })}
         />
         <ToggleChip
-          id="bbx-history-filter-feedback"
+          id={`${idPrefix}-feedback`}
           label="Feedback"
           checked={filter.feedback}
           onChange={(v) => onChange({ ...filter, feedback: v })}
         />
         {activeCount > 0 ? (
           <button
-            id="bbx-history-filter-clear"
+            id={`${idPrefix}-clear`}
             type="button"
             onClick={clearAll}
             className="text-[11px] text-warm-500 hover:text-warm-700 underline ml-auto"
@@ -104,7 +122,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
           <Badge tone="accent" size="sm">
             <span className="font-mono">Chat {filter.session.slice(0, 8)}</span>
             <button
-              id="bbx-history-filter-clear-session"
+              id={`${idPrefix}-clear-session`}
               type="button"
               onClick={() => onChange({ ...filter, session: null })}
               className="ml-1 text-primary-dark hover:text-danger"
@@ -119,7 +137,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Path {filter.path}</span>
-            <button id="bbx-history-filter-clear-path" type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
+            <button id={`${idPrefix}-clear-path`} type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
           </Badge>
         </div>
       ) : null}
@@ -127,16 +145,25 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
   );
 }
 
+/** One selectable value on a filter axis; `group` heads a labelled section. */
+interface FilterOption {
+  value: string;
+  label: string;
+  group?: string;
+}
+
 interface MultiSelectPopoverProps {
   /** Stable `bbx-` control address for the popover's trigger (see lib/ui-scan). */
   id: string;
   label: string;
-  options: string[];
+  options: FilterOption[];
+  /** Group headings in display order; groups with no options are skipped. */
+  groupOrder?: string[];
   selected: string[];
   onToggle: (value: string) => void;
 }
 
-function MultiSelectPopover({ id, label, options, selected, onToggle }: MultiSelectPopoverProps) {
+function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle }: MultiSelectPopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -159,12 +186,21 @@ function MultiSelectPopover({ id, label, options, selected, onToggle }: MultiSel
   }, [open]);
 
   const hasSelection = selected.length > 0;
+  const firstLabel = options.find((o) => o.value === selected[0])?.label ?? selected[0];
   const summary =
     selected.length === 0
       ? label
       : selected.length === 1
-        ? `${label}: ${selected[0]}`
-        : `${label}: ${selected[0]} +${selected.length - 1}`;
+        ? `${label}: ${firstLabel}`
+        : `${label}: ${firstLabel} +${selected.length - 1}`;
+
+  // Only heading a group when more than one is present: a single-kind list
+  // reads as a plain list of run names rather than one redundant header.
+  const groups = groupOrder?.filter((g) => options.some((o) => o.group === g)) ?? [];
+  const sections: { heading: string | null; options: FilterOption[] }[] =
+    groups.length > 1
+      ? groups.map((heading) => ({ heading, options: options.filter((o) => o.group === heading) }))
+      : [{ heading: null, options }];
 
   return (
     <div className="relative" ref={rootRef}>
@@ -183,23 +219,29 @@ function MultiSelectPopover({ id, label, options, selected, onToggle }: MultiSel
           {options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-warm-500 italic">No values</div>
           ) : (
-            options.map((opt) => {
-              const isSelected = selected.includes(opt);
-              return (
-                <label
-                  key={opt}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-warm-700 hover:bg-warm-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onToggle(opt)}
-                    className="accent-primary"
-                  />
-                  <span className="truncate">{opt}</span>
-                </label>
-              );
-            })
+            sections.map((section) => (
+              <div key={section.heading ?? ""}>
+                {section.heading === null ? null : (
+                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-500">
+                    {section.heading}
+                  </div>
+                )}
+                {section.options.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-warm-700 hover:bg-warm-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(opt.value)}
+                      onChange={() => onToggle(opt.value)}
+                      className="accent-primary"
+                    />
+                    <span className="truncate">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            ))
           )}
         </div>
       ) : null}

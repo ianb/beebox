@@ -1,56 +1,31 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
-import { TRPCError } from "@trpc/server";
-import { getGoogleAuth } from "../../../connectors/google-auth.js";
-import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
 import {
+  availableCalendarsWithSyncing,
   loadCalendarConfig,
   saveCalendarConfig,
-  fetchAvailableCalendars,
   type CalendarConfig,
 } from "../../../connectors/calendar-config.js";
-import { createGoogleCalendarService } from "../../../services/google-calendar.js";
-import { createGoogleAuthService } from "../../../services/google-auth.js";
+import { resolveCalendarService } from "../../../connectors/google-access.js";
+import { googleService } from "../google-service.js";
 import { BOX_DIRS } from "../../../lib/paths.js";
 import * as path from "node:path";
 
 export const calendarRouter = router({
+  /**
+   * Every calendar the grant can see, marked with whether this box syncs it.
+   *
+   * The settings page's picker and `bbx calendar calendars` from an agent's
+   * shell are the same call: the credential stays in this process either way
+   * (`docs/plans/agent-capability-delegation.md`).
+   */
   available: publicProcedure.query(async ({ ctx }) => {
-    // Skip policy check when a fake service is injected (tests)
-    if (!ctx.services.calendar) {
-      const allowed = await isGoogleServiceAllowed(ctx.boxRoot, "calendar");
-      if (!allowed) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Calendar service not enabled for this box. Enable it in box settings.",
-        });
-      }
-    }
-
-    let svc = ctx.services.calendar;
-    if (!svc) {
-      const auth = await getGoogleAuth(ctx.boxRoot);
-      if (!auth) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Google auth not configured. Run: bbx google-auth",
-        });
-      }
-      svc = createGoogleCalendarService(createGoogleAuthService(auth, { boxRoot: ctx.boxRoot }));
-    }
-    const available = await fetchAvailableCalendars(svc);
-
-    const config = await loadCalendarConfig(ctx.boxRoot);
-    const syncList = config.calendars || ["primary"];
-    const syncing = new Set(syncList);
-    const primaryId = available.find((c) => c.primary)?.id;
-
-    return available.map((cal) => ({
-      ...cal,
-      syncing: syncing.has(cal.id) || (cal.primary === true && syncing.has("primary")),
-      ...(cal.primary && primaryId ? { resolvedId: primaryId } : {}),
-    }));
+    const service = await googleService({
+      injected: ctx.services.calendar,
+      resolve: () => resolveCalendarService(ctx.boxRoot),
+    });
+    return availableCalendarsWithSyncing({ boxRoot: ctx.boxRoot, service });
   }),
 
   config: publicProcedure.query(async ({ ctx }) => {

@@ -12,7 +12,7 @@ should be extracted behind something like `pnpm serve` / its own entry point.
 
 `bbx` currently exposes **62 registered top-level commands**. `serve` and `hub`
 are the clearest non-agent ones; the whole surface deserves a pass, tracked in
-[audit the `bbx` subcommand surface](2026-08-08-audit-bbx-subcommand-surface.md).
+[audit the `bbx` subcommand surface](../closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md).
 
 ## The bigger cost is dependencies, not bundle bytes
 

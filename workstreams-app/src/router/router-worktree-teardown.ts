@@ -28,6 +28,17 @@ export interface CoreState {
   effects: RouterEffects;
   config: RouterCoreConfig;
   worktrees: Map<string, WorktreeHandle>;
+  /**
+   * Automatic restarts spent per worktree NAME, which is what makes the bound
+   * real: handles are per-generation and every retry builds a new one, so a
+   * counter on the handle would reset each time round.
+   *
+   * Evicted when a generation reaches `ready` (a worktree that came up has no
+   * retry history worth keeping) and when the boxholder asks for a retry
+   * explicitly (a human asking is a fresh start, not the fourth of three).
+   * Bounded by the number of worktree names, one integer each.
+   */
+  retryAttempts: Map<string, number>;
   log: (msg: string) => void;
 }
 
@@ -45,6 +56,19 @@ const STALE_CHECK_INTERVAL_MS = 5_000;
 export function browseDirsFor(state: CoreState, name: string): { socketDir: string; profileDir: string } {
   const base = path.join(state.config.browseDir, name);
   return { socketDir: path.join(base, "socket"), profileDir: path.join(base, "profile") };
+}
+
+/**
+ * The secret store a worktree's box reads — its own, beside the browse dirs
+ * (`<state>/secrets/<name>.json`), so a test box never touches the
+ * boxholder's real `~/.config/beebox/secrets.json`. Undefined for `main`,
+ * which is the real deployment surface and keeps the default store. Not under
+ * the browse dir: those are torn down with the worktree's browser, and a
+ * worktree's test keys should survive a router restart.
+ */
+export function isolatedSecretsFileFor(browseDir: string, name: string): string | undefined {
+  if (name === "main") return undefined;
+  return path.join(path.dirname(browseDir), "secrets", `${name}.json`);
 }
 
 // SIGTERM→SIGKILL escalation for one generation's children — shared by the
@@ -191,6 +215,14 @@ export async function stopWorktree(state: CoreState, name: string): Promise<void
   const handle = worktrees.get(name);
   if (!handle) return;
   worktrees.delete(name);
+  // Same reasoning as `clearFailed`: a deliberate stop is a fresh start, so it
+  // resets the automatic-retry budget. Without this, stopping a worktree whose
+  // retry was mid-flight leaves the count behind, and the NEXT cold start's
+  // first failure is mislabelled as attempt 2 with a short budget — for a
+  // reason nothing visible to the boxholder explains. (An idle stop reaches
+  // here too, but a ready generation already cleared its own count, so that
+  // case is a no-op.)
+  state.retryAttempts.delete(name);
   const ready = readyLifecycle(handle);
   if (!ready) {
     // `starting`: the in-flight start owns the children (they live in
@@ -283,6 +315,10 @@ export function clearFailed(state: CoreState, name: string): boolean {
   const handle = worktrees.get(name);
   if (handle && failedLifecycle(handle)) {
     worktrees.delete(name);
+    // The boxholder asking for a retry is a fresh start, not the fourth of
+    // three: the automatic-retry budget resets. `ensureRunning`'s own retry
+    // deliberately does NOT come through here, so it cannot reset its own bound.
+    state.retryAttempts.delete(name);
     return true;
   }
   return false;

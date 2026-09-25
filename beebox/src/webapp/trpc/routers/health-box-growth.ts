@@ -6,7 +6,7 @@ import { getBoxTime } from "../../../lib/time.js";
 import { ownerProcedure } from "../trpc.js";
 
 export const acknowledgeBoxGrowthProcedure = ownerProcedure.mutation(async ({ ctx }) => {
-  await acknowledgeCurrentBoxGrowth(ctx.boxRoot, { now: getBoxTime(ctx.boxRoot) });
+  await acknowledgeCurrentBoxGrowth(ctx.boxRoot);
   return { success: true as const };
 });
 

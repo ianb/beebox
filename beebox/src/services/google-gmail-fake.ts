@@ -16,7 +16,7 @@
 
 import { NotFoundError } from "../lib/errors.js";
 import { messageMatchesQuery } from "./gmail-query-match.js";
-import type { GoogleGmailService } from "./google-gmail.js";
+import { GmailDraftRejectedError, type GoogleGmailService } from "./google-gmail.js";
 import type {
   GmailMessage,
   GmailAttachmentData,
@@ -55,6 +55,8 @@ export interface FakeGoogleGmailService extends GoogleGmailService {
   attachments: Map<string, GmailAttachmentData>;
   /** Drafts created via createDraft() — tests inspect this directly. */
   drafts: FakeDraftRecord[];
+  /** When set, createDraft() rejects every draft as Gmail does a malformed one (HTTP 400). */
+  rejectDrafts: string | null;
   /** History records accumulated by addMessage/addLabelsToMessage. */
   historyRecords: GmailHistoryRecord[];
   /** Add a message and record a messagesAdded history entry. */
@@ -90,6 +92,7 @@ export function createFakeGoogleGmail(
     labels: [...(opts?.labels ?? [])],
     attachments: opts?.attachments ? new Map(opts.attachments) : new Map(),
     drafts: [],
+    rejectDrafts: null,
     historyRecords: [...(opts?.historyRecords ?? [])],
 
     addMessage(msg) {
@@ -189,6 +192,7 @@ export function createFakeGoogleGmail(
     },
 
     async createDraft(createOpts) {
+      if (fake.rejectDrafts !== null) throw new GmailDraftRejectedError(fake.rejectDrafts);
       draftSeq += 1;
       const draftId = `r-fake-${draftSeq}`;
       const messageId = `m-fake-${draftSeq}`;

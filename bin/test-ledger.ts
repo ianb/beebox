@@ -22,6 +22,8 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
+import { availableParallelism } from "node:os";
+import { pressureDecision, readMemoryPressure } from "./host-pressure.js";
 import { changedPaths, git, gitCommonDir } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
 import {
@@ -30,12 +32,15 @@ import {
   type RunContext,
   type RunMode,
 } from "./test-ledger-store.js";
+import { failureRecapLines } from "./test-ledger-lib.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 import {
   PACKAGE_ROOT,
   readCarefulList,
   taprcTestFiles,
   tierCommand,
+  capJobs,
+  cappedJobs,
   TierListError,
 } from "./test-tiers.js";
 
@@ -124,7 +129,24 @@ async function runUnderSlot(input: {
   context: RunContext;
   concurrency: number | null;
 }): Promise<number> {
-  const { executable, args } = input;
+  const { executable } = input;
+  // The cap runs HERE, not in `tierCommand`, because `tierCommand` builds the
+  // argv before the semaphore is acquired and so cannot see `concurrency`. It
+  // rewrites an already-built command; the explicit-`-j` check inside covers the
+  // careful tier's own `-j1`.
+  const args = executable === "tap"
+    ? capJobs({
+        args: input.args,
+        mode: input.context.mode,
+        concurrency: input.concurrency,
+        cores: availableParallelism(),
+      })
+    : input.args;
+  if (args.length !== input.args.length) {
+    console.error(
+      `test-ledger: another suite holds a slot; running at ${String(cappedJobs(availableParallelism()))} jobs instead of .taprc's default.`,
+    );
+  }
 
   // Tee stdout rather than using tap's `--output-file`.
   //
@@ -176,8 +198,10 @@ async function runUnderSlot(input: {
     // hang here would stall a merge over bookkeeping. Budgeted and swallowed.
     console.warn(`test-ledger: not recorded (${String(e)})`);
   }
+  for (const line of failureRecapLines(output, exitCode)) console.error(line);
   return exitCode;
 }
+
 
 /** Ledger bookkeeping runs after the suite; it may never become the long pole. */
 const LEDGER_BUDGET_MS = 60_000;
@@ -295,6 +319,23 @@ export async function main(argv: string[]): Promise<void> {
       console.error("test-ledger run: --source takes a name");
       process.exitCode = 2;
       return;
+    }
+    // Before spawning tap at all: a full run under critical memory pressure
+    // is a predetermined 300s-per-file timeout that teaches nothing (the
+    // 2026-09-11 incident). Checked here rather than inside runWrapped so a
+    // refusal acquires no slot and writes no ledger record.
+    const pressure = readMemoryPressure();
+    const decision = pressureDecision({ mode, level: pressure.level, ignoreLoad: process.env["BBX_TEST_IGNORE_LOAD"] === "1" });
+    if (decision === "refuse") {
+      console.error(
+        "test-ledger: host is under critical memory pressure; a full run would time out at tap's 300s budget" +
+          " and tell you nothing. Wait, close sessions, or set BBX_TEST_IGNORE_LOAD=1.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (decision === "warn") {
+      console.error(`test-ledger: host is under memory pressure (level ${String(pressure.level)}); timeouts in this run may be load, not code.`);
     }
     installSignalReleases();
     process.exitCode = await runWrapped(command, { tier, mode, base, source });

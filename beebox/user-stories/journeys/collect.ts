@@ -83,7 +83,7 @@ const elapsed = marks.length >= 2
   ? `${spanMinutes.toFixed(1)} min wall clock, ${waits.length} wait(s) over 45s`
   : "no screenshots — timing unavailable";
 
-const timing = agentTiming(join(before.box, "content"));
+const timing = agentTiming(before.box);
 const turns = timing.turns;
 const agentSeconds = timing.totalSeconds;
 
@@ -96,6 +96,8 @@ const after = {
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
   spanMinutes: Number(spanMinutes.toFixed(1)),
+  agentTimingSource: "Claude root-chat transcripts only: user message to first assistant text; excludes scoped chats, other engines, and full completion",
+  agentTimingAvailable: turns.length > 0,
   agentTurns: turns.length,
   agentMinutes: Number((agentSeconds / 60).toFixed(1)),
   agentMedianSeconds: Math.round(timing.medianSeconds),
@@ -115,8 +117,9 @@ if (waits.length > 0) {
 }
 if (turns.length > 0) {
   console.log(`agent       ${turns.length} turns, ${(agentSeconds / 60).toFixed(1)} min total, median ${after.agentMedianSeconds}s, slowest ${after.agentSlowestSeconds}s`);
-  console.log("            (what the person waited on; the rest of the span is the walker)");
+  console.log("            (Claude root-chat first-text timing; excludes scoped chats, other engines, full completion)");
 }
+if (turns.length === 0) console.log("agent timing unavailable: no Claude root-chat first-response intervals");
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
 console.log("");

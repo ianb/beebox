@@ -1,8 +1,10 @@
 # Feedback Review
 
-Agent feedback is recorded by box agents via `bbx feedback` when they notice something
-confusing or friction-inducing about the CLI, conventions, or file layout. This
-directory provides tooling to collect and resolve that feedback.
+Box agents record observations about Bee Box friction as `.doc.card` files directly
+in `_config/feedback/`. The card body contains the relevant context the agent
+selected; a known session ID may link to the transcript. This directory provides
+tooling to collect and resolve those cards. The collector also recognizes legacy
+timestamped `.md` notes during migration.
 
 ## Collecting feedback
 
@@ -11,7 +13,7 @@ pnpm dlx tsx collect.ts                        # show all unresolved feedback fr
 pnpm dlx tsx collect.ts --boxes ~/src/boxes    # explicit boxes directory
 ```
 
-Each item shows the box it came from and the full feedback text plus session context.
+Each item shows the box it came from and the full card text.
 
 ## Reviewing and resolving
 
@@ -30,10 +32,14 @@ step. And mechanics: `/finish` runs inside a worktree, while `collect.ts` needs
 silently skipped every remote box, which is where nearly all real feedback
 lives. The step couldn't do its job by construction.
 
-Note that `bbx feedback` gets used as a **general capture channel**, not only for
-CLI friction — a single pull can mix tool bugs, research pointers, and personal
-notes. Triage can't be mechanical; sort by kind first, and don't force
-everything into `issues/`.
+The inbox can mix tool bugs, research pointers, and personal notes. Triage
+can't be mechanical; sort by kind first, and don't force everything into
+`issues/`.
+
+The collector exits with an error if a feedback directory contains an
+unrecognized file or a local or remote read fails. Resolve actions stop before
+changing anything when a scan is incomplete. Directory docs and files under
+`resolved/` are excluded.
 
 After reading the feedback, decide for each item:
 
@@ -53,7 +59,14 @@ To resolve all at once after a review sweep:
 pnpm dlx tsx collect.ts --resolve-all
 ```
 
-Resolving moves the file to `config/feedback/resolved/` in its box and commits it.
+Resolving uses `bbx mv --commit` to move the file to
+`_config/feedback/resolved/` and rewrite inbound card links. The move and
+rewritten referrers are committed by path, leaving unrelated staged changes
+alone. If the CLI fails, the collector stops and reports the box and path;
+inspect for partial changes before retrying.
+Legacy timestamped `.md` notes remain in the listing during rollout, but must
+pass the `feedback-to-doc-cards` box migration before resolution. Raw transcript
+whitespace in those files can fail the box's commit hook after a move.
 
 ## Running a review session
 

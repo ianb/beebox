@@ -16,7 +16,7 @@ is resolved by this plan. Its older â€œDo not require a synthetic on-disk cardâ€
 proposal is superseded by the boxholder's explicit choice of real canonical cards.
 [Directory views](../../../issues/features/2026-07-28-directories-as-viewable-things.md)
 is related but only partially addressed: Browse becomes one card, not a tab per
-directory. [Route consolidation](../../../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md)
+directory. [Route consolidation](../../../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md)
 remains separate. [Chat everywhere](../../../issues/features/2026-08-30-chat-input-everywhere.md)
 and [mobile presentation](../../../issues/features/2026-07-23-mobile-modal-not-split-pane.md)
 remain open under their existing plans. They are deliberately absent from the
@@ -32,6 +32,12 @@ context the chat is in. The September 9 decision is to use that existing
 container through ordinary open-card operations.
 
 [Engineering review and dispositions](interface-as-cards.review.md) record the design review.
+
+The follow-on [workspace consolidation plan](interface-cards-consolidation.md)
+owns the remaining canonical instruments, retirement of parallel page/chat
+presentation, and its measured removal report. This plan remains the historical
+owner of the original Dashboard, Settings, and Browse implementation and keeps
+its outstanding visual, device, and production-convergence acceptance open.
 
 ## Stated preferences this plan trades against
 
@@ -590,7 +596,7 @@ convergence remains a deployment follow-up; local evidence does not establish it
   scenario evidence. Screenshot capture stalled in normal and fresh browser
   sessions; the one returned image did not match the observed DOM/viewport and
   was excluded. Reproduction is recorded in the existing
-  [screenshot flake](../../../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md).
+  [screenshot flake](../../../issues/closed/bugs/2026-07-10-agent-browser-screenshot-flake.md).
   **Partial status reflects pending trustworthy visual/device signoff**, not
   an outstanding implementation or automated-test failure. Landing verification
   is recorded separately from production convergence.

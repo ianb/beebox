@@ -181,7 +181,7 @@ tags[0].content
 The `schedulesFile` option lets per-thread schedule managers use separate files:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const fired = [];
 const manager = new ChatScheduleManager(box.root, {
   schedulesFile: ".beebox/thread-schedules/test-thread.json",
@@ -193,8 +193,9 @@ schedule.label
 ```
 
 ```ts continue
-// Wait for the schedule to fire
-await new Promise(r => setTimeout(r, 200));
+// Wait for delivery admission and the callback, not a fixed timer margin.
+const deadline = Date.now() + 3000;
+while (fired.length === 0 && Date.now() < deadline) await new Promise(r => setTimeout(r, 10));
 fired.length
 => 1
 

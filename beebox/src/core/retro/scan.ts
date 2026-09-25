@@ -37,7 +37,7 @@ export interface ScanSummary {
   reportPath: string | null;
 }
 
-/** Timestamp slug used for run ids and report filenames (matches `bbx feedback`). */
+/** Timestamp slug used for run ids and report filenames. */
 function makeRunId(now: Date): string {
   return now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
 }

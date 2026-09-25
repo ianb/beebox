@@ -1,6 +1,6 @@
 ---
 name: bbx-ios-overlap
-description: Flags where beebox web/backend code is mirrored in the native iOS app (ios-app/), so a web-side change doesn't silently break the companion app. Use when changing chat upload/transcribe endpoints, capture or bulk-upload routes, pairing/auth-token handling, the native-emission bridge, or session/webview query params — or when asking "does iOS use this". Also useful when starting work in ios-app/ itself, to find the web/backend counterpart. Not needed for frontend-only UI work with no HTTP/bridge surface.
+description: Trace contracts mirrored between beebox web/backend and `ios-app/`. Use for chat upload or transcription endpoints, capture or bulk-upload routes, pairing or auth, the native bridge, session or webview parameters, and iOS work with a web counterpart; not for frontend-only UI without an HTTP or bridge surface.
 ---
 
 # iOS ↔ web overlap

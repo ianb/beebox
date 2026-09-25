@@ -92,7 +92,7 @@ test("worktree: false runs the session in the main checkout and never creates a 
   assert.ok(hasLines(await rig.transcript(), [`cwd=${await fs.realpath(rig.fake.deps.mainRoot)}`]), rig.worktreePath);
 });
 
-test("a live or unknown agent in the worktree refuses the launch and alerts normal", async () => {
+test("a live or unknown agent in the worktree refuses the launch and alerts fyi", async () => {
   for (const state of ["live", "launching", "unknown"]) {
     const rig = await launchRig({
       name: "knip-sweep",
@@ -106,7 +106,7 @@ test("a live or unknown agent in the worktree refuses the launch and alerts norm
     await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
     assert.equal(await rig.transcript(), "", `${state} should not have started an agent`);
     const [alert] = await readAlerts(rig.fake.deps.storeRoot, "knip-sweep");
-    assert.equal(alert?.priority, "normal");
+    assert.equal(alert?.priority, "fyi");
     assert.equal(alert?.title, "work waiting, session already live");
   }
 });

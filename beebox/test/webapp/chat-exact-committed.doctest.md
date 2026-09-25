@@ -14,7 +14,7 @@ import { plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 ```
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const registry = new ChatSessionRegistry(box.root, { backend, buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }) });
 const ctx = { boxRoot: box.root, registry };

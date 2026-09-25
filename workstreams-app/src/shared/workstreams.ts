@@ -31,7 +31,6 @@ const sessionStateSchema = z.object({
   agent: z.enum(["claude", "codex"]).nullable(),
   hasSession: z.boolean(),
   tty: z.string().min(1).nullable(),
-  emoji: z.string().min(1).nullable(),
   baseSha: z.string().min(1).nullable(),
   removed: removedStateSchema.nullable(),
   archived: archivedStateSchema.nullable(),

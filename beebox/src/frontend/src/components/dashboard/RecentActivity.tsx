@@ -4,6 +4,8 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
+import { toSearch } from "../../lib/routing";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { RouterOutput } from "../../lib/trpc";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
@@ -42,7 +44,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2" {...bbxSource("commit", commit.hash)}>
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
-          <Link to={href(`/${boxSlug}/history/${commit.hash}`)} className="hover:text-primary">
+          <Link to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} search={toSearch({ viewState: { commit: commit.hash } })} className="hover:text-primary">
             {commit.subject}
           </Link>
         </div>
@@ -149,7 +151,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
     <Card as="section" aria-label="Recent activity" shadow border="none">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-warm-700">Recent Activity</h2>
-        <Link id="bbx-dashboard-all-history" to={href(`/${boxSlug}/history`)} className="text-xs text-primary hover:text-primary-dark">
+        <Link id="bbx-dashboard-all-history" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} className="text-xs text-primary hover:text-primary-dark">
           All history &rarr;
         </Link>
       </div>

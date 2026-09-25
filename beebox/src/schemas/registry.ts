@@ -19,6 +19,12 @@ import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-sta
 import { DashboardSchema } from "./dashboard.js";
 import { SettingsSchema } from "./settings.js";
 import { BrowseSchema } from "./browse.js";
+import { QuestionsSchema } from "./questions.js";
+import { LandmarksSchema } from "./landmarks.js";
+import { HistorySchema } from "./history.js";
+import { InventorySchema } from "./inventory.js";
+import { AdminSchema } from "./admin.js";
+import { SearchSchema } from "./search.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -70,6 +76,7 @@ import { ExpositionPlanSchema } from "./exposition-plan.js";
 import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
 import { TabArrangementSchema } from "./tab-arrangement.js";
+import { BrowserTaskSchema } from "./browser-task.js";
 import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -84,6 +91,12 @@ export const cardSchemas: CardSchema[] = [
   DashboardSchema,
   SettingsSchema,
   BrowseSchema,
+  QuestionsSchema,
+  LandmarksSchema,
+  HistorySchema,
+  InventorySchema,
+  AdminSchema,
+  SearchSchema,
   // authored — everyday recording types first
   DocSchema,
   RecordSchema,
@@ -92,6 +105,7 @@ export const cardSchemas: CardSchema[] = [
   PlaceSchema,
   TodoViewSchema,
   QuestionSchema,
+  BrowserTaskSchema,
   RecipeSchema,
   CommentarySchema,
   BriefingSchema,
@@ -289,7 +303,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   }
 
   // Files that vanished since the last rebuild drop their type (and bookkeeping).
-  for (const key of [...records.keys()]) {
+  for (const key of records.keys()) {
     if (!seen.has(key)) records.delete(key);
   }
   boxFileRecords.set(boxRoot, records);

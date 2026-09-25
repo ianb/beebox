@@ -258,6 +258,10 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
       killCalls.push({ pid, signal: signal ?? "SIGTERM" });
     },
     pidAlive: () => false,
+    // Fixed, so a failure line is byte-identical across runs. The real effect
+    // reads os.loadavg(); a test asserting on the stamp would be
+    // machine-dependent without this.
+    load1: () => 0,
     waitForHttp: () => {
       if (probeMode === "auto") return Promise.resolve();
       const d = deferred();

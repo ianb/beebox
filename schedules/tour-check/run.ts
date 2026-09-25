@@ -114,7 +114,7 @@ if (!router.up) {
     [
       "alert",
       "--priority",
-      "important",
+      "normal",
       "--title",
       "tours not checked: dev router is down",
       "--message",

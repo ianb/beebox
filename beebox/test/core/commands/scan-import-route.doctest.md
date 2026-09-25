@@ -27,7 +27,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 
 // Annex-converted boxes only: scan-import stages raw asset bytes, which a
-// manifest-scheme box gitignores (issues/bugs/2026-09-04-scan-import-gitignore-
+// manifest-scheme box gitignores (issues/closed/bugs/2026-09-04-scan-import-gitignore-
 // blocks-attach-staging.md).
 // The OCR decision reads the PDF's text layer, which needs poppler.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then(
@@ -51,7 +51,7 @@ The card is a `pdf.card`, not a set of photo cards, and the extraction ran OCR
 over the layout's regions, because there was no text layer to read.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const { result, docling } = await importPdf(box, textlessPdf());
 [result.success, result.data.mode].join(" ")
 => true pdf
@@ -72,7 +72,7 @@ A good text layer beats re-OCRing an image of itself. (A layer that is present
 but junk is a third case — see `pdf-probe.doctest.md`.)
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const { result, docling } = await importPdf(box, textPdf());
 [result.success, result.data.mode].join(" ")
 => true pdf
@@ -93,7 +93,7 @@ The concrete regression this guards: a document page reaching a question whose
 only options are photo, back-of-photo, or trash, with delete as the fallback.
 
 ```ts
-const box = await makeTmpBox({ git: true, annex: true });
+const box = await makeTmpBox({ git: true });
 const { result } = await importPdf(box, textlessPdf());
 result.data.questions === undefined || result.data.questions.length === 0
 => true

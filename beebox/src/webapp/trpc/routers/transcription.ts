@@ -7,6 +7,7 @@ import {
   updateTranscriptionConfig,
 } from "../../../core/transcription/index.js";
 import { HQ_TRANSCRIPTION_SERVICES, TRANSCRIPTION_SERVICES } from "../../../shared/transcription-services.js";
+import { serviceCapabilities, unusableWarning } from "../../../core/model-capabilities.js";
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey, OPENAI_THINKING_SECRET_NAME } from "../../../core/openai-thinking-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
@@ -40,12 +41,20 @@ export const transcriptionRouter = router({
       return { service: cfg.service };
     }),
 
-  /** Same reasoning as `setService` (Decision 6): owner-only. */
+  /**
+   * Same reasoning as `setService` (Decision 6): owner-only.
+   *
+   * A service the box has no credential for is still SAVED — a grant may
+   * arrive later, and refusing would make the setting order-dependent — but
+   * the response carries a `warning` the client must show, so a stale client
+   * or a script cannot persist an impossible choice silently.
+   */
   setHqService: ownerProcedure
     .input(z.object({ hqService: hqServiceSchema }))
     .mutation(async ({ ctx, input }) => {
       const cfg = await updateTranscriptionConfig(ctx.boxRoot, { hqService: input.hqService });
-      return { hqService: cfg.hqService };
+      const capability = (await serviceCapabilities(ctx.boxRoot)).hq[input.hqService];
+      return { hqService: cfg.hqService, warning: unusableWarning(input.hqService, capability) };
     }),
 
   /**

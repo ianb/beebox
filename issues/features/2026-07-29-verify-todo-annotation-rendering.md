@@ -39,6 +39,32 @@ didn't look at pixels.
 
 ## Manual testing
 
-Follow the concrete reproduction or verification steps above. Confirm the
-observed result matches the expected behavior described in this issue before
+The todo-view list was rewritten by
+[Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
+(2026-09-20). The steps above describe the earlier rendering; check the new
+list instead. Inline `{% todo %}` rendering inside a card body (the `Todo`
+component) is unchanged by that work and still worth the earlier spot-check.
+
+Open a todo-view card and expect:
+
+- A scope line at the top naming what the collection covers.
+- A dated strip when any open todo has a `start` or `due` date.
+- One block per card that has matching todos, each with a header naming the
+  card, and an "N open · M done" summary.
+- Within a card, sections with their own "x of y" count.
+- Nested items showing the note after the item's closing tag, not before it.
+- A card that only refers to this place (via `{% see-also %}` or a ref, not
+  physically here) marked "refers here" and sorted after the place's own
+  cards.
+- A By place / By date toggle and a Show finished switch, both keeping their
+  state in the URL across reload.
+
+Fixture content for a walkthrough (a project with open todos across several
+sections) landed on `main`'s test1 (`~/src/boxes/test1`, commit `526e68c3`,
+carried over from the `keep` branch of this workstream's isolated clone):
+`_content/projects/porch-rebuild/Porch.todo-view.card`. Try
+`/main/test1/browse/projects/porch-rebuild/Porch.todo-view.card` on the
+shared dev router.
+
+Confirm the observed result matches the expected behavior above before
 clearing the manual-testing flag.

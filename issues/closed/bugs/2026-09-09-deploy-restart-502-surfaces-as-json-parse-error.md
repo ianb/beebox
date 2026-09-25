@@ -80,7 +80,7 @@ bug; the raw parse-error text is how it looks, not why it happens.
   the mobile-token refresh-and-retry-once). Re-enabling retries blindly would
   regress that.
 - **Bounded, with backoff.** A deploy window is ~60s (see
-  [hub shutdown](../../bugs/2026-09-09-hub-shutdown-hits-the-sigterm-timeout.md)), so a
+  [hub shutdown](2026-09-09-hub-shutdown-hits-the-sigterm-timeout.md)), so a
   few attempts over that span is the target, not indefinite spinning.
 - **The honest message becomes the fallback** for when retries are exhausted,
   rather than the first thing the boxholder sees.

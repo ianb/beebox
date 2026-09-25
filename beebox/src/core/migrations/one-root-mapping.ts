@@ -5,15 +5,16 @@
  * A v2 box has TWO roots: the package root (`package.json`, `src/`,
  * `content/`) and the operational root `content/`. Every path this module
  * maps FROM is package-root-relative and starts with `content/` — the v2
- * `BOX_LAYOUT` (now retired; see the snapshot below) described paths
+ * `BOX_LAYOUT` (now retired; see below) described paths
  * relative to `content/` itself, so `content/` is prepended here. Every path
  * this module maps TO is v3-root-relative (the one root).
  *
- * `V2_LAYOUT` below is a frozen snapshot of the pre-Track-A `BOX_LAYOUT`
- * (`git show d7d3a19d3~1:./src/lib/box-layout-spec.ts`) — NOT a re-export of
- * the live (now v3) spec. It exists only so this module's exhaustiveness
- * switch has something to be exhaustive OVER; it must never be "kept in
- * sync" with anything else again, because v2 is frozen history.
+ * The v2 paths mapped FROM are the pre-Track-A `BOX_LAYOUT` — frozen history,
+ * NOT the live (now v3) spec. Its full record survives in git, reachable from
+ * `main`: `git show d7d3a19d3~1:./src/lib/box-layout-spec.ts` (the `./` path
+ * is relative to `beebox/`). The mapping dispatch below runs over the
+ * hand-written `V2TopLevel` union instead, so there is no layout table here
+ * to keep in sync.
  *
  * One real-box finding (2026-09, `~/src/boxes/test1` inspection, read-only)
  * extends the table beyond the clean v2 spec:
@@ -42,62 +43,6 @@
  */
 
 import { assertNever } from "../../lib/invariant.js";
-
-/** Frozen snapshot of the pre-Track-A `BoxLayoutArea` union. Do not extend. */
-type V2Area = "box" | "store" | "config" | "people-places" | "tricks" | "agent-config" | "legacy";
-
-interface V2LayoutEntry {
-  /** Path relative to the v2 operational root (`content/`). */
-  path: string;
-  area: V2Area;
-}
-
-/** Frozen snapshot of the pre-Track-A `BOX_LAYOUT` (paths only — the prose
- * columns aren't needed for mapping). See the module doc comment. */
-const V2_LAYOUT: readonly V2LayoutEntry[] = [
-  { path: "box/inbox", area: "box" },
-  { path: "box/inbox/unhandled", area: "box" },
-  { path: "box/inbox/intake", area: "box" },
-  { path: "box/inbox/staged", area: "box" },
-  { path: "box/inbox/triaged", area: "box" },
-  { path: "box/inbox/triaged/_unsure", area: "box" },
-  { path: "box/jobs", area: "box" },
-  { path: "box/output", area: "box" },
-  { path: "box/publish", area: "box" },
-  { path: "box/questions", area: "box" },
-  { path: "box/resources", area: "box" },
-  { path: "box/commands", area: "legacy" },
-  { path: "box/bookmarks", area: "legacy" },
-  { path: "store/archive/done", area: "store" },
-  { path: "store/archive/failed", area: "store" },
-  { path: "store/archive/processed", area: "store" },
-  { path: "store/trash", area: "store" },
-  { path: "store/recipes", area: "store" },
-  { path: "store/todos", area: "store" },
-  { path: "store/drive", area: "store" },
-  { path: "store/calendar", area: "store" },
-  { path: "store/chat", area: "store" },
-  { path: "store/usage", area: "store" },
-  { path: "store/reviews/retro", area: "store" },
-  { path: "people", area: "people-places" },
-  { path: "places", area: "people-places" },
-  { path: "config", area: "config" },
-  { path: "config/connectors", area: "config" },
-  { path: "config/schemas", area: "config" },
-  { path: "config/procedures", area: "config" },
-  { path: "config/schedules", area: "config" },
-  { path: "tricks/scripts", area: "tricks" },
-  { path: "tricks/lib", area: "tricks" },
-  { path: ".claude", area: "agent-config" },
-  { path: ".claude/rules", area: "agent-config" },
-] as const;
-
-// V2_LAYOUT exists for documentation/inventory parity with the historical
-// spec; the actual mapping dispatch below is over a closed key set derived
-// from it (`V2_TOP_LEVEL`), not a re-scan of this array. Referencing it here
-// keeps `pnpm lint:knip` from flagging the constant as unused while still
-// serving its documentation role.
-export const V2_LAYOUT_SNAPSHOT: readonly V2LayoutEntry[] = V2_LAYOUT;
 
 /**
  * The exhaustive set of v2 `content/`-relative top-level names this mapper

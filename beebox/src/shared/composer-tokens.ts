@@ -76,3 +76,27 @@ export function normalizeComposerTokens(text: string): string {
     .replace(/\[file#?(\d+)]/g, (_m, digits: string) => composerToken("file", parseInt(digits, 10)))
     .replace(/\[selection#?(\d+)]/g, (_m, digits: string) => composerToken("selection", parseInt(digits, 10)));
 }
+
+/**
+ * Where the message's trailing `<attachments>` block starts, or `text.length`
+ * when there is none.
+ *
+ * The block is the last thing the assembler appends
+ * (`input/targets/chat-assemble.ts`), and its lines re-spell the tokens they
+ * resolve: `[file#1]: _tmp/…` and, for an inline image's original file,
+ * `[image#1]: _tmp/…`. A reader that expands or strips `[image#N]` therefore
+ * has to stop at this index, or the image line would be consumed a second
+ * time — spliced into the block as another image block on the server and in
+ * the optimistic copy, and stripped to a bare `: _tmp/…` in the bus copy,
+ * which then no longer compares equal to the optimistic text and renders the
+ * message twice. Only a block that runs to the end of the text counts: an
+ * `<attachments>` the user typed mid-sentence is body text, like any other
+ * lookalike.
+ */
+export function attachmentsBlockStart(text: string): number {
+  const close = "</attachments>";
+  const trimmedEnd = text.trimEnd().length;
+  if (!text.slice(0, trimmedEnd).endsWith(close)) return text.length;
+  const open = text.lastIndexOf("<attachments>", trimmedEnd - close.length);
+  return open === -1 ? text.length : open;
+}

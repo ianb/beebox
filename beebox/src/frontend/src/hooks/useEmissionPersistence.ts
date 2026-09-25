@@ -51,9 +51,11 @@ import {
   isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
   partitionFiles,
+  restoredImageOriginal,
   type PersistedEmission,
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
+import { storageScopeFor } from "../lib/storage-scope";
 import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
 import { normalizeComposerTokens } from "@shared/composer-tokens";
 
@@ -93,14 +95,18 @@ export function useEmissionPersistence(opts: {
   emissionStore: EmissionStore;
 }): EmissionPersistenceApi {
   const { boxSlug, emissionStore } = opts;
+  // The draft slot is per box INSTANCE: behind the dev router two worktrees can
+  // each serve a `test1`, and one slot for both handed a clone the other's text
+  // and attachment paths. Empty in production, where the old key is kept.
+  const scope = storageScopeFor(getApiBase());
   const { editor } = emissionStore;
   const restoringRef = useRef(false);
   const [expiredAttachments, setExpiredAttachments] = useState<string[]>([]);
 
   const persistNow = useCallback(() => {
     if (restoringRef.current) return;
-    commitPersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
-  }, [boxSlug, emissionStore]);
+    commitPersistedEmission(window.localStorage, { boxSlug, scope, draft: emissionStore.get(), updatedAt: Date.now() });
+  }, [boxSlug, scope, emissionStore]);
 
   // Flush synchronously when the tab hides (the sleep / app-switch moment),
   // closing the debounce gap — same pattern as the retired useComposerDraft.
@@ -129,9 +135,9 @@ export function useEmissionPersistence(opts: {
     restoreAttempted.add(emissionStore);
     if (!isEmptyEmissionDraft(emissionStore.get())) return;
 
-    const persisted = loadPersistedEmission(window.localStorage, boxSlug);
+    const persisted = loadPersistedEmission(window.localStorage, { boxSlug, scope });
     if (persisted === null) {
-      const { adoptedText, discarded } = adoptLegacyComposerDrafts(window.localStorage, boxSlug);
+      const { adoptedText, discarded } = adoptLegacyComposerDrafts(window.localStorage, { boxSlug, scope });
       if (adoptedText !== null) {
         editor.setText(adoptedText);
         console.info(
@@ -150,11 +156,14 @@ export function useEmissionPersistence(opts: {
       // Persistence only ever saves landed files (`emission-persist.ts`), so
       // every entry here has a path; a defensive skip keeps a hand-edited or
       // older payload from throwing mid-restore.
-      const checks = await Promise.all(p.files.flatMap((f) => {
-        const path = uploadedPath(f);
-        if (path === null) return [];
-        return [fileExists(path).then((exists) => [path, exists] as const)];
-      }));
+      // Image originals are checked the same way: a landed `_tmp/` path the
+      // sweep has since removed must not come back as a usable file line.
+      const restoredPaths = [
+        ...p.files.flatMap((f) => { const path = uploadedPath(f); return path === null ? [] : [path]; }),
+        ...p.images.flatMap((image) => image.original?.status === "uploaded" ? [image.original.path] : []),
+      ];
+      const checks = await Promise.all(restoredPaths.map((path) =>
+        fileExists(path).then((exists) => [path, exists] as const)));
       // Commit-time recheck: the file HEADs are a network round trip, and
       // the user may have started typing during it. Their live composition
       // wins — abort rather than clobber (the persisted draft is then
@@ -171,10 +180,14 @@ export function useEmissionPersistence(opts: {
       // freshly-attached composition and the `<attachments>` block a later send
       // writes matches the tokens in its own body.
       editor.setText(normalizeComposerTokens(p.text));
-      editor.restoreImages(p.images.map((image): ImageItem => ({
+      const restoredImages = p.images.map((image): ImageItem => ({
         ...image,
         objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
-      })));
+        original: restoredImageOriginal(image.original, { existingPaths }),
+      }));
+      editor.restoreImages(restoredImages);
+      // Later uploads from this draft join the same `_tmp/chat/<batch>/`.
+      if (p.uploadBatch !== undefined) editor.restoreUploadBatch(p.uploadBatch);
       for (const file of live) editor.addFile(file);
       // Dead files (their tmp/ upload was swept) must not leave dangling
       // [file#N] tokens in the restored text — a send would reference an

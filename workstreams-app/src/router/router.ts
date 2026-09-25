@@ -60,6 +60,14 @@ import { createRealEffects, pidAlive, pruneRouterHubConfigs, resolveWorktree, sw
 import { isBenignSocketError } from "./router-proxy.js";
 import { dispatchRouterRequest, type DispatchContext } from "./router-dispatch.js";
 import { handleRouterUpgrade, type UpgradeState } from "./router-upgrade.js";
+import { routerLogPath, startRouterLogFile, stopRouterLogFile } from "./router-log-file.js";
+import { formatDenial, writeDeny, UpgradeDenialThrottle } from "./router-deny-log.js";
+import {
+  WORKTREE_UNAVAILABLE,
+  wantsHtmlPage,
+  writeWorktreeUnavailable,
+  parkedWorktreeFor,
+} from "./router-failed-page.js";
 import {
   AGENT_BROWSER_BIN,
   BROWSE_DIR,
@@ -73,72 +81,7 @@ import {
   ROUTER_SOCK,
   STATE_DIR,
   log,
-  parseWorktreeName,
 } from "./router-config.js";
-
-// --- Auth gate: deny handling -----------------------------------------
-
-/**
- * The worktree segment to route a login redirect through. Login lives under a
- * worktree (`/<w>/auth/login`), so a bare router-infra path (`/`, `/dev`,
- * `/__router/*`) has none — fall back to `main`. A box or `/<w>/dev/` path
- * carries its own worktree in the first segment.
- */
-function loginWorktree(url: string): string {
-  const first = parseWorktreeName(url);
-  if (!first || first === "dev" || first === "__router" || first === "workstreams") return "main";
-  return first;
-}
-
-/** The request field `writeDeny` reads. Structural so a unit test can pass a
- *  plain object instead of casting one to `http.IncomingMessage`. */
-export interface DenyRequest {
-  url?: string | undefined;
-}
-
-/** The response methods `writeDeny` writes through. Structural for the same
- *  reason; a real `http.ServerResponse` satisfies it. */
-export interface DenyResponse {
-  writeHead(status: number, headers?: Record<string, string>): void;
-  end(chunk?: string): void;
-}
-
-/**
- * Write the response for a denied (non-`trustedLocal`) request. A denied browser
- * NAVIGATION (302 → the prefixed login page, carrying `returnTo`) so the user can
- * log in and come back; everything else gets a small JSON body at the gate's
- * status (401 / 403 / 404). Nothing here cold-starts or serves — the deny is
- * terminal, upstream of all dispatch.
- */
-export function writeDeny(
-  req: DenyRequest,
-  { res, decision }: { res: DenyResponse; decision: RouterAuthDecision & { allow: false } },
-): void {
-  const url = req.url || "/";
-  // Self-identify as a GUARDED dev router on denials of our own `/__router/*`
-  // control routes (Track C, expose-dev-router.md): a benign marker so
-  // `bbx tailscale setup` can prove the gate is live end-to-end over Serve
-  // (401 + this header) and distinguish us from an ungated router (200, no
-  // header) or a non-router. Leaks nothing a bare curl doesn't already learn.
-  const guardHeaders = routerGuardHeaders(url);
-  if (decision.redirectToLogin) {
-    const location = `/${loginWorktree(url)}/auth/login?returnTo=${encodeURIComponent(url)}`;
-    res.writeHead(302, { location, ...guardHeaders });
-    res.end();
-    return;
-  }
-  res.writeHead(decision.status, { "content-type": "application/json; charset=utf-8", ...guardHeaders });
-  res.end(`${JSON.stringify({ error: decision.reason })}\n`);
-}
-
-/** The `x-bbx-router-guarded: 1` marker for a denial of a `/__router/*` control
- *  route, else no extra headers. Pure over the request path so it is unit-tested
- *  directly (workstreams-app/test/router/router-guard-header.test.ts). */
-export function routerGuardHeaders(url: string): Record<string, string> {
-  const q = url.indexOf("?");
-  const pathname = q === -1 ? url : url.slice(0, q);
-  return pathname === "/__router" || pathname.startsWith("/__router/") ? { "x-bbx-router-guarded": "1" } : {};
-}
 
 // --- HTTP + WebSocket server ------------------------------------------
 
@@ -162,7 +105,13 @@ export interface RouterServerGate {
 export function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
   const { authDeps, trustedLocal, workstreamsApp } = gate;
   const ctx: DispatchContext = { core, workstreamsApp };
-  const upgradeState: UpgradeState = { ctx, authDeps, trustedLocal, refusedUpgradeLogAt: new Map() };
+  const upgradeState: UpgradeState = {
+    ctx,
+    authDeps,
+    trustedLocal,
+    refusedUpgradeLogAt: new Map(),
+    denialThrottle: new UpgradeDenialThrottle(),
+  };
 
   // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
   // NO thrown/rejected error from any path (auth gate, dev-serving, proxy,
@@ -205,6 +154,22 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
       return;
     }
     if (!decision.allow) {
+      // Liveness is reported BEFORE authorization, for a route that names a
+      // worktree the router has parked as failed. Otherwise a crashed dependency
+      // is announced in the vocabulary of authorization — `target-box-unresolved`
+      // or `owner-session-required` — which points the reader at credentials and
+      // deploys, all plausible and all wrong. The bare root names no worktree, so
+      // it has no liveness fact to report and keeps its 401.
+      const parked = parkedWorktreeFor(core, decision.route);
+      if (parked) {
+        log(`${formatDenial({ method: req.method || "GET", url, decision })} → ${WORKTREE_UNAVAILABLE}`);
+        writeWorktreeUnavailable(res, { ...parked, html: wantsHtmlPage(req.headers.accept) });
+        return;
+      }
+      // Unthrottled: HTTP denials are request-driven, so a line per denial is
+      // a faithful record rather than a torrent (the upgrade path, which a
+      // client retries on a timer, is throttled instead).
+      log(formatDenial({ method: req.method || "GET", url, decision }));
       writeDeny(req, { res, decision });
       return;
     }
@@ -416,6 +381,10 @@ async function main(): Promise<void> {
     await Promise.all([core.stopAllChildren(), workstreamsApp?.shutdown()]);
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
     await fs.unlink(ROUTER_SOCK).catch(() => {});
+    // Last, so every line above reaches the durable log. The stream is flushed
+    // by end(); the process.exit below would otherwise drop buffered writes,
+    // losing exactly the shutdown reason a post-mortem starts from.
+    stopRouterLogFile();
     process.exit(0);
   };
 
@@ -438,6 +407,10 @@ async function main(): Promise<void> {
     void shutdown("uncaughtException");
   });
 
+  // Before the sweep, so everything boot does is in the durable record — the
+  // sweep's own kill lines are exactly what a post-mortem of a bad restart wants.
+  await startRouterLogFile(LOG_DIR);
+  log(`durable log: ${routerLogPath() ?? "unavailable"}`);
   await acquireRouterPidFile();
   // Two-stage sweep. sweepStaleChildren clears THIS state dir's pidfile-tracked
   // children (current generation + dashboard daemons). reclaimOrphans then

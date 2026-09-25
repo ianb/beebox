@@ -156,3 +156,10 @@ The workspace may project a card URL, but never chooses the conversation's
 session. Wait for the conversation route's confirmed binding before adopting an
 incoming URL. Focus inside content updates attention without navigating: a route
 replacement during pointer-down can cancel the link click that follows it.
+
+Workspace attention and conversation recipient are separate. Passive card opens,
+focus changes, Browse navigation, and History state changes update attention only;
+they must preserve the selected recipient, draft, and send destination. Change the
+recipient only for an explicit conversation action. The workspace is the single
+production presentation owner for ordinary cards. Keep task-specific modals such
+as source editing, image inspection, and capture scoped to their distinct jobs.

@@ -53,23 +53,32 @@ CLOUDFLARE_API_TOKEN=your-token-here
 ### `deploy.sh` — Deploy a commit to the server
 
 The everyday deploy (also fired automatically by the root husky
-`post-commit`/`post-merge` hooks on `main`). It deploys a git COMMIT, never a
-working tree: the requested ref is checked out into a persistent build
-checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree shared
-by all worktrees of the repo), gitignored build artifacts there are cleaned,
-the frontend and CLI bundle are built, and the result is rsynced to
-`/opt/beebox` followed by a frozen workspace install, a per-box convergence
-pass (migration sweep + generated-docs refresh), service restart, and
-healthcheck. `deploy-info.json` on the server
-therefore records exactly what shipped.
+`post-commit`/`post-merge` hooks on `main`) deploys a Git commit. It builds in the
+persistent detached checkout `<main-repo-root>/.deploy-checkout` and transfers
+the result to a separate server staging directory. `--skip-restart` stops there:
+the running installation has not been activated.
 
-Per-box convergence runs in the at-rest window before the restart, two steps
-each: `bbx migrate --sweep` converges card shape and box configuration, then
-`bbx docs refresh` regenerates the box's agent docs, card rules, and managed
-skills when the shipped engine has moved past what wrote them (otherwise a box
-nobody chats with keeps the old ones indefinitely). Both print only boxes that
-did something or need attention, skip a dirty box for the next deploy to retry,
-and never fail the deploy; see [`../docs/migrations.md`](../docs/migrations.md).
+The staged CLI's maintenance controller then closes admission for affected
+boxes, waits for accepted work, and records Git recovery snapshots. It stays
+alive outside the services while the activation script stops them, copies the
+staged release into `/opt/beebox`, installs dependencies, converges boxes,
+restarts services, and checks readiness. Ordinary requests do not acquire the
+controller's maintenance permissions. `deploy-info.json` records the shipped
+commit; final deployment success is written only after the checks finish.
+
+Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
+under the existing controller. That single operation handles deterministic
+migrations and generated guidance with snapshots and changed-path commits.
+Dirty input is accepted; deployment does not start a repair agent. Its separate
+ten-minute command limit remains. A box needing repair is reported and stays
+closed; restarting its process does not clear failed convergence. The hourly
+`box-convergence` schedule retries with bounded repair authority. See
+[migrations](../docs/migrations.md) for recovery, questions, and timeout limits.
+
+The shared drain accounts for gate-aware writers. The first rollout from older
+code needs an explicitly quiesced fleet; a new controller alone cannot register
+work already running in an older server or CLI. External editors and raw Git
+commands also remain outside admission enforcement.
 
 The healthcheck has two depths, both diag-key-gated and run on the server's
 localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
@@ -84,7 +93,7 @@ key, so an unauthenticated external monitor gets 401.
 ```bash
 ./deploy/deploy.sh                 # deploy HEAD of this checkout
 ./deploy/deploy.sh --ref <sha>     # deploy (or roll back to) any commit
-./deploy/deploy.sh --skip-restart  # sync + build without restarting services
+./deploy/deploy.sh --skip-restart  # stage only; leave the live installation unchanged
 ```
 
 Concurrent deploys collapse latest-wins: a run that finds another deploy in
@@ -92,6 +101,22 @@ progress records its request and exits; the running deploy chains to the
 newest request when it finishes. Hook-triggered runs each log to
 `deploy/.deploy-logs/`, with `deploy/.last-deploy.log` symlinked to the newest
 (see `deploy/CLAUDE.md` for the wait/poll pattern).
+
+While the services are stopped, nginx serves a deploy page instead of its bare
+502. The activation script puts it up before the stop and takes it down from
+its EXIT trap (`server-bin/bbx-deploy-window`); the page's presence in
+`/run/beebox-deploy/` is what tells nginx the 502 is a deploy
+(`nginx/beebox.conf`). The page is public, so it states only the start time and
+the median of recent downtime windows, and it says so when a deploy runs past
+ten minutes or an hour. Nothing that identifies the change appears on it.
+Timing records: the server appends each window to
+`/var/lib/beebox-deploy/windows.tsv`; the laptop appends one line per deploy
+(start, end, outcome, measured downtime) to `deploy/.deploy-logs/deploys.jsonl`,
+and each progress line in the log carries a UTC time.
+
+A deploy that fails because `ssh` could not reach the server (exit 255) is
+reported as a failure, not an interruption, and still hands off to a queued
+deploy. Only a signal the deploy itself received counts as an interrupt.
 
 The hook records its requested SHA synchronously before launching through
 `bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
@@ -125,7 +150,7 @@ Installs everything on Ubuntu 24.04:
 - Symlinks `bbx` CLI to `/usr/local/bin/`
 - Installs Claude Code CLI (native installer — auto-updates in background)
 - Creates systemd services for the box server and scheduler
-- Configures nginx reverse proxy (port 80 → the box server's port)
+- Installs the nginx site file `nginx/beebox.conf` (port 80 → the hub)
 
 **Known gap:** this script still generates the pre-hub `beebox-serve` unit
 (one process serving every box off `~/.config/beebox/boxes.json`), not `bbx hub` +
@@ -135,14 +160,16 @@ over to the hub by hand (see "Systemd units" below and
 `hetzner/create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
-**This script does not run on deploy.** `deploy.sh` never invokes it, so any
-change to the nginx config or systemd units here reaches a live server only on
-a re-provision — or by applying the equivalent change by hand. The most recent
-such change is `proxy_buffering off;` in the app proxy location (added
-2026-08-01 for tRPC streamed batches); an existing server needs that line added
-to `/etc/nginx/sites-available/beebox` followed by `nginx -t && systemctl
-reload nginx`. Without it the client still works, it just loses the
-progressive-delivery benefit.
+**This script does not run on deploy.** `deploy.sh` never invokes it, so a
+change to the systemd units here reaches a live server only on a re-provision
+or by hand. The nginx site file is the exception: it lives in
+`nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
+makes it the only enabled site, runs `nginx -t` whether or not anything
+changed, and reloads nginx when it did. A configuration that fails the test is
+restored and fails the deploy before anything stops. Edit the file in the repo,
+never on the server. Any other enabled site is moved to
+`/etc/nginx/pre-deploy-owned/` with a timestamp; that is where production's
+hand-made `callback` site went.
 
 ### `add-box.sh` — Add a box to the server
 
@@ -324,7 +351,27 @@ tracked files.
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
+/usr/local/sbin/bbx-host-apt # Root wrapper for box package installs (deploy installs it)
+/etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper
+/var/log/beebox/host-apt.log # One JSON line per box install attempt
+/usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
+/usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
+/run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
+/var/lib/beebox-deploy/windows.tsv  # One line per deploy window: opened, down, closed, outcome
+/etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
 ```
+
+### Box package installs
+
+A box agent installs a distro package with `bbx host install <pkg> --why ...`.
+The command records the need in the box's `_config/host-packages.json`, then
+runs `bbx-host-apt` through sudo. The wrapper installs only additive,
+service-free packages from the distro sources. `deploy.sh` installs the
+wrapper and the sudoers entry on every deploy, so `setup-server.sh` needs no
+copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
+box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
+`docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+`server-bin/bbx-host-apt.smoke.sh`.
 
 ## Systemd units
 

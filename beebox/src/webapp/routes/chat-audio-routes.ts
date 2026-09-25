@@ -16,6 +16,7 @@ import * as path from "node:path";
 import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
 import { transcribeAudioHq } from "../../core/transcription/index.js";
+import { isTranscriptionError } from "../../core/transcription/voxtral-errors.js";
 import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
@@ -28,7 +29,7 @@ import {
   type CompiledSpeakingVoice,
 } from "../../schemas/personality.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { HTTPError } from "ky";
+import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "../tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../core/tts/resolve.js";
 import { loadTtsConfig } from "../../core/tts/config.js";
@@ -73,10 +74,14 @@ function handleMockTts(options: {
  * A speech backend's failure in one line, or null when the error is not the
  * backend's (a bug here should still be a 500). ky's `HTTPError` carries the
  * provider's status; a `TypeError` from `fetch` means no response at all, with
- * the network reason in `cause`.
+ * the network reason in `cause`; a `TimeoutError` means the provider accepted
+ * the request and never finished it. Leaving that last one out sent a real
+ * OpenRouter speech timeout to the boxholder as a bare 500 "Internal server
+ * error" — the very outcome the 502 below was added to prevent.
  */
 function describeBackendFailure(e: unknown): string | null {
   if (e instanceof HTTPError) return `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
+  if (e instanceof TimeoutError) return `TTS backend timed out: ${e.message}`;
   if (e instanceof TypeError) {
     const reason = e.cause instanceof Error ? e.cause.message : e.message;
     return `TTS backend unreachable: ${reason}`;
@@ -123,7 +128,13 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[transcribe-audio] HQ transcription failed:", msg);
-      return reply.status(500).send({ error: msg });
+      // A transcription error already knows whether retrying could help
+      // (`permanent`) and carries a stable `code`. Both go to the client, so a
+      // misconfiguration — no key for the configured service — can be shown
+      // once and named, instead of being indistinguishable from a bad network
+      // moment that the realtime fallback rightly absorbs.
+      const detail = isTranscriptionError(e) ? { code: e.code, permanent: e.permanent } : { permanent: false };
+      return reply.status(500).send({ error: msg, ...detail });
     }
   });
 

@@ -1,6 +1,6 @@
 ---
 name: bbx-plan
-description: Use when the human wants to write a plan for non-trivial work — a new feature, a refactor, a vocabulary or schema change, a multi-track effort — or to review an existing plan. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/bbx-plan".
+description: Write or review an implementation plan for non-trivial work such as features, refactors, vocabulary or schema changes, and multi-track efforts.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebFetch, WebSearch
 ---
 
@@ -39,7 +39,7 @@ the artifact, and exploratory spikes (spike first; plan if it survives).
 The plan completes, then it ships as one piece — and **only when the boxholder
 says so**. Committing chunks is normal; merging a partial plan because "the
 first part feels done" is the violation. Long multi-track plans are fine when
-their budget says so (see *Circuit breaker*); execute them serially in
+their scope warrants it (see *Size and scope review*); execute them serially in
 dependency order, don't compress them.
 
 ## The discipline
@@ -52,10 +52,10 @@ writing and when reviewing.
   cites where). "CLAUDE.md says to read before writing" is a paraphrase;
   `beebox/CLAUDE.md:101`: *"Read before writing…"* is a citation.
   "Probably" / "likely" / "I think" are guesses: verify or mark unverified.
-- **Trace every choice to a stated preference** — a numbered principle in
-  `docs/engineering-principles.md`, a CLAUDE.md or code-style rule, or the most
-  recent shipped precedent. A choice that can't be traced means either a weak
-  choice or a missing principle; both are worth saying.
+- **Explain actual tradeoffs against stated preferences.** Cite the relevant
+  human decision, engineering principle, repo rule, or shipped precedent when
+  it informs the choice. Ordinary implementation choices need no principle
+  mapping; do not invent a principle to justify them.
 - **Two sections are gates, not prose.** *Could this be simpler?* — name the
   simplest version and what the fuller plan buys, per a principle; if you can't,
   shrink. *NOT in scope* — a plan touching more than one module, a transition
@@ -68,50 +68,47 @@ writing and when reviewing.
 - **Open questions live outside the first chunk.** A question inside the first
   implementation chunk is a missing decision — settle it in Direction.
 
-## Circuit breaker
+## Size and scope review
 
-A plan is sized against the problem that prompted it, and work stops when it
-outgrows that size. Stopping, stepping back to a smaller fix, or reverting are
-normal outcomes, not failures.
+Estimates create pressure to keep the design small. They are goals, not automatic
+cutoffs, and an agent's estimate is not a limit imposed by the boxholder.
 
-**Set the budget while writing.** The template's *Smallest fix and budget*
-section names the smallest change that fixes the problem as reported, and
-this plan's budget: tracks, subprojects, and estimated lines of source and of
-tests. Some plans exceed ~3× the smallest fix. Others add a subproject,
-protocol, or vocabulary that the request did not ask for. Either kind goes to
-the boxholder as a choice between the two before you write the rest.
+**Estimate while planning.** In *Smallest fix and budget*, name the smallest
+change that fixes the reported problem, the chosen tracks/subprojects, and
+estimated source and test lines. Explain what the fuller approach buys.
+Compare like-for-like during implementation: additions plus deletions, not net
+growth. Report documentation and generated output separately so the size is clear.
 
-**During implementation it trips when any of these holds:**
-- the diff passes 1.5× the budgeted lines, or reaches a subproject or track
-  the budget did not list;
-- a state, protocol, or subsystem appears that the plan did not name;
-- the same mechanism takes a second fix-and-review round;
-- the plan is edited a third time to carry implementation findings forward;
-- the boxholder asks why it is so big.
+**Over 2,000 changed lines is a BIG CHANGE.** Label it **BIG CHANGE**, explain
+what drives the size, and obtain the boxholder's approval before proceeding at
+that scale. Count the full proposed change, including source, tests, and authored
+documentation; identify generated output separately rather than concealing it.
+If that size and scope are already approved, continue without asking again.
 
-**When it trips:**
-1. Stop launching work and stop committing.
-2. Write a short breaker report in the plan: what was asked, what is built,
-   size against budget, what drove the growth.
-3. Run a scope review with the other model family (`cross-model`, challenge
-   mode). It classifies each built piece against the boxholder's own words as
-   required, justified-but-optional, or scope creep, and names the smallest
-   version that still meets the request.
-4. Give the boxholder the options: stop and revert, step back to the smallest
-   fix, salvage the required core, or continue under a new budget. Say what
-   each option keeps and what it loses.
+When work grows substantially, show the revised estimate and check whether the
+design still earns its size. Use cross-model scope review when it would help
+identify unnecessary machinery. An estimate overrun, a ratio such as 1.5×, or
+being asked why work is large does not itself require stopping or reverting.
+Keep progressing within approved scope while making the cost visible. Ask for
+a decision when the work becomes a BIG CHANGE without approval, introduces
+materially different scope, or a finding invalidates the chosen approach.
 
-Resume only on their choice, and record the new budget in the plan.
+Record the resulting decision in the plan. Honor an explicit human size limit;
+do not reinterpret it as aspirational. The separate `bbx-debug` three-failed-fix
+limit still applies during debugging.
 
 ## Reviewing an existing plan
 
 Read the plan; check every template section is present and every claim cited.
+For external prior art, verify the premises the design relies on; do not repeat
+searches that have no bearing on a design decision.
 Write findings to a sibling `<plan>.review.md`:
 
 ```
 # Plan Engineering Review — <topic>
 ## What already exists
-## Prior art (external) — verified      ← redo the planner's search; confirm or contradict
+## Ontology (verified against the code's own names)
+## Prior art (external) — verified      ← verify external premises the design depends on
 ## Stated preferences this plan trades against
 ## Could this be simpler? (verified)
 ## Failure modes
@@ -130,7 +127,7 @@ One finding per item, never batched:
 **Issue:** what's wrong, risky, or missing
 **Why it matters:** the failure mode or burden
 **Suggested action:** concrete next step
-**Traces to preference:** one sentence naming the principle
+**Relevant preference:** name it when the finding concerns a stated preference or tradeoff; otherwise omit
 ```
 
 A missing template section is itself a finding; flag it for the planner rather

@@ -22,8 +22,8 @@ The yaml holds the world and the words:
 
 | Field | |
 |---|---|
-| `box.base` | `empty` prunes a clone to the package skeleton; or a path to clone whole |
-| `box.setup` | optional shell run with `$BOX` = the content root, before the person arrives |
+| `box.base` | `empty` initializes a fresh box using the current engine; base paths are refused (use `box.setup`) |
+| `box.setup` | optional shell run with `$BOX` = the single box root; user files belong under `$BOX/_content`, before the person arrives |
 | `assets` | files plus a plain description of what each one is to them |
 | `situation` | handed over verbatim — their life, their reason, no product words |
 | `closing` | what to spend the back half of the budget on |
@@ -71,9 +71,19 @@ Then read the walk and write it up — **[after-action.md](after-action.md)** is
 procedure, and `<journey>/reports/<date>.md` is where it goes. That report is the only part of
 a run that is tracked, so it is what a walk leaves behind.
 
-Each new run supersedes the last: `prepare.ts` deletes the previous run's box and
-screenshots, keeps its notes, and **refuses to run at all** if that walk has no report
-— which is the point at which the evidence would be thrown away unread.
+Each run has a unique lowercase box slug and a fresh initialization history.
+`prepare.ts` preserves all earlier boxes, screenshots, notes, and snapshots, and
+**refuses to run** if an earlier walk has notes but no nonempty report. It never
+deletes transcripts outside a box. Retention cleanup is a separate operator decision.
+
+Provisioning checks the dashboard health results, then requires app navigation at
+the expected URL through `bin/browse` before handing out the prompt. A failed check
+leaves its evidence intact; it does not restart the shared router. No model turn is
+needed for this check.
+
+Timing currently reads only Claude root-chat transcripts and measures from a user
+message to the first assistant text, not completion. Scoped chats are excluded. Missing timing is unavailable, not zero
+waiting; Codex waits must be reported separately from observed browser evidence.
 
 ## Assets are not in the repo
 
@@ -100,3 +110,17 @@ half-provisioned by a missing file.
 - **Nothing the walk says is a finding until it is separately verified.** Three of the
   seven bugs the 2026-08-24 walk reported were the harness, not the app, each written
   up in good faith. That pass is [after-action.md](after-action.md).
+- **Journey walks do not test microphone or voice behavior.** Do not exercise a real,
+  fake, or mock microphone while walking a journey. If a mock-mic interaction is
+  encountered or fails, treat it as a harness limitation and do not present it as
+  product evidence; real microphone behavior belongs to a separate device-testing
+  workflow.
+
+## Scheduled work needs its own verification
+
+Preparation creates and serves a disposable box; it does not register or drive
+scheduler ticks. A valid enabled schedule is not evidence that a reminder will
+arrive. A run making that claim must observe the trigger and its delivery.
+In-process chat timers are a separate mechanism and can run while the box is
+served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+one misfire, but did not verify its replacement scheduled reminder.

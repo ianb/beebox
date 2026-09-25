@@ -25,7 +25,7 @@ import {
 import { loadDriveConfig, saveDriveConfig } from "../../../src/connectors/drive-config.js";
 import { syncFolderMount } from "../../../src/connectors/drive-mount-sync.js";
 import { createGfolderTemplate } from "../../../src/schemas/gfolder.js";
-import { runDriveStatus } from "../../../src/cli/commands/drive.js";
+import { runDriveStatus } from "../../../src/cli/commands/drive-status-cli.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

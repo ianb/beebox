@@ -1,0 +1,22 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-transcript",
+    "kind": "add-selection",
+    "selection": {
+      "ref": null,
+      "text": "Proof it overnight in the fridge",
+      "position": "chat transcript; assistant message"
+    }
+  },
+  "expected": {
+    "version": 1,
+    "id": "selection-command-transcript",
+    "kind": "add-selection",
+    "selection": {
+      "ref": null,
+      "text": "Proof it overnight in the fridge",
+      "position": "chat transcript; assistant message"
+    }
+  }
+}

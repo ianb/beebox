@@ -12,7 +12,9 @@ import { z } from "zod";
 /** `<YYYYMMDD>-<HHMMSS>-<4 hex>` (bin/lib/schedules.ts `alertIdFor`). */
 export const scheduleAlertIdSchema = z.string().regex(/^\d{8}-\d{6}-[0-9a-f]{4}$/u);
 
-export const scheduleAlertPrioritySchema = z.enum(["important", "normal", "backlog", "fyi"]);
+/** important pops up now; normal and fyi wait for the daily digest
+ *  (bin/lib/schedules.ts `prioritySchema` defines them). */
+export const scheduleAlertPrioritySchema = z.enum(["important", "normal", "fyi"]);
 
 export const scheduleAlertSchema = z.object({
   id: scheduleAlertIdSchema,
@@ -26,6 +28,18 @@ export const scheduleAlertSchema = z.object({
   createdAt: z.iso.datetime(),
   state: z.enum(["open", "acknowledged"]),
   acknowledgedAt: z.iso.datetime().nullable(),
+  /** Who closed it: a person, the digest (an fyi it showed), or the schedule
+   *  (the condition cleared). */
+  closedBy: z.enum(["person", "digest", "schedule"]).nullable(),
+  /** A standing condition's name; null for a one-off alert. */
+  condition: z.string().min(1).nullable(),
+  lastSeenAt: z.iso.datetime(),
+  occurrences: z.number().int().positive(),
+  digestedAt: z.iso.datetime().nullable(),
+  /** Repo-relative path of the private issue a week-old condition became. */
+  issue: z.string().nullable(),
+  filingFailedSince: z.iso.datetime().nullable(),
+  filingError: z.string().nullable(),
 });
 
 export const scheduleAlertsResultSchema = z.object({

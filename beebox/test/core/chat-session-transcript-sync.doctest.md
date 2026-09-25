@@ -42,7 +42,7 @@ the (test-shortened) timeout and resolves `false`; one that lands mid-wait is
 picked up by the next poll.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const sessionId = "tsync-helper";
 const logPath = await resolveSessionLogPath(box.root, sessionId);
 await mkdir(dirname(logPath), { recursive: true });
@@ -72,7 +72,7 @@ A turn whose assistant message carries a uuid must not surface `result`/
 the gate within a poll interval.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
 await session.send("hello");
@@ -118,7 +118,7 @@ errored turn with no assistant output) skip the gate entirely — `done` fires
 promptly even though no transcript file exists at all.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
 await session.send("hello");

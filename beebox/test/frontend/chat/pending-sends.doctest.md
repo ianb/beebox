@@ -6,7 +6,7 @@ resends a saved message automatically.
 
 ```ts setup
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../src/frontend/src/components/chat/conversation/pending-sends.js";
-import { conversationStorageScope } from "../../../src/frontend/src/components/chat/conversation/storage-scope.js";
+import { storageScopeFor } from "../../../src/frontend/src/lib/storage-scope.js";
 import type { Emission } from "../../../src/frontend/src/input/emission.js";
 import type { SendBinding } from "../../../src/shared/chat-composer-binding.js";
 ```
@@ -190,14 +190,14 @@ const storage = {
   removeItem: (key: string) => { data.delete(key); },
 };
 const binding: SendBinding = { boxSlug: "test1", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
-const paperScope = conversationStorageScope("/paper-cards/test1/api");
-const chatScope = conversationStorageScope("/chat-everywhere/test1/api");
+const paperScope = storageScopeFor("/paper-cards/test1/api");
+const chatScope = storageScopeFor("/chat-everywhere/test1/api");
 createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).stage(
   { id: "paper", origin: "typed", text: "Paper message", images: [], files: [], selections: [], diarized: false }, binding);
 createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).stage(
   { id: "chat", origin: "typed", text: "Chat message", images: [], files: [], selections: [], diarized: false }, binding);
 JSON.stringify({
-  scopes: [paperScope, chatScope, conversationStorageScope("/test1/api")],
+  scopes: [paperScope, chatScope, storageScopeFor("/test1/api")],
   paper: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).getSnapshot().map((row) => row.emission.text),
   chat: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).getSnapshot().map((row) => row.emission.text),
 })
@@ -302,4 +302,27 @@ quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test
 
 removed
 => false
+```
+
+## An image's original path survives the recovery copy
+
+The recovery envelope is what a rejected send is retried from, so it has to
+carry the uploaded original's `path` or the retry silently goes out with the
+pixels and no file line (the storage schema strips keys it does not name).
+
+```ts
+const data = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => data.get(key) ?? null,
+  setItem: (key: string, value: string) => { data.set(key, value); },
+  removeItem: (key: string) => { data.delete(key); },
+};
+const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "kitchen", contextDir: "_content/kitchen" }, attention: { surface: "card", focusedRef: "_content/house/Report.doc.card", transcript: "hidden" } };
+const withPath: Emission = { id: "img-1", origin: "typed", text: "receipt [image#1]", diarized: false,
+  images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }],
+  files: [], selections: [] };
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).stage(withPath, binding);
+const recovered = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
+recovered.getSnapshot()[0]?.emission.images[0]?.path
+=> _tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg
 ```

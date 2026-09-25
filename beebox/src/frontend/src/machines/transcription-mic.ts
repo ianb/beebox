@@ -21,7 +21,6 @@
  * captured so far preserved.
  */
 
-import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { delay, jitteredBackoff } from "@shared/backoff.js";
 import { setMicLevelSource, clearMicLevelSource } from "../lib/audio/mic-level";
 import { getMicStream } from "../lib/audio/fake-mic";
@@ -106,6 +105,15 @@ export class MicCapture {
     if (this.stopped) return;
 
     this.audioContext = new AudioContext();
+    // Imported HERE, not at module scope. A static `?url` import is a
+    // Vite-only asset reference the tap/tsx doctest loader cannot resolve, so
+    // it failed the whole module under Node — and with it everything that
+    // transitively imports this file: the transcription machine, its actor,
+    // and `useRealtimeTranscription`, none of which could be doctested at all
+    // (issues/code-quality/2026-08-15-transcription-machine-untestable-worklet-import.md).
+    // Deferring it to mic start means Node only ever resolves it if a test
+    // actually opens a microphone, which no doctest does.
+    const { default: pcmProcessorUrl } = await import("../audio/pcm-processor.worklet.js?url");
     await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
     if (this.isStopped()) return;
 

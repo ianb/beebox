@@ -1,6 +1,6 @@
 ---
 name: bbx-migration
-description: Use when you change a card type's on-disk shape that existing boxes already hold — renaming or removing a card field, changing a card's `type`/format/extension, splitting/merging fields, or moving data between cards. Such changes need a data migration even when they only edit a schema. NOT for a net-new schema or a purely additive change where old cards still load correctly.
+description: Use when changing existing cards' on-disk shape or meaning, including field renames/removals, type/format/extension changes, splits, merges, or moved data—even for schema-only edits. Not for new schemas or compatible additive changes.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 

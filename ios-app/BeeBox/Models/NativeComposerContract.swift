@@ -10,7 +10,8 @@ struct NativeEmissionFile: Codable, Equatable, Identifiable {
 
 struct NativeEmissionSelection: Codable, Equatable, Identifiable {
     var id: Int
-    var ref: String
+    /// Box path of the source document; nil for text quoted from the chat transcript.
+    var ref: String?
     var text: String
     var position: String
     var anchor: String?
@@ -25,6 +26,7 @@ struct NativeEmissionV2: Codable, Equatable {
 
     enum DecodeError: Error, Equatable {
         case unsupportedVersion(Int)
+        case contradictoryHqProvenance
     }
 
     var version = 2
@@ -34,6 +36,7 @@ struct NativeEmissionV2: Codable, Equatable {
     var diarized: Bool
     var hqText: Bool?
     var hqService: String?
+    var hqFallback: Bool?
     var images: [ChatImageAttachment]
     var files: [NativeEmissionFile]
     var selections: [NativeEmissionSelection]
@@ -45,6 +48,7 @@ struct NativeEmissionV2: Codable, Equatable {
         diarized = emission.diarized
         hqText = emission.hqText
         hqService = emission.hqService
+        hqFallback = emission.hqFallback
         images = emission.images
         files = emission.files
         selections = emission.selections
@@ -62,6 +66,10 @@ struct NativeEmissionV2: Codable, Equatable {
         diarized = try container.decode(Bool.self, forKey: .diarized)
         hqText = try container.decodeIfPresent(Bool.self, forKey: .hqText)
         hqService = try container.decodeIfPresent(String.self, forKey: .hqService)
+        hqFallback = try container.decodeIfPresent(Bool.self, forKey: .hqFallback)
+        guard hqText != true || hqFallback != true else {
+            throw DecodeError.contradictoryHqProvenance
+        }
         images = try container.decode([ChatImageAttachment].self, forKey: .images)
         files = try container.decode([NativeEmissionFile].self, forKey: .files)
         selections = try container.decode([NativeEmissionSelection].self, forKey: .selections)
@@ -112,7 +120,8 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
     }
 
     struct Selection: Codable, Equatable {
-        var ref: String
+        /// Box path of the source document; nil (JSON null) for chat-transcript text.
+        var ref: String?
         var text: String
         var position: String
     }

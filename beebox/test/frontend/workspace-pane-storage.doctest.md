@@ -8,7 +8,6 @@ usable in-memory state plus notices that the UI adapter can report.
 import { createEmptyWorkspaceState, type WorkspaceState } from "../../src/frontend/src/components/chat/workspace/workspace-state.js";
 import { createWorkspaceBrowserStoreWithStorage, type WorkspaceStorage } from "../../src/frontend/src/components/chat/workspace/workspace-browser-store.js";
 import {
-  conversationStorageScope,
   importTrustedLegacyWorkspace,
   parseWorkspaceState,
   restoreWorkspaceState,
@@ -16,6 +15,7 @@ import {
   storageUnavailableNotice,
   workspaceStorageKey,
 } from "../../src/frontend/src/components/chat/workspace/workspace-storage.js";
+import { storageScopeFor } from "../../src/frontend/src/lib/storage-scope.js";
 
 function target(path: string) {
   return { path, viewer: null, params: {}, viewState: null };
@@ -48,7 +48,7 @@ const legacyRaw = JSON.stringify({
 ## The API base isolates same-origin development worktrees
 
 ```ts
-conversationStorageScope("/paper-cards/test1/api")
+storageScopeFor("/paper-cards/test1/api")
 => paper-cards/test1
 
 workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" })
@@ -61,7 +61,7 @@ workspaceStorageKey({ apiBase: "/other-worktree/test1/api", logicalConversationI
 Production URLs retain their box identity too.
 
 ```ts continue
-conversationStorageScope("/my-box/api/")
+storageScopeFor("/my-box/api/")
 => my-box
 ```
 
@@ -161,40 +161,27 @@ importTrustedLegacyWorkspace("not-json").notices[0]?.code
 
 ## Restore precedence preserves the newest trusted state
 
-A valid v2 snapshot wins. Without one, the current in-memory strip is preferred
-to legacy storage so assigning a provisional conversation identity cannot clear
-tabs that are already open.
+A valid v2 snapshot wins over a trusted legacy strip.
 
 ```ts
-const currentStrip = {
-  tabs: [{ target: target("current"), label: "Current", pinned: false, lastActiveAt: 9 }],
-  activePath: "current",
-};
 restoreWorkspaceState({
   v2Raw: serializeWorkspaceState(workspaceWith("stored")),
-  currentStrip,
   trustedLegacyRaw: legacyRaw,
 }).state.panes.left.activePath
 => stored
-
-restoreWorkspaceState({ v2Raw: null, currentStrip, trustedLegacyRaw: legacyRaw }).source
-=> current-strip
-
-restoreWorkspaceState({ v2Raw: null, currentStrip, trustedLegacyRaw: legacyRaw }).state.panes.left.activePath
-=> current
 ```
 
-An ambiguous populated legacy key is left untouched by the caller. When no
-trusted state exists, the parser starts empty and returns a notice explaining
-why the old strip was skipped.
+An old key whose provenance is unknown is not supplied to restoration. The
+workspace starts quietly empty; it does not present a migration diagnostic for
+state it intentionally ignored.
 
 ```ts continue
-const ambiguous = restoreWorkspaceState({ v2Raw: null, skippedPopulatedLegacy: true });
-ambiguous.source
+const empty = restoreWorkspaceState({ v2Raw: null });
+empty.source
 => empty
 
-ambiguous.notices[0]?.code
-=> ambiguous-legacy
+empty.notices.length
+=> 0
 ```
 
 Blocked browser storage also has a notice that does not contain stored data.

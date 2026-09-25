@@ -10,7 +10,8 @@ import { bbxSource } from "../../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { MobileBackButton } from "../ui/MobileBackButton";
 import { parseDiff } from "./CommitDetail-diff";
-import { CommitTab, stripTrailers, trailerString } from "./CommitDetail-commit";
+import { stripTrailers, trailerString } from "@shared/commit-trailers";
+import { CommitTab } from "./CommitDetail-commit";
 import { DiffTab, MovedTab, NewFilesTab } from "./CommitDetail-tabs";
 
 interface CommitDetailProps {
@@ -21,25 +22,26 @@ interface CommitDetailProps {
   onFilterSession?: (sessionId: string) => void;
   /** Add this connector value to the active connector filter. */
   onFilterConnector?: (connector: string) => void;
-  /** Add this workflow value to the active workflow filter. */
-  onFilterWorkflow?: (workflow: string) => void;
+  /** Add this trigger id to the active triggered-by filter. */
+  onFilterTrigger?: (triggerId: string) => void;
+  idPrefix: string;
 }
 
 // --- Session toggle ---
 
-function SessionSection({ sessionId }: { sessionId: string }) {
+function SessionSection({ sessionId, idPrefix }: { sessionId: string; idPrefix: string }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div className="border-t border-warm-200">
       <button
-        id="bbx-history-session-log-toggle"
+        id={`${idPrefix}-session-log-toggle`}
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-2 text-xs text-warm-500 hover:text-warm-700 text-left"
       >
         {expanded ? "▾" : "▸"} Session log
       </button>
-      {expanded ? <SessionLog sessionId={sessionId} /> : null}
+      {expanded ? <SessionLog sessionId={sessionId} idPrefix={idPrefix} /> : null}
     </div>
   );
 }
@@ -62,7 +64,8 @@ export function CommitDetail({
   onBack,
   onFilterSession,
   onFilterConnector,
-  onFilterWorkflow,
+  onFilterTrigger,
+  idPrefix,
 }: CommitDetailProps) {
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
@@ -89,7 +92,7 @@ export function CommitDetail({
 
   return (
     <div className="h-full flex flex-col bg-white" {...bbxSource("commit", commit.hash)}>
-      {onBack ? <MobileBackButton id="bbx-history-back" label="Back to commits" onClick={onBack} /> : null}
+      {onBack ? <MobileBackButton id={`${idPrefix}-back`} label="Back to commits" onClick={onBack} /> : null}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- role="region" + tabIndex=0 is the W3C APG "scrollable region" pattern (lets a keyboard user Page-Down/arrow-scroll the mostly-read-only diff view); the rule's default config only whitelists role="tabpanel", not "region" */}
       <div className="flex-1 overflow-auto" tabIndex={0} role="region" aria-label="Commit details">
       {/* Commit info */}
@@ -98,7 +101,7 @@ export function CommitDetail({
         bodyText={bodyText}
         onFilterSession={onFilterSession}
         onFilterConnector={onFilterConnector}
-        onFilterWorkflow={onFilterWorkflow}
+        onFilterTrigger={onFilterTrigger}
       />
 
       {/* Divider */}
@@ -130,7 +133,7 @@ export function CommitDetail({
         </>
       ) : null}
 
-      {sessionId ? <SessionSection sessionId={sessionId} /> : null}
+      {sessionId ? <SessionSection sessionId={sessionId} idPrefix={idPrefix} /> : null}
       </div>
     </div>
   );

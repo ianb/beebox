@@ -440,7 +440,7 @@ must roll back. Here the box has no git repo, so the commit throws; the answer
 restores the original card and deletes the job before returning the error:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: "none" });
 await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
 const res = await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", answer: "a" });

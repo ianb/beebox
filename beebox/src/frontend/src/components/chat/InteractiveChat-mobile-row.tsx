@@ -9,6 +9,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
+import { useComposerCaret } from "./composer-caret";
 import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer";
 import { segmentCapturing } from "../../machines/transcription-events";
 
@@ -41,6 +42,7 @@ export function MobileTextareaRow({
   // This textarea is separate from the desktop composer's (which has its own
   // ref + autoscroll wired in useChatActions), so it needs its own pinning.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const noteTyped = useComposerCaret({ textareaRef, text: input });
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
   return (
@@ -53,7 +55,7 @@ export function MobileTextareaRow({
         id="bbx-composer-input-mobile"
         ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
+        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}

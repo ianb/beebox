@@ -26,6 +26,7 @@ import { extractPdf } from "./pdf-extract.js";
 import { probePdf, type PdfProbe } from "./pdf-probe.js";
 import type { DoclingOcr } from "../../services/docling.js";
 import { createSessionLayout } from "./scan-import-session.js";
+import { assertAnnexBox } from "../annex/assert-annex-box.js";
 
 /** The OCR intent a probed PDF calls for. Pure, so the mapping is testable. */
 export function ocrIntentFor(probe: Pick<PdfProbe, "hasTextLayer" | "textLayerQuality">): DoclingOcr {
@@ -51,6 +52,7 @@ export async function runPdfMode(
   ctx: CommandContext,
   args: RunPdfModeArgs
 ): Promise<CommandResult> {
+  await assertAnnexBox(ctx.boxRoot, "PDF extract");
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachAbsDir,

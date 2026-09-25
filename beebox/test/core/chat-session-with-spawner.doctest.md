@@ -39,7 +39,7 @@ the backend. With an override prompt and extra env the fake captures
 both:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: testPrompt, extraEnv: { BBX_TEST_FOO: "foo", BBX_TEST_BAR: "bar" }, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
@@ -74,7 +74,7 @@ When the fake emits the init system message with a `session_id`,
 `resume`.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const observed = [];
 async function recordId(id) { observed.push(id); }
@@ -119,7 +119,7 @@ A session with a custom `sessionFile` writes its id to that file; a
 session pointed at a different `sessionFile` sees a blank slate.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, buildSetupOpts(backend));
 await runTurn(session, { backend, sessionIdToEmit: "sess-setup-1" });
@@ -153,7 +153,7 @@ A full turn with an assistant text block + result event emits
 `turn-text` on completion with the accumulated assistant text.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
@@ -198,7 +198,7 @@ started run. This recovers from wedged/killed sessions without losing
 the user's in-flight messages.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
@@ -241,7 +241,7 @@ drains any queued messages into a new run, preserving the session
 id. Unlike `stop()`, queued messages survive.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
@@ -276,7 +276,7 @@ It clears the queue before closing the run so the close handler
 doesn't surprise the caller by starting a new run.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);

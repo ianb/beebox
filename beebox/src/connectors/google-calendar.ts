@@ -22,6 +22,7 @@ import {
   type SyncResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "./sync-skipped.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import { getBoxTime } from "../lib/time.js";
 import {
@@ -125,13 +126,13 @@ class GoogleCalendarConnector implements Connector {
     if (!this.injectedService) {
       const allowed = await isGoogleServiceAllowed(this.boxRoot, "calendar");
       if (!allowed) {
-        return { success: true, created: [], updated: [] };
+        return skippedSync(serviceNotAllowed("calendar"));
       }
     }
 
     const calendar = await this.getCalendar();
     if (!calendar) {
-      return { success: true, created: [], updated: [] };
+      return skippedSync(await serviceNotConfigured(this.boxRoot));
     }
 
     const config = await this.loadConfig();

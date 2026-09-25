@@ -19,6 +19,8 @@ interface SidebarProps {
   children: ReactNode;
   /** Width in pixels (default: 320, i.e. w-80) */
   widthPx?: number;
+  /** Let a list-only surface occupy all available width. */
+  fill?: boolean;
   /** Initially collapsed? */
   defaultCollapsed?: boolean;
   /** Whether a detail item is selected (controls mobile visibility) */
@@ -37,18 +39,20 @@ export function Sidebar({
   subtitle,
   children,
   widthPx,
+  fill,
   defaultCollapsed,
   detailSelected,
   idPrefix,
 }: SidebarProps) {
   const Heading = headingLevel ?? "h1";
   widthPx = widthPx ?? 320;
+  fill = fill ?? false;
   defaultCollapsed = defaultCollapsed ?? false;
   detailSelected = detailSelected ?? false;
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const collapsedWidth = 40;
-  const desktopWidth = collapsed ? collapsedWidth : widthPx;
+  const desktopWidth = fill ? "100%" : `${collapsed ? collapsedWidth : widthPx}px`;
 
   return (
     <div
@@ -58,7 +62,7 @@ export function Sidebar({
           : "flex flex-1 sm:flex-initial sm:flex-shrink-0"
       }`}
       // eslint-disable-next-line no-restricted-syntax -- React.CSSProperties' index signature doesn't cover CSS custom properties (`--foo`); this is the standard escape hatch for setting one via the inline `style` prop.
-      style={{ "--sidebar-desktop-w": `${desktopWidth}px` } as React.CSSProperties}
+      style={{ "--sidebar-desktop-w": desktopWidth } as React.CSSProperties}
     >
       {/* Apply desktop width via inline style scoped to sm+ */}
       <style>{"@media (min-width: 640px) { [style*=\"--sidebar-desktop-w\"] { width: var(--sidebar-desktop-w) !important; } }"}</style>
@@ -80,7 +84,7 @@ export function Sidebar({
               <Heading className="text-sm font-medium text-warm-700 truncate">{title}</Heading>
               {subtitle ? <div className="text-xs text-warm-500 truncate">{subtitle}</div> : null}
             </div>
-            <button
+            {!fill ? <button
               id={idPrefix !== undefined ? `${idPrefix}-collapse` : undefined}
               onClick={() => setCollapsed(true)}
               className="hidden sm:block p-1 hover:bg-warm-200 rounded text-warm-500 hover:text-warm-700 flex-shrink-0"
@@ -89,7 +93,7 @@ export function Sidebar({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
               </svg>
-            </button>
+            </button> : null}
           </div>
 
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- role="region" + tabIndex=0 is the W3C APG "scrollable region" pattern (lets a keyboard user Page-Down/arrow-scroll the pane before tabbing into a row); the rule's default config only whitelists role="tabpanel", not "region" */}

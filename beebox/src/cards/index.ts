@@ -17,10 +17,17 @@ export {
   type FieldDecl,
   type CardSchemaConfig,
   type CardSchema,
+  type CardSummaryBase,
+  type CardSummaryParts,
+  type SummaryAttrs,
   type InferCardFields,
   type CardCategory,
   type CardValidateInput,
   type TemplateMergePolicy,
+  type CardSubmissions,
+  type CardSubmissionInput,
+  type CardSubmissionResult,
+  type SubmissionIssue,
 } from "./schema.js";
 
 export {

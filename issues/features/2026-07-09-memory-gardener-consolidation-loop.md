@@ -30,7 +30,7 @@ cards, plus a maintenance loop we don't have.
   observes *chat sessions* after they quiesce and extracts observations/feedback. It's
   a **learning loop (sessions → observations)**, not a consolidation of accumulated
   records.
-- **Landmark curation** (`docs/landmark-curation.md`) — curates the *navigation
+- **Landmark curation** (`beebox/docs/box/landmark-curation.md`) — curates the *navigation
   surface*, not note content.
 - **Distill-into-`rules`** (`box/skills-content.ts`, `schemas/exposition-plan.ts`) —
   compiles material into rules, scoped to authoring, not a standing pass.

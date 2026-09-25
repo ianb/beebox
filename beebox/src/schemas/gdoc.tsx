@@ -69,6 +69,16 @@ server). Do not modify the card frontmatter — it is managed by the
 connector — with one exception: \`contains:\` is agent-owned and
 survives sync; set it freely (\`bbx contains update\`).
 
+Edit it only to change what the document says. The \`.md\` is Google's
+export, not an authored file, so never reformat it — and never edit it
+to satisfy a linter. Markdown lint does not run on these files; a lint
+failure on one is an engine bug to report, not a file to repair.
+Whitespace is not cosmetic here: trailing spaces encode a line break
+inside a nested list, and stripping them collapses checklists into
+paragraphs upstream. A push that strips trailing whitespace off lines it
+otherwise keeps is refused — the connector parks the upstream copy as
+\`.remote.md\` instead — so leave it alone even when making a real edit.
+
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and
 your push, the card \`status\` becomes \`conflict\` and the upstream
@@ -95,6 +105,12 @@ replace those features with the markdown body — destroying them. If
 \`lossy\` is non-empty and a push is intended, surface the loss to the
 user before committing. (Comments are handled separately via
 \`comments.ref:\` above, not counted here.)
+
+An empty \`lossy:\` is not a safety check. It means none of those six
+features were found — it says nothing about the structure the export
+does carry, such as nested lists and checkboxes, which markdown holds
+only in whitespace and indentation. Never read an empty \`lossy:\` as
+permission to edit or reformat.
 
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)

@@ -2,7 +2,7 @@
  * The merged activity surface: every landmark in the box, each with its
  * chats *and* its links, plus a trailing bucket for chats bound to a
  * directory with no landmark. Self-sufficient (fetches its own data), so it
- * serves both the /landmarks page and `view: landmarks` cards
+ * serves both the canonical Landmarks card and authored `view: landmarks` cards
  * (docs/plans/interface-as-cards.md) — a `view: landmarks` card shows the
  * sessions too, which is the point: one full picture of the box's activity
  * (docs/plans/top-nav-ia.md Track D).
@@ -22,6 +22,9 @@ import type { RouterOutput } from "../../lib/trpc";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ErrorText } from "../ui/ErrorText";
+import { StatusMessage } from "../ui/StatusMessage";
+import { Heading } from "../ui/Heading";
 import { LandmarkSection } from "./LandmarkSection";
 import { LandmarkSessions } from "./LandmarkSessions";
 
@@ -62,14 +65,14 @@ export function LandmarksList() {
   const chats = trpc.chat.byLandmark.useQuery();
 
   if (list.isLoading || chats.isLoading) {
-    return <Text as="div" tone="subtle" className="p-8">Loading…</Text>;
+    return <StatusMessage>Loading…</StatusMessage>;
   }
   const error = list.error ?? chats.error;
   if (error) {
     return (
-      <Text as="div" tone="subtle" className="p-8">
+      <ErrorText className="p-8">
         Failed to load landmarks: {error.message}
-      </Text>
+      </ErrorText>
     );
   }
 
@@ -124,7 +127,7 @@ export function LandmarksList() {
             <div className="flex items-center gap-3">
               <span className="text-4xl leading-none flex-shrink-0" aria-hidden>💬</span>
               <Stack gap="xs">
-                <Text as="h2" size="lg" weight="bold">Other chats</Text>
+                <Heading level={2}>Other chats</Heading>
                 <Text as="span" size="xs" tone="muted">
                   Chats whose directory has no landmark
                 </Text>

@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { triggeredByTrailer } from "../../shared/commit-trailers.js";
 import { z } from "zod";
 import { registerCommand, parseCommandArgs, type CommandContext, type CommandResult } from "../command-runner.js";
 import { getBoxDir, isCardFile, parseCardName } from "../../lib/paths.js";
@@ -212,7 +213,7 @@ export async function moveCardsToTrash(ctx: CommandContext, cardPaths: string[])
 }
 
 /** Commit one completed trash move receipt with standard attribution. */
-export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined }): Promise<string | null> {
+export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined; actor?: string | undefined }): Promise<string | null> {
   const { receipt, reason } = options;
   const suffix = reason === undefined ? "" : `: ${reason}`;
   const message =
@@ -220,7 +221,7 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
   return stageAndCommitPaths(boxRoot, {
     paths: receipt.gitPaths,
     message,
-    trailers: { "Trashed-By": "bbx rm" },
+    trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor) },
   });
 }
 

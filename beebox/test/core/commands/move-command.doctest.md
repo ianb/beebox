@@ -12,6 +12,7 @@ rewritten too.
 
 ```ts setup
 import { executeMove } from "../../../src/core/commands/move.js";
+import { extractBodyLinks } from "../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
@@ -373,6 +374,71 @@ type: doc
 By [Dana](../../../_content/box/people/dana.person.card), see [scan](scan.capture-session.card).
 ```
 
+A card inside the moved directory that names a sibling file by a
+*box-absolute* path — the legacy capture layout, where an image card's
+`filename.ref` is the absolute path of its own photo — follows the move and
+keeps the absolute style. An absolute ref to something that did not move is
+unchanged.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/session/photo-004.jpg", "JPG");
+await box.write(
+  "_content/box/session/photo-004-Beach.image.card",
+  "---\nfilename:\n  ref: /_content/box/session/photo-004.jpg\n---\nSee [Dana](/_content/box/people/dana.person.card).\n",
+);
+await box.write("_content/box/people/dana.person.card", "---\nname: Dana\n---\n");
+
+await mv(box, { from: "_content/box/session", to: "_bookkeeping/archive/session" });
+await box.read("_bookkeeping/archive/session/photo-004-Beach.image.card")
+=>
+---
+filename:
+  ref: /_bookkeeping/archive/session/photo-004.jpg
+---
+See [Dana](/_content/box/people/dana.person.card).
+```
+
+A single card that names a file in its own attach directory by absolute path
+gets the new attach path:
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/Beach.attach/photo.jpg", "JPG");
+await box.write("_content/box/Beach.image.card", "---\nfilename:\n  ref: /_content/box/Beach.attach/photo.jpg\n---\n");
+
+await mv(box, { from: "_content/box/Beach.image.card", to: "_content/trips/Beach.image.card" });
+await box.read("_content/trips/Beach.image.card")
+=>
+---
+filename:
+  ref: /_content/trips/Beach.attach/photo.jpg
+---
+```
+
+A move to a path with a space writes inbound markdown links in CommonMark's
+angle-bracket form, since a bare destination ends at the first space.
+`bbx validate` reads that form, and the next move rewrites it again, keeping
+the brackets as it keeps every link's style:
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/cap/Beach.image.card", "---\ntitle: Beach\n---\n");
+await box.write("_content/notes/trip.doc.card", "---\ntitle: Trip\n---\n![b](/_content/cap/Beach.image.card)\n");
+
+await mv(box, { from: "_content/cap/Beach.image.card", to: "_content/cap/Beach walk.image.card" });
+const trip = await box.read("_content/notes/trip.doc.card");
+trip.includes("![b](</_content/cap/Beach walk.image.card>)")
+=> true
+
+JSON.stringify(extractBodyLinks(trip.split("---\n")[2] ?? "").map((l) => l.ref))
+=> ["/_content/cap/Beach walk.image.card"]
+
+await mv(box, { from: "_content/cap/Beach walk.image.card", to: "_content/cap/Walk.image.card" });
+(await box.read("_content/notes/trip.doc.card")).includes("![b](</_content/cap/Walk.image.card>)")
+=> true
+```
+
 ## Rename in place (same directory)
 
 A card can be renamed within its directory; refs follow the new basename and
@@ -528,7 +594,7 @@ _content/store/kept/Two.memo.card
 
 ## Errors
 
-A non-card, non-directory source is rejected.
+A source that is not a card, a `.md` file, or a directory is rejected.
 
 ```ts
 const box = await makeTmpBox();
@@ -537,7 +603,17 @@ result.success
 => false
 
 result.error
-=> Source must be a .card file or directory: _content/box/notes.txt
+=> Source must be a .card file, a .md file, or a directory: _content/box/notes.txt
+```
+
+A move keeps the file's kind: a `.md` file cannot become a card.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/box/notes.md", "# Notes\n");
+const result = await mv(box, { from: "_content/box/notes.md", to: "_content/store/Notes.doc.card" });
+result.error
+=> Destination must be a .md file: _content/store/Notes.doc.card
 ```
 
 Moving multiple cards to a single file destination is rejected.
@@ -586,6 +662,40 @@ const saoirse = await box.read("_content/store/dossiers/saoirse.md");
 
 ```ts continue
 await box.cleanup();
+```
+
+## Moving a plain `.md` file
+
+A plain `.md` file moves or renames like a card. Cards and other `.md` files that link
+to it are rewritten in whichever style they used, and the moved file's own
+relative links are recomputed from its new location. A `.md` file has no
+attach scope, so nothing else moves with it.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/notes/saoirse.md", "# Saoirse\n\nSee [Dana](dana.person.card).\n");
+await box.write("_content/notes/dana.person.card", "---\nname: Dana\n---\n");
+await box.write("_content/index.doc.card", "---\ntitle: Index\n---\n[S](/_content/notes/saoirse.md)\n");
+await box.write("_content/other.md", "[S](notes/saoirse.md)\n");
+
+const result = await mv(box, { from: "_content/notes/saoirse.md", to: "_content/dossiers/" });
+result.success
+=> true
+
+(await box.read("_content/dossiers/saoirse.md")).includes("See [Dana](../notes/dana.person.card).")
+=> true
+
+(await box.read("_content/index.doc.card")).includes("[S](/_content/dossiers/saoirse.md)")
+=> true
+
+await box.read("_content/other.md")
+=> [S](dossiers/saoirse.md)
+
+(await mv(box, { from: "_content/dossiers/saoirse.md", to: "_content/dossiers/saoirse-2026.md" })).success
+=> true
+
+await box.list("_content/dossiers")
+=> _content/dossiers/saoirse-2026.md
 ```
 
 ## Directory moves rewrite `.md` dossiers too — inside and outside the move
