@@ -13,6 +13,7 @@ import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, S
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import type { SessionContentBlock } from "../../api";
 import { buildStreamEntry } from "../../lib/stream-entry";
+import { hasProgressUpdate } from "./message-parsing";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "./capture-bubble";
 import { invariant } from "@shared/invariant";
@@ -150,7 +151,7 @@ export function buildDataItems(opts: {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }
       }
-      if (isNoResponseOnly(allText) && !debugView) {
+      if (isNoResponseOnly(allText) && !debugView && !hasProgressUpdate(group.entries)) {
         // Suppress the empty bubble but still emit markers anchored here
         // so chronological order is preserved. Skipped in debug view so the
         // raw no-response ack stays visible.

@@ -1,5 +1,6 @@
 import { ChatSendRejectedError } from "../api-chat";
 import type { SendBinding } from "@shared/chat-composer-binding.js";
+import { writesProgressUpdates } from "@shared/model-ids.js";
 import { boundTurnFields } from "./chat-bound-turn.js";
 /**
  * XState actors (and their internal helpers) for the chat machine.
@@ -173,6 +174,10 @@ export function handleTurnMessage(
         // the first streamed one (the "only the last block renders" bug).
         if (state.sawTextPartial) continue;
         sendBack({ type: "STREAM_TEXT", text: block.text });
+      } else if (block.type === "thinking" && block.thinking?.trim() && writesProgressUpdates(msg.message.model)) {
+        // A progress update the model wrote for the user before a tool call.
+        // It rides the tool list so it keeps its place between tool calls.
+        sendBack({ type: "STREAM_TOOL", tool: { type: "thinking", text: block.thinking, progressUpdate: true } });
       } else if (block.type === "tool_use") {
         sendBack({
           type: "STREAM_TOOL",

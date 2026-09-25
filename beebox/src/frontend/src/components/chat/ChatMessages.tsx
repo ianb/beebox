@@ -175,6 +175,8 @@ export function AssistantMessage({
                 onZoomView={onZoomView}
               />
             )
+          ) : group.kind === "update" ? (
+            <p key={i} className="my-1 text-sm text-warm-600 whitespace-pre-wrap">{group.text}</p>
           ) : (
             <ActivityGroup key={i} parts={group.parts} />
           )
