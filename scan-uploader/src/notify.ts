@@ -65,6 +65,7 @@ interface Banner {
 export interface NotifyOptions {
   /** Overrides `process.platform`, for the doctest. */
   readonly platform?: string;
+  readonly photosFound?: readonly { readonly album: string; readonly count: number }[];
 }
 
 /**
@@ -74,7 +75,8 @@ export interface NotifyOptions {
 export async function notifySweep(boxes: readonly BoxSummary[], options?: NotifyOptions): Promise<void> {
   const platform = options?.platform ?? process.platform;
   if (platform !== "darwin") return;
-  for (const banner of bannersFor(boxes)) {
+  const photosFound = options?.photosFound ?? [];
+  for (const banner of [...bannersFor(boxes), ...photosFound.map((item) => ({ title: "Photos queued", message: `${item.count} ${item.count === 1 ? "photo" : "photos"} from '${item.album}' queued for upload`, group: `org.beebox.scan-uploader.photos.${item.album}` }))]) {
     await send(banner);
   }
 }

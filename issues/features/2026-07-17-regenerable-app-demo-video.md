@@ -79,7 +79,7 @@ narrative* + a *determinism decision*.
 - How far to take Tier B here vs. deferring the polish to a separate item.
 
 Prior art to evaluate before building the capture layer:
-[proving-it-works](../exploration/2026-08-14-proving-it-works-demo-video-plugin.md)
+[proving-it-works](../closed/exploration/2026-08-14-proving-it-works-demo-video-plugin.md)
 — a Claude Code plugin that records narrated demos and verifies them
 mechanically.
 
@@ -87,3 +87,33 @@ Related surfaces: `docs/tours.md`, `test/tours/tour-lib/`, `bin/tour`,
 `src/scenario/`, `src/lib/time.ts`, agent-browser (`get cdp-url`). A concrete build
 probably wants a short plan (`docs/plans/`) before implementation given the
 multi-part shape.
+
+## Patterns from proving-it-works (2026-09-24)
+
+The boxholder wants to experiment with video recording. They reviewed
+[proving-it-works](../closed/exploration/2026-08-14-proving-it-works-demo-video-plugin.md)
+and decided not to adopt it. Patterns worth copying from its scripts
+(`skills/proving-it-works-with-a-movie/scripts/` in that repository):
+
+- **Check picture and sound on one timeline.** `check-movie` samples the
+  picture at 1 Hz (the fraction of pixels changed since the previous second)
+  and the audio as per-second loudness, then compares them. It fails a movie
+  whose visible change ends in the first 40% while narration runs on for more
+  than 5 s. It also fails a still, a silent track, and missing or short
+  subtitles, and warns on long frozen stretches. Per-frame checks cannot see
+  these defects, because they live between frames.
+- **Hand a human a contact sheet, never a verdict of "good".** The check
+  emits a 12-frame contact sheet and tells the reader to look at it: it cannot
+  see wrong content, unreadable text, a missing cursor, or narration that
+  contradicts the picture.
+- **Time scenes to the longer of narration and action.** `assemble` holds each
+  scene for the longer of its narration and its visual action, so neither is
+  cut off.
+- **Subtitles are required when there is narration**, timed to the measured
+  clips (`make-subtitles`), and burned in or embedded.
+- **Hold any beat that matters for more than 1 s.** Anything shorter falls
+  between samples and reads as no change.
+
+Dependencies it assumes: `ffmpeg`, `ffprobe`, `uv` (the boxholder has said
+these are fine).
+

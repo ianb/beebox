@@ -35,14 +35,16 @@ async function makeViews() {
 }
 
 // Run the real CLI (prebuilt by pretest) in hook mode with a PostToolUse
-// payload on stdin; resolve its exit code + stderr.
-function runShellHook(filePath) {
+// payload on stdin; resolve its exit code and output channels.
+function runShellHook(filePath, sessionId) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "validate", "--hook"], { cwd: dirname(filePath) });
+    let stdout = "";
     let stderr = "";
+    child.stdout.on("data", (d) => { stdout += String(d); });
     child.stderr.on("data", (d) => { stderr += String(d); });
-    child.on("close", (code) => resolve({ code, stderr }));
-    child.stdin.end(JSON.stringify({ tool_input: { file_path: filePath } }));
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+    child.stdin.end(JSON.stringify({ session_id: sessionId, tool_input: { file_path: filePath } }));
   });
 }
 ```
@@ -149,4 +151,67 @@ good.code
 
 ```ts cleanup
 await rm(dirname(dirname(viewsDir)), { recursive: true, force: true });
+```
+
+A soft instruction-size warning exits 0 and reaches the agent through the
+`PostToolUse` JSON context channel, without a failing tool result:
+
+```ts
+const warningBox = await makeTmpBox();
+const instructions = join(warningBox.root, "CLAUDE.md");
+await writeFile(instructions, "x".repeat(13000));
+const warning = await runShellHook(instructions);
+JSON.stringify({
+  code: warning.code,
+  context: JSON.parse(warning.stdout).hookSpecificOutput.additionalContext.includes("claude-md-size"),
+  stderr: warning.stderr,
+})
+=> {"code":0,"context":true,"stderr":""}
+```
+
+```ts cleanup
+await warningBox.cleanup();
+```
+
+## Repeated instruction-size warnings
+
+One session sees a size tier once for each file. A larger character count in
+the same tier stays quiet; crossing to the firm tier warns again. A clean edit
+resets the notice, and another session gets its own notice.
+
+```ts
+const repeatBox = await makeTmpBox();
+const repeatFile = join(repeatBox.root, "CLAUDE.md");
+await writeFile(repeatFile, "x".repeat(13000));
+const first = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "x".repeat(13100));
+const repeated = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "x".repeat(21000));
+const firm = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "x".repeat(19000));
+const softAgain = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "x".repeat(21010));
+const firmAgain = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "small");
+const clean = await runShellHook(repeatFile, "session-one");
+await writeFile(repeatFile, "x".repeat(13000));
+const afterClean = await runShellHook(repeatFile, "session-one");
+const newSession = await runShellHook(repeatFile, "session-two");
+const cacheFile = join(repeatBox.root, ".beebox", "validate-hook-warnings.json");
+await writeFile(cacheFile, "{");
+const corruptCache = await runShellHook(repeatFile, "session-one");
+const recoveredCache = await runShellHook(repeatFile, "session-one");
+await rm(cacheFile);
+await mkdir(cacheFile);
+const unavailableCache = await runShellHook(repeatFile, "session-one");
+JSON.stringify([first, repeated, firm, softAgain, firmAgain, clean, afterClean, newSession, corruptCache, recoveredCache, unavailableCache].map((result) => ({
+  code: result.code,
+  warning: result.stdout.includes("claude-md-size"),
+  stderr: result.stderr,
+})))
+=> [{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":true,"stderr":""},{"code":0,"warning":false,"stderr":""},{"code":0,"warning":true,"stderr":""}]
+```
+
+```ts cleanup
+await repeatBox.cleanup();
 ```

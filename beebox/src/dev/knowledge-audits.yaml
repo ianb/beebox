@@ -413,6 +413,9 @@ tests:
   # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
   # direct orientation questions below used no reads or searches. user-adds-item
   # also passed, but inspected the frontend to verify its exact UI instructions.
+  # Status (2026-09-24, Claude): on-demand path passed after the audit runner
+  # installed generated package docs into the test box; the agent read the real
+  # Photos doc and left token minting and local setup with the boxholder.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -435,6 +438,27 @@ tests:
       The agent should know that users interact through the web UI.
       The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
+
+  - id: iphone-photos-album-setup
+    prompt: "I'm thinking about ways to add photos to the box. Can new photos from an Apple Photos album on my iPhone come in automatically? How would I set that up? Can you do the setup for me, including the token?"
+    expected_level: knows_about
+    watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token and all Mac setup actions to the boxholder"
+    correct_contains_any: ["scan-uploader", "scan uploader"]
+    correct_matches:
+      - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
+      - '(?:boxholder|user).{0,80}(?:mint|create|generate).{0,40}token|(?:mint|create|generate).{0,40}token.{0,80}(?:Settings|boxholder|yourself)'
+      - 'you.{0,100}(?:install|configure|run|grant|approve)|(?:install|configure|run|grant|approve).{0,100}(?:you|your|boxholder)'
+    response_not_matches:
+      - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:mint|create|generate)\\b[^.]{0,60}token"
+      - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:install|configure|run|set (?:it |this |that )?up|do\\b[^.]{0,40}\\b(?:setup|configuration))\\b"
+    should_read:
+      - "node_modules/beebox/box-docs/README.md"
+      - "node_modules/beebox/box-docs/phone-photos.md"
+    tags: [intake, photos]
+    notes: >
+      Agent-guide awareness should route into the concise package doc, which
+      explains the Mac export setup and keeps token/local-machine actions with
+      the boxholder.
 
   - id: dont-tell-user-to-place-files
     prompt: "I have some documents I want to add to the box. Where should I put them?"

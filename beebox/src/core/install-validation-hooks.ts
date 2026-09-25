@@ -287,9 +287,8 @@ const POST_TOOL_USE_MATCHER = "Edit|Write|MultiEdit";
 
 function postToolUseCommand(bbxBin: string): string {
   // Claude Code passes a JSON payload on stdin (tool_input.file_path). `bbx
-  // validate --hook` parses that itself, checks if the path is a card,
-  // and either exits 0 silently or exits 2 with the validation error on
-  // stderr (which Claude Code surfaces to the agent as feedback).
+  // validate --hook` parses that itself and sends warning-only feedback as
+  // PostToolUse JSON context on exit 0; errors use exit 2 and stderr.
   return `${JSON.stringify(bbxBin)} validate --hook`;
 }
 
