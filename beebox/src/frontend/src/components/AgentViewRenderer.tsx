@@ -32,7 +32,7 @@ import { type ViewState } from "../lib/view-url";
 import type { ViewHistory } from "@core/views/types.js";
 import { useViewHistory } from "../hooks/useViewHistory";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
-// `beebox/view-widgets` shim can hand CardLink/CardRef to compiled views.
+// `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
 import "./view-widgets";
 /** View card data from the API */
 interface ViewCard {

@@ -7,7 +7,7 @@
  * filename (no fetch), `renderInline` emits a minimal block, `openCard` is a
  * no-op (there is no surface to navigate). `bbx view test` wraps the rendered
  * view in `NodeViewHostProvider` (see src/cli/commands/view.ts), and the view's
- * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef
+ * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef/Markdown
  * here via the package `exports` map.
  *
  * This file lives under the frontend tsconfig (it renders frontend components);
@@ -24,8 +24,9 @@ import { BoxSlugProvider } from "../../lib/box-slug";
 import { LightboxProvider } from "../LightboxProvider";
 import { CardLink } from "./CardLink";
 import { CardRef } from "./CardRef";
+import { ViewMarkdown } from "./ViewMarkdown";
 
-export { CardLink, CardRef };
+export { CardLink, CardRef, ViewMarkdown as Markdown };
 
 /** Filename-derived title (mirrors core/file-summary titleFromFilename — kept
  *  local so the node bundle doesn't pull in backend-only modules). */
