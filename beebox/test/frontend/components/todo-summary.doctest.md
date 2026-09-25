@@ -9,13 +9,15 @@ follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/frontend/src/components/todo/TodoSummaryLine.js";
+import { directoryListPath } from "../../../src/frontend/src/components/todo/todo-summary.js";
 
 globalThis.React = React;
 
 const none = { open: 0, done: 0, parked: 0, escalated: 0 };
 
-function line(reduction, onJumpToOpen = null) {
-  return renderToStaticMarkup(React.createElement(TodoSummaryLine, { reduction: { ...none, ...reduction }, onJumpToOpen }));
+function line(reduction, onClick = null) {
+  const openAction = onClick === null ? null : { onClick, title: "Go to the first open todo" };
+  return renderToStaticMarkup(React.createElement(TodoSummaryLine, { reduction: { ...none, ...reduction }, openAction }));
 }
 
 /** The line as a reader sees it: tags stripped, `[…]` around the one control. */
@@ -63,4 +65,32 @@ Parked todos are named when there are any:
 ```ts
 text(line({ open: 1, parked: 2 }))
 => 1 open · 2 parked
+```
+
+## A directory's line
+
+A directory's browse page shows the same line for every card under it
+(`DirectoryTodos.tsx`), from a query on the directory with no reference
+pass. No boxholder todos, no line — the same rule as a card:
+
+```ts
+line({})
+=> 
+
+text(line({ open: 4, escalated: 1, done: 3 }, () => undefined))
+=> [4 open] · 1 overdue · 3 done
+```
+
+"4 open" opens the directory's list: its own `todo-view` card when one sits
+directly in it, else the plate.
+
+```ts
+directoryListPath([
+  { relativePath: "_content/projects/porch-rebuild/budget.memo.card", type: "memo" },
+  { relativePath: "_content/projects/porch-rebuild/todos.todo-view.card", type: "todo-view" },
+])
+=> _content/projects/porch-rebuild/todos.todo-view.card
+
+directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.memo.card", type: "memo" }])
+=> _content/plate.todo-view.card
 ```

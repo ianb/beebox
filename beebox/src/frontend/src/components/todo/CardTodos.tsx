@@ -79,7 +79,10 @@ export function CardTodos({ path, children }: { path: string; children: ReactNod
     <CardTodosContext.Provider value={todos}>
       <div ref={containerRef} className="contents">
         {result === undefined ? null : (
-          <TodoSummaryLine reduction={result.reduction} onJumpToOpen={hasOpenTarget ? jumpToOpen : null} />
+          <TodoSummaryLine
+            reduction={result.reduction}
+            openAction={hasOpenTarget ? { onClick: jumpToOpen, title: "Go to the first open todo" } : null}
+          />
         )}
         {children}
       </div>

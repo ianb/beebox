@@ -240,8 +240,8 @@ New or sharpened:
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
-**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2 and 3
-and Track 4's card line are implemented; the rest is not started.
+**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2, 3, 4,
+and 5 are implemented; Tracks 6 and 7 are not started.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -451,11 +451,28 @@ order, frontmatter entry, and an untick that removes `status`.
 
 ### Track 4 — Per-place summary
 
-**Status (2026-09-25): card line implemented** (`components/todo/CardTodos.tsx`);
-the directory line is not started. In a box view "N open" is plain text for
-now rather than a link to the card's list. The query uses `here` = the card
-path (its default glob is that path, now glob-escaped in
-`core/collection/here.ts`) rather than an explicit `glob`.
+**Status (2026-09-25): implemented.** Card line: `components/todo/CardTodos.tsx`.
+In a box view "N open" is plain text for now rather than a link to the
+card's list. The query uses `here` = the card path (its default glob is that
+path, now glob-escaped in `core/collection/here.ts`) rather than an explicit
+`glob`.
+
+Directory line: `components/todo/DirectoryTodos.tsx`, in the browse card's
+sidebar under the landmark header (`BrowseSidebarBody.tsx`). Corrections and
+choices where the direction was silent:
+
+- **`here` = the directory, not `glob: <dir>/**`.** The default glob for a
+  directory `here` is its subtree, glob-escaped, so a directory name with
+  glob characters is safe. `includeReferring: false`, boxholder scope, and
+  `status: ["open"]` (the reduction counts every status anyway).
+- **No line at the box root** (`here` = `""`). The browse card's root
+  listing is `_content`, which does get a line and agrees with the badge.
+- **The plate opens unfiltered.** The stock plate sets `glob: "**"`, which
+  wins over `here`, and the todo-view renderer takes no `here` override, so
+  "filtered by `here`" would need a new param. The plate's path is now one
+  constant, `PLATE_CARD_PATH` (`shared/todo-model.ts`).
+- "N open" is the link, as on a card; it opens the list in the other pane
+  (Track 5), and is plain text where there is no pane to open beside.
 
 **What.** A one-line summary where todos live: at the top of a card, and on
 a directory's browse page.
@@ -483,6 +500,28 @@ Walkthrough A1 and A6.
 component doctest over zero todos (no line), all done, and overdue.
 
 ### Track 5 — List links open in the opposite pane
+
+**Status (2026-09-25): implemented.** `WorkspaceCanvas` provides
+`WorkspacePaneContext` per pane, and `useOpenBeside`
+(`components/chat/workspace/use-open-beside.ts`) opens through
+`workspace.open` with the route from the pure `listLinkRoute`
+(`open-beside.ts`, doctest `test/frontend/open-beside.doctest.md`).
+Corrections and choices where the direction was silent:
+
+- **The workspace exists on mobile too** (`workspace.mobile`); the plan's
+  "outside the workspace (mobile, …)" was wrong. On mobile the link opens
+  through the workspace with no destination pane, and the workspace's mobile
+  rule places it. The plain `href` stays only where no pane context exists.
+- **`FileEntry` gains `onOpen`**: passing `onPanel` alone adds a panel
+  button but leaves the title as a peek. With `onOpen` the title opens the
+  card; the eye still peeks. `CardRow` passes the same opener as `onPanel`,
+  so a peeked card can also move to the other pane.
+- **A todo line's words open its card at the top.** No mechanism carries a
+  locator across an open (params and view state are the renderer's, and
+  nothing scrolls a newly opened body to an element), so scrolling to the
+  todo is not done. Outside a pane the words stay plain text, as before.
+- `InlineAction` gains the `quiet` intent (inherits color, underline on
+  hover) so a link inside a todo's words keeps the todo's status treatment.
 
 **What.** From the todo list, a card title and a dated-strip card name open
 the card in the other pane.

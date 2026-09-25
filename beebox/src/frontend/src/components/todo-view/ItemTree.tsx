@@ -18,6 +18,7 @@ import { Text } from "../ui/Text";
 import { InlineAction } from "../ui/InlineAction";
 import { TodoItem } from "../todo/TodoItem";
 import { bbxSourceItem } from "../../lib/source-tag";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside";
 import { clampAnnotation, needsExpand, todoKey, type TodoNode } from "../todo-view-card-logic";
 
 function Annotation({ annotation }: { annotation: string }) {
@@ -45,6 +46,10 @@ function Annotation({ annotation }: { annotation: string }) {
 
 function ItemLine({ node }: { node: TodoNode }) {
   const { item } = node;
+  // In a workspace pane the words open the todo's card in the other pane
+  // (`docs/plans/todos-ui.md`, Track 5). Nothing yet carries a todo's
+  // locator across an open, so the card opens at its top.
+  const openBeside = useOpenBeside();
   return (
     <Stack gap="none" {...bbxSourceItem(`todo: ${item.text}`)}>
       <TodoItem
@@ -59,7 +64,11 @@ function ItemLine({ node }: { node: TodoNode }) {
         text={item.text}
         muted={!item.matching}
       >
-        {item.text}
+        {openBeside === null ? item.text : (
+          <InlineAction intent="quiet" onClick={() => openBeside(cardTarget(item.path))} title="Open this todo's card">
+            {item.text}
+          </InlineAction>
+        )}
       </TodoItem>
       {item.annotation === "" ? null : <Annotation annotation={item.annotation} />}
     </Stack>

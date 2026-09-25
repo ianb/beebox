@@ -17,6 +17,7 @@ import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../../sche
 import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
+import { PLATE_CARD_PATH } from "../../shared/todo-model.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
 import {
   hasRecordedTemplateVersion,
@@ -259,7 +260,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
 export async function installTodoView(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
-    relPath: "_content/plate.todo-view.card",
+    relPath: PLATE_CARD_PATH,
     templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
   });
   return result.outcome === "fresh";

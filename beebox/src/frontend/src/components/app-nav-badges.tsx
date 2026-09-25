@@ -22,6 +22,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { href } from "../lib/routing";
+import { PLATE_CARD_PATH } from "@shared/todo-model";
 import { useErrorCount, clearErrorCount, hasDebugLogBeenOpened } from "./DebugLog";
 
 /** A speech bubble carrying a question mark — asked, not yet answered. */
@@ -88,7 +89,7 @@ export function AttentionBadges({ base, pendingQuestions, onPlateTodos, escalate
       <Link
         key="plate"
         id="bbx-nav-todo"
-        to={href(`${base}/browse/_content/plate.todo-view.card`)}
+        to={href(`${base}/browse/${PLATE_CARD_PATH}`)}
         className={`${SEGMENT} relative`}
         title={
           escalatedTodos > 0

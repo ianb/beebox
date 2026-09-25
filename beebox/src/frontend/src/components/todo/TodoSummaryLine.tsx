@@ -1,19 +1,26 @@
 /**
- * The quiet one-line todo summary at the top of a card
- * (`docs/plans/todos-ui.md`, Track 4). Presentational: `CardTodos.tsx` owns
- * the query and decides whether "N open" has anything to scroll to.
+ * The quiet one-line todo summary at the top of a card or a directory
+ * (`docs/plans/todos-ui.md`, Track 4). Presentational: `CardTodos.tsx` and
+ * `DirectoryTodos.tsx` own the queries and decide what "N open" does — scroll
+ * to the first open todo on a card, open the list from a directory.
  */
 
 import { Fragment, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
 import { summaryParts, type SummaryReduction } from "./todo-summary";
 
-export function TodoSummaryLine({ reduction, onJumpToOpen }: {
+/** What "N open" does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
+export interface OpenAction {
+  onClick: () => void;
+  title: string;
+}
+
+export function TodoSummaryLine({ reduction, openAction }: {
   reduction: SummaryReduction;
-  /** Scroll to the first open todo; `null` when none is rendered (a box view), and then the count is plain text. */
-  onJumpToOpen: (() => void) | null;
+  openAction: OpenAction | null;
 }): ReactNode {
   const parts = summaryParts(reduction);
+  const handleOpen = openAction?.onClick;
   if (parts === null) return null;
   return (
     <p
@@ -23,8 +30,8 @@ export function TodoSummaryLine({ reduction, onJumpToOpen }: {
       {parts.map((part, i) => (
         <Fragment key={part.key}>
           {i > 0 ? " · " : null}
-          {part.key === "open" && part.count > 0 && onJumpToOpen !== null ? (
-            <InlineAction intent="subtle" onClick={onJumpToOpen} title="Go to the first open todo">
+          {part.key === "open" && part.count > 0 && openAction !== null && handleOpen !== undefined ? (
+            <InlineAction intent="subtle" onClick={handleOpen} title={openAction.title}>
               {part.text}
             </InlineAction>
           ) : (

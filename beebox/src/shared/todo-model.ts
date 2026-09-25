@@ -26,6 +26,9 @@ import { assertNever, invariant } from "./invariant.js";
  */
 export const TODO_AGENT = "agent";
 
+/** The stock box-wide `todo-view` card, "The Plate" (`core/box/defaults.ts`, `installTodoView`). */
+export const PLATE_CARD_PATH = "_content/plate.todo-view.card";
+
 /**
  * True when a todo is the BOXHOLDER's to act on — `assigned` absent, or
  * naming anyone but the agent.

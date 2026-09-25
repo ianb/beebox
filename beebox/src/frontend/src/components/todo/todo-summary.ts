@@ -6,6 +6,8 @@
  * (`core/collection/types.ts`).
  */
 
+import { PLATE_CARD_PATH } from "@shared/todo-model";
+
 export interface SummaryReduction {
   open: number;
   done: number;
@@ -43,3 +45,13 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
  * then the count is plain text rather than a button that does nothing.
  */
 export const FIRST_OPEN_TODO_SELECTOR = '[data-todo-status="open"]:not([data-todo-assigned="agent"])';
+
+/**
+ * Where a directory's todo line leads (Track 4): the directory's own
+ * `todo-view` card when one sits directly in it, else the plate. The plate
+ * is box-wide (its `glob` is `**`), so it opens unfiltered; a `here` passed
+ * to it would not narrow an explicit glob.
+ */
+export function directoryListPath(cards: readonly { relativePath: string; type: string }[]): string {
+  return cards.find((card) => card.type === "todo-view")?.relativePath ?? PLATE_CARD_PATH;
+}
