@@ -193,12 +193,16 @@ export function TodoItem(props: TodoItemProps): ReactNode {
         </div>
       );
     case "line":
+      // A flex row, so words that wrap (or are a button, which lays out as
+      // one box) stay beside the checkbox instead of dropping below it.
       return (
-        <span {...data} className="group text-sm">
-          <Checkbox controls={controls} className="mr-1.5 align-middle" />
-          <span className={textClass}>{children}</span>
-          {chips}
-          {trailing}
+        <span {...data} className="group flex items-start gap-1.5 text-sm">
+          <Checkbox controls={controls} className="mt-0.5 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className={textClass}>{children}</span>
+            {chips}
+            {trailing}
+          </span>
         </span>
       );
   }
