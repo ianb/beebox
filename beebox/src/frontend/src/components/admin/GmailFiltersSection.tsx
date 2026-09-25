@@ -11,13 +11,16 @@ import { trpc, type RouterOutput } from "../../lib/trpc";
 import { SelectField, TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { Hint } from "../ui/Hint";
 import { GmailLabelList } from "./GmailFiltersSection-views";
 
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
 
-const DESCRIPTION = (
-  <>
+// Components rather than module-level JSX: the doctest loader imports this
+// module without a JSX runtime configured for evaluation at import time.
+function Description() {
+  return <>
     Choose which Gmail threads this box collects, and what happens to them. Uses{" "}
     <a
       id="bbx-admin-gmail-syntax-help"
@@ -30,15 +33,15 @@ const DESCRIPTION = (
     </a>
     . Matching threads are not stored until you say what should happen to
     them below. If both fields are empty, nothing matches.
-  </>
-);
-const RULES_DESCRIPTION = (
-  <>
+  </>;
+}
+function RulesDescription() {
+  return <>
     This box uses named, bounded Gmail rules. Edit them in{" "}
     <code className="text-xs bg-warm-100 px-1 rounded">_config/connectors/gmail.json</code>
     . This simpler form is disabled so it cannot overwrite them.
-  </>
-);
+  </>;
+}
 
 const PROCEDURE_REF_PATTERN = /^_config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/;
 
@@ -57,12 +60,13 @@ export function GmailFiltersSection() {
   const initialError =
     boxConfigQuery.error?.message ?? gmailConfigQuery.error?.message ?? null;
 
-  if (boxConfigQuery.isLoading || gmailConfigQuery.isLoading) return null;
-  if (!enabled) return null;
+  if (boxConfigQuery.isLoading || gmailConfigQuery.isLoading) return <AdminSectionCard id="gmail-filters" description={<Description />} busy><Hint>Loading…</Hint></AdminSectionCard>;
+  // The section keeps its address when it does not apply, so the overview and an agent can still point at it.
+  if (!enabled) return <AdminSectionCard id="gmail-filters" description={<Description />}><Hint>Off: Gmail is not enabled for this box. Turn it on under Google services.</Hint></AdminSectionCard>;
 
   if (initialError || !gmailConfigQuery.data) {
     return (
-      <AdminSectionCard id="gmail-filters" description={DESCRIPTION}>
+      <AdminSectionCard id="gmail-filters" description={<Description />}>
         {initialError ? (
           <div className="p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
             {initialError}
@@ -73,7 +77,7 @@ export function GmailFiltersSection() {
   }
 
   if (gmailConfigQuery.data.usesRules) {
-    return <AdminSectionCard id="gmail-filters" description={RULES_DESCRIPTION}>{null}</AdminSectionCard>;
+    return <AdminSectionCard id="gmail-filters" description={<RulesDescription />}>{null}</AdminSectionCard>;
   }
 
   return <GmailFiltersForm initial={gmailConfigQuery.data} />;
@@ -147,7 +151,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
   const error = updateMutation.error?.message ?? null;
 
   return (
-    <AdminSectionCard id="gmail-filters" description={DESCRIPTION}>
+    <AdminSectionCard id="gmail-filters" description={<Description />}>
       <div className="mb-4">
         <TextField
           id="bbx-admin-gmail-query"

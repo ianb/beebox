@@ -20,6 +20,8 @@ export interface TabBarProps<V extends string> {
    * `${idPrefix}-${tab.value}`, so a fixed tab set is addressable by name.
    */
   idPrefix?: string;
+  /** Each tab gets `aria-controls="${controlsPrefix}-${tab.value}"`, the id of its panel. */
+  controlsPrefix?: string;
   /**
    * Visual style. `"underline"` (default) is a row of tabs on a rule, for a
    * pane that switches between views of one thing. `"pills"` is a row of
@@ -43,8 +45,23 @@ const PILL_STATE: Record<"disabled" | "active" | "idle", string> = {
   idle: "bg-warm-100 text-warm-700 hover:bg-warm-200 cursor-pointer",
 };
 
-export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, variant, className }: TabBarProps<V>) {
+export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, controlsPrefix, variant, className }: TabBarProps<V>) {
   const pills = variant === "pills";
+  // Roving focus: one tab stop, arrows move between enabled tabs and select as they go.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const enabled = tabs.filter(tab => tab.disabled !== true);
+    const current = enabled.findIndex(tab => tab.value === value);
+    if (enabled.length === 0 || current === -1) return;
+    const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+    const target = event.key === "Home" ? 0 : event.key === "End" ? enabled.length - 1 : step === 0 ? -1 : (current + step + enabled.length) % enabled.length;
+    if (target === -1) return;
+    event.preventDefault();
+    const next = enabled[target];
+    if (next === undefined || next.value === value) return;
+    onChange(next.value);
+    if (idPrefix !== undefined) document.getElementById(`${idPrefix}-${next.value}`)?.focus();
+    else event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[tabs.indexOf(next)]?.focus();
+  };
   return (
     <div role="tablist" aria-label={label} className={cn(pills ? "flex flex-wrap gap-2" : "flex gap-0 border-b border-warm-300", className)}>
       {tabs.map((tab) => {
@@ -59,9 +76,11 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
             type="button"
             role="tab"
             aria-selected={active}
+            aria-controls={controlsPrefix !== undefined ? `${controlsPrefix}-${tab.value}` : undefined}
             aria-disabled={disabled || undefined}
             tabIndex={active ? 0 : -1}
             disabled={disabled}
+            onKeyDown={onKeyDown}
             onClick={() => {
               if (!disabled) onChange(tab.value);
             }}

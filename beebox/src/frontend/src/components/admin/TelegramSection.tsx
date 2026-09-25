@@ -4,7 +4,9 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { trpcClient } from "../../lib/trpc";
+import { trpc, trpcClient } from "../../lib/trpc";
+import { getQueryKey } from "@trpc/react-query";
+import { fetchSharedStatus } from "../../lib/trpc/shared-status";
 import { errorMessage } from "@shared/error-guards";
 import {
   TelegramConnectedView,
@@ -25,7 +27,8 @@ export function TelegramSection() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const data = await trpcClient.admin.telegramStatus.query();
+      // Shared with the admin overview's query of the same procedure.
+      const data = await fetchSharedStatus({ queryKey: getQueryKey(trpc.admin.telegramStatus, undefined, "query"), queryFn: () => trpcClient.admin.telegramStatus.query() });
       setStatus(data);
       setError(null);
       return data;

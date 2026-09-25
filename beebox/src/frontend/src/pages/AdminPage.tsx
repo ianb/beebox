@@ -54,6 +54,7 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab:
           variant="pills"
           label="Admin sections"
           idPrefix="bbx-admin-tab"
+          controlsPrefix="bbx-admin-panel"
           value={tab}
           onChange={onTabChange}
           tabs={ADMIN_TABS.map(value => ({ value, label: ADMIN_TAB_LABELS[value] }))}
