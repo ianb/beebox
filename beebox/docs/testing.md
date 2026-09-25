@@ -39,7 +39,7 @@ landing that broke it.
 | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of seconds |
 | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expensive; weekly or on demand |
-| [Card validator hook](card-validation.md) | Does a card still validate after an agent edit? Runs on its own during agent sessions. | blocks bad commits | automatic |
+| [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during agent sessions. | blocks bad commits | automatic |
 | [User-stories catalog](../user-stories/README.md) | What can the software actually do? Claims read from the source by agents, each verified by a different agent than the one that wrote it. | no | many model turns |
 
 Prefer the lowest instrument that catches the bug: a template generating bad

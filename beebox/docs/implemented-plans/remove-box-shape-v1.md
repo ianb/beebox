@@ -98,7 +98,7 @@ skill becomes a static constant.
   fork to a single form), **#1 Types are structure** (drop `LEGACY_SHAPE_VERSION`
   and the shape-note fields that only encoded the v1/v2 difference).
 - `beebox/CLAUDE.md` — "don't add features beyond what the task requires";
-  the migration-manifest append-only invariant (`docs/migrations.md`).
+  the migration-manifest append-only invariant (`docs/cards/migrations.md`).
 - `beebox/code-style.md` — no default params, exhaustiveness, strict casts.
 - Boxholder decisions in-thread (2026-07-11): "remove the migration entirely,
   everything is migrated, consider v1 migrated and done"; "use a label like
@@ -135,7 +135,7 @@ Grounded in a full-footprint inventory (2026-07-11). Reused/removed, not rebuilt
   shape *value* they receive changes.
 - **The conversion script** `scripts/migrate/box-packageify.ts` (537 lines),
   registered `src/core/migrations.ts:95-99`, tested by two doctests, documented
-  `docs/migrations.md:202-296`. This is the actual v1→v2 logic (upgrade.ts is
+  `docs/cards/migrations.md:202-296`. This is the actual v1→v2 logic (upgrade.ts is
   NOT — it's an unrelated engine-version bumper with one incidental v1 guard).
 - **The resolve-hook machinery** in `schemas/registry.ts` (`ensureEsmPackageJson`,
   `ensureResolveHooks`, `registerHooks`/`SCHEMA_DEPS`/`BBX_VIRTUAL_PARENT`,
@@ -233,7 +233,7 @@ machinery is a real complexity sink whose deletion was gated on exactly this.
 - **Delete `box-packageify`:** the script, its `migrations.ts:95-99` registration
   (pending-migration entry, NOT a manifest history record — verify against the
   append-only invariant, Open Questions), its two doctests, and the
-  `docs/migrations.md:202-296` section. Delete `LegacyBoxUpgradeError` +
+  `docs/cards/migrations.md:202-296` section. Delete `LegacyBoxUpgradeError` +
   `upgrade.ts:256` guard (upgrade.ts otherwise untouched).
 - **`findLegacySchemaFiles`:** keep the function (it's a *stray-file-on-a-v2-box*
   detector, still useful), delete only its `=== LEGACY_SHAPE_VERSION` short-circuit.
@@ -247,7 +247,7 @@ depends on this landing (the branch deletions read the collapsed shape).
 ### Track 3 — Docs + layout-spec cleanup
 
 `docs/box-layout.md:11-64` (rewrite "Shape versions" to single-shape),
-`docs/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
+`docs/cards/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
 `box-layout-types.ts` `shapeNotes` field + the three `box-layout-spec.ts`
 entries whose notes only encoded the v1/v2 difference, and check off Track H4 in
 `boxes-as-packages-v2.md`. **Explicitly out:** the unrelated `"legacy"`
@@ -314,7 +314,7 @@ is a fail-closed regression.
 - **Migration-registry deletion vs. append-only.** Confirm `migrations.ts`'s
   array is the *pending-migration* registry (safe to remove a completed one) and
   not the applied-history manifest (`config/migrations.jsonl`, append-only).
-  Inventory strongly suggests the former; verify against `docs/migrations.md`
+  Inventory strongly suggests the former; verify against `docs/cards/migrations.md`
   before deleting.
 
 ## Knowledge audits

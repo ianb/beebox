@@ -64,7 +64,7 @@ existing pieces, and whether each is reused or replaced:
 | Keep-last-good schema loading (per-file failure falls back) | `src/schemas/registry.ts:347-353` | **Reuse** — survives the move to `src/schemas/` |
 | View compiler: esbuild + browser shims (`window.__cbReact`, `__cbViewWidgets`) | `src/webapp/views/compiler.ts:44-108` | **Reuse the browser shims** (runtime React sharing is not a monorepo hack); **replace** the node-target resolution with native imports |
 | View metadata: *"Extract metadata from view source via regex on export const declarations."* | `src/webapp/views/compiler.ts:115` | **Replace** — import the compiled module (node target) and read real exports |
-| `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migrations.md` | **Reuse** — becomes one stage of `bbx upgrade`; the fleet conversion itself ships as a migration |
+| `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/cards/migrations.md` | **Reuse** — becomes one stage of `bbx upgrade`; the fleet conversion itself ships as a migration |
 | Template sync: *"When a template changes upstream, we want to push the new version into boxes — but only if the local copy hasn't been customised."* park-on-divergence + `boxOwnedFields` | `src/core/install-template-file.ts:1-30` | **Reuse** — the second stage of `bbx upgrade` |
 | `bbx serve` box resolution: args → manifest (`~/.config/beebox/boxes.json`) → cwd | `src/cli/commands/serve.ts:60-75` | **Replace** — standalone `bbx serve` serves the current box; the manifest is retired in favor of hub config |
 | Multi-box Fastify (per-box scope, per-box EventBus, webhooks outside auth) | `src/webapp/server.ts:126-133`, `src/webapp/server-box-scope.ts:200-213` | **Reuse internals**; the multi-box loop survives only behind the legacy escape hatch during transition |
@@ -711,7 +711,7 @@ H5 completes. No merge to main without the boxholder's explicit go.
 - **Migration:** scripted (`box-packageify` as a registry migration), per-box atomic (one
   commit per box), fleet-complete within the plan — a partially converted fleet is a
   transition state inside the plan, not an end state. Rollback per box: `git reset` to the
-  pre-migration SHA + remove the migrations.jsonl line (`docs/migrations.md` rollback
+  pre-migration SHA + remove the migrations.jsonl line (`docs/cards/migrations.md` rollback
   pattern), plus hub-route revert.
 - **What the boxholder sees at the end:** every box a package pinning an engine version;
   `bbx upgrade`/`bbx fleet upgrade` as the update ritual replacing rsync-on-commit;

@@ -24,7 +24,7 @@ test("rewritePromotedLinks: a link into the published set rewrites to an absolut
     repoDocPath: "beebox/docs/glossary.md",
     manifestByRepoPath: new Map([
       ["beebox/docs/glossary.md", "concepts/glossary.md"],
-      ["beebox/docs/cards-as-markdown.md", "concepts/cards.md"],
+      ["beebox/docs/cards/format.md", "concepts/cards.md"],
     ]),
     base: "/main/site/",
   });

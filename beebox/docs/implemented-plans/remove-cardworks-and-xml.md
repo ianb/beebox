@@ -420,7 +420,7 @@ type errors that cascade; rewrite the two system prompts.
 layer (refs/fs/loader/lint-format). Delete the `cardworks` package, the
 `node_modules/cardworks` symlink, the `workspace:*` dependency, and the
 pnpm-workspace entry. Update `beebox/CLAUDE.md`, root `CLAUDE.md`,
-`docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
+`docs/cards/format.md`, `docs/cards/schemas.md`.
 
 **Why this needs to change.** The whole point — no cardworks.
 
