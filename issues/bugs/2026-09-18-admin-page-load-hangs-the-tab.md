@@ -37,19 +37,41 @@ mount-only, so a naive scan does not find it — which fits an intermittent
 trigger (a specific response shape, a slow first request, a race between two
 queries).
 
-## What to capture next time it happens
+## After the next iOS freeze
 
-Before reloading:
+The temporary field probe is committed as `225de6982` in `admin-hang-probe`;
+it is **not deployed yet**. Once it lands, the boxholder should load a fresh
+bundle, reproduce the freeze as usual, reopen the **same box** after the freeze,
+and tell the investigating agent. The agent should then read that box's log.
+From the monorepo root, replacing `BOX_NAME` with the affected box's server
+directory name:
 
-1. Chrome DevTools → Performance → record a few seconds. A render loop shows
-   as one script frame repeating; the call stack names the component.
-2. The Console tab, for React's "Maximum update depth exceeded" — that error
-   names the culprit directly.
-3. The Network tab: which requests had completed when the tab locked up.
+```bash
+beebox/deploy/prod-ssh "grep -F '[admin-hang-probe]' /home/beebox/boxes/BOX_NAME/.beebox/client-debug.log | tail -20"
+```
 
-If it proves unreproducible on demand, use the `field-probe` approach: ship
-bounded instrumentation (a render-count guard that logs the offending
-component instead of looping forever) and wait for it to fire.
+For a reproduction in this worktree's isolated local `test1` box instead:
+
+```bash
+rg -n -F '[admin-hang-probe]' ~/src/box-worktrees/admin-hang-probe/test1/.beebox/client-debug.log
+```
+
+The report says `possible freeze`, identifies `page=admin|settings`, gives the
+age of the last heartbeat as `staleMs`, and lists up to eight recent
+`enter:<section>` and `query:<procedure>` breadcrumbs with milliseconds since
+the probe started. `entries` counts section-wrapper entries; `mounted=0`
+means the page did not finish mounting before it stopped. The log timestamp is
+when the report arrived after reopening, not necessarily when the freeze began.
+The last `enter` is a lead for investigation, not proof that section caused
+the loop. Compare nearby client errors, especially React's “Maximum update
+depth exceeded,” and the completed query names. No report does not rule out
+the bug: the probe depends on browser storage and a later load of the same box.
+
+The probe lives in `beebox/src/frontend/src/lib/admin-hang-probe.ts` and
+`beebox/src/frontend/src/components/admin/AdminHangProbe.tsx`, with call sites
+in `app-shell.tsx`, `AdminPage.tsx`, and `SettingsPage.tsx`. Remove these after
+the field evidence identifies the cause. If it happens in a desktop browser,
+capture DevTools Performance, Console, and Network evidence before reloading.
 
 ## Related
 
@@ -65,4 +87,3 @@ or Network tab to capture from. Disposition: ship bounded instrumentation
 send its own report, so the probe must either catch the loop before it locks
 up, or report from somewhere the main thread does not own (a Web Worker
 watchdog, or a breadcrumb that the next page load sends).
-
