@@ -38,6 +38,11 @@ export interface SessionContentBlock {
    * the history read carrying any of them.
    */
   imageRef?: string;
+  /**
+   * For thinking blocks: the text is a progress update written for the user,
+   * not reasoning (`writesProgressUpdates` in `shared/model-ids.ts`).
+   */
+  progressUpdate?: true;
 }
 
 /** Per-tool input summarizers, keyed on the shared tool vocabulary. */
@@ -157,6 +162,8 @@ export interface TransformContentOptions {
    * Null for every ordinary line — see {@link ImageBlockContext}.
    */
   mediaRef: { sessionId: string; entryUuid: string } | null;
+  /** The line's model writes progress updates in its thinking blocks. */
+  progressUpdates?: boolean;
 }
 
 /**
@@ -177,6 +184,7 @@ export function transformContent(
   if (!Array.isArray(content)) return [];
 
   const mediaRef = options?.mediaRef ?? null;
+  const progressUpdates = options?.progressUpdates === true;
   // Counts image blocks only, in document order: the ordinal half of a media
   // reference. `session-media-extract.ts` enumerates the same array the same
   // way to find its way back, so the two must not drift.
@@ -210,7 +218,8 @@ export function transformContent(
     }
 
     if (block.type === "thinking") {
-      blocks.push({ type: "thinking", text: String(block.thinking || "") });
+      const text = String(block.thinking || "");
+      blocks.push({ type: "thinking", text, ...(progressUpdates && text.trim() ? { progressUpdate: true as const } : {}) });
       continue;
     }
     if (block.type === "redacted_thinking") {

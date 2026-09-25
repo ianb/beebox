@@ -58,6 +58,8 @@ export interface SessionContentBlock {
    * lazily, so scrollback only pays for photos actually scrolled to.
    */
   imageRef?: string;
+  /** For thinking blocks: the text is a progress update written for the user. */
+  progressUpdate?: true;
 }
 
 /**
