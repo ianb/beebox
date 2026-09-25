@@ -172,7 +172,7 @@ su - "$BBX_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HO
 
 # Transcript retention. Claude Code prunes ~/.claude/projects/**/*.jsonl on a
 # timer whose default is 30 days. Transcripts are the raw material the nightly
-# chat review mines into husk cards (docs/chat-review.md) — once one expires the
+# chat review mines into husk cards (docs/chat/review.md) — once one expires the
 # conversation is unrecoverable, so a session not reviewed inside the window is
 # never reviewable. 60 days doubles the margin for a box that goes quiet.
 echo "Setting Claude Code transcript retention for $BBX_USER..."
