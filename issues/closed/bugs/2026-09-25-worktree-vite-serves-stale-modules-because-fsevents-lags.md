@@ -42,7 +42,7 @@ the machine-wide `fseventsd` daemon. The Vite watcher did not die and did not
 report an error.
 
 - The router runs Vite 8.0.16 (hoisted), not the Vite 5.4 that the frontend
-  declares. See [the Vite version issue](../../bugs/2026-09-25-dev-router-runs-hoisted-vite-8-not-the-frontends-vite-5.md).
+  declares. See [the Vite version issue](2026-09-25-dev-router-runs-hoisted-vite-8-not-the-frontends-vite-5.md).
   Vite 8 bundles chokidar 3.6, which uses the `fsevents` module on macOS.
 - Vite keeps each module's transform in its module graph. It invalidates the
   transform only on a watcher `change` event
