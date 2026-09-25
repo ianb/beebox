@@ -17,7 +17,7 @@ re-anchored to a now-visible message after the prepend so the older block's
 late-decoding images/embeds compensate against that anchor instead of reading as
 new content below. Unit-checked in
 `test/frontend/chat-scroll-reconcile.doctest.md`; manual DOM scenario 5c added to
-`docs/chat-scroll-testing.md`. See the commit referenced in the closing note.
+`docs/chat/scroll.md`. See the commit referenced in the closing note.
 
 In chat, when you scroll up far enough to load **previously-unshown older history**, the
 scroll-to-bottom **down arrow** lights up its **"new messages"** indicator — even though

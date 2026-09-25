@@ -15,7 +15,7 @@ Two kinds. A **stub** replaces one input to the real app (`/fakestream`
 replaces the agent's reply). A **dev harness** is a DEV-only route that mounts
 real components over injectable fake services so every state is reachable:
 `/dev/capture-mode`, `/dev/composer-states` (states catalogued in
-[composer states](../composer-states.md)), `/dev/chat-scroll`. Tours walk the
+[composer states](../chat/composer.md)), `/dev/chat-scroll`. Tours walk the
 real app; harnesses fabricate states.
 
 ## Running it
@@ -55,7 +55,7 @@ const s = document.querySelector('[data-testid="chat-scroller"]');
 **Driving the scroll behavior.** The two instruments — the scenario table at
 `/dev/chat-scroll` and the step-by-step `bin/browse` procedure, plus the
 real-device checklist — live in
-[chat-scroll-testing.md](../chat-scroll-testing.md). Note that `/fakestream`
+[chat-scroll-testing.md](../chat/scroll.md). Note that `/fakestream`
 content **vanishes at finalize in a server-backed session** (the authoritative
 history has no such turn), so sample while it streams, not after.
 

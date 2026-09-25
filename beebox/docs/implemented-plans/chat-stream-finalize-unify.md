@@ -367,7 +367,7 @@ during streaming. Shipping is a separate `/finish` signal.
 ## Rollout shape
 
 - **Test posture.** Behavior is layout/DOM, so verification is the `bin/browse`
-  procedure in `docs/chat-scroll-testing.md` (extended), not doctests
+  procedure in `docs/chat/scroll.md` (extended), not doctests
   (`testing.md:476`). Concrete done-when assertions: (1) at finalize the live
   assistant DOM node's identity persists (the streamed text node is not
   replaced) — measured by tagging the streaming bubble's node and confirming the

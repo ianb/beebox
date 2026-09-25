@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T12:30:37Z
-Total documents: 415
+Generated: 2026-09-25T17:32:41Z
+Total documents: 418
 
 ## Issues
 
@@ -54,6 +54,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
+- **docs/plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (150 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -80,6 +81,8 @@ These references point to files that don't exist.
 
 - **docs/implemented-plans/link-validation-fix.md:536** → `/store/foo/bar.md` (link)
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
+- **docs/reports/chat-scroll-investigation-2026-09-04.md:76** → `../../research/chat-scroll-comparison-2026-09-04.md` (link)
+  Context: [comparison research](../../research/chat-scroll-comparison-2026-09-04.md) for
 - **docs/reports/stack-decisions-2026-09-04.md:772** → `../../agent-doctest/docs/syntax.md` (link)
   Context: - Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus
 - **docs/testing/knowledge-audits.md:119** → `MAP.md` (at-include)
@@ -201,6 +204,7 @@ Referenced by:
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
+- docs/plans/doc-structure-chat.md:71 (mention) — | `chat-scroll-testing.md` intro, harness, real-app procedure, images matrix, trace format, device checklist, the three
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file upload/
@@ -221,6 +225,7 @@ Referenced by:
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
+- docs/reports/chat-scroll-investigation-2026-09-04.md:7 (mention) — `CLAUDE.md` and `docs/plans/chat-scroll-model.md`. Do not update in place.
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:62 (mention) — - **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but the schemas dir's
 - docs/reports/prompt-calibration-pilot-2026-09-12.md:27 (mention) — - Authority: the same five requests with complete root CLAUDE.md, launch skill,
 - docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
@@ -974,79 +979,25 @@ References:
 - → docs/implemented-plans/todo-collection.md (mention)
 - → docs/card-validation.md (mention)
 
-#### docs/chat-review.md
+#### docs/chat.md
 
-Title: "Chat review" | 172 lines | current reference
-
-Referenced by:
-- docs/guides.md:54 (link) — | Chat review (nightly titles + summaries) | [docs/chat-review.md](chat-review.md) |
-- ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat-review.md): its journal is keyed by
-- ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat-review.md) keeps two pieces of state
-- ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat-review.md`.
-- ../issues/closed/features/2026-05-19-overnight-session-compaction.md:11 (link) — See [docs/chat-review.md](../../../beebox/docs/chat-review.md) for the
-- ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:79 (link) — - [Chat review](../../../beebox/docs/chat-review.md) skips it too (correctly —
-
-References:
-- → docs/implemented-plans/chat-review.md (link)
-
-#### docs/chat-schedules.md
-
-Title: "Chat Schedules" | 101 lines | current reference
+Title: "Chat" | 24 lines | current reference
 
 Referenced by:
-- docs/design/README.md:32 (link) — and [`../chat-schedules.md`](../chat-schedules.md).
-- docs/design/processing.md:22 (link) — ([`../chat-schedules.md`](../chat-schedules.md)).
-- docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
-- docs/guides.md:40 (link) — | Agent-set chat timers (`<schedule>` tag) | [docs/chat-schedules.md](chat-schedules.md) |
-- docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
-- docs/implemented-plans/docs-reorg.md:173 (mention) — `chat-schedules.md` (current and load-bearing — the worst case),
-- docs/implemented-plans/mvp-implementation-guide.md:245 (mention) — See `docs/scheduler.md` and `docs/chat-schedules.md` for scheduling examples.
-- docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
-- ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat-schedules.md` documented the
+- docs/plans/doc-structure-chat.md:12 (mention) — `docs/chat.md`, one file per member, with the dated investigation material
 
 References:
-- → src/hub/CLAUDE.md (mention)
-
-#### docs/chat-scroll-testing.md
-
-Title: "Chat scroll — test procedure" | 579 lines | current reference
-
-Referenced by:
-- docs/implemented-plans/chat-composer-rerender.md:146 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
-- docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
-- docs/implemented-plans/chat-stream-finalize-unify.md:370 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
-- docs/implemented-plans/doc-structure.md:367 (mention) — - `chat-scroll-testing.md`: **not moved**. It is a test procedure for one
-- docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/plans/chat-scroll-model.md:199 (mention) — Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
-- docs/plans/chat-scroll-model.md:227 (link) — opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
-- docs/testing/dev-stubs.md:58 (link) — [chat-scroll-testing.md](../chat-scroll-testing.md). Note that `/fakestream`
-- src/frontend/src/components/chat/CLAUDE.md:82 (mention) — PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
-- ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:43 (link) — [chat scroll testing](../../beebox/docs/chat-scroll-testing.md).
-- ../issues/closed/bugs/2026-07-19-scroll-up-history-false-new-messages.md:20 (mention) — `docs/chat-scroll-testing.md`. See the commit referenced in the closing note.
-- ../research/chat-scroll-comparison-2026-09-04.md:4 (link) — [local reproduction protocol](../beebox/docs/chat-scroll-testing.md).
-
-References:
-- → docs/testing.md (mention)
-- → docs/plans/chat-scroll-model.md (mention)
-- → ../research/chat-scroll-comparison-2026-09-04.md (link)
-
-#### docs/chat-session-lifecycle.md
-
-Title: "Chat session lifecycle" | 143 lines | current reference
-
-Referenced by:
-- docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
-- docs/guides.md:52 (link) — | Chat session lifecycle | [docs/chat-session-lifecycle.md](chat-session-lifecycle.md) |
-- docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
-- docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
-- docs/implemented-plans/top-nav-ia.md:417 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
-- ../issues/code-quality/2026-07-06-chat-session-shared-core.md:51 (mention) — `beebox/docs/chat-session-lifecycle.md`.
-- ../issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:16 (mention) — docs/chat-session-lifecycle.md and the chat steering design are reconciled.
-- ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat-session-lifecycle.md`.)
-- ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat-session-lifecycle.md) — how
-
-References:
-- → ../issues/code-quality/2026-07-06-chat-session-shared-core.md (mention)
+- → docs/chat/sessions.md (link)
+- → docs/chat/history.md (link)
+- → docs/chat/schedules.md (link)
+- → docs/chat/review.md (link)
+- → docs/chat/quick-chat.md (link)
+- → docs/chat/composer.md (link)
+- → docs/chat/scroll.md (link)
+- → docs/model-policy.md (link)
+- → docs/mobile-contract.md (link)
+- → src/frontend/src/components/chat/CLAUDE.md (mention)
+- → docs/plans/chat-husks.md (link)
 
 #### docs/client-debug-log.md
 
@@ -1065,32 +1016,6 @@ Referenced by:
 References:
 - → docs/mobile-contract.md (mention)
 - → docs/implemented-plans/ios-log-forwarding.md (mention)
-
-#### docs/composer-input-machine.md
-
-Title: "Composer input machine" | 79 lines | current reference
-
-Referenced by:
-- docs/composer-states.md:5 (mention) — us, doing UI polish. Companion to `docs/composer-input-machine.md`, which
-- docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
-- docs/implemented-plans/docs-reorg.gap-analysis.md:118 (mention) — 10. `docs/composer-input-machine.md` leads with an unshipped 5-state
-- docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../composer-input-machine.md). It is not authorized runtime work. The
-
-References:
-- → docs/composer-states.md (link)
-- → docs/plans/composer-child-actors.md (link)
-
-#### docs/composer-states.md
-
-Title: "Composer states" | 282 lines | current reference
-
-Referenced by:
-- docs/composer-input-machine.md:4 (link) — [`composer-states.md`](composer-states.md) enumerates rendered states with
-- docs/plans/composer-child-actors.md:113 (mention) — 4. Keep the rendered states in `composer-states.md` reachable and unchanged.
-- docs/testing/dev-stubs.md:18 (link) — [composer states](../composer-states.md)), `/dev/chat-scroll`. Tours walk the
-
-References:
-- → docs/composer-input-machine.md (mention)
 
 #### docs/connectors.md
 
@@ -1446,7 +1371,7 @@ References:
 - → ../issues/decisions/2026-05-21-glossary-proper-nouns.md (link)
 - → docs/box-layout.md (mention)
 - → CLAUDE.md (mention)
-- → docs/chat-schedules.md (mention)
+- → docs/chat/schedules.md (mention)
 - → docs/adding-schemas.md (mention)
 - → docs/cards-as-markdown.md (mention)
 - → docs/assets.md (mention)
@@ -1459,7 +1384,7 @@ References:
 - → src/services/CLAUDE.md (mention)
 - → docs/implemented-plans/remove-cardworks-package.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
-- → docs/chat-session-lifecycle.md (mention)
+- → docs/chat/sessions.md (mention)
 - → docs/landmarks.md (mention)
 
 #### docs/gmail-setup.md
@@ -1554,7 +1479,7 @@ References:
 - → docs/procedure-implementation.md (link)
 - → docs/scheduler.md (link)
 - → docs/health-checks.md (link)
-- → docs/chat-schedules.md (link)
+- → docs/chat/schedules.md (link)
 - → docs/prompt-logging.md (link)
 - → docs/prompt-surface-review.md (link)
 - → docs/prompt-audits.md (link)
@@ -1566,10 +1491,10 @@ References:
 - → docs/box-layout.md (link)
 - → docs/landmarks.md (link)
 - → docs/client-debug-log.md (link)
-- → docs/quick-chat.md (link)
-- → docs/chat-session-lifecycle.md (link)
+- → docs/chat/quick-chat.md (link)
+- → docs/chat/sessions.md (link)
 - → docs/model-policy.md (link)
-- → docs/chat-review.md (link)
+- → docs/chat/review.md (link)
 - → docs/content-security-policy.md (link)
 - → docs/maintenance.md (link)
 - → docs/testing/knowledge-audits.md (link)
@@ -1775,6 +1700,7 @@ Title: "Cross-Platform Mobile Contract" | 1461 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- docs/chat.md:21 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:29 (link) — | Cross-platform mobile contract (iOS/Android ↔ box) | [docs/mobile-contract.md](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
@@ -1878,6 +1804,7 @@ Title: "Which model a box thinks with" | 182 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:206 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
+- docs/chat.md:20 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/guides.md:53 (link) — | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
@@ -2019,17 +1946,6 @@ References:
 - → CLAUDE.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 
-#### docs/quick-chat.md
-
-Title: "Quick chat" | 113 lines | current reference
-
-Referenced by:
-- docs/guides.md:51 (link) — | Quick chat routing and rubric | [docs/quick-chat.md](quick-chat.md) |
-
-References:
-- → docs/box/quick-chat.md (link)
-- → docs/security-report.md (link)
-
 #### docs/README.md
 
 Title: "docs/ — map and naming conventions" | 146 lines | current reference
@@ -2045,6 +1961,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
+- docs/plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -2094,7 +2011,7 @@ Referenced by:
 - docs/guides.md:38 (link) — | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
 - docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
-- docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
+- docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/docs-reorg.gap-analysis.md:140 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
 - docs/implemented-plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - docs/implemented-plans/mvp-implementation-guide.md:14 (mention) — > (never built — scheduling is `bbx tick`, `../scheduler.md`), `agents.json` +
@@ -2178,11 +2095,11 @@ References:
 Title: "Security report — structured version" | 504 lines | current reference
 
 Referenced by:
+- docs/chat/quick-chat.md:86 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/quick-chat.md:86 (link) — and recent conversation text. See [security report §3](security-report.md#3-data-egress).
 - docs/security-overview.md:28 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
@@ -2288,7 +2205,7 @@ Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
 - docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
-- docs/chat-scroll-testing.md:4 (mention) — exercise (`docs/testing.md` §6). Two instruments cover it, and a change to
+- docs/chat/scroll.md:4 (mention) — exercise (`docs/testing.md` §6). Two instruments cover it, and a change to
 - docs/development-process.md:20 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
 - docs/development-workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
@@ -2575,7 +2492,7 @@ References:
 Title: "Quick chat routing rules" | 45 lines | current reference
 
 Referenced by:
-- docs/quick-chat.md:51 (link) — Box agents have [packaged rubric instructions](box/quick-chat.md).
+- docs/chat/quick-chat.md:51 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
 
 #### docs/box/what-you-could-do.md
 
@@ -2588,6 +2505,122 @@ Referenced by:
 
 References:
 - → docs/box/phone-photos.md (mention)
+
+### docs/chat/
+
+#### docs/chat/composer.md
+
+Title: "Composer" | 361 lines | current reference
+
+Referenced by:
+- docs/chat.md:15 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
+- docs/chat/composer.md:286 (link) — [`composer-states.md`](composer.md) enumerates rendered states with
+- docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
+- docs/implemented-plans/docs-reorg.gap-analysis.md:118 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
+- docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
+- docs/plans/doc-structure-chat.md:70 (mention) — | `composer-input-machine.md` + `composer-states.md` (+ `composer-states/` images) | `chat/composer.md` (+ `chat/compose
+- docs/testing/dev-stubs.md:18 (link) — [composer states](../chat/composer.md)), `/dev/chat-scroll`. Tours walk the
+
+References:
+- → docs/chat/composer.md (link)
+- → docs/plans/composer-child-actors.md (link)
+
+#### docs/chat/history.md
+
+Title: "Chat history" | 51 lines | current reference
+
+Referenced by:
+- docs/chat.md:11 (link) — | [History](chat/history.md) | The transcript and the acceptance record, and how a replayed photo is served. |
+- docs/plans/doc-structure-chat.md:66 (mention) — | `chat-session-lifecycle.md` "Photos in a replayed conversation", "Two records of a message" | `chat/history.md` | tran
+
+#### docs/chat/quick-chat.md
+
+Title: "Quick chat" | 113 lines | current reference
+
+Referenced by:
+- docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
+- docs/guides.md:51 (link) — | Quick chat routing and rubric | [docs/chat/quick-chat.md](chat/quick-chat.md) |
+
+References:
+- → docs/box/quick-chat.md (link)
+- → docs/security-report.md (link)
+
+#### docs/chat/review.md
+
+Title: "Chat review" | 172 lines | current reference
+
+Referenced by:
+- docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
+- docs/guides.md:54 (link) — | Chat review (nightly titles + summaries) | [docs/chat/review.md](chat/review.md) |
+- docs/plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
+- ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
+- ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
+- ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat/review.md`.
+- ../issues/closed/features/2026-05-19-overnight-session-compaction.md:11 (link) — See [docs/chat/review.md](../../../beebox/docs/chat/review.md) for the
+- ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:79 (link) — - [Chat review](../../../beebox/docs/chat/review.md) skips it too (correctly —
+
+References:
+- → docs/implemented-plans/chat-review.md (link)
+
+#### docs/chat/schedules.md
+
+Title: "Chat Schedules" | 101 lines | current reference
+
+Referenced by:
+- docs/chat.md:12 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence, Telegram
+- docs/design/README.md:32 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
+- docs/design/processing.md:22 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
+- docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
+- docs/guides.md:40 (link) — | Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
+- docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
+- docs/implemented-plans/mvp-implementation-guide.md:245 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
+- docs/implemented-plans/prompt-calibration-bodies.subplan.md:100 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
+- docs/plans/doc-structure-chat.md:67 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
+- ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+
+References:
+- → src/hub/CLAUDE.md (mention)
+
+#### docs/chat/scroll.md
+
+Title: "Chat scroll — test procedure" | 359 lines | current reference
+
+Referenced by:
+- docs/chat.md:16 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
+- docs/implemented-plans/chat-composer-rerender.md:146 (mention) — 4. Manual procedure in `docs/chat/scroll.md` (stick-to-bottom,
+- docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat/scroll.md`):
+- docs/implemented-plans/chat-stream-finalize-unify.md:370 (mention) — procedure in `docs/chat/scroll.md` (extended), not doctests
+- docs/plans/chat-scroll-model.md:199 (mention) — Chrome's native anchoring, which the app disables); `docs/chat/scroll.md`
+- docs/plans/chat-scroll-model.md:227 (link) — opening during a live reply. See [the current verification record](../chat/scroll.md).
+- docs/plans/doc-structure-chat.md:71 (mention) — | `chat-scroll-testing.md` intro, harness, real-app procedure, images matrix, trace format, device checklist, the three
+- docs/reports/chat-scroll-investigation-2026-09-04.md:6 (link) — [chat scroll](../chat/scroll.md); the model is in the chat component's
+- docs/testing/dev-stubs.md:58 (link) — [chat-scroll-testing.md](../chat/scroll.md). Note that `/fakestream`
+- src/frontend/src/components/chat/CLAUDE.md:82 (mention) — PASS) **and the browser procedure in `docs/chat/scroll.md`**, and verify
+- ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:43 (link) — [chat scroll testing](../../beebox/docs/chat/scroll.md).
+- ../issues/closed/bugs/2026-07-19-scroll-up-history-false-new-messages.md:20 (mention) — `docs/chat/scroll.md`. See the commit referenced in the closing note.
+- ../research/chat-scroll-comparison-2026-09-04.md:4 (link) — [local reproduction protocol](../beebox/docs/chat/scroll.md).
+
+References:
+- → docs/testing.md (mention)
+- → docs/plans/chat-scroll-model.md (mention)
+
+#### docs/chat/sessions.md
+
+Title: "Chat sessions" | 94 lines | current reference
+
+Referenced by:
+- docs/chat.md:10 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
+- docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
+- docs/guides.md:52 (link) — | Chat session lifecycle | [docs/chat/sessions.md](chat/sessions.md) |
+- docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
+- docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat/sessions.md` protocol doc for the
+- docs/implemented-plans/top-nav-ia.md:417 (mention) — bar). `docs/chat/sessions.md` if it references the Chats page.
+- docs/implemented-plans/workstreams.md:120 (mention) — full conversation (v2.1.223+; code.claude.com/docs/en/sessions.md). Codex
+- docs/plans/doc-structure-chat.md:65 (mention) — | `chat-session-lifecycle.md` "Phases", "The contract", "Shared code" | `chat/sessions.md` | |
+- ../issues/code-quality/2026-07-06-chat-session-shared-core.md:51 (mention) — `beebox/docs/chat/sessions.md`.
+- ../issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:16 (mention) — docs/chat/sessions.md and the chat steering design are reconciled.
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat/sessions.md`.)
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat/sessions.md) — how
 
 ### docs/design/
 
@@ -2680,7 +2713,7 @@ Referenced by:
 
 References:
 - → docs/scheduler.md (link)
-- → docs/chat-schedules.md (link)
+- → docs/chat/schedules.md (link)
 - → src/core/reactor/DESIGN.md (mention)
 - → docs/triage.md (link)
 - → docs/design/teaching.md (mention)
@@ -2711,7 +2744,7 @@ References:
 - → docs/triage.md (link)
 - → docs/calendar.md (link)
 - → docs/scheduler.md (link)
-- → docs/chat-schedules.md (link)
+- → docs/chat/schedules.md (link)
 - → docs/implemented-plans/design-md-retired-sections.md (link)
 - → docs/cards-as-markdown.md (mention)
 
@@ -2872,7 +2905,7 @@ Referenced by:
 
 References:
 - → docs/engineering-principles.md (mention)
-- → docs/chat-session-lifecycle.md (mention)
+- → docs/chat/sessions.md (mention)
 
 #### docs/implemented-plans/architectural-review.md
 
@@ -2888,9 +2921,9 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
-- → docs/composer-input-machine.md (mention)
+- → docs/chat/composer.md (mention)
 - → frontend.md (mention)
-- → docs/chat-session-lifecycle.md (mention)
+- → docs/chat/sessions.md (mention)
 - → docs/testing.md (mention)
 - → docs/landmarks.md (mention)
 
@@ -3352,7 +3385,7 @@ References:
 Title: "Plan: stop composer keystrokes from re-rendering chat history" | 160 lines | shipped history | implemented
 
 References:
-- → docs/chat-scroll-testing.md (mention)
+- → docs/chat/scroll.md (mention)
 
 #### docs/implemented-plans/chat-header-chips.md
 
@@ -3397,9 +3430,10 @@ References:
 Title: "Chat review: size-gated overnight compaction and generated titles" | 854 lines | shipped history | implemented
 
 Referenced by:
-- docs/chat-review.md:9 (link) — [docs/implemented-plans/chat-review.md](implemented-plans/chat-review.md).
+- docs/chat/review.md:9 (link) — [docs/implemented-plans/chat-review.md](../implemented-plans/chat-review.md).
 - docs/implemented-plans/card-symbol.md:127 (mention) — `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
 - docs/implemented-plans/doc-structure.md:641 (mention) — Name failures reported by the navigators: `chat-review.md` chosen for
+- docs/plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
 - ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/chat-review.md
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:12 (link) — current reference and [the design doc](../../../beebox/docs/implemented-plans/chat-review.md)
@@ -3426,7 +3460,7 @@ Referenced by:
 - src/frontend/src/components/chat/CLAUDE.md:8 (mention) — without revisiting `docs/implemented-plans/chat-scroll-redesign.md`.
 
 References:
-- → docs/chat-scroll-testing.md (mention)
+- → docs/chat/scroll.md (mention)
 - → frontend.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
@@ -3469,7 +3503,7 @@ References:
 - → docs/implemented-plans/chat-scroll-redesign.md (mention)
 - → CLAUDE.md (mention)
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
-- → docs/chat-scroll-testing.md (mention)
+- → docs/chat/scroll.md (mention)
 
 #### docs/implemented-plans/clerk-contract-and-import-boundary.md
 
@@ -3747,7 +3781,7 @@ References:
 - → src/core/reactor/DESIGN.md (mention)
 - → docs/architecture/02-cards-and-memory.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/chat-schedules.md (mention)
+- → docs/chat/schedules.md (mention)
 - → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/dev-loop-lifecycle.md
@@ -3780,6 +3814,7 @@ References:
 Title: "Documentation structured like code" | 648 lines | shipped history | implemented
 
 Referenced by:
+- docs/plans/doc-structure-chat.md:10 (link) — that the [testing pilot](../implemented-plans/doc-structure.md) established.
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:12 (link) — > [`doc-structure`](../../../beebox/docs/implemented-plans/doc-structure.md)
 
 References:
@@ -3809,7 +3844,6 @@ References:
 - → docs/testing/field-testing.md (mention)
 - → docs/card-validation.md (mention)
 - → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
-- → docs/chat-scroll-testing.md (mention)
 - → docs/guides.md (mention)
 - → docs/questions.md (mention)
 - → docs/development-workflow.md (mention)
@@ -3834,7 +3868,7 @@ References:
 - → docs/box-layout.md (mention)
 - → docs/adding-schemas.md (mention)
 - → docs/testing.md (mention)
-- → docs/composer-input-machine.md (mention)
+- → docs/chat/composer.md (mention)
 - → docs/adding-a-box.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/glossary.md (mention)
@@ -3887,7 +3921,6 @@ References:
 - → docs/testing/knowledge-audits.md (mention)
 - → deploy/README.md (mention)
 - → docs/adding-api-endpoints.md (mention)
-- → docs/chat-schedules.md (mention)
 - → docs/telegram-setup.md (mention)
 - → docs/prompt-logging.md (mention)
 - → docs/scheduler.md (mention)
@@ -4401,7 +4434,7 @@ References:
 - → docs/scheduler.md (mention)
 - → docs/triage.md (mention)
 - → docs/design/durability-and-provenance.md (mention)
-- → docs/chat-schedules.md (mention)
+- → docs/chat/schedules.md (mention)
 - → docs/connectors.md (link)
 - → docs/adding-schemas.md (link)
 - → docs/calendar.md (mention)
@@ -4552,6 +4585,7 @@ Referenced by:
 References:
 - → docs/implemented-plans/prompt-calibration.md (link)
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
+- → docs/chat/schedules.md (mention)
 - → CLAUDE.md (mention)
 - → ../.claude/skills/cross-model/references/codex-runner.md (link)
 - → ../.claude/skills/cross-model/references/claude-runner.md (link)
@@ -5347,7 +5381,7 @@ References:
 - → frontend.md (mention)
 - → docs/implemented-plans/nav-card.md (mention)
 - → docs/landmarks.md (mention)
-- → docs/chat-session-lifecycle.md (mention)
+- → docs/chat/sessions.md (mention)
 - → docs/health-checks.md (mention)
 - → CLAUDE.md (mention)
 
@@ -5539,6 +5573,7 @@ References:
 - → ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md (link)
 - → ../issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md (link)
 - → docs/engineering-principles.md (mention)
+- → docs/chat/sessions.md (mention)
 - → docs/plans/README.md (mention)
 - → CLAUDE.md (mention)
 - → README.md (mention)
@@ -5576,7 +5611,6 @@ References:
 - → docs/landmarks.md (mention)
 - → docs/procedure-implementation.md (mention)
 - → docs/model-policy.md (mention)
-- → docs/chat-schedules.md (mention)
 - → docs/docker-install.md (mention)
 - → docs/developer-install.md (mention)
 - → docs/google-setup.md (mention)
@@ -5601,7 +5635,6 @@ References:
 - → docs/maintenance.md (mention)
 - → docs/server-operations.md (mention)
 - → docs/security-report.md (mention)
-- → docs/chat-scroll-testing.md (mention)
 - → code-style.md (mention)
 - → frontend.md (mention)
 - → docs/example-names.md (mention)
@@ -5812,6 +5845,7 @@ References:
 Title: "Chat husks — web chat sessions as cards (phase 1)" | 85 lines | proposal | partial
 
 Referenced by:
+- docs/chat.md:23 (link) — - Husk cards (`_content/chat/web/*.chat.card`) have no current reference; the design is the [chat husks plan](plans/chat
 - docs/design/interface-as-cards-background.md:300 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
 - docs/implemented-plans/docs-reorg.md:43 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 - ../issues/closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md:23 (mention) — per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
@@ -5860,7 +5894,9 @@ No references in or out.
 Title: "Chat scroll: write on user actions only" | 234 lines | proposal | partial
 
 Referenced by:
-- docs/chat-scroll-testing.md:18 (mention) — never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
+- docs/chat/scroll.md:18 (mention) — never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
+- docs/plans/doc-structure-chat.md:108 (mention) — that needs verifying against code); the active `plans/chat-scroll-model.md`.
+- docs/reports/chat-scroll-investigation-2026-09-04.md:7 (mention) — `CLAUDE.md` and `docs/plans/chat-scroll-model.md`. Do not update in place.
 - src/frontend/src/components/chat/CLAUDE.md:15 (mention) — (`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:48 (mention) — (landed 2026-08-26, `docs/plans/chat-scroll-model.md`, status `partial`). The
 - ../issues/closed/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md:68 (mention) — (`beebox/docs/plans/chat-scroll-model.md`; controller
@@ -5868,9 +5904,9 @@ Referenced by:
 
 References:
 - → ../issues/closed/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md (frontmatter)
-- → docs/chat-scroll-testing.md (mention)
+- → docs/chat/scroll.md (mention)
 - → CLAUDE.md (mention)
-- → docs/chat-scroll-testing.md (link)
+- → docs/chat/scroll.md (link)
 - → ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md (link)
 
 #### docs/plans/chat-session-delete.md
@@ -5964,11 +6000,10 @@ References:
 Title: "Composer child-actor ownership" | 138 lines | proposal | draft
 
 Referenced by:
-- docs/composer-input-machine.md:6 (link) — [`plans/composer-child-actors.md`](plans/composer-child-actors.md).
+- docs/chat/composer.md:288 (link) — [`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
 
 References:
-- → docs/composer-input-machine.md (link)
-- → docs/composer-states.md (mention)
+- → docs/chat/composer.md (link)
 
 #### docs/plans/container-first-pass2.review.md **[ORPHAN]**
 
@@ -6023,6 +6058,25 @@ References:
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
+
+#### docs/plans/doc-structure-chat.md **[ORPHAN]**
+
+Title: "Documentation structured like code: the chat cluster" | 150 lines | proposal | active
+
+References:
+- → docs/README.md (link)
+- → docs/implemented-plans/doc-structure.md (link)
+- → docs/chat.md (mention)
+- → docs/chat/sessions.md (mention)
+- → docs/chat/history.md (mention)
+- → docs/chat/schedules.md (mention)
+- → docs/implemented-plans/chat-review.md (mention)
+- → docs/chat/review.md (mention)
+- → docs/chat/composer.md (mention)
+- → docs/chat/scroll.md (mention)
+- → CLAUDE.md (mention)
+- → docs/reports/chat-scroll-investigation-2026-09-04.md (mention)
+- → docs/plans/chat-scroll-model.md (mention)
 
 #### docs/plans/document-comments.md
 
@@ -6898,6 +6952,19 @@ References:
 - → docs/plans/narration-mode.md (mention)
 - → docs/implemented-plans/mvp-implementation-guide.md (mention)
 
+#### docs/reports/chat-scroll-investigation-2026-09-04.md
+
+Title: "Chat scroll investigation, 2026-09-04" | 228 lines | dated report
+
+Referenced by:
+- docs/plans/doc-structure-chat.md:72 (mention) — | `chat-scroll-testing.md` dated sections (send-failure results, native reproduction, deeper web checks, controller fix
+
+References:
+- → docs/chat/scroll.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/chat-scroll-model.md (mention)
+- → ../../research/chat-scroll-comparison-2026-09-04.md (link) **[BROKEN]**
+
 #### docs/reports/git-annex-conversion-2026-08-01.md
 
 Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
@@ -7039,8 +7106,8 @@ Referenced by:
 - docs/testing/tours.md:58 (link) — the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
 
 References:
-- → docs/composer-states.md (link)
-- → docs/chat-scroll-testing.md (link)
+- → docs/chat/composer.md (link)
+- → docs/chat/scroll.md (link)
 
 #### docs/testing/doctests.md
 
@@ -7400,12 +7467,13 @@ No references in or out.
 Title: "Chat UI" | 166 lines
 
 Referenced by:
+- docs/chat.md:22 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend
 - docs/implemented-plans/chat-stream-finalize-unify.md:344 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
 
 References:
 - → docs/implemented-plans/chat-scroll-redesign.md (mention)
 - → docs/plans/chat-scroll-model.md (mention)
-- → docs/chat-scroll-testing.md (mention)
+- → docs/chat/scroll.md (mention)
 - → docs/implemented-plans/chat-stream-finalize-unify.md (mention)
 
 ### src/hub/
@@ -7417,7 +7485,7 @@ Title: "Hub" | 70 lines
 Referenced by:
 - CLAUDE.md:42 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/CLAUDE.md). Tests mirror source paths under `test/` and use helpe
 - docs/adding-a-box.md:26 (mention) — persisted to `hub-state.json` beside the config) — see `src/hub/CLAUDE.md`.
-- docs/chat-schedules.md:96 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/chat/schedules.md:96 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
 - docs/implemented-plans/docs-reorg.md:317 (mention) — conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
 - docs/implemented-plans/mobile-token-handshake.md:79 (mention) — unacceptable."* `src/hub/CLAUDE.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:25 (mention) — withholding `BBX_SESSION_SECRET` from boxes (`src/hub/CLAUDE.md`).

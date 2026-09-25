@@ -29,7 +29,7 @@ code doesn't fill yet — don't read it as description.
 Former design.md sections that were pure pointers after reconciliation:
 triage pipeline → [`../triage.md`](../triage.md); calendar →
 [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
-and [`../chat-schedules.md`](../chat-schedules.md).
+and [`../chat/schedules.md`](../chat/schedules.md).
 
 ## Retired sections
 

@@ -48,7 +48,7 @@ destination fits.
 
 ## Maintain the rubric
 
-Box agents have [packaged rubric instructions](box/quick-chat.md).
+Box agents have [packaged rubric instructions](../box/quick-chat.md).
 
 The optional box file `_config/chat-routing.yaml` contains authored rules.
 The boxholder or a box agent can edit it. It is plain YAML, not a card and
@@ -83,7 +83,7 @@ message. Do not put provider keys in the rubric.
 
 The request goes to OpenRouter's Decisions API and is pinned to TypeSafe Jev.
 It includes the captured text, candidate identities and activity, rubric rules,
-and recent conversation text. See [security report §3](security-report.md#3-data-egress).
+and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
 The current bounds are:
 
 - Captured message: 12,000 characters; text only, with no attachments.

@@ -9,7 +9,7 @@ resolution: implemented
 ---
 
 **Closed 2026-08-26** by [chat-session-identity](../../../beebox/docs/implemented-plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `bbx chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
-[Chat review](../../../beebox/docs/chat-review.md) keeps two pieces of state
+[Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
 about a session, and they live on opposite sides of the sync boundary:
 
 - **The span journal** — `.beebox/chat-review/state.json`. `.beebox/`
