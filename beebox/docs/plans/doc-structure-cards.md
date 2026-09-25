@@ -132,3 +132,27 @@ Questions (pilot protocol):
 | 8 | yes | 3 | migrations.md#Applying and inspecting | 1 |
 | 9 | yes | 3 | migrations.md#Admission | 1 |
 | 10 | yes | 3 | card-validation.md#Canonical ref form | 1 |
+
+### After (2026-09-25)
+
+| # | Found | Steps | Cited | Locations |
+|---|---|---|---|---|
+| 1 | yes | 4 | cards/format.md#Format | 1 |
+| 2 | yes | 3 | cards/format.md#Format, now the seven fields | 1 plus the per-field description under schemas |
+| 3 | yes | 4 | cards/schemas.md#Create the Schema File | 2 (format.md states it too); both are the rule's natural readers |
+| 4 | yes | 4 | cards/format.md#Attachments | 1 |
+| 5 | yes | 4 | cards/format.md#Refs | 1 |
+| 6 | yes | 3 | cards/schemas.md#How Agent Discovery Works | 1 |
+| 7 | yes | 3 | cards/schemas.md#templateMerge | 1 |
+| 8 | yes | 3 | cards/migrations.md#Applying and inspecting | 1 |
+| 9 | yes | 3 | cards/migrations.md#Admission | 1 |
+| 10 | yes | 3 | cards/validation.md#Canonical ref form | 1 |
+
+### Cross-model review of the diff (Codex, 2026-09-25)
+
+Three findings, all applied: stale path mentions inside the moved pages and
+the curated doc-graph table; five still-registered migrators' descriptions
+had been frozen into the report with the rollout history, and are back on
+the live page under "Later migrators" (the report keeps the May 2026
+rollout steps, the one-off fixes, and the two retired migrators); a parser
+placeholder leaked into the migrations page.

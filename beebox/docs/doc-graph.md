@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T19:25:49Z
+Generated: 2026-09-25T19:31:07Z
 Total documents: 429
 
 ## Issues
@@ -57,7 +57,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-cards.md** — "Documentation structured like code: cards" (135 lines) · proposal · active
+- **docs/plans/doc-structure-cards.md** — "Documentation structured like code: cards" (159 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -115,6 +115,7 @@ Referenced by:
 - docs/agent-coding.md:12 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
 - docs/box/publishing.md:19 (mention) — ├── CLAUDE.md
+- docs/cards/migrations.md:482 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
 - docs/cards/schemas.md:331 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:25 (mention) — prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
@@ -227,7 +228,6 @@ Referenced by:
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/reports/chat-scroll-investigation-2026-09-04.md:7 (mention) — `CLAUDE.md` and `docs/plans/chat-scroll-model.md`. Do not update in place.
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:62 (mention) — - **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but the schemas dir's
-- docs/reports/migration-rollout-2026-05-23.md:109 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
 - docs/reports/prompt-calibration-pilot-2026-09-12.md:27 (mention) — - Authority: the same five requests with complete root CLAUDE.md, launch skill,
 - docs/reports/stack-decisions-2026-09-04.md:1195 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/testing/knowledge-audits.md:17 (mention) — **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the
@@ -1336,7 +1336,7 @@ Title: "Code Maintenance" | 86 lines | current reference
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
 - docs/README.md:120 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:410 (link) — - [Maintenance](../maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
+- docs/cards/migrations.md:515 (link) — - [Maintenance](../maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
 - docs/guides.md:58 (link) — | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
@@ -2187,8 +2187,9 @@ Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:95 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:408 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:513 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:80 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
+- docs/cards/validation.md:93 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/guides.md:17 (link) — | Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked ex
 - docs/implemented-plans/box-root-paths.md:269 (mention) — `docs/cards/format.md`). Add the link rule to reactor/procedure prompt
@@ -2212,10 +2213,11 @@ References:
 - → README.md (mention)
 - → docs/implemented-plans/todo-annotation.md (mention)
 - → docs/implemented-plans/todo-collection.md (mention)
+- → docs/cards/validation.md (link)
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 452 lines | current reference
+Title: "Card migrations" | 557 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -2269,6 +2271,10 @@ References:
 - → docs/server/deploying.md (link)
 - → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/reports/migration-rollout-2026-05-23.md (link)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/implemented-plans/scanner-ingest.md (mention)
+- → docs/implemented-plans/one-root-box-layout.md (mention)
+- → CLAUDE.md (mention)
 - → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
 - → docs/cards/schemas.md (link)
@@ -2283,7 +2289,7 @@ Referenced by:
 - README.md:96 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:409 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:514 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/guides.md:17 (link) — | Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked ex
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
@@ -2317,6 +2323,7 @@ Title: "Card validation" | 96 lines | current reference
 Referenced by:
 - CLAUDE.md:29 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
 - docs/cards.md:12 (link) — | [Validation](cards/validation.md) | How `bbx validate` reaches agents and commits: the hooks and the canonical ref rew
+- docs/cards/format.md:144 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/guides.md:34 (link) — | Card validation hooks | [docs/cards/validation.md](cards/validation.md) |
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
 - docs/plans/doc-structure-cards.md:60 (mention) — | `card-validation.md` | `cards/validation.md` |
@@ -2328,6 +2335,7 @@ References:
 - → docs/plans/commit-performance.md (mention)
 - → docs/implemented-plans/external-url-validation.md (mention)
 - → docs/implemented-plans/box-root-paths.md (mention)
+- → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
 
 ### docs/chat/
@@ -3274,8 +3282,8 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2560 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:408 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
-- docs/cards/validation.md:93 (mention) — Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-mar
+- docs/cards/migrations.md:513 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/validation.md:93 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/guides.md:28 (link) — | Card format design history (RFC) | [docs/implemented-plans/cards-as-markdown-rfc.md](implemented-plans/cards-as-markdo
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
@@ -4461,8 +4469,8 @@ Title: "One-root box layout (shapeVersion 3)" | 575 lines | shipped history | im
 
 Referenced by:
 - docs/box-layout.md:32 (mention) — only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.md` for
+- docs/cards/migrations.md:477 (mention) — `_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
 - docs/mobile-contract.md:20 (mention) — layout (shapeVersion 3, `docs/implemented-plans/one-root-box-layout.md`) they land in underscore areas
-- docs/reports/migration-rollout-2026-05-23.md:104 (mention) — `_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
 - ../issues/bugs/2026-09-21-absolute-path-check-matches-urls.md:38 (mention) — The guard's whole purpose (`docs/implemented-plans/one-root-box-layout.md`,
 - ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:14 (mention) — > (`beebox/docs/implemented-plans/one-root-box-layout.md`, `status: partial` — code and
 - ../issues/closed/code-quality/2026-09-08-v2-layout-snapshot-exists-only-to-satisfy-knip.md:44 (mention) — layout is recorded anywhere that survives — `docs/implemented-plans/one-root-box-layout.md`
@@ -4614,7 +4622,7 @@ References:
 Title: "Questions, end-to-end" | 664 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:392 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
+- docs/cards/migrations.md:391 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
 - docs/questions.md:8 (mention) — `docs/implemented-plans/questions-end-to-end.md`.
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:9 (mention) — aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
@@ -4747,7 +4755,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:490 (mention) — resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 - docs/implemented-plans/one-root-box-layout.md:201 (mention) — converts. (Precedent: `remove-box-shape-v1.md` — clear-refusal beats silent
 - docs/implemented-plans/remove-box-shape-v1.review.md:3 (mention) — Cross-model review of the draft `remove-box-shape-v1.md`. Findings verbatim
-- docs/reports/migration-rollout-2026-05-23.md:138 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
+- docs/reports/migration-rollout-2026-05-23.md:36 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:14 (mention) — Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
 
 References:
@@ -4951,6 +4959,7 @@ References:
 Title: "Scanner Ingest" | 763 lines | shipped history | implemented
 
 Referenced by:
+- docs/cards/migrations.md:426 (mention) — `docs/implemented-plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 - docs/implemented-plans/scan-uploader-version-drift.md:21 (mention) — deferrals: `docs/implemented-plans/scanner-ingest.md:636-664` (NOT in scope) and
 - docs/implemented-plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
 - docs/plans/scan-guide-card.md:17 (mention) — This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshaped).
@@ -4958,7 +4967,6 @@ Referenced by:
 - docs/plans/scan-retry-and-document-route.md:110 (link) — [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
-- docs/reports/migration-rollout-2026-05-23.md:53 (mention) — `docs/implemented-plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 - docs/scan-upload-contract.md:16 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:8 (mention) — Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfPro
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:96 (link) — [`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
@@ -5275,10 +5283,10 @@ Title: "`{% todo %}` — universal todo annotation" | 596 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:100 (mention) — `docs/implemented-plans/todo-annotation.md` and
+- docs/cards/migrations.md:413 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - docs/implemented-plans/card-symbol.md:126 (mention) — (`docs/implemented-plans/todo-annotation.md:292`,
 - docs/implemented-plans/todo-collection.md:98 (mention) — (`docs/implemented-plans/todo-annotation.md`), goals 2 to 4: a trusted
 - docs/implemented-plans/todos-ui.md:102 (mention) — (`docs/implemented-plans/todo-annotation.md`, Open design questions):
-- docs/reports/migration-rollout-2026-05-23.md:40 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:7 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
@@ -6131,7 +6139,7 @@ No references in or out.
 
 #### docs/plans/doc-structure-cards.md **[ORPHAN]**
 
-Title: "Documentation structured like code: cards" | 135 lines | proposal | active
+Title: "Documentation structured like code: cards" | 159 lines | proposal | active
 
 References:
 - → docs/README.md (link)
@@ -7074,19 +7082,15 @@ References:
 
 #### docs/reports/migration-rollout-2026-05-23.md
 
-Title: "Migration rollout, May 2026, and retired migrators" | 182 lines | dated report
+Title: "Migration rollout, May 2026, and retired migrators" | 80 lines | dated report
 
 Referenced by:
-- docs/cards/migrations.md:396 (link) — what they did is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
+- docs/cards/migrations.md:395 (link) — what they did is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 - docs/plans/doc-structure-cards.md:62 (mention) — | `migrations.md` "Production rollout history" and the two retired migrators | `reports/migration-rollout-2026-05-23.md`
 
 References:
 - → docs/cards/migrations.md (mention)
 - → docs/cards/migrations.md (link)
-- → docs/implemented-plans/todo-annotation.md (mention)
-- → docs/implemented-plans/scanner-ingest.md (mention)
-- → docs/implemented-plans/one-root-box-layout.md (mention)
-- → CLAUDE.md (mention)
 - → docs/implemented-plans/remove-box-shape-v1.md (mention)
 
 #### docs/reports/plan-directory-migration-history-2026-09-13.md
@@ -7232,7 +7236,7 @@ Title: "Deploying" | 130 lines | current reference
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
 - deploy/README.md:20 (link) — | `deploy.sh` | Deploy a commit: build in the persistent detached checkout, stage on the server, activate under the main
-- docs/cards/migrations.md:170 (link) — not make its data current. See [deployment operations](../server/deploying.md).
+- docs/cards/migrations.md:169 (link) — not make its data current. See [deployment operations](../server/deploying.md).
 - docs/implemented-plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
 - docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
