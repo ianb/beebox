@@ -5,7 +5,13 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chat-text-drop — diagnosing a production report of chat turns that showed no reply
+resolution: implemented
 ---
+
+Resolved by ed3d5ecd4: progress-update thinking blocks now render as visible
+lines between tool groups (history and live stream), a no-response ack no
+longer suppresses a turn with an update, and the chat prompt tells the agent
+to put its answer in reply text. No divergence from the plan described below.
 
 On a production box, two chat turns on `claude-fable-5-1` showed the user
 only the collapsed "thinking, ran 2 commands" row. The user saw no reply.
