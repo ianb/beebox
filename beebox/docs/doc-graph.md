@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T18:04:55Z
+Generated: 2026-09-25T18:12:26Z
 Total documents: 425
 
 ## Issues
@@ -55,7 +55,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (170 lines) · proposal · active
+- **docs/plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (212 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -1325,7 +1325,7 @@ Referenced by:
 - docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
 - docs/plans/doc-structure-install-server.md:113 (mention) — daemon), `secrets.md`, `publishing.md`, `google-setup.md` and the connector
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](google-setup.md).
-- docs/server/configuration.md:158 (link) — Create the OAuth client as in [Google setup](../google-setup.md) with the
+- docs/server/configuration.md:157 (link) — Create the OAuth client as in [Google setup](../google-setup.md) with the
 - docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../google-setup.md#token-expired--invalid_grant); design
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/google-setup.md` already walks an operator through consent screen +
 
@@ -1989,6 +1989,7 @@ Referenced by:
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
+- docs/plans/doc-structure-install-server.md:177 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/security-overview.md:28 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
@@ -2060,6 +2061,7 @@ Referenced by:
 - docs/development-process.md:34 (link) — **[Technologies and AI services](technologies.md)** names the stack and the
 - docs/development-workflow.md:5 (mention) — services](technologies.md).
 - docs/guides.md:21 (link) — | Technologies and AI services | [docs/technologies.md](technologies.md) |
+- docs/plans/doc-structure-install-server.md:175 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
 
 References:
 - → docs/development-process.md (link)
@@ -2932,7 +2934,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/security-report.md:277 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
-- docs/server/provisioning.md:139 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
 References:
@@ -3041,7 +3043,7 @@ Referenced by:
 - docs/plans/source-available-release.md:393 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:88 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- docs/server/provisioning.md:146 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - user-stories/catalog/2026-08-21.md:9055 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:32 (mention) — (`beebox/docs/implemented-plans/boxes-as-packages-v2.md:579-585`: "two
@@ -5581,7 +5583,7 @@ Referenced by:
 - docs/plans/installation-story.md:423 (mention) — - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
-- docs/server/configuration.md:73 (link) — browser shows, the same flow the [Docker install](../install/docker.md#claude-auth-interactive-vs-headless)
+- docs/server/configuration.md:134 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
 - docs/server/provisioning.md:9 (link) — > [`../docs/docker-install.md`](../install/docker.md). Read that one.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:41 (mention) — as a variant in `beebox/docs/install/docker.md` (keep loopback mapping,
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
@@ -6076,7 +6078,7 @@ No references in or out.
 
 #### docs/plans/doc-structure-install-server.md **[ORPHAN]**
 
-Title: "Documentation structured like code: install and the production server" | 170 lines | proposal | active
+Title: "Documentation structured like code: install and the production server" | 212 lines | proposal | active
 
 References:
 - → docs/README.md (link)
@@ -6102,6 +6104,8 @@ References:
 - → docs/scheduler.md (mention)
 - → docs/google-setup.md (mention)
 - → deploy/CLAUDE.md (mention)
+- → docs/technologies.md (mention)
+- → docs/security-report.md (mention)
 
 #### docs/plans/document-comments.md
 
@@ -7124,7 +7128,7 @@ References:
 
 #### docs/server/boxes.md
 
-Title: "Boxes on the server" | 290 lines | current reference
+Title: "Boxes on the server" | 289 lines | current reference
 
 Referenced by:
 - README.md:97 (link) — - [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
@@ -7151,11 +7155,10 @@ References:
 - → README.md (link)
 - → docs/server/configuration.md (link)
 - → docs/secrets.md (link)
-- → docs/server/provisioning.md (link)
 
 #### docs/server/configuration.md
 
-Title: "Server configuration" | 181 lines | current reference
+Title: "Server configuration" | 180 lines | current reference
 
 Referenced by:
 - docs/plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
@@ -7250,19 +7253,18 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 222 lines | current reference
+Title: "Server provisioning" | 202 lines | current reference
 
 Referenced by:
 - deploy/README.md:21 (link) — | `hetzner/create-server.sh`, `hetzner/setup-server.sh` | Example provisioners for the one host shape `deploy.sh` ships
 - docs/plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
-- docs/server/boxes.md:143 (link) — [provisioning](provisioning.md#setting-up-the-host-hetznersetup-serversh).)
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
 
 References:
 - → docs/install/docker.md (link)
-- → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/implemented-plans/box-host-packages.md (mention)
+- → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 
 ### docs/testing/
 

@@ -117,9 +117,11 @@ from its admin page.
 Without a granted key the affected connector emits a health warning but the box
 still runs; `bbx secrets status` names exactly which grant is missing.
 
-Legacy `_config/connectors/*.secret.json` files no longer work as a fallback —
-the machine secret store is the only source a connector reads from — but
-`bbx health` still flags any stray file it finds. Don't create new ones — move
+Legacy `_config/connectors/*.secret.json` API-key files no longer work as a
+fallback; the machine secret store is the only source a connector reads a key
+from. The one exception is Google OAuth tokens, where a per-box
+`google.secret.json` is still read when `BBX_GOOGLE_TOKENS_FILE` is unset.
+`bbx health` flags any stray file it finds. Don't create new ones — move
 a machine's existing files into the store once with `bbx secrets migrate`
 (`--dry-run` prints the plan first), then delete the originals.
 
@@ -138,9 +140,6 @@ paths and service names for your own hub host, not copy them verbatim.
   check that the new box serves. For a box that does not exist yet,
   `deploy/add-box.sh --create <name>` covers step 1 as well — it scaffolds the
   box, pushes it to a private repo, and then does all of the above.
-  (`deploy/setup-server.sh`, which provisions a *bare* server, still generates
-  the pre-hub `beebox-serve` unit; that gap is described under
-  [provisioning](provisioning.md#setting-up-the-host-hetznersetup-serversh).)
 
 The whole process, in one command: clone the box repo, `bbx init` it, seed
 access + connector secrets, register it with **both** manifests, restart the

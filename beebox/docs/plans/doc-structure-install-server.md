@@ -167,3 +167,45 @@ Questions (protocol as in the pilot; the allowed area adds
 
 The walks found everything; none opened the second home, so the walk cannot
 see a contradiction. The location column is what records them.
+
+### After (2026-09-25)
+
+| # | Found | Steps | Cited | Locations |
+|---|---|---|---|---|
+| 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+| 2 | yes | 5 | server/boxes.md#Connector secrets | 1 plus secrets.md as the store's home |
+| 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the security docs are outside this cluster |
+| 4 | yes | 3 | server/boxes.md#Register it with the hub | 1 |
+| 5 | yes | 5 | server/deploying.md#Rolling back | 1 (deploy/CLAUDE.md, an agent file, restates it) |
+| 6 | yes | 4 | server/provisioning.md#Git-drain drop-in | 1 |
+| 7 | yes | 5 | install/docker.md#Public domain | 1 |
+| 8 | yes | 12 | server/configuration.md#Service-user logins | 1 |
+| 9 | yes | 6 | server/deploying.md#deploy.sh | 1 |
+| 10 | yes | 4 | server/health-checks.md#Hub health endpoints | 1 |
+
+Every fact found; the contradictions are gone; one home each except the
+access rule, which the security docs also state. Two walks got longer: the
+Node version (the navigator tried technologies.md first) and the service
+user's login (twelve steps: "configuration" was not the name the navigator
+expected for logins, and it listed the directory instead of reading the
+parent's members table). The parent's table names logins under
+configuration; whether the page should be named for them is a judgment call
+left as is.
+
+### Cross-model review of the diff (Codex, 2026-09-25)
+
+Five findings, all applied. Two were stale facts the old docs carried and
+the move preserved: the provisioner's "still generates the pre-hub unit"
+gap (the script writes `beebox-hub.service` and removes the old units; the
+gap text, the rollback-lever paragraph, and the script's own header comment
+are gone), and a retired `callback` service-user name in the credential
+transfer, the run-as-user rule, and a runbook (now `beebox`, as the scripts
+say). The connector-secret statement was too absolute: Google OAuth tokens
+still read a per-box legacy file when the central path is unset. The
+service-user login section no longer asserts a paste-code flow the sources
+do not show; it says to run the login and to transfer credentials if it does
+not complete. The curated doc-graph table follows the moves.
+
+**Boxholder decision left open:** which Claude-auth story is current on
+the real server. The page now carries the login command and the transfer
+fallback without claiming which one you need.

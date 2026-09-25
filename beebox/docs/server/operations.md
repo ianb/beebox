@@ -73,7 +73,7 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 | Claude Code update log | `/home/beebox/claude-update.log` |
 | Source the server is actually running | `/opt/beebox/beebox/src/` (rsynced `.ts`, no `dist/`) |
 
-**Running `bbx` commands on the server** — must be as the `callback` user so file ownership stays correct:
+**Running `bbx` commands on the server** — must be as the `beebox` user so file ownership stays correct:
 
 ```bash
 deploy/prod-ssh "su - beebox -c 'bbx boxes list'"
@@ -123,20 +123,20 @@ chokepoint at [`feedback-review/run-on-server.ts`](../../../feedback-review/run-
 `runOnServer({ script, asUser, host })` SSHes in as `root` (the entry point
 key auth is set up for), then immediately `su - beebox` before running the
 script, with the script piped via stdin so multi-line content and quotes work
-without escaping. `asUser` defaults to `callback`; only set `asUser: "root"`
+without escaping. `asUser` defaults to `beebox`; only set `asUser: "root"`
 for operations that genuinely require root (systemctl, chown, package
 installs) and leave a comment saying why.
 
 Why this matters — historical bug: an earlier feedback-resolver script SSHed
 as root and ran `git commit` directly. That created objects under
 `/home/beebox/boxes/<box>/.git/objects/<prefix>/` owned by root, and the
-next `callback`-user commit that happened to hash into one of those prefixes
+next `beebox`-user commit that happened to hash into one of those prefixes
 failed with `insufficient permission for adding an object to repository
 database`. Same shape for the `mv` into `config/feedback/resolved/` — that
-directory ended up root-owned too, blocking callback writes. The failures
+directory ended up root-owned too, blocking beebox writes. The failures
 were intermittent (hash-prefix-dependent) and never pointed back at the
 original culprit; they just silently blocked the wakeup agent until someone
-noticed. The chokepoint enforces the "never write as root inside callback's
+noticed. The chokepoint enforces the "never write as root inside beebox's
 home" invariant in one place so this doesn't drift back.
 
 If you're writing a new dev tool that needs to talk to the server: either

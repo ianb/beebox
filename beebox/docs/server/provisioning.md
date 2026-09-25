@@ -81,14 +81,6 @@ Installs everything on Ubuntu 24.04:
 - Creates systemd services for the box server and scheduler
 - Installs the nginx site file `nginx/beebox.conf` (port 80 → the hub)
 
-**Known gap:** this script still generates the pre-hub `beebox-serve` unit
-(one process serving every box off `~/.config/beebox/boxes.json`), not `bbx hub` +
-per-box `bbx@<box>.service` units. The live server has since been switched
-over to the hub by hand (see "Systemd units" below and
-`docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
-`hetzner/create-server.sh` run today would need the same by-hand steps repeated
-until this script catches up.
-
 **This script does not run on deploy.** `deploy.sh` never invokes it, so a
 change to the systemd units here reaches a live server only on a re-provision
 or by hand. The nginx site file is the exception: it lives in
@@ -181,8 +173,7 @@ in `deploy/systemd/` into both `beebox-hub.service.d/` and
 `beebox-scheduler.service.d/`, and `daemon-reload`s only when something
 changed, immediately before the restart. The drop-in directory is the seam that
 lets a deploy own a unit SETTING without owning the unit itself, which matters
-because `setup-server.sh` still emits the pre-hub unit shape (see the Known gap
-above). Anything a future deploy must guarantee about the units belongs here as
+because a deploy never re-runs `setup-server.sh`. Anything a future deploy must guarantee about the units belongs here as
 another `.conf`, not as a by-hand step someone repeats and then forgets.
 
 Verify with `systemctl show beebox-hub -p KillMode -p TimeoutStopUSec`.
@@ -199,21 +190,10 @@ shared `.env` must not set that flag.
 children. Do not add it to the production unit or shared `.env`; child tools
 and package managers can interpret it independently.
 
-**Rollback lever:** the old `beebox-serve.service` unit is stopped and
-disabled, not deleted — it stays on disk as `beebox-serve-disabled-on-disk`
-(masked, not purged) so a bad hub rollout can be rolled back with
-`systemctl disable --now beebox-hub && systemctl enable --now beebox-serve`.
-**Never run both at once** — two engines serving the same box against its
-one `events.db` is a corrupting state, not just a wasteful one (the plan's
-Failure modes section calls this out as an accepted, operator-driven risk
-during any cutover window).
-
-**`BBX_CLI_PREBUILT` loose end:** `bin/bbx` skips its dev-mode staleness
-rebuild check when this env var is set — the old `beebox-serve` and
-scheduler units set it so they never pay (or risk failing) a tsx rebuild at
-boot. The per-box `bbx@<box>`-style units the hub spawns need the same
-treatment, and `setup-server.sh` needs to actually generate them with it set;
-neither has been verified end-to-end yet.
+**`BBX_CLI_PREBUILT`:** `bin/bbx` skips its dev-mode staleness rebuild check
+when this env var is set, so a unit never pays or risks a tsx rebuild at boot.
+The units `setup-server.sh` generates do not set it; this is unverified end to
+end.
 
 ## DNS and HTTPS
 
