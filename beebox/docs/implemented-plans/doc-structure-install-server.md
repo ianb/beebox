@@ -1,6 +1,6 @@
 ---
 title: "Documentation structured like code: install and the production server"
-status: active
+status: implemented
 workstream: doc-structure
 issues: []
 ---
@@ -17,7 +17,7 @@ and `health-checks.md`, and they disagree with each other in three places.
 [add-box targets a retired service](../../../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md),
 [deploy infra drift](../../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md);
 both are about the scripts, not the docs. The active
-[installation story](installation-story.md) and [container-first](container-first.md)
+[installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
 plans cite these docs by line number; line citations go stale on any edit and
 are left as they are.
 
