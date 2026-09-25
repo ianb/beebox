@@ -8,7 +8,10 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
-import { Heading } from "../ui/Heading";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION =
+  "Codex runs chats and background agents for boxes configured to use OpenAI. Authentication is stored by Codex for the Bee Box service account.";
 
 function CodexStatusSummary({ loading, status }: { loading: boolean; status: CodexStatus | null }) {
   if (loading) return <Text size="sm" tone="muted">Checking status…</Text>;
@@ -37,76 +40,66 @@ export function CodexSection() {
   const statusUnknown = status?.kind === "inconclusive";
 
   return (
-    <Card shadow>
-      <Stack gap="md">
-        <Row gap="sm" align="center">
-          <Heading level={2}>Codex</Heading>
-          <Badge tone="neutral" size="sm">System-wide</Badge>
-        </Row>
-        <Text size="sm" tone="subtle">
-          Codex runs chats and background agents for boxes configured to use OpenAI. Authentication is stored by Codex for the Bee Box service account.
-        </Text>
+    <AdminSectionCard id="codex" description={DESCRIPTION}>
+      <CodexStatusSummary loading={loading} status={status} />
 
-        <CodexStatusSummary loading={loading} status={status} />
+      {polling && verificationUrl && userCode ? (
+        <Card background="info">
+          <Stack gap="sm">
+            <Text as="p" size="sm">Open the Codex sign-in page, then enter this one-time code:</Text>
+            <Text as="div" size="xl" weight="bold" mono>{userCode}</Text>
+            <div><ExternalLink id="bbx-admin-codex-login-link" href={verificationUrl}>Open Codex Login</ExternalLink></div>
+            <Text as="p" size="xs" tone="muted">This page updates automatically after authentication completes.</Text>
+          </Stack>
+        </Card>
+      ) : null}
 
-        {polling && verificationUrl && userCode ? (
-          <Card background="info">
-            <Stack gap="sm">
-              <Text as="p" size="sm">Open the Codex sign-in page, then enter this one-time code:</Text>
-              <Text as="div" size="xl" weight="bold" mono>{userCode}</Text>
-              <div><ExternalLink id="bbx-admin-codex-login-link" href={verificationUrl}>Open Codex Login</ExternalLink></div>
-              <Text as="p" size="xs" tone="muted">This page updates automatically after authentication completes.</Text>
-            </Stack>
-          </Card>
-        ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
-        {error ? <ErrorText>{error}</ErrorText> : null}
-
-        <Row gap="sm" wrap>
-          {!loggedIn && !statusUnknown && !polling ? (
-            <Button
-              id="bbx-admin-codex-authenticate"
-              intent="primary"
-              onClick={() => { send({ type: "LOGIN" }); }}
-              disabled={!idle}
-              loading={starting}
-              loadingLabel="Starting…"
-            >
-              Authenticate Codex
-            </Button>
-          ) : null}
-          {polling ? (
-            <Button
-              id="bbx-admin-codex-cancel-login"
-              intent="secondary"
-              onClick={() => { send({ type: "CANCEL" }); }}
-              loading={cancelling}
-              loadingLabel="Cancelling…"
-            >
-              Cancel
-            </Button>
-          ) : null}
-          {loggedIn || statusUnknown ? (
-            <Button
-              id="bbx-admin-codex-logout"
-              intent="secondary"
-              onClick={() => { send({ type: "LOGOUT" }); }}
-              loading={loggingOut}
-              loadingLabel="Logging out…"
-            >
-              Log Out
-            </Button>
-          ) : null}
+      <Row gap="sm" wrap>
+        {!loggedIn && !statusUnknown && !polling ? (
           <Button
-            id="bbx-admin-codex-refresh"
-            intent="ghost"
-            onClick={() => { send({ type: "REFRESH" }); }}
+            id="bbx-admin-codex-authenticate"
+            intent="primary"
+            onClick={() => { send({ type: "LOGIN" }); }}
             disabled={!idle}
+            loading={starting}
+            loadingLabel="Starting…"
           >
-            Refresh
+            Authenticate Codex
           </Button>
-        </Row>
-      </Stack>
-    </Card>
+        ) : null}
+        {polling ? (
+          <Button
+            id="bbx-admin-codex-cancel-login"
+            intent="secondary"
+            onClick={() => { send({ type: "CANCEL" }); }}
+            loading={cancelling}
+            loadingLabel="Cancelling…"
+          >
+            Cancel
+          </Button>
+        ) : null}
+        {loggedIn || statusUnknown ? (
+          <Button
+            id="bbx-admin-codex-logout"
+            intent="secondary"
+            onClick={() => { send({ type: "LOGOUT" }); }}
+            loading={loggingOut}
+            loadingLabel="Logging out…"
+          >
+            Log Out
+          </Button>
+        ) : null}
+        <Button
+          id="bbx-admin-codex-refresh"
+          intent="ghost"
+          onClick={() => { send({ type: "REFRESH" }); }}
+          disabled={!idle}
+        >
+          Refresh
+        </Button>
+      </Row>
+    </AdminSectionCard>
   );
 }

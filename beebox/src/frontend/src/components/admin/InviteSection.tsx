@@ -7,9 +7,10 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
-import { Hint } from "../ui/Hint";
-import { Heading } from "../ui/Heading";
 import { CheckboxField, TextField } from "../ui/fields";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION = "The link creates one member account for this box and expires after 15 minutes.";
 
 const LOCAL_OWNER_REQUIRED =
   "Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links.";
@@ -57,15 +58,9 @@ export function InviteSection() {
   };
 
   return (
-    <Card as="section" aria-label="Invite a user" shadow>
+    <AdminSectionCard id="invite" description={DESCRIPTION}>
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
-          <Stack gap="xs">
-            <Heading level={2}>Create invite link</Heading>
-            <Hint>
-              The link creates one member account for this box and expires after 15 minutes.
-            </Hint>
-          </Stack>
           <CheckboxField
             id="bbx-admin-invite-open"
             label="Let invitee enter email"
@@ -111,6 +106,6 @@ export function InviteSection() {
           ) : null}
         </Stack>
       </form>
-    </Card>
+    </AdminSectionCard>
   );
 }

@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { getApiBase } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { ExternalLink } from "../ui/ExternalLink";
+import { AdminSectionCard } from "./AdminSectionCard";
 
 /** The dev router listens here (`workstreams-app/src/router/router.ts` ROUTER_PORT). We don't pre-fill
  *  it as a *per-box* `--target`: viewing `/admin` on `localhost:3210` means
@@ -53,7 +54,7 @@ function useLocalTargetPort(): string | null {
  * effect-based SSR-safety shape as `useLocalTargetPort`: false until the
  * post-mount check runs.
  */
-function useIsLoopback(): boolean {
+export function useIsLoopback(): boolean {
   const [loopback, setLoopback] = useState(false);
   useEffect(() => {
     if (isLoopbackHostname(window.location.hostname)) setLoopback(true);
@@ -75,6 +76,9 @@ function boxPathPrefix(): string {
 
 const CODE = "text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded";
 
+const DESCRIPTION =
+  "Tailscale puts this box on a private network only your own devices can reach, so you can open it from your phone or laptop anywhere — on any Wi-Fi — without exposing anything to the public internet. It’s a second lock on top of your login, not a replacement: being on the network gets you to the door, but you still sign in.";
+
 export function TailscaleSection() {
   const localPort = useLocalTargetPort();
   const isLoopback = useIsLoopback();
@@ -83,19 +87,7 @@ export function TailscaleSection() {
     tailscaleUrlQuery.data?.baseUrl != null ? `${tailscaleUrlQuery.data.baseUrl}${boxPathPrefix()}` : null;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-warm-800">Tailscale</h2>
-        <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">System-wide</span>
-      </div>
-      <p className="text-sm text-warm-700 mb-4">
-        Tailscale puts this box on a private network only your own devices can reach, so
-        you can open it from your phone or laptop anywhere — on any Wi-Fi — without exposing
-        anything to the public internet. It&rsquo;s a second lock <em>on top of</em> your
-        login, not a replacement: being on the network gets you to the door, but you still
-        sign in.
-      </p>
-
+    <AdminSectionCard id="tailscale" description={DESCRIPTION}>
       {tailscaleBoxUrl !== null ? (
         <p className="text-sm text-warm-700 mb-4">
           This box over Tailscale: <ExternalLink id="bbx-admin-tailscale-box-url" href={tailscaleBoxUrl}>{tailscaleBoxUrl}</ExternalLink>
@@ -144,6 +136,6 @@ export function TailscaleSection() {
         <code className={CODE}>3210</code>) exposes the whole authenticated router, every
         worktree and box, over the tailnet. One login gets you all of it, remotely.
       </p>
-    </div>
+    </AdminSectionCard>
   );
 }
