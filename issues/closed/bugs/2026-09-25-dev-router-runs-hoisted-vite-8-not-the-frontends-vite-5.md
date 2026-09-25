@@ -1,12 +1,17 @@
 ---
 title: "The dev router runs the hoisted Vite 8, not the Vite 5 that the frontend declares"
-workstream: unattached
+workstream: admin-structure
 area: router
 labels: [dev-router, vite]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-admin-structure — while debugging the stale-module Vite watcher bug
+resolution: implemented
 ---
+
+> Closed by commit `bd0f6d5e4` (worktree-admin-structure). Effective for
+> worktrees only after the boxholder next restarts the shared dev router,
+> since the router runs from the main checkout — do not restart it yourself.
 
 `beebox/src/frontend/package.json` declares `vite: ^5.4.0`, and
 `beebox/src/frontend/node_modules/vite` is 5.4.21. The dev router starts
