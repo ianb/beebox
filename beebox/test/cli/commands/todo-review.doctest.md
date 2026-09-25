@@ -108,6 +108,29 @@ async function quietly(fn: () => Promise<void>): Promise<void> {
   }
 }
 
+/** 26 escalated todos (written newest due first), one stirring, one stale. */
+function manyTodosCard(): string {
+  const lines = Array.from({ length: 26 }, (_, i) => {
+    const nn = String(26 - i).padStart(2, "0");
+    return `{% todo due="2026-08-${nn}" %}Task ${nn}{% /todo %}`;
+  });
+  lines.push('{% todo start="2026-09-24" due="2026-10-30" %}Book the painter{% /todo %}');
+  lines.push('{% todo created="2026-06-01" %}Sort the shed{% /todo %}');
+  return memo(`${lines.join("\n\n")}\n`);
+}
+
+/** What the agent does with every item `check` saved: a recheck on each, in one commit. */
+async function recheckAllShown(root: string, recheck: string): Promise<void> {
+  const state = JSON.parse(await fs.readFile(path.join(root, ".beebox/todo-review-sweep.json"), "utf-8"));
+  const file = path.join(root, CARD);
+  let content = await fs.readFile(file, "utf-8");
+  for (const item of state.review.items) {
+    content = content.replace(` %}${item.text}{%`, ` recheck="${recheck}" %}${item.text}{%`);
+  }
+  await fs.writeFile(file, content);
+  execSync("git add -A && git commit -q -m recheck", { cwd: root, stdio: "pipe" });
+}
+
 async function rechecks(root: string): Promise<string[]> {
   const state = JSON.parse(await fs.readFile(path.join(root, ".beebox/todo-review-sweep.json"), "utf-8"));
   return Object.keys(state.rechecks);
@@ -285,6 +308,78 @@ setTime("2026-09-28T12:00:00.000Z");
 
 ```ts cleanup
 await stir.cleanup();
+```
+
+## The brief carries at most 25 todos, and the cut ones come back
+
+Escalated first (oldest `due` first), then stirring, then stale. The brief
+says how many were cut. Here 26 escalated todos fill the cap, so the last
+escalated one, the stirring one, and the stale one wait for a later run.
+
+```ts
+const many = await seedBox();
+await many.write(CARD, manyTodosCard());
+many.commitAll("many");
+setTime("2026-09-25T12:00:00.000Z");
+
+const capped = (await run(many.root, ["check"])).out.join("\n");
+capped.includes("25 of 28 shown; the rest come in later runs.")
+=> true
+
+const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i) => i.text);
+`${String(saved.length)}: ${saved[0]} … ${saved[24]}`
+=> 25: Task 01 … Task 25
+```
+
+The agent rechecks all 25 and the review passes. Because a stirring todo
+was cut, the stirring baseline does not move: the next run still lists the
+painter as stirring, with the other two cut todos.
+
+```ts continue
+await recheckAllShown(many.root, "2026-10-20");
+(await run(many.root, ["verify"])).out[0]
+=> Every todo review item is settled
+
+setTime("2026-09-26T12:00:00.000Z");
+const rest = (await run(many.root, ["check"])).out.join("\n");
+rest.slice(rest.indexOf("## The items"))
+=>
+## The items
+«blankline»
+«codeblock»yaml
+escalated:
+  - locator: store/Porch.memo.card:5
+    text: Task 26
+    detail: due 2026-08-26
+«*»
+stirring:
+  - locator: store/Porch.memo.card:57
+    text: Book the painter
+    detail: started 2026-09-24
+«*»
+stale:
+  - locator: store/Porch.memo.card:59
+    text: Sort the shed
+    detail: created 2026-06-01
+«*»
+«codeblock»
+```
+
+Once those are settled too, the baseline moves and the painter is no longer
+stirring.
+
+```ts continue
+await recheckAllShown(many.root, "2026-10-20");
+(await run(many.root, ["verify"])).out[0]
+=> Every todo review item is settled
+
+setTime("2026-09-27T12:00:00.000Z");
+(await run(many.root, ["check"])).code
+=> 75
+```
+
+```ts cleanup
+await many.cleanup();
 ```
 
 ## A legacy job card is the reactor's, not the procedure's

@@ -661,6 +661,12 @@ open:
 - **The stirring baseline** moves when `check` finds nothing, or when
   `verify` passes (to the day `check` swept). A review that never settles
   lists a newly stirring todo again the next day.
+- **The brief carries at most 25 todos**: escalated by oldest `due`, then
+  stirring, then stale by oldest `created`, with "25 of N shown; the rest
+  come in later runs". A cut todo has no new `recheck`, so it comes back.
+  When the cap cuts a stirring todo, `verify` leaves the baseline where it
+  was, so the next run still lists it as stirring. The item's `card` label
+  is cut to 80 characters (an untitled card's label is its whole body).
 - **On a boxholder's todo only `recheck` may change.** `verify` fails an
   item whose status, `start`, `due`, or `assigned` changed since `check`,
   naming them, and fails a reworded or removed boxholder todo ("the review

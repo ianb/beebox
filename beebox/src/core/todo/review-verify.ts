@@ -217,7 +217,7 @@ export async function verifyTodoReview(boxRoot: string): Promise<TodoReviewVerif
     await saveSweepState(boxRoot, {
       ...state,
       rechecks,
-      ...(settled && { lastSweepDateEpoch: state.review.sweptOn }),
+      ...(settled && state.review.sweptOn !== null && { lastSweepDateEpoch: state.review.sweptOn }),
     });
     return result;
   });

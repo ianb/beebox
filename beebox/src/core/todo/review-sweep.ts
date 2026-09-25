@@ -34,6 +34,7 @@ import { parseIsoDate, boxLocalDateEpoch, recheckDefers } from "../../shared/tod
 import type { TodoReviewJobItem } from "../../schemas/todo-review-job.js";
 
 const STALE_DAYS = 45;
+const CARD_LABEL_MAX = 80;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** The box-local calendar date today, as the UTC-midnight epoch `start`/`due`/`recheck` parse to. */
@@ -120,7 +121,9 @@ export function toBriefItem(todo: SweptTodo, kind: "escalated" | "stirring" | "s
   if (todo.assigned !== undefined) item.assigned = todo.assigned;
   // Where it was written. A locator says which line; these say what the
   // reader would have seen around it, so the brief reads in context.
-  if (todo.card !== "") item.card = todo.card;
+  // A card with no title summarizes as its body, which can be the whole card:
+  // one line is enough to say which card it is.
+  if (todo.card !== "") item.card = todo.card.length > CARD_LABEL_MAX ? `${todo.card.slice(0, CARD_LABEL_MAX - 1)}…` : todo.card;
   if (todo.section !== "") item.section = todo.section;
   return item;
 }

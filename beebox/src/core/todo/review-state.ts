@@ -85,14 +85,18 @@ const SweepStateSchema = z.object({
   // undercount a `start` dated earlier the same day a sweep happens to run
   // mid-afternoon.
   lastSweepDateEpoch: z.number().optional(),
-  /** `sweptOn`: the box-local date epoch `check` computed the items for; `verify` moves the baseline to it once every item is settled. */
-  review: z.object({ sweptOn: z.number(), items: z.array(ReviewItemSchema) }).optional(),
+  /**
+   * `sweptOn`: the box-local date epoch `check` computed the items for;
+   * `verify` moves the baseline to it once every item is settled. `null` when
+   * the item cap cut a stirring todo, so the baseline must stay put.
+   */
+  review: z.object({ sweptOn: z.number().nullable(), items: z.array(ReviewItemSchema) }).optional(),
   rechecks: z.record(z.string(), RecheckRecordSchema).optional(),
 });
 
 export interface SweepState {
   lastSweepDateEpoch: number | null;
-  review: { sweptOn: number; items: ReviewItem[] } | null;
+  review: { sweptOn: number | null; items: ReviewItem[] } | null;
   rechecks: Record<string, RecheckRecord>;
 }
 

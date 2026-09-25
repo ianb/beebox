@@ -7,7 +7,7 @@
  * returns the brief the procedure's agent works from: the review instructions
  * (`TODO_REVIEW_INSTRUCTIONS`, shared with the legacy job card) and the three
  * lists. The brief reaches the agent as the precheck's output
- * (`pass-output`); no job card is written, so the wakeup reactor has nothing
+ * (`pass-output`), at most 25 items per run; no job card is written, so the wakeup reactor has nothing
  * to pick up and two agents never work one review. A legacy `todo-review`
  * job card still pending on a box is the reactor's to drain, not this.
  *
@@ -52,28 +52,71 @@ function reviewItem(todo: SweptTodo): ReviewItem {
   };
 }
 
-/** One item per todo, even when a todo sits in two lists. */
-function reviewItems(sets: TodoReviewSets): ReviewItem[] {
+/** Most items one brief carries; the rest stay eligible and come in later runs. */
+const MAX_ITEMS = 25;
+
+type Kind = (typeof KINDS)[number];
+
+interface Selection {
+  shown: Array<{ kind: Kind; todo: SweptTodo }>;
+  /** Todos across all lists, one per todo. */
+  total: number;
+  /** A stirring todo was cut: the baseline must not move past it. */
+  cutStirring: boolean;
+}
+
+/** Ascending by an ISO date attribute, undated last, then by location. */
+function byDate(attr: "due" | "start" | "created"): (a: SweptTodo, b: SweptTodo) => number {
+  return (a, b) => {
+    const x = a[attr];
+    const y = b[attr];
+    if (x !== y) {
+      if (x === undefined) return 1;
+      if (y === undefined) return -1;
+      return x < y ? -1 : 1;
+    }
+    return formatTodoLocation(a).localeCompare(formatTodoLocation(b));
+  };
+}
+
+const ORDER: Record<Kind, (a: SweptTodo, b: SweptTodo) => number> = {
+  escalated: byDate("due"),
+  stirring: byDate("start"),
+  stale: byDate("created"),
+};
+
+/**
+ * One entry per todo (a todo in two lists keeps its first), in priority
+ * order — escalated by oldest `due`, then stirring, then stale by oldest
+ * `created` — capped at {@link MAX_ITEMS}. A cut todo gets no new `recheck`,
+ * so the next run lists it again.
+ */
+function selectItems(sets: TodoReviewSets): Selection {
   const seen = new Set<string>();
-  const items: ReviewItem[] = [];
+  const all: Array<{ kind: Kind; todo: SweptTodo }> = [];
   for (const kind of KINDS) {
-    for (const todo of sets[kind]) {
+    for (const todo of sets[kind].toSorted(ORDER[kind])) {
       const location = formatTodoLocation(todo);
       if (seen.has(location)) continue;
       seen.add(location);
-      items.push(reviewItem(todo));
+      all.push({ kind, todo });
     }
   }
-  return items;
+  const cutStirring = all.slice(MAX_ITEMS).some((entry) => entry.kind === "stirring");
+  return { shown: all.slice(0, MAX_ITEMS), total: all.length, cutStirring };
 }
 
-function renderBrief(sets: TodoReviewSets, todayEpoch: number): string {
+function renderBrief(selection: Selection, todayEpoch: number): string {
   const lists: Record<string, unknown> = {};
   for (const kind of KINDS) {
-    if (sets[kind].length > 0) lists[kind] = sets[kind].map((t) => toBriefItem(t, kind));
+    const items = selection.shown.filter((entry) => entry.kind === kind).map((entry) => toBriefItem(entry.todo, kind));
+    if (items.length > 0) lists[kind] = items;
   }
   const today = new Date(todayEpoch).toISOString().slice(0, 10);
-  return `${TODO_REVIEW_INSTRUCTIONS}\n\nToday (box-local) is ${today}.\n\n## The items\n\n\`\`\`yaml\n${stringify(lists, { lineWidth: 0 })}\`\`\``;
+  const shown = selection.shown.length;
+  const cap =
+    selection.total > shown ? `${String(shown)} of ${String(selection.total)} shown; the rest come in later runs.\n\n` : "";
+  return `${TODO_REVIEW_INSTRUCTIONS}\n\nToday (box-local) is ${today}.\n\n## The items\n\n${cap}\`\`\`yaml\n${stringify(lists, { lineWidth: 0 })}\`\`\``;
 }
 
 /** The todo texts on `relPath`, or `null` when the card is gone. */
@@ -110,7 +153,8 @@ async function pruneRechecks(boxRoot: string, rechecks: Record<string, RecheckRe
  * Sweep, save the items, and return the brief (or `nothing`). The stirring
  * baseline moves here only when there is nothing to review; otherwise
  * `verify` moves it to `sweptOn` once every item is settled, so a run that
- * never finishes does not lose a newly stirring todo.
+ * never finishes does not lose a newly stirring todo. When the 25-item cap
+ * cut a stirring todo, `sweptOn` is `null` and the baseline stays put.
  */
 export async function checkTodoReview(boxRoot: string): Promise<TodoReviewCheckResult> {
   return withSweepLock(boxRoot, async () => {
@@ -119,12 +163,15 @@ export async function checkTodoReview(boxRoot: string): Promise<TodoReviewCheckR
     const rechecks = await pruneRechecks(boxRoot, state.rechecks);
     // First run: everything already on the plate counts as "crossed since the box existed".
     const sets = await computeTodoReviewSets(boxRoot, { lastSweepEpoch: state.lastSweepDateEpoch ?? 0, todayEpoch });
-    const items = reviewItems(sets);
-    if (items.length === 0) {
+    const selection = selectItems(sets);
+    if (selection.total === 0) {
       await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch, review: null, rechecks });
       return { kind: "nothing" };
     }
-    await saveSweepState(boxRoot, { ...state, review: { sweptOn: todayEpoch, items }, rechecks });
-    return { kind: "review", brief: renderBrief(sets, todayEpoch), items };
+    const items = selection.shown.map((entry) => reviewItem(entry.todo));
+    // A stirring todo the cap cut was never shown: the baseline must not move past it.
+    const sweptOn = selection.cutStirring ? null : todayEpoch;
+    await saveSweepState(boxRoot, { ...state, review: { sweptOn, items }, rechecks });
+    return { kind: "review", brief: renderBrief(selection, todayEpoch), items };
   });
 }
