@@ -61,7 +61,7 @@ export function CardRow({ row }: { row: TodoRow }) {
   const openBeside = useOpenBeside();
   const open = openBeside === null ? undefined : (): void => openBeside(cardTarget(row.card.path));
   return (
-    <Stack gap="sm" {...bbxSource("card", row.card.path)}>
+    <Stack gap="sm" className="py-3" {...bbxSource("card", row.card.path)}>
       <Row gap="sm" align="start" justify="between" wrap={false}>
         <FileEntry summary={row.card} onOpen={open} onPanel={open} className="flex-1 min-w-0" />
         <Stack gap="none" align="end" className="flex-shrink-0 pt-1.5">
@@ -73,7 +73,9 @@ export function CardRow({ row }: { row: TodoRow }) {
           ) : null}
         </Stack>
       </Row>
-      <Stack gap="sm" className="pl-2">
+      {/* Indented past FileEntry's padding and icon (px-2 + 18px icon + gap-2),
+          so the checkboxes line up under the card's title, not its icon. */}
+      <Stack gap="sm" className="pl-[34px]">
         {sections.map((section) => (
           <Stack key={section.path.join(" › ")} gap="xs">
             {section.label === null ? null : (
