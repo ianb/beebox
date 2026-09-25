@@ -392,30 +392,38 @@ export function extractChatImages(
 // exist — no optional-field guards or runtime `invariant`s needed.
 type AssistantPart =
   | { type: "text"; text: string }
+  | { type: "update"; text: string }
   | { type: "thinking"; text?: string }
   | { type: "tools"; tools: SessionContentBlock[] };
 export interface TextGroup { kind: "text"; text: string }
+/** A progress update: a line the model wrote for the user before a tool call. */
+export interface UpdateGroup { kind: "update"; text: string }
 /** The non-text members of AssistantPart — what an activity group renders. */
 export type ActivityPart =
   | { type: "thinking"; text?: string }
   | { type: "tools"; tools: SessionContentBlock[] };
 export interface ActivityGroupData { kind: "activity"; parts: ActivityPart[] }
 
-// Narrows off the `type` discriminant: everything that isn't "text" is an
-// ActivityPart (thinking or tools).
+// Narrows off the `type` discriminant: everything that isn't text or an
+// update is an ActivityPart (thinking or tools).
 function isActivityPart(part: AssistantPart): part is ActivityPart {
-  return part.type !== "text";
+  return part.type !== "text" && part.type !== "update";
 }
 
 /**
  * Group consecutive non-text parts (thinking, tools) into activity groups,
- * separated by text parts which render as normal markdown.
+ * separated by text parts which render as normal markdown and by progress
+ * updates which render as visible status lines. A progress update is written
+ * for the user, and a model sometimes puts its whole answer there, so it must
+ * not hide inside a collapsed activity group.
  */
-export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGroupData> {
+export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | UpdateGroup | ActivityGroupData> {
   const flat: AssistantPart[] = [];
   for (const entry of entries) {
     for (const block of entry.content) {
-      if (block.type === "thinking") {
+      if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
+        flat.push({ type: "update", text: block.text.trim() });
+      } else if (block.type === "thinking") {
         flat.push({ type: "thinking", text: block.text });
       } else if (block.type === "text" && block.text?.trim()) {
         flat.push({ type: "text", text: block.text });
@@ -431,7 +439,7 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
     }
   }
 
-  const grouped: Array<TextGroup | ActivityGroupData> = [];
+  const grouped: Array<TextGroup | UpdateGroup | ActivityGroupData> = [];
   let activityBuf: ActivityPart[] = [];
 
   function flushActivity() {
@@ -446,12 +454,21 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       activityBuf.push(part);
     } else {
       flushActivity();
-      grouped.push({ kind: "text", text: part.text });
+      grouped.push({ kind: part.type, text: part.text });
     }
   }
   flushActivity();
 
   return grouped;
+}
+
+/**
+ * Whether any entry carries a progress update. An update is written for the
+ * user, so a turn that has one stays visible even when its only text is a
+ * `no-response` ack.
+ */
+export function hasProgressUpdate(entries: SessionEntry[]): boolean {
+  return entries.some((e) => e.content.some((b) => b.progressUpdate === true && Boolean(b.text?.trim())));
 }
 
 /** Number of `<speech>` chunks in a text fragment (for absolute index offsets). */

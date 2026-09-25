@@ -7,6 +7,7 @@
  */
 
 import { type SessionContentBlock, transformContent } from "./session-content.js";
+import { writesProgressUpdates } from "../../shared/model-ids.js";
 import { isRecord } from "../../lib/is-record.js";
 import { isCompactionSummary, isPlumbingMessage } from "./session-text.js";
 
@@ -142,6 +143,7 @@ export function buildEntry(
   const uuid = String(raw.uuid || "");
   const content = transformContent(message["content"], {
     mediaRef: mediaSessionId !== null && uuid !== "" ? { sessionId: mediaSessionId, entryUuid: uuid } : null,
+    progressUpdates: raw.type === "assistant" && writesProgressUpdates(typeof message.model === "string" ? message.model : undefined),
   });
 
   // Skip SDK meta prompts ("Continue from where you left off.") — wakeup plumbing.
