@@ -405,7 +405,7 @@ convention from its context. This plan adds no agent-facing concept: the
 verdict, the canary route, and the deploy assertion are engine and deployment
 internals no box agent reads, writes, or recalls. The verdict/canary/auth
 conventions are maintainer-facing and belong in route doc comments,
-`deploy/README.md`, and `docs/health-checks.md`.
+`deploy/README.md`, and `docs/server/health-checks.md`.
 
 ## Implementation order
 
@@ -419,7 +419,7 @@ conventions are maintainer-facing and belong in route doc comments,
    200/401/503 cases and the canary ready/not-ready cases.
 4. **Track C** — `deploy.sh` rewrite. Depends on the final body shape.
 5. **Docs** — `deploy/README.md` on what verification now asserts and the new
-   401; `docs/health-checks.md` on the verdict semantics and the canary;
+   401; `docs/server/health-checks.md` on the verdict semantics and the canary;
    route doc comments carrying the liveness-vs-canary rationale.
 
 Chunks 1-4 are commit boundaries within the worktree, not ship boundaries. The

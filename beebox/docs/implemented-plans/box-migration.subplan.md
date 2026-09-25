@@ -160,7 +160,7 @@ designed here.
 **What.** For each box, in a safe order: `bbx migrate --apply` (runs Tracks 0-1
 entries + the 28 existing), then `bbx validate`, then commit within the box repo.
 
-**Server mechanics** (`docs/server-operations.md`). Boxes are
+**Server mechanics** (`docs/server/operations.md`). Boxes are
 `/home/beebox/boxes/<box>/`, owned by `callback`; the server runs source via
 tsx (no build step), so migrators run in place:
 

@@ -12,11 +12,11 @@
   publish: concepts/cards.md
   description: "The card format: YAML frontmatter plus a markdown body."
 
-- source: beebox/docs/agent-install.md
+- source: beebox/docs/install/agent.md
   publish: install/agent-install.md
   description: "Install guide written for a user's AI assistant to follow."
 
-- source: beebox/docs/docker-install.md
+- source: beebox/docs/install/docker.md
   publish: install/docker.md
   description: "Docker install, local and VPS."
 
@@ -95,7 +95,7 @@
   publish: install/calendar.md
   description: "Google Calendar sync to and from .ics files in the box."
 
-- source: beebox/docs/adding-a-box.md
+- source: beebox/docs/server/boxes.md
   publish: install/adding-a-box.md
   description: "Provisioning another box behind one hub process on a server."
 
@@ -202,7 +202,7 @@
   publish: dev/frontend.md
   description: "Frontend conventions: UI primitives, palette, the className rule."
 
-- source: beebox/docs/developer-install.md
+- source: beebox/docs/install/developer.md
   publish: dev/developer-install.md
   description: "From-source install for contributors."
 
@@ -262,11 +262,11 @@
   publish: dev/maintenance.md
   description: "Periodic code cleanup: dead code, circular deps."
 
-- source: beebox/docs/server-operations.md
+- source: beebox/docs/server/operations.md
   publish: dev/server-operations.md
   description: "Runbooks for a deployed server."
 
-- source: beebox/docs/health-checks.md
+- source: beebox/docs/server/health-checks.md
   publish: dev/health-checks.md
   description: "Health-check runbooks for a deployed server."
 

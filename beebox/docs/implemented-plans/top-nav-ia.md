@@ -445,7 +445,7 @@ History are adjacent efforts (see NOT in scope).
 | Malformed landmark vanishes from the switcher | Doctest (B); warning rows (C1, D) | `problems` surfaced in both surfaces | Clear — was silent before |
 | Empty box lands on chat, no sessions | Existing (`bootstrap` null → `"new"`) | Fresh composer | Clear |
 | Native shell shows web Box row over native box picker | `nativeComposer` gate (C3) | Row suppressed under `nativeComposer`; `embed` already hides the whole bar (`app-shell.tsx:53`) | Clear |
-| Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reachable via Box submenu | **Accepted risk** (boxholder: dashboard was never the alert channel) |
+| Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview reachable via Box submenu | **Accepted risk** (boxholder: dashboard was never the alert channel) |
 | Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CLAUDE.md procedure) run in C2 | Chips portal from `InteractiveChat` (state ownership unchanged) | Clear if probe run — explicitly in C2's done-when |
 
 ## Agent-flow / user-flow edge cases

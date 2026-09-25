@@ -25,7 +25,7 @@ to people; close when the soft launch happens. Builds on
 - **Deploy**: local run first-class; **one blessed deploy happy path**
   (Docker/compose + optional Caddy, Tailscale as the protect story). No
   platform matrix — for unverified environments, the sanctioned path is
-  handing [the agent install guide](../../beebox/docs/agent-install.md)
+  handing [the agent install guide](../../beebox/docs/install/agent.md)
   to the user's agent and letting it reinterpret.
 - **iOS ships at release** (boxholder, 2026-07-21) — via local builds (no
   App Store distribution this cut). This escalates

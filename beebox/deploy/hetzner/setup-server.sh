@@ -2,13 +2,10 @@
 #
 # ONE EXAMPLE PROVISIONER, NOT THE INSTALL PATH — see hetzner/create-server.sh,
 # which uploads and runs this on the new server. To run a Bee Box, use the
-# container flow in docs/docker-install.md.
+# container flow in docs/install/docker.md.
 #
-# KNOWN GAP: this still generates the pre-hub `beebox-serve` unit (one process
-# serving every box) rather than `bbx engine hub` plus per-box units. The live server
-# was switched to the hub by hand; a fresh run of this needs those steps
-# repeated. deploy/README.md has the detail. It also never re-runs on deploy,
-# so nginx and unit changes here reach a live server only on a re-provision
+# This never re-runs on deploy, so nginx and unit changes here reach a live
+# server only on a re-provision
 # (issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md).
 set -euo pipefail
 

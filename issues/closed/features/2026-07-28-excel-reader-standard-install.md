@@ -50,7 +50,7 @@ API-based and doesn't help with a local `.xlsx` on disk.
 ## Surfaces to update (it's "standard install," so all of them)
 
 - `deploy/setup-server.sh` — the apt install line (prod provisioning).
-- `docs/developer-install.md`, `docs/docker-install.md`, `docs/agent-install.md`
+- `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
   — the documented dependency lists (mac dev: openpyxl via pip, since there's no
   brew formula; Linux: `python3-openpyxl`).
 

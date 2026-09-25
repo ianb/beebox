@@ -130,7 +130,7 @@ Already exists (`bbx chat self-note`). Keep as is.
   classify it: agent-facing? procedure-internal? Does it want a group home?
 - **`bbx hub`, `bbx upgrade`, `bbx boxes`** — added for the v2 (package-layout)
   box world: `bbx hub` supervises per-box child processes behind one router
-  (see `docs/adding-a-box.md`), `bbx upgrade` is the per-box engine-upgrade
+  (see `docs/server/boxes.md`), `bbx upgrade` is the per-box engine-upgrade
   lifecycle verb (bump dependency, migrate, sync templates, typecheck,
   commit), and `bbx boxes` manages the older manifest used by the pre-hub
   `bbx serve`/scheduler shape. None of this plan's renames or groupings

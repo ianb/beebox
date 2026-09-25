@@ -4,7 +4,7 @@ Setting up beebox from a fresh clone, for hacking on the codebase
 itself. This is the from-source path — no personal infrastructure, no
 prior box. To *run* beebox without hacking on it (locally or on a
 server), the Docker path is simpler: see
-[docker-install.md](docker-install.md).
+[docker-install.md](docker.md).
 
 ## Prerequisites
 

@@ -13,7 +13,7 @@
  * shared location). This is a per-user, machine-local record: `bbx tailscale
  * setup`/`stop` MUST run as the same account the server runs as — the service
  * account in prod, not root / an admin — or the intent it records lands in a
- * home the reconciliation never reads. See `docs/docker-install.md`.
+ * home the reconciliation never reads. See `docs/install/docker.md`.
  *
  * It carries no secret — only a port, the tailnet DNS name, and a timestamp — so
  * it is a normal-mode file, not the 0600 credential store. Writes are crash-safe

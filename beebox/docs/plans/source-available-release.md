@@ -65,7 +65,7 @@ new construction.
   by the `*.secret.json` convention enforced at `beebox/deploy/deploy.sh:26`
   and documented at `beebox/docs/box-layout.md:194`. No credential values
   are committed. This track needs verification, not construction.
-- **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
+- **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
   marks which commands are `box.example.com`-specific vs. generic. The author
   has already separated these mentally; the deploy track formalizes it.
 - **Fictional example roster — reuse.** `docs/example-names.md` and

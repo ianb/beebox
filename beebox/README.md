@@ -94,6 +94,6 @@ what the agent can actually do — is in [the security overview](docs/security-o
 - [`docs/box-layout.md`](docs/box-layout.md) — the full on-disk layout reference
 - [`docs/cards-as-markdown.md`](docs/cards-as-markdown.md) — the card format
 - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
-- [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
+- [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
 - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
 - [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md) — the design behind the package layout and the multi-box hub

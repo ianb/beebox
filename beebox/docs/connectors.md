@@ -69,7 +69,7 @@ that fails to upload).
 `connectors/activity-verdict.ts` reads the record and decides whether a
 connector has gone quiet or keeps failing; the scheduler alerts once per
 episode and the dashboard shows a warning. See
-[health-checks.md](health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
+[health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 
 Telegram also has a webhook route (`routes/telegram.ts`) for real-time message delivery, separate from the polling in `sync()`.
 

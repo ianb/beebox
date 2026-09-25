@@ -121,7 +121,7 @@ Track C.)*
   3211 ~/boxes/dev1` (backend watch); terminal 2 `cd
   beebox/src/frontend && FRONTEND_PORT=3210 BACKEND_PORT=3211 pnpm
   dev` (Vite + HMR, proxies `/api` and `/auth` to the backend). Documented
-  in `docs/developer-install.md`.
+  in `docs/install/developer.md`.
 - **`bbx` is not reachable from the monorepo root.** Root `package.json` had
   no `bbx` script; the binary belongs to the `beebox` package
   (`beebox/package.json` `"bbx": "./bin/bbx"`). **Decided (C2):** add
@@ -286,7 +286,7 @@ in A's pin, B's doctor checks, C's verified sequence).
   `ANTHROPIC_API_KEY` as required (the code deletes it:
   `src/cli/bootstrap.ts:31`, `src/core/script-env.ts:106`).
 - **Direction.**
-  - **Doc**: `docs/developer-install.md` — written and linked from the
+  - **Doc**: `docs/install/developer.md` — written and linked from the
     root README's Layout section (C2; superseded the plan-time note that
     release-plan Track E owns the link — the small pointer landed here
     instead). Content: prerequisites (Node 22, matching Track A's decided
@@ -337,14 +337,14 @@ in A's pin, B's doctor checks, C's verified sequence).
     piece 2, implemented here.)
   - **git-lfs loudness**: the husky guards keep degrading gracefully, but
     gain a one-line stderr warning (`git-lfs not found — media files will
-    not be handled; see docs/developer-install.md`) instead of `|| true`
+    not be handled; see docs/install/developer.md`) instead of `|| true`
     silence. Doctor makes it a failed check.
 - **Vocabulary lock-ins.** None.
 - **First implementation chunk (C1) — done.** The dev-loop spike, verified
   on a clean clone; landed two fixes (commit `0d2fbfb8`): `bbx init`
   defaults the box's `beebox` dep to `link:<checkout>`, and `bbx
   serve <package-root>` resolves down to `content/`.
-- **Second implementation chunk (C2) — done.** `docs/developer-install.md`,
+- **Second implementation chunk (C2) — done.** `docs/install/developer.md`,
   `beebox/.env.example`, the `deploy/README.md` correction, and the
   husky git-lfs stderr warnings (`post-commit`, `post-merge`, `pre-push`),
   plus a root `"bbx": "pnpm --dir beebox bbx"` convenience script
@@ -420,7 +420,7 @@ in A's pin, B's doctor checks, C's verified sequence).
     clean shutdown. This — not the image build itself — is what makes the
     Docker path verified; installing the same tarball the external smoke
     uses gives artifact identity, not test identity.
-  - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+  - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
     up, open `http://localhost:3210`), then the VPS section: same compose,
     DNS + `--profile public` for Caddy TLS, the Tailscale-only variant
     (keep loopback mapping, join tailnet, zero open ports), Google OAuth
@@ -559,13 +559,13 @@ the agent is told. No entries in `src/dev/knowledge-audits.yaml`.
 5. **C1: dev-loop spike** (`serve` on a clean clone, built frontend,
    `Procfile.dev`, `--dev` scope); fix what it surfaces; settle the root
    `bbx` convenience script.
-6. **C2: `docs/developer-install.md` + `.env.example` +
+6. **C2: `docs/install/developer.md` + `.env.example` +
    `deploy/README.md` correction + husky lfs warning.** Depends on B1
    (doc ends with `pnpm doctor`) and C1.
 7. **D1: Dockerfile + argv entrypoint + compose + lifecycle test**,
    exercised locally end-to-end (init → box-local install → auth
    experiment → serve → one chat turn). Depends on A1 and C1.
-8. **D2: Caddy profile + `docs/docker-install.md`** (local + VPS + auth
+8. **D2: Caddy profile + `docs/install/docker.md`** (local + VPS + auth
    fallback + Tailscale variant).
 
 ## Rollout shape
@@ -579,7 +579,7 @@ the agent is told. No entries in `src/dev/knowledge-audits.yaml`.
   designed alongside the entrypoint, not after it.
   `scripts/smoke-external-box.ts` stays the regression anchor for the
   tarball artifact both paths consume. The plan's overall done-when adds:
-  one clean-clone walkthrough of `docs/developer-install.md` on a machine
+  one clean-clone walkthrough of `docs/install/developer.md` on a machine
   without the personal `~/src` layout (a temp `git clone` + fresh
   `~/boxes` path suffices), and one real cheap-VPS run of the compose file
   before the guide ships.

@@ -69,7 +69,7 @@ async function readConfigText(configPath: string): Promise<string> {
         `No hub config at ${configPath}. This command registers a box with an existing hub; ` +
           "it deliberately will not invent one, because a config created from scratch would " +
           "silently drop the port/host/lazy settings the running hub depends on. Create the " +
-          "file first — see docs/adding-a-box.md — or pass --config to point at the real one.",
+          "file first — see docs/server/boxes.md — or pass --config to point at the real one.",
       );
     }
     throw new HubConfigEditError(

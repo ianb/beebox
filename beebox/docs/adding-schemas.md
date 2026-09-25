@@ -196,7 +196,7 @@ and `bbx health`'s `template-updates` box check reports them too — escalating 
 `warning` to `error` when a parked path is the procedure or task card behind a
 scheduled task that is currently failing or inconclusive, since that task's fix
 is then already sitting on disk unread. See
-[`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
+[`health-checks.md`](server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
 
 It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
 judgement that matters — "is this box on unmodified old stock, or did the

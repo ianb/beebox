@@ -537,7 +537,7 @@ branch (`BBX_GOOGLE_TOKENS_FILE` stays; env client creds in
 (`src/publish/connector-secret.ts` — which also *writes* a minted
 Cloudflare token). Order: mistral first as template, then by surface size.
 Update `deploy/add-box.sh`: `--secrets-from` becomes
-"copy the grant list", not the files. Update `docs/adding-a-box.md`. New-box
+"copy the grant list", not the files. Update `docs/server/boxes.md`. New-box
 provisioning becomes: `bbx secrets status <box>` names what's missing;
 granting is one command — resolving the 2026-03-15 decision issue.
 

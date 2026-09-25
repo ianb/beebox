@@ -448,7 +448,7 @@ viewports.
 
 ### Track 4 — reference documentation and operational calibration
 
-**What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
+**What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 host, state file, thresholds, acknowledgement semantics, state-failure behavior,
 and a runbook for inspecting the named subtree. Record the production
 calibration above as design evidence, not a promise that the numbers never need

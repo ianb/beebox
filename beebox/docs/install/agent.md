@@ -40,9 +40,9 @@ actions or asks questions. Two things matter for installation:
 Points you should put to your user rather than decide yourself:
 
 1. **Run it, or hack on it?** To *use* beebox, the Docker path
-   ([docker-install.md](docker-install.md)) is simpler and bundles every
+   ([docker-install.md](docker.md)) is simpler and bundles every
    dependency. To *modify* it, the from-source path
-   ([developer-install.md](developer-install.md)) is the one. Ask which
+   ([developer-install.md](developer.md)) is the one. Ask which
    they want.
 2. **Where should the box live?** It's their data, a git repo they'll
    keep. Suggest a location (`~/boxes/<name>`, or `./data/box` under the
@@ -59,7 +59,7 @@ Points you should put to your user rather than decide yourself:
    loopback-only everywhere. Widening that (a VPS, Caddy/TLS, Tailscale,
    Google OAuth for multi-device access) is a real decision with a
    security surface — surface it, explain the options in
-   [docker-install.md](docker-install.md), and follow their call. For the
+   [docker-install.md](docker.md), and follow their call. For the
    Tailscale option specifically, don't transcribe steps: run `bbx
    tailscale status` to see the current state and next step, and `bbx
    tailscale setup` to drive the guided setup loop — both auto-detect the
@@ -78,10 +78,10 @@ Points you should put to your user rather than decide yourself:
 Follow the guide matching the user's choice, and verify as you go rather
 than plowing through failures:
 
-- **Docker**: [docker-install.md](docker-install.md). The sequence is
+- **Docker**: [docker-install.md](docker.md). The sequence is
   init → auth → `up -d` → open the URL. `docker/smoke-docker.sh` is the
   packaging's own lifecycle test if something seems off.
-- **From source**: [developer-install.md](developer-install.md). The
+- **From source**: [developer-install.md](developer.md). The
   sequence ends with `pnpm run doctor`, which checks every prerequisite
   (Node version, native modules, external binaries, git-lfs, Claude auth,
   frontend build) and prints a one-line remedy for anything missing. Run

@@ -29,6 +29,6 @@ no hub) **or keep two, cross-documented** (each doc names the other; a
 `bbx boxes add --hub` convenience could bridge). Migration cost of
 unification: both file formats have live prod instances.
 
-Refs: `beebox/docs/scheduler.md`, `beebox/docs/adding-a-box.md`,
+Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
 `beebox/src/hub/CLAUDE.md`,
 `beebox/docs/implemented-plans/boxes-as-packages-v2.md`.

@@ -8,7 +8,7 @@ The hub exposes two diagnostic endpoints, both requiring the `BBX_DIAG_API_KEY` 
 
 **`GET /healthz` — passive verdict.** Reports `status: "ok"` (HTTP 200) or `status: "unhealthy"` (HTTP 503), plus per-box supervisor state. The verdict is **liveness**, not readiness: it's `unhealthy` only if a box is *broken* — crash-looping (`starting` with `consecutiveFailures > 0`) or crash-budget-latched (`unhealthy`). A `stopped` box is a lazy hub's normal resting state and is **not** a fault, so an idle fleet reads `ok`. `restarts` is a lifetime counter shown for information; the verdict never keys on it (a box that blipped once long ago would otherwise pin the hub red forever). Derivation lives in `src/hub/hub-health.ts`. This endpoint has no side effects — safe for an uptime monitor to poll.
 
-**`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches that box's *own* root `/healthz` (authenticated) and returns 200 only if the box answers 200 — otherwise 503, naming the slug. The box-healthz step matters: the supervisor's readiness probe treats *any* HTTP response as "ready", so a child that opens its port but whose health handler is broken would pass a socket-only check; requiring the box's healthz 200 makes "canary ok" mean the box actually answered. This is what catches a **fleet-wide startup break** — e.g. a native-module ABI mismatch after a Node major bump — that the passive verdict can't see, because on a lazy hub most boxes rest `stopped` and report nothing. `?box=<slug>` names the box to canary; unset picks the first configured slug. **It wakes a box** (leaving it resident for `idleMs`), so it's a deploy-time / on-demand check, not something a monitor should poll. The deploy runs it automatically (see [`deploy/README.md`](../deploy/README.md)).
+**`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches that box's *own* root `/healthz` (authenticated) and returns 200 only if the box answers 200 — otherwise 503, naming the slug. The box-healthz step matters: the supervisor's readiness probe treats *any* HTTP response as "ready", so a child that opens its port but whose health handler is broken would pass a socket-only check; requiring the box's healthz 200 makes "canary ok" mean the box actually answered. This is what catches a **fleet-wide startup break** — e.g. a native-module ABI mismatch after a Node major bump — that the passive verdict can't see, because on a lazy hub most boxes rest `stopped` and report nothing. `?box=<slug>` names the box to canary; unset picks the first configured slug. **It wakes a box** (leaving it resident for `idleMs`), so it's a deploy-time / on-demand check, not something a monitor should poll. The deploy runs it automatically ([deploying](deploying.md)).
 
 Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
 
@@ -53,7 +53,7 @@ The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav ca
 
 Anything that must not be stale asks for a live run:
 
-- `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the snapshot. Use this in any post-deploy or post-fix verification. Curl form in [`server-operations.md`](./server-operations.md#diagnostic-endpoints-behind-auth).
+- `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the snapshot. Use this in any post-deploy or post-fix verification. Curl form in [`server-operations.md`](operations.md#diagnostic-endpoints-behind-auth).
 - `bbx health` and the box server's `/api/health` route call `runHealthChecks` directly and never touch the cache — they are always fresh.
 
 A hub restart (every deploy restarts the children) empties the cache, so a deploy never serves a pre-deploy verdict.
@@ -194,14 +194,14 @@ wrong verdict.
 On a flip to broken, the boxholder gets one notification per breakage over
 Telegram/Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
-in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
-notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+in [`google-setup.md`](../google-setup.md#token-expired--invalid_grant); design
+notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 
 ## connector-activity (a connector that went quiet or keeps failing)
 
 A connector can stop producing while every sync reports success: a filter that
 no longer matches, a permission revoked upstream, a cursor past everything.
-The connector activity record (see [connectors.md](connectors.md#activity-record))
+The connector activity record (see [connectors.md](../connectors.md#activity-record))
 lets the box notice. `connectors/activity-verdict.ts` holds the rule:
 
 - Only days with at least one sync attempt count. Days with no syncs neither
@@ -243,7 +243,7 @@ clears the stamp.
 
 ### Why this exists
 
-The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` (wrapper). If the timer or wrapper ever breaks silently, the server's Claude Code could drift far behind upstream. The system has three evidence trails (wrapper log, syslog tag `claude-update`, and per-unit journalctl) — this check verifies all three are alive and consistent. See [`server-operations.md`](./server-operations.md) for the underlying design.
+The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` (wrapper). If the timer or wrapper ever breaks silently, the server's Claude Code could drift far behind upstream. The system has three evidence trails (wrapper log, syslog tag `claude-update`, and per-unit journalctl) — this check verifies all three are alive and consistent. See [`server-operations.md`](operations.md) for the underlying design.
 
 ### Run this
 
@@ -291,6 +291,6 @@ If the check is unhealthy, try these in order:
 
 1. **Force a run:** `ssh root@<ip> systemctl start claude-update.service` — then re-inspect the wrapper log and `journalctl -u claude-update.service -n 50`.
 2. **Look for auth failure:** Claude Code credentials can expire if the user logged out locally (see `server-operations.md` → "Claude Code credentials"). If `claude update` itself is failing, re-transfer credentials from macOS keychain.
-3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so the callback user can read+execute. `setup-server.sh` handles this but a bad deploy could leave it wrong.
+3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so the beebox user can read+execute. `setup-server.sh` handles this but a bad deploy could leave it wrong.
 4. **Look for a disabled timer:** `systemctl is-enabled claude-update.timer` — should be `enabled`. If someone disabled it, `systemctl enable --now claude-update.timer`.
 5. **Check disk space** on `/home/beebox` — a full disk would prevent the log from being written, which would silently mask failures.

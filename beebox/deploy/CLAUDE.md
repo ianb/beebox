@@ -1,7 +1,7 @@
 # Deploy
 
 ONE OPERATOR'S rsync-to-VPS pipeline, opt-in via a gitignored `target.env`. It
-is not the install path — that is the container flow in `docs/docker-install.md`
+is not the install path — that is the container flow in `docs/install/docker.md`
 — so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
 
 Key files:

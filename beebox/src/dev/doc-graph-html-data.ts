@@ -122,7 +122,7 @@ export const PILLARS: Pillar[] = [
     entry: "docs/box-layout.md",
     entryNote: "What a box's filesystem actually looks like, top to bottom.",
     supporting: [
-      { path: "docs/adding-a-box.md", note: "Procedure for spinning up a new one." },
+      { path: "docs/server/boxes.md", note: "Procedure for spinning up a new one." },
     ],
     code: ["~/src/boxes/"],
   },
@@ -136,7 +136,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "Two scripts. That's the whole story.",
     supporting: [
       { path: "deploy/CLAUDE.md", note: "Per-dir guide. Tiny." },
-      { path: "docs/server-operations.md", note: "What to do when the prod box is wedged." },
+      { path: "docs/server/operations.md", note: "What to do when the prod box is wedged." },
     ],
     code: ["deploy/"],
   },
@@ -202,7 +202,7 @@ export const CURATOR: CuratorSection[] = [
     blurb: "Loose ends, late-night thoughts, things that are someone's problem (Ian's) and not yet anyone else's.",
     entries: [
       { path: "docs/todo-security.md", note: "Things that scare him at 2am. Still a TODO." },
-      { path: "docs/health-checks.md", note: "When something's on fire, this is what to grep." },
+      { path: "docs/server/health-checks.md", note: "When something's on fire, this is what to grep." },
       { path: "docs/landmark-curation.md", note: "Which landmarks to surface to the agent. Hand-tuned." },
       { path: "docs/prompt-audits.md", note: "Catching stock-LLM phrases that crept into prompts." },
       { path: "docs/prompt-logging.md", note: "Log every agent invocation — what was sent, what came back." },
