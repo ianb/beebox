@@ -42,6 +42,7 @@ import { CardActions } from "./card-actions/CardActions";
 import { MissingCardState } from "./card-actions/MissingCardState";
 import { FileStaleNotice } from "./FileStaleNotice";
 import { CardTodos } from "./todo/CardTodos";
+import { TodoActionsProvider } from "./todo/TodoActionsProvider";
 import type { FileViewProps } from "./file-view-types";
 import type { ViewTarget } from "../lib/view-url";
 
@@ -165,9 +166,13 @@ function pendingFileViewLabel({ loading, followingMove }: { loading: boolean; fo
 
 /* ---------- main component ---------- */
 
-/** A card's todo summary sits above whichever renderer is active, core or box view; an embed has no chrome for it. */
-function withCardTodos({ mode, path }: { mode: FileViewProps["mode"]; path: string }, content: ReactNode): ReactNode {
-  return mode !== "embed" && isCardPath(path) ? <CardTodos path={path}>{content}</CardTodos> : content;
+/**
+ * A card's todo summary sits above whichever renderer is active, core or box view; an embed has no chrome for it.
+ * The todos inside get their tick and "+ to chat" actions here too (an embed inherits its host's).
+ */
+function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mode"]; path: string; onAddSelection: FileViewProps["onAddSelection"] }, content: ReactNode): ReactNode {
+  if (mode === "embed" || !isCardPath(path)) return content;
+  return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
 }
 
 function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
@@ -249,7 +254,7 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
     />
   );
   const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
-  const captured = withCardTodos({ mode, path: data.path }, selectable);
+  const captured = withCardTodos({ mode, path: data.path, onAddSelection }, selectable);
   // The marker rides with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,
   // and on its own page.

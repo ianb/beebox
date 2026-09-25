@@ -13,6 +13,7 @@
 
 import type { TodoPlateInput, TodoPlateState, TodoStatus } from "../../shared/todo-model.js";
 import type { TodoLocator } from "../../shared/todo-locators.js";
+import type { TodoSeeAlso } from "../../shared/todo-text.js";
 
 /**
  * Where a todo lives within its card. Defined in `shared/todo-locators.ts`
@@ -22,12 +23,8 @@ import type { TodoLocator } from "../../shared/todo-locators.js";
  */
 export type { TodoLocator };
 
-/** A `{% see-also %}` reference, from either capture form. */
-export interface TodoSeeAlso {
-  ref: string | undefined;
-  href: string | undefined;
-  note: string | undefined;
-}
+/** Defined beside the text flattening that builds it (`shared/todo-text.ts`); re-exported for existing imports. */
+export type { TodoSeeAlso };
 
 /**
  * One todo exactly as its card spells it — the output of the PURE extract

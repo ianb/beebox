@@ -21,7 +21,7 @@ import { parseCardText, typeFromFilename, type LoadCardContext } from "../card-i
 import { TodosFieldSchema } from "../../shared/todo-model.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { extractBodyTodos } from "./extract-body.js";
-import { resolveTodoRefs } from "./extract-text.js";
+import { resolveTodoRefs } from "../../shared/todo-text.js";
 import type { TodoCollectionIssue, TodoItem } from "./collect-types.js";
 
 export interface CardTodoExtraction {

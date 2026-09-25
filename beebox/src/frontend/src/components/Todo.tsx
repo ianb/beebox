@@ -10,9 +10,11 @@
  *
  * `locator` is not an authored attribute: the `todo` transform adds it when
  * `Markdown` renders a card's body (`markdoc-config.ts`), and it is how the
- * todo finds its server plate state (`card-todos-context.ts`). Markdown
- * rendered outside a card (chat, commit messages) has no locator and no
- * plate state.
+ * todo finds its server plate state (`card-todos-context.ts`). The transform
+ * adds `text` with it, the todo's words as the collector reads them; the two
+ * together are what a tick sends (`todo/todo-actions.ts`). Markdown rendered
+ * outside a card (chat, commit messages) has no locator, no plate state, and
+ * no tick.
  *
  * In a card's reading view a finished agent follow-up does not render at all
  * (`hiddenInReading`).
@@ -35,6 +37,8 @@ interface TodoProps {
   due?: string;
   start?: string;
   locator?: TodoLocator;
+  /** Transform-only, beside `locator`: the todo's words as the collector flattens them. */
+  text?: string;
   children?: ReactNode;
 }
 
@@ -52,6 +56,8 @@ function RenderedTodo({ props, layout, cardPath }: { props: TodoProps; layout: "
       plateState={plateState}
       layout={layout}
       locator={locator}
+      cardPath={cardPath}
+      text={props.text ?? null}
       muted={false}
     >
       {props.children}

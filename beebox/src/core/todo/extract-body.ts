@@ -39,7 +39,7 @@ import { assignLocators, isTodoTag } from "../../shared/todo-locators.js";
 import type { TodoItem, TodoLocator } from "./collect-types.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { invariant } from "../../lib/invariant.js";
-import { flattenNodes, resolveTodoRefs, type FlattenResult } from "./extract-text.js";
+import { flattenNodes, resolveTodoRefs, type FlattenResult } from "../../shared/todo-text.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
 // imports resolve to the CJS bundle — which only exposes a default export.

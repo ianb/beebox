@@ -31,7 +31,7 @@ import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
  * `package.json` just because the raw string starts with an underscore area
  * (`docs/implemented-plans/one-root-box-layout.md` Track B).
  */
-async function resolveCardPath({
+export async function resolveCardPath({
   boxRoot,
   inputPath,
   mode,

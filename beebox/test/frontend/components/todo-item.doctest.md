@@ -2,7 +2,7 @@
 
 `TodoItem` is how a todo reads in a card body, in a card's frontmatter
 `todos:`, and in the todo list (`docs/plans/todos-ui.md`, Track 2). A
-read-only checkbox leads, named by the status; the words carry the status
+checkbox leads, named by the status; the words carry the status
 treatment; date and assignment chips follow. Plate state comes from the
 server, so only a todo the server calls `escalated` reads as overdue.
 
@@ -22,6 +22,8 @@ function render(props) {
     plateState: null,
     layout: "inline",
     locator: null,
+    cardPath: null,
+    text: null,
     muted: false,
     ...props,
   }, "Call the roofer"));
@@ -42,9 +44,9 @@ function summary(html) {
 
 ## The four statuses
 
-Only `done` is checked. Every checkbox is disabled until the tick controls
-exist (Track 3), and each is named by its status, so a parked or dropped todo
-is announced as what it is.
+Only `done` is checked. Rendered with no `TodoActionsContext` (as here) every
+checkbox is disabled; `todo-actions.doctest.md` covers the live one. Each is
+named by its status, so a parked or dropped todo is announced as what it is.
 
 ```ts
 summary(render({ status: "open" }))
@@ -64,7 +66,7 @@ The status and the locator ride on the element as data attributes, which is
 how the card summary finds the first open todo to scroll to.
 
 ```ts
-render({ status: "open", locator: { kind: "body", line: 12, nth: 2 } }).startsWith('<span data-todo-status="open" data-todo-locator="12#2">')
+render({ status: "open", locator: { kind: "body", line: 12, nth: 2 } }).startsWith('<span data-todo-status="open" data-todo-locator="12#2" class="group">')
 => true
 
 render({ status: "done", locator: { kind: "frontmatter", index: 0 } }).includes('data-todo-locator="todos[0]"')

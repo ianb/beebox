@@ -101,3 +101,30 @@ const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
 [...html.matchAll(/data-todo-locator="([^"]*)"/g)].map((m) => m[1]).join(" ")
 => 7 7#2 9
 ```
+
+## It carries the collector's text
+
+A tick sends the todo's words for the server to compare with what the
+collector extracts (`todos.setStatus`). The transform adds `text` beside
+`locator` from the same flattening (`shared/todo-text.ts`), so a link keeps
+its label and a nested `see-also` drops out, exactly as the collector reads
+them. Unlocated todos carry no text.
+
+```ts
+const linked = [
+  "{% todo %}Call the [roofer](https://example.com) back{% /todo %}",
+  "",
+  "{% todo %}",
+  "Pick a stain {% see-also ref=\"Stains.memo.card\" %}options{% /see-also %} colour",
+  "{% /todo %}",
+].join("\n");
+const linkedAst = parse(linked);
+stampLocators(assignLocators(linkedAst, 0));
+const rendered = todoTags(transform(linkedAst, markdocConfig)).map((tag) => tag.attributes["text"]);
+const extracted = extractBodyTodos({ relPath: "Porch.memo.card", bodyText: linked, lineOffset: 0 });
+JSON.stringify([rendered, extracted.ok ? extracted.items.map((item) => item.text) : extracted.message])
+=> [["Call the roofer back","Pick a stain colour"],["Call the roofer back","Pick a stain colour"]]
+
+JSON.stringify(todoTags(transform(parse(linked), markdocConfig)).map((tag) => tag.attributes["text"] ?? null))
+=> [null,null]
+```

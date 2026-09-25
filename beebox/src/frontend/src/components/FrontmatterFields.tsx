@@ -108,6 +108,8 @@ function FrontmatterTodo({ entry, index }: { entry: TodoEntry; index: number }):
         plateState={plateState}
         layout="line"
         locator={locator}
+        cardPath={cardPath}
+        text={entry.text}
         muted={false}
       >
         {entry.text}

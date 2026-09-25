@@ -240,9 +240,8 @@ New or sharpened:
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
-**Status (2026-09-25): implemented**, commit `52b609299`. Track 2 and
-Track 4's card line are implemented; Track 3's `setTodoStatus` is in place
-without its mutation or controls; the rest is not started.
+**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2 and 3
+and Track 4's card line are implemented; the rest is not started.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -302,7 +301,7 @@ result has the 3 cards' items and exactly one issue.
 
 ### Track 2 — One rendering of a todo
 
-**Status (2026-09-25): implemented** (checkbox read-only until Track 3).
+**Status (2026-09-25): implemented** (Track 3 made the checkbox live).
 One correction to the direction below: `Markdoc.transform` resolves the tree
 first, and `resolve` clones every node, so a `Map<Node, TodoLocator>` passed
 in the config cannot be looked up from the transform. `Markdown.tsx` instead
@@ -363,6 +362,39 @@ used by `ItemTree` and `TodoInline`/`TodoBlock`, with a component doctest
 over the four statuses and an escalated item.
 
 ### Track 3 — Tick and "+ to chat"
+
+**Status (2026-09-25): implemented.** `todos.setStatus`
+(`webapp/trpc/routers/todos.ts`), `TodoActionsContext` and its rules
+(`components/todo/todo-actions.ts`), the provider
+(`components/todo/TodoActionsProvider.tsx`), and the live checkbox and "+"
+in `TodoItem`. Corrections and choices where the direction was silent:
+
+- **The client's `text` comes from the collector's own flattening.** A body
+  todo renders from React children, which carry no plain text to send.
+  `flattenNodes` moved from `core/todo/extract-text.ts` to
+  `shared/todo-text.ts` (with `TodoSeeAlso`), and the `todo` transform adds
+  `text` beside `locator`, so the text a tick sends and the text the server
+  checks come from one function, as the locators do.
+- **One provider, in `FileView`, serves the list too.** Every action is
+  addressed by card path, so the provider `FileView` renders around a card
+  (beside `CardTodos`) also serves a todo-view card's lines; `TodoViewCard`
+  needs none of its own. An embedded figure inherits its host's.
+- **"+" needs a composer, ticking does not.** Where `FileView` has no
+  `onAddSelection`, the provider gives `addToChat: null`: the checkbox is live
+  and "+" is absent. No provider at all (Markdown outside a card view) means
+  read-only and no "+".
+- **"+" on parked and dropped todos**, whose checkbox stays disabled, and on
+  agent todos, which are tickable (the plan did not restrict either).
+- **Not gated on ownership in the UI.** A non-owner's tick is refused by
+  `ownerProcedure` (`FORBIDDEN`) and reverts with that message inline.
+- **Touch.** "+" is hidden until hover or focus-within only under
+  `@media (hover: hover)`; without hover it is always shown. No precedent
+  existed in `components/`.
+- **A conflict also invalidates `card.get` and `collections.query`**, so
+  "it has been reloaded" holds even when no `file-change` arrives. A commit
+  warning is a toast.
+- `position` for "+" is "todo at line N", "todo at line N (#2 on that
+  line)", or "todo in frontmatter".
 
 **What.** A checkbox that sets a todo `done` or back to `open`, and a "+"
 that puts the todo into chat as a selection.

@@ -55,6 +55,8 @@ function ItemLine({ node }: { node: TodoNode }) {
         plateState={item.plateState}
         layout="line"
         locator={item.locator}
+        cardPath={item.path}
+        text={item.text}
         muted={!item.matching}
       >
         {item.text}

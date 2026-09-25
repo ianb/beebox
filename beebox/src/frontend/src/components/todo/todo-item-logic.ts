@@ -15,7 +15,7 @@ const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
   dropped: "text-warm-400 line-through",
 };
 
-/** The checkbox's accessible name: the status, since the box is read-only until Track 3 makes it live. */
+/** The checkbox's accessible name: the status, which also names a parked or dropped todo the checkbox cannot express. */
 export const STATUS_LABEL: Record<TodoStatus, string> = {
   open: "Open",
   done: "Done",
