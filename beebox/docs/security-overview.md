@@ -1,7 +1,7 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-24
+date: 2026-09-25
 model: gpt-6-astra
 reviewed-by: DRAFT — unreviewed
 ---
@@ -17,6 +17,16 @@ security tier, and the complete surface map were not re-audited.
 publishing authority and Cloudflare credential custody against
 `aa084d01ebdee12e2e88d210c2c5a5c85b7cc294` plus the uncommitted publish-pages
 worktree. This is not a full security-report refresh.
+
+**Scoped amendment (2026-09-25; DRAFT — unreviewed):** Adds owner-only custom
+hostname assignment: DNS and certificate changes can begin while the site is
+disabled, and a signed-in member separately approves the destination. An
+uncertain attachment stays pending and blocks approval/enable. The preflight
+checks Worker Custom Domain assignments, not existing DNS records or Workers
+Routes, and a hostname reservation cannot be released from Bee Box, even after
+manual Cloudflare detach. HTTPS readiness and the least-privilege token
+permissions have not been live-tested; the full inventory anchor remains
+unchanged.
 
 beebox is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
@@ -152,6 +162,10 @@ The summary:
   `bbx pub prepare <name>`. A member enables a new site or approves a scope
   change; same-scope content refreshes can publish immediately. Managed
   account-restricted sites remain blocked pending Access setup and live proof.
+  An authenticated Bee Box owner can attach an exact custom hostname to a
+  prepared, disabled public or secret site. Cloudflare DNS/certificate work
+  begins at assignment; a box member separately approves the destination.
+  HTTPS readiness and additional zone permissions have not been live-verified.
 - **Nothing else.** The running system sends no telemetry, analytics,
   crash reports, or update checks — verified absent, not just
   unpromised. (The monorepo's developer maintenance scripts in `bin/`
@@ -189,7 +203,10 @@ Before first enablement or a scope change, a signed-in member reviews the
 requested audience, destination, file summary, and leak-scan findings in the
 app. That grant permits subsequent content updates in the same scope without
 per-snapshot approval. The agent can build and prepare; a changed audience or
-destination cannot go live until a member approves it. The legacy rendered-doc
+destination cannot go live until a member approves it. Custom-host assignment
+is a separate authenticated-owner action with DNS/certificate effects that can
+begin before the page is enabled; an uncertain attach remains pending and
+blocks approval until the exact Worker mapping is confirmed. The legacy rendered-doc
 `bbx pub go` remains TTY-gated. Leak scanning is a backstop, not a guarantee
 that content is appropriate or free of secrets. Public and secret-link
 bundles are fully public to anyone with the URL; a secret URL is a bearer

@@ -28,6 +28,13 @@ function eligible(site: Site): boolean {
     && (firstAssignment || retryPendingAttach);
 }
 
+function destinationLabels(site: Site | undefined, hostnameInput: string): { hostname: string; site: string } {
+  return {
+    hostname: site?.assignedCustomHostname || hostnameInput.trim() || "the entered hostname",
+    site: site?.title || site?.name || "the selected publication",
+  };
+}
+
 export function CustomHostnameAssignment() {
   const publications = trpc.publications.list.useQuery();
   const utils = trpc.useUtils();
@@ -39,6 +46,7 @@ export function CustomHostnameAssignment() {
   const eligibleSites = (publications.data?.sites ?? []).filter(eligible);
   const selected = eligibleSites.find((site) => site.pubId === pubId) ?? eligibleSites[0];
   const retrying = selected?.customHostnameStatus === "pending";
+  const { hostname: hostLabel, site: destinationSite } = destinationLabels(selected, hostname);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,13 +65,23 @@ export function CustomHostnameAssignment() {
     }
   }
 
+  function changePublication(nextPubId: string) {
+    setPubId(nextPubId);
+    setAcknowledged(false);
+  }
+
+  function changeHostname(nextHostname: string) {
+    setHostname(nextHostname);
+    setAcknowledged(false);
+  }
+
   return (
     <Stack gap="sm">
       <Stack gap="xs">
         <Heading level={3}>Assign a custom hostname</Heading>
         <Hint>Assign one exact hostname to an existing disabled public or secret site. A box member must approve the destination before enabling it.</Hint>
       </Stack>
-      <div role="note"><Badge tone="warning">Cloudflare will begin DNS and certificate changes immediately, even while the site is disabled. This hostname stays reserved to this publication; detaching it in Cloudflare does not release it for reuse in Bee Box.</Badge></div>
+      <div role="note"><Badge tone="warning">For {destinationSite} at {hostLabel}, every path will route to Bee Box. Bee Box checks for conflicting Worker Custom Domain assignments, but does not inspect existing DNS records or Workers Routes; review those before assigning. Cloudflare begins DNS and certificate changes immediately, even while the site is disabled. This hostname stays reserved to this publication; detaching it in Cloudflare does not release it for reuse in Bee Box.</Badge></div>
       {publications.isLoading ? <Text size="sm" tone="muted">Loading eligible publications…</Text> : null}
       {publications.error ? <div role="alert"><ErrorText>{publications.error.message}</ErrorText></div> : null}
       {assign.error ? <div role="alert"><ErrorText>{assign.error.message}</ErrorText></div> : null}
@@ -76,17 +94,17 @@ export function CustomHostnameAssignment() {
               id="bbx-admin-publish-hostname-site"
               label="Prepared publication"
               value={selected.pubId}
-              onChange={setPubId}
+              onChange={changePublication}
               options={eligibleSites.map((site) => ({ value: site.pubId, label: `${site.title || site.name} (${site.pending?.requestedScope.tier ?? "site"})` }))}
             />
             {retrying
               ? <Text size="sm">Retrying the reserved hostname: <Text mono>{selected.assignedCustomHostname}</Text></Text>
-              : <TextField id="bbx-admin-publish-hostname" label="Exact hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as www.example.org, without https:// or a path." />}
+              : <TextField id="bbx-admin-publish-hostname" label="Exact hostname" value={hostname} onChange={changeHostname} required maxLength={253} helper="Enter a hostname such as www.example.org, without https:// or a path." />}
             <CheckboxField
               id="bbx-admin-publish-hostname-ack"
               label={retrying
-                ? "I understand this retries Cloudflare attachment for the already-reserved hostname; it cannot be changed here."
-                : "I understand Cloudflare will change DNS/certificate routing now, the disabled Worker will own this hostname, and detaching it in Cloudflare will not release it for reuse in Bee Box."}
+                ? `I understand this retries the reserved hostname ${hostLabel} for ${destinationSite}; all paths route to Bee Box and the hostname cannot be released here.`
+                : `I checked existing DNS records and Workers Routes for ${hostLabel}; all paths will route to Bee Box, and this hostname cannot be released here.`}
               checked={acknowledged}
               onChange={setAcknowledged}
             />

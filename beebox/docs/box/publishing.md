@@ -26,8 +26,19 @@ src/publications/
 ```
 
 For a new site, run `bbx pub id` to generate a fresh secure `pubId`; preserve
-that value in the definition across every refresh. Prepare a site by name with
-`bbx pub prepare <name>` and inspect managed server state with `bbx pub sites`.
+that value in the definition across every refresh. Before writing the
+`connection` field, run `bbx pub connections` and use an active connection
+name listed as granted to this box. Do not guess a name, inspect machine
+secrets, or search private server configuration. If no connection is listed,
+ask the boxholder or Cloudflare administrator to grant one. `bbx pub prepare
+<name>` prepares the named folder. `bbx pub connections` lists active
+connections granted to this box; it never prints credentials. `bbx pub status`
+shows managed publication state and the box's connections; `bbx pub status
+--legacy` explicitly requests the old Wrangler diagnostic. Without configured
+box-server credentials, managed status returns an error; run it through the
+configured box agent. Wrangler credentials are used only when the agent
+explicitly requests the legacy diagnostic. Server query errors do not fall
+back.
 
 The definition chooses a content mode and requested audience. The server
 derives the source root, owning box, publication Worker, storage location, and
@@ -40,7 +51,7 @@ Example public static definition:
 ```json
 {
   "pubId": "abcdefghijklmnop2345672345",
-  "connection": "publishing",
+  "connection": "replace-with-a-name-from-bbx-pub-connections",
   "content": "static",
   "title": "Field guide",
   "tier": "public",
@@ -48,6 +59,8 @@ Example public static definition:
 }
 ```
 
+Replace the connection placeholder with the exact active granted name printed
+by `bbx pub connections`; the example value is not a configured connection.
 `pubId` is a stable, random base32 id assigned once; preserve it on every
 refresh and never copy the example id. `connection` must name a connection
 already granted to this box by a Cloudflare publishing administrator. It does
@@ -505,8 +518,22 @@ box member to enable the site.
    scan before upload/promotion leaves the current release live. If a remote
    write may have succeeded but read-back or activation verification fails,
    serving state is unknown; do not claim that the old release was restored.
-3. For a first enable or scope change, review the title, destination, requested
-   audience, emitted file summary, and leak-scan findings in the app. If a scan
+   The command prints `publication URL: <full-url>` and an `approval:` line.
+   Preserve the whole destination URL,
+   including `/s/<pubId>/` for a secret link; the PubId path is the viewer's
+   capability, and shortening it makes the link unusable. Share a secret URL
+   privately with its intended recipient; do not write it into shared notes,
+   a public page, or a public issue. The output also prints a direct
+   Publications link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
+   available. Otherwise the line says to open this box's Publications page from
+   the app menu. Tell the boxholder to sign in to this box, open **Publications**
+   using the returned link or profile menu, select the named site, review its
+   requested audience and file/scan summary, then choose **Enable** or
+   **Approve**. The member's app action is required; no CLI command can enable
+   or approve it.
+3. For a first enable or scope change, the boxholder must review the title,
+   destination, requested audience, emitted file summary, and leak-scan findings
+   in the app. If a scan
    finding is real, remove the exposed material and prepare again. Do not wave
    through a suspected secret. An ordinary same-scope content refresh does not
    require a separate snapshot approval.
@@ -519,7 +546,7 @@ box member to enable the site.
    widening recipients or changing a public slug, needs fresh approval from a
    signed-in member. A local build or scan failure before promotion leaves the
    current release active. If a remote write may have succeeded but its
-   read-back/activation check fails, inspect `bbx pub sites` and treat serving
+   read-back/activation check fails, inspect `bbx pub status` and treat serving
    state as unknown; the publisher does not promise rollback.
 6. A signed-in box member can disable the publication in the app. Disablement
    stops every release at the serving edge. Revocation is terminal; a disabled
@@ -531,6 +558,38 @@ within an already-approved scope are allowed without a new member click. To
 inspect the actual site, use a local isolated preview or visit its separate
 published origin after enablement. If approval changes the destination or
 audience, old release URLs lose reachability under the previous approval.
+
+## Custom hostnames
+
+A custom hostname is assigned by the authenticated Bee Box owner in **Admin →
+Cloudflare publishing → Assign a custom hostname**. Do not add a hostname to
+`publication.json` or try to assign one from the CLI. The form selects an
+existing disabled, prepared public or secret publication and uses its existing
+server-side Cloudflare connection. Assignment begins Cloudflare DNS and
+certificate changes immediately, even though the site remains disabled; it
+cannot be detached or changed in Bee Box v1. Bee Box also has no hostname
+reservation-release path: manually detaching the Cloudflare mapping does not
+free that hostname for another publication. If assignment becomes stuck,
+inspect the mapping and choose a different hostname for any new publication;
+do not promise that the reserved hostname can be reused.
+Before assignment, ask the owner to review existing DNS records and Workers
+Routes for that host. Bee Box checks for conflicting Worker Custom Domain
+assignments but does not inspect DNS records or Workers Routes.
+
+The new destination is a candidate until a signed-in member of this box
+approves it in **Publications**. After approval, the agent can report the
+custom URL from `bbx pub status` or `bbx pub sites`; a member can also see it in
+**Publications**. Workers.dev remains an alternate. Preserve
+the whole secret URL including `/s/<pubId>/`. Do not treat the Admin
+assignment confirmation as proof that HTTPS is ready: Cloudflare may still be
+provisioning its certificate. If Cloudflare attachment is still marked
+pending, the publication stays disabled and the member cannot approve it yet.
+Tell the authenticated owner to retry the same reserved hostname from the Admin
+section; do not suggest another hostname on this publication or attempt to
+enable it from the CLI. If the reservation cannot be recovered, Bee Box v1 has
+no release path; a different hostname requires a different publication. If
+Cloudflare mapping must be inspected, ask the owner to do so; the box agent
+does not have Cloudflare access.
 
 ## Private publication notes
 
