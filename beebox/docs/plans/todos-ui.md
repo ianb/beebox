@@ -650,20 +650,27 @@ call to it. Health check: `webapp/trpc/routers/health-todos.ts`. Tests:
 frontmatter, set-status, and `TodoItem` doctests. Decisions the plan left
 open:
 
-- **How the procedure knows the job.** `check` prints the job path, and the
-  precheck's `pass-output: true` hands that text to the agent. `check` also
-  records the job's items (path, locator, text) in the sweep state, because
-  the agent's `bbx finish` deletes the job card before the validate phase
-  runs. `verify` takes an optional job path and defaults to the recorded one,
-  so the validate shell is plain `bbx engine todo-review verify`.
-- **A job already pending** (queued by an earlier run whose agent did not
-  finish it, or by the old wakeup hook) is handed out by `check` instead of
-  skipping, since on a box with no wakeup schedule nothing else would ever
-  run it.
-- **Finding a todo again** in `verify` is by its words on its card, with the
-  locator as a tie-break, not by locator: an agent edit elsewhere on the
-  card moves line numbers without changing the todo. A todo whose words
-  changed, or whose card is gone, counts as settled by an edit.
+- **No job card.** `check` prints the brief (the shared
+  `TODO_REVIEW_INSTRUCTIONS`, today's box-local date, and the items as
+  YAML), and the precheck's `pass-output: true` hands it to the agent. It
+  saves the items, with a snapshot of each todo's status, `assigned`,
+  `start`, and `due`, in `.beebox/todo-review-sweep.json` for `verify`. With
+  no card, the wakeup reactor has nothing to pick up, so two agents never
+  work one review. The job schema stays registered: a card still pending on
+  a box validates and the reactor drains it; `check` ignores it.
+- **The stirring baseline** moves when `check` finds nothing, or when
+  `verify` passes (to the day `check` swept). A review that never settles
+  lists a newly stirring todo again the next day.
+- **On a boxholder's todo only `recheck` may change.** `verify` fails an
+  item whose status, `start`, `due`, or `assigned` changed since `check`,
+  naming them, and fails a reworded or removed boxholder todo ("the review
+  may not reword the boxholder's todos"). The agent's own todos may change
+  status, or be reworded.
+- **Recheck history is pruned at `check`**: entries whose card is gone, or
+  whose words match no todo on the card, are dropped.
+- **Finding a todo again** in `verify` is by its saved words on its card,
+  with the locator as a tie-break: an agent edit elsewhere on the card moves
+  line numbers without changing the todo.
 - **`recheck="never"` written by the agent fails `verify`**; it passes only
   when `verify` retired the todo itself. A retired todo that comes back into
   review (someone removed `never`) starts a new count.

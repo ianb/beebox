@@ -1,15 +1,16 @@
 /**
- * Todo review job card schema — a job created by the `todo-review` sweep
+ * Todo review job card schema — the brief the `todo-review` sweep
  * (`src/core/todo/review-sweep.ts`, `docs/implemented-plans/todo-annotation.md`
- * Track 5b) when it finds open todos needing attention. Since
- * `docs/plans/todos-ui.md` Track 7 the sweep is the precheck of the stock
- * `todo-review` procedure, whose agent processes this job and whose validate
- * step (`bbx engine todo-review verify`) checks every item was settled.
+ * Track 5b) used to queue for the wakeup reactor.
  *
- * The sweep only computes three sets (escalated / stirring / stale); this
- * job is how that compact brief reaches the reactor so an *agent* judges
- * what to do with it. Deliberately terse (path + locator + text per item,
- * no inlined card content) — the plan calls for "a compact brief," and the
+ * Since `docs/plans/todos-ui.md` Track 7 nothing writes these cards: the
+ * stock `todo-review` procedure's precheck (`bbx engine todo-review check`)
+ * prints the same brief — these item shapes and {@link TODO_REVIEW_INSTRUCTIONS}
+ * — straight to its agent, so no card exists for the reactor to pick up too.
+ * The schema stays registered so a card still pending on a box validates and
+ * the reactor drains it.
+ *
+ * Deliberately terse (locator + text per item, no inlined card content) — the
  * agent can read any referenced card directly if it needs more context.
  */
 
@@ -26,7 +27,7 @@ import { z } from "zod";
  * undated todo mean anything. Both are optional so a job card queued before
  * they existed still validates.
  */
-export const TodoReviewItemSchema = z.object({
+const TodoReviewItemSchema = z.object({
   locator: z.string(),
   text: z.string(),
   assigned: z.string().optional(),
@@ -37,32 +38,11 @@ export const TodoReviewItemSchema = z.object({
   section: z.string().optional(),
 });
 
-export const TodoReviewJobSchema = cardSchema("todo-review-job", {
-  description: "A system job surfacing open todos needing attention (escalated, newly on-plate, or stale) from the todo-review sweep",
-  category: "system",
-  searchable: false,
-  fields: {
-    status: z.string().default("pending"),
-    source: z.string().default("todo-review"),
-    // `normal`, not `low`: `bbx wakeup` always runs the reactor with
-    // `skipLowPriority: true` (src/cli/commands/wakeup.ts), which skips a
-    // cycle when every pending job is low-priority and none has passed the
-    // 24h wait deadline. A `low` review job on an otherwise-idle box would
-    // then wait up to a day, and — being pending — suppress the next
-    // sweep's job for that long too (Track 5b's "deterministic hook, not a
-    // hope" wants it processed on the same tick that queued it).
-    // `chat-job`/`question-followup-job` (no `priority` field at all,
-    // defaulting to `normal` in `job-discovery.ts`) are the precedent for
-    // "must be processed promptly"; `low` (contains-backfill's own choice)
-    // is for genuinely-optional background filler that rides along other
-    // work, and drains on its own once it has waited a day.
-    priority: z.enum(["normal", "low"]).default("normal"),
-    description: z.string(),
-    escalated: z.array(TodoReviewItemSchema).default([]),
-    stirring: z.array(TodoReviewItemSchema).default([]),
-    stale: z.array(TodoReviewItemSchema).default([]),
-  },
-  instructions: `# Processing a Todo Review Job
+/**
+ * How to work a todo review: the text the procedure's brief carries
+ * (`core/todo/review-check.ts`) and a legacy job card's instructions.
+ */
+export const TODO_REVIEW_INSTRUCTIONS = `# Processing a Todo Review
 
 The \`todo-review\` sweep found open todos worth a look. It only computed
 these lists — **you judge what to do with them, the boxholder decides**.
@@ -92,24 +72,22 @@ A check runs after you and lists every item that ended neither way:
 
 \`recheck\` is the review's bookkeeping, not the boxholder's plan: it never
 changes the plate, the badge, or the order. It is **the one attribute you may
-write on the boxholder's todos without asking** — edit it in place
+write on the boxholder's todos** — edit it in place
 (\`{% todo due="2026-07-01" recheck="2026-08-15" %}\`, or \`recheck:\` on a
-frontmatter \`todos:\` entry) and change nothing else there. Never write
-\`recheck="never"\`; the check sets it itself when a todo was pushed three
-times with nothing about it changing.
+frontmatter \`todos:\` entry). The check fails an item whose words, status,
+\`start\`, \`due\`, or \`assigned\` you changed on a boxholder's todo. Never
+write \`recheck="never"\`; the check sets it itself when a todo was pushed
+three times with nothing about it changing.
 
 ## Your own items
 
 An item whose \`assigned\` is \`"agent"\` is **yours to chase**, not something
-to raise. Do the work now if the job is small enough to finish here, then
-mark it \`done\` with a \`{% see-also %}\` pointing at the evidence. If it is
-too big for this cycle, give it a \`recheck\` and say so in what you report.
-An agent-assigned item that keeps appearing in \`stale\` and never moves is
+to raise. Do the work now if it is small enough to finish here, then mark it
+\`done\` with a \`{% see-also %}\` pointing at the evidence. If it is too big
+for this cycle, give it a \`recheck\` and say so in what you report. An
+agent-assigned item that keeps appearing in \`stale\` and never moves is
 worth dropping honestly rather than carrying forever — that judgment you may
 make yourself, since nobody else took the work on.
-
-Everything \`assigned\` leaves to the boxholder is report-only apart from
-\`recheck\`: never change its status or any other attribute.
 
 ## What to do
 
@@ -124,7 +102,37 @@ Everything \`assigned\` leaves to the boxholder is report-only apart from
    you talk, or a question card for anything that needs a park/drop/merge
    decision.
 4. Commit your edits (the \`recheck\` dates, your own agent work marked
-   done), then \`bbx finish {thisJobFile}\`.`,
+   done).`;
+
+export const TodoReviewJobSchema = cardSchema("todo-review-job", {
+  description: "A system job surfacing open todos needing attention (escalated, newly on-plate, or stale) from the todo-review sweep",
+  category: "system",
+  searchable: false,
+  fields: {
+    status: z.string().default("pending"),
+    source: z.string().default("todo-review"),
+    // `normal`, not `low`: `bbx wakeup` always runs the reactor with
+    // `skipLowPriority: true` (src/cli/commands/wakeup.ts), which skips a
+    // cycle when every pending job is low-priority and none has passed the
+    // 24h wait deadline. A `low` review job on an otherwise-idle box would
+    // then wait up to a day, and — being pending — suppress the next
+    // sweep's job for that long too (Track 5b's "deterministic hook, not a
+    // hope" wants it processed on the same tick that queued it).
+    // `chat-job`/`question-followup-job` (no `priority` field at all,
+    // defaulting to `normal` in `job-discovery.ts`) are the precedent for
+    // "must be processed promptly"; `low` (contains-backfill's own choice)
+    // is for genuinely-optional background filler that rides along other
+    // work, and drains on its own once it has waited a day.
+    priority: z.enum(["normal", "low"]).default("normal"),
+    description: z.string(),
+    escalated: z.array(TodoReviewItemSchema).default([]),
+    stirring: z.array(TodoReviewItemSchema).default([]),
+    stale: z.array(TodoReviewItemSchema).default([]),
+  },
+  instructions: `${TODO_REVIEW_INSTRUCTIONS}
+
+This review came as a job card, so no check runs after you; the same rules
+apply. When you are done, \`bbx finish {thisJobFile}\`.`,
 });
 
 export type TodoReviewJobFields = InferCardFields<typeof TodoReviewJobSchema>;

@@ -91,8 +91,8 @@ in a todo makes it show up on the linked place as well as its own.
 ### Tending
 
 You may run a review pass yourself, and the daily \`todo-review\` procedure
-also hands you a job card with escalated / newly-on-plate / stale todos to
-look at. Either way, the same rule: **you judge, the boxholder decides.**
+also hands you a brief of escalated / newly-on-plate / stale todos to look
+at. Either way, the same rule: **you judge, the boxholder decides.**
 Suggest completion when you see evidence a todo is done; propose merging
 duplicates; flag a stale one for \`parked\`/\`dropped\`/a real date — but
 *ask*, in chat or a question card, rather than changing status yourself.
@@ -103,8 +103,8 @@ pointing at the evidence you did the work.
 \`recheck\` is the review's bookkeeping: an ISO date before which the review
 will not list the todo again, or \`never\` once it has stopped reviewing it.
 It is not a reminder and changes nothing the boxholder sees on the plate.
-You write it only while processing a \`todo-review\` job, and there it is
-the one attribute you may set on the boxholder's todos without asking. Never
+You write it only while working a todo review, and there it is the one
+attribute you may set on the boxholder's todos without asking. Never
 write \`never\` yourself; the review sets it when a todo was pushed three
 times with nothing changing.
 

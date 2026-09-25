@@ -3,7 +3,7 @@ name: todo-review
 description: |-
   Daily review of open todos: escalated (past due), newly on the plate
   (crossed start), and stale (undated, over 45 days old). The precheck
-  sweeps the box and queues a todo-review job; an agent processes it,
+  sweeps the box and prints a brief of those todos; an agent works it,
   giving every item a status change (its own todos only) or a recheck
   date 1-90 days out, and raises what matters with the boxholder. The
   validate step checks every item was settled, and stops reviewing a
@@ -13,13 +13,13 @@ description: |-
   days this procedure does no work and invokes no agent.
 steps:
   - id: review
-    description: Process the queued todo-review job
+    description: Give every todo in the review brief a status change or a recheck date
     precheck:
       shells:
         - |-
           bbx engine todo-review check
-          # Prints the job to process; exits CHECK_SKIP_CODE (75) when no
-          # todo needs review and no todo-review job is pending.
+          # Prints the review brief (instructions + items) for the agent;
+          # exits CHECK_SKIP_CODE (75) when no todo needs review.
       whys:
         - |-
           No need to invoke an agent when no open todo is escalated, newly
@@ -29,14 +29,12 @@ steps:
     run:
       agents:
         - prompt: |-
-            The precheck output above names a todo-review job card. Read it and
-            process it exactly as its instructions say. In short: every item
-            ends with either a status change (your own assigned="agent" todos
-            only) or a recheck date 1 to 90 days after today, with a short
+            The precheck output above is a todo review brief: how to work it,
+            then the items. Work every item exactly as it says. In short: every
+            item ends with either a status change (your own assigned="agent"
+            todos only) or a recheck date 1 to 90 days after today, with a short
             reason; raise what matters with the boxholder; on the boxholder's
-            todos, recheck is the only attribute you may write.
-
-            Commit your edits, then run `bbx finish <job card path>`.
+            todos, recheck is the only thing you may change. Commit your edits.
 
             GIT: Do NOT add Co-Authored-By to commits. The system adds the
             appropriate trailers automatically.

@@ -171,7 +171,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   {
     name: "todo-review",
     audience: "engine",
-    reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, the agent's side is the job card",
+    reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, and the agent's side is the brief `check` prints",
   },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

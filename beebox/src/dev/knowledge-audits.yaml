@@ -1594,13 +1594,13 @@ tests:
     correct_contains_any: ["dropped", "drop"]
     tags: [todos, agent-work]
 
-  # docs/plans/todos-ui.md Track 7: the todo-review procedure's job requires
+  # docs/plans/todos-ui.md Track 7: the todo-review procedure's brief requires
   # every item to end with a status change or a `recheck` date, and `recheck`
   # is the one attribute the agent may write on the boxholder's todos. The
-  # agent guide todos section and the job's own instructions carry it. Not yet run.
+  # agent guide todos section and the review brief's instructions carry it. Not yet run.
   - id: todo-recheck
     prompt: >
-      You are processing a todo-review job. One item is the boxholder's todo,
+      You are working the daily todo review. One item is the boxholder's todo,
       past its due date, and you see no sign it was done. What do you change
       on that todo, if anything, and what else do you do about it?
     expected_level: knows_directly

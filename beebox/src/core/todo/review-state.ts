@@ -5,10 +5,10 @@
  *
  * Three things live here:
  * - `lastSweepDateEpoch` — the sweep's `stirring` baseline (`review-sweep.ts`).
- * - `job` — the job `bbx engine todo-review check` last handed to the
- *   procedure, with its items as addresses (card path, locator, text). The
- *   job card itself is deleted by `bbx finish` before the procedure's
- *   validate phase runs, so `verify` reads the items from here.
+ * - `review` — the items `bbx engine todo-review check` last handed to the
+ *   procedure's agent, each an address (card path, locator, text) plus a
+ *   snapshot of the attributes the agent may not change on a boxholder's
+ *   todo. There is no job card: `verify` reads the items from here.
  * - `rechecks` — per-todo recheck history, keyed by card path + todo text,
  *   which is how `verify` counts unchanged rechecks and retires a todo on the
  *   third (`review-verify.ts`).
@@ -25,12 +25,13 @@ import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { sleep } from "../../lib/sleep.js";
 import { TodoLocatorSchema } from "../../shared/todo-locators.js";
+import { TODO_STATUSES } from "../../shared/todo-model.js";
 
 const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
 const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
 // Bounded retry against a concurrent holder (another check/verify, or a
 // manual run) — generous enough to outlast a normal sweep's own runtime (a
-// collector pass + one job-card write), short enough that a genuinely stuck
+// collector pass + one state write), short enough that a genuinely stuck
 // holder fails loud rather than wedging the caller indefinitely.
 const LOCK_RETRIES = 20;
 const LOCK_RETRY_MS = 250;
@@ -43,11 +44,18 @@ class TodoReviewSweepLockError extends Error {
   }
 }
 
-/** One job item, as an address `verify` can re-extract. */
+/**
+ * One review item: an address `verify` can re-extract, and what the todo
+ * looked like when `check` handed it out.
+ */
 const ReviewItemSchema = z.object({
   path: z.string(),
   locator: TodoLocatorSchema,
   text: z.string(),
+  status: z.enum(TODO_STATUSES),
+  assigned: z.string().optional(),
+  start: z.string().optional(),
+  due: z.string().optional(),
 });
 
 export type ReviewItem = z.infer<typeof ReviewItemSchema>;
@@ -77,19 +85,34 @@ const SweepStateSchema = z.object({
   // undercount a `start` dated earlier the same day a sweep happens to run
   // mid-afternoon.
   lastSweepDateEpoch: z.number().optional(),
-  job: z.object({ path: z.string(), items: z.array(ReviewItemSchema) }).optional(),
+  /** `sweptOn`: the box-local date epoch `check` computed the items for; `verify` moves the baseline to it once every item is settled. */
+  review: z.object({ sweptOn: z.number(), items: z.array(ReviewItemSchema) }).optional(),
   rechecks: z.record(z.string(), RecheckRecordSchema).optional(),
 });
 
 export interface SweepState {
   lastSweepDateEpoch: number | null;
-  job: { path: string; items: ReviewItem[] } | null;
+  review: { sweptOn: number; items: ReviewItem[] } | null;
   rechecks: Record<string, RecheckRecord>;
 }
 
 /** The `rechecks` key for one todo: its card and its words. */
 export function recheckKey({ path: cardPath, text }: { path: string; text: string }): string {
   return JSON.stringify([cardPath, text]);
+}
+
+const RecheckKeySchema = z.tuple([z.string(), z.string()]);
+
+/** The card path and todo text a `rechecks` key names, or `null` for a key this module did not write. */
+export function recheckKeyParts(key: string): { path: string; text: string } | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(key);
+  } catch (_e) {
+    return null; // not a key recheckKey wrote; the caller drops it
+  }
+  const parsed = RecheckKeySchema.safeParse(json);
+  return parsed.success ? { path: parsed.data[0], text: parsed.data[1] } : null;
 }
 
 export async function loadSweepState(boxRoot: string): Promise<SweepState> {
@@ -100,22 +123,22 @@ export async function loadSweepState(boxRoot: string): Promise<SweepState> {
     if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not read todo-review sweep state, treating as first run:", e);
     }
-    return { lastSweepDateEpoch: null, job: null, rechecks: {} };
+    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
   }
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch (e) {
     console.warn("todo-review sweep state is not JSON, treating as first run:", e);
-    return { lastSweepDateEpoch: null, job: null, rechecks: {} };
+    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
   }
   const parsed = SweepStateSchema.safeParse(json);
   if (!parsed.success) {
     console.warn(`todo-review sweep state has an unexpected shape, treating as first run: ${parsed.error.message}`);
-    return { lastSweepDateEpoch: null, job: null, rechecks: {} };
+    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
   }
   const data = parsed.data;
-  return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null, job: data.job ?? null, rechecks: data.rechecks ?? {} };
+  return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null, review: data.review ?? null, rechecks: data.rechecks ?? {} };
 }
 
 export async function saveSweepState(boxRoot: string, state: SweepState): Promise<void> {
@@ -123,7 +146,7 @@ export async function saveSweepState(boxRoot: string, state: SweepState): Promis
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   const data = {
     ...(state.lastSweepDateEpoch !== null && { lastSweepDateEpoch: state.lastSweepDateEpoch }),
-    ...(state.job !== null && { job: state.job }),
+    ...(state.review !== null && { review: state.review }),
     rechecks: state.rechecks,
   };
   await writeFileAtomic(absPath, { content: `${JSON.stringify(data, null, 2)}\n` });

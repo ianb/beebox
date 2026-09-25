@@ -1,17 +1,23 @@
 /**
- * `bbx engine todo-review verify <job>` — the validate phase of the stock
- * `todo-review` procedure (`docs/plans/todos-ui.md`, Track 7).
+ * `bbx engine todo-review verify` — the validate phase of the stock
+ * `todo-review` procedure (`docs/plans/todos-ui.md`, Track 7). It judges the
+ * items `check` saved in the sweep state (`review-check.ts`).
  *
- * Every item of the job must end settled:
- * - its status is no longer `open`;
- * - or it carries a `recheck` date 1 to 90 days after today (box-local);
- * - or its words changed, or its card is gone — someone edited it, which is
- *   tending it. A todo is found again by its words on its card (the locator is
- *   only a tie-break), since an edit elsewhere on the card moves line numbers
- *   without changing what the todo is.
+ * Every item must end settled:
+ * - its status is no longer `open` (the agent's own todos only);
+ * - or it carries a `recheck` date 1 to 90 days after today (box-local).
  *
- * Anything else is reported, and the procedure re-invokes the agent with the
- * list (`severity: review`).
+ * On a **boxholder's** todo (saved `assigned` is not `agent`), `recheck` is
+ * the only thing the review may change. The todo is found again by the words
+ * `check` saved (the locator only breaks ties, since an edit elsewhere on the
+ * card moves line numbers), so a reworded or removed boxholder todo is not
+ * found and fails; a changed status, `start`, `due`, or `assigned` fails and
+ * names the attributes. On the agent's own todo, a reword or removal counts
+ * as tending it.
+ *
+ * Anything unsettled is reported, and the procedure re-invokes the agent with
+ * the list (`severity: review`). When every item is settled, the stirring
+ * baseline moves to the day `check` swept.
  *
  * **Retirement.** Each settling recheck is recorded per todo (card path +
  * text) in the sweep state. When a todo gets its THIRD recheck while its
@@ -32,7 +38,7 @@ import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { parseRecheck, RECHECK_NEVER } from "../../shared/todo-model.js";
+import { parseRecheck, RECHECK_NEVER, TODO_AGENT } from "../../shared/todo-model.js";
 import { extractCardTodos } from "./extract.js";
 import { formatTodoLocation, type TodoItem } from "./collect-types.js";
 import { setTodoAttribute } from "./set-status.js";
@@ -46,19 +52,16 @@ const MAX_RECHECK_DAYS = 90;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const COMMIT_TEXT_MAX = 60;
 
-/** Thrown when `verify` is asked about a job `check` never handed out. */
-export class TodoReviewJobUnknownError extends Error {
-  constructor(jobPath: string, recorded: string | null) {
-    super(
-      `No todo-review snapshot for ${jobPath}` +
-        (recorded === null ? " (run `bbx engine todo-review check` first)" : ` (the last checked job is ${recorded})`),
-    );
-    this.name = "TodoReviewJobUnknownError";
+/** Thrown when `verify` runs with no review saved by `check`. */
+export class TodoReviewNotCheckedError extends Error {
+  constructor() {
+    super("No todo review to verify: run `bbx engine todo-review check` first");
+    this.name = "TodoReviewNotCheckedError";
   }
 }
 
 export interface TodoReviewVerifyResult {
-  /** Job items still open with no acceptable `recheck`, each with why. */
+  /** Items not settled, each with why. */
   unsettled: Array<{ item: ReviewItem; reason: string }>;
   /** Todos this run retired to `recheck="never"`. */
   retired: ReviewItem[];
@@ -87,6 +90,18 @@ async function findCurrent(
   const sameText = items.filter((t) => t.text === item.text);
   const wanted = formatTodoLocation(item);
   return sameText.find((t) => formatTodoLocation(t) === wanted) ?? sameText[0] ?? null;
+}
+
+/** Attributes the review may not change on a boxholder's todo. */
+const FROZEN = ["status", "assigned", "start", "due"] as const;
+
+/** Why this boxholder todo's review broke the recheck-only rule, or `null` when it didn't. */
+function boxholderEditProblem(item: ReviewItem, todo: TodoItem | null): string | null {
+  if (item.assigned === TODO_AGENT) return null;
+  if (todo === null) return "not found on its card as written: the review may not reword the boxholder's todos";
+  const changed = FROZEN.filter((name) => todo[name] !== item[name]);
+  if (changed.length === 0) return null;
+  return `the review may change only recheck on the boxholder's todos (changed: ${changed.join(", ")})`;
 }
 
 function judge(input: { todo: TodoItem; record: RecheckRecord | undefined; todayEpoch: number }): ItemVerdict {
@@ -165,19 +180,24 @@ async function retire(boxRoot: string, todo: TodoItem): Promise<boolean> {
   });
 }
 
-/** Judge every item of `jobPath`, record rechecks, and retire todos on their third unchanged recheck. */
-export async function verifyTodoReview(boxRoot: string, jobPath: string): Promise<TodoReviewVerifyResult> {
+/** Judge every saved item, record rechecks, and retire todos on their third unchanged recheck. */
+export async function verifyTodoReview(boxRoot: string): Promise<TodoReviewVerifyResult> {
   return withSweepLock(boxRoot, async () => {
     const state = await loadSweepState(boxRoot);
-    if (state.job?.path !== jobPath) throw new TodoReviewJobUnknownError(jobPath, state.job?.path ?? null);
+    if (state.review === null) throw new TodoReviewNotCheckedError();
     const todayEpoch = await boxTodayEpoch(boxRoot);
     const cardSchemas = await createCardSchemaMap(boxRoot);
     const rechecks = { ...state.rechecks };
     const result: TodoReviewVerifyResult = { unsettled: [], retired: [] };
 
-    for (const item of state.job.items) {
+    for (const item of state.review.items) {
       const todo = await findCurrent(boxRoot, { item, cardSchemas });
-      if (todo === null) continue; // edited or removed: someone tended it
+      const problem = boxholderEditProblem(item, todo);
+      if (problem !== null) {
+        result.unsettled.push({ item, reason: problem });
+        continue;
+      }
+      if (todo === null) continue; // the agent's own todo, reworded or removed: it tended it
       const key = recheckKey(todo);
       const verdict = judge({ todo, record: rechecks[key], todayEpoch });
       if (!verdict.settled) {
@@ -193,7 +213,12 @@ export async function verifyTodoReview(boxRoot: string, jobPath: string): Promis
       }
     }
 
-    await saveSweepState(boxRoot, { ...state, rechecks });
+    const settled = result.unsettled.length === 0;
+    await saveSweepState(boxRoot, {
+      ...state,
+      rechecks,
+      ...(settled && { lastSweepDateEpoch: state.review.sweptOn }),
+    });
     return result;
   });
 }
