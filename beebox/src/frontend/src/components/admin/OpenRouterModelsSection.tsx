@@ -35,6 +35,7 @@ export function OpenRouterModelsSection() {
   const config = trpc.admin.boxConfig.useQuery();
   const claudeEnabled = config.data !== undefined
     && (config.data.agentEngine === "claude" || config.data.engines.claude === true);
+  if (config.error !== null) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><ErrorText>{config.error.message}</ErrorText></AdminSectionCard>;
   if (config.data === undefined) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION} busy><Hint>Loading…</Hint></AdminSectionCard>;
   // The section keeps its address when it does not apply, so the overview and an agent can still point at it.
   if (!claudeEnabled) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><Hint>Not available: Claude Code is off for this box. Turn it on under Agent engine and model.</Hint></AdminSectionCard>;
