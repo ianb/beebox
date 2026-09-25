@@ -10,8 +10,8 @@
 > This report preserves evidence and commands recorded during the 2026-07-31
 > and 2026-08-01 conversion. It has not been revalidated against the present
 > production server. See [`../assets.md`](../assets.md) for the current model,
-> [`../server-operations.md`](../server-operations.md) for current operations,
-> and [`../health-checks.md`](../health-checks.md) for current health checks.
+> [`../server/operations.md`](../server/operations.md) for current operations,
+> and [`../server/health-checks.md`](../server/health-checks.md) for current health checks.
 
 ## Recorded outcome
 

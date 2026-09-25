@@ -44,7 +44,7 @@ Design constraints, from the boxholder's framing (2026-09-12):
 - **`site/agent-prompt.ts`** renders a titled, id-addressed, copyable
   agent-directed prompt block. The home card already carries
   `{% agent-prompt id="install-with-your-agent" %}` pointing at
-  `raw.githubusercontent.com/.../agent-install.md`.
+  `raw.githubusercontent.com/.../install/agent.md`.
 - **`beebox/box-docs/`** (gitignored, ~5,300 lines, 66 files) is a generated
   reference corpus that is a pure function of the engine source:
   `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,

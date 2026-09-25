@@ -485,7 +485,7 @@ So:
   cloned box gets configured.
 - **`runHealthChecks`** — checks 1 and 5 register at `error` severity,
   so they surface on the dashboard and fail `bbx health` (exit 1) for
-  the deploy runbooks (`docs/health-checks.md`) without touching
+  the deploy runbooks (`docs/server/health-checks.md`) without touching
   serving.
 
 This is a strictly better answer to the plan's original critical gap

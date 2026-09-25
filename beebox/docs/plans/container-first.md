@@ -322,7 +322,7 @@ Rebuilt, with reason:
     `tailscale.env.example`, `.gitignore`, `README.md`),
     `container/smoke/` (the three harnesses plus the new update harness),
     `container/README.md` (the install and update guide, replacing
-    `docs/docker-install.md`; it leaves the `beebox/docs` tree and the docs
+    `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
     browser on purpose, since it documents files beside it), and
     `container/CLAUDE.md` (a short map). The root `CLAUDE.md` project list
     and the `beebox/CLAUDE.md` Guides table gain the new entries in Track E.
@@ -583,8 +583,8 @@ Rebuilt, with reason:
   or guides knows about `container/`.
 - **Why this needs to change.** `<root>/README.md:13-17` lists the
   from-source guide first; `<root>/site/cards/index.site-page.card:20-21`
-  does the same; `docs/agent-install.md:28-29` says the engine is *"this
-  repository (or a Docker image built from it)"*; `docs/developer-install.md:1-6`
+  does the same; `docs/install/agent.md:28-29` says the engine is *"this
+  repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
   presents Docker as an alternative. The docker README table still says
   `bbx serve /data/box/content` (`docker/README.md:11`). The root
   `CLAUDE.md` project list and the `beebox/CLAUDE.md` Guides table point at
@@ -601,10 +601,10 @@ Rebuilt, with reason:
   - `<root>/site/cards/index.site-page.card:18-31`: image first,
     from-source under a contributor line; the agent prompt points at
     `container/README.md`.
-  - `docs/agent-install.md`: the engine is a published image; the Docker
+  - `docs/install/agent.md`: the engine is a published image; the Docker
     path is the default and the from-source path is offered only when the
     user says they want to hack on the code.
-  - `docs/developer-install.md`: first paragraph names itself the
+  - `docs/install/developer.md`: first paragraph names itself the
     contributor path.
   - `container/README.md`: the guide, rewritten around the three commands,
     `update`, the three roots, the rollback procedure as the harness proved
@@ -612,7 +612,7 @@ Rebuilt, with reason:
     only, the "a box with its own dependencies" limitation, and the
     checklist sections kept.
   - Root `CLAUDE.md` project list and `beebox/CLAUDE.md` Guides table:
-    `container/` and its README replace the `docs/docker-install.md` row.
+    `container/` and its README replace the `docs/install/docker.md` row.
   - `src/frontend/src/components/settings/ScanUploaderSection.tsx:82-87`
     tells the user to `git clone` and `pnpm install` the scan uploader. That
     tool runs on the machine with the scanner, not in the box, so the

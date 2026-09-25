@@ -711,7 +711,7 @@ moved to `container/README.md` (doc-check clean)"*.
 **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
 the repository; a new top-level `container/` is not in that list and the plan
 does not say it will be added. `beebox/CLAUDE.md`'s Guides table row
-*"Docker install (local + VPS) | `docs/docker-install.md`"* points at the file
+*"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
 being moved out of the beebox docs tree. Also worth stating: moving the guide
 out of `beebox/docs/` removes it from the tree the docs browser and doc-check
 index, which is a deliberate trade (it becomes a project README) but is not

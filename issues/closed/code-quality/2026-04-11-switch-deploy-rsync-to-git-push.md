@@ -16,7 +16,7 @@ Option 1 (bare repo + post-receive) was considered and rejected: it moves the
 build — the most failure-prone step — onto the 4GB prod box that's serving
 live boxes, and its unique payoff (truthful server `git HEAD`) is cosmetic
 once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
-rollback runbook: `docs/server-operations.md`. A Codex adversarial review
+rollback runbook: `docs/server/operations.md`. A Codex adversarial review
 shaped the hardenings (clean-artifact boundary, checkout ownership
 validation, per-run deploy logs).
 

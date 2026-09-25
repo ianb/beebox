@@ -247,7 +247,7 @@ depends on this landing (the branch deletions read the collapsed shape).
 ### Track 3 — Docs + layout-spec cleanup
 
 `docs/box-layout.md:11-64` (rewrite "Shape versions" to single-shape),
-`docs/migrations.md` (remove box-packageify section), `docs/adding-a-box.md:91`,
+`docs/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
 `box-layout-types.ts` `shapeNotes` field + the three `box-layout-spec.ts`
 entries whose notes only encoded the v1/v2 difference, and check off Track H4 in
 `boxes-as-packages-v2.md`. **Explicitly out:** the unrelated `"legacy"`

@@ -2,7 +2,7 @@
 #
 # ONE EXAMPLE PROVISIONER, NOT THE INSTALL PATH — see hetzner/create-server.sh,
 # which uploads and runs this on the new server. To run a Bee Box, use the
-# container flow in docs/docker-install.md.
+# container flow in docs/install/docker.md.
 #
 # KNOWN GAP: this still generates the pre-hub `beebox-serve` unit (one process
 # serving every box) rather than `bbx engine hub` plus per-box units. The live server

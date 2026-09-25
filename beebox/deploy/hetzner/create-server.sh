@@ -5,7 +5,7 @@
 # This creates the specific shape of server the boxholder's deploy.sh ships to:
 # a Hetzner VPS, Ubuntu 24.04, nginx, systemd, DNS through Cloudflare. The
 # supported way to run a Bee Box is the container flow in
-# docs/docker-install.md; everything under deploy/hetzner/ is here because one
+# docs/install/docker.md; everything under deploy/hetzner/ is here because one
 # operator's rsync pipeline needs a host that looks like this, and is useful to
 # read if you are building your own.
 #

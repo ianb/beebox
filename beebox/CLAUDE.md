@@ -64,6 +64,6 @@ When a correction exposes missing durable guidance, put a short rule at the narr
 
 ## Guides
 
-Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organization and naming. Common entry points are [engineering principles](docs/engineering-principles.md), [testing](docs/testing.md), [cards](docs/cards-as-markdown.md), [API endpoints](docs/adding-api-endpoints.md), [box layout](docs/box-layout.md), [mobile contract](docs/mobile-contract.md), [secrets](docs/secrets.md), [server operations](docs/server-operations.md), and [deployment](deploy/README.md). Proposed work lives under `docs/plans/`; implemented plans and RFCs record history unless a current guide explicitly says otherwise.
+Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organization and naming. Common entry points are [engineering principles](docs/engineering-principles.md), [testing](docs/testing.md), [cards](docs/cards-as-markdown.md), [API endpoints](docs/adding-api-endpoints.md), [box layout](docs/box-layout.md), [mobile contract](docs/mobile-contract.md), [secrets](docs/secrets.md), [server operations](docs/server/operations.md), and [deployment](deploy/README.md). Proposed work lives under `docs/plans/`; implemented plans and RFCs record history unless a current guide explicitly says otherwise.
 
 @code-style.md

@@ -9,7 +9,7 @@
 #
 # This is deliberately NOT an abstraction over deployment styles. The supported
 # install-and-update path for everyone else is the container flow in
-# docs/docker-install.md; deploy.sh is one operator's rsync-to-VPS pipeline, and
+# docs/install/docker.md; deploy.sh is one operator's rsync-to-VPS pipeline, and
 # this file is how it learns which VPS.
 #
 # Sourced by deploy.sh, the prod-* diagnostics, and (via `bbx_deploy_target_file`)
@@ -156,7 +156,7 @@ require_deploy_target() {
   echo "  beebox/deploy/target.env (gitignored) names the server to deploy to." >&2
   echo "  Copy beebox/deploy/target.env.example to beebox/deploy/target.env and" >&2
   echo "  fill in BBX_DEPLOY_HOST." >&2
-  echo "  For the supported install-and-update path, see beebox/docs/docker-install.md." >&2
+  echo "  For the supported install-and-update path, see beebox/docs/install/docker.md." >&2
   exit 1
 }
 

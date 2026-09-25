@@ -7,9 +7,9 @@ where to put new material.
 
 | Topic | Location |
 |-------|----------|
-| Developer install (from source) | [docs/developer-install.md](developer-install.md) |
-| Docker install (local + VPS) | [docs/docker-install.md](docker-install.md) |
-| Agent-driven install (for a user's AI assistant) | [docs/agent-install.md](agent-install.md) |
+| Developer install (from source) | [docs/install/developer.md](install/developer.md) |
+| Docker install (local + VPS) | [docs/install/docker.md](install/docker.md) |
+| Agent-driven install (for a user's AI assistant) | [docs/install/agent.md](install/agent.md) |
 | Engineering principles | [docs/engineering-principles.md](engineering-principles.md) |
 | Module map (lib/shared/types boundary) | [docs/module-map.md](module-map.md) |
 | Design rationale | [docs/design/README.md](design/README.md) |
@@ -36,15 +36,15 @@ where to put new material.
 | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |
 | Procedures | [docs/procedure-implementation.md](procedure-implementation.md) |
 | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
-| Deployed-server health-check runbooks | [docs/health-checks.md](health-checks.md) |
+| Deployed-server health-check runbooks | [docs/server/health-checks.md](server/health-checks.md) |
 | Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
 | Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
 | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt-audits.md](prompt-audits.md)) |
 | Triage pipeline current guide | [docs/triage.md](triage.md) |
 | Questions subsystem current reference | [docs/questions.md](questions.md) |
 | Deployment | [deploy/README.md](../deploy/README.md) |
-| Server operations | [docs/server-operations.md](server-operations.md) |
-| Adding a box | [docs/adding-a-box.md](adding-a-box.md) |
+| Server operations | [docs/server/operations.md](server/operations.md) |
+| Adding a box | [docs/server/boxes.md](server/boxes.md) |
 | Box layout reference | [docs/box-layout.md](box-layout.md) |
 | Landmarks (navigation surface) | [docs/landmarks.md](landmarks.md) |
 | Client debug log | [docs/client-debug-log.md](client-debug-log.md) |

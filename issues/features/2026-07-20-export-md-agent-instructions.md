@@ -18,7 +18,7 @@ the doc is the feature, not an automated pipeline per destination.
 This is the third instance of a deliberate pattern: every user of this
 system has an agent by definition, so a well-written agent-legible
 operational doc IS the capability — same move as
-[agent-install](../../beebox/docs/agent-install.md) (agent adapts
+[agent-install](../../beebox/docs/install/agent.md) (agent adapts
 install to the environment) and the
 [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
 (committed prompts as process). It also demos the system's own thesis:

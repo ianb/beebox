@@ -88,7 +88,7 @@ prints nothing; the sweep commits each migration it applies to your box's git
 history, skips a box whose tree is dirty until next start, and stops at a
 migration that needs a human. None of that can stop the server coming up —
 watch `docker compose logs box` for what it did. See
-[`migrations.md`](./migrations.md).
+[`migrations.md`](../migrations.md).
 
 Set `BBX_SKIP_CONVERGE=1` to turn it off and run
 `docker compose run --rm box bbx migrate --sweep` yourself instead.
@@ -176,7 +176,7 @@ To record the run, keep the `certificate obtained` log line, the two
 > **Status: not yet exercised end-to-end.** The smoke harness
 > (`docker/smoke-docker.sh`, `docker/smoke-vps-install.sh`) does not cover
 > this path. Live proof is tracked in
-> [`issues/features/2026-07-19-installation-remaining-work.md`](../../issues/features/2026-07-19-installation-remaining-work.md)
+> [`issues/features/2026-07-19-installation-remaining-work.md`](../../../issues/features/2026-07-19-installation-remaining-work.md)
 > item 2 — treat the steps below as unverified until that item records a run.
 
 To reach the box privately over a [tailnet](https://tailscale.com/) with

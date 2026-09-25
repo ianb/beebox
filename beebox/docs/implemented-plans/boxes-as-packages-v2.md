@@ -490,8 +490,8 @@ the old shared `beebox-serve`. H4 (deletions) is **mostly done** — the v1 shap
 resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 paragraph below for exactly what shipped and what's intentionally still here. H5 (knowledge
 audits + docs rewrite) is done: four `box-packageify` audits landed and pass against `test1`
-(a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
-rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
+(a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
 statements fixed. The deploy *provisioning scripts* (`setup-server.sh`, `add-box.sh`) still
 target the pre-hub shape — documented as a known gap in `deploy/README.md` rather than silently
 left wrong.

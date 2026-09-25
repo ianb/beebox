@@ -2458,7 +2458,7 @@ and a caution against reading the changelog as the list of installable versions.
     controls. Good to have, not act-now.
   - `Fixed dynamic workflows inside CPU-limited containers using the host
     machine's core count` — relevant to the documented Docker/VPS install
-    (`beebox/docs/docker-install.md`), where a container CPU limit is
+    (`beebox/docs/install/docker.md`), where a container CPU limit is
     normal.
   - Vertex/Bedrock SSE keepalives and the `ANTHROPIC_BASE_URL` gateway fixes do
     not apply — beebox talks to the Anthropic API directly.
@@ -2594,7 +2594,7 @@ outstanding work — it is durable evidence.
   `CLAUDE_CODE_OAUTH_TOKEN` with a stored login's short-lived token, breaking
   headless sessions until restart. **This is the most deployment-relevant item
   in the range.** `CLAUDE_CODE_OAUTH_TOKEN` is beebox's documented server
-  auth path (`beebox/docs/docker-install.md`,
+  auth path (`beebox/docs/install/docker.md`,
   `docs/plans/installation-story.md`), and box agents on a Docker/VPS install
   are exactly the long-running headless sessions described. Keep this as the
   explanation for any past "box agent stopped working until the service was

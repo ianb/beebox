@@ -36,5 +36,5 @@ hook `bbx init` installs runs `bbx validate --pre-commit` on every box commit,
 so a hard error would block box commits on any machine without shellcheck.
 
 Provisioning: add `shellcheck` to `deploy/setup-server.sh:22` and the
-developer install lists (`docs/developer-install.md:32,36`) — today only the
+developer install lists (`docs/install/developer.md:32,36`) — today only the
 dev-machine `schedules/` gate needs it, and it is not in either list.

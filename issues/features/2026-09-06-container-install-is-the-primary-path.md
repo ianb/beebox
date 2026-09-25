@@ -24,7 +24,7 @@ What follows from it:
 - The README front door and the docs the `launch-docs` session is writing
   lead with `docker compose up`; the from-source guide moves under "for
   contributors."
-- `beebox/docs/docker-install.md` becomes the path a stranger actually
+- `beebox/docs/install/docker.md` becomes the path a stranger actually
   walks, so its remaining unverified steps in
   `2026-07-19-installation-remaining-work.md` (real ACME issuance, the
   in-container `claude auth login` flow, Tailscale-only) move up in

@@ -344,7 +344,7 @@ export const healthRouter = router({
    * Served from a stale-while-revalidate snapshot (`health-snapshot.ts`) so the
    * dashboard's batch never waits on the deep probes. `{ fresh: true }` forces a
    * live run — that's the contract deploy runbooks use through the diag-key
-   * bypass (see docs/health-checks.md). `bbx health` and `/api/health` call
+   * bypass (see docs/server/health-checks.md). `bbx health` and `/api/health` call
    * `runHealthChecks` directly and are unaffected.
    */
   check: publicProcedure

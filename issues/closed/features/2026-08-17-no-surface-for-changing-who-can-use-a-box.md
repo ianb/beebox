@@ -65,4 +65,4 @@ Open questions:
 
 Until something exists, `deploy/add-box.sh --allow` at creation time and a
 hand-edit afterwards is the honest documented answer, and
-[`docs/adding-a-box.md`](../../../beebox/docs/adding-a-box.md) says so.
+[`docs/server/boxes.md`](../../../beebox/docs/server/boxes.md) says so.

@@ -5,7 +5,7 @@
 # Executable approximation of the "real VPS run of the compose file" rollout
 # verification in docs/plans/installation-story.md. A privileged `docker:dind`
 # container stands in for a fresh VPS: it runs its own Docker daemon, and
-# inside it we follow docs/docker-install.md's VPS walkthrough as literally as
+# inside it we follow docs/install/docker.md's VPS walkthrough as literally as
 # feasible:
 #
 #   clone the repo → `docker compose build` (a full ~2GB image build INSIDE

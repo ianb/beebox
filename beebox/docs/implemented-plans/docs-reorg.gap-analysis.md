@@ -135,7 +135,7 @@ answered — remain open questions in `docs-reorg.md`.
 5. **`src/hub/hub-server.ts:1-14` comment says the hub never lazy-spawns —
    contradicted by `resolveEndpoint()` and `supervisor.ts` `lazy: true`**
    (added 2026-07-04). Fix comment; give lazy-hub a sentence in
-   `docs/adding-a-box.md`.
+   `docs/server/boxes.md`.
 6. **`src/cli/commands/boxes.ts:1-8` says `bbx serve` reads boxes.json** —
    contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
    `docs/user-stories.md` asserts the old behavior as verified.

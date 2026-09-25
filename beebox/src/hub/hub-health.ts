@@ -18,7 +18,7 @@ import { assertNever } from "../lib/invariant.js";
  *  box is broken; `"ok"` (→ 200) otherwise, including a fleet that's merely
  *  idle. A liveness verdict, not a readiness one — a single broken child does
  *  not mean the hub PROCESS should be restarted (see the canary route and
- *  `docs/health-checks.md` for the liveness/readiness split). */
+ *  `docs/server/health-checks.md` for the liveness/readiness split). */
 export type HubVerdict = "ok" | "unhealthy";
 
 /**

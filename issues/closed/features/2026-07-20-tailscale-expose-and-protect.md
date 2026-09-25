@@ -38,10 +38,10 @@ general capability, not personal plumbing.
 
 This is the whole point of the item. Tailscale is **already documented** — as a
 first-class alternative in `beebox/docs/plans/installation-story.md` and
-as a variant in `beebox/docs/docker-install.md` (keep loopback mapping,
+as a variant in `beebox/docs/install/docker.md` (keep loopback mapping,
 join tailnet, zero open ports) — and has **never once been exercised**
 ([installation-remaining-work](../../features/2026-07-19-installation-remaining-work.md) item 2:
-"documented in `docs/docker-install.md`, never exercised (needs a tailnet + auth
+"documented in `docs/install/docker.md`, never exercised (needs a tailnet + auth
 key)").
 
 So "write a good guide" is the failure mode, not the deliverable. Another
@@ -77,10 +77,10 @@ it open this box — and Tailscale answers only the first.
 
 - `bin/doctor.ts` (+ `bin/doctor.test.ts`) — monorepo preflight doctor, run as
   `pnpm run doctor`. Note `pnpm doctor` collides with pnpm's own builtin, a
-  gotcha `docs/developer-install.md` has to warn about — a real argument for a
+  gotcha `docs/install/developer.md` has to warn about — a real argument for a
   `bbx`-side entry point.
 - `beebox/src/cli/commands/health.ts` — `bbx health` for a running box
-  (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
+  (`docs/server/health-checks.md`). Decide where a Tailscale check belongs rather than
   adding a third diagnostic surface by default.
 - Docker compose already defaults to `127.0.0.1:3210:3210`, with public access
   only via an explicit Caddy profile or Tailscale — the architecture already

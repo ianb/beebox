@@ -126,7 +126,7 @@ failure mode — it fails in front of a human who is actively trying to log in.
    `runHealthChecks()` alongside the scheduled-task table, in both text and
    `--json`. Error-severity failures join the exit-code-1 condition; warnings
    (including this one) do not.
-7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
+7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/server/health-checks.md`.
 8. **Tests** — doctests for the classifier, the flag lifecycle
    (mark → health check → clear on new grant), the health check's states, and
    the alert latch.

@@ -17,7 +17,7 @@ coding, the workflow, agent testing, and the technologies in use.
 
 ## Set up
 
-Follow [the developer install guide](beebox/docs/developer-install.md) for prerequisites and the
+Follow [the developer install guide](beebox/docs/install/developer.md) for prerequisites and the
 install sequence. Once installed, create your own test box with `bbx init`
 rather than reusing anyone else's; a box is a data directory, so making a new
 one is cheap.
