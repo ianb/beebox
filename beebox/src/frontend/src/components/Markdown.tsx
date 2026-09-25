@@ -23,7 +23,6 @@
 
 import { Fragment, useMemo } from "react";
 import * as React from "react";
-import { useParams } from "@tanstack/react-router";
 import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
@@ -46,6 +45,7 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { parseMarkdown } from "../lib/markdoc-parse";
+import { useBoxSlug } from "../lib/box-slug";
 import { transformedResolvedImageUrl } from "../lib/image-transform-url";
 import type { ReactNode } from "react";
 
@@ -293,7 +293,7 @@ export function Markdown({
   card,
 }: MarkdownProps) {
   prose = prose ?? false;
-  const { boxSlug } = useParams({ strict: false });
+  const boxSlug = useBoxSlug();
   const cardPath = card?.path ?? null;
   const bodyLineOffset = card?.bodyLineOffset ?? null;
   const { tree, mergedComponents } = useMemo(() => {

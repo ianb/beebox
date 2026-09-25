@@ -11,6 +11,6 @@ declare module "beebox/view-widgets" {
 
   export const CardLink: ComponentType<{ cardRef: string; view?: string; params?: Record<string, string>; children?: ReactNode }>;
   export const CardRef: ComponentType<{ cardRef: string; view?: string; params?: Record<string, string>; children?: ReactNode }>;
-  /** Supplies the node view host so card widgets resolve their context in `bbx view test`. */
-  export const NodeViewHostProvider: ComponentType<{ children: ReactNode }>;
+  /** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view test`. */
+  export const NodeViewHostProvider: ComponentType<{ boxSlug?: string; children: ReactNode }>;
 }

@@ -181,14 +181,15 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     try {
       // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
       const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
-      const props = buildProps({ cards, files, params, boxSlug: await resolveBoxSlug(boxRoot) });
-      // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)
+      const boxSlug = await resolveBoxSlug(boxRoot);
+      const props = buildProps({ cards, files, params, boxSlug });
+      // Wrap in the node view host so the widgets (<CardLink>/<CardRef>/<Markdown>)
       // resolve their context. NodeViewHostProvider comes from the same
       // dist/view-widgets bundle the view's widgets do (view.ts self-references
       // the package's exports map), so the ViewHostContext identity matches.
       const { NodeViewHostProvider } = await import("beebox/view-widgets");
       html = renderToString(
-        createElement(NodeViewHostProvider, null, createElement(viewMod.default, props)),
+        createElement(NodeViewHostProvider, { boxSlug, children: createElement(viewMod.default, props) }),
       );
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
