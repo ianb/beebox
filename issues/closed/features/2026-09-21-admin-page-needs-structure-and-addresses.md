@@ -6,7 +6,18 @@ labels: [admin, ui, agent-surface]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder working in admin
+resolution: implemented
 ---
+
+> Closed 2026-09-25 on `worktree-admin-structure` (commits `10a492c13`,
+> `2380b35ad`, `997ddb225`). Implementation matches the "Decision and
+> implementation" section below: five pill tabs with Overview default, live
+> per-section status, one section registry
+> (`beebox/src/frontend/src/components/admin/admin-sections.ts`) driving scope
+> badges, `bbx-admin-<section>` region landmarks, and `?tab=<tab>` deep links.
+> The related Secrets internal-disclosure gap
+> (`../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md`)
+> is untouched and stays open.
 
 The boxholder: "the admin page is very large and needs organization, sub-tabs
 or something. Also should be labeled for the AI."
@@ -22,7 +33,7 @@ scrolling; the page has no navigation of its own.
 Finding a control means knowing which of the 14 sections owns it. Several are
 large in their own right: Secrets alone is 8 files, and it has already grown
 its own internal disclosure for the advanced case
-([grant flow](../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md)),
+([grant flow](../../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md)),
 which is a section solving the page's problem locally.
 
 ## The second half is not cosmetic
@@ -71,7 +82,7 @@ is the drift the repo's standing preference warns about.
   that section selected follows naturally, and an agent could hand the
   boxholder a link rather than directions.
 
-Related: [card chrome has no bbx- ids](2026-08-23-card-chrome-controls-have-no-bbx-ids.md)
+Related: [card chrome has no bbx- ids](../../features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md)
 is the same gap on a different surface.
 
 ## Decision and implementation (2026-09-25, worktree-admin-structure)
