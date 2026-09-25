@@ -13,6 +13,7 @@ import {
   parseRelativeStart,
   resolveStartEpoch,
   validateTodoAttributes,
+  recheckDefers,
   deriveTodoPlateState,
   type TodoPlateInput,
 } from "../../src/shared/todo-model.js";
@@ -27,7 +28,7 @@ function errIds(attrs: Parameters<typeof validateTodoAttributes>[0]): string {
 }
 
 function noAttrs(overrides: Partial<Parameters<typeof validateTodoAttributes>[0]>) {
-  return { by: undefined, created: undefined, due: undefined, start: undefined, ...overrides };
+  return { by: undefined, created: undefined, due: undefined, start: undefined, recheck: undefined, ...overrides };
 }
 ```
 
@@ -175,6 +176,39 @@ valid
 errIds(noAttrs({ by: "Dana" }))
 =>
 valid
+```
+
+### `recheck` is a date or `never`
+
+`recheck` is the todo-review's bookkeeping (`docs/plans/todos-ui.md`, Track
+7): the date the review may next list the todo, or `never`. Anything else is
+a validation error that says both accepted forms.
+
+```ts
+errIds(noAttrs({ recheck: "2026-10-15" }))
+=>
+valid
+
+errIds(noAttrs({ recheck: "never" }))
+=>
+valid
+
+errIds(noAttrs({ recheck: "next month" }))
+=>
+todo-invalid-recheck
+
+validateTodoAttributes(noAttrs({ recheck: "Never" }))[0].message
+=> {% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or "never": "Never"
+```
+
+The sweep skips a todo whose `recheck` is `never` or still ahead of today;
+on the day itself, or after it, the todo is back in review. A malformed value
+defers nothing (validation is what reports it).
+
+```ts
+const today = parseIsoDate("2026-09-25");
+JSON.stringify(["2026-09-26", "2026-09-25", "2026-09-01", "never", undefined, "soon"].map((r) => recheckDefers(r, today)))
+=> [true,false,false,true,false,false]
 ```
 
 ## Plate-state derivation

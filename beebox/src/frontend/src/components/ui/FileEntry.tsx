@@ -35,6 +35,12 @@ interface FileEntryProps {
    * is not shown.
    */
   onPanel?: (summary: FileSummary<unknown>) => void;
+  /**
+   * When given, clicking the title opens the file (a list opens it in the
+   * other workspace pane) instead of previewing it. The peek button still
+   * previews in place.
+   */
+  onOpen?: (summary: FileSummary<unknown>) => void;
   /** Outer-layout classes only (margin, flex-self, sizing, position). */
   className?: string;
 }
@@ -182,7 +188,7 @@ function TitleSlot({ summary, compact, boxSlug }: { summary: FileSummary<unknown
   );
 }
 
-export function FileEntry({ summary, compact, onPanel, className }: FileEntryProps) {
+export function FileEntry({ summary, compact, onPanel, onOpen, className }: FileEntryProps) {
   compact = compact ?? false;
   const [expanded, setExpanded] = useState(false);
   const { boxSlug } = useParams({ strict: false });
@@ -229,8 +235,8 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
     >
       <button
         type="button"
-        onClick={() => setExpanded(true)}
-        aria-label={`Preview ${summary.title}`}
+        onClick={() => { if (onOpen) onOpen(summary); else setExpanded(true); }}
+        aria-label={onOpen ? `Open ${summary.title}` : `Preview ${summary.title}`}
         className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
         <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />

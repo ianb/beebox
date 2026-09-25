@@ -26,6 +26,9 @@ import { assertNever, invariant } from "./invariant.js";
  */
 export const TODO_AGENT = "agent";
 
+/** The stock box-wide `todo-view` card, "The Plate" (`core/box/defaults.ts`, `installTodoView`). */
+export const PLATE_CARD_PATH = "_content/plate.todo-view.card";
+
 /**
  * True when a todo is the BOXHOLDER's to act on — `assigned` absent, or
  * naming anyone but the agent.
@@ -137,6 +140,7 @@ export interface TodoAttributes {
   created: string | undefined;
   due: string | undefined;
   start: string | undefined;
+  recheck: string | undefined;
 }
 
 export interface TodoValidationError {
@@ -145,8 +149,37 @@ export interface TodoValidationError {
 }
 
 /**
+ * The `recheck` value that retires a todo from the todo-review sweep for good
+ * (`docs/plans/todos-ui.md`, Track 7). Any other `recheck` is an ISO date.
+ */
+export const RECHECK_NEVER = "never";
+
+/**
+ * A parsed `recheck`: `"never"`, the UTC-midnight epoch of its date, or `null`
+ * when absent or malformed (validation reports the malformed case).
+ */
+export function parseRecheck(recheck: string | undefined): number | typeof RECHECK_NEVER | null {
+  if (recheck === undefined || recheck === "") return null;
+  if (recheck === RECHECK_NEVER) return RECHECK_NEVER;
+  return parseIsoDate(recheck);
+}
+
+/**
+ * True when the todo-review sweep must not list this todo today: its `recheck`
+ * is `never`, or a date after `todayEpoch` (a box-local calendar-date epoch,
+ * `boxLocalDateEpoch`). `recheck` is the review's bookkeeping only: nothing
+ * else (plate state, badge, counts, order) reads it.
+ */
+export function recheckDefers(recheck: string | undefined, todayEpoch: number): boolean {
+  const parsed = parseRecheck(recheck);
+  if (parsed === null) return false;
+  return parsed === RECHECK_NEVER || parsed > todayEpoch;
+}
+
+/**
  * Validate a todo's date/provenance attributes per the plan's rules:
  * `created`/`due`/`start` must be valid dates (or a valid relative `start`);
+ * `recheck` must be a valid date or `never`;
  * a relative `start` requires `due`; an absolute `start` after an absolute
  * `due` is an error; `created` is required when `by="agent"`. Does NOT
  * validate `status` — that's a Markdoc `matches` enum, enforced by the
@@ -154,7 +187,7 @@ export interface TodoValidationError {
  */
 export function validateTodoAttributes(attrs: TodoAttributes): TodoValidationError[] {
   const errors: TodoValidationError[] = [];
-  const { by, created, due, start } = attrs;
+  const { by, created, due, start, recheck } = attrs;
 
   if (created !== undefined && created !== "" && parseIsoDate(created) === null) {
     errors.push({
@@ -193,6 +226,13 @@ export function validateTodoAttributes(attrs: TodoAttributes): TodoValidationErr
         message: `{% todo %} \`start\` ("${start}") is after \`due\` ("${due}")`,
       });
     }
+  }
+
+  if (recheck !== undefined && recheck !== "" && parseRecheck(recheck) === null) {
+    errors.push({
+      id: "todo-invalid-recheck",
+      message: `{% todo %} \`recheck\` must be an ISO date (YYYY-MM-DD) or "never": "${recheck}"`,
+    });
   }
 
   if (by === "agent" && (created === undefined || created === "")) {
@@ -254,6 +294,7 @@ export const TodoEntrySchema = z
     created: z.string().optional(),
     start: z.string().optional(),
     due: z.string().optional(),
+    recheck: z.string().optional(),
     status: z.enum(TODO_STATUSES).optional(),
     "see-also": z.array(TodoSeeAlsoEntrySchema).optional(),
   })
@@ -263,6 +304,7 @@ export const TodoEntrySchema = z
       created: entry.created,
       due: entry.due,
       start: entry.start,
+      recheck: entry.recheck,
     })) {
       ctx.addIssue({ code: "custom", message: error.message });
     }

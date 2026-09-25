@@ -1,18 +1,17 @@
 # The todo-review sweep (`core/todo/review-sweep.ts`)
 
 Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 5b:
-`runTodoReviewSweep(boxRoot)` computes three sets of open todos (escalated /
-stirring / stale) and, when any is nonempty, queues a `todo-review-job` card
-— the compact brief that reaches the reactor. All-empty does nothing at all;
-only `stirring` needs the persisted `lastSweepAt` baseline (escalated/stale
-are recomputed fresh every pass).
+`computeTodoReviewSets` computes three sets of open todos (escalated /
+stirring / stale). Only `stirring` needs a baseline (the day of the last
+review); escalated and stale are recomputed fresh every pass. Since
+`docs/plans/todos-ui.md` Track 7 the sweep writes nothing: `bbx engine
+todo-review check` owns the baseline and the brief
+(`test/cli/commands/todo-review.doctest.md`).
 
 ```ts setup
-import { runTodoReviewSweep } from "../../src/core/todo/review-sweep.js";
-import { findJobCards } from "../../src/core/reactor/job-discovery.js";
+import { computeTodoReviewSets, boxTodayEpoch, toBriefItem } from "../../src/core/todo/review-sweep.js";
+import { parseIsoDate } from "../../src/shared/todo-model.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 
 const MEMO_FM = "status: new\ncreated: 2026-07-01T10:00:00Z\n";
 
@@ -32,24 +31,26 @@ async function seedBox() {
   return box;
 }
 
-async function jobFiles(box: { root: string }) {
-  return findJobCards(path.join(box.root, "_bookkeeping/jobs"), { sourceFilter: "todo-review" });
+/** The sets' todo ids, swept with `since` as the stirring baseline (an ISO date; null = the box's first review). */
+async function sweep(root: string, since: string | null) {
+  const lastSweepEpoch = since === null ? 0 : (parseIsoDate(since) ?? 0);
+  const sets = await computeTodoReviewSets(root, { lastSweepEpoch, todayEpoch: await boxTodayEpoch(root), neverDefers: () => true });
+  return JSON.stringify({
+    escalated: sets.escalated.map((t) => t.id),
+    stirring: sets.stirring.map((t) => t.id),
+    stale: sets.stale.map((t) => t.id),
+  });
 }
 ```
 
-## All sets empty: no job, no side effect
+## All sets empty
 
 ```ts
 const box = await seedBox();
 setTime("2026-07-28T12:00:00.000Z");
 await box.write("store/a.memo.card", memo("Just a plain memo, no todos.\n"));
-
-const result = await runTodoReviewSweep(box.root);
-JSON.stringify({ escalated: result.escalated.length, stirring: result.stirring.length, stale: result.stale.length, jobPath: result.jobPath })
-=> {"escalated":0,"stirring":0,"stale":0,"jobPath":null}
-
-(await jobFiles(box)).length
-=> 0
+await sweep(box.root, null)
+=> {"escalated":[],"stirring":[],"stale":[]}
 ```
 
 ## Escalated, stirring, stale, and the ones that don't qualify
@@ -60,9 +61,7 @@ old undated one (stale), a recent undated one (not old enough — excluded),
 and a `done` one with a past `due` (excluded — sets are open-todos only).
 
 ```ts continue
-const box2 = await seedBox();
-setTime("2026-07-28T12:00:00.000Z");
-await box2.write(
+await box.write(
   "store/b.memo.card",
   memo(
     '{% todo id="fix-escalated" due="2026-07-01" %}Escalated item{% /todo %}\n\n' +
@@ -73,162 +72,41 @@ await box2.write(
     '{% todo id="fix-done" status="done" due="2026-07-01" %}Done item{% /todo %}\n'
   )
 );
-
-const result2 = await runTodoReviewSweep(box2.root);
-JSON.stringify({
-  escalated: result2.escalated.map((t) => t.id),
-  stirring: result2.stirring.map((t) => t.id),
-  stale: result2.stale.map((t) => t.id),
-})
+await sweep(box.root, null)
 => {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"stale":["fix-stale"]}
 ```
 
-A job card got queued, carrying the compact brief:
+## Stirring is relative to the baseline; escalated and stale are not
+
+With a baseline after the stirring todo's `start`, it is no longer stirring;
+the escalated and stale ones are still reported. A todo whose `start` falls
+after the baseline is stirring again.
 
 ```ts continue
-result2.jobPath !== null
-=> true
+await sweep(box.root, "2026-07-25")
+=> {"escalated":["fix-escalated"],"stirring":[],"stale":["fix-stale"]}
 
-const jobContent = await fs.readFile(path.join(box2.root, result2.jobPath), "utf-8");
-jobContent.includes("Escalated item")
-=> true
-
-jobContent.includes("Stirring item")
-=> true
-
-jobContent.includes("Stale item")
-=> true
-
-jobContent.includes("Quiet item")
-=> false
-
-jobContent.includes("Fresh undated item")
-=> false
-
-jobContent.includes("Done item")
-=> false
-
-(await jobFiles(box2)).length
-=> 1
+await sweep(box.root, "2026-07-19")
+=> {"escalated":["fix-escalated"],"stirring":["fix-stirring"],"stale":["fix-stale"]}
 ```
 
-Each item says where it was written — what the card is, and the heading above
-it — so the brief reads in context without the agent opening anything.
+## Each brief item says where it was written
+
+What the card is, and the heading above it, so the brief reads in context
+without the agent opening anything.
 
 ```ts continue
-const box3 = await seedBox();
-setTime("2026-07-28T12:00:00.000Z");
-await box3.write(
+await box.write(
   "store/Porch.doc.card",
   "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
 );
-
-const result3a = await runTodoReviewSweep(box3.root);
-JSON.stringify([result3a.escalated[0].card, result3a.escalated[0].section])
-=> ["Porch rebuild","Decking"]
-
-const jobContent3 = await fs.readFile(path.join(box3.root, result3a.jobPath), "utf-8");
-jobContent3.includes("section: Decking")
-=> true
-```
-
-Both fields are optional on the job card's schema, so a brief queued before
-they existed still validates.
-
-## Stirring dedups on the next sweep; escalated/stale don't
-
-Once the job is cleared (simulating `bbx finish`), a second sweep at the
-same moment still reports the still-escalated and still-stale items — but
-NOT the stirring one, because its `start` already crossed before the first
-sweep's `lastSweepAt` baseline.
-
-```ts continue
-await fs.rm(path.join(box2.root, result2.jobPath));
-
-const result3 = await runTodoReviewSweep(box2.root);
-JSON.stringify({
-  escalated: result3.escalated.map((t) => t.id),
-  stirring: result3.stirring.map((t) => t.id),
-  stale: result3.stale.map((t) => t.id),
-})
-=> {"escalated":["fix-escalated"],"stirring":[],"stale":["fix-stale"]}
-
-result3.jobPath !== null
-=> true
-```
-
-A *new* todo whose `start` crosses after that baseline still gets reported
-as stirring on the next sweep:
-
-```ts continue
-await fs.rm(path.join(box2.root, result3.jobPath));
-await box2.write(
-  "store/c.memo.card",
-  memo('{% todo id="fix-new-start" start="2026-07-29" due="2026-08-15" %}Newly on the plate{% /todo %}\n')
-);
-
-setTime("2026-07-30T12:00:00.000Z");
-const result4 = await runTodoReviewSweep(box2.root);
-JSON.stringify(result4.stirring.map((t) => t.id))
-=> ["fix-new-start"]
-```
-
-## Durability: a still-pending job must not let the baseline swallow an unreported item
-
-If a `todo-review` job from an earlier pass is still pending, `queueReviewJob`
-declines to queue a second one. The baseline must NOT advance past a
-newly-stirring item computed during that skipped pass — otherwise the item is
-folded into `lastSweepDateEpoch` and never makes it into any job at all, even
-once the pending job is finally cleared and a fresh sweep runs (this was the
-bug: the baseline used to be saved unconditionally, before the code even knew
-whether a job got queued).
-
-```ts
-const box5 = await seedBox();
-setTime("2026-07-28T12:00:00.000Z");
-await box5.write(
-  "store/d.memo.card",
-  memo('{% todo id="s1" start="2026-07-28" due="2026-08-15" %}First stirring item{% /todo %}\n')
-);
-const sweep1 = await runTodoReviewSweep(box5.root);
-sweep1.jobPath !== null
-=> true
-```
-
-A second stirring item crosses the very next day, while sweep1's job is still
-sitting unprocessed:
-
-```ts continue
-setTime("2026-07-29T12:00:00.000Z");
-await box5.write(
-  "store/e.memo.card",
-  memo('{% todo id="s2" start="2026-07-29" due="2026-08-15" %}Second stirring item{% /todo %}\n')
-);
-const sweep2 = await runTodoReviewSweep(box5.root);
-sweep2.jobPath
-=> null
-
-JSON.stringify(sweep2.stirring.map((t) => t.id))
-=> ["s2"]
-```
-
-The pending job now clears (`bbx finish`), and a third sweep runs. Without the
-durability fix, sweep2 would already have advanced the baseline past
-2026-07-29, and `"s2"` would silently vanish here — never having appeared in
-any job a human or agent actually saw:
-
-```ts continue
-await fs.rm(path.join(box5.root, sweep1.jobPath));
-const sweep3 = await runTodoReviewSweep(box5.root);
-sweep3.jobPath !== null
-=> true
-
-JSON.stringify(sweep3.stirring.map((t) => t.id))
-=> ["s2"]
+const sets = await computeTodoReviewSets(box.root, { lastSweepEpoch: 0, todayEpoch: await boxTodayEpoch(box.root), neverDefers: () => true });
+JSON.stringify(toBriefItem(sets.escalated.find((t) => t.id === "deck"), "escalated"))
+=> {"locator":"store/Porch.doc.card:6","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Decking"}
 ```
 
 ```ts cleanup
-await box5.cleanup();
+await box.cleanup();
 ```
 
 ## Staleness compares box-local calendar days, not a raw UTC instant
@@ -250,11 +128,37 @@ await boxTz.write(
   "store/f.memo.card",
   memo('{% todo id="just-turned-stale" created="2026-06-13" %}Undated, aging{% /todo %}\n')
 );
-const tzResult = await runTodoReviewSweep(boxTz.root);
-JSON.stringify(tzResult.stale.map((t) => t.id))
-=> ["just-turned-stale"]
+await sweep(boxTz.root, null)
+=> {"escalated":[],"stirring":[],"stale":["just-turned-stale"]}
 ```
 
 ```ts cleanup
 await boxTz.cleanup();
+```
+
+## A `recheck` still ahead, or `never`, keeps a todo out of every set
+
+`recheck` is when the review said it would look again
+(`docs/plans/todos-ui.md`, Track 7). Until that day the todo is left out of
+whichever set it would otherwise be in; on the day, it is back. `never` keeps
+it out for good. A done todo is out regardless.
+
+```ts
+const boxR = await seedBox();
+setTime("2026-07-28T12:00:00.000Z");
+await boxR.write(
+  "store/r.memo.card",
+  memo(
+    '{% todo id="later" due="2026-07-01" recheck="2026-08-10" %}Escalated, recheck ahead{% /todo %}\n\n' +
+    '{% todo id="today" due="2026-07-01" recheck="2026-07-28" %}Escalated, recheck today{% /todo %}\n\n' +
+    '{% todo id="retired" created="2026-01-01" recheck="never" %}Stale, retired{% /todo %}\n\n' +
+    '{% todo id="stir" start="2026-07-20" due="2026-08-15" recheck="2026-09-01" %}Stirring, recheck ahead{% /todo %}\n'
+  )
+);
+await sweep(boxR.root, null)
+=> {"escalated":["today"],"stirring":[],"stale":[]}
+```
+
+```ts cleanup
+await boxR.cleanup();
 ```

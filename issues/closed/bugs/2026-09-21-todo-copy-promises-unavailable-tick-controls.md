@@ -1,12 +1,19 @@
 ---
 title: "Todo card copy promises tick controls that the v1 renderer cannot provide"
-workstream: unattached
+workstream: todos-ui
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — F newcomer journey
 priority: important
+resolution: implemented
 ---
+
+**Closed (2026-09-25, todos-ui Track 3).** `todos.setStatus`
+(`beebox/src/webapp/trpc/routers/todos.ts`) makes the tick control real: the
+checkbox writes `status` back through the tRPC route and the "+ to chat"
+action drops a note into chat. The copy now matches the capability. See
+`beebox/docs/implemented-plans/todos-ui.md` Track 3.
 
 The authored todo card says “Tick them off as they're done”, but the current
 `{% todo %}` renderer and the Plate are explicitly read-only. A newcomer sees
@@ -28,4 +35,4 @@ The fix could change the authored guidance to match the current interaction or
 make the controls real. Do not clear the broader todo rendering manual-test
 gate based on this report.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

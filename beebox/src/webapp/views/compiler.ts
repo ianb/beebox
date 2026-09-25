@@ -119,7 +119,8 @@ const viewWidgetsExternalPlugin: esbuild.Plugin = {
     build.onLoad({ filter: /.*/, namespace: "view-widgets-shim" }, () => ({
       contents: `const W = window.__bbxViewWidgets;
 export const CardLink = W.CardLink;
-export const CardRef = W.CardRef;`,
+export const CardRef = W.CardRef;
+export const Markdown = W.Markdown;`,
       loader: "js",
     }));
   },

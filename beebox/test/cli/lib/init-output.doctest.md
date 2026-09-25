@@ -38,8 +38,8 @@ const fresh = await withOutput(() => runInit(boxRoot, { branch: "main" }));
 JSON.stringify({
   banner: fresh[0].startsWith("Initialized Bee Box at "),
   structure: fresh.includes("Directory structure created:"),
-  procedures: fresh.some((l) => l.startsWith("Installed 5 procedure(s)")),
-  schedules: fresh.some((l) => l.startsWith("Installed 7 schedule(s)")),
+  procedures: fresh.some((l) => l.startsWith("Installed 6 procedure(s)")),
+  schedules: fresh.some((l) => l.startsWith("Installed 8 schedule(s)")),
   personality: fresh.includes("Installed _config/main.personality.card"),
   nextStep: fresh.some((l) => l.includes("Next: run 'bbx engine serve'")),
 })

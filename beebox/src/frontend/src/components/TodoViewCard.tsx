@@ -4,8 +4,10 @@
  *
  * A `todo-view` card is a live query, not authored content: its own directory
  * is the query's `here`, its frontmatter supplies `glob`/`status`/`assigned`,
- * and this component renders whatever `collections.query` returns. Read-only
- * — checking a todo off is editing the card it was written in.
+ * and this component renders whatever `collections.query` returns. The list
+ * never edits itself: ticking a line (`todo/TodoItem.tsx`, through the
+ * `TodoActionsContext` its `FileView` provides) edits the card that todo was
+ * written in, and the `file-change` that follows refreshes the list.
  *
  * Two controls change what is shown, and neither is a card field: grouping
  * and "show finished" are view state, so they ride in the URL, survive
@@ -26,99 +28,40 @@ import { ErrorText } from "./ui/ErrorText";
 import { StatusMessage } from "./ui/StatusMessage";
 import { Heading } from "./ui/Heading";
 import { Stack } from "./ui/Stack";
-import { Row } from "./ui/Row";
-import { Toggle } from "./ui/Toggle";
-import { TabBar } from "./ui/TabBar";
+import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { busEventData } from "../lib/bus-events";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { CardRow } from "./todo-view/CardRow";
 import { DatedStrip } from "./todo-view/DatedStrip";
 import {
+  Controls,
+  IssuesSection,
+  optionsFrom,
+  PlateHeadline,
+  ScopeLine,
+  type ViewOptions,
+} from "./todo-view/TodoViewControls";
+import {
   datedTodos,
   hereForCard,
+  matchingItemCount,
   resolveTodoViewStatusFilter,
   statusFilterWithFinished,
   type TodoResult,
 } from "./todo-view-card-logic";
 import type { RendererProps } from "../file-type-registry";
 
-type Grouping = "place" | "plate";
-
 function stringField(fm: Record<string, unknown>, key: string): string | undefined {
   const value = fm[key];
   return typeof value === "string" ? value : undefined;
 }
 
-interface ViewOptions {
-  group: Grouping;
-  showFinished: boolean;
-}
-
-function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions {
-  const view = viewState ?? {};
-  return {
-    group: view["group"] === "plate" ? "plate" : "place",
-    showFinished: view["showFinished"] === true,
-  };
-}
-
-function ScopeLine({ result }: { result: TodoResult }) {
-  const { here, glob, includeReferring } = result.query;
-  const place = here === "" ? "the whole box" : here;
-  const scope = glob === `${here}/**` || (here === "" && glob === "**/*.card") ? place : `${place} (${glob})`;
-  return (
-    <Text as="div" size="xs" tone="muted">
-      Scope: {scope}
-      {includeReferring ? ", plus todos elsewhere that link here" : null}
-    </Text>
-  );
-}
-
-function IssuesSection({ issues }: { issues: TodoResult["issues"] }) {
-  if (issues.length === 0) return null;
-  return (
-    <Card padding="sm" background="warm" border="subtle">
-      <Stack gap="xs">
-        <Text size="xs" tone="muted" uppercase weight="semibold">
-          {issues.length} card{issues.length === 1 ? "" : "s"} couldn&rsquo;t be read
-        </Text>
-        {issues.map((issue) => (
-          <Text key={`${issue.kind}:${issue.path}`} as="div" size="xs" tone="muted">
-            {issue.path} — {issue.message}
-          </Text>
-        ))}
-      </Stack>
-    </Card>
-  );
-}
-
-function Controls({ options, onChange }: { options: ViewOptions; onChange: (next: Partial<ViewOptions>) => void }) {
-  return (
-    <Row gap="md" align="center" justify="between" wrap>
-      <TabBar
-        idPrefix="bbx-todo-view-group"
-        label="Group todos by"
-        value={options.group}
-        onChange={(group: Grouping) => onChange({ group })}
-        tabs={[
-          { value: "place", label: "By place" },
-          { value: "plate", label: "By date" },
-        ]}
-      />
-      <Toggle
-        id="bbx-todo-view-show-finished"
-        checked={options.showFinished}
-        onChange={(showFinished) => onChange({ showFinished })}
-        label="Show finished"
-      />
-    </Row>
-  );
-}
-
-function TodoViewBody({ data, result, options, onChange }: {
+function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChange }: {
   data: RendererProps["data"];
   result: TodoResult;
+  agentCount: number;
+  viewingAgent: boolean;
   options: ViewOptions;
   onChange: (next: Partial<ViewOptions>) => void;
 }) {
@@ -134,6 +77,7 @@ function TodoViewBody({ data, result, options, onChange }: {
         <Stack gap="md">
           <Stack gap="none">
             <Heading level={2}>{title}</Heading>
+            <PlateHeadline result={result} agentCount={agentCount} viewingAgent={viewingAgent} onChange={onChange} />
             <ScopeLine result={result} />
           </Stack>
 
@@ -158,10 +102,18 @@ function TodoViewBody({ data, result, options, onChange }: {
             </Stack>
           ))}
 
+          {/* A text button, not a switch: it reveals finished items in place
+              (still view state in the URL) rather than a persistent control
+              for a state the boxholder wants hidden by default. */}
           {options.showFinished || finished === 0 ? null : (
-            <Text as="div" size="xs" tone="muted">
-              {finished} finished todo{finished === 1 ? "" : "s"} hidden.
-            </Text>
+            <InlineAction
+              id="bbx-todo-view-show-finished"
+              intent="subtle"
+              onClick={() => onChange({ showFinished: true })}
+              title={`Show ${finished} finished todo${finished === 1 ? "" : "s"}`}
+            >
+              {finished} done
+            </InlineAction>
           )}
 
           <IssuesSection issues={result.issues} />
@@ -177,20 +129,53 @@ export function TodoViewCard(props: RendererProps) {
   const glob = stringField(fm, "glob");
   const assigned = stringField(fm, "assigned");
   const options = optionsFrom(viewState);
+  const here = hereForCard(data.path);
+
+  // A card that already commits its own `assigned` filter (an "agent-only"
+  // instance, say) has no boxholder/agent slice to toggle between — the
+  // headline and the agent-follow-up count only make sense for the common
+  // case, a card with no `assigned` field of its own.
+  const showHeadline = assigned === undefined;
+  const viewingAgent = showHeadline && options.assignedView === "agent";
+  const scopeParams: { scope: "boxholder" | "all"; assigned?: string } = viewingAgent
+    ? { scope: "all", assigned: "agent" }
+    : assigned !== undefined
+      ? { scope: "all", assigned }
+      : { scope: "boxholder" };
 
   const utils = trpc.useUtils();
   const query = trpc.collections.query.useQuery({
     collection: "todos",
     query: {
-      here: hereForCard(data.path),
+      here,
       ...(glob !== undefined && { glob }),
       group: options.group,
       params: {
         status: statusFilterWithFinished(resolveTodoViewStatusFilter(fm), options.showFinished),
-        ...(assigned !== undefined && { assigned }),
+        ...scopeParams,
       },
     },
   });
+
+  // The headline's third number. A `scope: "all"` query's OWN reduction can't
+  // answer it — a reduction counts everything `scope` admitted, not what
+  // `assigned` narrows to (`matches` decides display, not reduction) — so
+  // this is a second, cheap, `assigned`-only query, read through
+  // `matchingItemCount`. Skipped entirely once viewing the agent's own slice,
+  // since the main query already answers that.
+  const agentQuery = trpc.collections.query.useQuery(
+    {
+      collection: "todos",
+      query: {
+        here,
+        ...(glob !== undefined && { glob }),
+        includeReferring: false,
+        params: { status: ["open"], scope: "all", assigned: "agent" },
+      },
+    },
+    { enabled: showHeadline && !viewingAgent },
+  );
+  const agentCount = agentQuery.data === undefined ? 0 : matchingItemCount(agentQuery.data);
 
   // A todo lives in an ordinary card, so any card edit can change this list.
   // The scope is a glob rather than one path, so every `.card` write counts.
@@ -213,5 +198,14 @@ export function TodoViewCard(props: RendererProps) {
   if (query.error !== null) return <ErrorText className="p-8">Couldn&rsquo;t load todos: {query.error.message}</ErrorText>;
   if (query.data === undefined) return <ErrorText className="p-8">Couldn&rsquo;t load todos.</ErrorText>;
 
-  return <TodoViewBody data={data} result={query.data} options={options} onChange={change} />;
+  return (
+    <TodoViewBody
+      data={data}
+      result={query.data}
+      agentCount={agentCount}
+      viewingAgent={viewingAgent}
+      options={options}
+      onChange={change}
+    />
+  );
 }

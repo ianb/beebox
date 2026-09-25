@@ -1,6 +1,6 @@
 ---
 title: "Todos as inline things-to-think-about, not a todo location — and surfaced in the card companion view when that exists"
-workstream: unattached
+workstream: todos-ui
 area: beebox
 needs: [design]
 labels: [cards, ui]
@@ -43,6 +43,15 @@ Two asks:
 rewrote the list half: it now groups todos by card and section, in place
 order, instead of a flat list. The two asks above are still not built: no
 card-edge "N open things here" summary, and no companion panel.
+
+## Progress (2026-09-25, todos-ui Track 4)
+
+`todos-ui` (`beebox/docs/implemented-plans/todos-ui.md`) built ask 1: cards
+and directories now carry a per-place open-count summary line
+(`beebox/src/frontend/src/components/todo/CardTodos.tsx`,
+`DirectoryTodos.tsx`). Ask 2, the card companion panel, is not built —
+still shared design scope with the chat-panel landmark-context issue. This
+issue stays open for ask 2.
 
 Related: `2026-07-28-directories-as-viewable-things` (in-place lenses, same
 instinct — the view comes to the content), `2026-07-29-verify-todo-annotation-rendering`

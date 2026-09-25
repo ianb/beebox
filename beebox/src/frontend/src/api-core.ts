@@ -11,7 +11,7 @@
  * is built on top of at this box-scoped-router layer.
  */
 
-import { encodePathForUrl } from "./lib/view-url";
+import { encodePathForUrl, viteBase } from "./lib/view-url";
 
 /**
  * Pure helper exported for testability: combine a base URL prefix and a
@@ -41,7 +41,7 @@ export function joinBaseAndPath(base: string, p: string): string {
  * which the helper treats as empty prefix.
  */
 export function withBase(p: string): string {
-  return joinBaseAndPath(import.meta.env.BASE_URL, p);
+  return joinBaseAndPath(viteBase(), p);
 }
 
 /**

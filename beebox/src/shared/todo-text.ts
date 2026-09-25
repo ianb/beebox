@@ -8,11 +8,24 @@
  * the whole reason `core/body-refs.ts` (which re-scans the markdown SOURCE of
  * a whole body) cannot be aimed at one todo: there is no source range for
  * "this todo and the words after it".
+ *
+ * Moved here from `core/todo/extract-text.ts` (`docs/plans/todos-ui.md`,
+ * Track 3) so a rendered todo carries the same text the collector extracts:
+ * the `todo` Markdoc transform (`markdoc-config.ts`) flattens a located
+ * todo's children with {@link flattenNodes}, and `todos.setStatus` compares
+ * that text against the collector's before it writes. Pure and
+ * bundler-safe per `docs/module-map.md`.
  */
 
 import type { Node } from "@markdoc/markdoc";
-import { isExternalRef, parseRef, resolveRefPath } from "../../shared/ref-path.js";
-import type { TodoSeeAlso } from "./collect-types.js";
+import { isExternalRef, parseRef, resolveRefPath } from "./ref-path.js";
+
+/** A `{% see-also %}` reference, from either capture form. */
+export interface TodoSeeAlso {
+  ref: string | undefined;
+  href: string | undefined;
+  note: string | undefined;
+}
 
 export interface FlattenResult {
   /** Whitespace-collapsed plain text. */

@@ -23,6 +23,11 @@
  * signal ("that card contributes a visible-invalid entry"), not a
  * best-effort partial collection that could quietly hide a sibling todo's
  * own errors.
+ *
+ * Todo identity (`TodoLocator`) and the pass that assigns it
+ * (`assignLocators`) live in `shared/todo-locators.ts`, not here — the
+ * frontend render path needs the same numbering, so one function serves
+ * both (`docs/plans/todos-ui.md`, Track 2).
  */
 
 import Markdoc from "@markdoc/markdoc";
@@ -30,10 +35,11 @@ import type { Node } from "@markdoc/markdoc";
 import { markdocConfig } from "../../shared/markdoc-config.js";
 import { collectTagSpans, tagNameFor } from "../body-markdoc-lint.js";
 import { isTodoStatus } from "../../shared/todo-model.js";
+import { assignLocators, isTodoTag } from "../../shared/todo-locators.js";
 import type { TodoItem, TodoLocator } from "./collect-types.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { invariant } from "../../lib/invariant.js";
-import { flattenNodes, resolveTodoRefs, type FlattenResult } from "./extract-text.js";
+import { flattenNodes, resolveTodoRefs, type FlattenResult } from "../../shared/todo-text.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
 // imports resolve to the CJS bundle — which only exposes a default export.
@@ -228,6 +234,7 @@ function buildItem(input: {
     created: stringAttr(attrs["created"]),
     due: stringAttr(attrs["due"]),
     start: stringAttr(attrs["start"]),
+    recheck: stringAttr(attrs["recheck"]),
     seeAlso: body.seeAlso,
     sectionPath: sectionPathOf(state),
     parent,
@@ -271,51 +278,12 @@ function sectionPathOf(state: WalkState): string[] {
   return out;
 }
 
-function isTodoTag(node: Node): boolean {
-  return node.type === "tag" && node.tag === "todo";
-}
-
-/**
- * Every todo tag's locator, assigned in one document-order pass BEFORE the
- * walk. A line can carry several todos, so identity is `line` plus a 1-based
- * `nth` within that line — omitted for the first, which keeps `path:line` the
- * address a human writes for it.
- *
- * It happens up front because the walk does not meet the tags in document
- * order: `walkItem` asks `findOwnerLocator` about a list item's LAST todo
- * before `visit` builds the first one, so numbering as we go would count
- * backwards on exactly the line this exists for.
- */
-function assignLocators(root: Node, lineOffset: number): Map<Node, TodoLocator> {
-  const locators = new Map<Node, TodoLocator>();
-  const perLine = new Map<number, number>();
-  const walk = (node: Node): void => {
-    for (const child of node.children) {
-      if (isTodoTag(child)) {
-        const line = lineOffset + bodyLine(child);
-        const nth = (perLine.get(line) ?? 0) + 1;
-        perLine.set(line, nth);
-        locators.set(child, nth === 1 ? { kind: "body", line } : { kind: "body", line, nth });
-      }
-      walk(child);
-    }
-  };
-  walk(root);
-  return locators;
-}
-
 function locatorFor(node: Node, state: WalkState): TodoLocator {
   const locator = state.locators.get(node);
   // Every todo tag in this AST was numbered by `assignLocators`, and only todo
   // tags reach here — a miss would mean the two walks disagree about the tree.
   invariant(locator !== undefined, `no locator assigned for a {% todo %} tag in ${state.relPath}`);
   return locator;
-}
-
-/** Markdoc `lines` are 0-indexed; the tag's opening line, 1-indexed to match the body the human reads. */
-function bodyLine(node: Node): number {
-  const lines = node.lines;
-  return Array.isArray(lines) && typeof lines[0] === "number" ? lines[0] + 1 : 1;
 }
 
 function lineFor(lines: number[]): string {

@@ -390,3 +390,48 @@ true
 ```ts cleanup
 await box.cleanup();
 ```
+
+## The scope prefilter: a card whose text can't hold a todo is skipped without a parse
+
+200 cards, three carrying real todos, one broken card that mentions "todo" (so
+it earns a parse attempt and reports an issue), and one broken card that
+doesn't (so `mayHaveItem` skips it before anything can fail). Only the three
+todo-bearing cards contribute rows, and only the parsed-and-failed card
+contributes an issue — a card `mayHaveItem` skips is invisible even when its
+frontmatter is broken (the plan's narrowed visible-invalid guarantee).
+
+```ts
+const prefilterBox = await makeTmpBox();
+
+for (let i = 0; i < 195; i++) {
+  await prefilterBox.write(`_content/plain-${String(i)}.doc.card`, doc(`Plain ${String(i)}`, "Nothing to see here.\n"));
+}
+await prefilterBox.write("_content/one.doc.card", doc("One", "{% todo %}First{% /todo %}\n"));
+await prefilterBox.write("_content/two.doc.card", doc("Two", "{% todo %}Second{% /todo %}\n"));
+await prefilterBox.write("_content/three.doc.card", doc("Three", "{% todo %}Third{% /todo %}\n"));
+// Broken frontmatter (title must be a string) but mentions "todo", so it must
+// still be parsed and reported.
+await prefilterBox.write("_content/broken-with-todo.doc.card", "---\ntitle: 7\n---\ntodo mentioned but none written\n");
+// Broken frontmatter and no mention of "todo" anywhere — skipped before the
+// parse that would have failed ever runs.
+await prefilterBox.write("_content/broken-without.doc.card", "---\ntitle: 7\n---\nNothing relevant here.\n");
+
+const prefiltered = await runCollection(prefilterBox.root, {
+  def: todoCollection,
+  query: { here: "", params: params({}) },
+  deriveCtx: CTX,
+});
+
+prefiltered.groups[0].rows.map((r) => r.card.path).join("\n")
+=>
+_content/one.doc.card
+_content/three.doc.card
+_content/two.doc.card
+
+JSON.stringify(prefiltered.issues.map((i) => [i.kind, i.path]))
+=> [["load","_content/broken-with-todo.doc.card"]]
+```
+
+```ts cleanup
+await prefilterBox.cleanup();
+```

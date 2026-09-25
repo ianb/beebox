@@ -58,6 +58,13 @@ todo. Full vocabulary:
   onward, quiet before it. An undated todo (no `start`, no `due`) is on the
   plate immediately — quiet states are always explicit, never an accident
   of missing metadata.
+- `recheck` — ISO date, or `never`. The daily `todo-review` procedure's
+  bookkeeping: it does not list the todo before that date, and never lists it
+  once `never`. Written by the review agent (a date 1-90 days out) and by the
+  review's verify step (`never`, after three unchanged rechecks, reported by
+  the `todos-unreviewed` health warning). A retired todo that is edited
+  comes back into review; a `never` set by hand is respected. It never
+  affects plate state, the badge, counts, or order.
 
 `see-also` nests inside a `todo` (zero or more) and points at supporting
 context: exactly one of `ref` (an in-box card, tracked by `bbx mv`) or `href`
