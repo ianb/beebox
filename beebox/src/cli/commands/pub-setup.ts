@@ -211,7 +211,8 @@ export const pubStatusCommand = new Command("status")
             process.exit(1);
           }
         }
-        console.log(`No box-server credentials (${client.error.missing}); showing the legacy local Wrangler diagnostic instead.`);
+        console.error(`Error: no box-server credentials (${client.error.missing}); run this command through the configured box agent, or use --legacy only to inspect the old local Wrangler deployment.`);
+        process.exit(1);
       } else {
         console.log("Legacy Wrangler/Worker deployment diagnostic:");
       }

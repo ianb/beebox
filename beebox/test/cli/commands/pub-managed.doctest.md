@@ -90,6 +90,12 @@ publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pu
 publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pubId, scope: { tier: "public", slug: "notes" } })
 => https://example.workers.dev/p/notes/
 
+publicationSiteLines([site({
+  requested: { tier: "public", customHostname: "www.example.org" },
+  approved: { tier: "public", status: "live", customHostname: "www.example.org", expiresAt: null },
+})])[0].includes("publication: https://www.example.org/")
+=> true
+
 publicationApprovalUrl("https://boxes.example", "family")
 => https://boxes.example/family/publications
 

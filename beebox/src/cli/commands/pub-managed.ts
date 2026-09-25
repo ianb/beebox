@@ -5,28 +5,21 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import { errorMessage } from "../../lib/error-guards.js";
 import { generatePubId } from "../../publish/manifest.js";
+import { publicationUrl as buildPublicationUrl, samePublicationAudience, type PublicationUrlScope } from "../../shared/publication-url.js";
 import type { AppRouter } from "../../webapp/trpc/router.js";
 import { boxClient } from "../lib/box-client.js";
 
 type PublicationCandidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
 type PublicationSite = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type PublicationConnections = inferRouterOutputs<AppRouter>["publications"]["connections"];
-type RequestedScope = NonNullable<PublicationSite["pending"]>["requestedScope"];
 
 function printBoxClientError(message: string): never {
   console.error(`Error: ${message}`);
   process.exit(1);
 }
 
-export function publicationDestinationUrl(args: { hostname: string | null; pubId: string; scope: { tier: string; slug?: string } | null }): string | null {
-  const { hostname, pubId, scope } = args;
-  if (hostname === null || scope === null) return null;
-  let route: string;
-  if (scope.tier === "public") route = scope.slug === undefined ? "/" : `/p/${encodeURIComponent(scope.slug)}/`;
-  else if (scope.tier === "secret") route = `/s/${encodeURIComponent(pubId)}/`;
-  else if (scope.tier === "accounts" || scope.tier === "any-account") route = `/a/${encodeURIComponent(pubId)}/`;
-  else return null;
-  return new URL(route, `https://${hostname}`).toString();
+export function publicationDestinationUrl(args: { hostname: string | null; pubId: string; scope: PublicationUrlScope | null }): string | null {
+  return buildPublicationUrl({ workersHostname: args.hostname, pubId: args.pubId, scope: args.scope });
 }
 
 export function publicationApprovalUrl(serverUrl: string | undefined, boxName: string | undefined): string | null {
@@ -53,20 +46,15 @@ function siteDestination(site: PublicationSite): string | null {
   return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope });
 }
 
+function candidateDestination(site: PublicationSite): string | null {
+  return site.pending === null ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: site.pending.requestedScope });
+}
+
 function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[] } | null): string {
   if (scope === null) return "unknown audience";
   if (scope.tier === "public") return `public${scope.slug ? ` at /p/${scope.slug}/` : ""}`;
   if (scope.tier === "accounts") return `accounts (${scope.allowedEmails?.length ?? 0} allowed)`;
   return scope.tier;
-}
-
-function sameAudience(left: PublicationSite["approved"], right: RequestedScope): boolean {
-  if (left === null || left.tier !== right.tier) return false;
-  if (left.tier === "public" && right.tier === "public") return left.slug === right.slug;
-  if (left.tier === "accounts" && right.tier === "accounts") {
-    return (left.allowedEmails ?? []).toSorted().join("\n") === right.allowedEmails.toSorted().join("\n");
-  }
-  return true;
 }
 
 export function publicationSiteLines(sites: PublicationSite[]): string[] {
@@ -80,16 +68,15 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
     const servingScope = site.approved;
     const requestedScope = site.pending?.requestedScope ?? site.requested;
     const destination = siteDestination(site);
-    const candidateDestination = site.pending === null
-      ? null
-      : publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: site.pending.requestedScope });
+    const nextDestination = candidateDestination(site);
     const audience = servingScope === null
       ? `requested audience ${audienceLabel(requestedScope)}`
       : `serving audience ${audienceLabel(servingScope)}`;
-    const candidate = site.pending !== null && servingScope !== null && !sameAudience(servingScope, site.pending.requestedScope)
-      ? `; prepared audience ${audienceLabel(site.pending.requestedScope)}${candidateDestination ? `; candidate URL: ${candidateDestination}` : ""}`
+    const candidate = site.pending !== null && servingScope !== null && !samePublicationAudience({ requested: servingScope, approved: site.pending.requestedScope })
+      ? `; prepared audience ${audienceLabel(site.pending.requestedScope)}${nextDestination ? `; candidate URL: ${nextDestination}` : ""}`
       : "";
-    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; publication: ${destination}` : ""}${candidate}`;
+    const destinationLabel = servingScope === null ? "candidate URL" : "publication";
+    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${candidate}`;
   });
 }
 
@@ -111,8 +98,11 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
     `  release: ${candidate.releaseId}`,
     `  files: ${candidate.preview.length}; scan findings: ${candidate.scan.total}; skipped binaries: ${candidate.scan.skippedBinaries}`,
   ];
-  const siteUrl = publicationDestinationUrl({ hostname: site?.hostname ?? null, pubId: candidate.pubId, scope: candidate.requestedScope });
-  if (siteUrl !== null) lines.push(`  publication URL: ${siteUrl}`);
+  const servingUrl = site?.approved === null || site === undefined ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: candidate.pubId, scope: site.approved });
+  const candidateUrl = publicationDestinationUrl({ hostname: site?.hostname ?? null, pubId: candidate.pubId, scope: candidate.requestedScope });
+  if (servingUrl !== null) lines.push(`  publication URL: ${servingUrl}`);
+  if (candidateUrl !== null && candidateUrl !== servingUrl) lines.push(`  candidate URL (awaiting member approval): ${candidateUrl}`);
+  else if (candidateUrl !== null) lines.push(`  publication URL: ${candidateUrl}`);
   lines.push(...approvalLinkLines());
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {

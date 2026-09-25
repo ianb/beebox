@@ -15,6 +15,7 @@ import { Text } from "../ui/Text";
 import { TextField } from "../ui/fields";
 import { ExternalLink } from "../ui/ExternalLink";
 import { FriendlyDate } from "../ui/FriendlyDate";
+import { CustomHostnameAssignment } from "./CustomHostnameAssignment";
 
 type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
 
@@ -122,6 +123,7 @@ export function CloudflarePublishConnectionsSection() {
             />
           ))}
         </Stack>
+        <CustomHostnameAssignment />
       </Stack>
     </Card>
   );
@@ -201,10 +203,12 @@ function TokenSetupGuidance() {
 function TokenPermissionList() {
   return (
     <Stack gap="xs">
-      <Text size="sm">Add these account permissions:</Text>
+      <Text size="sm">Minimum account permissions for publishing and hostname assignment:</Text>
       <Text size="sm">Account Settings: <Text weight="medium">Read</Text></Text>
       <Text size="sm">Workers R2 Storage: <Text weight="medium">Edit</Text> (called <Text mono>Workers R2 Storage Write</Text> in the API permission reference)</Text>
       <Text size="sm">Workers Scripts: <Text weight="medium">Edit</Text> (called <Text mono>Workers Scripts Write</Text> in the API permission reference)</Text>
+      <Text size="sm">Zone: <Text weight="medium">Read</Text>, plus <Text weight="medium">Workers Routes: Edit</Text> scoped to the zone that owns the hostname.</Text>
+      <Hint>Cloudflare may report additional permissions for your account or token type. These permissions are guidance, not live-verified; if Cloudflare rejects an operation, adjust the token to match its authorization error.</Hint>
     </Stack>
   );
 }
