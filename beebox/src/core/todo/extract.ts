@@ -134,6 +134,7 @@ function frontmatterTodos(input: { relPath: string; fields: Record<string, unkno
       created: entry.created,
       due: entry.due,
       start: entry.start,
+      recheck: entry.recheck,
       seeAlso,
       sectionPath: [],
       parent: null,

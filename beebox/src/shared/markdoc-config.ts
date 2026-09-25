@@ -362,6 +362,7 @@ const todo: Schema = {
     created: { type: String },
     due: { type: String },
     start: { type: String },
+    recheck: { type: String },
   },
   validate(node) {
     const attrs = {
@@ -369,12 +370,9 @@ const todo: Schema = {
       created: stringAttr(node.attributes["created"]),
       due: stringAttr(node.attributes["due"]),
       start: stringAttr(node.attributes["start"]),
+      recheck: stringAttr(node.attributes["recheck"]),
     };
-    return validateTodoAttributes(attrs).map(({ id, message }) => ({
-      id,
-      level: "error" as const,
-      message,
-    }));
+    return validateTodoAttributes(attrs).map(({ id, message }) => ({ id, level: "error" as const, message }));
   },
   transform(node, config) {
     const attributes = node.transformAttributes(config);

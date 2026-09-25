@@ -5,7 +5,15 @@
  * without rendering (`test/frontend/components/todo-item.doctest.md`).
  */
 
-import { parseIsoDate, resolveStartEpoch, TODO_AGENT, type TodoPlateState, type TodoStatus } from "@shared/todo-model";
+import {
+  parseIsoDate,
+  parseRecheck,
+  RECHECK_NEVER,
+  resolveStartEpoch,
+  TODO_AGENT,
+  type TodoPlateState,
+  type TodoStatus,
+} from "@shared/todo-model";
 
 /** Status treatment for a todo's own words, the same in a card body, in frontmatter, and in the list. */
 const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
@@ -103,4 +111,21 @@ export function dateChips(
     chips.push({ kind: "start", iso, text: `starts ${epoch === null ? start : dayLabel(epoch, format)}`, warning: false });
   }
   return chips;
+}
+
+/**
+ * The list's quiet `recheck` chip (Track 7): when the todo-review will next
+ * list an open todo, or that it no longer will. `null` for a todo that is not
+ * open or has no (valid) `recheck`. The list only; a reading view never shows
+ * it, since `recheck` is the review's bookkeeping, not the reader's plan.
+ */
+export function recheckChip(
+  todo: { status: TodoStatus; recheck: string | undefined },
+  format: { nowYear: number; locale: string | undefined },
+): { iso: string | null; text: string } | null {
+  if (todo.status !== "open") return null;
+  const parsed = parseRecheck(todo.recheck);
+  if (parsed === null) return null;
+  if (parsed === RECHECK_NEVER) return { iso: null, text: "no longer reviewed" };
+  return { iso: todo.recheck ?? null, text: `agent checks again ${dayLabel(parsed, format)}` };
 }

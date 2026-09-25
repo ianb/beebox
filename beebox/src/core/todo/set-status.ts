@@ -1,11 +1,12 @@
 /**
- * Set one todo's `status` by editing exactly the bytes that change —
- * nothing else in the card's text moves (`docs/plans/todos-ui.md`, Track 3).
+ * Set one todo's `status` (or another single attribute, `setTodoAttribute`)
+ * by editing exactly the bytes that change — nothing else in the card's text
+ * moves (`docs/plans/todos-ui.md`, Tracks 3 and 7).
  *
  * A body `{% todo %}` tag is found by re-running the SAME identity pass the
  * collector and the renderer use (`assignLocators`,
- * `../../shared/todo-locators.js`), then its opening tag's `status`
- * attribute is rewritten in place — the `rewrite-card-refs.ts:220`
+ * `../../shared/todo-locators.js`), then its opening tag's attribute
+ * is rewritten in place — the `rewrite-card-refs.ts:220`
  * text-surgical-attribute-edit approach, not a reserialize. A frontmatter
  * `todos:` entry goes through format-preserving YAML instead
  * (`webapp/trpc/routers/card.ts`'s `setTheme`, same `parseDocument` +
@@ -40,6 +41,13 @@ const { parse } = Markdoc;
 /** The two statuses a boxholder checkbox can set. `parked`/`dropped` stay chat or hand edits (plan, NOT in scope). */
 export type TodoWriteStatus = "open" | "done";
 
+/**
+ * The attributes a program may write on one todo: `status` (the checkbox,
+ * Track 3) and `recheck` (the todo-review verify step, Track 7). A closed
+ * list, since each name is spliced into a regex below.
+ */
+type TodoAttributeName = "status" | "recheck";
+
 /** Thrown when `locator` does not resolve to a todo in `content` (a stale locator, or a body that no longer parses). */
 export class TodoLocatorNotFoundError extends Error {
   readonly locator: TodoLocator;
@@ -52,15 +60,33 @@ export class TodoLocatorNotFoundError extends Error {
 
 /** Set the todo at `locator` to `status`, changing nothing else in `content`. */
 export function setTodoStatus(content: string, { locator, status }: { locator: TodoLocator; status: TodoWriteStatus }): string {
-  return locator.kind === "frontmatter"
-    ? setFrontmatterTodoStatus(content, { locator, status })
-    : setBodyTodoStatus(content, { locator, status });
+  // `open` is the default, written as absence (the common case costs zero typing).
+  return setTodoAttribute(content, { locator, name: "status", value: status === "open" ? null : "done" });
 }
 
-function setFrontmatterTodoStatus(
+/**
+ * Set one attribute of the todo at `locator` to `value`, or remove it when
+ * `value` is `null`, changing nothing else in `content`.
+ */
+export function setTodoAttribute(
   content: string,
-  { locator, status }: { locator: { kind: "frontmatter"; index: number }; status: TodoWriteStatus }
+  edit: { locator: TodoLocator; name: TodoAttributeName; value: string | null }
 ): string {
+  invariant(edit.value === null || !/["$%']/.test(edit.value), `todo attribute value must not contain quotes, % or $: ${edit.value ?? ""}`);
+  const { locator } = edit;
+  return locator.kind === "frontmatter"
+    ? setFrontmatterAttribute(content, { ...edit, locator })
+    : setBodyAttribute(content, { ...edit, locator });
+}
+
+interface AttributeEdit<L extends TodoLocator> {
+  locator: L;
+  name: TodoAttributeName;
+  value: string | null;
+}
+
+function setFrontmatterAttribute(content: string, edit: AttributeEdit<{ kind: "frontmatter"; index: number }>): string {
+  const { locator, name, value } = edit;
   const split = splitCardContent(content);
   if (!split.hasFrontmatter || split.frontmatterText.trim() === "") {
     throw new TodoLocatorNotFoundError(locator, "card has no frontmatter block");
@@ -73,19 +99,17 @@ function setFrontmatterTodoStatus(
   if (!isSeq(todos) || locator.index < 0 || locator.index >= todos.items.length) {
     throw new TodoLocatorNotFoundError(locator, "no such todos[] entry");
   }
-  if (status === "open") {
-    doc.deleteIn(["todos", locator.index, "status"]);
+  if (value === null) {
+    doc.deleteIn(["todos", locator.index, name]);
   } else {
-    doc.setIn(["todos", locator.index, "status"], "done");
+    doc.setIn(["todos", locator.index, name], value);
   }
   const yaml = doc.toString({ lineWidth: 0 });
   return `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
 }
 
-function setBodyTodoStatus(
-  content: string,
-  { locator, status }: { locator: { kind: "body"; line: number; nth?: number }; status: TodoWriteStatus }
-): string {
+function setBodyAttribute(content: string, edit: AttributeEdit<{ kind: "body"; line: number; nth?: number }>): string {
+  const { locator } = edit;
   const split = splitCardContent(content);
   let ast: Node;
   try {
@@ -105,7 +129,7 @@ function setBodyTodoStatus(
   const lineText = bodyLines[bodyLineIndex];
   if (lineText === undefined) throw new TodoLocatorNotFoundError(locator);
 
-  const rewritten = rewriteNthOpeningTag({ lineText, occurrence: locator.nth ?? 1, status });
+  const rewritten = rewriteNthOpeningTag({ lineText, occurrence: locator.nth ?? 1, edit });
   if (rewritten === null) throw new TodoLocatorNotFoundError(locator, "opening tag not found on its own line");
   bodyLines[bodyLineIndex] = rewritten;
 
@@ -128,28 +152,36 @@ function sameBodyLocator(a: TodoLocator, b: TodoLocator): boolean {
 /** An opening `{% todo … %}` tag, stopping at its first `%}` — attributes never carry a bare `%`. */
 const OPENING_TODO_TAG_RE = /{%\s*todo\b[^%]*%}/g;
 
-/** A `status="…"` (or `'…'`) attribute anywhere in an opening tag's text. */
-const STATUS_ATTR_RE = /(\sstatus=)(["'])[^"']*\2/;
+/** A `name="…"` (or `'…'`) attribute anywhere in an opening tag's text, one per writable attribute. */
+const ATTRIBUTE_RE: Record<TodoAttributeName, RegExp> = {
+  status: /(\sstatus=)(["'])[^"']*\2/,
+  recheck: /(\srecheck=)(["'])[^"']*\2/,
+};
 
 /** Rewrite the `occurrence`-th (1-based) opening todo tag on one line; `null` if there is no such occurrence. */
-function rewriteNthOpeningTag(input: { lineText: string; occurrence: number; status: TodoWriteStatus }): string | null {
-  const { lineText, occurrence, status } = input;
+function rewriteNthOpeningTag(input: {
+  lineText: string;
+  occurrence: number;
+  edit: { name: TodoAttributeName; value: string | null };
+}): string | null {
+  const { lineText, occurrence, edit } = input;
   const match = [...lineText.matchAll(OPENING_TODO_TAG_RE)][occurrence - 1];
   if (match === undefined) return null;
-  const rewrittenTag = rewriteStatusAttribute(match[0], status);
+  const rewrittenTag = rewriteAttribute(match[0], edit);
   return lineText.slice(0, match.index) + rewrittenTag + lineText.slice(match.index + match[0].length);
 }
 
-function rewriteStatusAttribute(tagText: string, status: TodoWriteStatus): string {
-  if (status === "open") {
-    return tagText.replace(STATUS_ATTR_RE, "");
+function rewriteAttribute(tagText: string, { name, value }: { name: TodoAttributeName; value: string | null }): string {
+  const re = ATTRIBUTE_RE[name];
+  if (value === null) {
+    return tagText.replace(re, "");
   }
-  if (STATUS_ATTR_RE.test(tagText)) {
-    return tagText.replace(STATUS_ATTR_RE, (_m: string, ...g: string[]) => {
+  if (re.test(tagText)) {
+    return tagText.replace(re, (_m: string, ...g: string[]) => {
       const [eq, quote] = g;
-      invariant(eq !== undefined && quote !== undefined, "status attribute regex has two mandatory capture groups");
-      return `${eq}${quote}done${quote}`;
+      invariant(eq !== undefined && quote !== undefined, "attribute regex has two mandatory capture groups");
+      return `${eq}${quote}${value}${quote}`;
     });
   }
-  return tagText.replace(/^({%\s*todo)/, '$1 status="done"');
+  return tagText.replace(/^({%\s*todo)/, `$1 ${name}="${value}"`);
 }

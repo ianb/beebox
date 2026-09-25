@@ -27,14 +27,8 @@ import { errorMessage } from "../../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { extractCardTodos } from "../../../core/todo/extract.js";
 import { formatTodoLocation, type TodoLocator } from "../../../core/todo/collect-types.js";
+import { TodoLocatorSchema } from "../../../shared/todo-locators.js";
 import { setTodoStatus, TodoLocatorNotFoundError, type TodoWriteStatus } from "../../../core/todo/set-status.js";
-
-/** `TodoLocator`, with `nth` omitted rather than `undefined` for the first todo on a line (`exactOptionalPropertyTypes`). */
-const TodoLocatorSchema = z.union([
-  z.object({ kind: z.literal("body"), line: z.number().int().min(1), nth: z.number().int().min(2).optional() })
-    .transform(({ line, nth }): TodoLocator => (nth === undefined ? { kind: "body", line } : { kind: "body", line, nth })),
-  z.object({ kind: z.literal("frontmatter"), index: z.number().int().min(0) }),
-]);
 
 const WriteStatusSchema = z.enum(["open", "done"]);
 

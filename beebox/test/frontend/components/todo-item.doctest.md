@@ -10,7 +10,7 @@ server, so only a todo the server calls `escalated` reads as overdue.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoItem } from "../../../src/frontend/src/components/todo/TodoItem.js";
-import { dateChips, hiddenInReading } from "../../../src/frontend/src/components/todo/todo-item-logic.js";
+import { dateChips, hiddenInReading, recheckChip } from "../../../src/frontend/src/components/todo/todo-item-logic.js";
 
 globalThis.React = React;
 
@@ -104,6 +104,37 @@ escalated.includes("bg-accent-100") && escalated.includes('<time dateTime="2026-
 
 render({ status: "open", due: "2026-09-15", plateState: "on-plate" }).includes("bg-accent-100")
 => false
+```
+
+## `recheck`: a quiet chip in the list only
+
+`recheck` is the todo-review's bookkeeping (`docs/plans/todos-ui.md`, Track
+7). The list shows it as a quiet note, never a date chip; a finished todo
+shows none.
+
+```ts
+const fmt = { nowYear: 2026, locale: "en-US" };
+[
+  recheckChip({ status: "open", recheck: "2026-10-15" }, fmt)?.text,
+  recheckChip({ status: "open", recheck: "never" }, fmt)?.text,
+  String(recheckChip({ status: "done", recheck: "never" }, fmt)),
+  String(recheckChip({ status: "open", recheck: undefined }, fmt)),
+].join(" | ")
+=> agent checks again Oct 15 | no longer reviewed | null | null
+```
+
+The reading view (a card body, `inline`/`block`) never shows it; the list
+line does:
+
+```ts
+render({ status: "open", recheck: "2026-10-15", layout: "inline" }).includes("checks again")
+=> false
+
+render({ status: "open", recheck: "2026-10-15", layout: "line" }).includes('<time dateTime="2026-10-15">agent checks again Oct 15</time>')
+=> true
+
+render({ status: "open", recheck: "never", layout: "line" }).includes("no longer reviewed")
+=> true
 ```
 
 ## Agent follow-ups

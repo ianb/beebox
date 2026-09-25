@@ -5,7 +5,7 @@ tag's opening tag, or one frontmatter `todos:` entry's `status` field.
 Everything else in the card is unchanged.
 
 ```ts setup
-import { setTodoStatus, TodoLocatorNotFoundError } from "../../src/core/todo/set-status.js";
+import { setTodoAttribute, setTodoStatus, TodoLocatorNotFoundError } from "../../src/core/todo/set-status.js";
 import { extractCardTodos } from "../../src/core/todo/extract.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -196,6 +196,46 @@ before.status
 const updated = setTodoStatus(memo("{% todo %}Buy milk{% /todo %}\n"), { locator: before.locator, status: "done" });
 extractCardTodos({ relPath: CARD, content: updated, ctx }).items[0]!.status
 => done
+```
+
+## `setTodoAttribute`: the same surgery for `recheck`
+
+`setTodoStatus` is `setTodoAttribute` on `status`. The todo-review's verify
+step uses it on `recheck` (`docs/plans/todos-ui.md`, Track 7): an existing
+value is replaced in place, a missing one is inserted after `todo`, and the
+todo's words and its annotation stay as written. Extraction reads the new
+value back at the same locator.
+
+```ts continue
+const dated = memo('Order lumber {% todo due="2026-07-01" recheck="2026-08-15" %}for the deck{% /todo %} — waiting on a quote\n');
+const retired = setTodoAttribute(dated, { locator: { kind: "body", line: 5 }, name: "recheck", value: "never" });
+retired.split("\n")[4]
+=> Order lumber {% todo due="2026-07-01" recheck="never" %}for the deck{% /todo %} — waiting on a quote
+
+setTodoAttribute(memo("{% todo %}Buy milk{% /todo %}\n"), { locator: { kind: "body", line: 5 }, name: "recheck", value: "2026-10-01" }).split("\n")[4]
+=> {% todo recheck="2026-10-01" %}Buy milk{% /todo %}
+
+JSON.stringify(extractCardTodos({ relPath: CARD, content: retired, ctx }).items.map((t) => [t.text, t.recheck, t.annotation]))
+=> [["for the deck","never","waiting on a quote"]]
+```
+
+A frontmatter entry gets the key; `null` removes it.
+
+```ts continue
+const fm = "---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\ntodos:\n  - text: Renew permit\n    recheck: 2026-08-01\n---\nBody.\n";
+setTodoAttribute(fm, { locator: { kind: "frontmatter", index: 0 }, name: "recheck", value: "never" })
+=>
+---
+status: new
+created: 2026-07-01T10:00:00Z
+todos:
+  - text: Renew permit
+    recheck: never
+---
+Body.
+
+setTodoAttribute(fm, { locator: { kind: "frontmatter", index: 0 }, name: "recheck", value: null }).includes("recheck")
+=> false
 ```
 
 ```ts cleanup

@@ -23,7 +23,7 @@ import type { TodoLocator } from "@shared/todo-locators";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Text } from "../ui/Text";
-import { dateChips, STATUS_LABEL, todoTextClass } from "./todo-item-logic";
+import { dateChips, recheckChip, STATUS_LABEL, todoTextClass } from "./todo-item-logic";
 import { runTick, tickInput, TodoActionsContext, type TodoAddress } from "./todo-actions";
 
 interface TodoItemProps {
@@ -31,6 +31,8 @@ interface TodoItemProps {
   assigned: string | undefined;
   due: string | undefined;
   start: string | undefined;
+  /** The todo-review's `recheck`; shown only as a quiet chip on a `line` (the list), never in a reading view. */
+  recheck?: string | undefined;
   plateState: TodoPlateState | null;
   /** `inline` sits in running prose, `block` wraps block content, `line` is one row of a list. */
   layout: "inline" | "block" | "line";
@@ -132,9 +134,11 @@ function Trailing({ controls }: { controls: Controls }) {
 }
 
 function Chips({ props }: { props: TodoItemProps }) {
-  const { due, start, plateState, assigned } = props;
-  const dates = dateChips({ due, start, plateState }, { nowYear: new Date().getFullYear(), locale: undefined });
-  if (dates.length === 0 && (assigned === undefined || assigned === "")) return null;
+  const { due, start, plateState, assigned, status, layout } = props;
+  const format = { nowYear: new Date().getFullYear(), locale: undefined };
+  const dates = dateChips({ due, start, plateState }, format);
+  const recheck = layout === "line" ? recheckChip({ status, recheck: props.recheck }, format) : null;
+  if (dates.length === 0 && recheck === null && (assigned === undefined || assigned === "")) return null;
   return (
     <>
       {dates.map((chip) => (
@@ -144,6 +148,13 @@ function Chips({ props }: { props: TodoItemProps }) {
       ))}
       {assigned === undefined || assigned === "" ? null : (
         <Badge size="sm" className="ml-1 align-middle" title="Assigned">{assigned}</Badge>
+      )}
+      {recheck === null ? null : (
+        <span className="ml-1.5 align-middle" title="When the daily todo review looks at this again">
+          <Text size="xs" tone="muted">
+            {recheck.iso === null ? recheck.text : <time dateTime={recheck.iso}>{recheck.text}</time>}
+          </Text>
+        </span>
       )}
     </>
   );

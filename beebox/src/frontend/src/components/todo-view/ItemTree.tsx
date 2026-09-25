@@ -57,6 +57,7 @@ function ItemLine({ node }: { node: TodoNode }) {
         assigned={item.assigned}
         due={item.due}
         start={item.start}
+        recheck={item.recheck}
         plateState={item.plateState}
         layout="line"
         locator={item.locator}

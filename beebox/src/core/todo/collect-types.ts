@@ -48,6 +48,8 @@ export interface TodoItem {
   created: string | undefined;
   due: string | undefined;
   start: string | undefined;
+  /** The todo-review's next-check date, or `"never"` (`docs/plans/todos-ui.md`, Track 7). Never an input to plate state. */
+  recheck: string | undefined;
   seeAlso: TodoSeeAlso[];
   /** Heading texts above the todo, outermost first. `[]` for a frontmatter todo, or a body todo written above the first heading. */
   sectionPath: string[];
@@ -115,6 +117,26 @@ export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">
   if (locator.kind === "frontmatter") return `${path}#todos[${String(locator.index)}]`;
   const nth = locator.nth === undefined || locator.nth <= 1 ? "" : `#${String(locator.nth)}`;
   return `${path}:${String(locator.line)}${nth}`;
+}
+
+const BODY_LOCATION_RE = /^(.+):(\d+)(?:#(\d+))?$/;
+const FRONTMATTER_LOCATION_RE = /^(.+)#todos\[(\d+)]$/;
+
+/** The inverse of {@link formatTodoLocation}; `null` when `location` is in neither form. */
+export function parseTodoLocation(location: string): { path: string; locator: TodoLocator } | null {
+  const fm = FRONTMATTER_LOCATION_RE.exec(location);
+  if (fm !== null) {
+    const [, path, index] = fm;
+    if (path === undefined || index === undefined) return null;
+    return { path, locator: { kind: "frontmatter", index: Number(index) } };
+  }
+  const body = BODY_LOCATION_RE.exec(location);
+  if (body === null) return null;
+  const [, path, line, nth] = body;
+  if (path === undefined || line === undefined) return null;
+  const locator: TodoLocator =
+    nth === undefined || Number(nth) <= 1 ? { kind: "body", line: Number(line) } : { kind: "body", line: Number(line), nth: Number(nth) };
+  return { path, locator };
 }
 
 /** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */

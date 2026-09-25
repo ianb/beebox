@@ -234,6 +234,7 @@ function buildItem(input: {
     created: stringAttr(attrs["created"]),
     due: stringAttr(attrs["due"]),
     start: stringAttr(attrs["start"]),
+    recheck: stringAttr(attrs["recheck"]),
     seeAlso: body.seeAlso,
     sectionPath: sectionPathOf(state),
     parent,

@@ -12,6 +12,7 @@
  */
 
 import type { Node } from "@markdoc/markdoc";
+import { z } from "zod";
 
 /**
  * Where a todo lives within its card: a body `{% todo %}` tag (line,
@@ -26,6 +27,17 @@ import type { Node } from "@markdoc/markdoc";
  * and later ones grow the `#2` suffix.
  */
 export type TodoLocator = { kind: "body"; line: number; nth?: number } | { kind: "frontmatter"; index: number };
+
+/**
+ * `TodoLocator` at a boundary (a tRPC input, a state file), with `nth`
+ * omitted rather than `undefined` for the first todo on a line
+ * (`exactOptionalPropertyTypes`).
+ */
+export const TodoLocatorSchema = z.union([
+  z.object({ kind: z.literal("body"), line: z.number().int().min(1), nth: z.number().int().min(2).optional() })
+    .transform(({ line, nth }): TodoLocator => (nth === undefined ? { kind: "body", line } : { kind: "body", line, nth })),
+  z.object({ kind: z.literal("frontmatter"), index: z.number().int().min(0) }),
+]);
 
 /**
  * Every todo tag's locator, assigned in one document-order pass BEFORE any
