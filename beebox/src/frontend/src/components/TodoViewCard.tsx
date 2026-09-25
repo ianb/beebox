@@ -96,9 +96,12 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
                   {group.label} ({group.reduction.open + group.reduction.parked + group.reduction.done + group.reduction.dropped})
                 </Text>
               ) : null}
-              {group.rows.map((row) => (
-                <CardRow key={row.card.path} row={row} />
-              ))}
+              {/* A rule between cards, so each card and its todos read as one group. */}
+              <Stack gap="none" className="divide-y divide-warm-200">
+                {group.rows.map((row) => (
+                  <CardRow key={row.card.path} row={row} />
+                ))}
+              </Stack>
             </Stack>
           ))}
 
