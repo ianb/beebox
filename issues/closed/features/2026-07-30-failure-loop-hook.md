@@ -4,9 +4,11 @@ workstream: elixir-skills-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
-next-action: discuss
 priority: normal
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 (boxholder): a mechanical loop breaker is for weaker models; the current ones don't need it. The prose circuit breaker in bbx-debug stays.
 
 `.claude/skills/bbx-debug/SKILL.md:150` has a 3-fix circuit-breaker: after three
 failed fixes, stop patching and treat it as an architecture problem. It's prose
@@ -18,7 +20,7 @@ A hook can just count.
 
 ## The shape
 
-From [research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/enforcement-and-hooks.md),
+From [research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/enforcement-and-hooks.md),
 a `PostToolUseFailure` hook on Bash that keys on the failing command and
 escalates:
 

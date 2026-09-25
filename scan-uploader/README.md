@@ -111,12 +111,17 @@ uv tool install osxphotos
 ```
 
 Create an album in Apple Photos and add photos to it on the phone; iCloud
-syncs the album to the Mac. Grant **Full Disk Access** to the app that runs
-the launchd job under System Settings → Privacy & Security → Full Disk Access,
-so osxphotos can read the Photos library. Configure the target with
+syncs the album to the Mac. Before installing the schedule, run one uploader
+sweep manually from the Mac account that will own it and approve macOS
+permission prompts. Grant **Full Disk Access** to the app running scan-uploader
+under System Settings → Privacy & Security → Full Disk Access, so osxphotos can
+read the Photos library. Also allow the requesting app shown under **Privacy &
+Security → Automation** to control Photos: `--download-missing` uses Apple
+Events, which requires a separate permission. Configure the target with
 `--photos-album`; exported JPEGs go to the same watched folder and the normal
 uploader sweep sends them. Photos targets must use `keep` so osxphotos' update
-database and exported files remain in place.
+database and exported files remain in place. The real Photos library and
+launchd permission path have not been verified as part of this implementation.
 
 ```bash
 bin/scan-uploader configure https://<host>/<box> \

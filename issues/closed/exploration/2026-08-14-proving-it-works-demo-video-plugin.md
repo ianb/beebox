@@ -7,8 +7,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — link passed along for evaluation
 priority: normal
-next-action: discuss
+resolution: wontfix
 ---
+
+> Closed 2026-09-24 as reviewed (boxholder): not adopting the plugin. Its verification check is simple pixel-change and loudness heuristics plus a contact sheet for a human; its own demo movie is a competent but plain screencast. The patterns worth copying are recorded in [regenerable app demo video](../../features/2026-07-17-regenerable-app-demo-video.md).
 
 [proving-it-works](https://github.com/prime-radiant-inc/proving-it-works) (Prime
 Radiant Inc., MIT) is a Claude Code plugin that has an agent record a narrated
@@ -20,7 +22,7 @@ Worth a look for two separate reasons, and they are worth keeping apart.
 
 ## 1. It overlaps our demo-video item directly
 
-[regenerable-app-demo-video](../features/2026-07-17-regenerable-app-demo-video.md)
+[regenerable-app-demo-video](../../features/2026-07-17-regenerable-app-demo-video.md)
 names three gaps: video capture, a scripted narrative, and a determinism
 decision. This tool has opinions about the first two — four recording routes
 (browser interaction, terminal session, still sequence, log-rendered reel),
@@ -47,7 +49,7 @@ That is a real epistemic point and it generalizes past video. It is the same
 shape as several tensions we already carry: a check that passes because it was
 measuring the wrong axis, and a checker that should report *inconclusive*
 instead of a verdict — compare
-[health masks a review-step turn cap](../closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md).
+[health masks a review-step turn cap](../bugs/2026-08-12-health-masks-review-step-turn-cap.md).
 Even if we never record a video, the "verify along the axis the failure actually
 lives on, then hand a human something to look at" pattern is worth stealing.
 
