@@ -31,7 +31,7 @@ function caller(boxRoot, options) {
     },
     services: {},
     user: null,
-    authed: true,
+    authed: options?.authed !== false,
     isOwner: options?.isOwner !== false,
   });
 }
@@ -221,13 +221,21 @@ await outcome(caller(box.root).todos.setStatus({
 => true
 ```
 
-Only the box owner may write:
+Anyone the box admits may tick a todo, not only the owner, just as they may
+edit the card. A non-owner's call gets past access control to the ordinary
+stale check (here it names text that is not there, so nothing is written); an
+unauthenticated caller is refused:
 
 ```ts continue
 await outcome(caller(box.root, { isOwner: false }).todos.setStatus({
+  path: cardPath, locator: { kind: "body", line: 12 }, text: "no such todo text", expectedStatus: "open", status: "done",
+}))
+=> CONFLICT: This card changed since it was shown — it has been reloaded
+
+await outcome(caller(box.root, { authed: false, isOwner: false }).todos.setStatus({
   path: cardPath, locator: { kind: "body", line: 12 }, text: "Order lumber", expectedStatus: "open", status: "done",
 }))
-=> FORBIDDEN: Owner access required
+=> UNAUTHORIZED: Not authenticated
 ```
 
 A path outside the box is refused before anything is read:
