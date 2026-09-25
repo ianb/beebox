@@ -85,7 +85,7 @@ All of this is reused; nothing is rebuilt.
   `templates/procedures/process-retrospective.procedure.card:118-240`); a
   scan guide joins it for free. Untouched.
 - **Migration machinery.** `src/core/migrations.ts` (append-only registry;
-  script + procedure kinds; `docs/migrations.md`). NOT used — see
+  script + procedure kinds; `docs/cards/migrations.md`). NOT used — see
   Migration approach in Rollout shape for why this is a runbook instead.
 - **Boxholder drafts.** `scratch/box-readiness/{estate,box-family}-CLAUDE_SCANS.md`
   (7 + 5 `[VERIFY]` markers, HTML-comment source-citation headers) and its

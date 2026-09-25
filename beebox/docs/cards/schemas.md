@@ -1,6 +1,11 @@
-# Adding a New Card Schema
+# Card schemas
 
-How to add a new card type to beebox. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by capture-session only (its transcript is ordered mixed content) — see that file if your card has interleaved inline content. For new card types, default to the frontmatter form below.
+Adding a card type: the schema file and its hooks, registration, the
+template, and the generated instructions doc.
+
+## What it is
+
+How to add a new card type to beebox. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body).
 
 ## When to Create a New Card Type
 
@@ -70,9 +75,9 @@ export function createMyThingTemplate(options: { title: string }): string {
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
 - Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
-- Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
+- Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](../box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
-- The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
+- The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is tolerated on read and must match the filename; templates may still emit it, and the serializer never writes it back.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
 - Avoid `?: T | undefined` in `*Fields` interfaces — use `?: T` and spread conditionally at call sites. Zod recursive types are the exception (they need the explicit `| undefined`).
 - The `instructions` string is what agents see — make it thorough.
@@ -196,7 +201,7 @@ and `bbx health`'s `template-updates` box check reports them too — escalating 
 `warning` to `error` when a parked path is the procedure or task card behind a
 scheduled task that is currently failing or inconclusive, since that task's fix
 is then already sitting on disk unread. See
-[`health-checks.md`](server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
+[`health-checks.md`](../server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
 
 It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
 judgement that matters — "is this box on unmodified old stock, or did the
@@ -221,8 +226,6 @@ export const cardSchemas: CardSchema[] = [
 // Add re-export at bottom:
 export { MyThingSchema } from "./my-thing.js";
 ```
-
-(If you're adding a legacy XML schema instead, add it to `schemas[]` and `getCardTypes()` picks it up via `s.tagName` rather than `s.type`.)
 
 ### 3. Register in `src/schemas/index.ts`
 
@@ -322,7 +325,7 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 ## How Agent Discovery Works
 
 1. `bbx init` or `bbx wakeup` calls `generateDocs(boxRoot)`
-2. `generateDocs()` reads both `schemas` (XML) and `cardSchemas` (frontmatter) from `registry.ts`
+2. `generateDocs()` reads `cardSchemas` from `registry.ts` (and a box's own schemas through `loadBoxSchemas`)
 3. For each schema with an `instructions` string, it writes `card-<type>.md` — to `node_modules/beebox/box-docs/` for a built-in schema, to `_content/docs/generated/` for a box-local one
 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
@@ -332,8 +335,8 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 
 After implementing:
 
-1. `npm run typecheck` — TypeScript clean
-2. `npm run lint` — ESLint clean
+1. `pnpm typecheck` — TypeScript clean
+2. `pnpm lint` — ESLint clean
 3. `bbx init <box>` — creates storage directory (if added), generates docs
 4. `bbx create <box>/path/Name.my-thing.card -t my-thing title="..."` — template emits valid YAML
 5. `bbx validate <box>/path/Name.my-thing.card` — validates

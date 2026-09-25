@@ -18,7 +18,7 @@ agent-driven procedure migration — is reported by `bbx health` as
 **The residual, stated plainly:** a manifest key runs once, so the next change to
 `ASSET_EXTENSIONS` or either rendering needs a NEW dated migration entry, and
 forgetting to add one is silent. That is a discipline cost, not a mechanism gap,
-and it is written down in `docs/migrations.md` and in the migration script's own
+and it is written down in `docs/cards/migrations.md` and in the migration script's own
 comment. If it bites anyway, the fix is a convergence step that is not keyed on
 a one-shot name — re-running the annex doctor unconditionally at box startup was
 the alternative considered here (`docs/plans/asset-annex.md:458` specifies it and

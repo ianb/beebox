@@ -62,7 +62,7 @@ to appear in a prompt, name it in plain language rather than leaning on the term
 
 Validation is **strict and fail-closed** — cards validate against their schema
 on load and at commit, never "best effort" loose parsing. Schema evolution is
-controlled migration ([`../migrations.md`](../migrations.md)), not silent
+controlled migration ([`../migrations.md`](../cards/migrations.md)), not silent
 drift; the agent can migrate schemas itself, which is what makes strictness
 affordable.
 

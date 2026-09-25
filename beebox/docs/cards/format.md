@@ -1,8 +1,12 @@
-# Cards as Markdown
+# Card format
+
+A `.card` file: naming, frontmatter and body, the shared body tags, attachments, and refs.
+
+## What it is
 
 **Status:** Implemented (2026-05). Cards are YAML frontmatter + a markdown body. The legacy XML card format, its loader, and the `cardworks` package have been removed.
 
-This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For the full design record (why markdown over XML, alternatives considered, per-schema migration notes, phased rollout) see `docs/implemented-plans/cards-as-markdown-rfc.md`. For a worked example of adding a new card type, see `docs/adding-schemas.md`. For the on-disk box layout, see `docs/box-layout.md`.
+This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For the full design record (why markdown over XML, alternatives considered, per-schema migration notes, phased rollout) see `docs/implemented-plans/cards-as-markdown-rfc.md`. For adding a card type, see [schemas](schemas.md). For the on-disk box layout, see [box layout](../box-layout.md).
 
 ## Format
 
@@ -19,7 +23,7 @@ A `.card` file is a YAML frontmatter block (`---` fences) optionally followed by
 
 **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` frontmatter field. `src/core/card-io.ts` `typeFromFilename()` reads it off the filename; `serializeCardText()` never writes a `type:` key back out. (A YAML `type:` field is tolerated on read for backward compatibility, but must match the filename's type or it's a format error.) Any file matching `<basename>.<type>.card` where `<type>` isn't registered in `cardSchemas` is an error; anything not matching that pattern is just not a card (e.g. `README.md`).
 
-**Schemas** are declared with `cardSchema(type, config)` from `src/cards/` (or the `beebox/cards` public specifier for box-local schemas under `src/schemas/`). `config.fields` is a flat map of Zod validators — one of which may be wrapped in `body(zodSchema)` to mark it as the file's markdown body instead of a frontmatter key. At most one field may be body-wrapped, and it must be named `body`; a schema that declares none is frontmatter-only, and any non-whitespace body content on such a card is a load error. Every schema also gets optional `title` and `contains` frontmatter fields for free (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`) unless it declares its own. See `docs/adding-schemas.md` for the full authoring walkthrough, including the per-schema `validate` hook for cross-field rules Zod can't express.
+**Schemas** are declared with `cardSchema(type, config)` from `src/cards/` (or the `beebox/cards` public specifier for box-local schemas under `src/schemas/`). `config.fields` is a flat map of Zod validators — one of which may be wrapped in `body(zodSchema)` to mark it as the file's markdown body instead of a frontmatter key. At most one field may be body-wrapped, and it must be named `body`; a schema that declares none is frontmatter-only, and any non-whitespace body content on such a card is a load error. Every schema also gets seven optional frontmatter fields for free (`title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, `theme`; `GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`, described under [schemas](schemas.md)) unless it declares its own. See [schemas](schemas.md) for the full authoring walkthrough, including the per-schema `validate` hook for cross-field rules Zod can't express.
 
 **Body content and Markdoc.** Where a schema declares a body, it's plain markdown text rendered through a shared Markdoc configuration (`src/shared/markdoc-config.ts`) rather than plain CommonMark — this is the same config the frontend renderer and `bbx validate`'s body-ref walker both use. It defines a shared vocabulary of inline/block tags (`{% quote %}`, `{% source %}`, `{% ingredient %}`, `{% task %}`, `{% todo %}`, `{% see-also %}`, etc.) available across card bodies; a card type doesn't declare its own tag set, it just uses whichever shared tags make sense in its body prose.
 
@@ -137,7 +141,7 @@ sources:
 
 ## Validation
 
-Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the per-box pre-commit hook (`bbx validate --pre-commit`, installed by `bbx init`; see `docs/card-validation.md` for the hook mechanics). Beyond the Zod frontmatter shape, `bbx validate` also runs: the schema's own `validate` hook (self-contained, cross-field checks), box-aware ref-existence resolution, and the `.attach/` layout lint above.
+Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the per-box pre-commit hook (`bbx validate --pre-commit`, installed by `bbx init`; see [validation](validation.md) for the hook mechanics). Beyond the Zod frontmatter shape, `bbx validate` also runs: the schema's own `validate` hook (self-contained, cross-field checks), box-aware ref-existence resolution, and the `.attach/` layout lint above.
 
 ## Why markdown over XML
 

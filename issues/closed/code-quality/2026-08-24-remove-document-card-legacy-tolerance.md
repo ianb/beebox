@@ -49,7 +49,7 @@ Nothing to extend or delete in source. The only follow-up is operational:
 
 - Once every deployed box has run `bbx migrate` past `document-to-pdf` (or been
   confirmed to have never held a `.document.card`), the migrator itself can
-  stay registered forever (append-only `MIGRATIONS`, per `docs/migrations.md`)
+  stay registered forever (append-only `MIGRATIONS`, per `docs/cards/migrations.md`)
   but the "why this exists" note can be trimmed from
   `docs/plans/scanner-ingest.md`'s Track 4 section and the dated note added at
   the top of that section (2026-08-24) — check that no live box still needs

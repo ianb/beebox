@@ -6,7 +6,7 @@ description: Use when creating or changing beebox card types, schema fields, or 
 # Card schemas: the model, then the checklist
 
 A guide skill: the mental model and the boundaries. The worked example
-and file-by-file checklist live in `beebox/docs/adding-schemas.md`.
+and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
 
 ## The model
 
@@ -48,7 +48,7 @@ Things the schema system does that you'd otherwise miss:
   the schema as `src/schemas/<type>.list-entry.tsx`, is registered from
   `src/frontend/src/file-types/builtins.tsx`, types its props with
   `SummaryAttrs<typeof XSchema>`, and reaches schema/core/cards code by
-  `import type` only (lint-enforced). See `docs/adding-schemas.md`.
+  `import type` only (lint-enforced). See `docs/cards/schemas.md`.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
   `docs/prompt-surface-review.md` before writing more than a couple of
