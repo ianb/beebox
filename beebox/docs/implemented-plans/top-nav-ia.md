@@ -414,7 +414,7 @@ parse-problem warning rows. `view: landmarks` cards gain sessions too
 disclosures; delete the never-built tile/full-form description).
 `docs/implemented-plans/nav-card.md` + `chat-header-chips.md`: pointer
 notes (rendering surface relocated / header row absorbed into the app
-bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
+bar). `docs/chat/sessions.md` if it references the Chats page.
 Release note: `nav.card` entries render in the switch menu now; `/`
 lands on chat; `/chats` redirects. Grep agent-facing text
 (`src/dev/knowledge-audits.yaml`, agent guide, schema instructions) for

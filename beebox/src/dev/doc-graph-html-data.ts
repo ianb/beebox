@@ -68,7 +68,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "Per-directory guide — lives next to the code it documents. Auto-loads.",
     supporting: [
       { path: "docs/scheduler.md", note: "How the next wakeup gets set. Cron, except it's a CLI." },
-      { path: "docs/chat-schedules.md", note: "When the agent should proactively message you." },
+      { path: "docs/chat/schedules.md", note: "When the agent should proactively message you." },
     ],
     code: ["src/core/reactor/", "src/core/"],
   },

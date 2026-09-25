@@ -31,7 +31,7 @@ to change a user-facing word, change it here first. Decisions recorded
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
 *User-facing:* internal — never shown. The agent addresses the boxholder as "you".
 
-**card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat-schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
+**card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat/schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
 *User-facing:* prefer the thing's own name — "your recipe", "the memo" — over "the card"; "card" is acceptable when nothing more specific exists. Filenames and paths go inside links, never as the noun of a sentence.
 
 **quantity / measurements** — The record schema's two number-carrying fields (`src/schemas/record.tsx`). `quantity` is a single `{value, note?}` answering "how much/many of it do I have" ("3 items", "10 ounces", "roughly 15–20"); `measurements` is a `{value, note?}` list of facts about the thing itself ("7 feet", "45 pounds", "1200 USD"). Values are natural language carrying number and unit together. (Renamed from `measures`, 2026-09; migration `record-measurements`.)
@@ -69,7 +69,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 ## Chat and navigation
 
-**session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/chat/session/`). See `docs/chat-session-lifecycle.md`.
+**session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/chat/session/`). See `docs/chat/sessions.md`.
 *User-facing:* **"chat"** — "New chat", "Recent chats", "this chat". Bare "session" never appears in UI labels ("chat session" in running prose is fine).
 
 **agent** — The Claude Code (or Codex) process working inside a box: the thing the reactor invokes and the chat talks to.

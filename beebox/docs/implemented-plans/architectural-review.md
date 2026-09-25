@@ -178,7 +178,7 @@ These are the internal exemplars each track should extend rather than rebuild:
   surfaces with injection seams; the pattern Track D's connector validation
   slots into.
 - **`frontend/src/machines/`** — six mature, typed xstate machines, all live,
-  docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
+  docs in sync (`docs/chat/composer.md`). xstate's home; not to be
   extended server-side.
 - **`bin/router.ts` `EntryState`** — plain discriminated-union lifecycle with
   guarded transitions and generation-identity race checks; the target pattern
@@ -707,7 +707,7 @@ scan's module-by-module diagnosis.
    → `idle | starting | streaming | draining | closing` union with
    invariant-checked transitions; extract the shared run-lifecycle core
    from ChatSession/ChatThreadSession (admitted near-duplicates, drifting);
-   then a `docs/chat-session-lifecycle.md` protocol doc for the
+   then a `docs/chat/sessions.md` protocol doc for the
    park/drain/evict/queue contract (the frontend has machines + state docs;
    the backend has neither).
 2. **Procedure statuses:** the z.enums already exist in

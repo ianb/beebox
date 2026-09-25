@@ -48,7 +48,7 @@ destination fits.
 
 ## Maintain the rubric
 
-Box agents have [packaged rubric instructions](box/quick-chat.md).
+Box agents have [packaged rubric instructions](../box/quick-chat.md).
 
 The optional box file `_config/chat-routing.yaml` contains authored rules.
 The boxholder or a box agent can edit it. It is plain YAML, not a card and
@@ -74,7 +74,7 @@ and its eligible existing chats. A chat rule applies to that specific chat;
 `keepEligible: true` keeps it eligible beyond the recency window, provided it
 still exists and is resumable. Missing or invalid targets stop routing visibly.
 
-## Data and limits
+## Requirements, data, and limits
 
 Quick chat requires an `openrouter` key granted to the box in the machine
 secret store. It is an optional service, not a configured chat model. A missing
@@ -83,7 +83,7 @@ message. Do not put provider keys in the rubric.
 
 The request goes to OpenRouter's Decisions API and is pinned to TypeSafe Jev.
 It includes the captured text, candidate identities and activity, rubric rules,
-and recent conversation text. See [security report §3](security-report.md#3-data-egress).
+and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
 The current bounds are:
 
 - Captured message: 12,000 characters; text only, with no attachments.

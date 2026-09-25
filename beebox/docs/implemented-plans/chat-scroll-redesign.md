@@ -19,7 +19,7 @@ state, and establishes a deterministic harness (extending the existing
 measurable pass/fail so the redesign is decided by evidence, not argument.
 
 > **Status — shipped 2026-06-21.** Tracks 1–4 are implemented and verified on
-> desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
+> desktop Chrome via `bin/browse` (procedure: `docs/chat/scroll.md`):
 > de-virtualized list + single `useStickToBottom` controller
 > (`InteractiveChat-scroll.ts`), scroll-to-bottom button, real-turn finalize
 > (no flash), and hold-position-when-content-loads-above. Track 5 (mobile
