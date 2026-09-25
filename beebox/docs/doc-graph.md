@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T18:12:26Z
+Generated: 2026-09-25T18:41:59Z
 Total documents: 425
 
 ## Issues
@@ -23,6 +23,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-lifecycle-clarity.md** — "Make current documentation and historical records distinguishable" (125 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (113 lines) · shipped history · implemented
@@ -55,7 +56,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (212 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -608,7 +608,7 @@ Title: "Deploy" | 63 lines
 
 Referenced by:
 - docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/CLAUDE.md`'s poll matches —
-- docs/plans/doc-structure-install-server.md:114 (mention) — setup docs (next cluster). The scripts themselves. `deploy/CLAUDE.md`.
+- docs/implemented-plans/doc-structure-install-server.md:114 (mention) — setup docs (next cluster). The scripts themselves. `deploy/CLAUDE.md`.
 - docs/server/deploying.md:55 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
 References:
@@ -625,6 +625,7 @@ Referenced by:
 - docs/implemented-plans/box-host-packages.md:54 (mention) — `deploy/README.md` note): ~120 lines. No generated output. Well under the
 - docs/implemented-plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/deploy-maintenance-page.md:83 (mention) — (`deploy/hetzner/setup-server.sh:368-397`). `deploy/README.md:147-148`:
+- docs/implemented-plans/doc-structure-install-server.md:13 (mention) — are spread over `deploy/README.md`, `server-operations.md`, `adding-a-box.md`,
 - docs/implemented-plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/implemented-plans/hub-healthz-box-aggregation.md:314 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/local-password-auth.md:535 (mention) — `deploy/README.md:196-217` env template gains `BBX_AUTH_FILE` (default is
@@ -636,7 +637,6 @@ Referenced by:
 - docs/migrations.md:164 (link) — not make its data current. See [deployment operations](../deploy/README.md).
 - docs/plans/codex-session-startup-auth.md:35 (mention) — - `deploy/README.md:329-339` documents service-account Claude subscription login. Add the parallel Codex operator proced
 - docs/plans/container-first.md:136 (mention) — device flow (`deploy/README.md:417-419`) works in-container today. Missing:
-- docs/plans/doc-structure-install-server.md:13 (mention) — are spread over `deploy/README.md`, `server-operations.md`, `adding-a-box.md`,
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
@@ -1320,10 +1320,10 @@ Title: "Google Cloud Console Setup" | 171 lines | current reference
 Referenced by:
 - docs/gmail-setup.md:11 (link) — in [google-setup.md](google-setup.md).
 - docs/google-drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
+- docs/implemented-plans/doc-structure-install-server.md:113 (mention) — daemon), `secrets.md`, `publishing.md`, `google-setup.md` and the connector
 - docs/implemented-plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/plans/agent-docs.md:373 (mention) — `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
-- docs/plans/doc-structure-install-server.md:113 (mention) — daemon), `secrets.md`, `publishing.md`, `google-setup.md` and the connector
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](google-setup.md).
 - docs/server/configuration.md:157 (link) — Create the OAuth client as in [Google setup](../google-setup.md) with the
 - docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../google-setup.md#token-expired--invalid_grant); design
@@ -1431,7 +1431,7 @@ Title: "Installing beebox" | 29 lines | current reference
 
 Referenced by:
 - docs/guides.md:10 (link) — | Installing beebox (which path for whom) | [docs/install.md](install.md) |
-- docs/plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
+- docs/implemented-plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
 - ../issues/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
 
 References:
@@ -1482,6 +1482,7 @@ Referenced by:
 - docs/README.md:120 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
 - docs/guides.md:58 (link) — | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+- docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
 - docs/implemented-plans/doc-structure.md:180 (mention) — - Periodic checks appear in `testing.md` "Periodic Checks", `maintenance.md`,
 - docs/implemented-plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
@@ -1489,7 +1490,6 @@ Referenced by:
 - docs/migrations.md:574 (mention) — - `docs/maintenance.md` — where `bbx migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
-- docs/plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
 - docs/testing/knowledge-audits.md:19 (link) — [maintenance](../maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
 - user-stories/catalog/2026-08-21.md:8797 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/maintenance.md`
@@ -1842,11 +1842,11 @@ Referenced by:
 - docs/guides.md:5 (link) — for operating instructions. [Documentation organization](README.md) describes
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
+- docs/implemented-plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
 - docs/implemented-plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -1897,13 +1897,13 @@ Referenced by:
 - docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
+- docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
 - docs/implemented-plans/docs-reorg.gap-analysis.md:140 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
 - docs/implemented-plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - docs/implemented-plans/mvp-implementation-guide.md:14 (mention) — > (never built — scheduling is `bbx tick`, `../scheduler.md`), `agents.json` +
 - docs/implemented-plans/scanner-ingest.md:125 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
 - docs/plans/agent-docs.md:69 (mention) — - Leak scan of the candidate set: `scheduler.md` names a real box in an
 - docs/plans/asset-annex.md:595 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
-- docs/plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:27 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:32 (mention) — Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:88 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
@@ -1923,11 +1923,11 @@ Referenced by:
 - docs/box-layout.md:207 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/guides.md:37 (link) — | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |
+- docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
 - docs/implemented-plans/secret-trick-runtime-delivery.md:172 (mention) — Update `beebox/docs/secrets.md` to retain the HTTP route only as a low-level
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
-- docs/plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
 - docs/security-report.md:177 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
@@ -1987,9 +1987,9 @@ Referenced by:
 - docs/chat/quick-chat.md:86 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
+- docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/plans/doc-structure-install-server.md:177 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/security-overview.md:28 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
@@ -2035,8 +2035,8 @@ Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - deploy/README.md:10 (link) — under [`../docs/server.md`](../docs/server.md); this file is a map of the
 - docs/guides.md:46 (link) — | The production server (provisioning, configuration, deploying, boxes, operations) | [docs/server.md](server.md) |
+- docs/implemented-plans/doc-structure-install-server.md:79 (mention) — | (new) | `server.md`: one operator's pipeline, not the install path; members; owned elsewhere |
 - docs/install.md:26 (link) — [server](server.md).
-- docs/plans/doc-structure-install-server.md:79 (mention) — | (new) | `server.md`: one operator's pipeline, not the install path; members; owned elsewhere |
 
 References:
 - → docs/install/docker.md (link)
@@ -2061,7 +2061,7 @@ Referenced by:
 - docs/development-process.md:34 (link) — **[Technologies and AI services](technologies.md)** names the stack and the
 - docs/development-workflow.md:5 (mention) — services](technologies.md).
 - docs/guides.md:21 (link) — | Technologies and AI services | [docs/technologies.md](technologies.md) |
-- docs/plans/doc-structure-install-server.md:175 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
 
 References:
 - → docs/development-process.md (link)
@@ -2107,6 +2107,7 @@ Referenced by:
 - docs/implemented-plans/coined-chat-ids.md:516 (mention) — **Test posture**, named as part of the design per `docs/testing.md`:
 - docs/implemented-plans/courseware-lesson-plan.md:332 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/courseware-phase1.md:496 (mention) — - **Tests** (per `docs/testing.md`):
+- docs/implemented-plans/doc-structure-install-server.md:91 (mention) — problem `testing.md` had. The directory is what makes "where is the restart
 - docs/implemented-plans/doc-structure.md:99 (mention) — prefix line. Promoted today from the pilot cluster: `testing.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:56 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
@@ -2138,7 +2139,6 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:424 (mention) — implication about worth. `docs/testing.md:5-11` puts decomposition and
 - docs/plans/change-based-test-selection.review.md:249 (mention) — > The plan says a never-failed test is either load-bearing or dead weight and "there is no way to tell them apart", then
 - docs/plans/clerk-tab-arrangements.md:437 (mention) — - **Package gates.** Run Clerk test/typecheck/lint/build and the focused beebox doctests/typecheck/lint. Run the full be
-- docs/plans/doc-structure-install-server.md:91 (mention) — problem `testing.md` had. The directory is what makes "where is the restart
 - docs/plans/interface-as-cards.md:509 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
@@ -3714,6 +3714,37 @@ References:
 - → CLAUDE.md (mention)
 - → docs/reports/chat-scroll-investigation-2026-09-04.md (mention)
 - → docs/plans/chat-scroll-model.md (mention)
+
+#### docs/implemented-plans/doc-structure-install-server.md **[ORPHAN]**
+
+Title: "Documentation structured like code: install and the production server" | 211 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → deploy/README.md (mention)
+- → docs/server/health-checks.md (mention)
+- → ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md (link)
+- → ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md (link)
+- → docs/plans/installation-story.md (link)
+- → docs/plans/container-first.md (link)
+- → docs/secrets.md (mention)
+- → docs/install.md (mention)
+- → docs/install/developer.md (mention)
+- → docs/install/docker.md (mention)
+- → docs/install/agent.md (mention)
+- → docs/server.md (mention)
+- → docs/server/provisioning.md (mention)
+- → docs/server/configuration.md (mention)
+- → docs/server/deploying.md (mention)
+- → docs/server/boxes.md (mention)
+- → docs/server/operations.md (mention)
+- → docs/testing.md (mention)
+- → docs/maintenance.md (mention)
+- → docs/scheduler.md (mention)
+- → docs/google-setup.md (mention)
+- → deploy/CLAUDE.md (mention)
+- → docs/technologies.md (mention)
+- → docs/security-report.md (mention)
 
 #### docs/implemented-plans/doc-structure.md
 
@@ -5523,13 +5554,13 @@ Title: "Installing beebox with an AI agent" | 103 lines | current reference
 
 Referenced by:
 - docs/guides.md:13 (link) — | Agent-driven install (for a user's AI assistant) | [docs/install/agent.md](install/agent.md) |
+- docs/implemented-plans/doc-structure-install-server.md:78 (mention) — | `agent-install.md` | `install/agent.md` |
 - docs/implemented-plans/local-password-auth.md:534 (mention) — `docs/install/agent.md` gain the first-run account step;
 - docs/implemented-plans/remove-open-mode.md:51 (mention) — `docs/install/agent.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:545 (mention) — surface is `docs/install/agent.md`'s existing "widening exposure is a real
 - docs/install.md:11 (link) — | With an AI agent | A person who has asked their assistant to install it for them; the page is written for the assistan
 - docs/plans/agent-docs.md:47 (mention) — `raw.githubusercontent.com/.../install/agent.md`.
 - docs/plans/container-first.md:586 (mention) — does the same; `docs/install/agent.md:28-29` says the engine is *"this
-- docs/plans/doc-structure-install-server.md:78 (mention) — | `agent-install.md` | `install/agent.md` |
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:28 (link) — handing [the agent install guide](../../beebox/docs/install/agent.md)
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:2 (mention) — title: "Check out Fabien Sanglard's `agent.md` piece for practices worth adopting"
@@ -5547,11 +5578,11 @@ Title: "Developer install (from source)" | 178 lines | current reference
 Referenced by:
 - docker/README.md:18 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/install/developer.md` from a fresh `de
 - docs/guides.md:11 (link) — | Developer install (from source) | [docs/install/developer.md](install/developer.md) |
+- docs/implemented-plans/doc-structure-install-server.md:76 (mention) — | `developer-install.md` | `install/developer.md` |
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
 - docs/install.md:10 (link) — | From source | Hacking on the engine itself. | [Developer](install/developer.md) |
 - docs/install/agent.md:45 (link) — ([developer-install.md](developer.md)) is the one. Ask which
 - docs/plans/container-first.md:587 (mention) — repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
-- docs/plans/doc-structure-install-server.md:76 (mention) — | `developer-install.md` | `install/developer.md` |
 - docs/plans/installation-story.md:124 (mention) — in `docs/install/developer.md`.
 - docs/plans/operator-member-password-reset.md:490 (mention) — `docs/install/developer.md` where they describe invite/password lifecycle.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:80 (mention) — gotcha `docs/install/developer.md` has to warn about — a real argument for a
@@ -5571,6 +5602,7 @@ Referenced by:
 - deploy/README.md:5 (link) — > [`../docs/install/docker.md`](../docs/install/docker.md).
 - docker/README.md:5 (link) — [`../docs/install/docker.md`](../docs/install/docker.md); this file is a map
 - docs/guides.md:12 (link) — | Docker install (local + VPS) | [docs/install/docker.md](install/docker.md) |
+- docs/implemented-plans/doc-structure-install-server.md:77 (mention) — | `docker-install.md` | `install/docker.md` |
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
 - docs/implemented-plans/remove-open-mode.md:50 (mention) — - Docs mentioning the opt-out: `docs/install/docker.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:68 (mention) — - **The documented-but-untested path.** `beebox/docs/install/docker.md:119`
@@ -5579,7 +5611,6 @@ Referenced by:
 - docs/install/developer.md:7 (link) — [docker-install.md](docker.md).
 - docs/plans/container-first.md:325 (mention) — `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
 - docs/plans/container-first.review.md:714 (mention) — *"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
-- docs/plans/doc-structure-install-server.md:77 (mention) — | `docker-install.md` | `install/docker.md` |
 - docs/plans/installation-story.md:423 (mention) — - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
@@ -6034,8 +6065,8 @@ References:
 Title: "Container-first install" | 908 lines | proposal | draft
 
 Referenced by:
+- docs/implemented-plans/doc-structure-install-server.md:20 (link) — [installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
 - docs/plans/container-first.review.md:3 (mention) — Reviewed `beebox/docs/plans/container-first.md` at draft status. Every
-- docs/plans/doc-structure-install-server.md:20 (link) — [installation story](installation-story.md) and [container-first](container-first.md)
 
 References:
 - → ../issues/features/2026-09-06-container-install-is-the-primary-path.md (frontmatter)
@@ -6075,37 +6106,6 @@ References:
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
-
-#### docs/plans/doc-structure-install-server.md **[ORPHAN]**
-
-Title: "Documentation structured like code: install and the production server" | 212 lines | proposal | active
-
-References:
-- → docs/README.md (link)
-- → deploy/README.md (mention)
-- → docs/server/health-checks.md (mention)
-- → ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md (link)
-- → ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md (link)
-- → docs/plans/installation-story.md (link)
-- → docs/plans/container-first.md (link)
-- → docs/secrets.md (mention)
-- → docs/install.md (mention)
-- → docs/install/developer.md (mention)
-- → docs/install/docker.md (mention)
-- → docs/install/agent.md (mention)
-- → docs/server.md (mention)
-- → docs/server/provisioning.md (mention)
-- → docs/server/configuration.md (mention)
-- → docs/server/deploying.md (mention)
-- → docs/server/boxes.md (mention)
-- → docs/server/operations.md (mention)
-- → docs/testing.md (mention)
-- → docs/maintenance.md (mention)
-- → docs/scheduler.md (mention)
-- → docs/google-setup.md (mention)
-- → deploy/CLAUDE.md (mention)
-- → docs/technologies.md (mention)
-- → docs/security-report.md (mention)
 
 #### docs/plans/document-comments.md
 
@@ -6194,11 +6194,11 @@ References:
 Title: "Installation story, phase 1: developer install + local Docker" | 614 lines | proposal | partial
 
 Referenced by:
+- docs/implemented-plans/doc-structure-install-server.md:20 (link) — [installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
 - docs/implemented-plans/scan-uploader-pairing.md:198 (mention) — profile; `docs/plans/installation-story.md` gets a pointer sentence.
 - docs/implemented-plans/tailscale-expose-and-protect.md:359 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
 - docs/plans/container-first.md:69 (mention) — - `docs/plans/installation-story.md:434`: the entrypoint contract, *"args =
 - docs/plans/container-first.review.md:86 (mention) — - `installation-story.md:434` — the entrypoint contract quote is verbatim.
-- docs/plans/doc-structure-install-server.md:20 (link) — [installation story](installation-story.md) and [container-first](container-first.md)
 - docs/plans/source-available-release.md:277 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — first-class alternative in `beebox/docs/plans/installation-story.md` and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:16 (link) — [the installation story](../../beebox/docs/plans/installation-story.md)
@@ -7135,11 +7135,11 @@ Referenced by:
 - deploy/README.md:22 (link) — | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
 - docs/guides.md:49 (link) — | Adding a box | [docs/server/boxes.md](server/boxes.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:493 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+- docs/implemented-plans/doc-structure-install-server.md:83 (mention) — | `adding-a-box.md` (rest); `deploy/README.md` add-box.sh, Adding connector secrets | `server/boxes.md` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:138 (mention) — `docs/server/boxes.md`.
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
 - docs/implemented-plans/secret-custody.md:540 (mention) — "copy the grant list", not the files. Update `docs/server/boxes.md`. New-box
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/server/boxes.md`), `bbx upgrade` is the per-box engine-upgrade
-- docs/plans/doc-structure-install-server.md:83 (mention) — | `adding-a-box.md` (rest); `deploy/README.md` add-box.sh, Adding connector secrets | `server/boxes.md` |
 - docs/plans/source-available-release.md:68 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
 - docs/server.md:17 (link) — | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troublesh
 - docs/server/operations.md:115 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
@@ -7161,7 +7161,7 @@ References:
 Title: "Server configuration" | 180 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
+- docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 
@@ -7177,7 +7177,7 @@ Title: "Deploying" | 130 lines | current reference
 Referenced by:
 - CLAUDE.md:23 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
 - deploy/README.md:20 (link) — | `deploy.sh` | Deploy a commit: build in the persistent detached checkout, stage on the server, activate under the main
-- docs/plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
+- docs/implemented-plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
 - docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
 
@@ -7197,6 +7197,7 @@ Referenced by:
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
+- docs/implemented-plans/doc-structure-install-server.md:14 (mention) — and `health-checks.md`, and they disagree with each other in three places.
 - docs/implemented-plans/docs-reorg.md:178 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
@@ -7204,7 +7205,6 @@ Referenced by:
 - docs/implemented-plans/top-nav-ia.md:448 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
 - docs/plans/asset-annex.md:488 (mention) — the deploy runbooks (`docs/server/health-checks.md`) without touching
-- docs/plans/doc-structure-install-server.md:14 (mention) — and `health-checks.md`, and they disagree with each other in three places.
 - docs/reports/git-annex-conversion-2026-08-01.md:14 (link) — > and [`../server/health-checks.md`](../server/health-checks.md) for current health checks.
 - docs/server.md:19 (link) — | [Health checks](server/health-checks.md) | The runbooks: hub endpoints, engine quota, box growth, template updates, co
 - docs/server/deploying.md:36 (link) — localhost (see [`../docs/health-checks.md`](health-checks.md)): it polls
@@ -7231,8 +7231,8 @@ Referenced by:
 - docs/guides.md:48 (link) — | Server operations | [docs/server/operations.md](server/operations.md) |
 - docs/implemented-plans/box-migration.subplan.md:163 (mention) — **Server mechanics** (`docs/server/operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:494 (mention) — rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
+- docs/implemented-plans/doc-structure-install-server.md:84 (mention) — | `deploy/README.md` prod-ssh, Production app diagnostics; `server-operations.md` Connecting, Writing scripts, Nightly u
 - docs/implemented-plans/scanner-ingest.md:207 (mention) — `docs/server/operations.md`.
-- docs/plans/doc-structure-install-server.md:84 (mention) — | `deploy/README.md` prod-ssh, Production app diagnostics; `server-operations.md` Connecting, Writing scripts, Nightly u
 - docs/plans/migration-reliability.md:759 (link) — [migrations](../migrations.md), [server operations](../server/operations.md),
 - docs/reports/git-annex-conversion-2026-08-01.md:13 (link) — > [`../server/operations.md`](../server/operations.md) for current operations,
 - docs/server.md:18 (link) — | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the
@@ -7257,7 +7257,7 @@ Title: "Server provisioning" | 202 lines | current reference
 
 Referenced by:
 - deploy/README.md:21 (link) — | `hetzner/create-server.sh`, `hetzner/setup-server.sh` | Example provisioners for the one host shape `deploy.sh` ships
-- docs/plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
+- docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
 
