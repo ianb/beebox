@@ -13,17 +13,7 @@ const MAX_EVENTS = 8;
 const SAMPLE_AFTER_ENTRIES = 200;
 
 type Page = "admin" | "settings";
-interface Breadcrumb { kind: "enter" | "query"; name: string; ms: number }
-interface Record {
-  apiBase: string;
-  page: Page;
-  startedAt: number;
-  heartbeatAt: number;
-  entries: number;
-  mounted: boolean;
-  events: Breadcrumb[];
-  attempts: number;
-}
+const breadcrumbSchema = z.object({ kind: z.enum(["enter", "query"]), name: z.string(), ms: z.number() });
 
 const active = new Map<Page, Record>();
 const mounts = new Map<Page, number>();
@@ -39,8 +29,9 @@ const recordSchema = z.object({
   entries: z.number(),
   mounted: z.boolean(),
   attempts: z.number(),
-  events: z.array(z.object({ kind: z.enum(["enter", "query"]), name: z.string(), ms: z.number() })).max(MAX_EVENTS),
+  events: z.array(breadcrumbSchema).max(MAX_EVENTS),
 });
+type Record = z.infer<typeof recordSchema>;
 
 function read(key: string): Record | null {
   try {
