@@ -55,7 +55,13 @@ quiet album:
 ```ts continue
 await writeFile(fake, "#!/bin/sh\necho 'Operation not permitted: Photos library' >&2\nexit 1\n");
 await chmod(fake, 0o755);
-(await errorMessageFor(exportPhotos(target))).includes("grant Full Disk Access")
+const accessMessage = await errorMessageFor(exportPhotos(target));
+accessMessage.includes("grant Full Disk Access")
+=> true
+```
+
+```continue
+accessMessage.includes("Automation")
 => true
 ```
 
