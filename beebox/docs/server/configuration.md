@@ -67,10 +67,10 @@ page; on iOS the app must first be added to the Home Screen.
 Claude auth is **not** an env var here: `ANTHROPIC_API_KEY` is deliberately
 stripped (`src/cli/bootstrap.ts`, `src/core/script-env.ts`) so a stray key
 can't silently take over billing. The server authenticates via subscription
-login instead — run `claude auth login` as the `beebox` user
-(`su - beebox -c 'claude auth login'`) once after `setup-server.sh`
-installs the CLI; the login persists in `~/.claude/` for that user. If the
-flow cannot complete on the server, transfer credentials as described below.
+login instead, with credentials transferred from a local login as described
+under "Transferring the Claude login" below; `claude auth login` cannot
+complete on the server. The login persists in `~/.claude/` for the `beebox`
+user.
 
 Codex authentication uses the same service-account custody boundary and its
 own CLI-managed store under `~/.codex/`. Bee Box deliberately does not reuse a
@@ -98,9 +98,9 @@ Claude Code stores OAuth credentials differently per platform:
 - **macOS**: Keychain entry, service `Claude Code-credentials`.
 - **Linux (server)**: File at `~/.claude/.credentials.json` containing `{ "claudeAiOauth": { "accessToken": "...", "refreshToken": "...", "expiresAt": ... } }`. File-mode `0600`, owner `beebox:beebox`.
 
-### If the login flow cannot complete on the server
+### Transferring the Claude login
 
-`claude auth login` receives its OAuth callback on a localhost HTTP server, which a laptop browser cannot reach on the server, and the Admin page's "Sign in" button spawns the same flow. When the login does not complete, transfer credentials from a local macOS login to the server:
+`claude auth login` receives its OAuth callback on a localhost HTTP server, which a laptop browser cannot reach on the server, so it never completes there; the Admin page's "Sign in" button spawns the same flow and does not work in production either. Transfer credentials from a local macOS login to the server instead:
 
 ```bash
 # On macOS (where you've logged in Claude Code locally):

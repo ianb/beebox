@@ -115,9 +115,8 @@ setup docs (next cluster). The scripts themselves. `deploy/CLAUDE.md`.
 
 ## Open design questions
 
-Which Claude-auth story is current on the server. Lean: the paste-code flow
-the Docker page describes now works headless and the credential transfer is
-the fallback; not verified.
+none; the Claude-auth question was settled by the boxholder (transfer, not
+`claude auth login`).
 
 ## Knowledge audits
 
@@ -206,6 +205,6 @@ service-user login section no longer asserts a paste-code flow the sources
 do not show; it says to run the login and to transfer credentials if it does
 not complete. The curated doc-graph table follows the moves.
 
-**Boxholder decision left open:** which Claude-auth story is current on
-the real server. The page now carries the login command and the transfer
-fallback without claiming which one you need.
+**Boxholder ruling (2026-09-25):** `claude auth login` on the server is out
+of date; the credential transfer is the current procedure, and the page now
+says so.
