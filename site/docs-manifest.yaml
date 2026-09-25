@@ -75,23 +75,23 @@
 # --- install ----------------------------------------------------------------
 
 
-- source: beebox/docs/google-setup.md
+- source: beebox/docs/connectors/google-auth.md
   publish: install/google.md
   description: "Creating the Google OAuth credentials shared by Gmail, Calendar, and Drive."
 
-- source: beebox/docs/gmail-setup.md
+- source: beebox/docs/connectors/gmail.md
   publish: install/gmail.md
   description: "Configuring the Gmail connector and its tracked working set."
 
-- source: beebox/docs/google-drive.md
+- source: beebox/docs/connectors/drive.md
   publish: install/drive.md
   description: "The three kinds of Drive card and how the Drive connector syncs them."
 
-- source: beebox/docs/telegram-setup.md
+- source: beebox/docs/connectors/telegram.md
   publish: install/telegram.md
   description: "Connecting a Telegram chat to a box."
 
-- source: beebox/docs/calendar.md
+- source: beebox/docs/connectors/calendar.md
   publish: install/calendar.md
   description: "Google Calendar sync to and from .ics files in the box."
 

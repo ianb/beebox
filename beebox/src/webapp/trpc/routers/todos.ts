@@ -18,7 +18,7 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { router, ownerProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../trpc.js";
 import { resolveCardPath } from "./card.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
@@ -85,7 +85,9 @@ function assertUnchanged(input: {
 }
 
 export const todosRouter = router({
-  setStatus: ownerProcedure
+  // Anyone the box admits may tick a todo, as they may edit the card it is
+  // written in; owner-only is for box settings, not document content.
+  setStatus: authedProcedure
     .input(SetStatusInputSchema)
     .mutation(async ({ input, ctx }) => {
       const { relPath, fullPath } = await resolveCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "write" });

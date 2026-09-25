@@ -124,7 +124,7 @@ gmailCommand
         if (result.stderr !== "") process.stderr.write(result.stderr);
         // The child's own exit code, not a collapsed 1: a caller scripting
         // around gws distinguishes them, and this command has always passed
-        // them through (`docs/gmail-setup.md`).
+        // them through (`docs/connectors/gmail.md`).
         process.exitCode = result.exitCode;
       },
     });

@@ -1,4 +1,8 @@
-# Gmail Connector Setup
+# Gmail
+
+A small tracked working set of Gmail threads, kept as cards; the mailbox stays in Gmail.
+
+## What it is
 
 The Gmail connector maintains a deliberately small, tracked working set. Gmail
 remains the complete mailbox; email does not automatically become Git content.
@@ -8,7 +12,7 @@ It shares the Google OAuth connection used by Calendar and Drive.
 
 On the box admin page, connect a Google account and enable Gmail for the box.
 If Google Services is absent, configure the server-wide OAuth client described
-in [google-setup.md](google-setup.md).
+in [Google auth](google-auth.md).
 
 ## Track a thread explicitly
 
