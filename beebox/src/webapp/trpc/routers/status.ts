@@ -186,6 +186,7 @@ export const statusRouter = router({
         questions: state.questions.length,
         pendingQuestions: navCounts.pendingQuestions,
         onPlateTodos: navCounts.onPlateTodos,
+        escalatedTodos: navCounts.escalatedTodos,
       },
     };
   }),

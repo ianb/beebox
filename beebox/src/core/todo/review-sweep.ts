@@ -185,7 +185,10 @@ function toJobItem(todo: SweptTodo, kind: "escalated" | "stirring" | "stale"): T
 /** Every open todo the box holds, each carrying its card's summary text and its heading path. */
 async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<SweptTodo[]> {
   const result = await runTodoQuery(boxRoot, {
-    query: { here: "", params: { status: ["open"] } },
+    // `scope: "all"` — the sweep's job brief rides agent follow-ups along as
+    // an exception (module doc, point 4); a default `boxholder` scope would
+    // make them invisible to it.
+    query: { here: "", params: { status: ["open"], scope: "all" } },
     since: lastSweepEpoch,
   });
   const out: SweptTodo[] = [];

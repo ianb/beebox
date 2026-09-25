@@ -12,10 +12,10 @@ import { statusRouter } from "../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../src/core/todo/query.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-/** Every todo in the box, whatever its status — the collection runner, box-wide. */
+/** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
 async function collectTodos(boxRoot) {
   const result = await runTodoQuery(boxRoot, {
-    query: { here: "", params: { status: ["open", "done", "dropped", "parked"] } },
+    query: { here: "", params: { status: ["open", "done", "dropped", "parked"], scope: "all" } },
     since: null,
   });
   return { todos: result.groups.flatMap((g) => g.rows).flatMap((r) => r.items), issues: result.issues };
@@ -54,7 +54,7 @@ is zero pending questions, not an error.
 ```ts
 const box = await makeTmpBox({ git: true });
 JSON.stringify(await caller(box).navStatus())
-=> {"counts":{"pendingQuestions":0,"onPlateTodos":0}}
+=> {"counts":{"pendingQuestions":0,"onPlateTodos":0,"escalatedTodos":0}}
 ```
 
 ```ts cleanup
@@ -119,7 +119,7 @@ Body.
 
 const withTodos = (await caller(box).navStatus()).counts;
 JSON.stringify(withTodos)
-=> {"pendingQuestions":3,"onPlateTodos":1}
+=> {"pendingQuestions":3,"onPlateTodos":1,"escalatedTodos":0}
 ```
 
 ## The count agrees with the full collector
@@ -152,4 +152,32 @@ const fromBadge = (await caller(box).navStatus()).counts.onPlateTodos;
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## `escalatedTodos` counts what's past due, agent-assigned excluded
+
+The nav badge's dot: an escalated boxholder todo bumps it, an escalated agent
+follow-up does not — same `isBoxholderTodo` ownership rule as the badge
+number itself.
+
+```ts
+const escBox = await makeTmpBox({ git: true });
+await escBox.write(
+  "_content/notes/Overdue.memo.card",
+  `---
+created: 2026-01-01T00:00:00Z
+---
+{% todo due="2026-07-01" %}Boxholder, overdue{% /todo %}
+
+{% todo assigned="agent" by="agent" created="2026-07-01" due="2026-07-01" %}Agent, overdue{% /todo %}
+`,
+);
+
+const escCounts = (await caller(escBox).navStatus()).counts;
+JSON.stringify([escCounts.onPlateTodos, escCounts.escalatedTodos])
+=> [1,1]
+```
+
+```ts cleanup
+await escBox.cleanup();
 ```

@@ -1,6 +1,6 @@
 ---
 title: "Todos as inline things-to-think-about, not a todo location — and surfaced in the card companion view when that exists"
-workstream: unattached
+workstream: todos-ui
 area: beebox
 needs: [design]
 labels: [cards, ui]

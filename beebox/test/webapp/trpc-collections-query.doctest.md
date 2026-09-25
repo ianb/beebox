@@ -216,6 +216,51 @@ JSON.stringify(plate.groups.map((g) => `${g.key}=${String(g.reduction.open)}`))
 await box.cleanup();
 ```
 
+## `scope`: boxholder by default, agent follow-ups only with `scope: "all"`
+
+An agent-assigned todo never reaches a reduction or a row under the default
+`scope: "boxholder"` — not merely hidden, but never counted, which is what
+lets a header's number and the list's rows agree by construction.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(
+  "_content/a.memo.card",
+  memo(
+    '{% todo %}Boxholder{% /todo %}\n\n' +
+    '{% todo assigned="agent" by="agent" created="2026-07-01" %}Agent follow-up{% /todo %}\n'
+  )
+);
+box.commitAll("seed");
+const c = caller(box.root);
+
+const defaultScope = await c.collections.query({
+  collection: "todos",
+  query: { here: "_content/a.memo.card", params: { status: ["open"] } },
+});
+
+JSON.stringify(texts(defaultScope))
+=> ["Boxholder"]
+
+defaultScope.reduction.open
+=> 1
+
+const allScope = await c.collections.query({
+  collection: "todos",
+  query: { here: "_content/a.memo.card", params: { status: ["open"], scope: "all" } },
+});
+
+JSON.stringify(texts(allScope).sort())
+=> ["Agent follow-up","Boxholder"]
+
+allScope.reduction.open
+=> 2
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Guards: a scope that leaves the box is refused at the input boundary
 
 `here` and `glob` both fail closed, rather than reaching the glob package
