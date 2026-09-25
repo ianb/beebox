@@ -30,7 +30,7 @@ import { runTodoQuery } from "./query.js";
 import { summaryText } from "../file-summary.js";
 import { formatTodoLocation } from "./collect-types.js";
 import type { DerivedTodo } from "./collection.js";
-import { parseIsoDate, boxLocalDateEpoch, recheckDefers } from "../../shared/todo-model.js";
+import { parseIsoDate, boxLocalDateEpoch, recheckDefers, RECHECK_NEVER } from "../../shared/todo-model.js";
 import type { TodoReviewJobItem } from "../../schemas/todo-review-job.js";
 
 const STALE_DAYS = 45;
@@ -48,6 +48,12 @@ export async function boxTodayEpoch(boxRoot: string): Promise<number> {
  * without opening the card: what the card is, and what heading it sat under.
  */
 export type SweptTodo = DerivedTodo & { card: string; section: string };
+
+interface ComputeInput {
+  todayEpoch: number;
+  /** Whether a todo with `recheck="never"` stays out of review (`review-check.ts` decides). */
+  neverDefers: (todo: SweptTodo) => boolean;
+}
 
 export interface TodoReviewSets {
   escalated: SweptTodo[];
@@ -79,13 +85,12 @@ function ageInDays(created: string, todayEpoch: number): number | null {
  * it from the `since` baseline this sweep handed the runner — so the only
  * date arithmetic left here is the stale rule, which is the sweep's own.
  */
-function computeSets(
-  all: SweptTodo[],
-  todayEpoch: number,
-): TodoReviewSets {
-  // A todo whose `recheck` is `never` or still ahead is out of every set: the
-  // review already looked at it and said when to look again (Track 7).
-  const todos = all.filter((t) => !recheckDefers(t.recheck, todayEpoch));
+function computeSets(all: SweptTodo[], input: ComputeInput): TodoReviewSets {
+  const { todayEpoch, neverDefers } = input;
+  // A todo whose `recheck` is still ahead is out of every set: the review
+  // already looked at it and said when to look again (Track 7). Whether a
+  // `never` still holds is the caller's call (it knows who wrote it).
+  const todos = all.filter((t) => !(t.recheck === RECHECK_NEVER ? neverDefers(t) : recheckDefers(t.recheck, todayEpoch)));
 
   const escalated = todos.filter((t) => t.plateState === "escalated");
 
@@ -157,7 +162,7 @@ async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<Swep
  */
 export async function computeTodoReviewSets(
   boxRoot: string,
-  input: { lastSweepEpoch: number; todayEpoch: number },
+  input: ComputeInput & { lastSweepEpoch: number },
 ): Promise<TodoReviewSets> {
-  return computeSets(await sweptTodos(boxRoot, input.lastSweepEpoch), input.todayEpoch);
+  return computeSets(await sweptTodos(boxRoot, input.lastSweepEpoch), input);
 }

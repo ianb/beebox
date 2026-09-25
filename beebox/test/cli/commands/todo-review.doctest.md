@@ -98,6 +98,13 @@ async function cycle(root: string, input: { day: string; from: string; to: strin
   return run(root, ["verify"]);
 }
 
+/** Three daily cycles that end with verify retiring the todo `{% todo due="2026-09-01" %}<text>` on CARD. */
+async function retire(root: string): Promise<string> {
+  await cycle(root, { day: "2026-09-25", from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="2026-09-30" %}' });
+  await cycle(root, { day: "2026-09-30", from: 'recheck="2026-09-30"', to: 'recheck="2026-10-10"' });
+  return (await cycle(root, { day: "2026-10-10", from: 'recheck="2026-10-10"', to: 'recheck="2026-10-20"' })).out[0] ?? "";
+}
+
 async function quietly(fn: () => Promise<void>): Promise<void> {
   const log = console.log;
   console.log = () => {};
@@ -245,6 +252,19 @@ await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-05" %}',
 await edit(box.root, { from: '{% todo status="done" due="2026-10-20" recheck="2026-10-10" %}Order lumber', to: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber' });
 (await run(box.root, ["verify"])).out[1]
 => - store/Porch.memo.card:5 "Order lumber": not found on its card as written: the review may not reword the boxholder's todos
+```
+
+Every attribute but `recheck` is frozen, `created` included; the note after
+the closing tag is free.
+
+```ts continue
+await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber{% /todo %}', to: '{% todo created="2026-09-02" due="2026-09-01" recheck="2026-10-10" %}Order lumber{% /todo %} — still waiting' });
+(await run(box.root, ["verify"])).out[1]
+=> - store/Porch.memo.card:5 "Order lumber": the review may change only recheck on the boxholder's todos (changed: created)
+
+await edit(box.root, { from: '{% todo created="2026-09-02" ', to: "{% todo " });
+(await run(box.root, ["verify"])).code
+=> 0
 ```
 
 ```ts cleanup
@@ -404,6 +424,67 @@ await pendingJobs(legacy.root)
 
 ```ts cleanup
 await legacy.cleanup();
+```
+
+## A retired todo that is edited is back in review; a hand-set `never` holds
+
+`never` written by the review's own verify holds only while the todo is as
+it was retired. The boxholder moving its due date puts it back in the next
+review, where the agent replaces `never` with a date. A `never` the
+boxholder set by hand, with no retirement behind it, is respected.
+
+```ts
+const back = await seedBox();
+await back.write(CARD, memo('{% todo due="2026-09-01" %}Fix the gate{% /todo %}\n\n{% todo due="2026-09-01" recheck="never" %}Old idea{% /todo %}\n'));
+back.commitAll("gate");
+await retire(back.root)
+=> Stopped reviewing store/Porch.memo.card:5: Fix the gate (third recheck with no change)
+
+setTime("2026-11-01T12:00:00.000Z");
+(await run(back.root, ["check"])).code
+=> 75
+
+await edit(back.root, { from: 'due="2026-09-01" recheck="never" %}Fix', to: 'due="2026-10-15" recheck="never" %}Fix' });
+const relisted = (await run(back.root, ["check"])).out.join("\n");
+[relisted.includes("Fix the gate"), relisted.includes("Old idea")].join(" ")
+=> true false
+
+await edit(back.root, { from: 'recheck="never" %}Fix', to: 'recheck="2026-11-15" %}Fix' });
+(await run(back.root, ["verify"])).out[0]
+=> Every todo review item is settled
+```
+
+```ts cleanup
+await back.cleanup();
+```
+
+## The agent may not write `never`, even on a todo that was retired before
+
+Retired, then the boxholder removes `never`: the todo is listed again and its
+old retirement no longer counts. An agent that writes `never` back fails
+verify, and the todo is listed again the next day.
+
+```ts
+const sneaky = await seedBox();
+await sneaky.write(CARD, memo('{% todo due="2026-09-01" %}Fix the gate{% /todo %}\n'));
+sneaky.commitAll("gate");
+await retire(sneaky.root);
+await edit(sneaky.root, { from: ' recheck="never"', to: "" });
+setTime("2026-11-01T12:00:00.000Z");
+(await run(sneaky.root, ["check"])).code
+=> 0
+
+await edit(sneaky.root, { from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="never" %}' });
+(await run(sneaky.root, ["verify"])).out[1]
+=> - store/Porch.memo.card:5 "Fix the gate": recheck="never" is set only by the review itself; give a date 1-90 days out
+
+setTime("2026-11-02T12:00:00.000Z");
+(await run(sneaky.root, ["check"])).out.join("\n").includes("Fix the gate")
+=> true
+```
+
+```ts cleanup
+await sneaky.cleanup();
 ```
 
 ## The third unchanged recheck retires the todo, commits, and raises a health warning

@@ -11,29 +11,22 @@
  * to pick up and two agents never work one review. A legacy `todo-review`
  * job card still pending on a box is the reactor's to drain, not this.
  *
- * Each item carries a snapshot of the todo (status, assigned, start, due) so
- * `verify` can tell what the agent changed on a boxholder's todo.
+ * Each item carries a snapshot of the todo (every attribute but `recheck`,
+ * `review-snapshot.ts`) so `verify` can tell what the agent changed on a
+ * boxholder's todo.
  *
- * It also prunes the recheck history: entries whose card is gone, or whose
- * words no longer match any todo on that card, are dropped.
+ * A `recheck="never"` holds only when the boxholder set it, or when `verify`
+ * retired the todo and it is unchanged since (`review-retired.ts`); a listed
+ * todo's retired record is cleared, since it is re-entering review. The
+ * recheck history is pruned of cards that are gone and todos whose words are.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { stringify } from "yaml";
-import { errnoCode } from "../../lib/error-guards.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
 import { TODO_REVIEW_INSTRUCTIONS } from "../../schemas/todo-review-job.js";
-import { extractCardTodos } from "./extract.js";
 import { formatTodoLocation } from "./collect-types.js";
-import {
-  loadSweepState,
-  recheckKeyParts,
-  saveSweepState,
-  withSweepLock,
-  type RecheckRecord,
-  type ReviewItem,
-} from "./review-state.js";
+import { loadSweepState, saveSweepState, withSweepLock, type ReviewItem } from "./review-state.js";
+import { clearRetired, loadHistoryCards, neverDefers, pruneRechecks } from "./review-retired.js";
+import { snapshotOf } from "./review-snapshot.js";
 import { boxTodayEpoch, computeTodoReviewSets, toBriefItem, type SweptTodo, type TodoReviewSets } from "./review-sweep.js";
 
 export type TodoReviewCheckResult = { kind: "nothing" } | { kind: "review"; brief: string; items: ReviewItem[] };
@@ -45,10 +38,7 @@ function reviewItem(todo: SweptTodo): ReviewItem {
     path: todo.path,
     locator: todo.locator,
     text: todo.text,
-    status: todo.status,
-    ...(todo.assigned !== undefined && { assigned: todo.assigned }),
-    ...(todo.start !== undefined && { start: todo.start }),
-    ...(todo.due !== undefined && { due: todo.due }),
+    snapshot: snapshotOf(todo),
   };
 }
 
@@ -119,36 +109,6 @@ function renderBrief(selection: Selection, todayEpoch: number): string {
   return `${TODO_REVIEW_INSTRUCTIONS}\n\nToday (box-local) is ${today}.\n\n## The items\n\n${cap}\`\`\`yaml\n${stringify(lists, { lineWidth: 0 })}\`\`\``;
 }
 
-/** The todo texts on `relPath`, or `null` when the card is gone. */
-async function cardTexts(
-  boxRoot: string,
-  input: { relPath: string; cardSchemas: Awaited<ReturnType<typeof createCardSchemaMap>> },
-): Promise<Set<string> | null> {
-  let content: string;
-  try {
-    content = await fs.readFile(path.join(boxRoot, input.relPath), "utf-8");
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw e;
-  }
-  const { items } = extractCardTodos({ relPath: input.relPath, content, ctx: { cardSchemas: input.cardSchemas } });
-  return new Set(items.map((t) => t.text));
-}
-
-/** `rechecks` without entries for cards that are gone or todos whose words no longer appear on their card. */
-async function pruneRechecks(boxRoot: string, rechecks: Record<string, RecheckRecord>): Promise<Record<string, RecheckRecord>> {
-  const cardSchemas = await createCardSchemaMap(boxRoot);
-  const texts = new Map<string, Set<string> | null>();
-  const kept: Record<string, RecheckRecord> = {};
-  for (const [key, record] of Object.entries(rechecks)) {
-    const parts = recheckKeyParts(key);
-    if (parts === null) continue;
-    if (!texts.has(parts.path)) texts.set(parts.path, await cardTexts(boxRoot, { relPath: parts.path, cardSchemas }));
-    if (texts.get(parts.path)?.has(parts.text) === true) kept[key] = record;
-  }
-  return kept;
-}
-
 /**
  * Sweep, save the items, and return the brief (or `nothing`). The stirring
  * baseline moves here only when there is nothing to review; otherwise
@@ -160,10 +120,18 @@ export async function checkTodoReview(boxRoot: string): Promise<TodoReviewCheckR
   return withSweepLock(boxRoot, async () => {
     const todayEpoch = await boxTodayEpoch(boxRoot);
     const state = await loadSweepState(boxRoot);
-    const rechecks = await pruneRechecks(boxRoot, state.rechecks);
-    // First run: everything already on the plate counts as "crossed since the box existed".
-    const sets = await computeTodoReviewSets(boxRoot, { lastSweepEpoch: state.lastSweepDateEpoch ?? 0, todayEpoch });
+    const cards = await loadHistoryCards(boxRoot, state.rechecks);
+    const sets = await computeTodoReviewSets(boxRoot, {
+      // First run: everything already on the plate counts as "crossed since the box existed".
+      lastSweepEpoch: state.lastSweepDateEpoch ?? 0,
+      todayEpoch,
+      neverDefers: (todo) => neverDefers({ rechecks: state.rechecks, cards, todo }),
+    });
     const selection = selectItems(sets);
+    // A listed todo is re-entering review: a retired record for it no longer holds.
+    let history = state.rechecks;
+    for (const { todo } of selection.shown) history = clearRetired({ rechecks: history, cards, todo });
+    const rechecks = pruneRechecks({ rechecks: history, cards });
     if (selection.total === 0) {
       await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch, review: null, rechecks });
       return { kind: "nothing" };

@@ -667,19 +667,27 @@ open:
   When the cap cuts a stirring todo, `verify` leaves the baseline where it
   was, so the next run still lists it as stirring. The item's `card` label
   is cut to 80 characters (an untitled card's label is its whole body).
-- **On a boxholder's todo only `recheck` may change.** `verify` fails an
-  item whose status, `start`, `due`, or `assigned` changed since `check`,
-  naming them, and fails a reworded or removed boxholder todo ("the review
-  may not reword the boxholder's todos"). The agent's own todos may change
-  status, or be reworded.
+- **On a boxholder's todo only `recheck` may change**, and the note after
+  the closing tag. `check` snapshots every other attribute (`id`, `status`,
+  `assigned`, `by`, `created`, `start`, `due`) and the nested `see-also`
+  (`review-snapshot.ts`); `verify` fails an item whose snapshot changed,
+  naming the attributes, and fails a reworded or removed boxholder todo ("the
+  review may not reword the boxholder's todos"). The agent's own todos may
+  change status, or be reworded.
 - **Recheck history is pruned at `check`**: entries whose card is gone, or
   whose words match no todo on the card, are dropped.
 - **Finding a todo again** in `verify` is by its saved words on its card,
   with the locator as a tie-break: an agent edit elsewhere on the card moves
   line numbers without changing the todo.
-- **`recheck="never"` written by the agent fails `verify`**; it passes only
-  when `verify` retired the todo itself. A retired todo that comes back into
-  review (someone removed `never`) starts a new count.
+- **Who wrote `never` decides what it means** (`review-retired.ts`). With no
+  retired record, it was set by hand and holds. With one (card path + words,
+  or the retired locator when the words changed), it holds only while the
+  todo still matches the snapshot taken at retirement; an edited retired todo
+  is listed again, and the agent replaces `never` with a date. `check`
+  clears the retired record of every todo it lists, so `verify` accepts
+  `never` only when this review's verify wrote it. A `never` the agent wrote
+  fails `verify` and is flagged in the history, so it does not hide the todo
+  from the next review. A todo back in review starts a new count.
 - **"Oldest" in the health message** is by `created`, then by location.
 - **Schedule timeout** is `30m` (a 20-turn agent plus review retries; the
   scheduler default is 10m). No `lock-group`.

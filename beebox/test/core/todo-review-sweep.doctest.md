@@ -34,7 +34,7 @@ async function seedBox() {
 /** The sets' todo ids, swept with `since` as the stirring baseline (an ISO date; null = the box's first review). */
 async function sweep(root: string, since: string | null) {
   const lastSweepEpoch = since === null ? 0 : (parseIsoDate(since) ?? 0);
-  const sets = await computeTodoReviewSets(root, { lastSweepEpoch, todayEpoch: await boxTodayEpoch(root) });
+  const sets = await computeTodoReviewSets(root, { lastSweepEpoch, todayEpoch: await boxTodayEpoch(root), neverDefers: () => true });
   return JSON.stringify({
     escalated: sets.escalated.map((t) => t.id),
     stirring: sets.stirring.map((t) => t.id),
@@ -100,7 +100,7 @@ await box.write(
   "store/Porch.doc.card",
   "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
 );
-const sets = await computeTodoReviewSets(box.root, { lastSweepEpoch: 0, todayEpoch: await boxTodayEpoch(box.root) });
+const sets = await computeTodoReviewSets(box.root, { lastSweepEpoch: 0, todayEpoch: await boxTodayEpoch(box.root), neverDefers: () => true });
 JSON.stringify(toBriefItem(sets.escalated.find((t) => t.id === "deck"), "escalated"))
 => {"locator":"store/Porch.doc.card:6","text":"Order lumber","detail":"due 2026-07-01","card":"Porch rebuild","section":"Decking"}
 ```

@@ -11,8 +11,9 @@
  * the only thing the review may change. The todo is found again by the words
  * `check` saved (the locator only breaks ties, since an edit elsewhere on the
  * card moves line numbers), so a reworded or removed boxholder todo is not
- * found and fails; a changed status, `start`, `due`, or `assigned` fails and
- * names the attributes. On the agent's own todo, a reword or removal counts
+ * found and fails; a change to any other attribute (`review-snapshot.ts`:
+ * everything but `recheck`, plus nested `see-also`) fails and names them.
+ * The note after the closing tag may change: that is where the reason goes. On the agent's own todo, a reword or removal counts
  * as tending it.
  *
  * Anything unsettled is reported, and the procedure re-invokes the agent with
@@ -28,7 +29,11 @@
  * due are compared) restarts the count.
  *
  * `recheck="never"` is never a valid agent answer: it passes only when this
- * step wrote it.
+ * review's own verify wrote it (`check` clears older retired records for the
+ * todos it lists). A refused `never` is flagged in the history so it does not
+ * keep the todo out of the next review. The retirement records where the todo
+ * was and its snapshot; `check` treats a retired todo that no longer matches
+ * as back in review (`review-retired.ts`).
  */
 
 import * as fs from "node:fs/promises";
@@ -42,6 +47,7 @@ import { parseRecheck, RECHECK_NEVER, TODO_AGENT } from "../../shared/todo-model
 import { extractCardTodos } from "./extract.js";
 import { formatTodoLocation, type TodoItem } from "./collect-types.js";
 import { setTodoAttribute } from "./set-status.js";
+import { changedSince, snapshotOf } from "./review-snapshot.js";
 import { loadSweepState, recheckKey, saveSweepState, withSweepLock, type RecheckRecord, type ReviewItem } from "./review-state.js";
 import { boxTodayEpoch } from "./review-sweep.js";
 
@@ -92,14 +98,11 @@ async function findCurrent(
   return sameText.find((t) => formatTodoLocation(t) === wanted) ?? sameText[0] ?? null;
 }
 
-/** Attributes the review may not change on a boxholder's todo. */
-const FROZEN = ["status", "assigned", "start", "due"] as const;
-
 /** Why this boxholder todo's review broke the recheck-only rule, or `null` when it didn't. */
 function boxholderEditProblem(item: ReviewItem, todo: TodoItem | null): string | null {
-  if (item.assigned === TODO_AGENT) return null;
+  if (item.snapshot.assigned === TODO_AGENT) return null;
   if (todo === null) return "not found on its card as written: the review may not reword the boxholder's todos";
-  const changed = FROZEN.filter((name) => todo[name] !== item[name]);
+  const changed = changedSince(item.snapshot, todo);
   if (changed.length === 0) return null;
   return `the review may change only recheck on the boxholder's todos (changed: ${changed.join(", ")})`;
 }
@@ -115,7 +118,9 @@ function judge(input: { todo: TodoItem; record: RecheckRecord | undefined; today
     };
   }
   if (parsed === RECHECK_NEVER) {
-    if (record?.retiredOn !== undefined) return { settled: true, recheck: null };
+    // `check` cleared any older retired record for a listed todo, so one here
+    // was written by this review's own verify.
+    if (record?.retired !== undefined) return { settled: true, recheck: null };
     return { settled: false, reason: 'recheck="never" is set only by the review itself; give a date 1-90 days out' };
   }
   const days = Math.round((parsed - todayEpoch) / MS_PER_DAY);
@@ -136,7 +141,7 @@ function countRecheck(input: { todo: TodoItem; recheck: string; record: RecheckR
   // that is tending it, so its count starts over.
   const unchanged =
     record !== undefined &&
-    record.retiredOn === undefined &&
+    record.retired === undefined &&
     record.status === todo.status &&
     record.start === todo.start &&
     record.due === todo.due;
@@ -146,6 +151,17 @@ function countRecheck(input: { todo: TodoItem; recheck: string; record: RecheckR
     ...(todo.due !== undefined && { due: todo.due }),
     recheck,
     count: unchanged ? record.count + 1 : 1,
+  };
+}
+
+function rejectNever(todo: TodoItem, record: RecheckRecord | undefined): RecheckRecord {
+  return {
+    status: todo.status,
+    ...(todo.start !== undefined && { start: todo.start }),
+    ...(todo.due !== undefined && { due: todo.due }),
+    recheck: RECHECK_NEVER,
+    count: record?.count ?? 0,
+    neverRejected: true,
   };
 }
 
@@ -202,13 +218,19 @@ export async function verifyTodoReview(boxRoot: string): Promise<TodoReviewVerif
       const verdict = judge({ todo, record: rechecks[key], todayEpoch });
       if (!verdict.settled) {
         result.unsettled.push({ item, reason: verdict.reason });
+        // A `never` the agent wrote must not keep the todo out of the next review.
+        if (todo.recheck === RECHECK_NEVER) rechecks[key] = rejectNever(todo, rechecks[key]);
         continue;
       }
       if (verdict.recheck === null) continue;
       const record = countRecheck({ todo, recheck: verdict.recheck, record: rechecks[key] });
       rechecks[key] = record;
       if (record.count >= RETIRE_AFTER_RECHECKS && (await retire(boxRoot, todo))) {
-        rechecks[key] = { ...record, recheck: RECHECK_NEVER, retiredOn: isoDay(todayEpoch) };
+        rechecks[key] = {
+          ...record,
+          recheck: RECHECK_NEVER,
+          retired: { on: isoDay(todayEpoch), locator: todo.locator, snapshot: snapshotOf(todo) },
+        };
         result.retired.push(item);
       }
     }

@@ -1597,7 +1597,11 @@ tests:
   # docs/plans/todos-ui.md Track 7: the todo-review procedure's brief requires
   # every item to end with a status change or a `recheck` date, and `recheck`
   # is the one attribute the agent may write on the boxholder's todos. The
-  # agent guide todos section and the review brief's instructions carry it. Not yet run.
+  # agent guide todos section and the review brief's instructions carry it.
+  # Run 2026-09-25 on test1 (claude): PASS, correct on every watch_for point
+  # (recheck only, 1-90 days, never writes `never`, raises it). Read the
+  # todo-review procedure card first, so measured as knows_about-by-lookup;
+  # in a real run the brief is in context, which is the knows_directly case.
   - id: todo-recheck
     prompt: >
       You are working the daily todo review. One item is the boxholder's todo,
@@ -4549,7 +4553,9 @@ tests:
   # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
   # plan: the views/CLAUDE.md stub names `Markdown` and the rule, so the agent
   # should not need views.md. The always-loaded agent guide does not name view
-  # APIs, so the stub loading (or not) decides the measured level. Not yet run.
+  # APIs, so the stub loading (or not) decides the measured level.
+  # Run 2026-09-25 on test1 (claude): PASS on every watch_for point, but found
+  # it by reading box-docs/views.md (knows_about), not from the stub.
   - id: view-markdown-export
     prompt: >
       I'm writing a box view that lists meeting-note cards with each card's

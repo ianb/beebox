@@ -25,7 +25,7 @@ import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { sleep } from "../../lib/sleep.js";
 import { TodoLocatorSchema } from "../../shared/todo-locators.js";
-import { TODO_STATUSES } from "../../shared/todo-model.js";
+import { TodoSnapshotSchema } from "./review-snapshot.js";
 
 const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
 const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
@@ -46,16 +46,13 @@ class TodoReviewSweepLockError extends Error {
 
 /**
  * One review item: an address `verify` can re-extract, and what the todo
- * looked like when `check` handed it out.
+ * looked like when `check` handed it out (everything but `recheck`).
  */
 const ReviewItemSchema = z.object({
   path: z.string(),
   locator: TodoLocatorSchema,
   text: z.string(),
-  status: z.enum(TODO_STATUSES),
-  assigned: z.string().optional(),
-  start: z.string().optional(),
-  due: z.string().optional(),
+  snapshot: TodoSnapshotSchema,
 });
 
 export type ReviewItem = z.infer<typeof ReviewItemSchema>;
@@ -72,8 +69,19 @@ const RecheckRecordSchema = z.object({
   /** The `recheck` value last counted, so a re-run of `verify` never counts the same recheck twice. */
   recheck: z.string(),
   count: z.number().int().min(0),
-  /** Box-local ISO date on which `verify` set `recheck="never"`. */
-  retiredOn: z.string().optional(),
+  /**
+   * Set when `verify` wrote `recheck="never"`: the box-local ISO date, where
+   * the todo was, and what it was. A `never` todo that no longer matches this
+   * was edited and is back in review; a `never` with no such record was set
+   * by hand and is respected.
+   */
+  retired: z.object({ on: z.string(), locator: TodoLocatorSchema, snapshot: TodoSnapshotSchema }).optional(),
+  /**
+   * Set when `verify` refused a `recheck="never"` that the review agent wrote.
+   * That `never` does not keep the todo out of the next review; the next
+   * settling recheck clears the flag.
+   */
+  neverRejected: z.boolean().optional(),
 });
 
 export type RecheckRecord = z.infer<typeof RecheckRecordSchema>;
