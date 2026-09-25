@@ -4525,6 +4525,31 @@ tests:
     correct_contains_any: ["rewrites", "tracked", "bbx mv", "validate"]
     tags: [views, cards]
 
+  # === Views: card text through Markdown ===
+  # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
+  # plan: the views/CLAUDE.md stub names `Markdown` and the rule, so the agent
+  # should not need views.md. The always-loaded agent guide does not name view
+  # APIs, so the stub loading (or not) decides the measured level. Not yet run.
+  - id: view-markdown-export
+    prompt: >
+      I'm writing a box view that lists meeting-note cards with each card's
+      body text under its title. The bodies have Markdown and Markdoc tags like
+      {% todo %}. How should the view render the body? Explain only; do not
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Names `Markdown` from beebox/view-widgets with the card passed as `card`
+      (`<Markdown card={card}>{card.body}</Markdown>`, guarded because body is
+      optional), and says hand-rendering the body (`<p>{card.body}</p>`,
+      splitting it, stripping tags with a regex, or a Markdown library) is a
+      validation error; asks in _config/feedback/ when Markdown lacks something.
+      Failure: suggests marked/react-markdown, splitting on blank lines, or
+      stripping {% %} tags.
+    correct_contains: ["Markdown", "view-widgets"]
+    correct_matches:
+      - 'card=\{card\}'
+    tags: [views, cards]
+
   # === Card themes ===
   # Status (2026-09-08, Codex): 4/4 pass against paper-cards test boxes
   # after guide/package-doc regeneration. card-theme-choice used 1 file

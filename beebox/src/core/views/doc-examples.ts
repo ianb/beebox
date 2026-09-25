@@ -8,6 +8,8 @@ export const examplesSection = `## Examples
 ### Simple Card List
 
 \`\`\`tsx
+import { Markdown } from "beebox/view-widgets";
+
 export const name = "Recent Memos";
 export const description = "Every processed memo, newest first";
 export const dependencies = ["_content/**/*.memo.card"];
@@ -21,7 +23,7 @@ export default function RecentMemos({ cards }) {
       {memos.map(card => (
         <div key={card.path} style={{ marginBottom: "1rem" }}>
           <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
-          <p>{card.body}</p>
+          {card.body ? <Markdown card={card}>{card.body}</Markdown> : null}
         </div>
       ))}
     </div>

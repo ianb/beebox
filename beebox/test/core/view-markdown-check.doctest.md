@@ -11,6 +11,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { checkViewMarkdown, lintViewMarkdown } from "../../src/core/views/markdown-check.js";
+import { generateViewsDoc } from "../../src/core/views/doc.js";
 
 async function problems(source: string): Promise<string> {
   const found = await checkViewMarkdown(source);
@@ -103,6 +104,20 @@ const load = () => import("micromark");`)
 4: imports `markdown-it/lib/index.mjs`
 5: imports `showdown`
 6: imports `micromark`
+```
+
+## The view guide passes its own check
+
+Every `tsx` example in the generated view guide (`generateViewsDoc`,
+`src/core/views/doc.ts`) passes, so the guide cannot teach the form the
+check rejects:
+
+```ts
+const blocks = [...generateViewsDoc().matchAll(/\x60{3}tsx\n([\s\S]*?)\x60{3}/g)].map((m) => m[1]);
+const failing = [];
+for (const block of blocks) if ((await checkViewMarkdown(block)).length > 0) failing.push(block.slice(0, 60));
+[blocks.length > 5, blocks.some((b) => b.includes("<Markdown card={card}>")), JSON.stringify(failing)].join(" ")
+=> true true []
 ```
 
 ## The hook message

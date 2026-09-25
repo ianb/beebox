@@ -164,6 +164,20 @@ React is provided automatically. **Do NOT import React** — the build system ha
 
 You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.
 
+## Card text: \`Markdown\`
+
+Show a card's body with \`Markdown\` from \`beebox/view-widgets\`, the app's own renderer. Markdoc tags (todos, quotes, sources), links, and images then look and work as they do on the card's page, and the card's todos can be ticked:
+
+\`\`\`tsx
+import { Markdown } from "beebox/view-widgets";
+
+{card.body ? <Markdown card={card}>{card.body}</Markdown> : null}
+\`\`\`
+
+Pass the whole body, and the \`ViewCard\` it came from as \`card\` (\`body\` is optional, hence the test).
+
+**Any other way to render card text is an error**, reported when you save the view: reading \`body\` except as \`<Markdown>\`'s children or in a truthiness test, importing a Markdown library (\`marked\`, \`remark\`, \`markdown-it\`, …), or writing \`{%\` in a string or regex. If \`Markdown\` lacks something this view needs (part of a body, a different presentation), do not work around it: say so in \`_config/feedback/\`.
+
 ## Card-aware widgets
 
 To point at another card from a view — a link, or an embedded card — import the widgets from \`beebox/view-widgets\` instead of hand-rolling an \`<a>\`. They open the card **in whatever surface the view is shown in** (the chat companion pane, browse, or a full page); you don't pick a navigation target.

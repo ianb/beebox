@@ -137,13 +137,14 @@ Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array h
   path: string;        // Box-relative path (e.g., "_bookkeeping/archive/Foo.record.card")
   type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "memo")
   frontmatter?: Record<string, unknown>;  // Parsed YAML frontmatter (body and type excluded)
-  body?: string;       // Markdown body
+  body?: string;       // Markdown body — render it with \`Markdown\` (see "Card text")
+  bodyLineOffset: number;         // File lines before the body; \`Markdown\` uses it
   attachments?: ViewFile[];       // Deep listing of the card's attach scope
 }
 \`\`\`
 
 Read a card's fields from \`frontmatter\` (e.g. \`card.frontmatter?.title\`, the
-status from \`card.frontmatter?.status\`) and its prose from \`body\`. \`type\` is
+status from \`card.frontmatter?.status\`); show its prose with \`Markdown\`. \`type\` is
 the card type — filter a mixed \`cards\` array with
 \`cards.filter(c => c.type === "memo")\`. \`frontmatter\` values are whatever the
 card's schema declares (strings, numbers, arrays, nested objects), so they are
