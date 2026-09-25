@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T00:04:10Z
+Generated: 2026-09-25T12:30:37Z
 Total documents: 415
 
 ## Issues
@@ -54,7 +54,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure.md** — "Documentation structured like code" (607 lines) · proposal · draft
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -139,6 +138,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:107 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/delivered-user-message-codec.md:23 (mention) — - Project testing convention. `CLAUDE.md:11-17` says: *"Tests are doctests (`.doctest.md`) in `test/`"* and *"Run tests
 - docs/implemented-plans/design-reconciliation.md:88 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
+- docs/implemented-plans/doc-structure.md:198 (mention) — always-loaded file (`CLAUDE.md`, the agent guide) must carry, or a
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/implemented-plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
 - docs/implemented-plans/extfile-card.md:45 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
@@ -201,7 +201,6 @@ Referenced by:
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
-- docs/plans/doc-structure.md:198 (mention) — always-loaded file (`CLAUDE.md`, the agent guide) must carry, or a
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file upload/
@@ -275,6 +274,7 @@ Referenced by:
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:33 (mention) — simplicity bet (`beebox/CLAUDE.md`). Note the cost is NOT "N standing agents":
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:2 (mention) — title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
 - ../issues/closed/exploration/2026-07-30-do-our-skills-auto-fire.md:19 (mention) — that CLAUDE.md prose routing measured "~0% firing across 400 sessions" — which is
+- ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:22 (mention) — > into the aspect headings. Box-loaded guidance, `CLAUDE.md`/skills, and the
 - ../issues/closed/features/2026-08-04-crossmodel-review-skill-bidirectional.md:28 (mention) — catches blind spots a same-model self-review structurally cannot (root CLAUDE.md
 - ../issues/closed/features/2026-08-23-choose-the-engine-for-a-new-chat.md:104 (mention) — Related: [AGENTS.md missing from the CLAUDE.md special-cases](../bugs/2026-08-22-agents-md-missing-from-claude-md-specia
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
@@ -298,7 +298,6 @@ Referenced by:
 - ../issues/exploration/2026-07-30-subagent-context-inheritance.md:2 (mention) — title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:86 (mention) — system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
 - ../issues/exploration/2026-09-06-per-box-symbol-strategy-note.md:37 (mention) — `CLAUDE.md`, a `.claude/rules/` glob that fires on the files it governs, or a
-- ../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md:53 (mention) — | `CLAUDE.md` files | 38 files, ~4200 lines |
 - ../issues/exploration/2026-09-23-agent-over-centers-general-questions-on-the-box.md:18 (mention) — box CLAUDE.md and agent guide describe the box in detail, and nothing tells the
 - ../issues/features/2026-05-28-retrospective-session-scan.md:9 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:14 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
@@ -562,6 +561,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:493 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/cards-as-markdown-rfc.md:79 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
+- docs/implemented-plans/doc-structure.md:89 (mention) — new `docs/testing/` directory is checked automatically. `README.md` files
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/refresh-maps-correctness.md:190 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
@@ -922,9 +922,9 @@ Referenced by:
 - CLAUDE.md:29 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
 - docs/cards-as-markdown.md:133 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/guides.md:33 (link) — | Card validation hooks | [docs/card-validation.md](card-validation.md) |
+- docs/implemented-plans/doc-structure.md:311 (mention) — developer runs; it is a validation hook, and `card-validation.md` already
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
-- docs/plans/doc-structure.md:311 (mention) — developer runs; it is a validation hook, and `card-validation.md` already
 - docs/testing.md:42 (link) — | [Card validator hook](card-validation.md) | Does a card still validate after an agent edit? Runs on its own during age
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:19 (mention) — the agent harness's PostToolUse hook (`beebox/docs/card-validation.md:13`):
 
@@ -1015,10 +1015,10 @@ Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:146 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:370 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
+- docs/implemented-plans/doc-structure.md:367 (mention) — - `chat-scroll-testing.md`: **not moved**. It is a test procedure for one
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/chat-scroll-model.md:199 (mention) — Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
 - docs/plans/chat-scroll-model.md:227 (link) — opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
-- docs/plans/doc-structure.md:367 (mention) — - `chat-scroll-testing.md`: **not moved**. It is a test procedure for one
 - docs/testing/dev-stubs.md:58 (link) — [chat-scroll-testing.md](../chat-scroll-testing.md). Note that `/fakestream`
 - src/frontend/src/components/chat/CLAUDE.md:82 (mention) — PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:43 (link) — [chat scroll testing](../../beebox/docs/chat-scroll-testing.md).
@@ -1185,7 +1185,7 @@ Referenced by:
 - docs/agent-coding.md:3 (link) — Part of [how development happens here](development-process.md). See also
 - docs/development-workflow.md:3 (link) — Part of [how development happens here](development-process.md). See also
 - docs/guides.md:17 (link) — | How development happens (overview) | [docs/development-process.md](development-process.md) |
-- docs/plans/doc-structure.md:75 (mention) — Trade-off accepted: the public narrative series (`development-process.md`
+- docs/implemented-plans/doc-structure.md:75 (mention) — Trade-off accepted: the public narrative series (`development-process.md`
 - docs/technologies.md:3 (link) — Part of [how development happens here](development-process.md). See also [agent
 
 References:
@@ -1203,7 +1203,7 @@ Referenced by:
 - docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
 - docs/development-process.md:26 (link) — **[The development workflow](development-workflow.md)** covers how a piece of
 - docs/guides.md:19 (link) — | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-wo
-- docs/plans/doc-structure.md:597 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
+- docs/implemented-plans/doc-structure.md:597 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
 - docs/technologies.md:5 (mention) — workflow](development-workflow.md), and [testing](testing.md).
 - docs/testing.md:27 (link) — ([recurring work](development-workflow.md#recurring-work)), bisected to the
 
@@ -1220,11 +1220,11 @@ Title: "(no title)" | 1 lines | current reference
 
 Referenced by:
 - docs/README.md:45 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
+- docs/implemented-plans/doc-structure.md:48 (mention) — No generated output changes except `docs/doc-graph.md`, regenerated. Not a BIG
 - docs/implemented-plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/implemented-plans/remove-bbx-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/agent-docs.md:71 (mention) — `doc-graph.md` mentions `private-issues`. `box-docs/` has two benign hits
-- docs/plans/doc-structure.md:48 (mention) — No generated output changes except `docs/doc-graph.md`, regenerated. Not a BIG
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - user-stories/catalog/2026-08-21.md:8708 (mention) — **Code check** — beebox/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.md and
@@ -1297,6 +1297,7 @@ Referenced by:
 - docs/implemented-plans/connector-sync-isolation.md:25 (mention) — - `docs/engineering-principles.md`: principle 1 (types are structure),
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:62 (mention) — - `docs/engineering-principles.md` #1 (types are structure), #2
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
+- docs/implemented-plans/doc-structure.md:57 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
@@ -1352,7 +1353,6 @@ Referenced by:
 - docs/plans/container-first-pass2.review.md:216 (mention) — **Traces to preference:** `docs/engineering-principles.md` 3 (validate at
 - docs/plans/container-first.md:52 (mention) — - `docs/engineering-principles.md` 3 (validate at boundaries), 4 (resilient
 - docs/plans/container-first.review.md:89 (mention) — "**Read before writing**" and the `docs/engineering-principles.md` 4
-- docs/plans/doc-structure.md:57 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/plans/document-comments.md:68 (mention) — - `beebox/docs/engineering-principles.md` — principles traced below by
 - docs/plans/general-browser.md:71 (mention) — - `beebox/docs/engineering-principles.md` — **3** (validate at
 - docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
@@ -1520,8 +1520,8 @@ Title: "Guide index" | 68 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- docs/implemented-plans/doc-structure.md:532 (mention) — - `guides.md`, the hand-maintained topic index: once subjects are
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:304 (link) — Manual review restored the on-demand [guide index](../guides.md), the atomic-write
-- docs/plans/doc-structure.md:532 (mention) — - `guides.md`, the hand-maintained topic index: once subjects are
 
 References:
 - → docs/README.md (link)
@@ -1676,13 +1676,13 @@ Referenced by:
 - docs/README.md:120 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
 - docs/guides.md:56 (link) — | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+- docs/implemented-plans/doc-structure.md:180 (mention) — - Periodic checks appear in `testing.md` "Periodic Checks", `maintenance.md`,
 - docs/implemented-plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
 - docs/implemented-plans/scheduled-workstreams.md:253 (mention) — **Why this needs to change.** Today the catalog (`docs/maintenance.md`
 - docs/migrations.md:574 (mention) — - `docs/maintenance.md` — where `bbx migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
-- docs/plans/doc-structure.md:180 (mention) — - Periodic checks appear in `testing.md` "Periodic Checks", `maintenance.md`,
 - docs/testing/knowledge-audits.md:19 (link) — [maintenance](../maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
 - user-stories/catalog/2026-08-21.md:8797 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/maintenance.md`
@@ -1778,6 +1778,7 @@ Referenced by:
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:29 (link) — | Cross-platform mobile contract (iOS/Android ↔ box) | [docs/mobile-contract.md](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
+- docs/implemented-plans/doc-structure.md:234 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:262 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
@@ -1796,7 +1797,6 @@ Referenced by:
 - docs/plans/chat-everywhere.md:575 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
 - docs/plans/chat-photo-batch-upload.md:25 (mention) — > cross-platform rule is stated in `docs/mobile-contract.md` §8.
 - docs/plans/chat-photo-batch-upload.md:84 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
-- docs/plans/doc-structure.md:234 (mention) — are cited by number (`mobile-contract.md`).
 - docs/plans/document-comments.md:270 (mention) — `lib/chat-send-diagnostics.ts:150`, and on the wire at `docs/mobile-contract.md:262`
 - docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
@@ -1806,7 +1806,7 @@ Referenced by:
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `beebox/docs/mobile-contract.md`**
 - ../CLAUDE.md:9 (link) — - **Native iOS companion:** [ios-app/CLAUDE.md](ios-app/CLAUDE.md). It shares an [HTTP/bridge contract](beebox/docs/mobi
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:39 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
-- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:70 (mention) — (`beebox/docs/mobile-contract.md:487-495`): native detects over its own
+- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:76 (mention) — (`beebox/docs/mobile-contract.md:487-495`): native detects over its own
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../beebox/docs/mobile-contract.md).
@@ -1937,6 +1937,7 @@ Title: "Prompt Audits" | 203 lines | current reference
 
 Referenced by:
 - docs/guides.md:42 (link) — | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt
+- docs/implemented-plans/doc-structure.md:619 (mention) — after: `prompt-audits.md` for "audit results" (Q2), `scheduled/` for the
 - docs/implemented-plans/docs-reorg.md:103 (mention) — `browse`); `prompt-audits.md` → nonexistent `tone-design.md`;
 - docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
 - docs/prompt-audits.md:174 (mention) — **Useful: what-changed closers.** One or two sentences naming what changed and where: "Added the pre-tool-brevity audit
@@ -2002,10 +2003,10 @@ Title: "Questions" | 340 lines | current reference
 
 Referenced by:
 - docs/guides.md:44 (link) — | Questions subsystem current reference | [docs/questions.md](questions.md) |
+- docs/implemented-plans/doc-structure.md:546 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/implemented-plans/questions-end-to-end.md:465 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/implemented-plans/todo-annotation.md:65 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
-- docs/plans/doc-structure.md:546 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:15 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
@@ -2040,13 +2041,14 @@ Referenced by:
 - docs/cards-as-markdown.md:20 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
 - docs/guides.md:5 (link) — for operating instructions. [Documentation organization](README.md) describes
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
+- docs/implemented-plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
+- ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:16 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
 
 References:
@@ -2304,6 +2306,7 @@ Referenced by:
 - docs/implemented-plans/coined-chat-ids.md:516 (mention) — **Test posture**, named as part of the design per `docs/testing.md`:
 - docs/implemented-plans/courseware-lesson-plan.md:332 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/courseware-phase1.md:496 (mention) — - **Tests** (per `docs/testing.md`):
+- docs/implemented-plans/doc-structure.md:99 (mention) — prefix line. Promoted today from the pilot cluster: `testing.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:56 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/figure-card-type.md:87 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
@@ -2334,7 +2337,6 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:424 (mention) — implication about worth. `docs/testing.md:5-11` puts decomposition and
 - docs/plans/change-based-test-selection.review.md:249 (mention) — > The plan says a never-failed test is either load-bearing or dead weight and "there is no way to tell them apart", then
 - docs/plans/clerk-tab-arrangements.md:437 (mention) — - **Package gates.** Run Clerk test/typecheck/lint/build and the focused beebox doctests/typecheck/lint. Run the full be
-- docs/plans/doc-structure.md:99 (mention) — prefix line. Promoted today from the pilot cluster: `testing.md`,
 - docs/plans/interface-as-cards.md:509 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
@@ -2553,10 +2555,10 @@ Referenced by:
 
 #### docs/box/phone-photos.md
 
-Title: "Add iPhone photos through an Apple Photos album" | 33 lines | current reference
+Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current reference
 
 Referenced by:
-- docs/box/what-you-could-do.md:44 (mention) — setup](phone-photos.md).
+- docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
 
 #### docs/box/publishing.md
 
@@ -2577,7 +2579,7 @@ Referenced by:
 
 #### docs/box/what-you-could-do.md
 
-Title: "What you could do with your box" | 216 lines | current reference
+Title: "What you could do with your box" | 218 lines | current reference
 
 Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
@@ -3397,6 +3399,7 @@ Title: "Chat review: size-gated overnight compaction and generated titles" | 854
 Referenced by:
 - docs/chat-review.md:9 (link) — [docs/implemented-plans/chat-review.md](implemented-plans/chat-review.md).
 - docs/implemented-plans/card-symbol.md:127 (mention) — `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
+- docs/implemented-plans/doc-structure.md:641 (mention) — Name failures reported by the navigators: `chat-review.md` chosen for
 - ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/chat-review.md
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:12 (link) — current reference and [the design doc](../../../beebox/docs/implemented-plans/chat-review.md)
@@ -3772,6 +3775,47 @@ References:
 - → docs/plans/README.md (mention)
 - → ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
 
+#### docs/implemented-plans/doc-structure.md
+
+Title: "Documentation structured like code" | 648 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:12 (link) — > [`doc-structure`](../../../beebox/docs/implemented-plans/doc-structure.md)
+
+References:
+- → ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md (frontmatter)
+- → ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md (link)
+- → ../issues/docs-and-chores/2026-03-16-review-all-prompts.md (link)
+- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
+- → ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md (link)
+- → ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md (link)
+- → docs/README.md (mention)
+- → docs/doc-graph.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/docs-reorg.md (link)
+- → docs/development-process.md (mention)
+- → README.md (mention)
+- → docs/testing.md (mention)
+- → docs/testing/tours.md (mention)
+- → docs/testing/knowledge-audits.md (mention)
+- → docs/maintenance.md (mention)
+- → CLAUDE.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/testing/doctests.md (mention)
+- → docs/testing/tap-tests.md (mention)
+- → docs/testing/session-critiques.md (mention)
+- → docs/testing/dev-stubs.md (mention)
+- → docs/testing/smoke.md (mention)
+- → docs/testing/field-testing.md (mention)
+- → docs/card-validation.md (mention)
+- → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
+- → docs/chat-scroll-testing.md (mention)
+- → docs/guides.md (mention)
+- → docs/questions.md (mention)
+- → docs/development-workflow.md (mention)
+- → docs/prompt-audits.md (mention)
+- → docs/implemented-plans/chat-review.md (mention)
+
 #### docs/implemented-plans/docs-reorg.gap-analysis.md
 
 Title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions" | 166 lines | shipped history
@@ -3804,9 +3848,9 @@ Title: "Documentation reorganization" | 416 lines | shipped history | implemente
 
 Referenced by:
 - docs/implemented-plans/design-reconciliation.md:11 (mention) — (see the Direction section of `docs/plans/docs-reorg.md`: "Design docs require
+- docs/implemented-plans/doc-structure.md:64 (link) — - Shipped precedent: [documentation reorganization](../implemented-plans/docs-reorg.md)
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (link) — Historical assessment accompanying [the shipped reorganization](docs-reorg.md).
 - docs/implemented-plans/prompt-calibration.md:16 (link) — **Issues addressed:** the description-rewrite portion of [Run trigger evals on our skills](../../../issues/docs-and-chor
-- docs/plans/doc-structure.md:64 (link) — - Shipped precedent: [documentation reorganization](../implemented-plans/docs-reorg.md)
 - docs/reports/stack-decisions-2026-09-04.md:147 (mention) — - **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is over
 - ../issues/closed/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — > Closed 2026-09-24 as moot: no living document claims `@xstate/store` is adopted. `stack-decisions.md` became a frozen
 
@@ -5980,42 +6024,6 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
-#### docs/plans/doc-structure.md **[ORPHAN]**
-
-Title: "Documentation structured like code" | 607 lines | proposal | draft
-
-References:
-- → ../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md (frontmatter)
-- → ../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md (link)
-- → ../issues/docs-and-chores/2026-03-16-review-all-prompts.md (link)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
-- → ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md (link)
-- → ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md (link)
-- → docs/README.md (mention)
-- → docs/doc-graph.md (mention)
-- → docs/engineering-principles.md (mention)
-- → docs/implemented-plans/docs-reorg.md (link)
-- → docs/development-process.md (mention)
-- → docs/plans/README.md (mention)
-- → docs/testing.md (mention)
-- → docs/testing/tours.md (mention)
-- → docs/testing/knowledge-audits.md (mention)
-- → docs/maintenance.md (mention)
-- → CLAUDE.md (mention)
-- → docs/mobile-contract.md (mention)
-- → docs/testing/doctests.md (mention)
-- → docs/testing/tap-tests.md (mention)
-- → docs/testing/session-critiques.md (mention)
-- → docs/testing/dev-stubs.md (mention)
-- → docs/testing/smoke.md (mention)
-- → docs/testing/field-testing.md (mention)
-- → docs/card-validation.md (mention)
-- → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
-- → docs/chat-scroll-testing.md (mention)
-- → docs/guides.md (mention)
-- → docs/questions.md (mention)
-- → docs/development-workflow.md (mention)
-
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -6288,7 +6296,7 @@ Title: "iOS input-plane parity" | 556 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:304 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
-- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:97 (mention) — (`beebox/docs/plans/ios-input-plane-parity.md`, still `status: partial`) or
+- ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:103 (mention) — (`beebox/docs/plans/ios-input-plane-parity.md`, still `status: partial`) or
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:4 (frontmatter) — design: ../../beebox/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:26 (link) — [`ios-input-plane-parity.md`](../../beebox/docs/plans/ios-input-plane-parity.md).
 - ../issues/features/2026-08-18-ios-support-all-interface-orientations.md:50 (mention) — - `docs/plans/ios-input-plane-parity.md:461-463` says landscape and the
@@ -6578,7 +6586,6 @@ Referenced by:
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
-- docs/plans/doc-structure.md:89 (mention) — new `docs/testing/` directory is checked automatically. `README.md` files
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
@@ -6922,7 +6929,7 @@ References:
 Title: "Knowledge audit prompt catalog and run notes (frozen 2026-02-23)" | 431 lines | dated report
 
 Referenced by:
-- docs/plans/doc-structure.md:347 (mention) — | Areas 1 to 9 prompt lists, Extension test prompts, Chat-specific view knowledge, Expected levels summary | superseded
+- docs/implemented-plans/doc-structure.md:347 (mention) — | Areas 1 to 9 prompt lists, Extension test prompts, Chat-specific view knowledge, Expected levels summary | superseded
 - docs/plans/source-available-release.md:178 (mention) — test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the rea
 - ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/reports/knowledge-taxonomy-catalog-2026-02-23.md`). There is no plugin manifest, no
 
@@ -7027,7 +7034,7 @@ References:
 Title: "Dev stubs" | 64 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure.md:303 (mention) — dev-stubs.md           does the streaming UI behave, checked by hand?
+- docs/implemented-plans/doc-structure.md:303 (mention) — dev-stubs.md           does the streaming UI behave, checked by hand?
 - docs/testing.md:38 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
 - docs/testing/tours.md:58 (link) — the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
 
@@ -7040,7 +7047,7 @@ References:
 Title: "Doctests" | 155 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure.md:292 (mention) — doctests.md            does this function, route, or box operation behave?
+- docs/implemented-plans/doc-structure.md:292 (mention) — doctests.md            does this function, route, or box operation behave?
 - docs/testing.md:34 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
 - docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
 
@@ -7054,9 +7061,9 @@ References:
 Title: "Field tests" | 55 lines | current reference
 
 Referenced by:
-- docs/guides.md:22 (link) — | Field tests (current runbook) | [docs/field-testing.md](testing/field-testing.md) |
+- docs/guides.md:22 (link) — | Field tests (current runbook) | [docs/testing/field-testing.md](testing/field-testing.md) |
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
-- docs/plans/doc-structure.md:307 (mention) — field-testing.md       is it discoverable end to end through the real UI?
+- docs/implemented-plans/doc-structure.md:307 (mention) — field-testing.md       is it discoverable end to end through the real UI?
 - docs/testing.md:41 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
 
 References:
@@ -7068,12 +7075,12 @@ Title: "Knowledge audits" | 206 lines | current reference
 
 Referenced by:
 - docs/engineering-principles.md:174 (link) — ([`docs/knowledge-audits.md`](testing/knowledge-audits.md)).
-- docs/guides.md:57 (link) — | Knowledge audits | [docs/knowledge-audits.md](testing/knowledge-audits.md) |
+- docs/guides.md:57 (link) — | Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
 - docs/implemented-plans/bbx-agent-surface.md:573 (mention) — `docs/knowledge-audits.md` exists to catch. Two `knows_directly` entries in
+- docs/implemented-plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/implemented-plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/implemented-plans/workstreams.md:1238 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 - docs/maintenance.md:48 (mention) — | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/tes
-- docs/plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/plans/document-comments.md:839 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
@@ -7106,8 +7113,8 @@ References:
 Title: "Session critiques" | 59 lines | current reference
 
 Referenced by:
+- docs/implemented-plans/doc-structure.md:302 (mention) — session-critiques.md   did the tools serve the agent in a real session?
 - docs/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
-- docs/plans/doc-structure.md:302 (mention) — session-critiques.md   did the tools serve the agent in a real session?
 - docs/testing.md:37 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
 
 #### docs/testing/smoke.md
@@ -7115,7 +7122,7 @@ Referenced by:
 Title: "Smoke" | 101 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure.md:305 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
+- docs/implemented-plans/doc-structure.md:305 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
 - docs/testing.md:39 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 - docs/testing/tours.md:27 (link) — [smoke review](smoke.md), which files and never edits, is by design.
 
@@ -7124,7 +7131,7 @@ Referenced by:
 Title: "TAP tests" | 45 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure.md:296 (mention) — tap-tests.md           what a doctest cannot test without circularity
+- docs/implemented-plans/doc-structure.md:296 (mention) — tap-tests.md           what a doctest cannot test without circularity
 - docs/testing.md:35 (link) — | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circu
 
 #### docs/testing/tours.md
@@ -7132,12 +7139,12 @@ Referenced by:
 Title: "Tours" | 166 lines | current reference
 
 Referenced by:
-- docs/guides.md:23 (link) — | Tours (browser walks for UI/a11y review) | [docs/tours.md](testing/tours.md) |
+- docs/guides.md:23 (link) — | Tours (browser walks for UI/a11y review) | [docs/testing/tours.md](testing/tours.md) |
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
 - docs/implemented-plans/card-themes.md:564 (link) — exhibit. Check contrast independently because [tours](../testing/tours.md) documents that
+- docs/implemented-plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/plans/agent-docs.md:383 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
-- docs/plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:40 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
 - ../.claude/skills/bbx-plan/TEMPLATE.md:158 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour

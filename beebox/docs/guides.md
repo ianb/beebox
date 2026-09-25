@@ -19,8 +19,8 @@ where to put new material.
 | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-workflow.md) |
 | Technologies and AI services | [docs/technologies.md](technologies.md) |
 | Testing philosophy | [docs/testing.md](testing.md) |
-| Field tests (current runbook) | [docs/field-testing.md](testing/field-testing.md) |
-| Tours (browser walks for UI/a11y review) | [docs/tours.md](testing/tours.md) |
+| Field tests (current runbook) | [docs/testing/field-testing.md](testing/field-testing.md) |
+| Tours (browser walks for UI/a11y review) | [docs/testing/tours.md](testing/tours.md) |
 | Doctest syntax | [Doctest syntax](../../agent-doctest/docs/syntax.md) |
 | Adding a card type | [docs/adding-schemas.md](adding-schemas.md) |
 | Card format reference | [docs/cards-as-markdown.md](cards-as-markdown.md) |
@@ -54,7 +54,7 @@ where to put new material.
 | Chat review (nightly titles + summaries) | [docs/chat-review.md](chat-review.md) |
 | Content-Security-Policy | [docs/content-security-policy.md](content-security-policy.md) |
 | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
-| Knowledge audits | [docs/knowledge-audits.md](testing/knowledge-audits.md) |
+| Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
 | Docs shipped to box agents ([box-docs/](../box-docs)) | [docs/box/](box) (prose sources) + [src/core/docs-gen/package-docs.ts](../src/core/docs-gen/package-docs.ts) (generated reference) |
 | Calendar integration | [docs/calendar.md](calendar.md) |
 | PDF intake partial design history | [docs/plans/pdf-intake-design.md](plans/pdf-intake-design.md) |

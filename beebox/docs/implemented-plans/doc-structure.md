@@ -1,9 +1,9 @@
 ---
 title: "Documentation structured like code: one home per fact, names as the search path"
-status: active
+status: implemented
 workstream: doc-structure
 issues:
-  - ../../../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md
+  - ../../../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md
 ---
 # Documentation structured like code
 
@@ -17,7 +17,7 @@ produce the same tree. A pilot restructures the testing cluster and measures the
 result before anything else moves.
 
 **Issues addressed:**
-[prompts as code](../../../issues/exploration/2026-09-15-prompts-as-code-mece-structure.md)
+[prompts as code](../../../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md)
 (the source of the idea). Related, referenced not duplicated:
 [review all prompts](../../../issues/docs-and-chores/2026-03-16-review-all-prompts.md)
 (the end-to-end read),
