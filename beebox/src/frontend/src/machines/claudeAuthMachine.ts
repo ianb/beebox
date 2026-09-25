@@ -8,7 +8,9 @@
  */
 
 import { setup, assign, fromPromise, fromCallback } from "xstate";
-import { trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc";
+import { getQueryKey } from "@trpc/react-query";
+import { fetchSharedStatus } from "../lib/trpc/shared-status";
 import { RequestError } from "../lib/errors";
 import { errorMessage } from "@shared/error-guards";
 
@@ -36,8 +38,11 @@ type ClaudeAuthEvent =
 
 // -- Actors --
 
+/** Shared with the admin overview's query of the same procedure. */
+const readStatus = (): Promise<ClaudeStatus> => fetchSharedStatus({ queryKey: getQueryKey(trpc.admin.claudeStatus, undefined, "query"), queryFn: () => trpcClient.admin.claudeStatus.query() });
+
 const fetchStatus = fromPromise<ClaudeStatus>(async () => {
-  return trpcClient.admin.claudeStatus.query();
+  return readStatus();
 });
 
 const startLogin = fromPromise(async () => {
@@ -56,13 +61,12 @@ const doLogout = fromPromise<ClaudeStatus>(async () => {
     throw new RequestError(result.error || "Logout failed");
   }
   // Fetch fresh status after logout.
-  return trpcClient.admin.claudeStatus.query();
+  return readStatus();
 });
 
 const pollForLogin = fromCallback(({ sendBack }) => {
   const id = setInterval(() => {
-    trpcClient.admin.claudeStatus
-      .query()
+    readStatus()
       .then((status) => {
         sendBack({ type: "POLL_RESULT", status });
       })

@@ -11,8 +11,10 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
-import { Heading } from "../ui/Heading";
 import { TextField } from "../ui/fields";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";
 
 type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
 type LocalPasswordStatus = RouterOutput["admin"]["boxConfig"]["localPasswordStatus"];
@@ -119,9 +121,9 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 
 function LoadingAllowedUsers() {
   return (
-    <Card as="section" aria-label="Allowed users" shadow>
+    <AdminSectionCard id="allowed-users" description={DESCRIPTION} busy>
       <Hint>Loading allowed users…</Hint>
-    </Card>
+    </AdminSectionCard>
   );
 }
 
@@ -153,81 +155,72 @@ export function AllowedEmailsSection() {
   const visibleEmails = emails.filter((email) => email !== configQuery.data?.ownerEmail);
 
   return (
-    <Card as="section" aria-label="Allowed users" shadow>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <Heading level={2}>Allowed Users</Heading>
-          <Hint>
-            Email addresses that can access this box. Leave empty to keep the box owner-only.
-          </Hint>
-        </Stack>
+    <AdminSectionCard id="allowed-users" description={DESCRIPTION}>
+      {configQuery.data?.ownerEmail ? (
+        <Card background="warm" border="subtle" padding="sm">
+          <Row justify="between" wrap>
+            <Text size="sm" breakAll>{configQuery.data.ownerEmail}</Text>
+            <Text size="xs" tone="muted">owner — always has access</Text>
+          </Row>
+        </Card>
+      ) : null}
 
-        {configQuery.data?.ownerEmail ? (
-          <Card background="warm" border="subtle" padding="sm">
-            <Row justify="between" wrap>
-              <Text size="sm" breakAll>{configQuery.data.ownerEmail}</Text>
-              <Text size="xs" tone="muted">owner — always has access</Text>
-            </Row>
-          </Card>
-        ) : null}
+      {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
 
-        {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
+      <AllowedUserRows
+        emails={visibleEmails}
+        details={details}
+        googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
+        resettingEmail={resettingEmail}
+        removingEmail={removingEmail}
+        onReset={createReset}
+        onRemove={(email) => saveEmails(emails.filter((candidate) => candidate !== email), email)}
+      />
 
-        <AllowedUserRows
-          emails={visibleEmails}
-          details={details}
-          googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
-          resettingEmail={resettingEmail}
-          removingEmail={removingEmail}
-          onReset={createReset}
-          onRemove={(email) => saveEmails(emails.filter((candidate) => candidate !== email), email)}
+      <Row gap="sm" align="start">
+        <TextField
+          id="bbx-admin-allowed-email-input"
+          label="Allowed email"
+          hideLabel
+          type="email"
+          value={newEmail}
+          onChange={(value) => {
+            setNewEmail(value);
+            setPendingExistingEmail(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void addEmail();
+            }
+          }}
+          placeholder="user@example.com"
+          className="flex-1"
         />
+        <Button
+          id="bbx-admin-allowed-email-add"
+          intent="primary"
+          onClick={() => void addEmail()}
+          disabled={!newEmail.trim().includes("@")}
+          loading={updateMutation.isPending || checking}
+          loadingLabel={checking ? "Checking…" : "Saving…"}
+        >
+          Add
+        </Button>
+      </Row>
 
-        <Row gap="sm" align="start">
-          <TextField
-            id="bbx-admin-allowed-email-input"
-            label="Allowed email"
-            hideLabel
-            type="email"
-            value={newEmail}
-            onChange={(value) => {
-              setNewEmail(value);
-              setPendingExistingEmail(null);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void addEmail();
-              }
-            }}
-            placeholder="user@example.com"
-            className="flex-1"
-          />
-          <Button
-            id="bbx-admin-allowed-email-add"
-            intent="primary"
-            onClick={() => void addEmail()}
-            disabled={!newEmail.trim().includes("@")}
-            loading={updateMutation.isPending || checking}
-            loadingLabel={checking ? "Checking…" : "Saving…"}
-          >
-            Add
-          </Button>
-        </Row>
+      {pendingExistingEmail ? (
+        <Card background="info" border="subtle" padding="sm">
+          <Text size="sm">
+            A local password account already exists for {pendingExistingEmail}. Adding it grants that account
+            access; click Add again to confirm.
+          </Text>
+        </Card>
+      ) : null}
 
-        {pendingExistingEmail ? (
-          <Card background="info" border="subtle" padding="sm">
-            <Text size="sm">
-              A local password account already exists for {pendingExistingEmail}. Adding it grants that account
-              access; click Add again to confirm.
-            </Text>
-          </Card>
-        ) : null}
+      {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
 
-        {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
-
-        {queryError || mutationError ? <ErrorText>{queryError ?? mutationError}</ErrorText> : null}
-      </Stack>
-    </Card>
+      {queryError || mutationError ? <ErrorText>{queryError ?? mutationError}</ErrorText> : null}
+    </AdminSectionCard>
   );
 }
