@@ -31,6 +31,8 @@ export interface FileData {
   frontmatter?: Record<string, unknown>;
   /** Markdown body for cards. */
   body?: string;
+  /** File lines before `body` in the card's file (`card.get`); a rendered todo's locator is counted from it. */
+  bodyLineOffset?: number;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
 }

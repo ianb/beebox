@@ -240,8 +240,9 @@ New or sharpened:
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
-**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2-7 below
-are not started.
+**Status (2026-09-25): implemented**, commit `52b609299`. Track 2 and
+Track 4's card line are implemented; Track 3's `setTodoStatus` is in place
+without its mutation or controls; the rest is not started.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -300,6 +301,14 @@ unparseable card without "todo", one unparseable card with "todo"; the
 result has the 3 cards' items and exactly one issue.
 
 ### Track 2 — One rendering of a todo
+
+**Status (2026-09-25): implemented** (checkbox read-only until Track 3).
+One correction to the direction below: `Markdoc.transform` resolves the tree
+first, and `resolve` clones every node, so a `Map<Node, TodoLocator>` passed
+in the config cannot be looked up from the transform. `Markdown.tsx` instead
+stamps each todo node with its locator under a module-private symbol
+(`stampLocators`, `shared/todo-locators.ts`), which the clone carries; the
+`todo` transform reads it with `stampedLocator`.
 
 **What.** A todo looks and behaves the same in a card body, in frontmatter,
 and in the list.
@@ -409,6 +418,12 @@ block tag, two todos on one line (`nth`), a tag with other attributes kept in
 order, frontmatter entry, and an untick that removes `status`.
 
 ### Track 4 — Per-place summary
+
+**Status (2026-09-25): card line implemented** (`components/todo/CardTodos.tsx`);
+the directory line is not started. In a box view "N open" is plain text for
+now rather than a link to the card's list. The query uses `here` = the card
+path (its default glob is that path, now glob-escaped in
+`core/collection/here.ts`) rather than an explicit `glob`.
 
 **What.** A one-line summary where todos live: at the top of a card, and on
 a directory's browse page.

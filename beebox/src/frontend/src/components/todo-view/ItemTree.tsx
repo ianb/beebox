@@ -2,10 +2,10 @@
  * One todo, and whatever nests under it, inside a `todo-view` list
  * (`docs/plans/todo-collection.md`, Track 4).
  *
- * The item reads the same here as it does in the card it was written in: the
- * status treatment comes from `components/Todo.tsx`, so a done item is struck
- * through and a parked one dimmed in both places rather than by two rules
- * that can drift.
+ * The item reads the same here as it does in the card it was written in: both
+ * render through `todo/TodoItem.tsx` (`docs/plans/todos-ui.md`, Track 2), so
+ * a done item is struck through, a parked one dimmed, and an overdue one
+ * flagged by one rule rather than by several that can drift.
  *
  * An item marked `matching: false` is an ancestor the filter would otherwise
  * have orphaned. It is shown as context — muted, unmarked — so its open child
@@ -13,13 +13,10 @@
  */
 
 import { useState } from "react";
-import { Badge } from "../ui/Badge";
-import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { InlineAction } from "../ui/InlineAction";
-import { FriendlyDate } from "../ui/FriendlyDate";
-import { STATUS_TEXT_CLASS } from "../Todo";
+import { TodoItem } from "../todo/TodoItem";
 import { bbxSourceItem } from "../../lib/source-tag";
 import { clampAnnotation, needsExpand, todoKey, type TodoNode } from "../todo-view-card-logic";
 
@@ -46,36 +43,22 @@ function Annotation({ annotation }: { annotation: string }) {
   );
 }
 
-function Chips({ item }: { item: TodoNode["item"] }) {
-  return (
-    <>
-      {item.due === undefined ? null : (
-        <Badge size="sm" tone="warning" title="Due">
-          due <FriendlyDate iso={item.due} mode="date" />
-        </Badge>
-      )}
-      {item.start === undefined ? null : (
-        <Badge size="sm" tone="info" title="Start">
-          starts <FriendlyDate iso={item.start} mode="date" />
-        </Badge>
-      )}
-      {item.assigned === undefined ? null : (
-        <Badge size="sm" title="Assigned">{item.assigned}</Badge>
-      )}
-    </>
-  );
-}
-
 function ItemLine({ node }: { node: TodoNode }) {
   const { item } = node;
   return (
     <Stack gap="none" {...bbxSourceItem(`todo: ${item.text}`)}>
-      <Row gap="sm" wrap align="baseline">
-        <span className={item.matching ? STATUS_TEXT_CLASS[item.status] : "text-warm-400"}>
-          <Text size="sm" as="span">{item.text}</Text>
-        </span>
-        {item.matching ? <Chips item={item} /> : null}
-      </Row>
+      <TodoItem
+        status={item.status}
+        assigned={item.assigned}
+        due={item.due}
+        start={item.start}
+        plateState={item.plateState}
+        layout="line"
+        locator={item.locator}
+        muted={!item.matching}
+      >
+        {item.text}
+      </TodoItem>
       {item.annotation === "" ? null : <Annotation annotation={item.annotation} />}
     </Stack>
   );
