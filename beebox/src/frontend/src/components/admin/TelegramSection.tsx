@@ -11,6 +11,9 @@ import {
   TelegramSetupView,
   type TelegramStatus,
 } from "./TelegramSection-views";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION = "Connect a Telegram bot to receive and respond to messages in Telegram groups or private chats.";
 
 export function TelegramSection() {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
@@ -72,20 +75,14 @@ export function TelegramSection() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">Telegram</h2>
+      <AdminSectionCard id="telegram" description={DESCRIPTION} busy>
         <p className="text-sm text-warm-600">Checking status...</p>
-      </div>
+      </AdminSectionCard>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Telegram</h2>
-      <p className="text-sm text-warm-700 mb-4">
-        Connect a Telegram bot to receive and respond to messages in Telegram groups or private chats.
-      </p>
-
+    <AdminSectionCard id="telegram" description={DESCRIPTION}>
       {status?.configured ? (
         <TelegramConnectedView
           status={status}
@@ -106,6 +103,6 @@ export function TelegramSection() {
           {error}
         </div>
       ) : null}
-    </div>
+    </AdminSectionCard>
   );
 }

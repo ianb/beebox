@@ -10,9 +10,35 @@ import { useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { SelectField, TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
+import { AdminSectionCard } from "./AdminSectionCard";
+import { GmailLabelList } from "./GmailFiltersSection-views";
 
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
+
+const DESCRIPTION = (
+  <>
+    Choose which Gmail threads this box collects, and what happens to them. Uses{" "}
+    <a
+      id="bbx-admin-gmail-syntax-help"
+      href="https://support.google.com/mail/answer/7190?hl=en"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline"
+    >
+      Gmail search syntax
+    </a>
+    . Matching threads are not stored until you say what should happen to
+    them below. If both fields are empty, nothing matches.
+  </>
+);
+const RULES_DESCRIPTION = (
+  <>
+    This box uses named, bounded Gmail rules. Edit them in{" "}
+    <code className="text-xs bg-warm-100 px-1 rounded">_config/connectors/gmail.json</code>
+    . This simpler form is disabled so it cannot overwrite them.
+  </>
+);
 
 const PROCEDURE_REF_PATTERN = /^_config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/;
 
@@ -36,30 +62,18 @@ export function GmailFiltersSection() {
 
   if (initialError || !gmailConfigQuery.data) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-2">Gmail Filters</h2>
+      <AdminSectionCard id="gmail-filters" description={DESCRIPTION}>
         {initialError ? (
           <div className="p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
             {initialError}
           </div>
         ) : null}
-      </div>
+      </AdminSectionCard>
     );
   }
 
   if (gmailConfigQuery.data.usesRules) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-2">Gmail Rules</h2>
-        <p className="text-sm text-warm-700">
-          This box uses named, bounded Gmail rules. Edit them in{" "}
-          <code className="text-xs bg-warm-100 px-1 rounded">
-            _config/connectors/gmail.json
-          </code>
-          . This simpler form is disabled so it cannot overwrite them.
-        </p>
-      </div>
-    );
+    return <AdminSectionCard id="gmail-filters" description={RULES_DESCRIPTION}>{null}</AdminSectionCard>;
   }
 
   return <GmailFiltersForm initial={gmailConfigQuery.data} />;
@@ -133,23 +147,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
   const error = updateMutation.error?.message ?? null;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Gmail Filters</h2>
-      <p className="text-sm text-warm-700 mb-4">
-        Choose which Gmail threads this box collects, and what happens to them. Uses{" "}
-        <a
-          id="bbx-admin-gmail-syntax-help"
-          href="https://support.google.com/mail/answer/7190?hl=en"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline"
-        >
-          Gmail search syntax
-        </a>
-        . Matching threads are not stored until you say what should happen to
-        them below. If both fields are empty, nothing matches.
-      </p>
-
+    <AdminSectionCard id="gmail-filters" description={DESCRIPTION}>
       <div className="mb-4">
         <TextField
           id="bbx-admin-gmail-query"
@@ -224,82 +222,6 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
           {error}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-interface GmailLabelListProps {
-  labels: string[];
-  newLabel: string;
-  busy: boolean;
-  onNewLabelChange: (value: string) => void;
-  onAdd: () => void;
-  onRemove: (label: string) => void;
-}
-
-function GmailLabelList({
-  labels,
-  newLabel,
-  busy,
-  onNewLabelChange,
-  onAdd,
-  onRemove,
-}: GmailLabelListProps) {
-  return (
-      <div className="mb-4">
-      {/* Heading for the label-chips group below, not a control label — the
-          actual input ("Add label") carries its own associated label. */}
-      <p className="block text-sm font-medium text-warm-700 mb-2">
-        Labels (OR-joined when no query is set)
-      </p>
-      {labels.length > 0 ? (
-        <div className="mb-2 space-y-2">
-          {labels.map((label) => (
-            <div
-              key={label}
-              className="flex items-center gap-2 p-2 bg-warm-50 border border-warm-200 rounded text-sm"
-            >
-              <span className="flex-1 text-warm-800">{label}</span>
-              <button
-                onClick={() => onRemove(label)}
-                disabled={busy}
-                className="text-warm-500 hover:text-danger-dark text-xs px-2"
-              >
-                remove
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mb-2 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-600">
-          No labels configured.
-        </div>
-      )}
-      <div className="flex gap-2 items-start">
-        <TextField
-          id="bbx-admin-gmail-new-label"
-          label="Add label"
-          hideLabel
-          value={newLabel}
-          onChange={onNewLabelChange}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              onAdd();
-            }
-          }}
-          placeholder="inbox"
-          className="flex-1"
-        />
-        <Button
-          id="bbx-admin-gmail-add-label"
-          intent="secondary"
-          onClick={onAdd}
-          disabled={!newLabel.trim()}
-        >
-          Add
-        </Button>
-      </div>
-    </div>
+    </AdminSectionCard>
   );
 }

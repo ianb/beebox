@@ -2,7 +2,7 @@
 
 ```ts setup
 import { parseInventoryCardState, inventoryCardViewState } from "../../src/frontend/src/lib/inventory-card-state.js";
-import { adminArrivalKey, adminArrivalReceipt, adminArrivalViewState, clearAdminArrivalState, parseAdminCardState, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival } from "../../src/frontend/src/lib/admin-card-state.js";
+import { adminArrivalKey, adminArrivalReceipt, adminArrivalViewState, adminTabViewState, clearAdminArrivalState, parseAdminCardState, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival } from "../../src/frontend/src/lib/admin-card-state.js";
 import { boxRouteSurface } from "../../src/frontend/src/lib/box-route-layout.js";
 import { captureModeForRequest } from "../../src/frontend/src/lib/capture-intent.js";
 ```
@@ -21,21 +21,40 @@ JSON.stringify(inventoryCardViewState({ projection: "grouped", metric: "bytes", 
 => {"projection":"grouped","metric":"bytes","linkStatus":"linked"}
 ```
 
-Only recognized OAuth return fields become renderer state. Authorization codes
-remain backend-only, and consumption preserves unrelated future Admin state.
+Only recognized OAuth return fields and a known tab become renderer state.
+Authorization codes remain backend-only, and consuming the arrival keeps the
+open tab and any unrelated future Admin state.
 
 ```ts
-JSON.stringify(adminArrivalViewState({ google: "error", message: "Denied", reconnect: "google", code: "secret", session: "chosen" }))
-=> {"google":"error","message":"Denied","reconnect":"google"}
+JSON.stringify(adminArrivalViewState({ google: "error", message: "Denied", reconnect: "google", code: "secret", session: "chosen", tab: "connections" }))
+=> {"google":"error","message":"Denied","reconnect":"google","tab":"connections"}
+
+JSON.stringify(adminArrivalViewState({ tab: "nowhere" }))
+=> null
 
 JSON.stringify(parseAdminCardState({ google: "connected", message: "Ready" }))
-=> {"ok":true,"arrival":{"google":"connected","message":"Ready"}}
+=> {"ok":true,"arrival":{"google":"connected","message":"Ready"},"tab":null}
+
+JSON.stringify(parseAdminCardState({ tab: "host" }))
+=> {"ok":true,"arrival":{},"tab":"host"}
 
 parseAdminCardState({ google: "maybe" }).ok
 => false
 
-JSON.stringify(clearAdminArrivalState({ google: "error", message: "Denied", reconnect: "google", panel: "future" }))
+parseAdminCardState({ tab: "nowhere" }).ok
+=> false
+
+JSON.stringify(clearAdminArrivalState({ google: "error", message: "Denied", reconnect: "google", tab: "host", panel: "future" }))
+=> {"tab":"host","panel":"future"}
+
+JSON.stringify(clearAdminArrivalState({ reconnect: "google" }))
+=> {"tab":"connections"}
+
+JSON.stringify(clearAdminArrivalState({ panel: "future" }))
 => {"panel":"future"}
+
+JSON.stringify(adminTabViewState({ google: "connected" }, "people"))
+=> {"google":"connected","tab":"people"}
 ```
 
 A hidden retained Admin card and an in-flight status request cannot consume the

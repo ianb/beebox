@@ -1,6 +1,6 @@
 ---
 title: "The admin page is one long scroll of 14 sections, with no structure and no addresses an agent can point at"
-workstream: unattached
+workstream: admin-structure
 area: beebox
 labels: [admin, ui, agent-surface]
 filed-by: agent
@@ -73,3 +73,32 @@ is the drift the repo's standing preference warns about.
 
 Related: [card chrome has no bbx- ids](2026-08-23-card-chrome-controls-have-no-bbx-ids.md)
 is the same gap on a different surface.
+
+## Decision and implementation (2026-09-25, worktree-admin-structure)
+
+The boxholder chose tabs, styled as pills so they do not read as the
+workspace's own tab strip, with a default Overview tab that shows what each
+tab holds and each section's current state. The grouping is by what the
+boxholder is doing rather than by scope, since scope did not split cleanly
+(Notifications is per device; Allowed users and Invite are per box but sat
+under "Host"; Google, Secrets, and Cloudflare are mixed):
+
+| Tab | Sections |
+|---|---|
+| Overview | one row per section: title, scope badge, live status, blurb |
+| Agents | Agent engine and model, OpenRouter models, Claude Code, Codex |
+| People | Allowed users, Invite link |
+| Connections | Google services, Gmail filters, Telegram, Secrets, Cloudflare publishing |
+| Host | Tailscale, Backup, Notifications |
+
+Scope stays visible as a badge on every section heading ("This box", "Whole
+host", "This device", "Host and box").
+
+Addresses, all from one registry (`components/admin/admin-sections.ts`):
+tabs `bbx-admin-tab-<tab>`, panels `bbx-admin-panel-<tab>`, sections
+`bbx-admin-<section>` as a named `region` whose name is the heading, overview
+rows `bbx-admin-overview-<section>`. Deep links: `/<box>/admin?tab=<tab>`, and
+the existing `?reconnect=google` opens Connections and scrolls to Google.
+
+Every panel stays mounted; only the open one is shown. That keeps configured
+state and the hang probe's per-section breadcrumbs unchanged on every load.
