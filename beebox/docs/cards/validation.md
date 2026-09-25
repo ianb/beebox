@@ -1,4 +1,9 @@
-# Card validation hooks
+# Card validation
+
+How `bbx validate` reaches agents and commits inside a box, and the canonical
+ref rewrite.
+
+## What it is
 
 How card validation reaches agents and commits inside a box. Installed
 during `bbx init` by `src/core/install-validation-hooks.ts`; the hook
