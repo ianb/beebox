@@ -16,8 +16,10 @@ const DESCRIPTION =
 function CodexStatusSummary({ loading, status }: { loading: boolean; status: CodexStatus | null }) {
   if (loading) return <Text size="sm" tone="muted">Checking status…</Text>;
   if (status?.kind === "logged-in") return <Row><Badge tone="success">Authenticated</Badge></Row>;
+  // The probe gave no answer. That is not a failure of the login itself, so it
+  // reads as "not checked", with the detail as guidance rather than an error.
   if (status?.kind === "inconclusive") {
-    return <Stack gap="sm"><Row><Badge tone="warning">Status unknown</Badge></Row><ErrorText>{status.detail}</ErrorText></Stack>;
+    return <Stack gap="sm"><Row><Badge tone="neutral">Not checked</Badge></Row><Text size="sm" tone="muted">{status.detail}</Text></Stack>;
   }
   return (
     <Stack gap="sm">
@@ -37,7 +39,6 @@ export function CodexSection() {
   const loggingOut = snapshot.matches("loggingOut");
   const idle = snapshot.matches("idle");
   const loggedIn = status?.kind === "logged-in";
-  const statusUnknown = status?.kind === "inconclusive";
 
   return (
     <AdminSectionCard id="codex" description={DESCRIPTION}>
@@ -57,7 +58,7 @@ export function CodexSection() {
       {error ? <ErrorText>{error}</ErrorText> : null}
 
       <Row gap="sm" wrap>
-        {!loggedIn && !statusUnknown && !polling ? (
+        {!loggedIn && !polling ? (
           <Button
             id="bbx-admin-codex-authenticate"
             intent="primary"
@@ -80,7 +81,7 @@ export function CodexSection() {
             Cancel
           </Button>
         ) : null}
-        {loggedIn || statusUnknown ? (
+        {loggedIn ? (
           <Button
             id="bbx-admin-codex-logout"
             intent="secondary"

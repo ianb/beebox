@@ -33,3 +33,25 @@ no Codex login; watch the Codex section for ten seconds.
 Related: the admin overview being built in `worktree-admin-structure` surfaces
 this same status as a one-line summary, so the presentation question applies
 there too.
+
+## What was established (2026-09-25, worktree-admin-structure)
+
+`codex login status` answers in about 0.15 s on this host when run by hand,
+and a later admin load reported "Logged in", so the timeout is intermittent,
+not a hang on every load. The cause of the slow instance is not known; a
+concurrent `codex exec` review was running on the machine around the same
+time and is the leading suspect.
+
+Fixed the two things that were wrong regardless of cause:
+
+- The service now logs a `console.warn` when the ten-second timer fires,
+  with how many bytes the CLI had printed, so the next occurrence carries
+  evidence of hung-versus-slow. The detail text a boxholder sees is
+  "Codex did not answer within 10 seconds. Refresh to check again."
+- The Codex section shows an unanswered probe as a neutral "Not checked"
+  badge with that guidance, keeps the Authenticate and Refresh buttons, and
+  no longer offers Log Out for an unknown state. The admin overview says
+  "Not checked: Codex did not answer" with a warning tone instead of an error.
+
+Left open until a timeout recurs with the new log line: whether something in
+the CLI blocks under concurrency.

@@ -74,7 +74,7 @@ export function summarizeCodex(status: Admin["codexStatus"]): AdminSectionStatus
     case "logged-in": return ready("Logged in", "success");
     case "logged-out": return ready("Not logged in", "warning");
     case "unavailable": return ready("Not available on this host", "danger");
-    case "inconclusive": return { state: "error", message: `Status unknown: ${status.detail}` };
+    case "inconclusive": return ready("Not checked: Codex did not answer", "warning");
   }
 }
 

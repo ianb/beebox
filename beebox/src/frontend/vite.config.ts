@@ -111,6 +111,16 @@ export default defineConfig({
     // reach us. Vite's default localhost-resolution sometimes lands on ::1
     // only, which the router doesn't follow.
     host: "127.0.0.1",
+    // On macOS, poll instead of using FSEvents. Vite serves a module from its
+    // cache until the watcher reports a change, and FSEvents delivery depends
+    // on the machine-wide fseventsd daemon. When fseventsd is overloaded,
+    // events arrive 1-15 s late or not at all. Vite then serves the old code
+    // with no error, and a restart does not help (measured 2026-09-25; see
+    // issues/bugs/2026-09-25-worktree-vite-serves-stale-modules-because-fsevents-lags.md).
+    // Polling calls stat() on each watched file, so it does not use fseventsd.
+    // At 1 s it adds about 1% of one core per running Vite (100 ms, chokidar's
+    // default, adds about 7%).
+    watch: process.platform === "darwin" ? { usePolling: true, interval: 1000, binaryInterval: 1000 } : undefined,
     // Report-Only CSP on every dev response (incl. the HTML document), so dev
     // exercises the policy and surfaces external-origin mistakes early.
     headers: DEV_CSP_HEADERS,
