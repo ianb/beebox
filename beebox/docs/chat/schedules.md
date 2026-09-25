@@ -1,8 +1,8 @@
-# Chat Schedules
+# Chat schedules
 
 Agent-initiated timers set during web chat conversations. The agent uses `<schedule>` XML tags in its responses to set timers that fire later, optionally playing an alarm sound and/or TTS announcement, then waking the agent back up to respond.
 
-## How It Works
+## How it works
 
 ### Agent sets a schedule
 
@@ -71,7 +71,7 @@ Each thread gets its own schedule file at `.beebox/thread-schedules/<threadRef>.
 
 No alarm or announce support — Telegram schedules are simple wakeup messages. For longer-term reminders, the agent should create a job card instead.
 
-## Key Files
+## Key files
 
 | File | Role |
 |------|------|
@@ -95,6 +95,6 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 
 Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfired entries fire immediately). Because the timers live in that process, a lazy `bbx hub` (`lazy: true`, which idle-stops boxes) must not stop or fail to start a schedule-holding box: it keeps any box whose `chat-schedules.json` holds an entry running instead of idle-stopping it, and pre-starts such boxes at hub boot (independent of `keepRecent`), so a schedule fires on time even after a hub restart. See `src/hub/CLAUDE.md` (Lazy mode) and `src/hub/pending-schedules.ts`.
 
-## Known Issues / Future Work
+## Known issues
 
 - **Telegram schedule delivery on restart**: If the server restarts, schedule timers are re-armed from disk but the `deliverResponse` callback (which sends to Telegram) is lost. The schedule fires but the response only goes to the session log, not to Telegram. This is acceptable for short-term timers.

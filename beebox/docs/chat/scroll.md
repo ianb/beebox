@@ -1,7 +1,12 @@
-# Chat scroll — test procedure
+# Chat scroll
+
+Verifying the message list's scroll behavior: the harness, the browser
+procedure, the on-device trace, and what only a real phone can show.
+
+## What it is
 
 The chat message list's scroll behavior is layout behavior that doctests can't
-exercise (`docs/testing.md` §6). Two instruments cover it, and a change to
+exercise ([dev stubs](../testing/dev-stubs.md)). Two instruments cover it, and a change to
 `chat-scroll.ts`, `InteractiveChat-messages.tsx` (the list, the send anchor, the
 spacer, the button) or the `/fakestream` stub should run both:
 
@@ -18,7 +23,7 @@ compensations for changes the reader cannot see. Content growth below the reader
 never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
 `components/chat/CLAUDE.md` has the invariants).
 
-## 1. The harness
+## The harness
 
 ```bash
 bin/browse open /dev/chat-scroll
@@ -37,7 +42,7 @@ never from what the controller says about itself.
 A run takes ~40s. It is deterministic: the same seed, fixed pixel heights, and a
 per-scenario reset that goes through the controller's open-thread path.
 
-## 2. The real app
+## The browser procedure
 
 ### Setup
 
@@ -74,7 +79,7 @@ back identical and the check silently proves nothing.
   any output — `scrollHeight` sits flat until it does; that's the agent spinning
   up, not a scroll bug). Run at least one real turn for the finalize check.
 
-### 2.1 Send anchors the user message to the top
+### Send anchors the user message to the top
 
 ```bash
 bin/browse fill bbx-composer-input "/fakestream 600 30 40"; bin/browse press Enter
@@ -88,7 +93,7 @@ from 0 on a short reply, suspect the last-turn spacer (`min-height` on the last
 item, from the controller's `viewportPx`): without it the anchor position is not
 a reachable scroll offset.
 
-### 2.2 The reply does not follow
+### The reply does not follow
 
 Sample the same expression a few times a second apart while the stream runs:
 `fb` must GROW, `top` must NOT change (the controller writes nothing), and
@@ -99,7 +104,7 @@ bin/browse eval --no-wait '(()=>{const s=document.querySelector("[data-testid=ch
 # expect a growing fb, a fixed top, btn:true, emph:true
 ```
 
-### 2.3 The button returns to the bottom
+### The button returns to the bottom
 
 ```bash
 bin/browse eval --no-wait 'document.querySelector("#bbx-chat-scroll-latest").click(), "clicked"'
@@ -111,7 +116,7 @@ Mid-stream the click lands at the bottom and the *continuing* growth pushes it
 away again — a small `fb` and a button that comes back is the model working, not
 a regression. After the stream ends it must be ~0.
 
-### 2.4 Opening a thread lands at the bottom
+### Opening a thread lands at the bottom
 
 ```bash
 bin/browse open "/chat?session=<session-with-history>"
@@ -125,7 +130,7 @@ reports "history is in the DOM" from an effect that runs *before* the
 ResizeObserver cycle which measures it, so the hold lapses on a timer. A thread
 that lands at the top means the hold ended before the first content cycle.
 
-### 2.4b Opening a thread whose last turn carries images
+### Opening a thread whose last turn carries images
 
 The boxholder's 2026-08-26 report: with images in the transcript the page
 opened above the bottom (web and iOS). Assistant images and user-image thumbnails use natural proportions and
@@ -149,7 +154,7 @@ navigation was cold.
 
 The harness scenario for this is `open-thread-late-image-at-bottom`.
 
-### 2.5 Content loading above must not shift the view
+### Content loading above must not shift the view
 
 The regression for async-resizing embeds and for "load older". Scroll to the
 middle, let the anchor capture, insert a tall block **above** the viewport, and
@@ -165,7 +170,7 @@ Real "load older" is the same branch with a captured gap: click
 0 while the scroll-to-bottom button stays **unaccented** — old history prepended
 above the viewport is not new content below the reader.
 
-### 2.6 Mobile composer path (< 640px)
+### Mobile composer path (< 640px)
 
 The narrow composer is a different set of controls; a send through it must
 anchor identically.
@@ -176,11 +181,11 @@ bin/browse open "/chat?session=new"
 bin/browse click bbx-composer-keyboard
 bin/browse fill bbx-composer-input-mobile "/fakestream 300 30 40"
 bin/browse click bbx-composer-send-mobile
-# then the 2.1 assertion: userTop must be 0
+# then the send-anchoring assertion above: userTop must be 0
 bin/browse set viewport 1280 800
 ```
 
-### 2.7 Real-turn finalize (no flash)
+### Real-turn finalize (no flash)
 
 The sharpest instrument here is a MutationObserver on the content wrapper, not a
 scroll sample — the failure mode is a *content collapse*, and the scroll jump is
@@ -197,7 +202,28 @@ history request. That transient collapse is the regression
 `chat-machine-finalize.doctest.md` guards. Record intentional send-spacer
 removal separately; a height decrease by itself is not proof of that bug.
 
-## 3. Inline images and lazy loading
+### Reproduction scripts
+
+Three scripts drive the real app for the cases the procedure above checks by
+hand. Each exits 0 on success, 1 on the assertion it exists for, and 2 on a
+setup or cleanup error; run them against a disposable conversation and keep
+frontend source stable while they run, since HMR replaces nodes and restarts
+requests.
+
+- `node --import tsx beebox/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' scratch/scroll-repro`
+  sends an eight-line `/fakestream` message three times through the desktop
+  composer and asserts the last user message is within 2 px of the scroller
+  top; `SCROLL_REPRO_TRACE=0` runs the control without observation.
+- `node --import tsx beebox/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION'`
+  grows the composer while reading, both at the bottom and 200 px above it,
+  and asserts the reading position holds.
+- `node --import tsx beebox/scripts/chat-scroll-lazy-image-repro.ts` serves a
+  held image above and below a reading marker and asserts zero marker drift.
+
+The 2026-09-04 runs and what they established are in
+[the investigation report](../reports/chat-scroll-investigation-2026-09-04.md).
+
+## Inline images and lazy loading
 
 Image-bearing conversations are required fixtures for scroll verification,
 including the simulator and physical-device passes. A text-only `/fakestream`
@@ -243,7 +269,7 @@ replace a physical-device momentum/rubber-band pass. Its native composer is
 outside the DOM: a zero/missing web-composer measurement is not a native
 composer-height measurement; pair DOM traces with a simulator recording.
 
-## `/scrolldebug` — the on-device scroll trace (field probe)
+## The on-device trace
 
 When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
 iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle a
@@ -338,7 +364,7 @@ concurrent clients and HMR generations by this ID before comparing timelines;
 it identifies neither the conversation nor the device. Geometry sampling can
 affect timing; always compare a failing sequence with observation disabled.
 
-## Device-only checklist (real iPhone — Chromium can't emulate these)
+## Device-only checklist
 
 - **Keyboard:** focus the composer; it must stay above the on-screen keyboard
   (`.h-app` tracks `visualViewport`), and a list that was at the bottom must

@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T17:32:41Z
+Generated: 2026-09-25T17:34:34Z
 Total documents: 418
 
 ## Issues
@@ -2205,7 +2205,6 @@ Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
 - docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
-- docs/chat/scroll.md:4 (mention) — exercise (`docs/testing.md` §6). Two instruments cover it, and a change to
 - docs/development-process.md:20 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
 - docs/development-workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
@@ -2510,11 +2509,11 @@ References:
 
 #### docs/chat/composer.md
 
-Title: "Composer" | 361 lines | current reference
+Title: "Composer" | 351 lines | current reference
 
 Referenced by:
 - docs/chat.md:15 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
-- docs/chat/composer.md:286 (link) — [`composer-states.md`](composer.md) enumerates rendered states with
+- docs/chat/sessions.md:18 (link) — counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 - docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
 - docs/implemented-plans/docs-reorg.gap-analysis.md:118 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
 - docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
@@ -2522,12 +2521,11 @@ Referenced by:
 - docs/testing/dev-stubs.md:18 (link) — [composer states](../chat/composer.md)), `/dev/chat-scroll`. Tours walk the
 
 References:
-- → docs/chat/composer.md (link)
 - → docs/plans/composer-child-actors.md (link)
 
 #### docs/chat/history.md
 
-Title: "Chat history" | 51 lines | current reference
+Title: "Chat history" | 54 lines | current reference
 
 Referenced by:
 - docs/chat.md:11 (link) — | [History](chat/history.md) | The transcript and the acceptance record, and how a replayed photo is served. |
@@ -2564,7 +2562,7 @@ References:
 
 #### docs/chat/schedules.md
 
-Title: "Chat Schedules" | 101 lines | current reference
+Title: "Chat schedules" | 101 lines | current reference
 
 Referenced by:
 - docs/chat.md:12 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence, Telegram
@@ -2583,7 +2581,7 @@ References:
 
 #### docs/chat/scroll.md
 
-Title: "Chat scroll — test procedure" | 359 lines | current reference
+Title: "Chat scroll" | 385 lines | current reference
 
 Referenced by:
 - docs/chat.md:16 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
@@ -2601,12 +2599,13 @@ Referenced by:
 - ../research/chat-scroll-comparison-2026-09-04.md:4 (link) — [local reproduction protocol](../beebox/docs/chat/scroll.md).
 
 References:
-- → docs/testing.md (mention)
+- → docs/testing/dev-stubs.md (link)
 - → docs/plans/chat-scroll-model.md (mention)
+- → docs/reports/chat-scroll-investigation-2026-09-04.md (link)
 
 #### docs/chat/sessions.md
 
-Title: "Chat sessions" | 94 lines | current reference
+Title: "Chat sessions" | 97 lines | current reference
 
 Referenced by:
 - docs/chat.md:10 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
@@ -2621,6 +2620,9 @@ Referenced by:
 - ../issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:16 (mention) — docs/chat/sessions.md and the chat steering design are reconciled.
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat/sessions.md`.)
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat/sessions.md) — how
+
+References:
+- → docs/chat/composer.md (link)
 
 ### docs/design/
 
@@ -5894,7 +5896,7 @@ No references in or out.
 Title: "Chat scroll: write on user actions only" | 234 lines | proposal | partial
 
 Referenced by:
-- docs/chat/scroll.md:18 (mention) — never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
+- docs/chat/scroll.md:23 (mention) — never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
 - docs/plans/doc-structure-chat.md:108 (mention) — that needs verifying against code); the active `plans/chat-scroll-model.md`.
 - docs/reports/chat-scroll-investigation-2026-09-04.md:7 (mention) — `CLAUDE.md` and `docs/plans/chat-scroll-model.md`. Do not update in place.
 - src/frontend/src/components/chat/CLAUDE.md:15 (mention) — (`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
@@ -6000,7 +6002,7 @@ References:
 Title: "Composer child-actor ownership" | 138 lines | proposal | draft
 
 Referenced by:
-- docs/chat/composer.md:288 (link) — [`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
+- docs/chat/composer.md:11 (link) — [`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
 
 References:
 - → docs/chat/composer.md (link)
@@ -6957,6 +6959,7 @@ References:
 Title: "Chat scroll investigation, 2026-09-04" | 228 lines | dated report
 
 Referenced by:
+- docs/chat/scroll.md:224 (link) — [the investigation report](../reports/chat-scroll-investigation-2026-09-04.md).
 - docs/plans/doc-structure-chat.md:72 (mention) — | `chat-scroll-testing.md` dated sections (send-failure results, native reproduction, deeper web checks, controller fix
 
 References:
@@ -7101,6 +7104,7 @@ References:
 Title: "Dev stubs" | 64 lines | current reference
 
 Referenced by:
+- docs/chat/scroll.md:9 (link) — exercise ([dev stubs](../testing/dev-stubs.md)). Two instruments cover it, and a change to
 - docs/implemented-plans/doc-structure.md:303 (mention) — dev-stubs.md           does the streaming UI behave, checked by hand?
 - docs/testing.md:38 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
 - docs/testing/tours.md:58 (link) — the dev-harness pattern in [dev stubs](dev-stubs.md). The line:

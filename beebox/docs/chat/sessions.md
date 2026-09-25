@@ -1,5 +1,8 @@
 # Chat sessions
 
+The backend session lifecycle: phases, the queue-and-drain contract, and the
+code both session classes share.
+
 The backend chat runs are long-lived SDK conversations wrapped by two classes:
 
 - **`ChatSession`** (`src/core/chat/session/index.ts`) — whole-box interactive chat.
@@ -11,8 +14,8 @@ The backend chat runs are long-lived SDK conversations wrapped by two classes:
 Both drive their SDK run through the same lifecycle, modelled as a discriminated
 union in `src/core/chat/session/lifecycle.ts`, and adapt raw SDK messages through
 the same shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
-This doc is the backend
-counterpart to the frontend's state-machine docs — the park/drain/evict/queue
+This page is the backend
+counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 contract the backend previously left implicit.
 
 ## Phases

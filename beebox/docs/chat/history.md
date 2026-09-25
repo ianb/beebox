@@ -1,5 +1,8 @@
 # Chat history
 
+What the box keeps of a conversation: the transcript, the acceptance record
+of each send, and how a photo in an old conversation is served again.
+
 ## Photos in a replayed conversation
 
 A photo attached in chat is written by the SDK into the transcript's own JSONL

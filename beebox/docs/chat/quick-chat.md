@@ -74,7 +74,7 @@ and its eligible existing chats. A chat rule applies to that specific chat;
 `keepEligible: true` keeps it eligible beyond the recency window, provided it
 still exists and is resumable. Missing or invalid targets stop routing visibly.
 
-## Data and limits
+## Requirements, data, and limits
 
 Quick chat requires an `openrouter` key granted to the box in the machine
 secret store. It is an optional service, not a configured chat model. A missing

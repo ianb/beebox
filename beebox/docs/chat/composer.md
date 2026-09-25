@@ -1,9 +1,14 @@
 # Composer
 
-A map of the chat composer's UI across its state combinations — what each
-button shows, how you reach the state, and where you can go from it. Audience:
-us, doing UI polish. Companion to `docs/composer-input-machine.md`, which
-describes the `composerMachine` that now backs this surface.
+The chat input bar: its coordination machine and a map of its rendered states.
+
+## What it is
+
+The composer is the chat input surface: the `composerMachine` coordination
+overlay that backs it, and a map of its rendered UI across state combinations
+(what each button shows, how you reach the state, and where you can go from
+it). The unbuilt child-actor design is separate in
+[`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
 
 The composer is the bottom button bar (+ inline textarea on desktop, + a
 drop-up textarea row on mobile) plus two header chips (the narration badge and
@@ -11,7 +16,83 @@ the mute button) that change with the same state. Screenshots are tight
 viewport crops: desktop at 1100×380 (header + bar), mobile at 390-wide (bar /
 typing row).
 
-## State dimensions
+## How it works
+
+### Ownership
+
+`src/frontend/src/machines/composerMachine.ts` is a parallel XState machine
+with three regions:
+
+- `voice`: `idle | speaking | pausedForSpeech`
+- `hq`: `idle | inFlight`
+- `keyboard`: `closed | open.{unlocked,locked}`
+
+The machine is a coordination overlay. It does not own microphone or playback
+device lifecycles. `realtimeTranscriptionMachine` owns microphone states and
+`speechPlaybackMachine` owns playback. `InteractiveChat-voice.ts` mirrors
+device facts into the composer and executes the device commands it emits.
+
+### Voice coordination
+
+`recording` and `transcriptNonEmpty` are mirrored context flags. A queued speech
+segment follows these rules:
+
+| Current condition | Result |
+|---|---|
+| muted | mark the segment played without playback |
+| transcript has text | mark the segment played without playback |
+| microphone is recording | cancel the mic, play speech, enter `pausedForSpeech` |
+| otherwise | play speech and enter `speaking` |
+
+When ordinary playback finishes, the machine returns to `idle` and restarts the
+mic if `turnTaking` is set. When playback finishes or is stopped in
+`pausedForSpeech`, it returns to `idle` and resumes the mic. Starting dictation
+while speech plays stops speech first.
+
+The rendered `voicePaused` flag is
+`composerSnapshot.matches({ voice: "pausedForSpeech" })`. Recording appearance
+and `isTranscribing` still come from the transcription machine.
+
+### HQ coordination
+
+The `hq` region tracks zero or more pending HQ transcription requests. The
+first `START_HQ` enters `inFlight`; later requests append to `pendingHq`.
+`HQ_STATUS` updates one row, `HQ_SEND_LIVE` emits the fallback send command,
+and `HQ_DONE` removes one row. The region returns to `idle` after the last
+pending request completes.
+
+HQ request work stays in `InteractiveChat-voice.ts`; the machine owns visible
+coordination state and emitted commands.
+
+### Mobile keyboard coordination
+
+The machine defines this region:
+
+```text
+keyboard (initial: closed)
+  closed: OPEN_KEYBOARD → open.unlocked
+  open:
+    CLOSE_KEYBOARD → closed
+    unlocked: TOGGLE_LOCK → locked; MESSAGE_SENT → closed
+    locked: TOGGLE_LOCK → unlocked; MESSAGE_SENT stays open
+```
+
+The current React view still owns `typingMode` and `typingLocked` and renders
+the mobile typing row when `typingMode || isTranscribing`. The keyboard region
+therefore records the intended transitions and has doctest coverage, but the
+view has not yet been wired to read it.
+
+### Tests
+
+`test/frontend/composer-machine.doctest.md` covers voice, HQ, and keyboard
+transitions. The React wiring lives in
+`src/frontend/src/components/chat/InteractiveChat-voice.ts`, and the remaining
+component-owned keyboard state lives in `InteractiveChat.tsx` and
+`InteractiveChat-layout.tsx`.
+
+## States
+
+### State dimensions
 
 The composer's appearance is a function of these, most read straight off the
 machines that own them:
@@ -29,7 +110,7 @@ machines that own them:
 | mobile keyboard | closed / open.unlocked / open.locked | `typingMode` / `typingLocked` |
 | device | desktop (≥`sm`) / mobile (<`sm`) | viewport |
 
-## The two state-dependent controls
+### The two state-dependent controls
 
 **Mic / voice toggle** — a strict priority cascade:
 
@@ -46,11 +127,9 @@ speaking" (**speaker-x** — audio semantics, rhymes with the header mute icon);
 glyphs: they used to be identical, so when one showed alone you couldn't tell
 which action you were about to take.
 
----
+### Named states, desktop
 
-# Named states — desktop
-
-## Idle, empty
+#### Idle, empty
 
 The resting state. `+` (Add menu), the textarea placeholder "Type or paste an
 image…", a **disabled** Send (faint up-arrow), and the plain **mic** ("Voice
@@ -61,7 +140,7 @@ input"). Header: speaker (unmuted), no narration badge.
 → **Typing** (type text) · **Recording** (tap mic) · toggle **narration** /
 **muted** from the header/debug menu.
 
-## Typing (Send enabled)
+#### Typing (Send enabled)
 
 Any non-empty input flips Send to the solid accent up-arrow; the mic is
 unchanged (you can still dictate instead). Enter sends; Shift+Enter / Ctrl+J
@@ -71,7 +150,7 @@ newline.
 
 → **Idle** (clear / send) · send fires `MESSAGE_SENT` (ends any voice turn).
 
-## Narration mode
+#### Narration mode
 
 Header gains the `🎙️ narration ×` badge; the mic swaps to the
 **mic-with-speech-bubble** icon ("Voice input (narration mode)"). Narration
@@ -83,7 +162,7 @@ means silent/structured replies and an HQ transcription pass on send.
 `· transcribing…` sub-label (`composerMachine.hq === inFlight`) — *capture
 pending, see below*.
 
-## Muted
+#### Muted
 
 The header speaker becomes the muted icon (speaker-×, pressed). Queued TTS is
 never played (`markPlayed`), so the "Stop speaking" button and the
@@ -91,11 +170,9 @@ speaking/paused states can't occur while muted.
 
 ![desktop muted](composer/desktop-muted.png)
 
----
+### Named states, mobile
 
-# Named states — mobile
-
-## Idle, empty
+#### Idle, empty
 
 Below `sm`, the textarea is hidden; the bar is icon-only: `+`, a spacer, the
 **keyboard** button, and the **mic**. (Stop-speaking / Stop-agent appear
@@ -105,7 +182,7 @@ between the spacer and keyboard when active.)
 
 → **Keyboard** (tap ⌨ → typing row) · **Recording** (tap mic).
 
-## Keyboard open (typing)
+#### Keyboard open (typing)
 
 The keyboard button opens a drop-up textarea row with its own Send, plus a
 **lock** and **close** affordance above it (the button bar is hidden). Unlocked,
@@ -120,16 +197,14 @@ glance — the open-vs-closed padlock outline alone was illegible at that size:
 
 → **lock** keeps it open across sends · **close** returns to the icon bar.
 
----
-
-# Voice states — desktop
+### Voice states, desktop
 
 These are the states the machine work was really about. They normally need a
 live mic / TTS, so the shots below are from the dev gallery
 (`/dev/composer-states`, dev-only) which renders the real presentational
 composer with fabricated props. Behaviour is documented from the code.
 
-## Recording (`isTranscribing`)
+#### Recording (`isTranscribing`)
 
 Mic button becomes a **red stop square** ("Stop recording"). The textarea goes
 read-only showing the live transcript, with Cancel (✕) / Edit (✎) / Send
@@ -152,7 +227,7 @@ the dictation):
 → **Cancel/Esc** (`STOP_DICTATION`) · **keyword send** (`KEYWORD_SEND` → commit
 → keep recording) · speech queued while recording → **pausedForSpeech**.
 
-## Paused for speech (`voicePaused`)
+#### Paused for speech (`voicePaused`)
 
 Mic button is a **pulsing mic with a pause badge** ("Resume recording (stops
 speech)") — the mic is the action (tap to get it back), the badge is the state —
@@ -165,7 +240,7 @@ you were recording — the mic is cancelled and TTS plays.
 speaking** → resume mic. This state replaced the old `voicePaused` boolean; it
 should *not* flicker between the agent's sentences.
 
-## Speaking, not paused (`speaking`)
+#### Speaking, not paused (`speaking`)
 
 **Stop speaking** shows; the mic stays the plain/narration mic (it wasn't
 recording). Reached when the agent speaks and you weren't mid-utterance (a
@@ -176,7 +251,7 @@ replay-while-idle, or a spoken reply to a typed message).
 → **playback ends** → idle (or reopen mic if a voice turn is active) · **Stop
 speaking** → idle.
 
-## Agent streaming (`isStreaming`)
+#### Agent streaming (`isStreaming`)
 
 A **Stop agent** danger-circle (independent of the mic), shown while the agent
 replies:
@@ -188,16 +263,14 @@ mid-stream speech (speaker-x + stop circle, one per concern):
 
 ![desktop speaking + streaming](composer/desktop-speaking-streaming.png)
 
-## Narration HQ in flight (`hq === inFlight`)
+#### Narration HQ in flight (`hq === inFlight`)
 
 The narration badge gains a `· transcribing…` sub-label while the HQ round-trip
 runs after a voice send; the mic has usually already reopened.
 
 ![desktop narration HQ](composer/desktop-narration-hq.png)
 
----
-
-# Voice states — mobile
+### Voice states, mobile
 
 The mobile bar is icon-only; transcription shows the drop-up row beneath it, and
 the Stop-speaking / Stop-agent circles slot in between the spacer and the
@@ -215,9 +288,7 @@ Speaking — Stop-speaking speaker-x + plain mic:
 
 ![mobile speaking](composer/mobile-speaking.png)
 
----
-
-# Realizable combinations (raw)
+### Realizable combinations
 
 `R` = recording, `Sp` = speaking, `Pa` = pausedForSpeech, `St` = streaming,
 `N` = narration, `M` = muted, `T` = typed text present.
@@ -236,7 +307,7 @@ Speaking — Stop-speaking speaker-x + plain mic:
 × narration (badge + mic-bubble icon) and × muted (mute icon; forces TTS off)
 overlay the rows above, except where excluded below.
 
-# Impossible combinations (and why)
+### Impossible combinations
 
 - **recording + (speaking | pausedForSpeech)** — speech queued *while recording*
   cancels the mic and enters `pausedForSpeech`; you can't be capturing and have
@@ -258,9 +329,7 @@ overlay the rows above, except where excluded below.
 - **mobile inline textarea while idle** — below `sm` the textarea only mounts in
   `typingMode` or while transcribing; otherwise the bar is icon-only.
 
----
-
-## Regenerating these shots
+## Regenerating the screenshots
 
 The idle / typing / narration / muted shots come from a live chat session; the
 voice states come from the dev gallery at **`/dev/composer-states`** (dev-only,
@@ -279,82 +348,3 @@ realizable ones. Each card is keyed by its active axes
 capture. To re-shoot, point `bin/browse` at
 `/dev/composer-states?state=<key>` and `screenshot`. The named-state shots above
 are the readable subset; the gallery is the exhaustive grid.
-
-## From composer-input-machine.md (to reconcile)
-
-Current reference for the shipped composer coordination overlay. The companion
-[`composer-states.md`](composer.md) enumerates rendered states with
-screenshots. The unbuilt child-actor design is separate in
-[`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
-
-## Ownership
-
-`src/frontend/src/machines/composerMachine.ts` is a parallel XState machine
-with three regions:
-
-- `voice`: `idle | speaking | pausedForSpeech`
-- `hq`: `idle | inFlight`
-- `keyboard`: `closed | open.{unlocked,locked}`
-
-The machine is a coordination overlay. It does not own microphone or playback
-device lifecycles. `realtimeTranscriptionMachine` owns microphone states and
-`speechPlaybackMachine` owns playback. `InteractiveChat-voice.ts` mirrors
-device facts into the composer and executes the device commands it emits.
-
-## Voice coordination
-
-`recording` and `transcriptNonEmpty` are mirrored context flags. A queued speech
-segment follows these rules:
-
-| Current condition | Result |
-|---|---|
-| muted | mark the segment played without playback |
-| transcript has text | mark the segment played without playback |
-| microphone is recording | cancel the mic, play speech, enter `pausedForSpeech` |
-| otherwise | play speech and enter `speaking` |
-
-When ordinary playback finishes, the machine returns to `idle` and restarts the
-mic if `turnTaking` is set. When playback finishes or is stopped in
-`pausedForSpeech`, it returns to `idle` and resumes the mic. Starting dictation
-while speech plays stops speech first.
-
-The rendered `voicePaused` flag is
-`composerSnapshot.matches({ voice: "pausedForSpeech" })`. Recording appearance
-and `isTranscribing` still come from the transcription machine.
-
-## HQ coordination
-
-The `hq` region tracks zero or more pending HQ transcription requests. The
-first `START_HQ` enters `inFlight`; later requests append to `pendingHq`.
-`HQ_STATUS` updates one row, `HQ_SEND_LIVE` emits the fallback send command,
-and `HQ_DONE` removes one row. The region returns to `idle` after the last
-pending request completes.
-
-HQ request work stays in `InteractiveChat-voice.ts`; the machine owns visible
-coordination state and emitted commands.
-
-## Mobile keyboard coordination
-
-The machine defines this region:
-
-```text
-keyboard (initial: closed)
-  closed: OPEN_KEYBOARD → open.unlocked
-  open:
-    CLOSE_KEYBOARD → closed
-    unlocked: TOGGLE_LOCK → locked; MESSAGE_SENT → closed
-    locked: TOGGLE_LOCK → unlocked; MESSAGE_SENT stays open
-```
-
-The current React view still owns `typingMode` and `typingLocked` and renders
-the mobile typing row when `typingMode || isTranscribing`. The keyboard region
-therefore records the intended transitions and has doctest coverage, but the
-view has not yet been wired to read it.
-
-## Verification owner
-
-`test/frontend/composer-machine.doctest.md` covers voice, HQ, and keyboard
-transitions. The React wiring lives in
-`src/frontend/src/components/chat/InteractiveChat-voice.ts`, and the remaining
-component-owned keyboard state lives in `InteractiveChat.tsx` and
-`InteractiveChat-layout.tsx`.
