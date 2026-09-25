@@ -7,7 +7,7 @@ compile check. It reports each problem with its line; the hook message ends
 with the rule and where to ask for more.
 
 ```ts setup
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { checkViewMarkdown, lintViewMarkdown } from "../../src/core/views/markdown-check.js";
@@ -122,7 +122,7 @@ for (const block of blocks) if ((await checkViewMarkdown(block)).length > 0) fai
 
 ## The hook message
 
-`lintViewMarkdown(path)` is what `bbx validate --hook` and the in-process
+`lintViewMarkdown(path, { root })` is what `bbx validate --hook` and the in-process
 hook call. A clean view gives `null`; a failing one names each problem and
 ends with the rule:
 
@@ -130,10 +130,10 @@ ends with the rule:
 const dir = await mkdtemp(join(tmpdir(), "view-md-"));
 await writeFile(join(dir, "clean.tsx"), IMPORT + `export default ({ card }) => card.body ? <Markdown card={card}>{card.body}</Markdown> : null;`);
 await writeFile(join(dir, "raw.tsx"), `export default ({ card }) => <p>{card.body}</p>;`);
-await lintViewMarkdown(join(dir, "clean.tsx"))
+await lintViewMarkdown(join(dir, "clean.tsx"), { root: dir })
 => null
 
-await lintViewMarkdown(join(dir, "raw.tsx"))
+await lintViewMarkdown(join(dir, "raw.tsx"), { root: dir })
 => View renders Markdown by hand:
   line 1: reads `card.body` outside `<Markdown>`
 Render card text with `Markdown` from `beebox/view-widgets`. If it lacks something this view needs, say so in `_config/feedback/`.
@@ -141,4 +141,63 @@ Render card text with `Markdown` from `beebox/view-widgets`. If it lacks somethi
 
 ```ts cleanup
 await rm(dir, { recursive: true, force: true });
+```
+
+## Local helpers are checked too
+
+A view renders whatever the local files it imports render, so
+`lintViewMarkdown` follows relative imports (`import`, `export … from`,
+`import()`, `require()`; `.js` names the `.ts`/`.tsx` source; a directory
+names its `index`), transitively and within `root`, and names the helper
+that fails. The hooks also run it on a helper when the helper itself is
+edited.
+
+```ts
+const box = await mkdtemp(join(tmpdir(), "view-md-helpers-"));
+const views = join(box, "src", "views");
+await mkdir(join(views, "lib"), { recursive: true });
+await writeFile(join(views, "event.tsx"), `import { Md } from "./lib/prose";
+export default ({ card }) => <Md card={card} />;`);
+await writeFile(join(views, "lib", "prose.tsx"), `import { strip } from "./strip.js";
+export function Md({ card }) {
+  return card.body ? strip(card.body).split("\\n\\n").map((p) => <p>{p}</p>) : null;
+}`);
+await writeFile(join(views, "lib", "strip.ts"), `import "../event";
+export const strip = (text) => text.replace(/\\{%[^%]*%\\}/g, "");`);
+await writeFile(join(views, "clean.tsx"), `import { Body } from "./lib/body";
+export default ({ card }) => <Body card={card} />;`);
+await mkdir(join(views, "lib", "body"));
+await writeFile(join(views, "lib", "body", "index.tsx"), `import { Markdown } from "beebox/view-widgets";
+export const Body = ({ card }) => card.body ? <Markdown card={card}>{card.body}</Markdown> : null;`);
+```
+
+```ts continue
+await lintViewMarkdown(join(views, "event.tsx"), { root: box })
+=> View renders Markdown by hand:
+  src/views/lib/prose.tsx line 3: reads `card.body` outside `<Markdown>`
+  src/views/lib/strip.ts line 2: has the Markdoc delimiter `{%` in a literal
+Render card text with `Markdown` from `beebox/view-widgets`. If it lacks something this view needs, say so in `_config/feedback/`.
+```
+
+`strip.ts` imports `event.tsx` back; the walk visits each file once, so the
+cycle ends. Checking the helper directly finds the same problems, reported
+against the helper itself:
+
+```ts continue
+await lintViewMarkdown(join(views, "lib", "strip.ts"), { root: box })
+=> View renders Markdown by hand:
+  line 2: has the Markdoc delimiter `{%` in a literal
+  src/views/lib/prose.tsx line 3: reads `card.body` outside `<Markdown>`
+Render card text with `Markdown` from `beebox/view-widgets`. If it lacks something this view needs, say so in `_config/feedback/`.
+```
+
+A view whose helper renders through `Markdown` passes:
+
+```ts continue
+await lintViewMarkdown(join(views, "clean.tsx"), { root: box })
+=> null
+```
+
+```ts cleanup
+await rm(box, { recursive: true, force: true });
 ```

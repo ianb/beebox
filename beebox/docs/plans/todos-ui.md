@@ -581,6 +581,13 @@ silent:
   does not catch is listed in the module header. In the in-process hook a
   compile error is reported first; the Markdown check runs only on a view
   that compiles.
+- **Local helpers** (added after cross-model review: the field-box case keeps
+  its hand-rolled renderer in `views/lib/`). The check follows a file's
+  relative imports transitively (`local-imports.ts`: cycle-safe, within the
+  box root after symlinks, `.js` → `.ts`/`.tsx`, directory → `index`) and
+  names the failing helper's path. `isViewSourceFile` (any `.ts`/`.tsx` under
+  `views/`) makes editing a helper run the Markdown check; the compile check
+  stays on views (`isViewFile`, which does not match `views/lib/*`).
 - **Guide.** A "Card text: `Markdown`" section in `doc-files.ts`, the
   example and `ViewCard` structure in `doc.ts`/`doc-examples.ts`, and two
   sentences in the `views/CLAUDE.md` stub (template ledger updated with

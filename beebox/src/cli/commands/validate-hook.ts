@@ -16,7 +16,7 @@ import {
   formatMarkdownResults,
   isLintableMarkdown,
 } from "./validate-markdown.js";
-import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/paths.js";
+import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile, isViewSourceFile } from "../../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintViewMarkdown } from "../../core/views/markdown-check.js";
@@ -145,6 +145,22 @@ export interface HookValidationResult {
 
 const CLEAN_HOOK_VALIDATION: HookValidationResult = { feedback: null, hasErrors: false };
 
+/**
+ * A view or a helper under `views/`: compile-check views only; the Markdown
+ * check covers both (and the local files they import); ref warnings are for
+ * views.
+ */
+async function validateViewSource(fp: string): Promise<HookValidationResult> {
+  const err = isViewFile(fp) ? await lintViewFile(fp) : null;
+  if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
+  const refBoxRoot = await findBoxRoot(path.dirname(fp));
+  const markdownErr = await lintViewMarkdown(fp, { root: refBoxRoot ?? path.dirname(fp) });
+  if (markdownErr !== null) return { feedback: `View error for ${fp}:\n${markdownErr}`, hasErrors: true };
+  if (!isViewFile(fp)) return CLEAN_HOOK_VALIDATION;
+  const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
+  return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
+}
+
 async function validateHookPathResult(fp: string, sessionId: string | null): Promise<HookValidationResult> {
   if (!existsSync(fp)) return CLEAN_HOOK_VALIDATION;
   if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
@@ -176,15 +192,7 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
     }
     return { feedback: warning, hasErrors: false };
   }
-  if (isViewFile(fp)) {
-    const err = await lintViewFile(fp);
-    if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
-    const markdownErr = await lintViewMarkdown(fp);
-    if (markdownErr !== null) return { feedback: `View error for ${fp}:\n${markdownErr}`, hasErrors: true };
-    const refBoxRoot = await findBoxRoot(path.dirname(fp));
-    const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
-    return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
-  }
+  if (isViewSourceFile(fp)) return validateViewSource(fp);
   if (isLintableMarkdown(fp)) {
     const boxRoot = await requireBoxRoot(path.dirname(fp));
     if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;

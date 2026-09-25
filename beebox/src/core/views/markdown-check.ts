@@ -26,15 +26,23 @@
  * property (`const { body } = card`, `({ body }) => …`), whose uses are then
  * held to the same rule.
  *
+ * The hooks run it on a view and on any `.ts`/`.tsx` under `views/` (helpers
+ * such as `views/lib/prose.tsx`), and it follows local relative imports
+ * transitively (`local-imports.ts`), so a helper a view imports is held to
+ * the same three rules.
+ *
  * Not caught: text assembled at run time (`"{" + "%"`, a computed key equal
  * to `"body"`), a regex that matches `{%` without writing it (`/[{]%/`), a
- * whole card handed to code outside the view file, a destructured `body`
+ * whole card handed to code the view reaches other than by a relative
+ * import (a package, a path alias, a file outside the box), a destructured `body`
  * local shadowed by an unrelated variable of the same name (it is flagged
  * when it should not be), and Markdown libraries not on the list.
  */
 
 import { promises as fs } from "node:fs";
+import * as path from "node:path";
 import type * as TS from "typescript";
+import { localImportClosure } from "./local-imports.js";
 
 type Ts = typeof TS;
 
@@ -228,20 +236,35 @@ export async function checkViewMarkdown(source: string): Promise<ViewMarkdownPro
   return findProblems(ts, source);
 }
 
+/** Every module specifier a source imports (`import`, `export … from`, `import()`, `require()`). */
+function listSpecifiers(ts: Ts, source: string): string[] {
+  const file = ts.createSourceFile("view.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const out: string[] = [];
+  const visit = (node: TS.Node): void => {
+    const specifier = importedSpecifier(ts, node);
+    if (specifier !== null) out.push(specifier);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return out;
+}
+
 /**
- * The edit-time error for a view file (absolute path): null when the view
- * renders card text only through `Markdown`, else the problems and the rule.
- * An unreadable view is the compile check's concern and passes here.
+ * The edit-time error for a view file, or a helper under `views/` (absolute
+ * path): null when it and every local file it imports (transitively, under
+ * `root`) render card text only through `Markdown`, else the problems and the
+ * rule. A helper's problems name its path relative to `root`. An unreadable
+ * file is the compile check's concern and passes here.
  */
-export async function lintViewMarkdown(viewAbsPath: string): Promise<string | null> {
-  let source: string;
-  try {
-    source = await fs.readFile(viewAbsPath, "utf-8");
-  } catch (_e) {
-    return null;
+export async function lintViewMarkdown(viewAbsPath: string, { root }: { root: string }): Promise<string | null> {
+  const ts = await import("typescript");
+  const files = await localImportClosure(viewAbsPath, { root, listSpecifiers: (source) => listSpecifiers(ts, source) });
+  const realRoot = await fs.realpath(root);
+  const lines: string[] = [];
+  for (const [index, file] of files.entries()) {
+    const where = index === 0 ? "" : `${path.relative(realRoot, file.path)} `;
+    for (const p of findProblems(ts, file.source)) lines.push(`  ${where}line ${String(p.line)}: ${p.what}`);
   }
-  const problems = await checkViewMarkdown(source);
-  if (problems.length === 0) return null;
-  const lines = problems.map((p) => `  line ${String(p.line)}: ${p.what}`);
+  if (lines.length === 0) return null;
   return ["View renders Markdown by hand:", ...lines, VIEW_MARKDOWN_MESSAGE].join("\n");
 }
