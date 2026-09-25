@@ -13,11 +13,13 @@ import { createFakeProvisioningClient } from "../../src/services/cloudflare-prov
 import { releaseIdForFiles, siteEdgeManifestSchema } from "../../src/publish/manifest-edge.js";
 import { publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { defaultManagedPublicationRuntime } from "../../src/services/managed-publication-runtime.js";
-import { prepareManagedPublication } from "../../src/publish/managed-publications.js";
+import { prepareManagedPublication, readCandidate } from "../../src/publish/managed-publications.js";
+import { assignManagedPublicationHostname } from "../../src/publish/managed-publication-custom-domain.js";
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
 import { previewManagedPublicationFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
+import { withFileLock } from "../../src/lib/file-lock.js";
 import type { CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -37,8 +39,11 @@ const runtime = {
   now: () => new Date(Date.UTC(2026, 8, 24, 0, 0)),
   newHostHandle: () => "bbx-test-host",
   getBinding: async () => binding,
-  reserveBinding: async (input) => (binding = { ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
+  reserveBinding: async (input) => (binding = { ...(binding ?? {}), ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
   listBindings: async () => binding === null ? [] : [{ ...binding, pubId }],
+  reserveHostname: async ({ hostname }) => (binding = { ...binding, customHostname: hostname, customHostnameStatus: "pending" }),
+  assignHostname: async ({ hostname }) => (binding = { ...binding, customHostname: hostname, customHostnameStatus: "attached" }),
+  findHostnameOwner: async (hostname) => binding?.customHostname === hostname ? { ...binding, pubId } : null,
   listConnections: async () => connectionRows,
   resolveCredential: async () => ({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder" }),
   markCapability: async () => undefined,
@@ -71,7 +76,7 @@ const runtime = {
   },
 };
 const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function publicationCaller(actor) {
+function publicationCaller(actor, authenticatedOwner = actor === "user") {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
   return appRouter.createCaller({
     boxRoot,
@@ -81,7 +86,7 @@ function publicationCaller(actor) {
     user,
     authed: true,
     isOwner: actor === "user",
-    isAuthenticatedOwner: actor === "user",
+    isAuthenticatedOwner: authenticatedOwner,
     actor,
   });
 }
@@ -255,6 +260,106 @@ store.put = originalPut;
 const afterFailedWrite = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ writeFailure, stillLive: afterFailedWrite.status === "live" })
 => {"writeFailure":true,"stillLive":true}
+```
+
+Hostname assignment is owner-only and remains disabled if Cloudflare's attach
+response is lost. Retrying the same host reads back the exact mapping before
+the candidate can be approved.
+
+```ts continue
+await disableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
+provisioning.zones.push({ id: "zone-1", name: "example.com", status: "active", accountId: "0123456789abcdef0123456789abcdef" });
+const unauthorizedAssignment = await Promise.resolve()
+  .then(() => publicationCaller("user", false).publications.assignCustomHostname({ pubId, hostname: "site.example.com" }))
+  .then(() => "allowed", (error) => error.code);
+const agentAssignment = await Promise.resolve()
+  .then(() => publicationCaller("agent").publications.assignCustomHostname({ pubId, hostname: "site.example.com" }))
+  .then(() => "allowed", (error) => error.code);
+provisioning.zones.push({ id: "zone-specific", name: "site.example.com", status: "active", accountId: "0123456789abcdef0123456789abcdef" });
+const rejectedHostnames = [];
+for (const hostname of ["no-zone.invalid", "site.inactive.test", "site.other.net"]) {
+  if (hostname === "site.inactive.test") provisioning.zones.push({ id: "zone-inactive", name: "inactive.test", status: "pending", accountId: "0123456789abcdef0123456789abcdef" });
+  if (hostname === "site.other.net") provisioning.zones.push({ id: "zone-other", name: "other.net", status: "active", accountId: "ffffffffffffffffffffffffffffffff" });
+  rejectedHostnames.push(await Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname }, runtime)).then(() => false, () => binding.customHostname === undefined));
+}
+provisioning.workerDomains.push({ id: "conflict", hostname: "conflict.example.com", service: "another-worker", environment: "production", zoneId: "zone-1", zoneName: "example.com" });
+const customDomainConflictRejected = await Promise.resolve()
+  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "conflict.example.com" }, runtime))
+  .then(() => false, (error) => error.message.includes("another Worker")) && binding.customHostname === undefined;
+provisioning.workerDomains.pop();
+const scriptBindingChecks = ["PUB_ID", "HOST_HANDLE", "PUB_STORE"].map((name) => {
+  const item = provisioning.scripts.get("bbx-test-host").bindings.find((row) => row.name === name);
+  const original = item.text ?? item.bucketName;
+  if (name === "PUB_STORE") item.bucketName = "another-bucket";
+  else item.text = "another-publication";
+  return Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime))
+    .then(() => false, () => binding.customHostname === undefined)
+    .finally(() => { if (name === "PUB_STORE") item.bucketName = original; else item.text = original; });
+});
+const identityMismatchesRejected = (await Promise.all(scriptBindingChecks)).every(Boolean);
+let racingEnableResult;
+let racingBindingReads = 0;
+const racingRuntime = { ...runtime, getBinding: async () => { racingBindingReads += 1; return binding; } };
+const pubLockPath = path.join(boxRoot, ".beebox", "publish-locks", `${pubId}.lock`);
+await withFileLock({ lockPath: pubLockPath, metadata: { purpose: "doctest-enable-race", pubId }, waitMs: 1_000 }, async () => {
+  racingEnableResult = enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, racingRuntime)
+    .then(() => "allowed", (error) => error.message);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  binding = { ...binding, customHostname: "site.example.com", customHostnameStatus: "pending" };
+});
+const staleEnable = await racingEnableResult;
+binding = { ...binding, customHostname: undefined, customHostnameStatus: undefined };
+const deployedScript = provisioning.scripts.get("bbx-test-host");
+const versionBinding = deployedScript.bindings.find((item) => item.name === "PUB_WORKER_VERSION");
+const currentWorkerVersion = versionBinding.text;
+versionBinding.text = "old-worker-version";
+const staleWorkerRejected = await Promise.resolve()
+  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime))
+  .then(() => false, () => true);
+versionBinding.text = currentWorkerVersion;
+const staleWorkerHadNoSideEffects = binding.customHostname === undefined && provisioning.ops.every((op) => !op.startsWith("attach-domain:"));
+const originalAttach = provisioning.attachWorkerDomain.bind(provisioning);
+let loseAttachResponse = true;
+provisioning.attachWorkerDomain = async (args) => {
+  const result = await originalAttach(args);
+  if (loseAttachResponse) { loseAttachResponse = false; throw new Error("response timed out"); }
+  return result;
+};
+const hostnameRaceOriginalBundle = runtime.workerBundle;
+let assignmentDuringPrepare = false;
+const racingPrepareRuntime = { ...runtime, workerBundle: async () => {
+  if (!assignmentDuringPrepare) {
+    assignmentDuringPrepare = true;
+    await Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime)).catch(() => undefined);
+  }
+  return hostnameRaceOriginalBundle();
+} };
+const prepareAssignmentRace = await Promise.resolve()
+  .then(() => prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, racingPrepareRuntime))
+  .then(() => false, () => true);
+const pendingCandidate = await readCandidate(store, pubId);
+const pendingStatus = binding.customHostnameStatus;
+const prepareRacePreservedHostname = pendingCandidate.requestedScope.customHostname === "site.example.com";
+const secondPubId = "zyxwvutsrqponmlkjihgfedcba";
+const secondBinding = { ...binding, pubId: secondPubId, boxSlug: "box-b", hostHandle: "bbx-second-host", workerName: "bbx-second-host", customHostname: undefined, customHostnameStatus: undefined };
+const duplicateRuntime = { ...runtime, getBinding: async ({ pubId: requestedPubId }) => requestedPubId === secondPubId ? secondBinding : binding };
+const crossPublicationDuplicateRejected = await Promise.resolve()
+  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-b", pubId: secondPubId, hostname: "site.example.com" }, duplicateRuntime))
+  .then(() => false, (error) => error.message.includes("already assigned to another"));
+const pendingApproval = await Promise.resolve()
+  .then(() => approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: pendingCandidate.revision }, runtime))
+  .then(() => "allowed", (error) => error.message);
+const pendingEnable = await Promise.resolve()
+  .then(() => enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime))
+  .then(() => "allowed", (error) => error.message);
+const retried = await assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "SITE.example.com." }, runtime);
+const attachedCandidate = await readCandidate(store, pubId);
+await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: attachedCandidate.revision }, runtime);
+const approvedHostname = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`)))).customHostname;
+source = "<h1>Refreshed</h1>";
+const refreshedWithHostname = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+JSON.stringify({ unauthorizedAssignment, agentAssignment, rejectedHostnames, customDomainConflictRejected, identityMismatchesRejected, crossPublicationDuplicateRejected, staleWorkerRejected, staleWorkerHadNoSideEffects, racingEnableBlocked: staleEnable !== "allowed", readsAfterLock: racingBindingReads, prepareAssignmentRace, prepareRacePreservedHostname, pending: pendingStatus, candidateHost: "customHostname" in pendingCandidate.requestedScope ? pendingCandidate.requestedScope.customHostname : null, approvalBlocked: pendingApproval.includes("not confirmed"), enableBlocked: pendingEnable !== "allowed", retried: retried.hostname, attached: binding.customHostnameStatus, approvedHostname, refreshRetainsHostname: refreshedWithHostname.requestedScope.customHostname === "site.example.com", assignedZone: provisioning.workerDomains.find((item) => item.hostname === "site.example.com").zoneId, attachCalls: provisioning.ops.filter((op) => op.startsWith("attach-domain:")).length })
+=> {"unauthorizedAssignment":"FORBIDDEN","agentAssignment":"FORBIDDEN","rejectedHostnames":[true,true,true],"customDomainConflictRejected":true,"identityMismatchesRejected":true,"crossPublicationDuplicateRejected":true,"staleWorkerRejected":true,"staleWorkerHadNoSideEffects":true,"racingEnableBlocked":true,"readsAfterLock":1,"prepareAssignmentRace":true,"prepareRacePreservedHostname":true,"pending":"pending","candidateHost":"site.example.com","approvalBlocked":true,"enableBlocked":true,"retried":"site.example.com","attached":"attached","approvedHostname":"site.example.com","refreshRetainsHostname":true,"assignedZone":"zone-specific","attachCalls":1}
 ```
 
 ```ts teardown

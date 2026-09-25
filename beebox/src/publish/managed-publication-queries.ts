@@ -43,6 +43,8 @@ export async function listManagedPublications(args: { boxRoot: string; boxSlug: 
     }
     return {
       pubId: binding.pubId,
+      assignedCustomHostname: binding.customHostname ?? null,
+      customHostnameStatus: binding.customHostnameStatus ?? null,
       name: typeof candidate?.name === "string" ? candidate.name : binding.pubId,
       title: typeof candidate?.title === "string" ? candidate.title : binding.pubId,
       hostname,
@@ -52,6 +54,7 @@ export async function listManagedPublications(args: { boxRoot: string; boxSlug: 
         status: manifest.status,
         ...(manifest.tier === "public" && manifest.slug !== undefined ? { slug: manifest.slug } : {}),
         ...(manifest.tier === "accounts" ? { allowedEmails: manifest.allowedEmails } : {}),
+        ...(manifest.customHostname === undefined ? {} : { customHostname: manifest.customHostname }),
         expiresAt: manifest.expiresAt,
       },
       activeReleaseId: manifest?.activeRelease.id ?? null,

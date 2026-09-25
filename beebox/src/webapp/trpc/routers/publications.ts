@@ -14,7 +14,8 @@ import {
   revokeManagedPublication,
 } from "../../../publish/managed-publication-actions.js";
 import { listManagedPublications, previewManagedPublicationFile } from "../../../publish/managed-publication-queries.js";
-import { authedProcedure, router } from "../trpc.js";
+import { assignManagedPublicationHostname } from "../../../publish/managed-publication-custom-domain.js";
+import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
 
 const pubIdInput = pubIdSchema;
 
@@ -63,6 +64,14 @@ export const publicationsRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         return await prepareManagedPublication({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, name: input.name, ownerEmail: getOwnerEmail() }, ctx.services.managedPublicationRuntime);
+      } catch (error) { publicationError(error); }
+    }),
+
+  assignCustomHostname: authenticatedOwnerProcedure
+    .input(z.object({ pubId: pubIdInput, hostname: z.string().min(1).max(253) }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await assignManagedPublicationHostname({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
       } catch (error) { publicationError(error); }
     }),
 

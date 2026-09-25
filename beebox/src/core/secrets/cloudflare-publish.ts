@@ -246,6 +246,44 @@ export async function listCloudflarePublishBindings(boxSlug: string): Promise<Cl
     .toSorted((a, b) => a.pubId.localeCompare(b.pubId));
 }
 
+/** Check the machine-wide hostname reservation before changing Cloudflare. */
+export async function getCloudflarePublishHostnameOwner(hostname: string): Promise<CloudflarePublishBinding | null> {
+  const normalizedHostname = hostname.trim().toLowerCase().replace(/\.$/, "");
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
+  const found = Object.entries(loaded.value.cloudflarePublishBindings ?? {}).find(([, binding]) => binding.customHostname !== undefined && binding.customHostname.trim().toLowerCase().replace(/\.$/, "") === normalizedHostname);
+  return found === undefined ? null : { pubId: found[0], ...found[1] };
+}
+
+async function mutateCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string; status: "pending" | "attached" }): Promise<CloudflarePublishBinding> {
+  const hostname = opts.hostname.trim().toLowerCase().replace(/\.$/, "");
+  if (hostname.length === 0) throw connectionError("A custom hostname is required.");
+  return mutateSecretStore({ purpose: "cloudflare-publish-hostname-assign" }, (store) => {
+    const bindings = bindingMap(store);
+    const binding = bindings[opts.pubId];
+    if (binding === undefined) throw connectionError("Publication is not registered on this server.");
+    if (binding.boxSlug !== opts.boxSlug) throw connectionError("This publication id is already bound to a different box.");
+    if (binding.customHostname !== undefined && binding.customHostname !== hostname) {
+      throw connectionError("This publication already has a different custom hostname. Bee Box cannot remap or release a hostname reservation, even after a Cloudflare detach. Use a different hostname.");
+    }
+    const owner = Object.entries(bindings).find(([pubId, row]) => pubId !== opts.pubId && row.customHostname !== undefined && row.customHostname.trim().toLowerCase().replace(/\.$/, "") === hostname);
+    if (owner !== undefined) throw connectionError("This hostname is already assigned to another Bee Box publication.");
+    binding.customHostname = hostname;
+    binding.customHostnameStatus = opts.status;
+    return { pubId: opts.pubId, ...binding };
+  });
+}
+
+/** Reserve hostname before remote writes so an uncertain attach cannot be enabled unapproved. */
+export function reserveCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string }): Promise<CloudflarePublishBinding> {
+  return mutateCloudflarePublishHostname({ ...opts, status: "pending" });
+}
+
+/** Mark a reserved hostname attached only after Cloudflare exact-tuple readback. */
+export function assignCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string }): Promise<CloudflarePublishBinding> {
+  return mutateCloudflarePublishHostname({ ...opts, status: "attached" });
+}
+
 /** Used by legacy CLI paths to refuse mutation of server-managed publications. */
 export async function isServerManagedPublication(pubId: string): Promise<boolean> {
   const loaded = await loadSecretStore();

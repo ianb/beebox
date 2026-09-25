@@ -9,6 +9,9 @@ import type {
   CloudflarePublishConnectionSummary,
 } from "../core/secrets/cloudflare-publish.js";
 import {
+  assignCloudflarePublishHostname,
+  getCloudflarePublishHostnameOwner,
+  reserveCloudflarePublishHostname,
   getCloudflarePublishBinding,
   listCloudflarePublishBindings,
   listCloudflarePublishConnections,
@@ -31,6 +34,9 @@ export interface ManagedPublicationRuntime {
   getBinding: typeof getCloudflarePublishBinding;
   reserveBinding(args: Parameters<typeof reserveCloudflarePublishBinding>[0]): Promise<CloudflarePublishBinding>;
   listBindings: typeof listCloudflarePublishBindings;
+  assignHostname: typeof assignCloudflarePublishHostname;
+  reserveHostname: typeof reserveCloudflarePublishHostname;
+  findHostnameOwner: typeof getCloudflarePublishHostnameOwner;
   listConnections: () => Promise<CloudflarePublishConnectionSummary[]>;
   markCapability: typeof markCloudflarePublishCapability;
   createStore(config: R2PublishStoreConfig): PublishRemoteStore;
@@ -48,6 +54,9 @@ export const defaultManagedPublicationRuntime: ManagedPublicationRuntime = {
   getBinding: getCloudflarePublishBinding,
   reserveBinding: reserveCloudflarePublishBinding,
   listBindings: listCloudflarePublishBindings,
+  assignHostname: assignCloudflarePublishHostname,
+  reserveHostname: reserveCloudflarePublishHostname,
+  findHostnameOwner: getCloudflarePublishHostnameOwner,
   listConnections: listCloudflarePublishConnections,
   markCapability: markCloudflarePublishCapability,
   createStore: createR2PublishStore,

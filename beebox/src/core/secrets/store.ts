@@ -107,6 +107,9 @@ const cloudflarePublishBindingSchema = z.object({
   bucketName: z.string().min(1),
   workerName: z.string().min(1),
   hostHandle: z.string().min(1),
+  /** Exact Worker Custom Domain assigned by Admin; absent for workers.dev-only sites. */
+  customHostname: z.string().min(1).optional(),
+  customHostnameStatus: z.enum(["pending", "attached"]).optional(),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type CloudflarePublishBindingRecord = z.infer<typeof cloudflarePublishBindingSchema>;
