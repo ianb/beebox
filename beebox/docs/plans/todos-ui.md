@@ -240,8 +240,9 @@ New or sharpened:
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
-**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2, 3, 4,
-5, and 6 are implemented; Track 7 is not started.
+**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2 through
+7 are implemented; step 9 of the implementation order (walkthrough, audits,
+branch review) remains.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -638,6 +639,37 @@ this (`doc-examples.ts:24`).
 behind a box-slug context, with the existing Markdown doctests passing.
 
 ### Track 7 — todo-review runs on its own schedule
+
+**Status (2026-09-25): implemented**; the `todo-recheck` audit is written
+and not yet run. Engine verbs: `src/cli/commands/todo-review.ts` over
+`core/todo/review-check.ts`, `review-verify.ts`, and `review-state.ts` (the
+sweep state and lock, moved out of `review-sweep.ts`). `setTodoAttribute`
+in `set-status.ts` does the `recheck="never"` edit; `setTodoStatus` is now a
+call to it. Health check: `webapp/trpc/routers/health-todos.ts`. Tests:
+`test/cli/commands/todo-review.doctest.md`, plus sweep, model, tag,
+frontmatter, set-status, and `TodoItem` doctests. Decisions the plan left
+open:
+
+- **How the procedure knows the job.** `check` prints the job path, and the
+  precheck's `pass-output: true` hands that text to the agent. `check` also
+  records the job's items (path, locator, text) in the sweep state, because
+  the agent's `bbx finish` deletes the job card before the validate phase
+  runs. `verify` takes an optional job path and defaults to the recorded one,
+  so the validate shell is plain `bbx engine todo-review verify`.
+- **A job already pending** (queued by an earlier run whose agent did not
+  finish it, or by the old wakeup hook) is handed out by `check` instead of
+  skipping, since on a box with no wakeup schedule nothing else would ever
+  run it.
+- **Finding a todo again** in `verify` is by its words on its card, with the
+  locator as a tie-break, not by locator: an agent edit elsewhere on the
+  card moves line numbers without changing the todo. A todo whose words
+  changed, or whose card is gone, counts as settled by an edit.
+- **`recheck="never"` written by the agent fails `verify`**; it passes only
+  when `verify` retired the todo itself. A retired todo that comes back into
+  review (someone removed `never`) starts a new count.
+- **"Oldest" in the health message** is by `created`, then by location.
+- **Schedule timeout** is `30m` (a 20-turn agent plus review retries; the
+  scheduler default is 10m). No `lock-group`.
 
 **What.** The review sweep becomes a stock scheduled procedure. This track
 fixes when it runs. It does not decide what it should raise on undated
