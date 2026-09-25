@@ -1,11 +1,12 @@
 ---
 title: "Codex `login status` times out after 10s on the dev host, so the admin page shows an error badge for a box that may simply not be logged in"
-workstream: unattached
+workstream: admin-structure
 area: beebox
 labels: [admin, codex]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-admin-structure — walking the admin page on the local test1 box
+resolution: implemented
 ---
 
 The Codex section of the admin page on the local `test1` box renders a
@@ -42,7 +43,7 @@ not a hang on every load. The cause of the slow instance is not known; a
 concurrent `codex exec` review was running on the machine around the same
 time and is the leading suspect.
 
-Fixed the two things that were wrong regardless of cause:
+Fixed the two things that were wrong regardless of cause (commit 121c9c6f5):
 
 - The service now logs a `console.warn` when the ten-second timer fires,
   with how many bytes the CLI had printed, so the next occurrence carries

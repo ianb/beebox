@@ -1,11 +1,12 @@
 ---
 title: "A worktree's Vite dev server serves stale modules because macOS FSEvents delivery lags (not a parse error)"
-workstream: unattached
+workstream: admin-structure
 area: router
 labels: [dev-router, vite]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-admin-structure — two agents editing components/admin/ while the page was open
+resolution: implemented
 ---
 
 During a session with two agents editing `beebox/src/frontend/src/components/admin/`,
@@ -32,7 +33,7 @@ Two possible fixes: make the router notice a worktree whose Vite has stopped
 emitting updates for files that changed on disk and restart it, or at least
 log a watcher failure so the dashboard can show it.
 
-Related: [box watcher ceiling](2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
+Related: [box watcher ceiling](../../bugs/2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
 
 ## Research (2026-09-25)
 
@@ -41,7 +42,7 @@ the machine-wide `fseventsd` daemon. The Vite watcher did not die and did not
 report an error.
 
 - The router runs Vite 8.0.16 (hoisted), not the Vite 5.4 that the frontend
-  declares. See [the Vite version issue](2026-09-25-dev-router-runs-hoisted-vite-8-not-the-frontends-vite-5.md).
+  declares. See [the Vite version issue](../../bugs/2026-09-25-dev-router-runs-hoisted-vite-8-not-the-frontends-vite-5.md).
   Vite 8 bundles chokidar 3.6, which uses the `fsevents` module on macOS.
 - Vite keeps each module's transform in its module graph. It invalidates the
   transform only on a watcher `change` event
@@ -74,7 +75,7 @@ report an error.
   that runs inside the Codex sandbox, which blocks FSEvents. It is in the
   output of each cross-model review since August.
 
-## Fix
+## Fix (commit 121c9c6f5)
 
 On macOS, `beebox/src/frontend/vite.config.ts` sets
 `server.watch = { usePolling: true, interval: 1000, binaryInterval: 1000 }`.
