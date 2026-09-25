@@ -241,7 +241,7 @@ New or sharpened:
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
 **Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2, 3, 4,
-and 5 are implemented; Tracks 6 and 7 are not started.
+5, and 6 are implemented; Track 7 is not started.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -541,6 +541,50 @@ scrolled to the todo where the renderer supports it.
 browse-level check in the doctest of `WorkspaceCanvas` pane routing.
 
 ### Track 6 — `Markdown` for box views; hand-rolled Markdown is an error
+
+**Status (2026-09-25): implemented**; the `view-markdown-export` audit is
+added but not yet run. Corrections and choices where the direction was
+silent:
+
+- **Box slug.** `lib/box-slug.tsx`; the root layout (`RootLayout`) provides
+  it from `useParams`, so every page has it, with `undefined` outside a box
+  route as before. A missing provider throws. `NodeViewHostProvider` also
+  provides a `LightboxProvider` (images need one) and takes an optional
+  `boxSlug`, which `bbx view test` now passes.
+- **Node renderability needed two more fixes.** `withBase` read
+  `import.meta.env` directly (undefined in Node); it now uses the guarded
+  `viteBase`. The link renderer imported `withBase` through `api.ts`, which
+  pulled the tRPC client into the Markdown graph; it imports `api-core`.
+- **Node test path.** `@markdoc/markdoc`'s named exports do not resolve
+  under Node's ESM loader, so `Markdown.tsx` cannot be imported by a tsx
+  doctest without default-member access (a lint rule the frontend enforces).
+  The render is tested through the built bundle instead, which is the real
+  `bbx view test` path (`view-test-command.doctest.md`, "Card text through
+  `Markdown`").
+- **Bundle size.** `dist/view-widgets/index.js` grows from about 170 KB to
+  1.2 MB (Markdoc, zod). Both are beebox dependencies and could be made
+  external; left bundled.
+- **The widget** is `view-widgets/ViewMarkdown.tsx`, exported as `Markdown`.
+  It renders with `prose="block"`, as a card's own body does, and navigates
+  with `openCard("/" + serializeViewUrl(target))`.
+- **`ViewCard.bodyLineOffset` is required**: `loadViewCards` reads each card
+  once and takes the offset from `splitCardContent`, the split `card.get`
+  and the collector use.
+- **The check** (`core/views/markdown-check.ts`) also rejects the `remark-`,
+  `micromark-`, `markdown-it-` families, `markdown-to-jsx`, `commonmark`,
+  `snarkdown`, `@mdx-js/*`, and raw `@markdoc/markdoc` (it would bypass the
+  app's tag config), by `import`, `export … from`, `import()`, or
+  `require()`. Beyond the plan's truthiness tests it allows a `typeof`
+  operand, `== null`/`!= null`, and passes through `( )`, `!`, `as`, and the
+  left of `??`. Any `.body` except on `document` counts as a card's. What it
+  does not catch is listed in the module header. In the in-process hook a
+  compile error is reported first; the Markdown check runs only on a view
+  that compiles.
+- **Guide.** A "Card text: `Markdown`" section in `doc-files.ts`, the
+  example and `ViewCard` structure in `doc.ts`/`doc-examples.ts`, and two
+  sentences in the `views/CLAUDE.md` stub (template ledger updated with
+  `pnpm template-stock:update`). A doctest holds every `tsx` example in the
+  guide to the check. test1's one view passes.
 
 **What.** Box views import the built-in renderer from `beebox/view-widgets`,
 and the view check rejects a view that renders Markdown any other way.
