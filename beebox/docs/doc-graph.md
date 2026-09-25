@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-24T23:58:23Z
+Generated: 2026-09-25T00:04:10Z
 Total documents: 415
 
 ## Issues
@@ -925,7 +925,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/doc-structure.md:311 (mention) — developer runs; it is a validation hook, and `card-validation.md` already
-- docs/testing.md:41 (link) — | [Card validator hook](card-validation.md) | Does a card still validate after an agent edit? Runs on its own during age
+- docs/testing.md:42 (link) — | [Card validator hook](card-validation.md) | Does a card still validate after an agent edit? Runs on its own during age
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:19 (mention) — the agent harness's PostToolUse hook (`beebox/docs/card-validation.md:13`):
 
 References:
@@ -1205,6 +1205,7 @@ Referenced by:
 - docs/guides.md:19 (link) — | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-wo
 - docs/plans/doc-structure.md:597 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
 - docs/technologies.md:5 (mention) — workflow](development-workflow.md), and [testing](testing.md).
+- docs/testing.md:27 (link) — ([recurring work](development-workflow.md#recurring-work)), bisected to the
 
 References:
 - → docs/development-process.md (link)
@@ -1672,7 +1673,7 @@ Title: "Code Maintenance" | 86 lines | current reference
 
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
-- docs/README.md:119 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
+- docs/README.md:120 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
 - docs/guides.md:56 (link) — | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
@@ -2030,7 +2031,7 @@ References:
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 145 lines | current reference
+Title: "docs/ — map and naming conventions" | 146 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2279,7 +2280,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 55 lines | current reference
+Title: "Testing" | 57 lines | current reference
 
 Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
@@ -2355,6 +2356,7 @@ Referenced by:
 - ../research/external-skills-harvest.md:289 (mention) — - [x] **X1 — reconcile bbx-plan's test posture with `docs/testing.md`. DONE →
 
 References:
+- → docs/development-workflow.md (link)
 - → docs/testing/doctests.md (link)
 - → docs/testing/tap-tests.md (link)
 - → docs/testing/knowledge-audits.md (link)
@@ -2364,6 +2366,7 @@ References:
 - → docs/testing/tours.md (link)
 - → docs/testing/field-testing.md (link)
 - → docs/card-validation.md (link)
+- → user-stories/README.md (link)
 
 #### docs/todo-security.md
 
@@ -7025,7 +7028,7 @@ Title: "Dev stubs" | 64 lines | current reference
 
 Referenced by:
 - docs/plans/doc-structure.md:303 (mention) — dev-stubs.md           does the streaming UI behave, checked by hand?
-- docs/testing.md:37 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
+- docs/testing.md:38 (link) — | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked
 - docs/testing/tours.md:58 (link) — the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
 
 References:
@@ -7038,7 +7041,7 @@ Title: "Doctests" | 155 lines | current reference
 
 Referenced by:
 - docs/plans/doc-structure.md:292 (mention) — doctests.md            does this function, route, or box operation behave?
-- docs/testing.md:33 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
+- docs/testing.md:34 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
 - docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
 
 References:
@@ -7054,7 +7057,7 @@ Referenced by:
 - docs/guides.md:22 (link) — | Field tests (current runbook) | [docs/field-testing.md](testing/field-testing.md) |
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 - docs/plans/doc-structure.md:307 (mention) — field-testing.md       is it discoverable end to end through the real UI?
-- docs/testing.md:40 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
+- docs/testing.md:41 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
 
 References:
 - → docs/implemented-plans/agent-field-tests.md (link)
@@ -7075,7 +7078,7 @@ Referenced by:
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:6 (link) — [knowledge audits](../testing/knowledge-audits.md). What remains here is the
-- docs/testing.md:35 (link) — | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns
+- docs/testing.md:36 (link) — | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/testing/knowledge-audits.md` |
 - user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
@@ -7105,7 +7108,7 @@ Title: "Session critiques" | 59 lines | current reference
 Referenced by:
 - docs/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
 - docs/plans/doc-structure.md:302 (mention) — session-critiques.md   did the tools serve the agent in a real session?
-- docs/testing.md:36 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
+- docs/testing.md:37 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
 
 #### docs/testing/smoke.md
 
@@ -7113,7 +7116,7 @@ Title: "Smoke" | 101 lines | current reference
 
 Referenced by:
 - docs/plans/doc-structure.md:305 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
-- docs/testing.md:38 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
+- docs/testing.md:39 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 - docs/testing/tours.md:27 (link) — [smoke review](smoke.md), which files and never edits, is by design.
 
 #### docs/testing/tap-tests.md
@@ -7122,7 +7125,7 @@ Title: "TAP tests" | 45 lines | current reference
 
 Referenced by:
 - docs/plans/doc-structure.md:296 (mention) — tap-tests.md           what a doctest cannot test without circularity
-- docs/testing.md:34 (link) — | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circu
+- docs/testing.md:35 (link) — | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circu
 
 #### docs/testing/tours.md
 
@@ -7136,7 +7139,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
-- docs/testing.md:39 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
+- docs/testing.md:40 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
 - ../.claude/skills/bbx-plan/TEMPLATE.md:158 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/closed/code-quality/2026-08-26-repair-tours-and-check-them-weekly.md:27 (mention) — (`beebox/docs/tours.md` keeps them out of pre-commit and the suite on
@@ -7469,6 +7472,7 @@ Title: "User stories" | 273 lines
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:185 (mention) — - `user-stories/README.md:257-259` lesson → resolved, pointing here.
+- docs/testing.md:43 (link) — | [User-stories catalog](../user-stories/README.md) | What can the software actually do? Claims read from the source by
 - user-stories/README.md:16 (mention) — README.md          this file
 - user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:61 (link) — [the pipeline README](../../beebox/user-stories/README.md).

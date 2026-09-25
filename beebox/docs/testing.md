@@ -23,8 +23,9 @@ What tests are NOT for: validating types (the type system does that), achieving 
 **Iteration runs the selected tests, not the suite.** `pnpm test:changed`
 selects the tests the diff implicates, plus typecheck and lint. There is no
 full run at merge: full runs were mostly red for reasons the branch did not
-cause. The full suite runs hourly on `main` (`schedules/full-suite/`) and is
-bisected to the landing that broke it.
+cause. The full suite runs on its own schedule instead
+([recurring work](development-workflow.md#recurring-work)), bisected to the
+landing that broke it.
 
 ## Instruments
 
@@ -39,6 +40,7 @@ bisected to the landing that broke it.
 | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of seconds |
 | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expensive; weekly or on demand |
 | [Card validator hook](card-validation.md) | Does a card still validate after an agent edit? Runs on its own during agent sessions. | blocks bad commits | automatic |
+| [User-stories catalog](../user-stories/README.md) | What can the software actually do? Claims read from the source by agents, each verified by a different agent than the one that wrote it. | no | many model turns |
 
 Prefer the lowest instrument that catches the bug: a template generating bad
 XML is a doctest; an agent not knowing about a command is a knowledge audit;

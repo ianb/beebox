@@ -8,15 +8,15 @@ depend on the user's PATH.
 `bbx validate` checks all cards, a list of files, or `--staged`. Cards also
 validate on load (`src/core/card-io.ts`).
 
-Four hooks reach agents and commits:
+Engine-spawned agent runs (wakeup, procedures, chat) get an in-process SDK
+callback instead of the settings-file hook: `cardValidatorHook`
+(`src/core/sdk-hooks.ts`) matches `PostToolUse` of `Write`/`Edit`/`MultiEdit`
+and, by file type, compiles a view file, rejects a trick script outside
+`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint.ts`), warns on
+a connector-owned markdown file, or runs markdownlint on built-in markdown.
+Every result is injected as `additionalContext`; none blocks the edit.
 
-- `cardValidatorHook` (`src/core/sdk-hooks.ts`) — for engine-spawned agent
-  runs, on `PostToolUse` of `Write`/`Edit`. When an agent writes or edits a
-  `.card` file, the hook calls the card linter (`src/core/card-lint.ts`, built
-  on the card primitives in `src/cards/`) in-process and feeds any issues back
-  as `additionalContext`, so frontmatter and schema issues surface during the
-  work rather than after. It also enforces directory-structure rules (trick
-  scripts must be in subdirectories of `tricks/scripts/`).
+Three hooks are installed per box:
 
 - `.claude/settings.json` — PostToolUse hook running `bbx validate --hook`
   after Edit/Write/MultiEdit. Warning-only results use exit 0 with JSON

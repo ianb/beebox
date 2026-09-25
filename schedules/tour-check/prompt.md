@@ -25,7 +25,7 @@ Its `$PWD` picks the dev-router URL prefix, and the box is this worktree's own
 clone — so run it here, not from the main checkout. Artifacts land in
 `beebox/test/tours/.artifacts/<tour>/<runId>/`.
 
-For each tour, follow `docs/testing/tours.md` "How an agent reviews with tours":
+For each tour, follow `docs/testing/tours.md` "Reading results":
 
 1. Read `summary.md` — **findings first**.
 2. **View the checkpoint PNGs** — you can read images, so look at them. Both

@@ -105,7 +105,8 @@ subsection).
    order and with no other top-level headings: *What it is* (scope and the
    question it answers), *How it works*, *Running it*, *Writing one* or
    *Changing it*, *Reading results* or *Failure modes*. Use only the aspects
-   the doc needs.
+   the doc needs. A subject parent is the exception: its headings are the
+   ones principle 8 names.
 6. **Names are the search path.** A name says what the node contains, in the
    reader's words, and distinguishes it from its siblings without reading
    either. Headings are noun phrases naming a scope, not sentences making a
