@@ -9,7 +9,7 @@ audience or is waiting for a signed-in member.
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../src/webapp/trpc/router.js";
 import { pubCommand } from "../../../src/cli/commands/pub.js";
-import { publicationPreparedLines, publicationSiteLines } from "../../../src/cli/commands/pub-managed.js";
+import { publicationApprovalUrl, publicationDestinationUrl, publicationPreparedLines, publicationSiteLines } from "../../../src/cli/commands/pub-managed.js";
 
 type Site = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type Candidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
@@ -47,7 +47,7 @@ The root commands coexist with the legacy Cloudflare `status` report.
 
 ```ts
 JSON.stringify(sites)
-=> ["setup","draft","ls","revoke","go","prepare","sites","id","status"]
+=> ["setup","draft","ls","revoke","go","prepare","sites","id","connections","status"]
 ```
 
 A remote outage must not read as disabled, even when the last observed edge
@@ -65,9 +65,29 @@ A matching audience can advance the active release immediately; a pending
 candidate remains explicitly gated by member approval.
 
 ```ts
-publicationPreparedLines(candidate, site())[6]
+publicationPreparedLines(candidate, site()).at(-1)
 =>   content is live under the already approved audience; within-scope updates take effect immediately.
 
-publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } }))[6]
+publicationPreparedLines(candidate, site({ activeReleaseId: null, approved: null, pending: { ...candidate, requestedScope: candidate.requestedScope } })).at(-1)
 =>   waiting for a signed-in box member to approve and enable this release.
+```
+
+Publication links preserve the tier route, and the approval link uses the
+configured app origin and box slug rather than guessing a host.
+
+```ts
+publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pubId, scope: { tier: "secret" } })
+=> https://example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/
+
+publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pubId, scope: { tier: "accounts" } })
+=> https://example.workers.dev/a/abcdefghijklmnopqrstuvwxyz/
+
+publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pubId, scope: { tier: "public", slug: "notes" } })
+=> https://example.workers.dev/p/notes/
+
+publicationApprovalUrl("https://boxes.example", "family")
+=> https://boxes.example/family/publications
+
+publicationApprovalUrl(undefined, "family")
+=> null
 ```

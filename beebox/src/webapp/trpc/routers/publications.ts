@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pubIdSchema } from "../../../publish/manifest.js";
 import { getOwnerEmail } from "../../auth.js";
+import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime.js";
 import {
   prepareManagedPublication,
 } from "../../../publish/managed-publications.js";
@@ -39,6 +40,18 @@ const publicationHumanProcedure = authedProcedure.use(({ ctx, next }) => {
 });
 
 export const publicationsRouter = router({
+  /** Names only, scoped to this box; never expose global connection metadata to agents. */
+  connections: publicationReadProcedure.query(async ({ ctx }) => {
+    const runtime = ctx.services.managedPublicationRuntime ?? defaultManagedPublicationRuntime;
+    const rows = await runtime.listConnections();
+    return {
+      connections: rows
+        .filter((row) => row.tokenStatus === "active" && row.grants.some((grant) => grant.boxSlug === ctx.boxSlug))
+        .map((row) => row.name)
+        .toSorted(),
+    };
+  }),
+
   list: publicationReadProcedure.query(async ({ ctx }) => {
     try {
       return { sites: await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime) };

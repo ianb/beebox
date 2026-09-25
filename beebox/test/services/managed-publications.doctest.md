@@ -17,6 +17,8 @@ import { prepareManagedPublication } from "../../src/publish/managed-publication
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
 import { previewManagedPublicationFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";
+import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
+import type { CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const pubId = "abcdefghijklmnopqrstuvwxyz";
@@ -28,6 +30,7 @@ let source = "<h1>First</h1>";
 const store = createFakePublishStore();
 const provisioning = createFakeProvisioningClient({ accountSubdomain: "example-account" });
 let binding = null;
+let connectionRows: CloudflarePublishConnectionSummary[] = [];
 let tier = "public";
 const runtime = {
   ...defaultManagedPublicationRuntime,
@@ -36,7 +39,7 @@ const runtime = {
   getBinding: async () => binding,
   reserveBinding: async (input) => (binding = { ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
   listBindings: async () => binding === null ? [] : [{ ...binding, pubId }],
-  listConnections: async () => [],
+  listConnections: async () => connectionRows,
   resolveCredential: async () => ({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder" }),
   markCapability: async () => undefined,
   createStore: () => store,
@@ -71,6 +74,20 @@ const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], sub
 function publicationCaller(actor) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
   return appRouter.createCaller({
+    boxRoot,
+    boxSlug: "box-a",
+    eventBus: noBus,
+    services: { managedPublicationRuntime: runtime },
+    user,
+    authed: true,
+    isOwner: actor === "user",
+    isAuthenticatedOwner: actor === "user",
+    actor,
+  });
+}
+function publicationConnectionsCaller(actor) {
+  const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
+  return publicationsRouter.createCaller({
     boxRoot,
     boxSlug: "box-a",
     eventBus: noBus,
@@ -127,6 +144,24 @@ const memberAction = await actorResult("user");
 const memberManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ agentAction, openAction, agentApproval, openEnable, memberAction: memberAction.code, memberError: memberAction.message, memberStatus: memberManifest.status })
 => {"agentAction":{"code":"FORBIDDEN","message":"A signed-in member of this box must perform this action."},"openAction":{"code":"FORBIDDEN","message":"A signed-in member of this box must perform this action."},"agentApproval":"FORBIDDEN","openEnable":"FORBIDDEN","memberAction":"allowed","memberError":"","memberStatus":"disabled"}
+```
+
+Agent discovery returns only active connection names granted to this box.
+
+```ts continue
+connectionRows = [
+  { name: "for-this-box", accountId: "1".repeat(32), credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] },
+  { name: "other-box", accountId: "2".repeat(32), credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id-2", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-b", access: "server" }] },
+  { name: "revoked", accountId: "3".repeat(32), credentialType: "account-api-token", verifiedAt: null, tokenId: null, tokenStatus: "revoked", capabilities: { tokenForAccount: "unverified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] },
+];
+JSON.stringify(await publicationConnectionsCaller("agent").connections())
+=> {"connections":["for-this-box"]}
+
+const openConnectionDiscovery = await Promise.resolve()
+  .then(() => publicationConnectionsCaller("open").connections())
+  .then(() => "allowed", (error) => error.code);
+JSON.stringify({ openConnectionDiscovery })
+=> {"openConnectionDiscovery":"FORBIDDEN"}
 ```
 
 A changed audience stays pending and does not replace the approved live
