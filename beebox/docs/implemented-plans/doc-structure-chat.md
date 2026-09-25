@@ -1,6 +1,6 @@
 ---
 title: "Documentation structured like code: the chat cluster"
-status: active
+status: implemented
 workstream: doc-structure
 issues: []
 ---
