@@ -4,6 +4,9 @@ import { parse as parseYaml, YAMLParseError } from "yaml";
 import { z } from "zod";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { getBoxTime } from "../../../lib/time.js";
+import type { SessionEntry } from "../../../cli/lib/session-entry.js";
+import { isRealUserMessage } from "../../../cli/lib/session-real-user.js";
+import { isCompactionSummary, isPlumbingMessage, stripSpeechWrappers } from "../../../cli/lib/session-text.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path.js";
 import { loadLandmarkSummaries, type LandmarkSummary } from "../../landmark/summaries.js";
 import { loadAllSessions, type ChatSessionRow } from "../session/list.js";
@@ -124,8 +127,9 @@ export function boundRoutingContexts(candidates: RoutingCandidate[], serializedB
   const applyLimit = (limit: number) => candidates.map(candidate => {
     if (candidate.target.kind !== "existing-session") return candidate;
     const text = candidate.recentContext ?? "";
-    return { ...candidate, recentContext: limit === 0 ? "" : text.slice(-limit),
-      contextTruncated: candidate.contextTruncated === true || text.length > limit };
+    const bounded = boundRecentMessages(text, limit);
+    return { ...candidate, recentContext: bounded,
+      contextTruncated: candidate.contextTruncated === true || text.length > bounded.length };
   });
   const metadata = applyLimit(0);
   if (JSON.stringify(metadata).length > budget) throw new RoutingCatalogError({ reason: "size" });
@@ -140,6 +144,75 @@ export function boundRoutingContexts(candidates: RoutingCandidate[], serializedB
   return applyLimit(low);
 }
 
+/** Keep message boundaries and protect the newest user intent during both budget passes. */
+function boundRecentMessages(text: string, limit: number): string {
+  if (limit <= 0 || text.length === 0) return "";
+  const messages = text.split("\n").filter(Boolean);
+  if (messages.join("\n").length <= limit) return messages.join("\n");
+  if (!messages.some(message => /^\[[^\]]*] (?:user|assistant):/.test(message))) return text.slice(-limit);
+  const newestUser = messages.findLastIndex(message => /^\[[^\]]*] user:/.test(message));
+  const newestAssistant = messages.findLastIndex(message => /^\[[^\]]*] assistant:/.test(message));
+  const selected = new Set<number>();
+  let used = 0;
+  const add = (index: number, options?: { mustKeep?: boolean; maxChars?: number }): boolean => {
+    const message = messages[index];
+    if (message === undefined || selected.has(index)) return true;
+    const mustKeep = options?.mustKeep === true;
+    const maxChars = options?.maxChars ?? limit;
+    const separator = selected.size === 0 ? 0 : 1;
+    const allowance = Math.min(limit - used - separator, maxChars);
+    const cost = message.length + separator;
+    if (cost <= allowance + separator) { selected.add(index); used += cost; return true; }
+    else if (mustKeep) {
+      const available = Math.max(0, allowance);
+      const headerEnd = message.indexOf(": ") + 2;
+      const header = message.slice(0, headerEnd);
+      const body = message.slice(headerEnd);
+      const marker = " …[truncated]";
+      const headRoom = Math.max(0, available - header.length - marker.length);
+      const excerpt = `${header}${body.slice(0, headRoom)}${marker}`.slice(0, available);
+      if (excerpt.length > 0) { messages[index] = excerpt; selected.add(index); used += excerpt.length + separator; return true; }
+    }
+    return false;
+  };
+  if (newestUser !== -1) add(newestUser, { mustKeep: true, maxChars: newestAssistant !== -1 ? Math.floor(limit / 2) : limit });
+  if (newestAssistant !== -1) add(newestAssistant, { mustKeep: true });
+  for (let index = messages.length - 1; index >= 0; index--) if (!add(index)) break;
+  return [...selected].toSorted((a, b) => a - b).map(index => messages[index]).filter((message): message is string => message !== undefined).join("\n");
+}
+
+function routingConversationEntries(entries: SessionEntry[]): SessionEntry[] {
+  const realUsers = entries.filter(isRealUserMessage);
+  // Older and some provider transcripts lack typed/speech tags; retain their user text while excluding known injected entries.
+  const legacyUsers = entries.filter(entry => entry.type === "user" && routingEntryText(entry)
+    && !isPlumbingMessage(routingEntryText(entry)) && !isCompactionSummary(routingEntryText(entry)));
+  const userEntries = realUsers.length > 0 ? realUsers : legacyUsers;
+  return entries.filter(entry => entry.type === "assistant" || userEntries.includes(entry));
+}
+
+function routingEntryText(entry: SessionEntry): string {
+  return entry.content.filter(block => block.type === "text")
+    .map(block => entry.type === "user" ? stripSpeechWrappers(block.text ?? "") : block.text ?? "")
+    .join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function formatRecentRoutingContext(entries: SessionEntry[], limit?: number): string {
+  const messages = routingConversationEntries(entries)
+    .map(entry => {
+      const text = routingEntryText(entry);
+      return text ? `[${entry.timestamp || "unknown time"}] ${entry.type}: ${text}` : "";
+    }).filter(Boolean);
+  return boundRecentMessages(messages.join("\n"), limit ?? 2000);
+}
+
+export function routingHistoryMetadata(total: number, entries: SessionEntry[]): Pick<RoutingCandidate, "totalEntries" | "lastMessageAt"> {
+  const latest = routingConversationEntries(entries).toReversed().find(entry => routingEntryText(entry) && Number.isFinite(Date.parse(entry.timestamp)));
+  return {
+    totalEntries: total,
+    ...(latest ? { lastMessageAt: new Date(latest.timestamp).toISOString() } : {}),
+  };
+}
+
 export async function loadRoutingCandidates(boxRoot: string): Promise<RoutingCandidate[]> {
   // A failed source invalidates the whole catalog; never route from partial discovery.
   const [sessions, { summaries, problems }, rubric] = await Promise.all([
@@ -151,12 +224,11 @@ export async function loadRoutingCandidates(boxRoot: string): Promise<RoutingCan
   // Provider-owned histories may use RPC. Bound the evidence sent to Jev.
   for (const candidate of candidates) {
     if (candidate.target.kind !== "existing-session") continue;
-    const history = await loadSessionHistory(boxRoot, { sessionId: candidate.target.sessionId, slice: { mode: "tail", tail: 12 } });
-    const text = history.entries.filter((entry) => entry.type === "user" || entry.type === "assistant")
-      .map((entry) => `${entry.type}: ${entry.content.filter((block) => block.type === "text").map((block) => block.text ?? "").join("\n")}`)
-      .join("\n");
-    candidate.recentContext = text.slice(-2000);
-    candidate.contextTruncated = text.length > 2000 || history.total > history.entries.length;
+    const history = await loadSessionHistory(boxRoot, { sessionId: candidate.target.sessionId, slice: { mode: "tail", tail: 12, minRealUserMessages: 2 } });
+    const rawText = formatRecentRoutingContext(history.entries, Number.POSITIVE_INFINITY);
+    candidate.recentContext = formatRecentRoutingContext(history.entries);
+    candidate.contextTruncated = rawText.length > candidate.recentContext.length || history.total > history.entries.length;
+    Object.assign(candidate, routingHistoryMetadata(history.total, history.entries));
   }
   return boundRoutingContexts(candidates);
 }
