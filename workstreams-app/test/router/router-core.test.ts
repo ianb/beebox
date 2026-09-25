@@ -31,6 +31,8 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
     const fastify = h.spawner.lifecycleCalls()[0];
     assert.equal(fastify?.options.env?.BBX_DEV_SURFACES, "1", "hub backend explicitly enables dev surfaces");
+    const vite = h.spawner.lifecycleCalls()[1];
+    assert.match(vite?.command ?? "", /[/\\]frontend-vite$/, "vite is the frontend package's own binary, not the workspace root's hoisted one");
   } finally {
     await h.cleanup();
   }

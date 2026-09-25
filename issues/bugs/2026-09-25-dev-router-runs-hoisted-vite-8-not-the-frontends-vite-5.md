@@ -29,3 +29,28 @@ Effects:
 It is not clear which way to resolve it: start the frontend's own Vite from
 the router, or move the frontend to Vite 8 and a matching plugin-react on
 purpose.
+
+## Resolution (2026-09-25, worktree-admin-structure)
+
+The router now starts the frontend package's own Vite: `resolveWorktree`
+(`workstreams-app/src/router/router-real-effects.ts`) resolves
+`<checkout>/beebox/src/frontend/node_modules/.bin/vite`, checks it exists
+(a missing binary is a `FrontendViteMissingError` naming the path and the
+`pnpm install` fix), and carries it on `ResolvedWorktree.viteBin`, which
+`router-generation.ts` spawns. That is the binary `pnpm build` runs in the
+same package, so dev and the production build use one Vite. The comment
+that per-package `node_modules/.bin` is not populated under the hoisted
+linker was out of date: it carries each package's direct dependencies.
+
+Verified: the router harness pins the spawned command to the resolved
+binary (`test/router/router-core.test.ts`), all 177 router tests pass, and
+the frontend's Vite 5.4.21 started directly against the current config
+with no deprecation warnings. `bin/process-cleanup` still recognizes the
+process, since its matcher accepts any `node_modules/.bin/vite` path under
+a checkout.
+
+Takes effect for worktrees when the shared dev router is next restarted,
+since the router runs from the main checkout.
+
+Moving the frontend to Vite 8 on purpose (with a matching plugin-react)
+remains a separate decision; nothing here depends on it.
