@@ -65,7 +65,7 @@ only the reviewed public cards and a readable editorial history.
   files so this boundary remains intact.
 - **Bee Box supports box-local schemas.** Box schemas live under `src/schemas/`
   and use `cardSchema()` with YAML frontmatter and Markdown body
-  (`beebox/docs/cards-as-markdown.md:22-24`, `beebox/docs/box-layout.md:240-250`).
+  (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
   The authoring box currently has an empty `_config/schemas/` legacy directory; the
   new schema must use its `src/schemas/` location.
 - **The box workbench spaces now exist.** The authoring box's `CLAUDE.md` defines

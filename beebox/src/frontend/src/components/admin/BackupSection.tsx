@@ -13,6 +13,10 @@
  */
 
 import { trpc } from "../../lib/trpc";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION =
+  "Where copies of this box exist besides this machine. Its history and its attachments travel separately, so they are reported separately.";
 
 /** Bytes as a short human string. Binary units, matching git's own `-H` output. */
 function formatBytes(bytes: number): string {
@@ -39,13 +43,7 @@ export function BackupSection() {
   const status = query.data?.repo;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Backup</h2>
-      <p className="text-sm text-warm-700 mb-4">
-        Where copies of this box exist besides this machine. Its history and its
-        attachments travel separately, so they are reported separately.
-      </p>
-
+    <AdminSectionCard id="backup" description={DESCRIPTION} busy={query.isLoading}>
       {query.isLoading ? <p className="text-sm text-warm-600">Checking…</p> : null}
 
       {query.error != null ? (
@@ -122,6 +120,6 @@ export function BackupSection() {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </AdminSectionCard>
   );
 }

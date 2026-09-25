@@ -1,4 +1,9 @@
-# Card validation hooks
+# Card validation
+
+How `bbx validate` reaches agents and commits inside a box, and the canonical
+ref rewrite.
+
+## What it is
 
 How card validation reaches agents and commits inside a box. Installed
 during `bbx init` by `src/core/install-validation-hooks.ts`; the hook
@@ -85,6 +90,6 @@ bury the broken-ref signal that actually needs acting on. It is a whole-box chec
 `--urls`, which error rather than half-work. Design rationale:
 `docs/implemented-plans/box-root-paths.md` (Track F).
 
-Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
+Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
 Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`
 (noisy-mode field-loss detection).

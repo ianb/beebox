@@ -758,7 +758,7 @@ this was invisible.
 
 `docs/asset-manifests.md` is rewritten as `docs/assets.md` describing
 the annex model; the manifest doc moves to `docs/implemented-plans/`
-since it accurately records a system that existed. `docs/migrations.md`
+since it accurately records a system that existed. `docs/cards/migrations.md`
 gets the Track B runbook. Knowledge audits below.
 
 ## Subplans

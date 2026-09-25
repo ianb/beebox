@@ -51,7 +51,7 @@ loader but without schema validation. Migration restores them to first-class.
   is the discriminator, **no `type:` field** in frontmatter; `bbx validate`
   output is the correctness gate; "don't add features beyond what the task
   requires."
-- **`docs/migrations.md`** — the established migration framework: `bbx migrate`
+- **`docs/cards/migrations.md`** — the established migration framework: `bbx migrate`
   drives the ordered `MIGRATIONS` manifest (`src/core/migrations.ts`), each box
   tracks applied entries in `config/migrations.jsonl`, a failed entry halts the
   run and is not recorded. New transforms are added as **manifest entries**, not

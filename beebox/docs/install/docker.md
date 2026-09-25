@@ -88,7 +88,7 @@ prints nothing; the sweep commits each migration it applies to your box's git
 history, skips a box whose tree is dirty until next start, and stops at a
 migration that needs a human. None of that can stop the server coming up —
 watch `docker compose logs box` for what it did. See
-[`migrations.md`](../migrations.md).
+[`migrations.md`](../cards/migrations.md).
 
 Set `BBX_SKIP_CONVERGE=1` to turn it off and run
 `docker compose run --rm box bbx migrate --sweep` yourself instead.

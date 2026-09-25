@@ -95,7 +95,7 @@ export type FieldDecl = ZodType | BodyField;
  *   by the host because a self-contained Zod schema cannot read box settings.
  *
  * Adding/removing a field here? Update the enumerations in
- * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
+ * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),

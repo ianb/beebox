@@ -323,7 +323,7 @@ test file with a mocked `fetch`.
 3. C — `--yield`, deferred status, schedule wiring and reporting.
 4. D — `until`, `Retry-After`, client retry.
 5. Cross-model review; issue for the unidentified leak; docs
-   (`docs/migrations.md` admission section) updated.
+   (`docs/cards/migrations.md` admission section) updated.
 
 ## Rollout shape
 

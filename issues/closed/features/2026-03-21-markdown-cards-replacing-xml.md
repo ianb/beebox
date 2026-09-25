@@ -5,7 +5,7 @@ area: beebox
 resolution: implemented
 ---
 
-**Closed:** Implemented: the card format moved to YAML frontmatter + Markdown body, and the legacy XML card format, its loader, and the `cardworks` package have since been fully removed. See `docs/cards-as-markdown.md` for the design and migration history.
+**Closed:** Implemented: the card format moved to YAML frontmatter + Markdown body, and the legacy XML card format, its loader, and the `cardworks` package have since been fully removed. See `docs/cards/format.md` for the design and migration history.
 
 Consider replacing card XML with Markdown files that have rich validated frontmatter (YAML). The frontmatter would carry all the structured data currently in XML attributes and elements, validated by Zod schemas just like today. The body would be Markdown instead of XML content elements.
 

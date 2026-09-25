@@ -1,12 +1,23 @@
 ---
 title: "The admin page is one long scroll of 14 sections, with no structure and no addresses an agent can point at"
-workstream: unattached
+workstream: admin-structure
 area: beebox
 labels: [admin, ui, agent-surface]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder working in admin
+resolution: implemented
 ---
+
+> Closed 2026-09-25 on `worktree-admin-structure` (commits `10a492c13`,
+> `2380b35ad`, `997ddb225`). Implementation matches the "Decision and
+> implementation" section below: five pill tabs with Overview default, live
+> per-section status, one section registry
+> (`beebox/src/frontend/src/components/admin/admin-sections.ts`) driving scope
+> badges, `bbx-admin-<section>` region landmarks, and `?tab=<tab>` deep links.
+> The related Secrets internal-disclosure gap
+> (`../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md`)
+> is untouched and stays open.
 
 The boxholder: "the admin page is very large and needs organization, sub-tabs
 or something. Also should be labeled for the AI."
@@ -22,7 +33,7 @@ scrolling; the page has no navigation of its own.
 Finding a control means knowing which of the 14 sections owns it. Several are
 large in their own right: Secrets alone is 8 files, and it has already grown
 its own internal disclosure for the advanced case
-([grant flow](../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md)),
+([grant flow](../../bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md)),
 which is a section solving the page's problem locally.
 
 ## The second half is not cosmetic
@@ -71,5 +82,34 @@ is the drift the repo's standing preference warns about.
   that section selected follows naturally, and an agent could hand the
   boxholder a link rather than directions.
 
-Related: [card chrome has no bbx- ids](2026-08-23-card-chrome-controls-have-no-bbx-ids.md)
+Related: [card chrome has no bbx- ids](../../features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md)
 is the same gap on a different surface.
+
+## Decision and implementation (2026-09-25, worktree-admin-structure)
+
+The boxholder chose tabs, styled as pills so they do not read as the
+workspace's own tab strip, with a default Overview tab that shows what each
+tab holds and each section's current state. The grouping is by what the
+boxholder is doing rather than by scope, since scope did not split cleanly
+(Notifications is per device; Allowed users and Invite are per box but sat
+under "Host"; Google, Secrets, and Cloudflare are mixed):
+
+| Tab | Sections |
+|---|---|
+| Overview | one row per section: title, scope badge, live status, blurb |
+| Agents | Agent engine and model, OpenRouter models, Claude Code, Codex |
+| People | Allowed users, Invite link |
+| Connections | Google services, Gmail filters, Telegram, Secrets, Cloudflare publishing |
+| Host | Tailscale, Backup, Notifications |
+
+Scope stays visible as a badge on every section heading ("This box", "Whole
+host", "This device", "Host and box").
+
+Addresses, all from one registry (`components/admin/admin-sections.ts`):
+tabs `bbx-admin-tab-<tab>`, panels `bbx-admin-panel-<tab>`, sections
+`bbx-admin-<section>` as a named `region` whose name is the heading, overview
+rows `bbx-admin-overview-<section>`. Deep links: `/<box>/admin?tab=<tab>`, and
+the existing `?reconnect=google` opens Connections and scrolls to Google.
+
+Every panel stays mounted; only the open one is shown. That keeps configured
+state and the hang probe's per-section breadcrumbs unchanged on every load.

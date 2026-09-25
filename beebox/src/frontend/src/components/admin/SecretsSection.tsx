@@ -19,18 +19,20 @@
 
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
-import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { BoxSecretsView } from "./SecretsSection-box";
 import { ConnectServiceSection } from "./SecretsSection-connect";
 import { GrantExistingForm, grantableSecrets } from "./SecretsSection-grant";
 import { MachineSecretsView } from "./SecretsSection-machine";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION =
+  "API keys live in one store outside every box, and each box holds a grant to the ones it may use. Values are never shown here — saving one replaces it.";
 
 export function SecretsSection() {
   const [machineWide, setMachineWide] = useState(false);
@@ -47,9 +49,9 @@ export function SecretsSection() {
 
   if (status.isLoading) {
     return (
-      <Card as="section" aria-label="Secrets" shadow aria-busy>
+      <AdminSectionCard id="secrets" description={DESCRIPTION} busy>
         <Hint>Loading secrets…</Hint>
-      </Card>
+      </AdminSectionCard>
     );
   }
 
@@ -57,54 +59,42 @@ export function SecretsSection() {
   const grantable = machine.data ? grantableSecrets(machine.data, grantedNames) : [];
 
   return (
-    <Card as="section" aria-labelledby="secrets-heading" shadow>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <div id="secrets-heading">
-            <Heading level={2}>Secrets</Heading>
-          </div>
-          <Hint>
-            API keys live in one store outside every box, and each box holds a grant to the ones it may use.
-            Values are never shown here — saving one replaces it.
-          </Hint>
+    <AdminSectionCard id="secrets" description={DESCRIPTION}>
+      <Row gap="sm" wrap>
+        <Button id="bbx-admin-secrets-scope-box" intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
+        <Button id="bbx-admin-secrets-scope-machine" intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
+      </Row>
+
+      {machineWide ? (
+        machine.data ? <MachineSecretsView machine={machine.data} refresh={refresh} /> : null
+      ) : (
+        <Stack gap="md">
+          <ConnectServiceSection
+            guides={guides.data}
+            grantedNames={grantedNames}
+            boxSlug={status.data?.slug ?? ""}
+            hints={hints.data}
+            onSaved={refresh}
+          />
+          {status.data ? <BoxSecretsView status={status.data} hints={hints.data} refresh={refresh} /> : null}
+          {machine.data && grantable.length > 0 ? (
+            <details id="bbx-admin-secrets-advanced">
+              <summary><Text as="span" size="sm" weight="medium">Use a key another box already has</Text></summary>
+              <div className="pt-3">
+                <GrantExistingForm machine={machine.data} grantedNames={grantedNames} onGranted={refresh} />
+              </div>
+            </details>
+          ) : null}
         </Stack>
+      )}
 
-        <Row gap="sm" wrap>
-          <Button id="bbx-admin-secrets-scope-box" intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
-          <Button id="bbx-admin-secrets-scope-machine" intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
-        </Row>
-
-        {machineWide ? (
-          machine.data ? <MachineSecretsView machine={machine.data} refresh={refresh} /> : null
-        ) : (
-          <Stack gap="md">
-            <ConnectServiceSection
-              guides={guides.data}
-              grantedNames={grantedNames}
-              boxSlug={status.data?.slug ?? ""}
-              hints={hints.data}
-              onSaved={refresh}
-            />
-            {status.data ? <BoxSecretsView status={status.data} hints={hints.data} refresh={refresh} /> : null}
-            {machine.data && grantable.length > 0 ? (
-              <details id="bbx-admin-secrets-advanced">
-                <summary><Text as="span" size="sm" weight="medium">Use a key another box already has</Text></summary>
-                <div className="pt-3">
-                  <GrantExistingForm machine={machine.data} grantedNames={grantedNames} onGranted={refresh} />
-                </div>
-              </details>
-            ) : null}
-          </Stack>
-        )}
-
-        {/* Both queries fail for the same reasons — no owner session, an unreadable store — so
-            rendering one alert each printed the identical sentence twice. Show each distinct
-            message once, and keep both when they genuinely differ. */}
-        {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
-          .map((message) => (
-            <div key={message} role="alert"><ErrorText>{message}</ErrorText></div>
-          ))}
-      </Stack>
-    </Card>
+      {/* Both queries fail for the same reasons — no owner session, an unreadable store — so
+          rendering one alert each printed the identical sentence twice. Show each distinct
+          message once, and keep both when they genuinely differ. */}
+      {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
+        .map((message) => (
+          <div key={message} role="alert"><ErrorText>{message}</ErrorText></div>
+        ))}
+    </AdminSectionCard>
   );
 }
