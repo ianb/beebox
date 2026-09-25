@@ -11,6 +11,7 @@ import { boxClient } from "../lib/box-client.js";
 type PublicationCandidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
 type PublicationSite = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type PublicationConnections = inferRouterOutputs<AppRouter>["publications"]["connections"];
+type RequestedScope = NonNullable<PublicationSite["pending"]>["requestedScope"];
 
 function printBoxClientError(message: string): never {
   console.error(`Error: ${message}`);
@@ -52,12 +53,20 @@ function siteDestination(site: PublicationSite): string | null {
   return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope });
 }
 
-function audienceLabel(site: PublicationSite): string {
-  const scope = site.pending?.requestedScope ?? site.requested ?? site.approved;
+function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[] } | null): string {
   if (scope === null) return "unknown audience";
   if (scope.tier === "public") return `public${scope.slug ? ` at /p/${scope.slug}/` : ""}`;
   if (scope.tier === "accounts") return `accounts (${scope.allowedEmails?.length ?? 0} allowed)`;
   return scope.tier;
+}
+
+function sameAudience(left: PublicationSite["approved"], right: RequestedScope): boolean {
+  if (left === null || left.tier !== right.tier) return false;
+  if (left.tier === "public" && right.tier === "public") return left.slug === right.slug;
+  if (left.tier === "accounts" && right.tier === "accounts") {
+    return (left.allowedEmails ?? []).toSorted().join("\n") === right.allowedEmails.toSorted().join("\n");
+  }
+  return true;
 }
 
 export function publicationSiteLines(sites: PublicationSite[]): string[] {
@@ -68,8 +77,19 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
       : site.approved?.status ?? "not enabled";
     const active = site.activeReleaseId === null ? "no active release" : `active ${site.activeReleaseId.slice(0, 12)}`;
     const prepared = site.pending === null ? "no prepared update" : `prepared ${site.pending.releaseId.slice(0, 12)}`;
+    const servingScope = site.approved;
+    const requestedScope = site.pending?.requestedScope ?? site.requested;
     const destination = siteDestination(site);
-    return `${site.name} — ${serving}; ${audienceLabel(site)}; ${active}; ${prepared}${destination ? `; publication: ${destination}` : ""}`;
+    const candidateDestination = site.pending === null
+      ? null
+      : publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: site.pending.requestedScope });
+    const audience = servingScope === null
+      ? `requested audience ${audienceLabel(requestedScope)}`
+      : `serving audience ${audienceLabel(servingScope)}`;
+    const candidate = site.pending !== null && servingScope !== null && !sameAudience(servingScope, site.pending.requestedScope)
+      ? `; prepared audience ${audienceLabel(site.pending.requestedScope)}${candidateDestination ? `; candidate URL: ${candidateDestination}` : ""}`
+      : "";
+    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; publication: ${destination}` : ""}${candidate}`;
   });
 }
 

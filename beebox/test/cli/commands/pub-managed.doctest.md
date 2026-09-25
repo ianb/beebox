@@ -59,6 +59,11 @@ publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "clo
 
 publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })])[0].includes(`prepared ${releaseId.slice(0, 12)}`)
 => true
+
+const pendingSecret = { kind: "site" as const, hostHandle: "notes-host", tier: "secret" as const, expiresAt: null };
+const transitioned = publicationSiteLines([site({ pending: { ...candidate, requestedScope: pendingSecret } })])[0];
+JSON.stringify({ servingAudience: transitioned.includes("serving audience public"), preparedAudience: transitioned.includes("prepared audience secret"), oldUrl: transitioned.includes("https://notes.example.workers.dev/p/notes/"), candidateUrl: transitioned.includes("https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/") })
+=> {"servingAudience":true,"preparedAudience":true,"oldUrl":true,"candidateUrl":true}
 ```
 
 A matching audience can advance the active release immediately; a pending
