@@ -1,11 +1,18 @@
 ---
 title: "Completed agent bookkeeping interrupts the document reading view"
-workstream: unattached
+workstream: todos-ui
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — F newcomer journey
+resolution: implemented
 ---
+
+**Closed (2026-09-25, todos-ui Track 2/1).** Finished agent-assigned todos are
+now hidden from the reading view (Track 2 unified todo rendering), and
+agent-scoped todos are out of boxholder-facing scope by default (Track 1
+scope prefilter, `beebox/docs/implemented-plans/todos-ui.md`). A person
+reading a card no longer sees completed agent bookkeeping.
 
 Completed todos assigned to `agent` are rendered in the same document view as
 the boxholder's learning note. The result exposes internal bookkeeping that a
@@ -22,7 +29,7 @@ annotations should be hidden, collapsed, or separated from user content.
   visible badge, and lines 25-29/93-105 render `done` as struck-through content.
 - Screenshot 16 shows the completed `todo` + `agent` row above “Still shaky”.
 - This differs from the closed chat-narration issue
-  ([chat bookkeeping](../closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md)):
+  ([chat bookkeeping](../docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md)):
   the current problem is card-view visibility, not prose about the edit in chat.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

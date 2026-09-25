@@ -53,6 +53,6 @@ disabled. Limits enforced in code, not only in the prompt:
 - Attempt identity: todos rarely have an `id`, and path + text resets when
   the text changes.
 
-Related: [todos in the UI plan](../../beebox/docs/plans/todos-ui.md) (hides
+Related: [todos in the UI plan](../../beebox/docs/implemented-plans/todos-ui.md) (hides
 agent todos from boxholder surfaces; keeps the todo-review pickup until this
 exists), [completion requires an answer](../exploration/2026-09-24-todo-completion-requires-an-answer.md).

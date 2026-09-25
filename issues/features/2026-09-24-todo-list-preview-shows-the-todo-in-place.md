@@ -14,7 +14,7 @@ inline (`beebox/src/frontend/src/components/ui/FileEntry.tsx:191-222`,
 boxholder wants it to show where the todo is in the document: scrolled to
 the todo, with the todo marked.
 
-The [todos-ui plan](../../beebox/docs/plans/todos-ui.md) gives every
+The [todos-ui plan](../../beebox/docs/implemented-plans/todos-ui.md) gives every
 rendered todo its locator (`assignLocators`, shared by the collector and the
 renderer), and Track 4 already scrolls a card to its first open todo. The
 missing parts are a per-item preview (the eye sits on the card header, not

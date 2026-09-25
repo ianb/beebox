@@ -39,7 +39,7 @@ didn't look at pixels.
 
 ## Manual testing
 
-The [todos-ui plan](../../beebox/docs/plans/todos-ui.md) (2026-09-25) replaced
+The [todos-ui plan](../../beebox/docs/implemented-plans/todos-ui.md) (2026-09-25) replaced
 the rendering this issue gates: one `TodoItem` component now renders a todo in
 a card body, in frontmatter, and in the list, and todos can be ticked. The
 steps below describe the current behaviour. Use the worktree or main test1 box

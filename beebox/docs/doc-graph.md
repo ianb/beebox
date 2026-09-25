@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T12:30:37Z
-Total documents: 415
+Generated: 2026-09-25T17:32:30Z
+Total documents: 417
 
 ## Issues
 
@@ -53,7 +53,6 @@ These documents are not referenced by any other document.
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
-- **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -227,6 +226,7 @@ Referenced by:
 - docs/testing/knowledge-audits.md:17 (mention) — **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:412 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
 - docs/unimplemented-plans/design-vision-superseded.md:67 (mention) — - Small additions like a `CLAUDE.md` file with custom prompts are preferred to elaborate new structures
+- scratch/cross-model-out.md:190 (mention) — 499:- Canonical skill sources are `.claude/skills/*/SKILL.md`; `.agents/skills/*` are symlinks. `AGENTS.md` files are ge
 - user-stories/catalog/2026-06-26.md:1485 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
 - user-stories/catalog/2026-08-21.md:5947 (mention) — > As a box agent, I want Markdoc-tagged card bodies such as the briefing emitted as plain markdown, so that guidance I a
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
@@ -450,6 +450,7 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:51 (mention) — - `beebox/code-style.md` — no default parameters, injected-deps
 - docs/implemented-plans/todo-annotation.md:59 (mention) — - `beebox/code-style.md` — exhaustiveness (`assertNever` over status),
 - docs/implemented-plans/todo-collection.md:91 (mention) — - **`beebox/code-style.md`**: no `as`; exhaustive dispatch with `assertNever`;
+- docs/implemented-plans/todos-ui.md:111 (mention) — - **`beebox/code-style.md`**: no `as`; `assertNever` for status dispatch;
 - docs/implemented-plans/user-location.md:66 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:34 (mention) — - `beebox/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webapp-production-mode.md:40 (mention) — - `code-style.md:88-89`: resolve optional values inside function bodies and
@@ -479,6 +480,7 @@ Referenced by:
 - docs/plans/workstreams-app.md:59 (mention) — - `beebox/CLAUDE.md` and `beebox/code-style.md` remain the coding,
 - docs/unimplemented-plans/query-cards.md:40 (mention) — - `beebox/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
+- scratch/cross-model-out.md:150 (mention) — 8. Files must stay <=300 lines (code-style.md rule). Check the two touched/new
 - ../.claude/skills/bbx-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/bbx-plan/TEMPLATE.md:36 (mention) — - beebox/code-style.md — the mechanical rules
 - ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:67 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
@@ -920,7 +922,7 @@ Title: "Card validation hooks" | 91 lines | current reference
 
 Referenced by:
 - CLAUDE.md:29 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
-- docs/cards-as-markdown.md:133 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/cards-as-markdown.md:140 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/guides.md:33 (link) — | Card validation hooks | [docs/card-validation.md](card-validation.md) |
 - docs/implemented-plans/doc-structure.md:311 (mention) — developer runs; it is a validation hook, and `card-validation.md` already
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
@@ -938,7 +940,7 @@ References:
 
 #### docs/cards-as-markdown.md
 
-Title: "Cards as Markdown" | 142 lines | current reference
+Title: "Cards as Markdown" | 149 lines | current reference
 
 Referenced by:
 - CLAUDE.md:27 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
@@ -1925,11 +1927,13 @@ Referenced by:
 - docs/implemented-plans/browser-task-card.md:496 (mention) — (`beebox/docs/procedure-implementation.md:214-222`), so a run that stops
 - docs/implemented-plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/implemented-plans/procedure-validation-completion.md:15 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
+- docs/implemented-plans/todos-ui.md:201 (mention) — `docs/procedure-implementation.md:110`), prechecks, and validate phases.
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/email-tracking.md:63 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
 - docs/scheduler.md:41 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
 - user-stories/catalog/2026-06-26.md:5743 (mention) — **Verifier (flagged):** The code implements multi-phase procedure definitions and execution with progress tracking, but
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
+- ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:48 (mention) — (`docs/procedure-implementation.md:176`); restoring is the procedure's
 
 #### docs/prompt-audits.md
 
@@ -2010,6 +2014,7 @@ Referenced by:
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:15 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
+- ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md:29 (mention) — - The questions subsystem (`beebox/docs/questions.md`) already models an
 - ../issues/features/2026-07-19-write-only-secret-capture-in-chat.md:34 (mention) — - **Explicitly NOT the questions subsystem.** Questions (`docs/questions.md`) are an
 - ../research/opencode/inspiration.md:82 (mention) — | `question` tool blocking on a `Deferred` | question cards that outlive the session (`docs/questions.md`) | beebox is a
 
@@ -3236,6 +3241,7 @@ Referenced by:
 - docs/implemented-plans/card-themes.md:20 (link) — [card prominence](../implemented-plans/card-prominence.md).
 - docs/landmarks.md:19 (mention) — - **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the dir
 - docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- scratch/cross-model-out.md:2099 (mention) — 56	  /** The pruned-subtree rollup (`docs/implemented-plans/card-prominence.md`, Track B): does anything under it lead?
 - ../issues/closed/bugs/2026-09-06-landmark-symbol-migration-reflows-long-lines.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/bugs/2026-09-06-prominence-attach-scope-lint-misses-own-landmark-exception.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/features/2026-06-12-card-level-prominence.md:10 (mention) — > Closed 2026-09-06 (card-visibility): implemented by `docs/implemented-plans/card-prominence.md` — the `prominence` fro
@@ -4465,6 +4471,7 @@ Referenced by:
 - docs/box-layout.md:32 (mention) — only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.md` for
 - docs/migrations.md:545 (mention) — `_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
 - docs/mobile-contract.md:20 (mention) — layout (shapeVersion 3, `docs/implemented-plans/one-root-box-layout.md`) they land in underscore areas
+- scratch/cross-model-out.md:2664 (mention) — 255	      // (`docs/implemented-plans/one-root-box-layout.md` Track B). The root listing
 - ../issues/bugs/2026-09-21-absolute-path-check-matches-urls.md:38 (mention) — The guard's whole purpose (`docs/implemented-plans/one-root-box-layout.md`,
 - ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:14 (mention) — > (`beebox/docs/implemented-plans/one-root-box-layout.md`, `status: partial` — code and
 - ../issues/closed/code-quality/2026-09-08-v2-layout-snapshot-exists-only-to-satisfy-knip.md:44 (mention) — layout is recorded anywhere that survives — `docs/implemented-plans/one-root-box-layout.md`
@@ -5276,14 +5283,17 @@ References:
 Title: "`{% todo %}` — universal todo annotation" | 596 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards-as-markdown.md:89 (mention) — `docs/implemented-plans/todo-annotation.md` and
+- docs/cards-as-markdown.md:96 (mention) — `docs/implemented-plans/todo-annotation.md` and
 - docs/implemented-plans/card-symbol.md:126 (mention) — (`docs/implemented-plans/todo-annotation.md:292`,
 - docs/implemented-plans/todo-collection.md:98 (mention) — (`docs/implemented-plans/todo-annotation.md`), goals 2 to 4: a trusted
+- docs/implemented-plans/todos-ui.md:102 (mention) — (`docs/implemented-plans/todo-annotation.md`, Open design questions):
 - docs/migrations.md:481 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
+- scratch/cross-model-out.md:338 (mention) — 102:  (`docs/implemented-plans/todo-annotation.md`, Open design questions):
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:7 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/exploration/2026-07-28-ad-hoc-agent-views.md:12 (link) — [todo-annotation plan](../../beebox/docs/implemented-plans/todo-annotation.md)), the
+- ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md:24 (link) — ([todo annotation](../../beebox/docs/implemented-plans/todo-annotation.md)).
 - ../issues/features/2026-07-28-directories-as-viewable-things.md:12 (link) — [todo-annotation](../../beebox/docs/implemented-plans/todo-annotation.md) surface,
 - ../issues/features/2026-07-29-verify-todo-annotation-rendering.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/features/2026-08-30-todos-inline-things-to-think-about.md:17 (link) — [todo-annotation](../../beebox/docs/implemented-plans/todo-annotation.md)
@@ -5304,9 +5314,9 @@ References:
 Title: "Todo collection — todos as a staged query, with summaries that belong to the card type" | 739 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards-as-markdown.md:90 (mention) — `docs/plans/todo-collection.md`.
+- docs/cards-as-markdown.md:97 (mention) — `docs/plans/todo-collection.md`.
+- scratch/cross-model-out.md:560 (mention) — 3	 * several consumers render (`docs/plans/todo-collection.md`, Track 3).
 - ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:11 (link) — The [todo collection plan](../../beebox/docs/implemented-plans/todo-collection.md) added
-- ../issues/features/2026-07-29-verify-todo-annotation-rendering.md:43 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:467 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
 - ../issues/features/2026-08-30-todos-inline-things-to-think-about.md:42 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
 
@@ -5325,6 +5335,37 @@ References:
 - → docs/cards-as-markdown.md (mention)
 - → docs/adding-schemas.md (mention)
 
+#### docs/implemented-plans/todos-ui.md
+
+Title: "Todos in the UI — one experience of what is open here and what to do about it" | 954 lines | shipped history | implemented
+
+Referenced by:
+- scratch/cross-model-out.md:30 (mention) — `beebox/docs/plans/todos-ui.md` (read that file's Track 1 section — "What",
+- ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:14 (mention) — (`beebox/docs/implemented-plans/todos-ui.md`), completing the plate
+- ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:16 (mention) — `beebox/docs/implemented-plans/todos-ui.md` Track 3.
+- ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:14 (mention) — scope prefilter, `beebox/docs/implemented-plans/todos-ui.md`). A person
+- ../issues/features/2026-07-29-verify-todo-annotation-rendering.md:42 (link) — The [todos-ui plan](../../beebox/docs/implemented-plans/todos-ui.md) (2026-09-25) replaced
+- ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:56 (link) — Related: [todos in the UI plan](../../beebox/docs/implemented-plans/todos-ui.md) (hides
+- ../issues/features/2026-09-24-todo-list-preview-shows-the-todo-in-place.md:17 (link) — The [todos-ui plan](../../beebox/docs/implemented-plans/todos-ui.md) gives every
+
+References:
+- → ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md (frontmatter)
+- → ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md (link)
+- → ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md (link)
+- → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
+- → ../issues/features/2026-08-30-todos-inline-things-to-think-about.md (link)
+- → ../issues/features/2026-07-29-verify-todo-annotation-rendering.md (link)
+- → ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md (link)
+- → ../issues/features/2026-09-20-near-duplicate-todos-accumulate-across-cards.md (link)
+- → ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md (link)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/plans/collections-design-notes.md (mention)
+- → code-style.md (mention)
+- → docs/procedure-implementation.md (mention)
+- → ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md (link)
+
 #### docs/implemented-plans/top-nav-ia.md
 
 Title: "Unified app bar: one nav for chat and everything else" | 539 lines | shipped history | implemented
@@ -5334,6 +5375,7 @@ Referenced by:
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
 - docs/landmarks.md:142 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/questions.md:256 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
+- scratch/cross-model-out.md:3224 (mention) — 4	 * The unified app bar (docs/plans/top-nav-ia.md Track C) — one gradient row,
 - user-stories/catalog/2026-08-21.md:9048 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
 - ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:43 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:42 (link) — [top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
@@ -5719,6 +5761,7 @@ References:
 - → ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md (link)
 - → ../issues/features/2026-07-18-provider-endpoint-config.md (link)
 - → ../issues/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md (link)
+- → scratch/cross-model-out.md (mention)
 - → docs/model-policy.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)
 
@@ -5938,6 +5981,8 @@ Title: "Collections — queries over cards, with todos as the worked example" | 
 
 Referenced by:
 - docs/implemented-plans/todo-collection.md:18 (link) — [design notes](../plans/collections-design-notes.md). This plan does not repeat them.
+- docs/implemented-plans/todos-ui.md:106 (mention) — workstream (`docs/plans/collections-design-notes.md:1-12`, *"This is not
+- ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md:26 (link) — - The [collection design notes](../../beebox/docs/plans/collections-design-notes.md)
 - ../issues/features/2026-09-20-near-duplicate-todos-accumulate-across-cards.md:69 (link) — [design notes](../../beebox/docs/plans/collections-design-notes.md): a list of todos over
 
 References:
@@ -6018,11 +6063,12 @@ References:
 - → CLAUDE.md (mention)
 - → docs/docker-install.md (mention)
 
-#### docs/plans/display-path-guard.subplan.md **[ORPHAN]**
+#### docs/plans/display-path-guard.subplan.md
 
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
-No references in or out.
+Referenced by:
+- scratch/cross-model-out.md:2128 (mention) — 85	 * Display-form leak (docs/plans/display-path-guard.subplan.md): unlike every
 
 #### docs/plans/document-comments.md
 
@@ -7317,6 +7363,28 @@ Title: "Priya Marlowe" | 22 lines
 
 No references in or out.
 
+### scratch/
+
+#### scratch/cross-model-out.md
+
+Title: "(no title)" | 5131 lines
+
+Referenced by:
+- docs/plans/box-glm-provider.md:41 (mention) — (raw output: `scratch/cross-model-out.md`, worktree-local). Ten findings; all
+- ../.claude/skills/cross-model/references/claude-runner.md:26 (mention) — < scratch/cross-model-prompt.txt > scratch/cross-model-out.md 2>&1
+- ../.claude/skills/cross-model/references/codex-runner.md:25 (mention) — < scratch/cross-model-prompt.txt > scratch/cross-model-out.md 2>&1
+
+References:
+- → docs/implemented-plans/todos-ui.md (mention)
+- → code-style.md (mention)
+- → CLAUDE.md (mention)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/implemented-plans/todo-collection.md (mention)
+- → docs/implemented-plans/card-prominence.md (mention)
+- → docs/plans/display-path-guard.subplan.md (mention)
+- → docs/implemented-plans/one-root-box-layout.md (mention)
+- → docs/implemented-plans/top-nav-ia.md (mention)
+
 ### src/connectors/
 
 #### src/connectors/CLAUDE.md
@@ -7621,7 +7689,7 @@ References:
 - → ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
 - → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
 - → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
-- → ../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
+- → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
 - → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
@@ -7644,7 +7712,6 @@ References:
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (mention)
 - → ../issues/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (mention)
 - → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (mention)
-- → ../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md (mention)
 - → ../issues/code-quality/2026-08-25-router-failure-page-addresses-nobody.md (mention)
 
 ### user-stories/journeys/B-inventory/reports/
@@ -7708,11 +7775,11 @@ References:
 Title: "D-chemistry, 2026-09-21" | 236 lines
 
 Referenced by:
-- ../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md:59 (link) — Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 - ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md:33 (link) — Evidence and limits: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
 - ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md:37 (link) — Evidence: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
 - ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md:28 (link) — Evidence: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 - ../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:65 (link) — Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:77 (link) — Evidence: [D chemistry report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-chemistry-tutor-teaches-neutral-isotope-rule.md:15 (link) — has no charge.” Screenshot 05 in the [journey D report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-0
 - ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:37 (link) — Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 
@@ -7722,7 +7789,6 @@ References:
 - → ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (mention)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (mention)
 - → ../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
-- → ../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md (mention)
 - → ../issues/closed/features/2026-07-20-chat-thread-management.md (mention)
 
 ### user-stories/journeys/F-newcomer/reports/
@@ -7736,18 +7802,16 @@ Referenced by:
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:34 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:47 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:14 (link) — [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
-- ../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:31 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+- ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:38 (link) — Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+- ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:35 (link) — Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:54 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:110 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
-- ../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:28 (link) — Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 
 References:
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
 - → ../issues/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
 - → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
-- → ../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md (mention)
-- → ../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md (mention)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
 - → ../issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
 

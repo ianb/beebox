@@ -1,11 +1,11 @@
 ---
 title: "Todos in the UI — one experience of what is open here and what to do about it"
-status: partial
+status: implemented
 workstream: todos-ui
 issues:
-  - ../../../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md
-  - ../../../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md
-  - ../../../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md
+  - ../../../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md
+  - ../../../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md
+  - ../../../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md
 ---
 # Todos in the UI — one experience of what is open here and what to do about it
 
@@ -23,11 +23,11 @@ sweep does not run on most boxes.
 
 **Issues addressed:**
 
-- Closes [tick controls promised but absent](../../../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md)
+- Closes [tick controls promised but absent](../../../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md)
   (Track 3 makes the controls real).
-- Closes [hide completed agent todos](../../../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md)
+- Closes [hide completed agent todos](../../../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md)
   (Track 2).
-- Closes [the plate badge is a bare number](../../../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md)
+- Closes [the plate badge is a bare number](../../../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md)
   (Track 1: the plate headline states the badge's number and its scope).
 - Advances, does not close,
   [todos as inline things to think about](../../../issues/features/2026-08-30-todos-inline-things-to-think-about.md):
