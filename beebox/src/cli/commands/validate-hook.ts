@@ -19,6 +19,7 @@ import {
 import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
+import { lintViewMarkdown } from "../../core/views/markdown-check.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
@@ -178,6 +179,8 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
   if (isViewFile(fp)) {
     const err = await lintViewFile(fp);
     if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
+    const markdownErr = await lintViewMarkdown(fp);
+    if (markdownErr !== null) return { feedback: `View error for ${fp}:\n${markdownErr}`, hasErrors: true };
     const refBoxRoot = await findBoxRoot(path.dirname(fp));
     const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
     return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };

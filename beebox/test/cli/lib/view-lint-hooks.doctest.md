@@ -4,7 +4,9 @@ Agent-authored views (`views/*.tsx`) get a compile check the moment they're
 written — the same edit-time nudge cards already get. The check runs from **both**
 validation hook paths: the shell `bbx validate --hook` (installed
 `.claude/settings.json`) and the in-process `cardValidatorHook()` that agent chat
-and agent-run sessions use. Both call the shared `lintViewFile`.
+and agent-run sessions use. Both call the shared `lintViewFile`, and then, for a
+view that compiles, `lintViewMarkdown`: rendering card text other than through
+`Markdown` is an error of the same weight (`test/core/view-markdown-check.doctest.md`).
 
 ```ts setup
 import { mkdir, writeFile, rm } from "node:fs/promises";
@@ -23,6 +25,12 @@ export const modes = ["page"];
 export default function Good() { return <div>ok</div>; }
 `;
 const BROKEN_VIEW = `export default function Broken() { return <div`;
+const RAW_BODY_VIEW = `
+export const name = "Raw";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Raw({ cards }) { return cards.map((card) => <p key={card.path}>{card.body}</p>); }
+`;
 
 async function makeViews() {
   const box = await makeTmpBox({ git: true });
@@ -31,6 +39,7 @@ async function makeViews() {
   await mkdir(viewsDir, { recursive: true });
   await writeFile(join(viewsDir, "good.tsx"), GOOD_VIEW);
   await writeFile(join(viewsDir, "broken.tsx"), BROKEN_VIEW);
+  await writeFile(join(viewsDir, "raw.tsx"), RAW_BODY_VIEW);
   return viewsDir;
 }
 
@@ -103,6 +112,18 @@ brokenOut.hookSpecificOutput.additionalContext.startsWith("View compile error")
 => true
 ```
 
+A view that compiles but renders a body as raw text gets the Markdown rule:
+
+```ts continue
+const rawOut = await hook({
+  hook_event_name: "PostToolUse",
+  tool_input: { file_path: join(viewsDir, "raw.tsx") },
+  cwd: viewsDir,
+});
+rawOut.hookSpecificOutput.additionalContext.includes("Render card text with `Markdown` from `beebox/view-widgets`")
+=> true
+```
+
 ```ts continue
 const goodOut = await hook({
   hook_event_name: "PostToolUse",
@@ -139,6 +160,14 @@ broken.code
 ```ts continue
 broken.stderr.includes("View compile error")
 => true
+```
+
+The Markdown rule fails the same way:
+
+```ts continue
+const raw = await runShellHook(join(viewsDir, "raw.tsx"));
+[raw.code, raw.stderr.includes("line 5: reads `card.body` outside `<Markdown>`")].join(" ")
+=> 2 true
 ```
 
 A clean view exits 0:

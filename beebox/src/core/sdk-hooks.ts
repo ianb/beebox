@@ -16,6 +16,7 @@ import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
 import { isViewFile, findBoxRoot } from "../lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
+import { lintViewMarkdown } from "./views/markdown-check.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";
 import { connectorOwnedEditWarning, isConnectorOwnedMarkdown } from "./connector-owned-markdown.js";
@@ -53,16 +54,15 @@ export function cardValidatorHook(): HookCallbackMatcher {
         const filePath = extractFilePath(post.tool_input);
         if (filePath === null) return {};
 
-        // Agent-authored view: compile-check it (syntax/JSX/imports).
+        // Agent-authored view: compile-check it (syntax/JSX/imports), then
+        // require card text to render through `Markdown`.
         if (isViewFile(filePath)) {
           const err = await lintViewFile(filePath);
-          if (err === null) return {};
-          return {
-            hookSpecificOutput: {
-              hookEventName: "PostToolUse",
-              additionalContext: `View compile error for ${filePath}:\n${err}`,
-            },
-          };
+          const compileError = err === null ? null : `View compile error for ${filePath}:\n${err}`;
+          const markdownErr = compileError === null ? await lintViewMarkdown(filePath) : null;
+          const additionalContext = compileError ?? (markdownErr === null ? null : `View error for ${filePath}:\n${markdownErr}`);
+          if (additionalContext === null) return {};
+          return { hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext } };
         }
 
         // Tricks dir layout enforcement.
