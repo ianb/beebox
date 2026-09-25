@@ -7,8 +7,20 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk; mechanism traced by a verifier agent
 priority: normal
-next-action: discuss
 ---
+
+## Progress (2026-09-25, todos-ui Track 1)
+
+Boxholder disposition on `next-action: discuss` (2026-09-24): "Badge is fine"
+— keep the bare number on the nav badge. `next-action: discuss` removed.
+
+Track 1 (commit `52b609299`, plan `beebox/docs/plans/todos-ui.md`) landed the
+plate headline "N on your plate · M later · K for the agent"
+(`beebox/src/frontend/src/components/TodoViewCard.tsx`) and an overdue dot on
+the nav badge, plus boxholder-vs-agent scope default
+(`beebox/src/core/todo/count.ts`, `beebox/src/core/collection/run.ts`). The
+headline repeats the badge's number with the split the boxholder asked for.
+This issue stays open until the rest of the plan (Tracks 2-7) ships.
 
 ## Recovery assessment (2026-09-21)
 

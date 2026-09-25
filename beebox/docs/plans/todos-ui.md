@@ -1,6 +1,6 @@
 ---
 title: "Todos in the UI — one experience of what is open here and what to do about it"
-status: draft
+status: partial
 workstream: todos-ui
 issues:
   - ../../../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md
@@ -239,6 +239,9 @@ New or sharpened:
 ## Tracks / scope
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
+
+**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2-7 below
+are not started.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
