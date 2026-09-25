@@ -12,22 +12,15 @@
  */
 
 import type { TodoPlateInput, TodoPlateState, TodoStatus } from "../../shared/todo-model.js";
+import type { TodoLocator } from "../../shared/todo-locators.js";
 
 /**
- * Where a todo lives within its card: a body `{% todo %}` tag (line,
- * 1-indexed, in the FILE, not the body) or an entry in the frontmatter
- * `todos:` list (index).
- *
- * A line can hold more than one todo — `{% todo %}Appraise{% /todo %} — ask
- * Marisol {% todo %}Insure{% /todo %}` is two — so the line alone is not an
- * identity. `nth` (1-based, in document order on that line) separates them,
- * and is OMITTED for the first: `path:line` stays exactly what it has always
- * been for the todo a human means when they cite a line, and only the second
- * and later ones grow the `#2` suffix.
+ * Where a todo lives within its card. Defined in `shared/todo-locators.ts`
+ * (with the pass that assigns it, `assignLocators`) because the frontend
+ * render path needs the same type; re-exported here so every existing
+ * `collect-types.js` import keeps working.
  */
-export type TodoLocator =
-  | { kind: "body"; line: number; nth?: number }
-  | { kind: "frontmatter"; index: number };
+export type { TodoLocator };
 
 /** A `{% see-also %}` reference, from either capture form. */
 export interface TodoSeeAlso {
