@@ -146,4 +146,33 @@ Questions (protocol as in the pilot plan):
 | 9 | Which lifecycle phase is ChatSession-only, and why? | `stopping` |
 | 10 | The margin for a new conversation to beat an existing chat; ties? | `0.1` |
 
-Results are appended when the runs complete.
+### Results (2026-09-25)
+
+| # | Before: found / steps | After: found / steps | After: cited |
+|---|---|---|---|
+| 1 | yes / 3 | yes / 3 | chat/schedules.md#Agent sets a schedule |
+| 2 | yes / 3 | yes / 4 | chat/schedules.md#Restart and lazy-hub behavior |
+| 3 | yes / 3 | yes / 3 | chat/review.md#What qualifies |
+| 4 | yes / 4 | yes / 4 | chat/review.md#Editing what it writes |
+| 5 | yes / 7 | yes / 3 | chat/quick-chat.md#Requirements, data, and limits |
+| 6 | yes / 3 | yes / 4 | chat/composer.md#Ownership |
+| 7 | yes / 3 | yes / 4 | chat/scroll.md#The harness |
+| 8 | yes / 6 | yes / 3 | chat/history.md#Photos in a replayed conversation |
+| 9 | yes / 3 | yes / 4 | chat/sessions.md#Phases |
+| 10 | yes / 3 | yes / 4 | chat/quick-chat.md#Destinations and preference |
+
+This cluster was already navigable by file name; the gains are the two
+questions whose facts sat under a misleading name (the secret requirement
+under "Data and limits"; photo replay under "lifecycle"), and the removal of
+330 lines of dated results from the live procedure. The extra step in most
+after-run walks is `ls docs/chat`. Every fact has one home; the location
+grep found no second full statement.
+
+### Cross-model review of the diff (Codex, 2026-09-25)
+
+Four findings, all applied: two references written one directory too
+shallow after the move (one a real link in the frozen report, which
+`doc-check` exempts under `reports/`); dated run results still inside the
+scroll page's trace section, now moved to the report; the sessions page
+stated facts above its first heading, now under "What it is"; the curated
+doc-graph table still named the old schedules path.

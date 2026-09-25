@@ -73,7 +73,7 @@ input alone does not exercise this boundary.
 The simulator results establish reproduction, not completion. Real-device
 momentum/rubber-band, actual delayed-image network completion, and the full
 image/keyboard combination matrix remain separate verification gates. See the
-[comparison research](../../research/chat-scroll-comparison-2026-09-04.md) for
+[comparison research](../../../research/chat-scroll-comparison-2026-09-04.md) for
 the external product review and its limits.
 
 ## Deeper web checks (2026-09-04)
@@ -225,3 +225,32 @@ A mounted production `Image` component probe also measured landscape, portrait,
 and small images. In a 400px-wide container, 800×400 rendered at 400×200,
 400×800 rendered at approximately 202×404 (the viewport's 70vh cap), and
 120×80 remained 120×80. Their button and figure widths matched the images.
+
+## Trace and harness runs
+
+An initial single-line typing capture produced one composer callback and one
+outer callback, no message-list callback, no transcript mutation, and no scroll
+write. This checks a narrow typing case, not streaming performance.
+
+The isolated `real-images-around-reading-marker` scenario uses actual lazy
+`img` nodes and controlled SVG sources, waiting for load and decode with a
+bounded failure path. It asserts image placement and final dimensions above
+and below the reading marker. Wait 400ms after the user drag before completing
+the first image: the sampler ignores movement for 350ms after input. The
+initial 150ms wait produced a vacuous zero-drift result and was corrected.
+
+After correction, an isolated Chromium run and a fresh full run measured zero
+drift, but another full run reported 490px accumulated drift. Temporarily
+disabling only the harness scroller's `scrollTo` produced a 245px drift failure;
+the override was restored and the page reloaded before the full runs. This
+proves the check can fail without compensation, but does not establish stable
+image behavior. The doubled movement may reflect growth followed by correction
+or an intermediate state sampled before paint. Preserve that uncertainty until
+frame/recording evidence distinguishes them. Full runs currently produce 16/19
+or 17/19 passes; the two send-alignment failures are consistent.
+
+Step exceptions now return failed scenario summaries so the remainder of
+`runAll()` still runs. A forced image-geometry mismatch returned a failure and
+the following prepend scenario passed.
+Data URLs do not establish network lazy-load deferral or delayed server timing;
+those remain in the real-chat matrix above.

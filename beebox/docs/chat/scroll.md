@@ -298,32 +298,12 @@ only the Profiler's early-return callback unless a subscriber is attached.
 Like controller events, React commits are available to a subscribe-only client;
 enabling additionally sends them through the bounded log transport.
 
-An initial single-line typing capture produced one composer callback and one
-outer callback, no message-list callback, no transcript mutation, and no scroll
-write. This checks a narrow typing case, not streaming performance.
-
-The isolated `real-images-around-reading-marker` scenario uses actual lazy
-`img` nodes and controlled SVG sources, waiting for load and decode with a
-bounded failure path. It asserts image placement and final dimensions above
-and below the reading marker. Wait 400ms after the user drag before completing
-the first image: the sampler ignores movement for 350ms after input. The
-initial 150ms wait produced a vacuous zero-drift result and was corrected.
-
-After correction, an isolated Chromium run and a fresh full run measured zero
-drift, but another full run reported 490px accumulated drift. Temporarily
-disabling only the harness scroller's `scrollTo` produced a 245px drift failure;
-the override was restored and the page reloaded before the full runs. This
-proves the check can fail without compensation, but does not establish stable
-image behavior. The doubled movement may reflect growth followed by correction
-or an intermediate state sampled before paint. Preserve that uncertainty until
-frame/recording evidence distinguishes them. Full runs currently produce 16/19
-or 17/19 passes; the two send-alignment failures are consistent.
-
-Step exceptions now return failed scenario summaries so the remainder of
-`runAll()` still runs. A forced image-geometry mismatch returned a failure and
-the following prepend scenario passed.
-Data URLs do not establish network lazy-load deferral or delayed server timing;
-those remain in the real-chat matrix above.
+The isolated `real-images-around-reading-marker` scenario uses real lazy
+`img` nodes with controlled SVG sources and asserts image placement above and
+below the reading marker. A scenario that completes an image must wait 400 ms
+after the user drag, because the sampler ignores movement for 350 ms after
+input. Data URLs do not establish network lazy-load deferral or delayed server
+timing; those cases remain in the real-chat matrix above.
 
 When enabled through the dev API, a read-only observer samples geometry on animation frames and
 emits changed samples (plus frame gaps over 50 ms). `frame` includes composer

@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T17:34:34Z
+Generated: 2026-09-25T17:39:49Z
 Total documents: 418
 
 ## Issues
@@ -54,7 +54,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (150 lines) · proposal · active
+- **docs/plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -81,8 +81,6 @@ These references point to files that don't exist.
 
 - **docs/implemented-plans/link-validation-fix.md:536** → `/store/foo/bar.md` (link)
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
-- **docs/reports/chat-scroll-investigation-2026-09-04.md:76** → `../../research/chat-scroll-comparison-2026-09-04.md` (link)
-  Context: [comparison research](../../research/chat-scroll-comparison-2026-09-04.md) for
 - **docs/reports/stack-decisions-2026-09-04.md:772** → `../../agent-doctest/docs/syntax.md` (link)
   Context: - Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus
 - **docs/testing/knowledge-audits.md:119** → `MAP.md` (at-include)
@@ -2513,7 +2511,7 @@ Title: "Composer" | 351 lines | current reference
 
 Referenced by:
 - docs/chat.md:15 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
-- docs/chat/sessions.md:18 (link) — counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
+- docs/chat/sessions.md:20 (link) — counterpart to the [composer](composer.md) machine docs — the park/drain/evict/queue
 - docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
 - docs/implemented-plans/docs-reorg.gap-analysis.md:118 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
 - docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
@@ -2581,7 +2579,7 @@ References:
 
 #### docs/chat/scroll.md
 
-Title: "Chat scroll" | 385 lines | current reference
+Title: "Chat scroll" | 365 lines | current reference
 
 Referenced by:
 - docs/chat.md:16 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
@@ -2605,7 +2603,7 @@ References:
 
 #### docs/chat/sessions.md
 
-Title: "Chat sessions" | 97 lines | current reference
+Title: "Chat sessions" | 99 lines | current reference
 
 Referenced by:
 - docs/chat.md:10 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
@@ -6063,7 +6061,7 @@ No references in or out.
 
 #### docs/plans/doc-structure-chat.md **[ORPHAN]**
 
-Title: "Documentation structured like code: the chat cluster" | 150 lines | proposal | active
+Title: "Documentation structured like code: the chat cluster" | 179 lines | proposal | active
 
 References:
 - → docs/README.md (link)
@@ -6956,7 +6954,7 @@ References:
 
 #### docs/reports/chat-scroll-investigation-2026-09-04.md
 
-Title: "Chat scroll investigation, 2026-09-04" | 228 lines | dated report
+Title: "Chat scroll investigation, 2026-09-04" | 257 lines | dated report
 
 Referenced by:
 - docs/chat/scroll.md:224 (link) — [the investigation report](../reports/chat-scroll-investigation-2026-09-04.md).
@@ -6966,7 +6964,7 @@ References:
 - → docs/chat/scroll.md (link)
 - → CLAUDE.md (mention)
 - → docs/plans/chat-scroll-model.md (mention)
-- → ../../research/chat-scroll-comparison-2026-09-04.md (link) **[BROKEN]**
+- → ../research/chat-scroll-comparison-2026-09-04.md (link)
 
 #### docs/reports/git-annex-conversion-2026-08-01.md
 
