@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T18:57:30Z
+Generated: 2026-09-25T19:02:16Z
 Total documents: 426
 
 ## Issues
@@ -56,7 +56,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (136 lines) · proposal · active
+- **docs/plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -950,7 +950,7 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 126 lines | current reference
+Title: "Connectors" | 128 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
@@ -2127,7 +2127,7 @@ Title: "Triage" | 89 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:155 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
-- docs/connectors.md:123 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:125 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:30 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
@@ -2435,10 +2435,11 @@ References:
 
 #### docs/connectors/calendar.md
 
-Title: "Calendar" | 123 lines | current reference
+Title: "Calendar" | 138 lines | current reference
 
 Referenced by:
 - docs/connectors.md:36 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
+- docs/connectors/google-auth.md:103 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:31 (link) — [`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../connectors/calendar.md).
 - docs/guides.md:61 (link) — | Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
@@ -2484,11 +2485,11 @@ References:
 
 #### docs/connectors/google-auth.md
 
-Title: "Google auth" | 161 lines | current reference
+Title: "Google auth" | 153 lines | current reference
 
 Referenced by:
 - docs/connectors.md:31 (link) — authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
-- docs/connectors/calendar.md:98 (link) — [Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
+- docs/connectors/calendar.md:113 (link) — [Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
 - docs/connectors/drive.md:20 (link) — 1. **Google OAuth** configured (see [Google auth](google-auth.md))
 - docs/connectors/gmail.md:15 (link) — in [Google auth](google-auth.md).
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
@@ -2499,6 +2500,7 @@ Referenced by:
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/connectors/google-auth.md` already walks an operator through consent screen +
 
 References:
+- → docs/connectors/calendar.md (link)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
 
 #### docs/connectors/telegram.md
@@ -4030,7 +4032,7 @@ References:
 Title: "Dead Google auth as a first-class health + notify condition" | 140 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/google-auth.md:160 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
+- docs/connectors/google-auth.md:152 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:14 (link) — [google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
@@ -6102,7 +6104,7 @@ No references in or out.
 
 #### docs/plans/doc-structure-connectors.md **[ORPHAN]**
 
-Title: "Documentation structured like code: connectors" | 136 lines | proposal | active
+Title: "Documentation structured like code: connectors" | 164 lines | proposal | active
 
 References:
 - → docs/README.md (link)
@@ -7687,7 +7689,7 @@ Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
-- docs/connectors.md:105 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
+- docs/connectors.md:107 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/CLAUDE.md`).
 - docs/implemented-plans/capture-mode.md:621 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image

@@ -41,10 +41,12 @@ Find calendar IDs in Google Calendar → Settings → (calendar name) → "Integ
 ## State
 
 ```
-_bookkeeping/connectors/google-calendar-state.json   # sync cursor, event-file mapping (machine-owned, gitignored)
+_bookkeeping/connectors/google-calendar-state.json   # the event index: event-file mapping (machine-owned, gitignored)
+_bookkeeping/connectors/google-calendar.state.json   # transient: per-calendar sync tokens
 ```
 
-`google-calendar-state.json` tracks per-event metadata, including the slugged filename for each Google event ID (so re-syncs update the right file even if the slug would change).
+The sync tokens (cursors) live in the transient file; the index file's own
+`syncTokens` is always written empty. `google-calendar-state.json` tracks per-event metadata, including the slugged filename for each Google event ID (so re-syncs update the right file even if the slug would change).
 
 **The index is keyed by (event, calendar), not by event id.** A Google event id is unique within one calendar, not across them, so a box syncing two calendars can hold two different events with the same id. Each `eventFiles` key is `<eventId> <calendarId>` — a space, with the calendar id LAST, because an event id is base32hex (plus an `_<instance stamp>` suffix for a recurring instance) and can never contain whitespace, while a calendar id is an address-like string we do not control. Build and read the key through `eventKey`/`parseEventKey` in `src/connectors/google-calendar-event-index.ts`; nothing else should join the two halves. The file carries `"version": 2` to say its keys are composite: a state file without it is re-keyed **on load**, from each entry's recorded `calendarId`, and the rewrite reaches disk on that sync's own save. The oldest entries of all — a bare filename string, from before entries carried metadata — record no calendar, so they are filed under the sentinel `(legacy)` and adopted onto the real calendar the next time a pull returns the same event id. They are kept rather than dropped for the reason in the next paragraph: an entry that disappears takes its file out of the index, and an unindexed `.ics` is pushed to Google as a new event.
 
@@ -61,6 +63,19 @@ Every way a sync can fall short is part of its result: a calendar whose pull fai
 **Nothing retries forever.** A push Google rejects for a transient reason (a 429, a 5xx, a network error, any other 4xx) is retried on every wakeup for seven days — `STRANDED_AFTER_MS`, the boxholder's chosen bound — measured from `pendingSince`, the stamp the first failure writes into the event's state entry and a successful push clears. A definitive rejection skips the wait entirely: a `404` or `410` on the patch, or, after a `410` resync, a non-recurring locally-edited event Google no longer returns. Either way the end is **stranding**: the `.ics` moves to `_content/calendar/stranded/`, the event is untracked, and the sync says so once — a `Stranded:` line in the commit naming the reason, and one failure in `SyncResult.error`. Nothing looks at it again (the orphan scan does not descend into the subdirectory, so it is never re-inserted into Google). To recover, move the file back out of `stranded/` into `_content/calendar/` — untracked, it is read as a locally-created event and pushed to Google as a new one — or delete it.
 
 After a `410` (expired sync token) the connector refetches the full window and then reconciles: a tracked, in-window event Google no longer returns was deleted remotely while the token was invalid. Its `.ics` is deleted if it still matches what the connector wrote; if it was edited locally the file is stranded, because the edit can never be pushed to an event that no longer exists (leaving it tracked meant re-reporting the same stuck file forever; untracking it in place would make the next push pass insert the just-deleted event back into Google, which is exactly what moving it out of `_content/calendar/` prevents). Events outside the refetched window are never touched, and neither are **recurring masters**: with `singleEvents=false` and a `timeMin`/`timeMax`, whether a series' master comes back in a window is Google's judgement about where its instances fall, so an absent master is no evidence of deletion. A series really deleted in Google arrives as a cancelled event on an ordinary pull.
+
+## Verify
+
+```bash
+# Pull calendar events
+bbx wakeup --connector google-calendar
+
+# View today's events
+bbx calendar today
+
+# View upcoming events (default: next 7 days)
+bbx calendar
+```
 
 ## CLI
 

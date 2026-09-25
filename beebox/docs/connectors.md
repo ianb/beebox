@@ -78,11 +78,13 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 
 ## Configuration
 
-Each connector reads its non-credential config from
-`_config/connectors/<name>.json` (the shape is on the connector's page), its
-credentials from the machine [secret store](secrets.md), and keeps transient
-state (sync cursors, mappings) in `_bookkeeping/connectors/<name>.state.json`
-or `<name>-state.json`, machine-owned and gitignored.
+A connector with non-credential config reads it from
+`_config/connectors/<name>.json`; the shape, and whether one exists at all, is
+on the connector's page (Telegram has none; Drive's configuration is its
+cards). Credentials come from the machine [secret store](secrets.md).
+Transient state (sync cursors, mappings) lives in
+`_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`,
+machine-owned and gitignored.
 
 ## Service injection
 

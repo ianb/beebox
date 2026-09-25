@@ -133,3 +133,31 @@ Questions (pilot protocol):
 | 8 | yes | 8 | google-drive.md#CLI Commands | the home is the intro above any heading |
 | 9 | yes | 3 | telegram-setup.md#4 | 3: also connectors.md#Configuration, secrets.md |
 | 10 | yes | 3 | connectors.md#Activity record | 1 |
+
+### After (2026-09-25)
+
+| # | Found | Steps | Cited | Locations |
+|---|---|---|---|---|
+| 1 | yes | 3 | connectors/google-auth.md#Enable APIs | 1 |
+| 2 | yes | 4 | connectors/google-auth.md#Where tokens live | 1 |
+| 3 | yes | 4 | connectors/google-auth.md#Create OAuth credentials | 1 |
+| 4 | yes | 3 | connectors/gmail.md#Automatic rules | 1 |
+| 5 | yes | 3 | connectors/gmail.md#Automatic rules | 1 |
+| 6 | yes | 3 | connectors/calendar.md#State | 1, now correct |
+| 7 | yes | 3 | connectors/calendar.md#Failure and recovery | 1 |
+| 8 | yes | 3 | connectors/drive.md#What it is | 1 |
+| 9 | yes | 3 | secrets.md#Multi-field credentials | 2: the store's name registry and the Telegram page; left |
+| 10 | yes | 3 | connectors.md#Activity record | 1 |
+
+The two slow walks (13 and 8 steps) are 4 and 3 after the headings named the
+facts.
+
+### Cross-model review of the diff (Codex, 2026-09-25)
+
+Five findings, all applied: the calendar "State" fix was itself half wrong
+(sync tokens live in the transient `.state.json`, the index file's own
+`syncTokens` is written empty); the parent's configuration sentence claimed
+every connector has a config file; the shared Google auth page carried a
+calendar-only verify; the Telegram webhook URL is built from a server base
+with the box slug removed, not `$PUBLIC_URL` verbatim; the doc-graph table
+followed the moves.

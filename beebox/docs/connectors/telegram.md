@@ -52,7 +52,7 @@ bbx wakeup --connector telegram
 
 This does three things:
 1. Polls for any messages sent while the server was down
-2. Registers the webhook URL (`$PUBLIC_URL/webhook/<box>/telegram`) with Telegram
+2. Registers the webhook URL (`<server base>/webhook/<box>/telegram`, the server base derived from `publicUrl` by removing the box's own slug) with Telegram
 3. Sends any pending outbound messages from `_bookkeeping/output/`
 
 After this, new messages will be pushed to your server in real-time via the webhook.

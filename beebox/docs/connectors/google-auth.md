@@ -99,16 +99,8 @@ If `googleServices` is missing, no Google services are enabled for that box (saf
 
 ## Verify
 
-```bash
-# Pull calendar events
-bbx wakeup --connector google-calendar
-
-# View today's events
-bbx calendar today
-
-# View upcoming events (default: next 7 days)
-bbx calendar
-```
+Each connector's page has its own verify step; the quickest end-to-end check
+is the [calendar pull](calendar.md#verify).
 
 ## Scopes authorized
 
