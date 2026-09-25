@@ -1,5 +1,9 @@
 # Server provisioning
 
+Creating and setting up the host: what it needs, the two provisioners, what ends up where, the systemd units, DNS and HTTPS.
+
+## What it is
+
 > **This is not how you install a Bee Box.** The supported install-and-update
 > path — local or on a VPS, with TLS — is the container flow in
 > [`../docs/docker-install.md`](../install/docker.md). Read that one.
@@ -20,6 +24,7 @@ configurable in `target.env`, and the rest is what
 `hetzner/setup-server.sh` happens to build.
 
 ## Prerequisites
+
 For the `hetzner/` provisioners only. `deploy.sh` itself needs nothing but SSH
 to an already-provisioned host.
 
@@ -30,6 +35,7 @@ to an already-provisioned host.
 - **Cloudflare API token** (optional): Needs Zone DNS Edit and Zone Settings Edit for the zone that holds `box.example.com`
 
 ## Setup
+
 `deploy/target.env` (gitignored) — the deploy target. At minimum:
 
 ```
@@ -46,7 +52,8 @@ command run on deploy failure — `deploy/notify-macos` is the macOS one).
 CLOUDFLARE_API_TOKEN=your-token-here
 ```
 
-### `hetzner/create-server.sh` — Create a new server from scratch
+## Creating the host (`hetzner/create-server.sh`)
+
 One example provisioner, kept because `deploy.sh` needs a host of this exact
 shape. Destroys any existing server, creates a fresh Hetzner VPS, provisions
 it, and sets up DNS. The server name, region, domain, and zone are constants at
@@ -64,9 +71,10 @@ What it does:
 5. Sets Cloudflare SSL to Flexible
 6. Uploads and runs `hetzner/setup-server.sh` on the server
 
-### `hetzner/setup-server.sh` — Provision a bare server (runs remotely)
+## Setting up the host (`hetzner/setup-server.sh`)
+
 Installs everything on Ubuntu 24.04:
-- System packages (git, Node.js 22, nginx)
+- System packages (git, Node.js 24, nginx)
 - Clones and builds: beebox
 - Symlinks `bbx` CLI to `/usr/local/bin/`
 - Installs Claude Code CLI (native installer — auto-updates in background)
@@ -93,6 +101,10 @@ never on the server. Any other enabled site is moved to
 hand-made `callback` site went.
 
 ## Server layout
+
+Services run as the **`beebox` user** (User/Group in systemd unit files), not root.
+`/opt/beebox/` is root-owned and read-only to that user; `/home/beebox/` is its own.
+
 ```
 /opt/beebox/              # Source code
   beebox/
@@ -101,6 +113,7 @@ hand-made `callback` site went.
   hearth/
 /home/beebox/.config/beebox/hub.json   # Hub routing table (slug -> box path)
 /home/beebox/.env         # Environment variables (API keys)
+/home/beebox/.claude/.credentials.json  # Claude Code OAuth credentials (beebox:beebox, 0600)
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
@@ -115,6 +128,7 @@ hand-made `callback` site went.
 ```
 
 ### Box package installs
+
 A box agent installs a distro package with `bbx host install <pkg> --why ...`.
 The command records the need in the box's `_config/host-packages.json`, then
 runs `bbx-host-apt` through sudo. The wrapper installs only additive,
@@ -126,6 +140,7 @@ box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
 `server-bin/bbx-host-apt.smoke.sh`.
 
 ## Systemd units
+
 The live server runs `bbx hub` (see `src/cli/commands/hub.ts`) in place of the
 old single shared `beebox-serve` process — one hub process routes
 `/<slug>/...` to per-box children, each spawned via that box's own `bbx serve`
@@ -153,6 +168,7 @@ systemctl restart beebox-hub
 ```
 
 ### Git-drain drop-in (`deploy/systemd/git-drain.conf`)
+
 Both units need `KillMode=mixed` and `TimeoutStopSec=60`. Without them systemd
 signals every process in the cgroup on stop, so a `git` a box child is running
 gets killed by systemd rather than by us — and a `git` SIGKILLed mid-index-write
@@ -172,6 +188,7 @@ another `.conf`, not as a by-hand step someone repeats and then forgets.
 Verify with `systemctl show beebox-hub -p KillMode -p TimeoutStopUSec`.
 
 ### Production-safe webapp defaults
+
 Security-sensitive webapp behavior fails closed when configuration is absent:
 tRPC never sends server stacks, Fastify always serves the built-frontend CSP,
 and `/api/external` plus mock TTS are disabled unless a development launcher
@@ -199,22 +216,6 @@ treatment, and `setup-server.sh` needs to actually generate them with it set;
 neither has been verified end-to-end yet.
 
 ## DNS and HTTPS
+
 - DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
 - HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin)
-
-## From server-operations.md (to reconcile)
-
-## Server architecture
-Services run as the **`beebox` user** (User/Group in systemd unit files), not root.
-
-| Path | Owner | Purpose |
-|------|-------|---------|
-| `/opt/beebox/` | root (read-only to `beebox`) | Checked-out source code (beebox) |
-| `/home/beebox/boxes/` | `beebox` | Box data — each subdirectory is a box: one root holding both the npm package (`package.json`, `src/`) and the operational areas (`_content/`, `_config/`, `_bookkeeping/`, `.beebox/`) |
-| `/home/beebox/.env` | `beebox` | Environment variables for services (API keys, `BBX_DIAG_API_KEY`, etc.) |
-| `/home/beebox/.claude/.credentials.json` | `beebox` | Claude Code OAuth credentials (see below) |
-
-The server is named in gitignored `deploy/target.env` (see
-`deploy/target.env.example`). Use `deploy/prod-ssh` for root administration; it
-finds the main checkout's copy when invoked from a worktree. SSH as the service
-user (`beebox`) for manual data work.

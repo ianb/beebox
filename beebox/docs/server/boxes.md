@@ -1,5 +1,9 @@
 # Boxes on the server
 
+Provisioning a box behind the hub: the pieces, the by-hand steps, the one-command path, and what goes wrong.
+
+## What it is
+
 How to provision a new box behind a `bbx hub` (the multi-box parent process —
 see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 for the full design). This doc covers the generic shape; the concrete
@@ -7,6 +11,7 @@ commands below are annotated where they're specific to one example
 deployment (`box.example.com`) rather than something every hub needs.
 
 ## The pieces
+
 - **The box itself** is a one-root box: a small Node package whose root
   directory is also the operational box — see
   [`docs/box-layout.md`](../box-layout.md) for the full shape. `bbx init <path>`
@@ -27,7 +32,8 @@ deployment (`box.example.com`) rather than something every hub needs.
   see the root [`README.md`](../../README.md) for that path. This doc is about
   the multi-box case.
 
-## 1. Create the box
+## Create the box
+
 ```bash
 mkdir <name> && cd <name>
 pnpm dlx --package=<beebox tarball> bbx init .
@@ -41,7 +47,8 @@ compiles it into the agent's generated docs.
 Push the repo somewhere the hub host can reach it (its own git remote is the
 box's normal history — nothing hub-specific here).
 
-## 2. Register it with the hub
+## Register it with the hub
+
 Use `bbx hub add-box`, which writes the entry to the hub's `hub.json` (default
 `~/.config/beebox/hub.json`, or wherever `bbx hub --config <path>` points):
 
@@ -83,7 +90,13 @@ Restart the hub process to pick up the new entry:
 systemctl restart beebox-hub   # example deployment: adjust to how you run bbx hub
 ```
 
-## 4. Connector secrets
+## Access control
+
+Per-box access is `allowedEmails` in the box's `_config/box.json`, fail-closed to
+owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
+
+## Connector secrets
+
 Secrets are **not** files in the box. They live in one machine-level store
 (`~/.config/beebox/secrets.json`, 0600, outside every box tree) and a box reaches
 one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
@@ -110,7 +123,8 @@ the machine secret store is the only source a connector reads from — but
 a machine's existing files into the store once with `bbx secrets migrate`
 (`--dry-run` prints the plan first), then delete the originals.
 
-## Example deployment: box.example.com
+## One command: `add-box.sh`
+
 The rest of this section documents one operator's concrete setup — adapt the
 paths and service names for your own hub host, not copy them verbatim.
 
@@ -123,33 +137,11 @@ paths and service names for your own hub host, not copy them verbatim.
   config, the secrets, both manifest registrations, the restart, and a canary
   check that the new box serves. For a box that does not exist yet,
   `deploy/add-box.sh --create <name>` covers step 1 as well — it scaffolds the
-  box, pushes it to a private repo, and then does all of the above. See
-  [`deploy/README.md`](../../deploy/README.md).
+  box, pushes it to a private repo, and then does all of the above.
   (`deploy/setup-server.sh`, which provisions a *bare* server, still generates
-  the pre-hub `beebox-serve` unit — that gap is separate, and described in
-  that same doc.)
+  the pre-hub `beebox-serve` unit; that gap is described under
+  [provisioning](provisioning.md#setting-up-the-host-hetznersetup-serversh).)
 
-## Troubleshooting
-
-
-### Box exists but isn't served
-Check the hub's own log/health output first (`GET /healthz` on the hub)
-before assuming the box process itself is at fault — a box missing from
-`hub.json`, or a slug typo, means the hub never spawns it at all.
-
-### "API key not configured" warnings
-The box has no grant for that connector's secret (see step 4 above).
-`bbx secrets status <box>` says which — a missing grant, a granted name whose
-value was never supplied, or a grant whose secret was removed.
-
-### Permission denied writing to box directories
-If a box was provisioned as `root` instead of its intended service user, its
-files won't be writable by the process that runs `bbx hub`/`bbx serve`. Fix
-ownership recursively for the affected box directory.
-
-## From deploy/README.md (to reconcile)
-
-### `add-box.sh` — Add a box to the server
 The whole process, in one command: clone the box repo, `bbx init` it, seed
 access + connector secrets, register it with **both** manifests, restart the
 services, and verify the new box actually serves. There is no by-hand
@@ -276,12 +268,22 @@ on a URL the key cannot authenticate.
 a deploy from 2026-08 or later. On an older build the preflight fails with an
 unknown-command error.
 
-## Adding connector secrets
-Per-box secrets go in each box's `config/connectors/` directory:
+## Troubleshooting
 
-```bash
-# SSH in and create secrets
-./deploy/prod-ssh
-cd /home/beebox/boxes/hearth/config/connectors/
-echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
-```
+### Box exists but isn't served
+
+Check the hub's own log/health output first (`GET /healthz` on the hub)
+before assuming the box process itself is at fault — a box missing from
+`hub.json`, or a slug typo, means the hub never spawns it at all.
+
+### "API key not configured" warnings
+
+The box has no grant for that connector's secret (see step 4 above).
+`bbx secrets status <box>` says which — a missing grant, a granted name whose
+value was never supplied, or a grant whose secret was removed.
+
+### Permission denied writing to box directories
+
+If a box was provisioned as `root` instead of its intended service user, its
+files won't be writable by the process that runs `bbx hub`/`bbx serve`. Fix
+ownership recursively for the affected box directory.

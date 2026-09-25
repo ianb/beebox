@@ -7,6 +7,7 @@ where to put new material.
 
 | Topic | Location |
 |-------|----------|
+| Installing beebox (which path for whom) | [docs/install.md](install.md) |
 | Developer install (from source) | [docs/install/developer.md](install/developer.md) |
 | Docker install (local + VPS) | [docs/install/docker.md](install/docker.md) |
 | Agent-driven install (for a user's AI assistant) | [docs/install/agent.md](install/agent.md) |
@@ -42,7 +43,8 @@ where to put new material.
 | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt-audits.md](prompt-audits.md)) |
 | Triage pipeline current guide | [docs/triage.md](triage.md) |
 | Questions subsystem current reference | [docs/questions.md](questions.md) |
-| Deployment | [deploy/README.md](../deploy/README.md) |
+| The production server (provisioning, configuration, deploying, boxes, operations) | [docs/server.md](server.md) |
+| Deploy scripts (directory map) | [deploy/README.md](../deploy/README.md) |
 | Server operations | [docs/server/operations.md](server/operations.md) |
 | Adding a box | [docs/server/boxes.md](server/boxes.md) |
 | Box layout reference | [docs/box-layout.md](box-layout.md) |

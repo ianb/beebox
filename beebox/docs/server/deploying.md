@@ -1,6 +1,9 @@
 # Deploying
 
-### `deploy.sh` — Deploy a commit to the server
+Shipping a commit to the production server, what the deploy does to a running fleet, and how to roll back.
+
+## `deploy.sh`
+
 The everyday deploy (also fired automatically by the root husky
 `post-commit`/`post-merge` hooks on `main`) deploys a Git commit. It builds in the
 persistent detached checkout `<main-repo-root>/.deploy-checkout` and transfers
@@ -72,9 +75,8 @@ The hook records its requested SHA synchronously before launching through
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
 
-## From server-operations.md (to reconcile)
+## The maintenance boundary
 
-## Maintenance and replacement
 Migration, deployment, and supervised development reload use the same per-box
 admission boundary: close admission, drain accepted work, perform the change,
 verify readiness, then reopen. New mutating requests receive a retryable 503;
@@ -100,15 +102,17 @@ cannot promise a supervised handoff by exiting itself. Older processes that
 predate this protocol and external editors need explicit quiescence during the
 first rollout.
 
-## Prod runs the bundled `dist/cli.mjs`
-`bbx serve` (spawned by `bbx hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.ts`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle in its local build checkout (a detached git worktree at the deployed ref — see `deploy/README.md`) and rsyncs it — `bin/bbx` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `bbx hub` itself runs from the same bundle.
+## What production executes
+
+`bbx serve` (spawned by `bbx hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.ts`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle in its local build checkout (a detached git worktree at the deployed ref, see `deploy.sh` above) and rsyncs it — `bin/bbx` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `bbx hub` itself runs from the same bundle.
 
 Consequences:
 
 - The bundle lives at `dist/` — one level below the package root, **not** `dist/webapp/`. So `import.meta.dirname` inside the running code is `/opt/beebox/beebox/dist`. Resolve package-relative asset paths (frontend dist, templates, tsconfig) via `src/lib/package-root.ts` `PACKAGE_ROOT` (walks up to the `beebox` package.json — correct under both the bundle and tsx), never a hardcoded `import.meta.dirname + "../.."` that assumes a 2-level layout. A `../..` path that worked under tsx silently overshoots under the bundle — this is what made the frontend serve its "not built yet" fallback for every box (fixed 2026-06-20).
 - If a behavior seems not to have deployed, the source rsync isn't enough — confirm `dist/cli.mjs` rebuilt (its mtime should be newer than the sources). A stale bundle keeps serving old code even with fresh `.ts` on disk.
 
-## Rolling back a bad deploy
+## Rolling back
+
 Any commit in history redeploys with one command from a local checkout:
 
 ```bash
