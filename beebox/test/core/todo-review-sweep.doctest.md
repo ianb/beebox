@@ -258,3 +258,35 @@ JSON.stringify(tzResult.stale.map((t) => t.id))
 ```ts cleanup
 await boxTz.cleanup();
 ```
+
+## A `recheck` still ahead, or `never`, keeps a todo out of every set
+
+`recheck` is when the review said it would look again
+(`docs/plans/todos-ui.md`, Track 7). Until that day the todo is left out of
+whichever set it would otherwise be in; on the day, it is back. `never` keeps
+it out for good. A done todo is out regardless.
+
+```ts
+const boxR = await seedBox();
+setTime("2026-07-28T12:00:00.000Z");
+await boxR.write(
+  "store/r.memo.card",
+  memo(
+    '{% todo id="later" due="2026-07-01" recheck="2026-08-10" %}Escalated, recheck ahead{% /todo %}\n\n' +
+    '{% todo id="today" due="2026-07-01" recheck="2026-07-28" %}Escalated, recheck today{% /todo %}\n\n' +
+    '{% todo id="retired" created="2026-01-01" recheck="never" %}Stale, retired{% /todo %}\n\n' +
+    '{% todo id="stir" start="2026-07-20" due="2026-08-15" recheck="2026-09-01" %}Stirring, recheck ahead{% /todo %}\n'
+  )
+);
+const rResult = await runTodoReviewSweep(boxR.root);
+JSON.stringify({
+  escalated: rResult.escalated.map((t) => t.id),
+  stirring: rResult.stirring.map((t) => t.id),
+  stale: rResult.stale.map((t) => t.id),
+})
+=> {"escalated":["today"],"stirring":[],"stale":[]}
+```
+
+```ts cleanup
+await boxR.cleanup();
+```

@@ -1,104 +1,54 @@
 /**
- * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b): a
- * deterministic wakeup-housekeeping hook, following the `question-aging.ts`
- * precedent — resurfacing needs a call site, not just guidance.
+ * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track
+ * 5b). Since `docs/plans/todos-ui.md` Track 7 it runs as the precheck of the
+ * stock `todo-review` procedure (`bbx engine todo-review check`,
+ * `review-check.ts`) on its own daily schedule, not inside `bbx wakeup`.
  *
  * Runs the todo collection box-wide (`core/todo/query.ts`, the same runner
  * `bbx query todos` and the web list use) and computes three sets of *open*
- * todos:
+ * todos, leaving out any todo whose `recheck` is `never` or still ahead:
  * - **escalated** — past `due`.
  * - **stirring** — crossed `start` since the last sweep. The baseline is the
- *   sweep's own (`lastSweepDateEpoch`, persisted the same way the questions
- *   sweep persists its latch — see `question-alert.ts`'s `.beebox/…json`
- *   precedent), handed to the runner as the query's `since`; the collection
- *   derives `stirring` from it. Only this set needs a baseline: escalated and stale are
- *   recomputed fresh every pass, so re-running the sweep with nothing new
- *   correctly reports nothing new for THIS set without extra bookkeeping.
+ *   sweep's own (`lastSweepDateEpoch`, `review-state.ts`), handed to the
+ *   runner as the query's `since`; the collection derives `stirring` from
+ *   it. Only this set needs a baseline: escalated and stale are recomputed
+ *   fresh every pass.
  * - **stale** — open, has `created`, is more than 45 days old, and has
  *   neither `start` nor `due` (so it never even entered the escalated/
  *   stirring math).
  *
- * When all three are empty, the sweep does nothing and injects nothing —
- * no job card, no console output. When any is nonempty, it queues a
- * `todo-review-job` card (mirroring the contains-backfill job's "wakeup
- * housekeeping step queues a job the reactor picks up" pattern — the
- * shipped precedent for getting a compact brief into the reactor's next
- * cycle without inventing a new channel) UNLESS a `todo-review` job is
- * already pending, so a slow-to-process brief doesn't get restated every
- * wakeup. The sweep only computes; the job's own instructions are what
- * tell the agent to judge and raise with the boxholder, never to silently
- * resolve anything (Track 5's "the sweep computes, the agent judges, the
- * human decides").
+ * When all three are empty, the sweep does nothing — no job card, no output.
+ * When any is nonempty, it queues a `todo-review-job` card UNLESS a
+ * `todo-review` job is already pending, so a slow-to-process brief doesn't
+ * get restated. The sweep only computes; the job's own instructions tell the
+ * agent what it may change ("the sweep computes, the agent judges, the human
+ * decides").
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { z } from "zod";
 import { getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import { loadBoxTimezone } from "../box/config.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
-import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
-import { sleep } from "../../lib/sleep.js";
 import { findJobCards } from "../reactor/job-discovery.js";
 import { runTodoQuery } from "./query.js";
 import { summaryText } from "../file-summary.js";
 import { formatTodoLocation } from "./collect-types.js";
 import type { DerivedTodo } from "./collection.js";
-import { parseIsoDate, boxLocalDateEpoch } from "../../shared/todo-model.js";
+import { parseIsoDate, boxLocalDateEpoch, recheckDefers } from "../../shared/todo-model.js";
 import { createTodoReviewJobTemplate, type TodoReviewJobItem } from "../../schemas/todo-review-job.js";
+import { loadSweepState, saveSweepState, withSweepLock } from "./review-state.js";
 
-const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
-const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
-// Bounded retry against a concurrent sweep (another `bbx wakeup`/`bbx tick`
-// run) — generous enough to outlast a normal sweep's own runtime (a
-// collector pass + one job-card write), short enough that a genuinely stuck
-// holder fails loud rather than wedging the caller indefinitely.
-const LOCK_RETRIES = 20;
-const LOCK_RETRY_MS = 250;
 const STALE_DAYS = 45;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const JOB_SOURCE = "todo-review";
+export const TODO_REVIEW_JOB_SOURCE = "todo-review";
 
-/** Thrown when the sweep's cross-process lock stays held by another process for the whole retry budget. */
-class TodoReviewSweepLockError extends Error {
-  constructor(lockPath: string) {
-    super(`Could not acquire the todo-review sweep lock at ${lockPath} — another process held it too long`);
-    this.name = "TodoReviewSweepLockError";
-  }
-}
-
-const sweepStateSchema = z.object({
-  // A box-local calendar-date epoch (see `boxLocalDateEpoch`), stored as a
-  // number, NOT a wall-clock ISO instant — `start`/`due` are calendar dates,
-  // and comparing a calendar epoch against a wall-clock timestamp would
-  // undercount a `start` dated earlier the same day a sweep happens to run
-  // mid-afternoon.
-  lastSweepDateEpoch: z.number().optional(),
-});
-
-interface SweepState {
-  lastSweepDateEpoch: number | null;
-}
-
-async function loadSweepState(boxRoot: string): Promise<SweepState> {
-  try {
-    const raw = await fs.readFile(path.join(boxRoot, SWEEP_STATE_PATH), "utf-8");
-    const data = sweepStateSchema.parse(JSON.parse(raw));
-    return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null };
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Could not read todo-review sweep state, treating as first run:", e);
-    }
-    return { lastSweepDateEpoch: null };
-  }
-}
-
-async function saveSweepState(boxRoot: string, state: SweepState): Promise<void> {
-  const absPath = path.join(boxRoot, SWEEP_STATE_PATH);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, `${JSON.stringify(state, null, 2)}\n`);
+/** The box-local calendar date today, as the UTC-midnight epoch `start`/`due`/`recheck` parse to. */
+export async function boxTodayEpoch(boxRoot: string): Promise<number> {
+  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return boxLocalDateEpoch(getBoxTime(boxRoot), timeZone);
 }
 
 /**
@@ -140,9 +90,13 @@ function ageInDays(created: string, todayEpoch: number): number | null {
  * date arithmetic left here is the stale rule, which is the sweep's own.
  */
 function computeSets(
-  todos: SweptTodo[],
+  all: SweptTodo[],
   todayEpoch: number,
 ): Pick<TodoReviewSweepResult, "escalated" | "stirring" | "stale"> {
+  // A todo whose `recheck` is `never` or still ahead is out of every set: the
+  // review already looked at it and said when to look again (Track 7).
+  const todos = all.filter((t) => !recheckDefers(t.recheck, todayEpoch));
+
   const escalated = todos.filter((t) => t.plateState === "escalated");
 
   const stirring = todos.filter((t) => t.stirring);
@@ -205,42 +159,19 @@ async function sweptTodos(boxRoot: string, lastSweepEpoch: number): Promise<Swep
 }
 
 /**
- * Run the todo-review sweep once, guarded by the standard cross-process lock
- * (`file-lock.ts`) so two concurrent wakeups (or a wakeup racing a manual
- * `bbx tick`) can't both load the same `lastSweepDateEpoch` baseline, each
- * compute a job, and step on each other's write. Bounded retry against a
- * live holder, same shape as `withQuestionTransition`'s lock loop
- * (`core/commands/question-transition.ts`) — a genuinely stuck holder fails
- * loud rather than blocking the caller forever.
+ * Run the todo-review sweep once under the sweep lock (`review-state.ts`), so
+ * two concurrent runs can't both load the same `lastSweepDateEpoch` baseline,
+ * each compute a job, and step on each other's write.
  */
 export async function runTodoReviewSweep(boxRoot: string): Promise<TodoReviewSweepResult> {
-  const lockPath = path.join(boxRoot, SWEEP_LOCK_PATH);
-  await fs.mkdir(path.dirname(lockPath), { recursive: true });
-
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lockPath, { purpose: "todo-review-sweep" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await sleep(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await runTodoReviewSweepLocked(boxRoot);
-    } finally {
-      await releaseLock(lockPath);
-    }
-  }
-  throw new TodoReviewSweepLockError(lockPath);
+  return withSweepLock(boxRoot, () => runTodoReviewSweepLocked(boxRoot));
 }
 
 /**
- * The sweep's actual work, run while holding the lock above.
+ * The sweep's actual work. The caller holds the sweep lock.
  *
  * `lastSweepDateEpoch` only advances past today when this pass's findings
- * actually reached the reactor: either the sets were genuinely empty (nothing
+ * actually reached a job: either the sets were genuinely empty (nothing
  * to report — always safe to move forward), or a job got queued this pass. If
  * a `todo-review` job was ALREADY pending (or queuing throws), the baseline is
  * left where it was — advancing it anyway would fold this pass's newly
@@ -249,10 +180,8 @@ export async function runTodoReviewSweep(boxRoot: string): Promise<TodoReviewSwe
  * fixes). Leaving the baseline alone means the next sweep recomputes the same
  * sets and tries again.
  */
-async function runTodoReviewSweepLocked(boxRoot: string): Promise<TodoReviewSweepResult> {
-  const now = getBoxTime(boxRoot);
-  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const todayEpoch = boxLocalDateEpoch(now, timeZone);
+export async function runTodoReviewSweepLocked(boxRoot: string): Promise<TodoReviewSweepResult> {
+  const todayEpoch = await boxTodayEpoch(boxRoot);
 
   const state = await loadSweepState(boxRoot);
   const lastSweepEpoch = state.lastSweepDateEpoch ?? 0; // first run: everything already on-plate counts as "crossed since the box existed"
@@ -261,13 +190,13 @@ async function runTodoReviewSweepLocked(boxRoot: string): Promise<TodoReviewSwee
 
   const isEmpty = sets.escalated.length === 0 && sets.stirring.length === 0 && sets.stale.length === 0;
   if (isEmpty) {
-    await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch });
+    await saveSweepState(boxRoot, { ...state, lastSweepDateEpoch: todayEpoch });
     return { ...sets, jobPath: null };
   }
 
   const jobPath = await queueReviewJob(boxRoot, sets);
   if (jobPath !== null) {
-    await saveSweepState(boxRoot, { lastSweepDateEpoch: todayEpoch });
+    await saveSweepState(boxRoot, { ...state, lastSweepDateEpoch: todayEpoch });
   }
   return { ...sets, jobPath };
 }
@@ -277,7 +206,7 @@ async function queueReviewJob(
   sets: Pick<TodoReviewSweepResult, "escalated" | "stirring" | "stale">,
 ): Promise<string | null> {
   const jobsDir = getBoxDir(boxRoot, "jobs");
-  const pending = await findJobCards(jobsDir, { sourceFilter: JOB_SOURCE });
+  const pending = await findJobCards(jobsDir, { sourceFilter: TODO_REVIEW_JOB_SOURCE });
   if (pending.length > 0) return null; // a brief is already waiting to be judged; don't restate it
 
   const created = getBoxTime(boxRoot).toISOString();

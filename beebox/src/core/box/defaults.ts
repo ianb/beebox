@@ -280,6 +280,7 @@ interface DefaultSchedule {
   source: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
+  timeout?: string;
   /** Every seeded schedule declares its initial state; true is omitted from cards. */
   enabled: boolean;
   requires?: string[];
@@ -367,6 +368,23 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     source: "Weekly Monday-morning sweep over any chat sessions that went quiet",
   },
   {
+    name: "todo-review",
+    description:
+      "Daily todo review: an agent gives each escalated, newly-on-plate, or stale todo a status change or a recheck date",
+    cron: "30 6 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    // Seeded ENABLED (boxholder, 2026-09-24, docs/plans/todos-ui.md Track 7).
+    // Like process-retrospective, the precheck exits CHECK_SKIP when no todo
+    // needs review, so a quiet box runs no agent.
+    enabled: true,
+    // A 20-turn agent plus up to the engine's review retries; the scheduler's
+    // 10m default would cut a retry short.
+    timeout: "30m",
+    runs: "bbx procedure run todo-review",
+    source: "Daily early-morning sweep; precheck no-ops when no todo needs review",
+  },
+  {
     name: "chat-review",
     description:
       "Nightly chat review: title and summarize chat sessions that have grown enough to be worth re-reading",
@@ -401,6 +419,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
       ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
       ...(sched.lockGroup && { lockGroup: sched.lockGroup }),
+      ...(sched.timeout && { timeout: sched.timeout }),
       ...(sched.enabled === false && { enabled: false }),
       ...(sched.requires && sched.requires.length > 0 && { requires: sched.requires }),
       runs: sched.runs,

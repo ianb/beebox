@@ -1594,6 +1594,26 @@ tests:
     correct_contains_any: ["dropped", "drop"]
     tags: [todos, agent-work]
 
+  # docs/plans/todos-ui.md Track 7: the todo-review procedure's job requires
+  # every item to end with a status change or a `recheck` date, and `recheck`
+  # is the one attribute the agent may write on the boxholder's todos. The
+  # agent guide todos section and the job's own instructions carry it. Not yet run.
+  - id: todo-recheck
+    prompt: >
+      You are processing a todo-review job. One item is the boxholder's todo,
+      past its due date, and you see no sign it was done. What do you change
+      on that todo, if anything, and what else do you do about it?
+    expected_level: knows_directly
+    watch_for: >
+      Sets a `recheck` date 1-90 days out on the todo (and nothing else on it:
+      not its status, due, or text), notes a short reason, and raises it with
+      the boxholder. Says `recheck` is the one attribute it may write on the
+      boxholder's todos, and does not write `recheck="never"` itself.
+      Failure: marks it done/dropped/parked, moves its due date, or leaves the
+      item with no recheck.
+    correct_contains: ["recheck"]
+    tags: [todos, agent-work]
+
   - id: todo-annotation-vs-question
     prompt: "You're processing a card and you're not sure whether to create a {% todo %} or a question card. What's the difference?"
     expected_level: knows_directly
