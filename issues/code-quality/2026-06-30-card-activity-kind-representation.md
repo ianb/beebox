@@ -3,7 +3,6 @@ title: "card activity kind representation"
 workstream: unknown
 needs: [design]
 area: beebox
-next-action: reconfirm
 ---
 
 The `<card-activity>` children of the `<chat-app>` snapshot currently use ONE
@@ -35,3 +34,7 @@ convention). So the representation is worth a deliberate pass:
   and the agent-facing prompt description + example. (This is exactly the
   drift that just bit us — the scroll-position detail landed in code before the
   prompt was updated.)
+
+## Next-action check (2026-09-24)
+
+Reconfirmed 2026-09-24: still open, and more concrete. `renderActivityChildren` (`beebox/src/core/chat/card-activity.ts`, ~line 116) still puts every detail in element text. `scrolled` now reports a real scalar (`WorkspaceCanvas.tsx:51`, `reportActivity("scrolled", fraction.toFixed(1))`) through that free-text channel, so the mixed-shape case is live. The design pass is still needed.

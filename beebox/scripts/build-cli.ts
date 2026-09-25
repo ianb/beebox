@@ -12,6 +12,7 @@
 // both files in, so a concurrent `bbx` invocation (bin/bbx self-heals on
 // staleness) never sees a half-written bundle.
 import { build } from "esbuild";
+import { buildPublicationWorker } from "./build-pub-worker.mjs";
 import { copyFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -97,7 +98,7 @@ await build({
 
 // Also build the public view-widgets layer (the `beebox/view-widgets`
 // export) to dist/view-widgets/index.js. Box-authored views import this
-// specifier for <CardLink>/<CardRef>; `bbx view test` resolves it via the
+// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view test` resolves it via the
 // package `exports` map (the temp-dir node_modules/beebox symlink in
 // src/cli/commands/view.ts), and wraps the rendered view in the bundle's
 // NodeViewHostProvider. Only React (incl. its runtime entry points) stays
@@ -128,6 +129,9 @@ await copyFile(
   join(root, "src/exports/view-widgets.d.ts"),
   join(distDir, "view-widgets", "index.d.ts"),
 );
+
+// Package the exact module Worker uploaded by server-managed publications.
+await buildPublicationWorker();
 
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);

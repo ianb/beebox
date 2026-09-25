@@ -40,6 +40,8 @@ export const BOX_ROOT_VOCABULARY = [
   { name: "AGENTS.md", kind: "tooling" },
   { name: ".agents", kind: "tooling" },
   { name: ".codex", kind: "tooling" },
+  // `src/` remains the existing box-owned code namespace; it also holds
+  // authored publication files under `src/publications/`, not a new root.
   { name: "src", kind: "tooling" },
   { name: ".beebox", kind: "tooling" },
   { name: "README.md", kind: "tooling" },

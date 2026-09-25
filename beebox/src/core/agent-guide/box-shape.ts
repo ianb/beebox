@@ -78,6 +78,8 @@ This box root also holds \`package.json\`, \`node_modules/\`, and the box's sour
 
 **Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart.
 
+**Published sites are a separate kind of source.** Sites and their private shared notes live under \`src/publications/\`. Read \`${BOX_PACKAGE_DOCS}/publishing.md\` before working there; its site-local \`project/package.json\` is separate from the box-root engine package and builds only static files. Do not import Bee Box frontend components into a published site.
+
 **Not yours to edit.** \`package.json\`, \`node_modules/\`, lockfiles, \`tsconfig.json\`, and anything else at the box root outside the underscore-prefixed content areas (\`_content/\`, \`_config/\`, \`_bookkeeping/\`, \`_publish/\`, \`_tmp/\`) and \`src/\` belong to the boxholder, not to you. Upgrading the engine — bumping the \`beebox\` dependency and everything that comes with it — is done with \`bbx engine upgrade\`, run by the boxholder from outside this session. Don't run \`bbx engine upgrade\` yourself unless explicitly asked to.
 
 **Imports.** Box code may only import from the beebox library surface: \`beebox/cards\` (card/schema primitives), \`beebox/schema\` (Zod and YAML, version-pinned to the engine), and \`beebox/view-widgets\` (view components). Don't add other dependencies to \`package.json\` — that file isn't yours to edit.`;

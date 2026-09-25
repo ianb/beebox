@@ -1,0 +1,51 @@
+---
+name: todo-review
+description: |-
+  Daily review of open todos: escalated (past due), newly on the plate
+  (crossed start), and stale (undated, over 45 days old). The precheck
+  sweeps the box and prints a brief of those todos; an agent works it,
+  giving every item a status change (its own todos only) or a recheck
+  date 1-90 days out, and raises what matters with the boxholder. The
+  validate step checks every item was settled, and stops reviewing a
+  todo that was pushed three times with nothing about it changing.
+
+  The precheck exits CHECK_SKIP when no todo needs review, so on quiet
+  days this procedure does no work and invokes no agent.
+steps:
+  - id: review
+    description: Give every todo in the review brief a status change or a recheck date
+    precheck:
+      shells:
+        - |-
+          bbx engine todo-review check
+          # Prints the review brief (instructions + items) for the agent;
+          # exits CHECK_SKIP_CODE (75) when no todo needs review.
+      whys:
+        - |-
+          No need to invoke an agent when no open todo is escalated, newly
+          on the plate, or stale, or every such todo has a recheck date
+          still ahead.
+      pass-output: true
+    run:
+      agents:
+        - prompt: |-
+            The precheck output above is a todo review brief: how to work it,
+            then the items. Work every item exactly as it says. In short: every
+            item ends with either a status change (your own assigned="agent"
+            todos only) or a recheck date 1 to 90 days after today, with a short
+            reason; raise what matters with the boxholder; on the boxholder's
+            todos, recheck is the only thing you may change. Commit your edits.
+
+            GIT: Do NOT add Co-Authored-By to commits. The system adds the
+            appropriate trailers automatically.
+          max-turns: 20
+    validate:
+      shells:
+        - bbx engine todo-review verify
+      whys:
+        - |-
+          Without a recheck date, an item the agent looked at comes back on
+          the next day's run, and the review repeats itself instead of
+          deciding when to look again.
+      severity: review
+---

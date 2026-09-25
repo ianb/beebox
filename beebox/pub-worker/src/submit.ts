@@ -95,6 +95,7 @@ export async function handleSubmit({
   // the tombstone/expiry that kills pages kills submit in the same read → 410.
   const manifest = await loadManifest(pubId, env);
   if (manifest === null) return notFound();
+  if ("kind" in manifest) return forbidden();
   if (manifest.status === "revoked") return gone();
   if (isExpired(manifest.expiresAt, deps.now())) return gone();
 

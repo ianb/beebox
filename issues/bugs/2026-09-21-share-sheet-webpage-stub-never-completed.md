@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: normal
 ---
 
 A card saved through the `share.saveTextual` tRPC route (used by the iOS

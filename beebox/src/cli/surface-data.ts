@@ -131,7 +131,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "pub",
-    subcommands: ["draft", "ls", "status"],
+    subcommands: ["draft", "ls", "status", "prepare", "sites", "id"],
     audience: "agent",
     smoke: { run: ["pub", "ls"] },
   },
@@ -168,5 +168,10 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "init", audience: "engine", reason: "scaffolds the box installation rather than its content" },
   { name: "upgrade", audience: "engine", reason: "bumps the box's engine dependency; an installation act" },
   { name: "migrate", audience: "engine", reason: "applies data migrations to the installation; deploy sweeps every box" },
+  {
+    name: "todo-review",
+    audience: "engine",
+    reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, and the agent's side is the brief `check` prints",
+  },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

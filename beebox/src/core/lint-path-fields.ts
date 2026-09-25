@@ -19,7 +19,7 @@
  */
 
 import type { LintIssue } from "../cards/index.js";
-import { resolveRefExists } from "./ref-exists.js";
+import { brokenRefReason, resolveRefExists } from "./ref-exists.js";
 import { isRecord } from "./card-io.js";
 
 export interface PathFieldLintInput {
@@ -91,7 +91,7 @@ async function checkPathField(args: {
     {
       type: "reference",
       severity: "warning",
-      message: `Broken reference at ${field}: ${ref} does not exist`,
+      message: `Broken reference at ${field}: ${ref} ${brokenRefReason({ ref, fromPath: input.path, boxRoot: input.boxRoot })}`,
     },
   ];
 }

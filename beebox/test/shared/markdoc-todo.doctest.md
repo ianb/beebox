@@ -108,6 +108,22 @@ check('{% todo by="agent" created="2026-07-28" %}\n\ntext\n\n{% /todo %}')
 valid
 ```
 
+## `recheck` is a declared attribute: a date or `never`, else a validate() error
+
+```ts
+check('Order lumber {% todo due="2026-07-01" recheck="2026-10-15" %}soon{% /todo %}')
+=>
+valid
+
+check('{% todo recheck="never" %}old idea{% /todo %}')
+=>
+valid
+
+check('{% todo recheck="next week" %}text{% /todo %}')
+=>
+todo-invalid-recheck
+```
+
 ## `see-also` nested inside a todo, with a reason and a `ref`
 
 Markdoc's HTML renderer lowercases attribute names (`sourceRef` → `sourceref`)

@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-paper-cards — final changed-test verification
+priority: important
 ---
 
 `test/cli/commands/view-test-command.doctest.md` failed during a parallel

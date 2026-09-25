@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
+priority: normal
 ---
 
 `bbx trick <name>` runs the trick as a child process and, only if it exits 0,
@@ -59,3 +60,19 @@ Related: `issues/features/2026-09-16-sandboxed-trick-helpers.md` proposes a
 this bug is a concrete argument for building that piece specifically, and for
 retrofitting `commitIfDirty` itself even before the fuller helper library
 exists.
+
+## From the generate-image report (2026-09-24)
+
+A box's `generate-image` trick twice wrote an image card to the wrong place
+(a doubled directory tree; a new top-level folder, repeated by a subagent
+batch). `bbx trick` then auto-committed it, so each mistake cost a revert and
+a manual cleanup. Two engine-side points:
+
+- Auto-commit turns a wrong output into history before anyone looks. A way to
+  skip or confirm the commit would make the mistake cheap.
+- Tricks have no convention for what a relative path argument means. The
+  runner starts a trick with cwd `src/tricks/` (`beebox/src/cli/commands/trick.ts:138`),
+  agent shells reset their cwd between calls, and each trick picks its own
+  base. The trick itself was fixed box-side; see
+  [the closed generate-image issue](../closed/bugs/2026-09-21-trick-generate-image-relative-path-mislabeled.md).
+

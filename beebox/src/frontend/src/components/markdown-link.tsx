@@ -18,7 +18,7 @@ import {
   type NavigateHint,
   type ViewTarget,
 } from "../lib/view-url";
-import { withBase } from "../api";
+import { withBase } from "../api-core";
 import { isRecord } from "@shared/is-record";
 
 export interface LinkContext {

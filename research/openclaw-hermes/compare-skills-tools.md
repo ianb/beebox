@@ -81,7 +81,7 @@ on demand — but implement it at different granularities:
 
 - **bbx**: Deliberately **not** agent-extensible at this layer. Connectors (`src/connectors/`)
   and CLI commands (`src/cli/commands/`) live in the beebox source tree, outside any box,
-  explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
+  explicitly not agent-editable (`docs/reports/knowledge-taxonomy-catalog-2026-02-23.md`). There is no plugin manifest, no
   capability-registration API, no lifecycle hooks exposed to a box. The only "extension" surface
   a box agent can touch is data-level (schemas, procedures, views, tricks) — code-level
   extensibility is a human/source-change operation.

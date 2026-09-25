@@ -83,6 +83,36 @@ r.stdout.includes("cards: 2")
 await box.cleanup();
 ```
 
+## Card text through `Markdown`
+
+A view renders a card's body with `Markdown` from `beebox/view-widgets`, the
+app's own renderer (`docs/plans/todos-ui.md`, Track 6). It renders here with
+no app router: the node view host supplies the box slug. A relative link
+resolves against the card, and a todo carries the collector's locator (file
+line 7: four frontmatter lines, then the body's third line):
+
+```ts
+const box = await makeViewBox();
+await box.write("_content/inbox/A.memo.card", MEMO_CARD.replace("Body\n", "See [B](B.memo.card).\n\n{% todo %}Order lumber{% /todo %}\n"));
+await writeView(box, "prose.tsx", `
+import { Markdown } from "beebox/view-widgets";
+export const name = "Prose";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Prose({ cards }) {
+  return <div>{cards.map((card) => card.body ? <Markdown key={card.path} card={card}>{card.body}</Markdown> : null)}</div>;
+}
+`);
+
+const r = await runViewTest(box.root, ["prose"]);
+[r.code, r.stdout.includes("/views/_content/inbox/B.memo.card"), r.stdout.includes('data-todo-locator="7"')].join(" ")
+=> 0 true true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Image variants are safe to construct during render
 
 The mock exposes the same synchronous `imageUrl` helper as the browser host,

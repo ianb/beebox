@@ -61,7 +61,7 @@ tag is dropped with only a `console.log` (`src/core/chat/schedule-tags.ts:23-33`
 already told the user the reminder is set. Same user-visible outcome as the
 overflow — no reminder — by the opposite mechanism.
 
-Also fixed alongside this filing: `docs/chat-schedules.md` documented the
+Also fixed alongside this filing: `docs/chat/schedules.md` documented the
 attribute as `delay=`; the parser requires `in` (the agent-facing prompt was
 already correct, so live agents were unaffected — but a doc reader writes tags
 that path 2 silently drops).

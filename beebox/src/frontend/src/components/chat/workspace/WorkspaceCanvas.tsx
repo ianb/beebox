@@ -8,6 +8,7 @@ import { useCardIdentities } from "../../../hooks/useCardIdentities";
 import { cardTypeFromName } from "@shared/card-name";
 import { CardVisibilityProvider } from "../everywhere/card-context";
 import { useWorkspace } from "./WorkspaceProvider";
+import { WorkspacePaneContext } from "./use-open-beside";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
 import { isWorkspacePdf } from "./pdf-pane-view";
 import { workspacePanelId, workspaceTabId } from "../workspace-address";
@@ -50,7 +51,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
         const node = event.currentTarget;
         callbacks.reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
       }}>
-      <CardVisibilityProvider visible={visible}>
+      <CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
         <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
           canPushViewState={visible}
           onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
@@ -58,7 +59,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
           onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
           onNavigate={(target, hint) => { callbacks.reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
           onAddSelection={handleAddSelection} reportActivity={callbacks.reportActivity} />
-      </CardVisibilityProvider>
+      </WorkspacePaneContext.Provider></CardVisibilityProvider>
     </div>
   </div>;
 }

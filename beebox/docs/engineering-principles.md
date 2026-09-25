@@ -171,4 +171,4 @@ idiom, the defensiveness policy, the `as`/cast conventions, the suppression
 policy). Agent-facing conventions that a box agent must recall — `assertNever`,
 the Result convention, `withCardLock`, `resolveContainedRef`, `fenceForPrompt`,
 the logging policy — are also verified by knowledge audits
-([`docs/knowledge-audits.md`](knowledge-audits.md)).
+([`docs/knowledge-audits.md`](testing/knowledge-audits.md)).

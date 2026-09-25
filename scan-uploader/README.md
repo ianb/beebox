@@ -101,6 +101,41 @@ and mints the token; the steps in full:
 `smoke-install.sh` is the executable check that step 1 works from a clean
 clone and that the built bundle runs self-contained.
 
+### Importing an Apple Photos album
+
+Install [osxphotos](https://github.com/RhetTbull/osxphotos) on the Mac:
+
+```bash
+uv tool install osxphotos
+# or: pipx install osxphotos
+```
+
+Create an album in Apple Photos and add photos to it on the phone; iCloud
+syncs the album to the Mac. Before installing the schedule, run one uploader
+sweep manually from the Mac account that will own it and approve macOS
+permission prompts. Grant **Full Disk Access** to the app running scan-uploader
+under System Settings → Privacy & Security → Full Disk Access, so osxphotos can
+read the Photos library. Also allow the requesting app shown under **Privacy &
+Security → Automation** to control Photos: `--download-missing` uses Apple
+Events, which requires a separate permission. Configure the target with
+`--photos-album`; exported JPEGs go to the same watched folder and the normal
+uploader sweep sends them. Photos targets must use `keep` so osxphotos' update
+database and exported files remain in place. The real Photos library and
+launchd permission path have not been verified as part of this implementation.
+
+```bash
+bin/scan-uploader configure https://<host>/<box> \
+  --name <token-name> --folder <scan-folder> --photos-album "Bee Box"
+```
+
+The configure command still reads a scan token, which must be minted in the
+box settings UI. The launchd agent already installed by `schedule install`
+runs both export and upload; no second job is needed. When osxphotos adds
+files, the uploader posts a desktop notification naming the album and count.
+Each export is bounded to ten minutes. The Photos-enabled PATH is written by
+`schedule install`; run it again if the agent was installed before adding
+Photos so it picks up the updated tool paths.
+
 ### Scheduling the sweep
 
 The launchd agent is the trigger, on two schedules at once. It watches every
@@ -172,7 +207,8 @@ unknown keys already in the file. Shape, for hand-maintenance:
       "serverUrl": "https://beebox.run",
       "box": "family",
       "tokenPath": "/Users/user/.scan-tokens/family.token",
-      "disposition": "archive"
+      "disposition": "keep",
+      "photos": { "album": "Bee Box" }
     }
   ]
 }
@@ -190,6 +226,11 @@ unknown keys already in the file. Shape, for hand-maintenance:
 - `disposition` — `"keep"` (default), `"archive"`, or `"trash"`.
   `"trash"` is refused at config load on any platform other than macOS —
   there's no `unlink` fallback.
+- `photos` — optional `{"album":"Bee Box"}` Apple Photos source. The sweep
+  runs `osxphotos export <folder> --album "Bee Box" --update
+  --convert-to-jpeg --download-missing --skip-live` before walking the folder.
+  It requires `disposition: "keep"`. If osxphotos is missing, install it
+  with `uv tool install osxphotos` or `pipx install osxphotos`.
 
 The config is validated strictly at load: an unrecognized field value, a
 missing required field, or an empty `targets` array all fail closed with a

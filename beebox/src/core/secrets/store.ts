@@ -75,15 +75,55 @@ const secretEntrySchema = z.object({
 });
 export type SecretEntry = z.infer<typeof secretEntrySchema>;
 
+/**
+ * Cloudflare publishing credentials use their own broker slot rather than a
+ * generic named secret. This prevents the generic secrets UI/CLI from raising
+ * the grant to `agent` and exposing an account deployment token to box code.
+ */
+const cloudflarePublishGrantSchema = z.literal("server");
+const cloudflarePublishConnectionSchema = z.object({
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  credentialType: z.enum(["account-api-token", "user-api-token"]),
+  /** Absent after local revocation; never returned from management APIs. */
+  apiToken: z.string().min(1).optional(),
+  tokenId: z.string().min(1).optional(),
+  verifiedAt: z.string().datetime({ offset: true }).optional(),
+  capabilities: z.object({
+    tokenForAccountVerifiedAt: z.string().datetime({ offset: true }),
+    r2ObjectWriteVerifiedAt: z.string().datetime({ offset: true }).optional(),
+    workerDeployVerifiedAt: z.string().datetime({ offset: true }).optional(),
+    accessLiveVerifiedAt: z.string().datetime({ offset: true }).optional(),
+  }).optional(),
+  revokedAt: z.string().datetime({ offset: true }).optional(),
+  grants: z.record(z.string(), cloudflarePublishGrantSchema),
+});
+export type CloudflarePublishConnectionRecord = z.infer<typeof cloudflarePublishConnectionSchema>;
+
+/** Server-owned routing locator only; audience and release authority stay in R2. */
+const cloudflarePublishBindingSchema = z.object({
+  boxSlug: z.string().min(1),
+  connectionName: z.string().min(1),
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  bucketName: z.string().min(1),
+  workerName: z.string().min(1),
+  hostHandle: z.string().min(1),
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type CloudflarePublishBindingRecord = z.infer<typeof cloudflarePublishBindingSchema>;
+
 const secretStoreSchema = z.object({
   secrets: z.record(z.string(), secretEntrySchema),
   grants: z.record(z.string(), z.record(z.string(), secretAccessLevelSchema)),
+  /** Optional for backwards compatibility with existing machine stores. */
+  cloudflarePublishConnections: z.record(z.string(), cloudflarePublishConnectionSchema).optional(),
+  /** Keyed globally by PubId so one box cannot claim another box's publication. */
+  cloudflarePublishBindings: z.record(z.string(), cloudflarePublishBindingSchema).optional(),
 });
 export type SecretStoreData = z.infer<typeof secretStoreSchema>;
 
 /** The empty store — what a machine with no secrets file has. */
 function emptySecretStore(): SecretStoreData {
-  return { secrets: {}, grants: {} };
+  return { secrets: {}, grants: {}, cloudflarePublishConnections: {}, cloudflarePublishBindings: {} };
 }
 
 /**

@@ -3,10 +3,11 @@
  *
  * Deliberately thin. Agents need to know landmarks exist and what
  * they're for; they should not learn how to create them from this
- * always-loaded guide. Curation criteria live in
- * `docs/landmark-curation.md`; schema details in
- * the package docs (`node_modules/beebox/box-docs/card-landmark.md`).
+ * always-loaded guide. Curation criteria and schema details live in the
+ * package docs (`landmark-curation.md` and `card-landmark.md`).
  */
+
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 
 export function landmarksSection(): string {
   return `## Landmarks
@@ -15,5 +16,5 @@ The Landmarks instrument is the user's quick-jump surface to the spots in the bo
 
 A landmark's link list is mostly derived: the \`entry-point\` and \`primary\` cards under its directory (stopping at nested landmarks) appear in the Landmarks instrument and in the place menu without being listed — see \`prominence:\` under "Frontmatter every card shares". Write a \`links:\` entry only for what a card cannot say about itself: a target outside the directory, a contextual label, a fixed order. A place that is housekeeping (logs, imports, machinery) gets \`prominence: background\` on its landmark; it leaves the Landmarks instrument and everything under it folds.
 
-Landmarks earn their spot. If the same kind of thing comes up over and over in chat — recipes, an ongoing project, a todo list — and there is no landmark for it, that's a signal worth raising with the user. Do not create one quietly for something trivial. But the flip side is active: when you build out a new structure the user will want to return to, drop a landmark in it so the structure isn't invisible from the Landmarks instrument. Read \`docs/landmark-curation.md\` before suggesting or editing one.`;
+Landmarks earn their spot. If the same kind of thing comes up over and over in chat — recipes, an ongoing project, a todo list — and there is no landmark for it, that's a signal worth raising with the user. Do not create one quietly for something trivial. But the flip side is active: when you build out a new structure the user will want to return to, drop a landmark in it so the structure isn't invisible from the Landmarks instrument. Read \`${BOX_PACKAGE_DOCS}/landmark-curation.md\` before suggesting or editing one.`;
 }

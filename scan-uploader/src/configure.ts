@@ -13,7 +13,7 @@ import type { Disposition } from "./config.js";
 import { writeUploaderTarget } from "./config-writer.js";
 import { compareContractVersion, describeDrift, SCAN_CONTRACT_VERSION } from "./contract-version.js";
 import { errorMessage } from "./error-guards.js";
-import { ConfigureError } from "./errors.js";
+import { ConfigureError, EmptyPhotosAlbumError, PhotosDispositionError } from "./errors.js";
 import { parseServerUrlWithBox } from "./target-url.js";
 import { writeTokenFile } from "./token-file.js";
 import { checkHashes } from "./wire-client.js";
@@ -22,6 +22,7 @@ export interface ConfigureParams {
   readonly serverUrlWithBox: string;
   readonly folder: string;
   readonly disposition: Disposition;
+  readonly photosAlbum?: string;
   readonly name: string;
   readonly token: string;
   readonly configPath: string;
@@ -60,9 +61,18 @@ export async function configure(params: ConfigureParams): Promise<ConfigureResul
   // machine-local-unique across servers a laptop talks to.
   const tokenPath = join(params.homeDir, ".scan-tokens", `${box}.token`);
 
+  if (params.photosAlbum !== undefined && params.photosAlbum.trim().length === 0) {
+    throw new EmptyPhotosAlbumError();
+  }
+  if (params.photosAlbum !== undefined && params.disposition !== "keep") {
+    throw new PhotosDispositionError();
+  }
   await writeUploaderTarget({
     configPath: params.configPath,
-    target: { folder: folderPath, serverUrl, box, tokenPath, disposition: params.disposition },
+    target: {
+      folder: folderPath, serverUrl, box, tokenPath, disposition: params.disposition,
+      ...(params.photosAlbum === undefined ? {} : { photos: { album: params.photosAlbum } }),
+    },
   });
 
   await writeTokenFile(tokenPath, params.token);

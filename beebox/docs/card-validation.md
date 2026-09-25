@@ -8,12 +8,26 @@ depend on the user's PATH.
 `bbx validate` checks all cards, a list of files, or `--staged`. Cards also
 validate on load (`src/core/card-io.ts`).
 
+Engine-spawned agent runs (wakeup, procedures, chat) get an in-process SDK
+callback instead of the settings-file hook: `cardValidatorHook`
+(`src/core/sdk-hooks.ts`) matches `PostToolUse` of `Write`/`Edit`/`MultiEdit`
+and, by file type, compiles a view file, rejects a trick script outside
+`tricks/scripts/<name>/`, lints a `.card` (`src/core/card-lint.ts`), warns on
+a connector-owned markdown file, or runs markdownlint on built-in markdown.
+Every result is injected as `additionalContext`; none blocks the edit.
+
 Three hooks are installed per box:
 
 - `.claude/settings.json` — PostToolUse hook running `bbx validate --hook`
-  after Edit/Write/MultiEdit. On a card path with errors it exits 2 with
-  the error on stderr so Claude Code surfaces it to the agent (warning,
-  not blocking).
+  after Edit/Write/MultiEdit. Warning-only results use exit 0 with JSON
+  `hookSpecificOutput.additionalContext` on stdout, so the agent sees the
+  warning while the completed edit remains successful. Errors use exit 2
+  with stderr; the edit has already happened, and pre-commit blocks invalid
+  commits. The Codex plugin uses the same command after `apply_patch`.
+  A box `CLAUDE.md` size warning appears once per file and size tier in each
+  agent session. The bounded notice cache is gitignored at
+  `.beebox/validate-hook-warnings.json`; a clean edit resets that file's
+  notice, and a new session gets its own warning.
 - `.git/hooks/pre-commit` — runs `bbx validate --pre-commit`; blocks commits
   that include cards failing validation. That one invocation is the whole
   commit-time suite (it replaced three separate `bbx` calls, each of which

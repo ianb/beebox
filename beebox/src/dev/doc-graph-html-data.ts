@@ -68,7 +68,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "Per-directory guide — lives next to the code it documents. Auto-loads.",
     supporting: [
       { path: "docs/scheduler.md", note: "How the next wakeup gets set. Cron, except it's a CLI." },
-      { path: "docs/chat-schedules.md", note: "When the agent should proactively message you." },
+      { path: "docs/chat/schedules.md", note: "When the agent should proactively message you." },
     ],
     code: ["src/core/reactor/", "src/core/"],
   },
@@ -108,7 +108,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "Philosophy. 537 lines on why doctests, then how.",
     supporting: [
       { path: ".claude/rules/doctest.md", note: "Conditional pointer to the doctest syntax reference." },
-      { path: "docs/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
+      { path: "docs/testing/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
       { path: "docs/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
     ],
     code: ["test/", "test/helpers/"],
@@ -204,7 +204,6 @@ export const CURATOR: CuratorSection[] = [
       { path: "docs/todo-security.md", note: "Things that scare him at 2am. Still a TODO." },
       { path: "docs/health-checks.md", note: "When something's on fire, this is what to grep." },
       { path: "docs/landmark-curation.md", note: "Which landmarks to surface to the agent. Hand-tuned." },
-      { path: "docs/knowledge-taxonomy.md", note: "What the agent is expected to know, vs. what it knows. The accountability ledger." },
       { path: "docs/prompt-audits.md", note: "Catching stock-LLM phrases that crept into prompts." },
       { path: "docs/prompt-logging.md", note: "Log every agent invocation — what was sent, what came back." },
       { path: "issues/CLAUDE.md", note: "The idea/issue graveyard, promoted out of a single 936-line ideas.md into one file per item." },

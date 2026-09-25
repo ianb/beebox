@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — F newcomer journey
+priority: normal
 ---
 
 The Settings path gives a boxholder implementation details without a usable

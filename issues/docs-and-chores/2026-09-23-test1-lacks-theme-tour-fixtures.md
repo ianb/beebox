@@ -6,6 +6,7 @@ labels: [tours]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check run 20260923-193557
+priority: normal
 ---
 
 Two tours open theme-tour fixtures that the stock `test1` box does not

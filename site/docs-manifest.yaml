@@ -59,7 +59,7 @@
   publish: concepts/model-policy.md
   description: "Which engine (Claude Code or Codex) and which model tier a box thinks with."
 
-- source: beebox/docs/chat-schedules.md
+- source: beebox/docs/chat/schedules.md
   publish: concepts/chat-schedules.md
   description: "Timers the agent sets from chat that fire later."
 
@@ -182,10 +182,6 @@
   publish: dev/development-workflow.md
   description: "Workstreams in their own worktrees and sessions, the issue queue, planning, recurring work, document comments, and exhibits."
 
-- source: beebox/docs/agent-testing.md
-  publish: dev/agent-testing.md
-  description: "Testing what agents know and do: knowledge audits, the verified capability catalog, fakes, smoke, tours."
-
 - source: beebox/docs/technologies.md
   publish: dev/technologies.md
   description: "The stack, and every outside AI service the system can be configured to use."
@@ -212,7 +208,31 @@
 
 - source: beebox/docs/testing.md
   publish: dev/testing.md
-  description: "Testing philosophy and the doctest tiers."
+  description: "Testing philosophy and the verification instruments, one per question about the system."
+
+- source: beebox/docs/testing/doctests.md
+  publish: dev/testing/doctests.md
+  description: "Doctests: executable markdown, the default test form, with service fakes."
+
+- source: beebox/docs/testing/tap-tests.md
+  publish: dev/testing/tap-tests.md
+  description: "TAP tests for what a doctest cannot test without circularity."
+
+- source: beebox/docs/testing/session-critiques.md
+  publish: dev/testing/session-critiques.md
+  description: "Reviewing a real agent session for whether the CLI tools served it."
+
+- source: beebox/docs/testing/dev-stubs.md
+  publish: dev/testing/dev-stubs.md
+  description: "Deterministic frontend stubs for checking streaming UI by hand."
+
+- source: beebox/docs/testing/smoke.md
+  publish: dev/testing/smoke.md
+  description: "The smoke walk: a real box boots and is walked before a merge."
+
+- source: beebox/docs/testing/field-testing.md
+  publish: dev/testing/field-testing.md
+  description: "Field tests: a persona operator drives a disposable real box through the real UI."
 
 - source: beebox/docs/engineering-principles.md
   publish: dev/engineering-principles.md
@@ -234,8 +254,8 @@
   publish: dev/migrations.md
   description: "How box data migrations are applied and written."
 
-- source: beebox/docs/tours.md
-  publish: dev/tours.md
+- source: beebox/docs/testing/tours.md
+  publish: dev/testing/tours.md
   description: "Browser walk-throughs for UI and accessibility review."
 
 - source: beebox/docs/maintenance.md
@@ -254,11 +274,19 @@
   publish: dev/event-bus.md
   description: "The in-process pub/sub event system."
 
-- source: beebox/docs/chat-session-lifecycle.md
+- source: beebox/docs/chat.md
+  publish: dev/chat.md
+  description: "The chat subject: one page per member, and where the rest is owned."
+
+- source: beebox/docs/chat/sessions.md
   publish: dev/chat-session-lifecycle.md
   description: "Chat session state and recovery."
 
-- source: beebox/docs/chat-review.md
+- source: beebox/docs/chat/history.md
+  publish: dev/chat-history.md
+  description: "The transcript and the acceptance record; how a replayed photo is served."
+
+- source: beebox/docs/chat/review.md
   publish: dev/chat-review.md
   description: "Nightly chat titles and summaries."
 
@@ -278,21 +306,13 @@
   publish: dev/prompt-surface-review.md
   description: "Workflow for auditing agent context."
 
-- source: beebox/docs/knowledge-audits.md
-  publish: dev/knowledge-audits.md
+- source: beebox/docs/testing/knowledge-audits.md
+  publish: dev/testing/knowledge-audits.md
   description: "Tests that prompt a real box agent and check what it knows."
 
-- source: beebox/docs/knowledge-taxonomy.md
-  publish: dev/knowledge-taxonomy.md
-  description: "Where each kind of box knowledge lives."
-
-- source: beebox/docs/composer-states.md
-  publish: dev/composer-states.md
-  description: "The chat input state machine."
-
-- source: beebox/docs/composer-input-machine.md
-  publish: dev/composer-input-machine.md
-  description: "Composer input validation and submission logic."
+- source: beebox/docs/chat/composer.md
+  publish: dev/composer.md
+  description: "The chat composer: its coordination machine and a map of its rendered states."
 
 - source: beebox/docs/image-orientation.md
   publish: dev/image-orientation.md

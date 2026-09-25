@@ -57,6 +57,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
   const activePath = workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path;
   const isOnSettings = activePath === SYSTEM_CARD_PATHS.settings;
   const isOnAdmin = activePath === SYSTEM_CARD_PATHS.admin;
+  const isOnPublications = location.pathname === `${base}/publications`;
 
   return (
     <Dropdown
@@ -89,6 +90,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="bbx-profile-menu-publications" to={href(`${base}/publications`)} active={isOnPublications}>Publications</MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
@@ -116,6 +118,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.navStatus.useQuery();
   const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
+  const escalatedTodos = statusQuery.data ? statusQuery.data.counts.escalatedTodos : 0;
   const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
 
   // A burst of card-created/file-change events (e.g. a bulk upload) would
@@ -159,7 +162,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />
-          <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} onToggleDebugLog={onToggleDebugLog} />
+          <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>

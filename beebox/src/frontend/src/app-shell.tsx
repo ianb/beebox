@@ -7,9 +7,10 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Outlet, useParams } from "@tanstack/react-router";
+import { Outlet, useLocation, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
+import { reportPreviousAdminHang } from "./lib/admin-hang-probe";
 import { startVoiceStagingDrainer } from "./lib/audio/voice-staging-queue";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
@@ -33,6 +34,7 @@ import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { DocumentIcon } from "./components/DocumentIcon";
 import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
+import { BoxSlugProvider } from "./lib/box-slug";
 import { QuickSearchOverlay } from "./components/search/QuickSearchOverlay";
 
 
@@ -41,6 +43,7 @@ export { BoxRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();
+reportPreviousAdminHang();
 
 // Drain any voice-recording ops left over from a reload or a prior visit
 // (docs/plans/resilient-voice-recording.md, Track 2) even before any
@@ -58,10 +61,15 @@ startVoiceStagingDrainer();
  * global chrome.
  */
 export function RootLayout() {
+  // Every page gets the route's slug as context, so `Markdown` reads it
+  // without depending on the router (it also renders in `bbx view test`).
+  const { boxSlug } = useParams({ strict: false });
   return (
-    <PageTitleProvider>
-      <Outlet />
-    </PageTitleProvider>
+    <BoxSlugProvider boxSlug={boxSlug}>
+      <PageTitleProvider>
+        <Outlet />
+      </PageTitleProvider>
+    </BoxSlugProvider>
   );
 }
 
@@ -100,6 +108,8 @@ export function ProductLayout() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
+  const location = useLocation();
+  const standalonePage = location.pathname.endsWith("/publications");
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
   return (
@@ -113,7 +123,7 @@ export function ProductLayout() {
           />
           <PresentationNotice />
           <main className="flex-1 min-h-0">
-            <BoxConversationShell /><Outlet />
+            {standalonePage ? null : <BoxConversationShell />}<Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />

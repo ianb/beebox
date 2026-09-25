@@ -32,7 +32,7 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.278`, Codex `0.155.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.280`, Codex `0.155.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
@@ -41,13 +41,11 @@ Codex entries here are labeled as such; they carry their own pin.
   the root copy and `bin/` tooling still imports it.
 - **Latest reviewed upstream version:** `0.3.281` (SDK), `2.1.281` (Claude Code), `0.156.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** **No bump was due on either channel.** `0.3.280`
-  settles 2026-09-24T15:51Z and Codex `0.156.0` 2026-09-24T19:55Z. When
-  `0.3.280` is pinned, note that the bump only makes `verbatimPrompts`
-  *available*; beebox still has to set it on each `query()`, which is a code
-  change outside this schedule's bump (see the `0.3.280` entry). Also open:
-  `issues/code-quality/2026-09-22-opus-alias-still-pins-opus-5.md`, now covering
-  the Codex aliases too.
+- **Current recommendation:** `0.3.280` is pinned (applied 2026-09-24). Next:
+  set `verbatimPrompts: true` on every SDK `query()` beebox makes. The bump only
+  makes the option *available*; setting it is a code change outside this
+  schedule's bump (see the `0.3.280` entry). Codex `0.156.0` settles
+  2026-09-24T19:55Z.
 - **No run on 2026-09-14, and nothing was missed.** That run exited with
   `sessionLaunched: false` and an empty log: `0.3.271` was published at 19:47Z,
   after the run started at 17:14Z, so the newest release was `0.3.270` — already
@@ -132,7 +130,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-09-25.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03281), [Claude Code 2.1.281](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21281)
 
-### 0.3.280 / Claude Code 2.1.280 — pending (published 2026-09-22T15:51Z, ~28h at 2026-09-23; settles 2026-09-24T15:51Z)
+### 0.3.280 / Claude Code 2.1.280 — APPLIED 2026-09-24 (published 2026-09-22T15:51Z)
 
 - **SDK — adopt when it lands:** a `verbatimPrompts` option, *"prompts are
   delivered as written — no `@path` expansion, no slash-command dispatch and, on
@@ -170,7 +168,14 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   this ledger has tracked. And the advisor-tag 400 behind a proxy (2.1.275's
   regression) now retries without the tag, which covers beebox's
   `BBX_LOG_PROMPTS=1` proxy path even outside the `0.3.276` repair.
-- **Action:** Settled path; takeable 2026-09-24.
+- **Action:** Applied 2026-09-24 on the settled path (~51h old), out of band
+  from a main session. The model-bump workstream had already moved
+  `MODEL_ID.opus` to `claude-opus-5-5`. The `0.3.278` pin bundles Claude Code
+  2.1.278, which refuses that model, so chat turns on Opus failed with *"Claude
+  Code 2.1.278 does not support this model; version 2.1.280 or newer is
+  required"*. A real `query()` on `claude-opus-5-5` through `0.3.280` reports
+  `claude_code_version: 2.1.280` and succeeds. Steering probe passes. Typecheck
+  clean.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03280), [Claude Code 2.1.280](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21280)
 
 ### 0.3.279 / Claude Code 2.1.279 — never published

@@ -155,10 +155,48 @@ To link or embed another card, import \`CardLink\`/\`CardRef\` from
 \`beebox/view-widgets\` (point at cards with \`cardRef="/_content/…"\`, not a
 hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 
+To show a card's text, render its body with \`Markdown\` from
+\`beebox/view-widgets\`: \`{card.body ? <Markdown card={card}>{card.body}</Markdown> : null}\`.
+Any other rendering of card text (\`<p>{card.body}</p>\`, splitting the body,
+a Markdown library) is a validation error; if \`Markdown\` lacks something the
+view needs, say so in \`_config/feedback/\`.
+
 After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 
 Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
+`;
+
+export const PUBLICATIONS_CLAUDE_MD = `# Publication Sites
+
+Before creating, preparing, or changing a site, read \`${BOX_PACKAGE_DOCS}/publishing.md\`.
+
+Independent publication sources live in child folders here. Read the shared
+\`NOTES.md\` and apply only the \`All sites\`, matching \`Site: <name>\`, and
+matching \`Path: <site>/<relative-path>\` notes. Keep source/build code and
+private notes out of published output. A prepared site does not become live
+until a signed-in member of this box enables it in the app; audience or
+destination changes need fresh member approval.
+`;
+
+const PUBLICATIONS_NOTES = `# Publication Notes
+
+Private, box-owned notes for authoring the sites in this directory. These notes
+are never part of a published release. Keep the headings and add only durable
+lessons that help future work.
+
+## All sites
+
+Shared defaults and reusable lessons for every publication.
+
+## Site: <name>
+
+Decisions that apply only to one named publication.
+
+## Path: <site>/<relative-path>
+
+Notes for one part of a site. For example: \`field-guide/site/styles/\` in static
+mode or \`field-guide/project/src/components/\` in project mode.
 `;
 
 export const FEEDBACK_CLAUDE_MD = `# Feedback about the Bee Box system
@@ -233,6 +271,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   // entry.
   { name: "schemas-guide-v2", relPath: "src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
   { name: "views-guide-v2", relPath: "src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "publications-guide-v1", relPath: "src/publications/CLAUDE.md", content: PUBLICATIONS_CLAUDE_MD },
   { name: "agent-feedback-guide", relPath: "_config/feedback/CLAUDE.md", content: FEEDBACK_CLAUDE_MD },
   { name: "tricks-guide-v2", relPath: "src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
   // The root briefing seed. Unlike the guides it lives under `_content/`
@@ -273,6 +312,17 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     templateContent: VIEWS_CLAUDE_MD,
     priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
   });
+}
+
+/** Install lazy publications guidance and preserve the box's shared notes. */
+export async function installPublicationsGuidance(boxRoot: string): Promise<void> {
+  await installTemplateFile({
+    boxRoot,
+    relPath: "src/publications/CLAUDE.md",
+    templateContent: PUBLICATIONS_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["publications-guide-v1"].superseded,
+  });
+  await writeFileIfMissing(path.join(boxRoot, "src", "publications", "NOTES.md"), PUBLICATIONS_NOTES);
 }
 
 /** Install or refresh the local guide for agent-authored feedback cards. */

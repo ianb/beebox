@@ -170,13 +170,13 @@ export interface ResolveLaunchdInvocationParams {
   /** `process.execPath`. */
   readonly execPath: string;
   readonly configPath: string;
+  readonly homeDir: string;
 }
 
 /**
  * Builds the launchd-facing invocation for whichever mode `entryPath`
- * indicates. Bundle mode is unchanged from before source-mode existed:
- * `[execPath, entryPath, configPath]`, no working directory or env — the
- * bundle is self-contained and portable. Source mode instead runs through
+ * indicates. Both modes include Node and user CLI directories so external
+ * tools installed with uv/pipx are visible to launchd. Source mode runs through
  * the repo-root wrapper (which resolves and execs tsx itself), so the
  * schedule needs to hand launchd a repo root (`WorkingDirectory`) and a
  * `PATH` with a `node` on it (launchd's own default `PATH` has none —
@@ -187,7 +187,10 @@ export async function resolveLaunchdInvocation(
   params: ResolveLaunchdInvocationParams,
 ): Promise<LaunchdInvocation> {
   if (detectRunMode(params.entryPath) === "bundle") {
-    return { programArguments: [params.execPath, params.entryPath, params.configPath] };
+    return {
+      programArguments: [params.execPath, params.entryPath, params.configPath],
+      environmentVariables: { PATH: launchPath(params) },
+    };
   }
   return resolveSourceInvocation(params);
 }
@@ -207,8 +210,12 @@ async function resolveSourceInvocation(params: ResolveLaunchdInvocationParams): 
   return {
     programArguments: [wrapperPath, params.configPath],
     workingDirectory: repoRoot,
-    environmentVariables: { PATH: `${dirname(params.execPath)}:/usr/bin:/bin` },
+    environmentVariables: { PATH: launchPath(params) },
   };
+}
+
+function launchPath(params: ResolveLaunchdInvocationParams): string {
+  return `${dirname(params.execPath)}:${join(params.homeDir, ".local", "bin")}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin`;
 }
 
 export interface ScheduleContext {
@@ -261,6 +268,7 @@ export async function installSchedule(params: InstallParams): Promise<InstallRes
     entryPath: params.entryPath,
     execPath: params.execPath,
     configPath: params.configPath,
+    homeDir: params.homeDir,
   });
   const plist = generatePlist({ ...invocation, intervalSeconds, watchPaths, logPath: log });
   await writeFileAtomic(path, { contents: plist });

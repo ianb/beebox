@@ -6,6 +6,7 @@ labels: [browse, dev-tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-collection-views — visual check of the rewritten todo list
+priority: normal
 ---
 
 On 2026-09-20, `bin/browse screenshot` did not return on any page of the
@@ -51,3 +52,13 @@ does not merely block, it can also return without producing output.
 
 The remaining untested hypothesis from the original filing stands: the display
 was asleep or locked during every attempt in both worktrees.
+
+**Re-encountered 2026-09-24 and 2026-09-25 in `worktree-todos-ui`.**
+Screenshots worked in this worktree at the start of the session on
+2026-09-24, then hung for every later capture across four implementation
+agents and the driving session. On 2026-09-25, `https://example.com` also
+hung after `bin/browse close` and a fresh `open` (60 s and 40 s timeouts, no
+file). `open`, `snapshot`, `click`, and `eval` kept working throughout, so
+all UI verification fell back to DOM reads. That screenshots worked earlier
+in the same session and later stopped fits the asleep-or-locked display
+hypothesis; it was not checked directly.

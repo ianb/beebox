@@ -51,6 +51,34 @@ export class ConfigureError extends Error {
   }
 }
 
+export class EmptyPhotosAlbumError extends ConfigureError {
+  constructor() { super("--photos-album must not be empty"); this.name = "EmptyPhotosAlbumError"; }
+}
+export class PhotosDispositionError extends ConfigureError {
+  constructor() { super("--photos-album requires --disposition keep"); this.name = "PhotosDispositionError"; }
+}
+
+/** Optional Photos export failed before the normal folder sweep. */
+export class PhotosExportError extends Error {
+  constructor(params: { album: string; code: number | null; detail: string }) {
+    const { album, code, detail } = params;
+    super(`osxphotos export failed for album "${album}" (exit ${String(code)}): ${detail}`);
+    this.name = "PhotosExportError";
+  }
+}
+export class PhotosAccessError extends Error {
+  constructor(album: string) {
+    super(`Apple Photos access denied for album "${album}"; grant Full Disk Access to the app running scan-uploader and allow the requesting app listed under System Settings → Privacy & Security → Automation to control Photos. Run one export manually first to approve any macOS permission prompts.`);
+    this.name = "PhotosAccessError";
+  }
+}
+export class PhotosToolMissingError extends Error {
+  constructor() { super("osxphotos is not installed; install it with `uv tool install osxphotos` or `pipx install osxphotos`"); this.name = "PhotosToolMissingError"; }
+}
+export class PhotosTimeoutError extends Error {
+  constructor() { super("osxphotos export timed out after 10 minutes"); this.name = "PhotosTimeoutError"; }
+}
+
 /** The `schedule` subcommand failed validation, resolution, or a launchd
  * (`launchctl`) invocation. */
 export class ScheduleError extends Error {

@@ -18,6 +18,7 @@ import { MIGRATIONS } from "../migrations.js";
 import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import {
   installFeedbackGuide,
+  installPublicationsGuidance,
   installSchemasGuide,
   installTricksFiles,
   installViewsGuide,
@@ -210,6 +211,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 
   // Install views CLAUDE.md if missing
   await installViewsGuide(resolvedRoot);
+  await installPublicationsGuidance(resolvedRoot);
   await installFeedbackGuide(resolvedRoot);
 
   // Initialize git repo (only on fresh init) — don't commit yet;

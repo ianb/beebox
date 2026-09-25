@@ -6,6 +6,7 @@ labels: [courseware, progress]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey saved-state review
+priority: backlog
 ---
 
 The Chemistry Foundations progress card has contradictory saved state after the

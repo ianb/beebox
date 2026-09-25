@@ -6,7 +6,7 @@ narration `hq` region, and the mobile `keyboard` region. Whether the mic is
 recording lives in the transcription machine and is mirrored in as the
 `recording` flag. The machine commands the real mic/TTS devices through named
 action seams; here we replace those seams with spies and assert the
-*decisions*. See `docs/composer-input-machine.md`.
+*decisions*. See `docs/chat/composer.md`.
 
 ```ts setup
 import { createActor } from "xstate";

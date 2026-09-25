@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-prompt-calibration — verifying the current triage documentation
+priority: backlog
 ---
 
 `bbx handle` can pass only the first item in a multi-item category bucket to a

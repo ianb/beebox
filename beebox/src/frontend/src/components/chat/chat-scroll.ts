@@ -33,7 +33,7 @@
  * the button's visibility; `hasUnseenContent` its accent.
  *
  * Testing: `/dev/chat-scroll` runs the scenario table against this hook; the
- * browser procedure is docs/chat-scroll-testing.md.
+ * browser procedure is docs/chat/scroll.md.
  */
 
 import { useRef, useState, useCallback, useEffect } from "react";

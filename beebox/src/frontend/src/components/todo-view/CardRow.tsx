@@ -19,6 +19,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { bbxSource } from "../../lib/source-tag";
 import { ItemTree } from "./ItemTree";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside";
 import { buildRowSections, progressOf, type TodoReduction, type TodoRow } from "../todo-view-card-logic";
 
 /** What a card amounts to: what is open, what is finished, and the next date it carries. */
@@ -55,10 +56,14 @@ function SectionHead({ label, path, reduction }: { label: string; path: string[]
 
 export function CardRow({ row }: { row: TodoRow }) {
   const sections = buildRowSections(row);
+  // In a workspace pane the title opens the card in the other pane
+  // (`docs/plans/todos-ui.md`, Track 5); the peek still previews in place.
+  const openBeside = useOpenBeside();
+  const open = openBeside === null ? undefined : (): void => openBeside(cardTarget(row.card.path));
   return (
     <Stack gap="sm" {...bbxSource("card", row.card.path)}>
       <Row gap="sm" align="start" justify="between" wrap={false}>
-        <FileEntry summary={row.card} className="flex-1 min-w-0" />
+        <FileEntry summary={row.card} onOpen={open} onPanel={open} className="flex-1 min-w-0" />
         <Stack gap="none" align="end" className="flex-shrink-0 pt-1.5">
           <RowReduction reduction={row.reduction} />
           {row.via === "reference" ? (

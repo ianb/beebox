@@ -31,6 +31,7 @@ import { assertNever } from "./exhaustive";
 import { withSecurityHeaders } from "./headers";
 import { isExpired, loadManifest } from "./manifest-store";
 import { forbidden, gone, methodNotAllowed, notFound } from "./responses";
+import { handleSite, hasPinnedSiteBindings, readSiteWorkerIdentity } from "./site";
 import { handleSubmit, matchSubmitPath } from "./submit";
 
 type Prefix = "p" | "s" | "a";
@@ -51,7 +52,11 @@ export default {
  */
 export async function handle({ request, env, deps }: { request: Request; env: Env; deps: WorkerDeps }): Promise<Response> {
   // Single exit: every response (including errors) gets the full header set.
-  return withSecurityHeaders(await route({ request, env, deps }));
+  const siteMode = hasPinnedSiteBindings(env);
+  const response = siteMode
+    ? await handleSite({ request, env, deps, identity: readSiteWorkerIdentity(env) })
+    : await route({ request, env, deps });
+  return withSecurityHeaders(response, siteMode ? "site" : "legacy");
 }
 
 /** Route a request to a response WITHOUT security headers (the caller adds them). */
@@ -109,6 +114,9 @@ async function route({ request, env, deps }: { request: Request; env: Env; deps:
 
   const manifest = await loadManifest(pubId, env);
   if (manifest === null) return notFound();
+  // A legacy shared Worker must never interpret a site manifest as its older
+  // tier/path shape, even if an old slug pointer still names this publication.
+  if ("kind" in manifest) return notFound();
 
   // Fail-closed on a tier/URL-prefix mismatch: a mis-uploaded manifest can't
   // widen access (e.g. an `accounts` manifest reached via `/s/`).

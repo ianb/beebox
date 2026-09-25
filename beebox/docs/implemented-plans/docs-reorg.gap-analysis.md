@@ -115,7 +115,7 @@ answered — remain open questions in `docs-reorg.md`.
 9. **Two-and-a-half registration manifests** (`bbx boxes add` scheduler
    manifest vs `hub.json`, plus `bbx activity` reading boxes.json) read as
    one system in docs. Cross-reference or unify?
-10. `docs/composer-input-machine.md` leads with an unshipped 5-state
+10. `docs/chat/composer.md` leads with an unshipped 5-state
     design and buries the shipped 3-state reality — restructure?
 
 ## C. Documented but wrong / unfindable from point of need

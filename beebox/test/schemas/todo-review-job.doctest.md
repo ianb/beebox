@@ -1,7 +1,9 @@
 # `todo-review-job` card schema
 
-The compact brief the wakeup sweep queues for the reactor
-(`core/todo/review-sweep.ts`). Each item is deliberately terse: a locator, the
+The compact brief the wakeup sweep used to queue for the reactor
+(`core/todo/review-sweep.ts`). Since `docs/plans/todos-ui.md` Track 7 nothing
+writes these cards (the todo-review procedure prints the brief instead), but
+the schema stays so a card still pending on a box validates and drains. Each item is deliberately terse: a locator, the
 todo's text, whichever date drove it into its set — and, since
 `docs/plans/todo-collection.md` Track 4, where it was written.
 

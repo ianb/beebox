@@ -2,6 +2,10 @@ import { createContext, useContext, useMemo } from "react";
 import { resolveRelativePath } from "../lib/view-url";
 import { isRecord } from "@shared/is-record";
 import { toDisplayPath } from "@shared/display-path";
+import { TodosFieldSchema, type TodoEntry } from "@shared/todo-model";
+import { TodoItem } from "./todo/TodoItem";
+import { hiddenInReading } from "./todo/todo-item-logic";
+import { usePlateState } from "./todo/card-todos-context";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
@@ -84,23 +88,74 @@ function ValueView({ value }: { value: unknown }): ReactNode {
     );
   }
   if (hasRef(value) && Object.keys(value).length === 1) return <RefLink refPath={value.ref} />;
-  if (isRecord(value)) return <FieldsTable fields={value} />;
+  if (isRecord(value)) return <FieldsTable fields={value} root={false} />;
   return null;
 }
 
-function FieldsTable({ fields }: { fields: Record<string, unknown> }): ReactNode {
+/** One `todos:` entry, addressed as the collector addresses it (`{ kind: "frontmatter", index }`). */
+function FrontmatterTodo({ entry, index }: { entry: TodoEntry; index: number }): ReactNode {
+  const nav = useContext(FieldsNavContext);
+  const cardPath = nav?.basePath ?? null;
+  const locator = { kind: "frontmatter" as const, index };
+  const plateState = usePlateState(cardPath, locator);
+  return (
+    <li className="min-w-0">
+      <TodoItem
+        status={entry.status ?? "open"}
+        assigned={entry.assigned}
+        due={entry.due}
+        start={entry.start}
+        plateState={plateState}
+        layout="line"
+        locator={locator}
+        cardPath={cardPath}
+        text={entry.text}
+        muted={false}
+      >
+        {entry.text}
+      </TodoItem>
+    </li>
+  );
+}
+
+/**
+ * A card's own `todos:` list, rendered as todos (`docs/plans/todos-ui.md`,
+ * Track 2) rather than as `text:`/`due:` rows. `null` when the value is not a
+ * valid todo list, so it falls back to the generic rendering — the collector
+ * reads nothing from an invalid list either (`core/todo/extract.ts`).
+ */
+function visibleTodoEntries(value: unknown): Array<{ entry: TodoEntry; index: number }> | null {
+  const parsed = TodosFieldSchema.safeParse(value);
+  if (!parsed.success || parsed.data === undefined) return null;
+  return parsed.data
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => !hiddenInReading({ status: entry.status ?? "open", assigned: entry.assigned }));
+}
+
+function FieldRow({ name, value, root }: { name: string; value: unknown; root: boolean }): ReactNode {
+  const todos = root && name === "todos" ? visibleTodoEntries(value) : null;
+  // Every entry a finished agent follow-up: nothing for the reader here.
+  if (todos !== null && todos.length === 0) return null;
+  return (
+    <div className="contents">
+      <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{name}:</dt>
+      <dd className="min-w-0 max-w-full">
+        {todos !== null ? (
+          <ul className="min-w-0 space-y-1">
+            {todos.map(({ entry, index }) => <FrontmatterTodo key={index} entry={entry} index={index} />)}
+          </ul>
+        ) : name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <ValueView value={value} />}
+      </dd>
+    </div>
+  );
+}
+
+function FieldsTable({ fields, root }: { fields: Record<string, unknown>; root: boolean }): ReactNode {
   const entries = Object.entries(fields);
   if (entries.length === 0) return null;
   return (
     <dl className="min-w-0 max-w-full grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields">
-      {entries.map(([name, value]) => (
-        <div key={name} className="contents">
-          <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{name}:</dt>
-          <dd className="min-w-0 max-w-full">
-            {name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <ValueView value={value} />}
-          </dd>
-        </div>
-      ))}
+      {entries.map(([name, value]) => <FieldRow key={name} name={name} value={value} root={root} />)}
     </dl>
   );
 }
@@ -111,5 +166,5 @@ export function FrontmatterFields({ fields, onNavigate, basePath }: {
   basePath: string | undefined;
 }): ReactNode {
   const navCtx = useMemo<FieldsNavCtx>(() => ({ onNavigate, basePath }), [onNavigate, basePath]);
-  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={fields} /></FieldsNavContext.Provider>;
+  return <FieldsNavContext.Provider value={navCtx}><FieldsTable fields={fields} root /></FieldsNavContext.Provider>;
 }

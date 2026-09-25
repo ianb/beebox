@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — journey F newcomer walk
+priority: backlog
 ---
 
 A newcomer asked what help was possible with a future neighbour meal. The

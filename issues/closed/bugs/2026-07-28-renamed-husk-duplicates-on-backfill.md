@@ -79,7 +79,7 @@ so nobody has renamed one yet. The bug is armed, not fired.
 ## Knock-on for chat review
 
 Two husks for one session interact badly with
-[chat review](../../../beebox/docs/chat-review.md): its journal is keyed by
+[chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
 **session id**, but `review-span` lives on the **husk**. The first husk gets
 reviewed and advances the journal; the second then resolves an empty span, falls
 below the size threshold, and is never reviewed — so it sits there permanently

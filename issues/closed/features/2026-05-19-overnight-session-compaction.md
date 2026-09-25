@@ -8,7 +8,7 @@ resolution: implemented
 
 **Resolved 2026-07-28** — implemented under the name **chat review** (not
 "compaction"; that word was reserved for the SDK's context-window compaction).
-See [docs/chat-review.md](../../../beebox/docs/chat-review.md) for the
+See [docs/chat/review.md](../../../beebox/docs/chat/review.md) for the
 current reference and [the design doc](../../../beebox/docs/implemented-plans/chat-review.md)
 for rationale/history. Landed on `main` via the `worktree-compacting` branch.
 

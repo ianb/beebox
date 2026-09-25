@@ -561,7 +561,7 @@ tiers from [testing](../testing.md); no new testing framework.
 The permanent gallery is both a reference for theme authors and the subject of
 `card-themes.tour.ts`. It shows actual engine rendering, not a parallel handwritten
 renderer. Run the tour, inspect screenshots, and package labeled evidence in an
-exhibit. Check contrast independently because [tours](../tours.md) documents that
+exhibit. Check contrast independently because [tours](../testing/tours.md) documents that
 its current axe run suppresses color contrast. Verify keyboard focus, touch-sized
 Properties controls, reduced motion, print, long content, and nested scopes.
 
