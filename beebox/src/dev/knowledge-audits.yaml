@@ -16,7 +16,7 @@ tests:
     watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
     fixture:
       CLAUDE.md: |
-        @node_modules/beebox/box-docs/quick-chat.md
+        @node_modules/beebox/box-docs/chat/quick-chat.md
     correct_contains:
       - "_config/chat-routing.yaml"
       - "keepEligible"

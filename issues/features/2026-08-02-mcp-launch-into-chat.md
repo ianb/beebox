@@ -50,7 +50,7 @@ being told "go start a chat over there" and losing the thread.
 - **Message provenance.** The seeded context — is it delivered as a *user*
   message, an *agent/system handoff* block, or a dedicated handoff kind? This
   decides how the destination agent treats it and whether it auto-runs a turn.
-  (See `docs/chat-session-lifecycle.md`.)
+  (See `docs/chat/sessions.md`.)
 - **The redirect channel.** How does an MCP tool call cause the chat UI to
   navigate? The tool returns a directive; the client must interpret it and route
   to the target chat. Needs a defined "navigate to chat X" signal from the
@@ -69,7 +69,7 @@ being told "go start a chat over there" and losing the thread.
 
 - [Landmarks](../../beebox/docs/landmarks.md) — the navigation surface the
   "by landmark" target rides on.
-- [Chat session lifecycle](../../beebox/docs/chat-session-lifecycle.md) — how
+- [Chat session lifecycle](../../beebox/docs/chat/sessions.md) — how
   a chat/turn starts, which the seeded message would trigger.
 - Memory Atlas architecture review (`research/memory-atlas-architecture-review.md`)
   — the feature set this belongs to.

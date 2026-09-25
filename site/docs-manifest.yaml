@@ -59,7 +59,7 @@
   publish: concepts/model-policy.md
   description: "Which engine (Claude Code or Codex) and which model tier a box thinks with."
 
-- source: beebox/docs/chat-schedules.md
+- source: beebox/docs/chat/schedules.md
   publish: concepts/chat-schedules.md
   description: "Timers the agent sets from chat that fire later."
 
@@ -274,11 +274,19 @@
   publish: dev/event-bus.md
   description: "The in-process pub/sub event system."
 
-- source: beebox/docs/chat-session-lifecycle.md
+- source: beebox/docs/chat.md
+  publish: dev/chat.md
+  description: "The chat subject: one page per member, and where the rest is owned."
+
+- source: beebox/docs/chat/sessions.md
   publish: dev/chat-session-lifecycle.md
   description: "Chat session state and recovery."
 
-- source: beebox/docs/chat-review.md
+- source: beebox/docs/chat/history.md
+  publish: dev/chat-history.md
+  description: "The transcript and the acceptance record; how a replayed photo is served."
+
+- source: beebox/docs/chat/review.md
   publish: dev/chat-review.md
   description: "Nightly chat titles and summaries."
 
@@ -302,13 +310,9 @@
   publish: dev/testing/knowledge-audits.md
   description: "Tests that prompt a real box agent and check what it knows."
 
-- source: beebox/docs/composer-states.md
-  publish: dev/composer-states.md
-  description: "The chat input state machine."
-
-- source: beebox/docs/composer-input-machine.md
-  publish: dev/composer-input-machine.md
-  description: "Composer input validation and submission logic."
+- source: beebox/docs/chat/composer.md
+  publish: dev/composer.md
+  description: "The chat composer: its coordination machine and a map of its rendered states."
 
 - source: beebox/docs/image-orientation.md
   publish: dev/image-orientation.md

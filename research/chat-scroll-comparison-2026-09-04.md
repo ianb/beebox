@@ -1,7 +1,7 @@
 # Chat scroll comparison — 2026-09-04
 
 Investigation for `chat-scroll-fixes`, alongside the
-[local reproduction protocol](../beebox/docs/chat-scroll-testing.md).
+[local reproduction protocol](../beebox/docs/chat/scroll.md).
 This is a source review, not hands-on verification of either product.
 
 ## OpenClaw

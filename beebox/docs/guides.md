@@ -37,7 +37,7 @@ where to put new material.
 | Procedures | [docs/procedure-implementation.md](procedure-implementation.md) |
 | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
 | Deployed-server health-check runbooks | [docs/health-checks.md](health-checks.md) |
-| Agent-set chat timers (`<schedule>` tag) | [docs/chat-schedules.md](chat-schedules.md) |
+| Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
 | Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
 | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt-audits.md](prompt-audits.md)) |
 | Triage pipeline current guide | [docs/triage.md](triage.md) |
@@ -48,10 +48,10 @@ where to put new material.
 | Box layout reference | [docs/box-layout.md](box-layout.md) |
 | Landmarks (navigation surface) | [docs/landmarks.md](landmarks.md) |
 | Client debug log | [docs/client-debug-log.md](client-debug-log.md) |
-| Quick chat routing and rubric | [docs/quick-chat.md](quick-chat.md) |
-| Chat session lifecycle | [docs/chat-session-lifecycle.md](chat-session-lifecycle.md) |
+| Quick chat routing and rubric | [docs/chat/quick-chat.md](chat/quick-chat.md) |
+| Chat session lifecycle | [docs/chat/sessions.md](chat/sessions.md) |
 | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
-| Chat review (nightly titles + summaries) | [docs/chat-review.md](chat-review.md) |
+| Chat review (nightly titles + summaries) | [docs/chat/review.md](chat/review.md) |
 | Content-Security-Policy | [docs/content-security-policy.md](content-security-policy.md) |
 | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
 | Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
