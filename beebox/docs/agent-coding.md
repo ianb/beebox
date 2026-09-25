@@ -1,8 +1,7 @@
 # Agent coding, and the checks around it
 
 Part of [how development happens here](development-process.md). See also
-[the development workflow](development-workflow.md), [testing what agents know
-and do](agent-testing.md), and [technologies and AI services](technologies.md).
+[the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technologies.md).
 
 ## Agent coding
 

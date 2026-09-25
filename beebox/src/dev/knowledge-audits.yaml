@@ -2870,7 +2870,7 @@ tests:
   # directly without reading the file.
   #
   # `context_dir` and `fixture` are the audit-runner fields that drive
-  # this — see docs/knowledge-audits.md.
+  # this — see docs/testing/knowledge-audits.md.
   #
   # Status (2026-05-10): landmark-subdir-claude-md-loads passes —
   # agent answered "ZK-4827-LANDMARK" with 0 file reads and 0
