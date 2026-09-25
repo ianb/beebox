@@ -1,8 +1,10 @@
-# Calendar Integration
+# Calendar
+
+Google Calendar synced two-way into `.ics` files in `_content/calendar/`.
+
+## What it is
 
 **Status: Implemented (bidirectional).** Google Calendar ↔ `.ics` files in `_content/calendar/`. Pull is the well-exercised path; local edits, locally-created events, and `x-bbx-DELETE` markers are pushed back to Google during sync. Caveats: scheduled auto-sync is disabled by default, and the push path has little real-world mileage.
-
-## Overview
 
 Google Calendar sync into `.ics` files as the canonical local store. Events are pulled on each calendar connector sync; the CLI surfaces them via `bbx calendar`. No realized monthly card views — queries are CLI-driven.
 
@@ -21,15 +23,28 @@ Recurring events are stored as a single `.ics` with an `RRULE`; expansion to per
 
 `.ics` is RFC 5545: editable, greppable, parses cleanly via `ical.js` with round-trip fidelity.
 
-## Config and state
+## Configuration
+
+`_config/connectors/google-calendar.json` holds the calendars to sync
+(default `["primary"]`) and the window:
+
+```json
+{
+  "calendars": ["primary", "your.email@gmail.com", "calendar-id@group.calendar.google.com"],
+  "syncDaysBack": 30,
+  "syncDaysForward": 90
+}
+```
+
+Find calendar IDs in Google Calendar → Settings → (calendar name) → "Integrate calendar" section.
+
+## State
 
 ```
-_config/connectors/google-calendar.json         # sync settings (which calendars)
-_config/connectors/google-calendar.secret.json  # OAuth tokens (gitignored)
-_config/connectors/google-calendar-state.json   # sync cursor, event-file mapping
+_bookkeeping/connectors/google-calendar-state.json   # sync cursor, event-file mapping (machine-owned, gitignored)
 ```
 
-`google-calendar.json` holds the list of calendar IDs to sync (default: `["primary"]`). `google-calendar-state.json` tracks per-event metadata, including the slugged filename for each Google event ID (so re-syncs update the right file even if the slug would change).
+`google-calendar-state.json` tracks per-event metadata, including the slugged filename for each Google event ID (so re-syncs update the right file even if the slug would change).
 
 **The index is keyed by (event, calendar), not by event id.** A Google event id is unique within one calendar, not across them, so a box syncing two calendars can hold two different events with the same id. Each `eventFiles` key is `<eventId> <calendarId>` — a space, with the calendar id LAST, because an event id is base32hex (plus an `_<instance stamp>` suffix for a recurring instance) and can never contain whitespace, while a calendar id is an address-like string we do not control. Build and read the key through `eventKey`/`parseEventKey` in `src/connectors/google-calendar-event-index.ts`; nothing else should join the two halves. The file carries `"version": 2` to say its keys are composite: a state file without it is re-keyed **on load**, from each entry's recorded `calendarId`, and the rewrite reaches disk on that sync's own save. The oldest entries of all — a bare filename string, from before entries carried metadata — record no calendar, so they are filed under the sentinel `(legacy)` and adopted onto the real calendar the next time a pull returns the same event id. They are kept rather than dropped for the reason in the next paragraph: an entry that disappears takes its file out of the index, and an unindexed `.ics` is pushed to Google as a new event.
 
@@ -79,7 +94,9 @@ class GoogleCalendarConnector implements Connector {
 
 ## Auth
 
-Google Calendar requires OAuth2 (unlike Gmail, which accepts app passwords). Auth setup goes through `bbx google-auth`; tokens land in `google-calendar.secret.json` and refresh on demand from within the connector.
+Google Calendar requires OAuth2. Tokens come from the shared
+[Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
+from within the connector.
 
 ## Design choices worth noting
 

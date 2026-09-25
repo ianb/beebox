@@ -1,4 +1,8 @@
-# Google Drive Integration
+# Drive
+
+Google Docs, Sheets, and folders as cards: synced, mirrored, or pointed at.
+
+## What it is
 
 Three kinds of Drive card, three promises:
 
@@ -13,7 +17,7 @@ Every one of them is a card; there is no mount config to edit.
 
 ## Prerequisites
 
-1. **Google OAuth** configured (see [google-setup.md](google-auth.md))
+1. **Google OAuth** configured (see [Google auth](google-auth.md))
 2. **Drive service** enabled for the box: set `googleServices.drive: true` in `_config/box.json` or toggle it in the Admin page
 3. The OAuth scopes `drive.readonly` and `drive.file` are already included in the default scope set
 

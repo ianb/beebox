@@ -1,17 +1,19 @@
-# Google Cloud Console Setup
+# Google auth
+
+The one Google OAuth client and grant that Calendar, Gmail, and Drive share: creating it, authorizing it, where the tokens live, and what to do when the grant dies.
+
+## What it is
 
 This guide walks through setting up Google OAuth2 credentials for Bee Box. These credentials are shared across all Google connectors (Calendar, Gmail API, Drive).
 
-See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
-
-## 1. Create a Google Cloud Project
+## Create a Google Cloud project
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Click the project dropdown at the top → **New Project**
 3. Name it something like "Bee Box"
 4. Click **Create**
 
-## 2. Enable APIs
+## Enable APIs
 
 In your new project, go to **APIs & Services → Library** and enable:
 
@@ -22,7 +24,7 @@ In your new project, go to **APIs & Services → Library** and enable:
 
 Search for each one and click **Enable**.
 
-## 3. Configure OAuth Consent Screen
+## Configure the OAuth consent screen
 
 Go to **APIs & Services → OAuth consent screen**:
 
@@ -36,7 +38,7 @@ Go to **APIs & Services → OAuth consent screen**:
 
 > **Note:** In Testing mode, tokens expire every 7 days and you'll need to re-auth. If this becomes annoying, you can publish the app (it won't be listed anywhere since there's no homepage/verification).
 
-## 4. Create OAuth Credentials
+## Create OAuth credentials
 
 Go to **APIs & Services → Credentials**:
 
@@ -58,18 +60,20 @@ Go to **APIs & Services → Credentials**:
      then `bbx secrets grant <box> google-oauth-client-id` (and the `-secret`
      name) for each box that needs them. Env vars are not read for this path.
 
-## 5. Authorize Bee Box
+## Where tokens live
 
 Google OAuth tokens are stored centrally (shared across all boxes on the server). Set `BBX_GOOGLE_TOKENS_FILE` env var to point to the token file (e.g., `/home/beebox/.google-tokens.json`). If not set, tokens fall back to per-box `_config/connectors/google.secret.json`.
 
-### Option A: Web Admin (recommended)
+## Authorize Bee Box
+
+### Web admin (recommended)
 
 1. Go to any box's **Admin** page
 2. In the **Google Services** section, click **Connect Google Account**
 3. You'll be redirected to Google for authorization
 4. After approving, you'll be redirected back — the token is now available to all boxes
 
-### Option B: CLI
+### CLI
 
 ```bash
 bbx google-auth
@@ -77,7 +81,7 @@ bbx google-auth
 
 (Client ID/Secret come from the box's granted `google-oauth-client-id`/`google-oauth-client-secret` machine-store entries — see step 4 above.)
 
-### Per-box service policy
+## Per-box service policy
 
 After connecting, enable specific services per box in each box's Admin page (Calendar, Gmail, Drive toggles). Or edit `_config/box.json` directly:
 
@@ -93,7 +97,7 @@ After connecting, enable specific services per box in each box's Admin page (Cal
 
 If `googleServices` is missing, no Google services are enabled for that box (safe default).
 
-## 6. Verify
+## Verify
 
 ```bash
 # Pull calendar events
@@ -106,7 +110,7 @@ bbx calendar today
 bbx calendar
 ```
 
-## Scopes Authorized
+## Scopes authorized
 
 | Scope | Description |
 |-------|-------------|
@@ -154,17 +158,3 @@ The state is stored with the credential, so on a server sharing one
 `BBX_GOOGLE_TOKENS_FILE` across boxes, reconnecting once fixes every box.
 
 Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
-
-### Adding more calendars
-
-Edit `_config/connectors/google-calendar.json`:
-
-```json
-{
-  "calendars": ["primary", "your.email@gmail.com", "calendar-id@group.calendar.google.com"],
-  "syncDaysBack": 30,
-  "syncDaysForward": 90
-}
-```
-
-Find calendar IDs in Google Calendar → Settings → (calendar name) → "Integrate calendar" section.

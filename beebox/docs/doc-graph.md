@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T18:55:30Z
+Generated: 2026-09-25T18:57:30Z
 Total documents: 426
 
 ## Issues
@@ -950,7 +950,7 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 135 lines | current reference
+Title: "Connectors" | 126 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
@@ -974,6 +974,7 @@ Referenced by:
 
 References:
 - → docs/secrets.md (link)
+- → docs/connectors/google-auth.md (link)
 - → docs/connectors/telegram.md (link)
 - → docs/connectors/calendar.md (link)
 - → docs/connectors/gmail.md (link)
@@ -1853,7 +1854,7 @@ Referenced by:
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:207 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
-- docs/connectors/telegram.md:39 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
+- docs/connectors/telegram.md:41 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
 - docs/guides.md:37 (link) — | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
@@ -2126,7 +2127,7 @@ Title: "Triage" | 89 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:155 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
-- docs/connectors.md:132 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:123 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:30 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
@@ -2434,11 +2435,10 @@ References:
 
 #### docs/connectors/calendar.md
 
-Title: "Calendar Integration" | 106 lines | current reference
+Title: "Calendar" | 123 lines | current reference
 
 Referenced by:
-- docs/connectors.md:33 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](connectors/calendar.md) |
-- docs/connectors/google-auth.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
+- docs/connectors.md:36 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
 - docs/design/README.md:31 (link) — [`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../connectors/calendar.md).
 - docs/guides.md:61 (link) — | Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
@@ -2450,12 +2450,15 @@ Referenced by:
 - ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
 - ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:60 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
 
+References:
+- → docs/connectors/google-auth.md (link)
+
 #### docs/connectors/drive.md
 
-Title: "Google Drive Integration" | 263 lines | current reference
+Title: "Drive" | 267 lines | current reference
 
 Referenced by:
-- docs/connectors.md:35 (link) — | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](connectors/drive.md) |
+- docs/connectors.md:38 (link) — | Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
 - docs/implemented-plans/connector-sync-isolation.md:288 (mention) — 1. Update `docs/connectors/drive.md` and the Drive skill text in
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
 - docs/plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
@@ -2466,10 +2469,10 @@ References:
 
 #### docs/connectors/gmail.md
 
-Title: "Gmail Connector Setup" | 181 lines | current reference
+Title: "Gmail" | 185 lines | current reference
 
 Referenced by:
-- docs/connectors.md:34 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
+- docs/connectors.md:37 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](conne
 - docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
 - docs/plans/doc-structure-connectors.md:60 (mention) — | `gmail-setup.md` | `connectors/gmail.md` |
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
@@ -2481,11 +2484,13 @@ References:
 
 #### docs/connectors/google-auth.md
 
-Title: "Google Cloud Console Setup" | 171 lines | current reference
+Title: "Google auth" | 161 lines | current reference
 
 Referenced by:
-- docs/connectors/drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-auth.md))
-- docs/connectors/gmail.md:11 (link) — in [google-setup.md](google-auth.md).
+- docs/connectors.md:31 (link) — authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
+- docs/connectors/calendar.md:98 (link) — [Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
+- docs/connectors/drive.md:20 (link) — 1. **Google OAuth** configured (see [Google auth](google-auth.md))
+- docs/connectors/gmail.md:15 (link) — in [Google auth](google-auth.md).
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](connectors/google-auth.md).
@@ -2494,15 +2499,14 @@ Referenced by:
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:24 (mention) — - `docs/connectors/google-auth.md` already walks an operator through consent screen +
 
 References:
-- → docs/connectors/calendar.md (mention)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
 
 #### docs/connectors/telegram.md
 
-Title: "Telegram Connector Setup" | 120 lines | current reference
+Title: "Telegram" | 122 lines | current reference
 
 Referenced by:
-- docs/connectors.md:32 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](connectors/telegram.md) |
+- docs/connectors.md:35 (link) — | Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
 - docs/plans/doc-structure-connectors.md:62 (mention) — | `telegram-setup.md` | `connectors/telegram.md` |
 
 References:
@@ -2710,7 +2714,7 @@ References:
 Title: "Agent self-configuration of credentialed connectors (Drive first)" | 441 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/gmail.md:144 (mention) — further (`docs/plans/agent-capability-delegation.md`).
+- docs/connectors/gmail.md:148 (mention) — further (`docs/plans/agent-capability-delegation.md`).
 - docs/implemented-plans/bbx-agent-surface.md:95 (mention) — - **Shipped precedent:** `docs/implemented-plans/agent-capability-delegation.md`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:60 (mention) — `beebox/docs/plans/agent-capability-delegation.md`. `wakeup` stays here as
 
@@ -4026,7 +4030,7 @@ References:
 Title: "Dead Google auth as a first-class health + notify condition" | 140 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/google-auth.md:156 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
+- docs/connectors/google-auth.md:160 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:14 (link) — [google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
@@ -7200,7 +7204,7 @@ Title: "Health Checks" | 297 lines | current reference
 
 Referenced by:
 - docs/adding-schemas.md:199 (link) — [`health-checks.md`](server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
-- docs/connectors.md:72 (link) — [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
+- docs/connectors.md:75 (link) — [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 - docs/guides.md:40 (link) — | Deployed-server health-check runbooks | [docs/server/health-checks.md](server/health-checks.md) |
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
@@ -7683,7 +7687,7 @@ Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
-- docs/connectors.md:114 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
+- docs/connectors.md:105 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/CLAUDE.md`).
 - docs/implemented-plans/capture-mode.md:621 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image

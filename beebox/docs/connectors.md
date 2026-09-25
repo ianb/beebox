@@ -1,6 +1,6 @@
 # Connectors
 
-Connectors bridge external services to the box filesystem. Each implements the `Connector` interface with a `sync()` method that pulls data in (and sometimes pushes data out).
+How external services reach the box filesystem: the framework every connector shares, and one page per connector.
 
 ## How connectors work
 
@@ -25,14 +25,17 @@ Procedure requests are run by wakeup orchestration after connector writes finish
 
 Sync rebuilds a connector-managed card's content wholesale from its template; any agent-added field the template doesn't know about is lost unless it's one of the few fields `preserve-agent-fields.ts` explicitly carries forward (currently just `contains`).
 
-## Connector inventory
+## Members
 
-| Connector | File | Card types | Direction | Service-injected | Setup doc |
-|-----------|------|-----------|-----------|-----------------|-----------|
-| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](connectors/telegram.md) |
-| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](connectors/calendar.md) |
-| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-setup.md](connectors/gmail.md) |
-| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](connectors/drive.md) |
+Every built-in connector is service-injected (see below). Shared Google
+authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
+
+| Connector | File | Card types | Direction | Page |
+|---|---|---|---|---|
+| Telegram | `telegram.ts` | `chat-thread` | Two-way | [Telegram](connectors/telegram.md) |
+| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
+| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](connectors/gmail.md) |
+| Google Drive | `google-drive.ts` | `gsheet`, `gdoc`, `gfolder`, `glink` | Two-way | [Drive](connectors/drive.md) |
 
 ## Lifecycle
 
@@ -75,23 +78,11 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 
 ## Configuration
 
-Each connector reads its non-credential config from `_config/connectors/`:
-- `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.json` — named Gmail query rules with a bounded `track` action, a
-  `procedure` action, or a `stage` action (record a pending summary and do
-  nothing else), or the equivalent `query`/`labels` shorthand for a single rule.
-  Every shape states its action explicitly; a missing action, or a missing file,
-  is an error that stops the sync rather than a silent no-op. The history
-  cursor, budgets, and bounded pending summaries live in gitignored
-  `_bookkeeping/connectors/gmail.state.json`.
-  A live email-thread card is the sole tracking registry; deleting it untracks
-  the thread without changing Gmail. See [gmail-setup.md](connectors/gmail.md).
-
-Telegram's credentials (`{ botToken, webhookSecret }`) are the store's
-`telegram-bot/<box>` secret, resolved by `connectors/telegram-helpers.ts` —
-see [`docs/secrets.md`](secrets.md).
-
-Transient state (last sync offsets, mappings) goes in `_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`.
+Each connector reads its non-credential config from
+`_config/connectors/<name>.json` (the shape is on the connector's page), its
+credentials from the machine [secret store](secrets.md), and keeps transient
+state (sync cursors, mappings) in `_bookkeeping/connectors/<name>.state.json`
+or `<name>-state.json`, machine-owned and gitignored.
 
 ## Service injection
 
