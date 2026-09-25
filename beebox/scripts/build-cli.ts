@@ -98,7 +98,7 @@ await build({
 
 // Also build the public view-widgets layer (the `beebox/view-widgets`
 // export) to dist/view-widgets/index.js. Box-authored views import this
-// specifier for <CardLink>/<CardRef>; `bbx view test` resolves it via the
+// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view test` resolves it via the
 // package `exports` map (the temp-dir node_modules/beebox symlink in
 // src/cli/commands/view.ts), and wraps the rendered view in the bundle's
 // NodeViewHostProvider. Only React (incl. its runtime entry points) stays

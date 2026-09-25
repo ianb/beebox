@@ -34,6 +34,7 @@ import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { DocumentIcon } from "./components/DocumentIcon";
 import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
+import { BoxSlugProvider } from "./lib/box-slug";
 import { QuickSearchOverlay } from "./components/search/QuickSearchOverlay";
 
 
@@ -60,10 +61,15 @@ startVoiceStagingDrainer();
  * global chrome.
  */
 export function RootLayout() {
+  // Every page gets the route's slug as context, so `Markdown` reads it
+  // without depending on the router (it also renders in `bbx view test`).
+  const { boxSlug } = useParams({ strict: false });
   return (
-    <PageTitleProvider>
-      <Outlet />
-    </PageTitleProvider>
+    <BoxSlugProvider boxSlug={boxSlug}>
+      <PageTitleProvider>
+        <Outlet />
+      </PageTitleProvider>
+    </BoxSlugProvider>
   );
 }
 

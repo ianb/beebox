@@ -17,23 +17,26 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { TextLink } from "../ui/TextLink";
 import { FriendlyDate } from "../ui/FriendlyDate";
+import { InlineAction } from "../ui/InlineAction";
 import { href } from "../../lib/routing";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside";
 import type { DatedTodo } from "../todo-view-card-logic";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
   const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
+  // In a workspace pane the card opens in the other pane (`docs/plans/todos-ui.md`, Track 5).
+  const openBeside = useOpenBeside();
+  const name = <Text size="xs" tone="muted">{dated.cardTitle}</Text>;
   return (
     <Row gap="sm" wrap align="baseline">
       <Badge size="sm" tone={dated.kind === "due" ? "warning" : "info"} title={dated.kind === "due" ? "Due" : "Starts"}>
         {dated.kind === "due" ? "due" : "starts"} <FriendlyDate iso={dated.date} mode="date" />
       </Badge>
       <Text size="sm">{dated.item.text}</Text>
-      {cardHref === undefined ? (
-        <Text size="xs" tone="muted">{dated.cardTitle}</Text>
-      ) : (
-        <TextLink to={cardHref} tone="subtle">
-          <Text size="xs" tone="muted">{dated.cardTitle}</Text>
-        </TextLink>
+      {openBeside !== null ? (
+        <InlineAction intent="quiet" onClick={() => openBeside(cardTarget(dated.cardPath))}>{name}</InlineAction>
+      ) : cardHref === undefined ? name : (
+        <TextLink to={cardHref} tone="subtle">{name}</TextLink>
       )}
     </Row>
   );

@@ -4759,6 +4759,22 @@ test1:
       peak: 59742
       added: 9150
       turns: 6
+  todo-recheck:
+    - date: 2026-09-25T15:38:02.736Z
+      boxCommit: d3dd59908deb708dd15d88770743ff07b1abb5e6
+      repoCommit: f79edba5c5dc1dce8946d2b5d5e019ee6c36ddbc
+      initial: 49042
+      peak: 52820
+      added: 3778
+      turns: 4
+  view-markdown-export:
+    - date: 2026-09-25T15:38:21.786Z
+      boxCommit: ce0f744083883cfd80a90e287835fe2c51fd6c3b
+      repoCommit: f79edba5c5dc1dce8946d2b5d5e019ee6c36ddbc
+      initial: 49011
+      peak: 55823
+      added: 6812
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

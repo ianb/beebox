@@ -1,16 +1,16 @@
 /**
  * `bbx wakeup` step 2: housekeeping.
  *
- * Sweeps stale tmp uploads and abandoned captures, refills and commits the root
- * landmark, and runs the todo-review sweep (which may queue a job the same
- * cycle's reactor step picks up). Lifted out of `wakeup.ts` so the orchestrator
+ * Sweeps stale tmp uploads and abandoned captures, and refills and commits the
+ * root landmark. (The todo-review sweep that used to run here is the stock
+ * `todo-review` procedure's precheck now, on its own schedule —
+ * `docs/plans/todos-ui.md` Track 7.) Lifted out of `wakeup.ts` so the orchestrator
  * reads as the six steps it is.
  */
 
 import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
 import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { installRootLandmark } from "../../core/box/index.js";
-import { runTodoReviewSweep } from "../../core/todo/review-sweep.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
 
 export async function runHousekeeping(boxRoot: string): Promise<void> {
@@ -50,21 +50,6 @@ export async function runHousekeeping(boxRoot: string): Promise<void> {
   }
   if (swept === 0 && rootLandmarkPath === null) {
     console.log("  Nothing to clean up");
-  }
-
-  // Todo-review sweep (docs/implemented-plans/todo-annotation.md Track 5b): computes
-  // escalated/stirring/stale sets and, when nonempty, queues a job the
-  // reactor cycle below (step 5) picks up this same run — mirrors the
-  // contains-backfill job's "housekeeping step queues a job" pattern.
-  try {
-    const sweep = await runTodoReviewSweep(boxRoot);
-    if (sweep.jobPath !== null) {
-      console.log(
-        `  Todo review: queued ${sweep.jobPath} (${sweep.escalated.length} escalated, ${sweep.stirring.length} stirring, ${sweep.stale.length} stale)`,
-      );
-    }
-  } catch (e) {
-    console.error("  Todo review sweep failed:", e);
   }
 
   console.log("");

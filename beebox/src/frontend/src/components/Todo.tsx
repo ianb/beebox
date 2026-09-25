@@ -3,69 +3,32 @@
  * (`docs/implemented-plans/todo-annotation.md`).
  *
  * `{% todo id="..." status="..." assigned="..." due="..." start="..." %}
- * …{% /todo %}` marks any span as a todo. Read-only rendering in v1 — no
- * click-to-toggle; the agent/human edits the annotation directly
- * (`todo-model.ts`, `markdoc-config.ts` own the vocabulary and validation).
+ * …{% /todo %}` marks any span as a todo. Inline vs block is decided by the
+ * Markdoc transform's `node.inline` split (`quote`/`source` precedent). Both
+ * render through `TodoItem`, so a todo reads the same in a card body, in
+ * frontmatter, and in the list (`docs/plans/todos-ui.md`, Track 2).
  *
- * Status drives the visual treatment: `open` reads live (a small badge plus
- * metadata chips for `due`/`start`/`assigned` when present); `done` is
- * struck through; `parked` is dimmed (deliberately off the plate, not an
- * accident of missing metadata); `dropped` is struck through and grayed
- * (deliberately not doing). Inline vs block is decided by the Markdoc
- * transform's `node.inline` split (`quote`/`source` precedent).
+ * `locator` is not an authored attribute: the `todo` transform adds it when
+ * `Markdown` renders a card's body (`markdoc-config.ts`), and it is how the
+ * todo finds its server plate state (`card-todos-context.ts`). The transform
+ * adds `text` with it, the todo's words as the collector reads them; the two
+ * together are what a tick sends (`todo/todo-actions.ts`). Markdown rendered
+ * outside a card (chat, commit messages) has no locator, no plate state, and
+ * no tick.
+ *
+ * In a card's reading view a finished agent follow-up does not render at all
+ * (`hiddenInReading`).
  */
 
 import type { ReactNode } from "react";
 import { isTodoStatus, type TodoStatus } from "@shared/todo-model";
+import type { TodoLocator } from "@shared/todo-locators";
+import { TodoItem } from "./todo/TodoItem";
+import { hiddenInReading } from "./todo/todo-item-logic";
+import { usePlateState } from "./todo/card-todos-context";
 
 function resolveStatus(status: string | undefined): TodoStatus {
   return status !== undefined && isTodoStatus(status) ? status : "open";
-}
-
-/** Status treatment for a todo's own words. Shared with the todo list (`todo-view/ItemTree.tsx`) so an item reads the same in a list as it does in the card it was written in. */
-export const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
-  open: "text-warm-800",
-  done: "text-warm-400 line-through",
-  parked: "text-warm-400",
-  dropped: "text-warm-400 line-through",
-};
-
-const STATUS_BADGE_CLASS: Record<TodoStatus, string> = {
-  open: "bg-primary-50 text-primary-dark",
-  done: "bg-warm-100 text-warm-500",
-  parked: "bg-warm-100 text-warm-400",
-  dropped: "bg-warm-100 text-warm-400",
-};
-
-interface TodoMetaProps {
-  due: string | undefined;
-  start: string | undefined;
-  assigned: string | undefined;
-}
-
-function TodoMeta({ due, start, assigned }: TodoMetaProps): ReactNode {
-  const chips: string[] = [];
-  if (due !== undefined && due !== "") chips.push(`due ${due}`);
-  if (start !== undefined && start !== "") chips.push(`start ${start}`);
-  if (assigned !== undefined && assigned !== "") chips.push(assigned);
-  if (chips.length === 0) return null;
-  return (
-    <span className="ml-1 space-x-1 align-middle">
-      {chips.map((chip) => (
-        <span key={chip} className="rounded bg-warm-100 px-1.5 py-0.5 text-xs text-warm-500">
-          {chip}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function TodoBadge({ status }: { status: TodoStatus }): ReactNode {
-  return (
-    <span className={`mr-1 rounded px-1.5 py-0.5 align-middle text-xs ${STATUS_BADGE_CLASS[status]}`}>
-      todo
-    </span>
-  );
 }
 
 interface TodoProps {
@@ -73,38 +36,45 @@ interface TodoProps {
   assigned?: string;
   due?: string;
   start?: string;
+  locator?: TodoLocator;
+  /** Transform-only, beside `locator`: the todo's words as the collector flattens them. */
+  text?: string;
   children?: ReactNode;
 }
 
-export function makeTodoComponents(): {
+function RenderedTodo({ props, layout, cardPath }: { props: TodoProps; layout: "inline" | "block"; cardPath: string | null }) {
+  const status = resolveStatus(props.status);
+  const locator = props.locator ?? null;
+  const plateState = usePlateState(cardPath, locator);
+  if (hiddenInReading({ status, assigned: props.assigned })) return null;
+  return (
+    <TodoItem
+      status={status}
+      assigned={props.assigned}
+      due={props.due}
+      start={props.start}
+      plateState={plateState}
+      layout={layout}
+      locator={locator}
+      cardPath={cardPath}
+      text={props.text ?? null}
+      muted={false}
+    >
+      {props.children}
+    </TodoItem>
+  );
+}
+
+export function makeTodoComponents({ cardPath }: { cardPath: string | null }): {
   TodoInline: (props: TodoProps) => ReactNode;
   TodoBlock: (props: TodoProps) => ReactNode;
 } {
-  function TodoInline({ status, assigned, due, start, children }: TodoProps) {
-    const resolved = resolveStatus(status);
-    return (
-      <span data-todo-status={resolved} className={STATUS_TEXT_CLASS[resolved]}>
-        <TodoBadge status={resolved} />
-        {children}
-        <TodoMeta due={due} start={start} assigned={assigned} />
-      </span>
-    );
+  function TodoInline(props: TodoProps) {
+    return <RenderedTodo props={props} layout="inline" cardPath={cardPath} />;
   }
 
-  function TodoBlock({ status, assigned, due, start, children }: TodoProps) {
-    const resolved = resolveStatus(status);
-    return (
-      <div
-        data-todo-status={resolved}
-        className={`my-3 rounded border-l-2 border-warm-300 bg-warm-50/50 py-2 pl-4 pr-3 ${STATUS_TEXT_CLASS[resolved]}`}
-      >
-        <div className="mb-1">
-          <TodoBadge status={resolved} />
-          <TodoMeta due={due} start={start} assigned={assigned} />
-        </div>
-        <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">{children}</div>
-      </div>
-    );
+  function TodoBlock(props: TodoProps) {
+    return <RenderedTodo props={props} layout="block" cardPath={cardPath} />;
   }
 
   return { TodoInline, TodoBlock };

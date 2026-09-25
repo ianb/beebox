@@ -67,7 +67,7 @@ the exports resolve. The tsconfig base resolves as an exported JSON path.
 
 ```ts
 const widgets = await import("beebox/view-widgets");
-Object.keys(widgets).includes("CardLink") && Object.keys(widgets).includes("CardRef")
+["CardLink", "CardRef", "Markdown", "NodeViewHostProvider"].every((name) => Object.keys(widgets).includes(name))
 => true
 
 import.meta.resolve("beebox/tsconfig.base.json").endsWith("/tsconfig.base.json")

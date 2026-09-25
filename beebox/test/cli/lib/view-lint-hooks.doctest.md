@@ -4,7 +4,9 @@ Agent-authored views (`views/*.tsx`) get a compile check the moment they're
 written — the same edit-time nudge cards already get. The check runs from **both**
 validation hook paths: the shell `bbx validate --hook` (installed
 `.claude/settings.json`) and the in-process `cardValidatorHook()` that agent chat
-and agent-run sessions use. Both call the shared `lintViewFile`.
+and agent-run sessions use. Both call the shared `lintViewFile`, and then, for a
+view that compiles, `lintViewMarkdown`: rendering card text other than through
+`Markdown` is an error of the same weight (`test/core/view-markdown-check.doctest.md`).
 
 ```ts setup
 import { mkdir, writeFile, rm } from "node:fs/promises";
@@ -12,7 +14,7 @@ import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { spawn } from "node:child_process";
-import { isViewFile } from "../../../src/lib/paths.js";
+import { isViewFile, isViewSourceFile } from "../../../src/lib/paths.js";
 import { lintViewFile } from "../../../src/webapp/views/compiler.js";
 import { cardValidatorHook } from "../../../src/core/sdk-hooks.js";
 
@@ -23,6 +25,12 @@ export const modes = ["page"];
 export default function Good() { return <div>ok</div>; }
 `;
 const BROKEN_VIEW = `export default function Broken() { return <div`;
+const RAW_BODY_VIEW = `
+export const name = "Raw";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Raw({ cards }) { return cards.map((card) => <p key={card.path}>{card.body}</p>); }
+`;
 
 async function makeViews() {
   const box = await makeTmpBox({ git: true });
@@ -31,6 +39,9 @@ async function makeViews() {
   await mkdir(viewsDir, { recursive: true });
   await writeFile(join(viewsDir, "good.tsx"), GOOD_VIEW);
   await writeFile(join(viewsDir, "broken.tsx"), BROKEN_VIEW);
+  await writeFile(join(viewsDir, "raw.tsx"), RAW_BODY_VIEW);
+  await mkdir(join(viewsDir, "lib"));
+  await writeFile(join(viewsDir, "lib", "prose.tsx"), `export const Prose = ({ card }) => <p>{card.body}</p>;`);
   return viewsDir;
 }
 
@@ -62,6 +73,20 @@ function runShellHook(filePath, sessionId) {
   isViewFile("/box/views/notes.md"),
 ].join(",")
 => true,true,false,false,false
+```
+
+Helpers a view imports live beside it (`views/lib/…`). They are not views,
+but `isViewSourceFile` covers them, so editing one runs the Markdown check
+(and not the compile check):
+
+```ts
+[
+  isViewSourceFile("/box/src/views/dashboard.tsx"),
+  isViewSourceFile("/box/src/views/lib/prose.tsx"),
+  isViewSourceFile("/box/src/views/lib/strip.ts"),
+  isViewSourceFile("/box/src/components/Foo.tsx"),
+].join(",")
+=> true,true,true,false
 ```
 
 ## The shared check
@@ -103,6 +128,30 @@ brokenOut.hookSpecificOutput.additionalContext.startsWith("View compile error")
 => true
 ```
 
+A view that compiles but renders a body as raw text gets the Markdown rule:
+
+```ts continue
+const rawOut = await hook({
+  hook_event_name: "PostToolUse",
+  tool_input: { file_path: join(viewsDir, "raw.tsx") },
+  cwd: viewsDir,
+});
+rawOut.hookSpecificOutput.additionalContext.includes("Render card text with `Markdown` from `beebox/view-widgets`")
+=> true
+```
+
+Editing a helper under `views/` gets the same rule, naming the helper:
+
+```ts continue
+const helperOut = await hook({
+  hook_event_name: "PostToolUse",
+  tool_input: { file_path: join(viewsDir, "lib", "prose.tsx") },
+  cwd: viewsDir,
+});
+helperOut.hookSpecificOutput.additionalContext.includes("line 1: reads `card.body` outside `<Markdown>`")
+=> true
+```
+
 ```ts continue
 const goodOut = await hook({
   hook_event_name: "PostToolUse",
@@ -139,6 +188,22 @@ broken.code
 ```ts continue
 broken.stderr.includes("View compile error")
 => true
+```
+
+The Markdown rule fails the same way:
+
+```ts continue
+const raw = await runShellHook(join(viewsDir, "raw.tsx"));
+[raw.code, raw.stderr.includes("line 5: reads `card.body` outside `<Markdown>`")].join(" ")
+=> 2 true
+```
+
+So does an edited helper:
+
+```ts continue
+const helper = await runShellHook(join(viewsDir, "lib", "prose.tsx"));
+[helper.code, helper.stderr.includes("View renders Markdown by hand")].join(" ")
+=> 2 true
 ```
 
 A clean view exits 0:

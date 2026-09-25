@@ -1594,6 +1594,30 @@ tests:
     correct_contains_any: ["dropped", "drop"]
     tags: [todos, agent-work]
 
+  # docs/plans/todos-ui.md Track 7: the todo-review procedure's brief requires
+  # every item to end with a status change or a `recheck` date, and `recheck`
+  # is the one attribute the agent may write on the boxholder's todos. The
+  # agent guide todos section and the review brief's instructions carry it.
+  # Run 2026-09-25 on test1 (claude): PASS, correct on every watch_for point
+  # (recheck only, 1-90 days, never writes `never`, raises it). Read the
+  # todo-review procedure card first, so measured as knows_about-by-lookup;
+  # in a real run the brief is in context, which is the knows_directly case.
+  - id: todo-recheck
+    prompt: >
+      You are working the daily todo review. One item is the boxholder's todo,
+      past its due date, and you see no sign it was done. What do you change
+      on that todo, if anything, and what else do you do about it?
+    expected_level: knows_directly
+    watch_for: >
+      Sets a `recheck` date 1-90 days out on the todo (and nothing else on it:
+      not its status, due, or text), notes a short reason, and raises it with
+      the boxholder. Says `recheck` is the one attribute it may write on the
+      boxholder's todos, and does not write `recheck="never"` itself.
+      Failure: marks it done/dropped/parked, moves its due date, or leaves the
+      item with no recheck.
+    correct_contains: ["recheck"]
+    tags: [todos, agent-work]
+
   - id: todo-annotation-vs-question
     prompt: "You're processing a card and you're not sure whether to create a {% todo %} or a question card. What's the difference?"
     expected_level: knows_directly
@@ -4523,6 +4547,33 @@ tests:
       should_read: it's a yes/no correctness check, and the agent may confirm
       the guarantee from views.md or the source — either is fine.)
     correct_contains_any: ["rewrites", "tracked", "bbx mv", "validate"]
+    tags: [views, cards]
+
+  # === Views: card text through Markdown ===
+  # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
+  # plan: the views/CLAUDE.md stub names `Markdown` and the rule, so the agent
+  # should not need views.md. The always-loaded agent guide does not name view
+  # APIs, so the stub loading (or not) decides the measured level.
+  # Run 2026-09-25 on test1 (claude): PASS on every watch_for point, but found
+  # it by reading box-docs/views.md (knows_about), not from the stub.
+  - id: view-markdown-export
+    prompt: >
+      I'm writing a box view that lists meeting-note cards with each card's
+      body text under its title. The bodies have Markdown and Markdoc tags like
+      {% todo %}. How should the view render the body? Explain only; do not
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Names `Markdown` from beebox/view-widgets with the card passed as `card`
+      (`<Markdown card={card}>{card.body}</Markdown>`, guarded because body is
+      optional), and says hand-rendering the body (`<p>{card.body}</p>`,
+      splitting it, stripping tags with a regex, or a Markdown library) is a
+      validation error; asks in _config/feedback/ when Markdown lacks something.
+      Failure: suggests marked/react-markdown, splitting on blank lines, or
+      stripping {% %} tags.
+    correct_contains: ["Markdown", "view-widgets"]
+    correct_matches:
+      - 'card=\{card\}'
     tags: [views, cards]
 
   # === Card themes ===

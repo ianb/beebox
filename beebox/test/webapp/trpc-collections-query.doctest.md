@@ -104,6 +104,35 @@ JSON.stringify(texts(boxWide))
 await box.cleanup();
 ```
 
+## A card as `here`: the card summary's one-file query
+
+A card's todo summary (`docs/plans/todos-ui.md`, Track 4) asks about the card
+itself with no reference pass. `here` is a literal path, so a card whose name
+holds glob metacharacters still scopes to itself — and only itself, not a
+sibling that a `[2]` character class would otherwise match.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("_content/porch/Draft [2].memo.card", memo('{% todo %}Sand the rail{% /todo %}\n{% todo status="done" %}Buy primer{% /todo %}\n'));
+await box.write("_content/porch/Draft 2.memo.card", memo('{% todo %}Sibling todo{% /todo %}\n'));
+box.commitAll("seed");
+
+const one = await caller(box.root).collections.query({
+  collection: "todos",
+  query: { here: "_content/porch/Draft [2].memo.card", includeReferring: false, params: { status: ["open", "parked", "done", "dropped"] } },
+});
+
+JSON.stringify(texts(one))
+=> ["Buy primer","Sand the rail"]
+
+JSON.stringify([one.reduction.open, one.reduction.done])
+=> [1,1]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Referring scope: a todo elsewhere that links into `here`
 
 A card outside the glob contributes only the items that point into `here`,

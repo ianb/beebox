@@ -4,8 +4,10 @@
  *
  * A `todo-view` card is a live query, not authored content: its own directory
  * is the query's `here`, its frontmatter supplies `glob`/`status`/`assigned`,
- * and this component renders whatever `collections.query` returns. Read-only
- * — checking a todo off is editing the card it was written in.
+ * and this component renders whatever `collections.query` returns. The list
+ * never edits itself: ticking a line (`todo/TodoItem.tsx`, through the
+ * `TodoActionsContext` its `FileView` provides) edits the card that todo was
+ * written in, and the `file-change` that follows refreshes the list.
  *
  * Two controls change what is shown, and neither is a card field: grouping
  * and "show finished" are view state, so they ride in the URL, survive

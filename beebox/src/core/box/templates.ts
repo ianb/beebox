@@ -155,6 +155,12 @@ To link or embed another card, import \`CardLink\`/\`CardRef\` from
 \`beebox/view-widgets\` (point at cards with \`cardRef="/_content/…"\`, not a
 hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 
+To show a card's text, render its body with \`Markdown\` from
+\`beebox/view-widgets\`: \`{card.body ? <Markdown card={card}>{card.body}</Markdown> : null}\`.
+Any other rendering of card text (\`<p>{card.body}</p>\`, splitting the body,
+a Markdown library) is a validation error; if \`Markdown\` lacks something the
+view needs, say so in \`_config/feedback/\`.
+
 After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 

@@ -179,8 +179,9 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh, run cleanup, retrospective, and todo review enabled; other seeds disabled)`);
     changes.push("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
+    changes.push("  todo-review invokes an agent once a day, only when a todo is overdue, newly started, or stale.");
     changes.push("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
     for (const s of schedules) changes.push(`  ${s}`);
   }

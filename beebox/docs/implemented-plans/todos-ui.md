@@ -1,11 +1,11 @@
 ---
 title: "Todos in the UI — one experience of what is open here and what to do about it"
-status: partial
+status: implemented
 workstream: todos-ui
 issues:
-  - ../../../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md
-  - ../../../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md
-  - ../../../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md
+  - ../../../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md
+  - ../../../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md
+  - ../../../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md
 ---
 # Todos in the UI — one experience of what is open here and what to do about it
 
@@ -23,11 +23,11 @@ sweep does not run on most boxes.
 
 **Issues addressed:**
 
-- Closes [tick controls promised but absent](../../../issues/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md)
+- Closes [tick controls promised but absent](../../../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md)
   (Track 3 makes the controls real).
-- Closes [hide completed agent todos](../../../issues/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md)
+- Closes [hide completed agent todos](../../../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md)
   (Track 2).
-- Closes [the plate badge is a bare number](../../../issues/bugs/2026-08-25-plate-badge-is-a-bare-number.md)
+- Closes [the plate badge is a bare number](../../../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md)
   (Track 1: the plate headline states the badge's number and its scope).
 - Advances, does not close,
   [todos as inline things to think about](../../../issues/features/2026-08-30-todos-inline-things-to-think-about.md):
@@ -240,8 +240,9 @@ New or sharpened:
 
 ### Track 1 — Scope prefilter, plate headline, agent scope
 
-**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2-7 below
-are not started.
+**Status (2026-09-25): implemented**, commit `52b609299`. Tracks 2 through
+7 are implemented; step 9 of the implementation order (walkthrough, audits,
+branch review) remains.
 
 **What.** Make the todo query skip cards that cannot hold a todo, default
 boxholder surfaces to boxholder scope, and give the plate a headline that
@@ -301,6 +302,14 @@ result has the 3 cards' items and exactly one issue.
 
 ### Track 2 — One rendering of a todo
 
+**Status (2026-09-25): implemented** (Track 3 made the checkbox live).
+One correction to the direction below: `Markdoc.transform` resolves the tree
+first, and `resolve` clones every node, so a `Map<Node, TodoLocator>` passed
+in the config cannot be looked up from the transform. `Markdown.tsx` instead
+stamps each todo node with its locator under a module-private symbol
+(`stampLocators`, `shared/todo-locators.ts`), which the clone carries; the
+`todo` transform reads it with `stampedLocator`.
+
 **What.** A todo looks and behaves the same in a card body, in frontmatter,
 and in the list.
 
@@ -354,6 +363,39 @@ used by `ItemTree` and `TodoInline`/`TodoBlock`, with a component doctest
 over the four statuses and an escalated item.
 
 ### Track 3 — Tick and "+ to chat"
+
+**Status (2026-09-25): implemented.** `todos.setStatus`
+(`webapp/trpc/routers/todos.ts`), `TodoActionsContext` and its rules
+(`components/todo/todo-actions.ts`), the provider
+(`components/todo/TodoActionsProvider.tsx`), and the live checkbox and "+"
+in `TodoItem`. Corrections and choices where the direction was silent:
+
+- **The client's `text` comes from the collector's own flattening.** A body
+  todo renders from React children, which carry no plain text to send.
+  `flattenNodes` moved from `core/todo/extract-text.ts` to
+  `shared/todo-text.ts` (with `TodoSeeAlso`), and the `todo` transform adds
+  `text` beside `locator`, so the text a tick sends and the text the server
+  checks come from one function, as the locators do.
+- **One provider, in `FileView`, serves the list too.** Every action is
+  addressed by card path, so the provider `FileView` renders around a card
+  (beside `CardTodos`) also serves a todo-view card's lines; `TodoViewCard`
+  needs none of its own. An embedded figure inherits its host's.
+- **"+" needs a composer, ticking does not.** Where `FileView` has no
+  `onAddSelection`, the provider gives `addToChat: null`: the checkbox is live
+  and "+" is absent. No provider at all (Markdown outside a card view) means
+  read-only and no "+".
+- **"+" on parked and dropped todos**, whose checkbox stays disabled, and on
+  agent todos, which are tickable (the plan did not restrict either).
+- **Not gated on ownership in the UI.** A non-owner's tick is refused by
+  `ownerProcedure` (`FORBIDDEN`) and reverts with that message inline.
+- **Touch.** "+" is hidden until hover or focus-within only under
+  `@media (hover: hover)`; without hover it is always shown. No precedent
+  existed in `components/`.
+- **A conflict also invalidates `card.get` and `collections.query`**, so
+  "it has been reloaded" holds even when no `file-change` arrives. A commit
+  warning is a toast.
+- `position` for "+" is "todo at line N", "todo at line N (#2 on that
+  line)", or "todo in frontmatter".
 
 **What.** A checkbox that sets a todo `done` or back to `open`, and a "+"
 that puts the todo into chat as a selection.
@@ -410,6 +452,29 @@ order, frontmatter entry, and an untick that removes `status`.
 
 ### Track 4 — Per-place summary
 
+**Status (2026-09-25): implemented.** Card line: `components/todo/CardTodos.tsx`.
+In a box view "N open" is plain text for now rather than a link to the
+card's list. The query uses `here` = the card path (its default glob is that
+path, now glob-escaped in `core/collection/here.ts`) rather than an explicit
+`glob`.
+
+Directory line: `components/todo/DirectoryTodos.tsx`, in the browse card's
+sidebar under the landmark header (`BrowseSidebarBody.tsx`). Corrections and
+choices where the direction was silent:
+
+- **`here` = the directory, not `glob: <dir>/**`.** The default glob for a
+  directory `here` is its subtree, glob-escaped, so a directory name with
+  glob characters is safe. `includeReferring: false`, boxholder scope, and
+  `status: ["open"]` (the reduction counts every status anyway).
+- **No line at the box root** (`here` = `""`). The browse card's root
+  listing is `_content`, which does get a line and agrees with the badge.
+- **The plate opens unfiltered.** The stock plate sets `glob: "**"`, which
+  wins over `here`, and the todo-view renderer takes no `here` override, so
+  "filtered by `here`" would need a new param. The plate's path is now one
+  constant, `PLATE_CARD_PATH` (`shared/todo-model.ts`).
+- "N open" is the link, as on a card; it opens the list in the other pane
+  (Track 5), and is plain text where there is no pane to open beside.
+
 **What.** A one-line summary where todos live: at the top of a card, and on
 a directory's browse page.
 
@@ -437,6 +502,28 @@ component doctest over zero todos (no line), all done, and overdue.
 
 ### Track 5 — List links open in the opposite pane
 
+**Status (2026-09-25): implemented.** `WorkspaceCanvas` provides
+`WorkspacePaneContext` per pane, and `useOpenBeside`
+(`components/chat/workspace/use-open-beside.ts`) opens through
+`workspace.open` with the route from the pure `listLinkRoute`
+(`open-beside.ts`, doctest `test/frontend/open-beside.doctest.md`).
+Corrections and choices where the direction was silent:
+
+- **The workspace exists on mobile too** (`workspace.mobile`); the plan's
+  "outside the workspace (mobile, …)" was wrong. On mobile the link opens
+  through the workspace with no destination pane, and the workspace's mobile
+  rule places it. The plain `href` stays only where no pane context exists.
+- **`FileEntry` gains `onOpen`**: passing `onPanel` alone adds a panel
+  button but leaves the title as a peek. With `onOpen` the title opens the
+  card; the eye still peeks. `CardRow` passes the same opener as `onPanel`,
+  so a peeked card can also move to the other pane.
+- **A todo line's words open its card at the top.** No mechanism carries a
+  locator across an open (params and view state are the renderer's, and
+  nothing scrolls a newly opened body to an element), so scrolling to the
+  todo is not done. Outside a pane the words stay plain text, as before.
+- `InlineAction` gains the `quiet` intent (inherits color, underline on
+  hover) so a link inside a todo's words keeps the todo's status treatment.
+
 **What.** From the todo list, a card title and a dated-strip card name open
 the card in the other pane.
 
@@ -455,6 +542,57 @@ scrolled to the todo where the renderer supports it.
 browse-level check in the doctest of `WorkspaceCanvas` pane routing.
 
 ### Track 6 — `Markdown` for box views; hand-rolled Markdown is an error
+
+**Status (2026-09-25): implemented**; the `view-markdown-export` audit is
+added but not yet run. Corrections and choices where the direction was
+silent:
+
+- **Box slug.** `lib/box-slug.tsx`; the root layout (`RootLayout`) provides
+  it from `useParams`, so every page has it, with `undefined` outside a box
+  route as before. A missing provider throws. `NodeViewHostProvider` also
+  provides a `LightboxProvider` (images need one) and takes an optional
+  `boxSlug`, which `bbx view test` now passes.
+- **Node renderability needed two more fixes.** `withBase` read
+  `import.meta.env` directly (undefined in Node); it now uses the guarded
+  `viteBase`. The link renderer imported `withBase` through `api.ts`, which
+  pulled the tRPC client into the Markdown graph; it imports `api-core`.
+- **Node test path.** `@markdoc/markdoc`'s named exports do not resolve
+  under Node's ESM loader, so `Markdown.tsx` cannot be imported by a tsx
+  doctest without default-member access (a lint rule the frontend enforces).
+  The render is tested through the built bundle instead, which is the real
+  `bbx view test` path (`view-test-command.doctest.md`, "Card text through
+  `Markdown`").
+- **Bundle size.** `dist/view-widgets/index.js` grows from about 170 KB to
+  1.2 MB (Markdoc, zod). Both are beebox dependencies and could be made
+  external; left bundled.
+- **The widget** is `view-widgets/ViewMarkdown.tsx`, exported as `Markdown`.
+  It renders with `prose="block"`, as a card's own body does, and navigates
+  with `openCard("/" + serializeViewUrl(target))`.
+- **`ViewCard.bodyLineOffset` is required**: `loadViewCards` reads each card
+  once and takes the offset from `splitCardContent`, the split `card.get`
+  and the collector use.
+- **The check** (`core/views/markdown-check.ts`) also rejects the `remark-`,
+  `micromark-`, `markdown-it-` families, `markdown-to-jsx`, `commonmark`,
+  `snarkdown`, `@mdx-js/*`, and raw `@markdoc/markdoc` (it would bypass the
+  app's tag config), by `import`, `export … from`, `import()`, or
+  `require()`. Beyond the plan's truthiness tests it allows a `typeof`
+  operand, `== null`/`!= null`, and passes through `( )`, `!`, `as`, and the
+  left of `??`. Any `.body` except on `document` counts as a card's. What it
+  does not catch is listed in the module header. In the in-process hook a
+  compile error is reported first; the Markdown check runs only on a view
+  that compiles.
+- **Local helpers** (added after cross-model review: the field-box case keeps
+  its hand-rolled renderer in `views/lib/`). The check follows a file's
+  relative imports transitively (`local-imports.ts`: cycle-safe, within the
+  box root after symlinks, `.js` → `.ts`/`.tsx`, directory → `index`) and
+  names the failing helper's path. `isViewSourceFile` (any `.ts`/`.tsx` under
+  `views/`) makes editing a helper run the Markdown check; the compile check
+  stays on views (`isViewFile`, which does not match `views/lib/*`).
+- **Guide.** A "Card text: `Markdown`" section in `doc-files.ts`, the
+  example and `ViewCard` structure in `doc.ts`/`doc-examples.ts`, and two
+  sentences in the `views/CLAUDE.md` stub (template ledger updated with
+  `pnpm template-stock:update`). A doctest holds every `tsx` example in the
+  guide to the check. test1's one view passes.
 
 **What.** Box views import the built-in renderer from `beebox/view-widgets`,
 and the view check rejects a view that renders Markdown any other way.
@@ -508,6 +646,58 @@ this (`doc-examples.ts:24`).
 behind a box-slug context, with the existing Markdown doctests passing.
 
 ### Track 7 — todo-review runs on its own schedule
+
+**Status (2026-09-25): implemented**; the `todo-recheck` audit is written
+and not yet run. Engine verbs: `src/cli/commands/todo-review.ts` over
+`core/todo/review-check.ts`, `review-verify.ts`, and `review-state.ts` (the
+sweep state and lock, moved out of `review-sweep.ts`). `setTodoAttribute`
+in `set-status.ts` does the `recheck="never"` edit; `setTodoStatus` is now a
+call to it. Health check: `webapp/trpc/routers/health-todos.ts`. Tests:
+`test/cli/commands/todo-review.doctest.md`, plus sweep, model, tag,
+frontmatter, set-status, and `TodoItem` doctests. Decisions the plan left
+open:
+
+- **No job card.** `check` prints the brief (the shared
+  `TODO_REVIEW_INSTRUCTIONS`, today's box-local date, and the items as
+  YAML), and the precheck's `pass-output: true` hands it to the agent. It
+  saves the items, with a snapshot of each todo's status, `assigned`,
+  `start`, and `due`, in `.beebox/todo-review-sweep.json` for `verify`. With
+  no card, the wakeup reactor has nothing to pick up, so two agents never
+  work one review. The job schema stays registered: a card still pending on
+  a box validates and the reactor drains it; `check` ignores it.
+- **The stirring baseline** moves when `check` finds nothing, or when
+  `verify` passes (to the day `check` swept). A review that never settles
+  lists a newly stirring todo again the next day.
+- **The brief carries at most 25 todos**: escalated by oldest `due`, then
+  stirring, then stale by oldest `created`, with "25 of N shown; the rest
+  come in later runs". A cut todo has no new `recheck`, so it comes back.
+  When the cap cuts a stirring todo, `verify` leaves the baseline where it
+  was, so the next run still lists it as stirring. The item's `card` label
+  is cut to 80 characters (an untitled card's label is its whole body).
+- **On a boxholder's todo only `recheck` may change**, and the note after
+  the closing tag. `check` snapshots every other attribute (`id`, `status`,
+  `assigned`, `by`, `created`, `start`, `due`) and the nested `see-also`
+  (`review-snapshot.ts`); `verify` fails an item whose snapshot changed,
+  naming the attributes, and fails a reworded or removed boxholder todo ("the
+  review may not reword the boxholder's todos"). The agent's own todos may
+  change status, or be reworded.
+- **Recheck history is pruned at `check`**: entries whose card is gone, or
+  whose words match no todo on the card, are dropped.
+- **Finding a todo again** in `verify` is by its saved words on its card,
+  with the locator as a tie-break: an agent edit elsewhere on the card moves
+  line numbers without changing the todo.
+- **Who wrote `never` decides what it means** (`review-retired.ts`). With no
+  retired record, it was set by hand and holds. With one (card path + words,
+  or the retired locator when the words changed), it holds only while the
+  todo still matches the snapshot taken at retirement; an edited retired todo
+  is listed again, and the agent replaces `never` with a date. `check`
+  clears the retired record of every todo it lists, so `verify` accepts
+  `never` only when this review's verify wrote it. A `never` the agent wrote
+  fails `verify` and is flagged in the history, so it does not hide the todo
+  from the next review. A todo back in review starts a new count.
+- **"Oldest" in the health message** is by `created`, then by location.
+- **Schedule timeout** is `30m` (a 20-turn agent plus review retries; the
+  scheduler default is 10m). No `lock-group`.
 
 **What.** The review sweep becomes a stock scheduled procedure. This track
 fixes when it runs. It does not decide what it should raise on undated
