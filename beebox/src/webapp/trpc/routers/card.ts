@@ -88,6 +88,12 @@ export interface FrontmatterCardResponse {
   type: string;
   frontmatter: Record<string, unknown> | undefined;
   body: string | undefined;
+  /**
+   * File lines before `body` (the frontmatter block and its fences), from the
+   * same `splitCardContent` the todo collector uses, so a rendered todo can
+   * compute the file-line locator a write addresses (`shared/todo-locators.ts`).
+   */
+  bodyLineOffset: number;
   validationError: string | undefined;
 }
 
@@ -133,6 +139,7 @@ function loadFrontmatterCard(input: {
     path: source,
     kind: "frontmatter",
     type,
+    bodyLineOffset: splitCardContent(raw).lineOffset,
     frontmatter,
     body,
     validationError,
@@ -194,6 +201,7 @@ export const cardRouter = router({
         type: fileType ?? "",
         frontmatter: undefined,
         body: split.hasFrontmatter ? split.body : raw,
+        bodyLineOffset: split.lineOffset,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
       };
     }),

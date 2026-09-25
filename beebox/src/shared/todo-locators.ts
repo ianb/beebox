@@ -67,3 +67,40 @@ function bodyLine(node: Node): number {
   const lines = node.lines;
   return Array.isArray(lines) && typeof lines[0] === "number" ? lines[0] + 1 : 1;
 }
+
+/**
+ * Carrying a locator from the parsed AST into the Markdoc `todo` transform
+ * (`markdoc-config.ts`), for the render path (`Markdown.tsx`).
+ *
+ * A `Map<Node, TodoLocator>` cannot be looked up from inside the transform:
+ * `Markdoc.transform` first runs `resolve`, which CLONES every node
+ * (`Object.assign(new Node(), this, …)`, `@markdoc/markdoc` `ast/node.ts`),
+ * so the transform sees different objects than `assignLocators` keyed. The
+ * clone copies own enumerable properties, symbol keys included, so the
+ * locator rides on the node under a module-private symbol. Source text cannot
+ * produce a symbol-keyed property, which is what keeps an author-written
+ * `locator=` attribute from ever standing in for one (it is also undeclared,
+ * so Markdoc drops it from the transformed attributes). The doctest
+ * `test/shared/todo-locators-render.doctest.md` pins the clone behaviour, so a
+ * Markdoc upgrade that changes it fails there rather than silently dropping
+ * every rendered todo's locator.
+ */
+const LOCATOR_KEY: unique symbol = Symbol("bbx.todoLocator");
+
+/** Stamp each todo node with its locator, in place, before `Markdoc.transform`. */
+export function stampLocators(locators: Map<Node, TodoLocator>): void {
+  for (const [node, locator] of locators) Reflect.set(node, LOCATOR_KEY, locator);
+}
+
+/** The locator {@link stampLocators} put on this node (or on the node it was cloned from), if any. */
+export function stampedLocator(node: Node): TodoLocator | undefined {
+  const value: unknown = Reflect.get(node, LOCATOR_KEY);
+  return isTodoLocator(value) ? value : undefined;
+}
+
+function isTodoLocator(value: unknown): value is TodoLocator {
+  if (typeof value !== "object" || value === null) return false;
+  if (!("kind" in value)) return false;
+  if (value.kind === "frontmatter") return "index" in value && typeof value.index === "number";
+  return value.kind === "body" && "line" in value && typeof value.line === "number";
+}

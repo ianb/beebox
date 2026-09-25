@@ -10,6 +10,7 @@
  * query must resolve the same way whether or not the path exists yet.
  */
 
+import { escape as escapeGlob } from "glob";
 import { parseCardFileName } from "../../shared/card-name.js";
 
 /** True when `here` names one card rather than a directory. */
@@ -18,11 +19,17 @@ function hereIsCard(here: string): boolean {
   return parseCardFileName(base) !== null;
 }
 
-/** The scope glob `here` implies: the box, the card itself, or the directory's subtree. */
+/**
+ * The scope glob `here` implies: the box, the card itself, or the directory's
+ * subtree. `here` is a literal path, so its glob metacharacters are escaped:
+ * a card named `Draft [2].memo.card` must scope to itself, not to a character
+ * class that matches nothing. `glob`'s `escape` leaves braces alone, so a
+ * path containing a `{a,b}` group still brace-expands.
+ */
 export function defaultGlobFor(here: string): string {
   if (here === "") return "**/*.card";
-  if (hereIsCard(here)) return here;
-  return `${here}/**`;
+  if (hereIsCard(here)) return escapeGlob(here);
+  return `${escapeGlob(here)}/**`;
 }
 
 /**

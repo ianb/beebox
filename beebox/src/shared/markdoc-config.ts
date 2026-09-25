@@ -77,6 +77,7 @@ import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc"
 import { QUOTE_TREATMENTS, validateQuoteTreatment } from "./quote-treatment.js";
 import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, validateTodoAttributes } from "./todo-model.js";
+import { stampedLocator } from "./todo-locators.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by the doctest runner); the frontend
@@ -377,7 +378,15 @@ const todo: Schema = {
   transform(node, config) {
     const attributes = node.transformAttributes(config);
     const children = node.transformChildren(config);
-    return new Tag(node.inline ? "TodoInline" : "TodoBlock", attributes, children);
+    // `locator` is transform-only: the render path stamps it on the node
+    // (`stampLocators`, `Markdown.tsx`), and it is not a declared attribute,
+    // so an author's `locator="…"` never reaches the Tag.
+    const locator = stampedLocator(node);
+    return new Tag(
+      node.inline ? "TodoInline" : "TodoBlock",
+      locator === undefined ? attributes : { ...attributes, locator },
+      children,
+    );
   },
 };
 
