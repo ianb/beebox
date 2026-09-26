@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:27:32Z
+Generated: 2026-09-26T16:30:15Z
 Total documents: 436
 
 ## Issues
@@ -27,6 +27,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-development.md** — "Documentation structured like code: how development happens" (154 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines) · shipped history · implemented
@@ -60,7 +61,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -1252,7 +1252,7 @@ References:
 Title: "Media" | 19 lines | current reference
 
 Referenced by:
-- docs/plans/doc-structure-media.md:45 (mention) — | (new) | `media.md`: what media is in a box; members; owned elsewhere (attach scopes in the card format, phone photos i
+- docs/implemented-plans/doc-structure-media.md:45 (mention) — | (new) | `media.md`: what media is in a box; members; owned elsewhere (attach scopes in the card format, phone photos i
 
 References:
 - → docs/media/assets.md (link)
@@ -1487,12 +1487,12 @@ Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
 - docs/implemented-plans/doc-structure-development.md:9 (link) — Seventh cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
+- docs/implemented-plans/doc-structure-media.md:9 (link) — Eighth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-prompts.md:9 (link) — Sixth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure-media.md:9 (link) — Eighth cluster under the [organizing principles](../README.md#organizing-principles):
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -1980,8 +1980,8 @@ Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current re
 
 Referenced by:
 - docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
+- docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 - docs/media.md:18 (link) — - Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).
-- docs/plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 
 #### docs/box/publishing.md
 
@@ -3762,6 +3762,18 @@ References:
 - → deploy/CLAUDE.md (mention)
 - → docs/development/technologies.md (mention)
 - → docs/security-report.md (mention)
+
+#### docs/implemented-plans/doc-structure-media.md **[ORPHAN]**
+
+Title: "Documentation structured like code: media" | 130 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → docs/media.md (mention)
+- → docs/media/assets.md (mention)
+- → docs/media/image-orientation.md (mention)
+- → docs/media/image-transforms.md (mention)
+- → docs/box/phone-photos.md (mention)
 
 #### docs/implemented-plans/doc-structure-prompts.md **[ORPHAN]**
 
@@ -5661,6 +5673,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:14 (link) — > upload design is live. Current model: [`assets.md`](../media/assets.md).
 - docs/implemented-plans/courseware-phase1.md:12 (link) — > unaffected. Current model: [`assets.md`](../media/assets.md).
 - docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/doc-structure-media.md:46 (mention) — | `assets.md` | `media/assets.md` |
 - docs/implemented-plans/scanner-ingest.md:14 (link) — > [`assets.md`](../media/assets.md).
 - docs/media.md:11 (link) — | [Assets](media/assets.md) | git-annex: the model, the extension allowlist, absent content, configuration, commands, fa
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
@@ -5670,7 +5683,6 @@ Referenced by:
 - docs/plans/container-first-pass2.review.md:91 (mention) — `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
 - docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
 - docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
-- docs/plans/doc-structure-media.md:46 (mention) — | `assets.md` | `media/assets.md` |
 - docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
 - docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
 - docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
@@ -5689,9 +5701,9 @@ Title: "Image orientation" | 55 lines | current reference
 
 Referenced by:
 - docs/guides.md:31 (link) — | Image orientation (EXIF) contract | [docs/media/image-orientation.md](media/image-orientation.md) |
+- docs/implemented-plans/doc-structure-media.md:47 (mention) — | `image-orientation.md` | `media/image-orientation.md` |
 - docs/media.md:12 (link) — | [Image orientation](media/image-orientation.md) | The invariant that an image at rest is upright with no EXIF orientat
 - docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
-- docs/plans/doc-structure-media.md:47 (mention) — | `image-orientation.md` | `media/image-orientation.md` |
 - ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/media/image-orientation.md`.
 
 References:
@@ -5703,8 +5715,8 @@ Title: "Image transforms" | 45 lines | current reference
 
 Referenced by:
 - docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](media/image-transforms.md))
+- docs/implemented-plans/doc-structure-media.md:48 (mention) — | `image-transforms.md` | `media/image-transforms.md`, with headings (its facts sat above any heading) |
 - docs/media.md:13 (link) — | [Image transforms](media/image-transforms.md) | `/api/images/*`: the parameters, the errors, the cache, and the helper
-- docs/plans/doc-structure-media.md:48 (mention) — | `image-transforms.md` | `media/image-transforms.md`, with headings (its facts sat above any heading) |
 
 ### docs/plans/
 
@@ -6177,18 +6189,6 @@ References:
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
-
-#### docs/plans/doc-structure-media.md **[ORPHAN]**
-
-Title: "Documentation structured like code: media" | 130 lines | proposal | active
-
-References:
-- → docs/README.md (link)
-- → docs/media.md (mention)
-- → docs/media/assets.md (mention)
-- → docs/media/image-orientation.md (mention)
-- → docs/media/image-transforms.md (mention)
-- → docs/box/phone-photos.md (mention)
 
 #### docs/plans/document-comments.md
 
