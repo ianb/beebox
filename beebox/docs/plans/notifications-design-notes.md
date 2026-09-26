@@ -12,6 +12,11 @@ issues:
 ---
 # Notifications and proactive work: experience, pieces, and worked examples
 
+This is the design conversation before the plan. Where this document and
+[notifications.md](notifications.md) differ on mechanism (output cards
+versus bus events, `bbx remind` versus a `notify:` field), the plan is
+current; the rulings here still stand.
+
 This is the design conversation before the plan. It records what the
 boxholder wants the experience to be, the small set of pieces an agent
 composes to get there, and one worked example per use case. The
