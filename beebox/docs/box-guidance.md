@@ -99,6 +99,20 @@ output before the marker existed and a box must not shadow a generated rule
 under the same name. A boxholder's own rule takes a name outside those
 families. A `.agents/skills/<skill>` symlink goes when its target is gone.
 
+The families `compileGuides` writes (`guides-for-<type>.md`,
+`guide-for-chat-<chat>.md`) prune by marker and manifest too, and an
+`AGENTS.md` symlink whose `CLAUDE.md` is gone is removed by the mirror step.
+
+## Maps and tracked guides
+
+The maps finalizer (`src/core/maps/finalize.ts`) gives every map-bearing
+directory a `CLAUDE.md` holding the map include line. A directory whose
+`CLAUDE.md` is a tracked guide is skipped: the include would make the guide
+differ from stock, and the tracker would park every later rewrite. That
+happened on production boxes before 2026-09-26, so the finalizer and the sync
+both strip a leading include they find on a tracked guide
+(`src/core/maps/include-line.ts`). The map file itself is left where it is.
+
 The sync commit (`commitTemplateSyncChanges`) sweeps the paths
 `isTemplateManagedPath` accepts: every git-tracked `tracked` or `generated`
 row, plus the tracker's own bookkeeping and everything under `.claude/rules/`,

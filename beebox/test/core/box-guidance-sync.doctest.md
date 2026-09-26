@@ -23,6 +23,8 @@ import {
 import { isTemplateManagedPath } from "../../src/core/install-template-file.js";
 import { installValidationHooks } from "../../src/core/install-validation-hooks.js";
 import { generateAgentContextMirrors } from "../../src/core/agent-context-mirrors.js";
+import { ensureClaudeMdInDir } from "../../src/core/maps/finalize.js";
+import { compileGuides } from "../../src/core/docs-gen/compile.js";
 import { readDocId, withDocId } from "../../src/core/docs-gen/shared.js";
 import { commitTemplateSyncChanges } from "../../src/core/docs-gen/index.js";
 import { execFileSync } from "node:child_process";
@@ -245,6 +247,24 @@ JSON.stringify({
 => {"retired":"absent","notOurs":"present","views":"present"}
 ```
 
+A `CLAUDE.md` that was removed leaves its `AGENTS.md` mirror dangling; the
+mirror step removes the link. A file named `AGENTS.md` that is not a symlink is
+not a mirror and stays.
+
+```ts continue
+await fs.mkdir(path.join(box.root, "_content/retired"), { recursive: true });
+await fs.symlink("CLAUDE.md", path.join(box.root, "_content/retired/AGENTS.md"));
+await fs.mkdir(path.join(box.root, "_content/hand"), { recursive: true });
+await fs.writeFile(path.join(box.root, "_content/hand/AGENTS.md"), "hand-written\n");
+await generateAgentContextMirrors(box.root);
+
+JSON.stringify({
+  dangling: await linkState(box.root, "_content/retired/AGENTS.md"),
+  hand: await linkState(box.root, "_content/hand/AGENTS.md"),
+})
+=> {"dangling":"absent","hand":"present"}
+```
+
 The Codex render of a rule carries its own marker, not the rule's:
 
 ```ts continue
@@ -305,6 +325,54 @@ JSON.stringify({
   handWritten: await exists(box.root, ".claude/rules/hand-written.md"),
 })
 => {"retired":false,"current":true,"handWritten":true}
+```
+
+## The maps finalizer leaves tracked guides alone
+
+`ensureClaudeMdInDir` plants the map include line in a directory's
+`CLAUDE.md`. Where that file is a tracked guide, the include would make it
+differ from stock and park every later rewrite, so the finalizer skips the
+directory and strips an include an earlier run prepended. The sync strips the
+same stray line before the tracker compares.
+
+```ts continue
+const stock = await box.read("src/views/CLAUDE.md");
+await ensureClaudeMdInDir(box.root, "src/views");
+(await box.read("src/views/CLAUDE.md")) === stock
+=> true
+
+await box.write("src/views/CLAUDE.md", "@MAP.md\n\n" + stock);
+await ensureClaudeMdInDir(box.root, "src/views");
+(await box.read("src/views/CLAUDE.md")) === stock
+=> true
+
+await box.write("src/views/CLAUDE.md", "@MAP.md\n\n" + stock);
+await syncBoxGuidance(box.root, { generators: false });
+(await box.read("src/views/CLAUDE.md")) === stock
+=> true
+
+await fs.mkdir(path.join(box.root, "_content/mapped"), { recursive: true });
+await ensureClaudeMdInDir(box.root, "_content/mapped");
+(await box.read("_content/mapped/CLAUDE.md")).trim()
+=> @MAP.md
+```
+
+## Guide-derived rules prune their marked orphans
+
+`compileGuides` writes `guides-for-<type>.md` for each job type a guide card
+names. A marked rule from a job type no guide names any more is removed; an
+unmarked file in the family is not the engine's and stays.
+
+```ts continue
+await plant(box.root, { rel: ".claude/rules/guides-for-gone-job.md", content: withDocId({ relativePath: ".claude/rules/guides-for-gone-job.md", content: "---\npaths:\n  - \"**/*.gone-job.card\"\n---\nold\n" }) });
+await plant(box.root, { rel: ".claude/rules/guides-for-hand.md", content: "a boxholder's own rule\n" });
+await compileGuides(box.root);
+
+JSON.stringify({
+  gone: await exists(box.root, ".claude/rules/guides-for-gone-job.md"),
+  hand: await exists(box.root, ".claude/rules/guides-for-hand.md"),
+})
+=> {"gone":false,"hand":true}
 ```
 
 ```ts cleanup

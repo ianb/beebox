@@ -21,9 +21,11 @@ import { loadMapState, saveMapState, type MapState } from "./state.js";
 import type { MapTask } from "./precheck.js";
 import { CLAUDE_MD } from "../agent-instruction-files.js";
 import { ensureAgentsMirror } from "../agent-context-mirrors.js";
+import { guidanceSurfaceFor } from "../box/guidance-surfaces.js";
+import { MAP_INCLUDE_LINE, stripLeadingMapInclude } from "./include-line.js";
 import { verifyMapCoverage } from "./verify.js";
 
-const INCLUDE_LINE = "@MAP.md";
+const INCLUDE_LINE = MAP_INCLUDE_LINE;
 
 async function readFileOrNull(absPath: string): Promise<string | null> {
   try {
@@ -88,13 +90,28 @@ async function mapWasRewritten(options: MapWasRewrittenOptions): Promise<boolean
 
 
 /**
- * Ensure `<dir>/CLAUDE.md` exists with an `@MAP.md` line. If the file
+ * Ensure `<dir>/CLAUDE.md` exists with the map include line. If the file
  * already exists, only insert the include line (preserving everything
  * else). If absent, create a minimal one-line file.
+ *
+ * A directory whose `CLAUDE.md` is a tracked guide (`src/schemas/`,
+ * `src/views/`, `src/tricks/scripts/`, `_config/feedback/`; the registry's
+ * `tracked` rows) is left alone: the include would make the guide differ
+ * from stock, and the template tracker then parks every later rewrite. An
+ * include an earlier finalizer already prepended there is stripped, so the
+ * guide reads as stock again.
  */
-async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Promise<void> {
+export async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Promise<void> {
   const claudePath = path.join(boxRoot, dirRel, CLAUDE_MD);
   const existing = await readFileOrNull(claudePath);
+
+  if (guidanceSurfaceFor(path.posix.join(dirRel, CLAUDE_MD))?.class === "tracked") {
+    if (existing !== null) {
+      const stripped = stripLeadingMapInclude(existing);
+      if (stripped !== existing) await fs.writeFile(claudePath, stripped);
+    }
+    return;
+  }
 
   if (existing === null) {
     await fs.writeFile(claudePath, INCLUDE_LINE + "\n");

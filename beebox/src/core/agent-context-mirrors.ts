@@ -43,8 +43,15 @@ async function ensureRelativeSymlink(linkPath: string, targetPath: string): Prom
 /** Basename of `_config/_template-updates` (install-template-file.ts owns the full path). */
 const TEMPLATE_UPDATES_DIR_NAME = "_template-updates";
 
-async function findClaudeDocs(root: string): Promise<string[]> {
+interface ClaudeDocScan {
+  claudeDocs: string[];
+  /** `AGENTS.md` symlinks whose `CLAUDE.md` target is gone. */
+  danglingMirrors: string[];
+}
+
+async function findClaudeDocs(root: string): Promise<ClaudeDocScan> {
   const found: string[] = [];
+  const dangling: string[] = [];
   const visit = async (dir: string): Promise<void> => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       // `_template-updates` holds parked copies of templates awaiting review,
@@ -56,10 +63,21 @@ async function findClaudeDocs(root: string): Promise<string[]> {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);
+      else if (entry.isSymbolicLink() && entry.name === AGENTS_MD && !(await targetExists(path))) dangling.push(path);
     }
   };
   await visit(root);
-  return found;
+  return { claudeDocs: found, danglingMirrors: dangling };
+}
+
+async function targetExists(linkPath: string): Promise<boolean> {
+  try {
+    await stat(linkPath);
+    return true;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
 }
 
 /**
@@ -81,9 +99,16 @@ export async function ensureAgentsMirror(claudePath: string): Promise<string | n
 
 async function mirrorClaudeDocs(boxRoot: string): Promise<string[]> {
   const changed: string[] = [];
-  for (const claudePath of await findClaudeDocs(boxRoot)) {
+  const { claudeDocs, danglingMirrors } = await findClaudeDocs(boxRoot);
+  for (const claudePath of claudeDocs) {
     const mirror = await ensureAgentsMirror(claudePath);
     if (mirror !== null) changed.push(mirror);
+  }
+  // A `CLAUDE.md` that was removed leaves its mirror pointing at nothing;
+  // Codex would list a guide that no longer exists.
+  for (const link of danglingMirrors) {
+    await rm(link);
+    changed.push(link);
   }
   return changed;
 }
