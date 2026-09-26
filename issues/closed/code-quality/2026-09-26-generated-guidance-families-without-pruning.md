@@ -6,7 +6,13 @@ labels: [box-guidance, docs-gen]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doc-structure — Track 1 of docs/implemented-plans/doc-structure-box-guidance.md
+resolution: implemented
 ---
+
+Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): `compileGuides`
+prunes marked `guides-for-*` and `guide-for-chat-*` rules it did not write, and
+the mirror step removes a dangling `AGENTS.md` symlink. Doctests in
+`test/core/box-guidance-sync.doctest.md`.
 
 The box-guidance registry (`beebox/src/core/box/guidance-surfaces.ts`) gave
 the rule, skill, and Codex-mirror generators manifest pruning: a file that

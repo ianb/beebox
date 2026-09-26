@@ -6,7 +6,13 @@ labels: [box-docs, dev-boxes, docs-gen]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doc-structure — refreshing ~/src/boxes/test1 after the 2026-09-26 landing
+resolution: implemented
 ---
+
+Closed 2026-09-26 by the no-code direction: `~/src/boxes/test1/node_modules/beebox`
+is now a symlink to the main checkout's `beebox/` package, the same shape the
+worktree clones and `scaffoldPackageRoot` produce, so the engine's `box-docs/`
+is the box's. The stale copy was moved aside, not deleted.
 
 `ensurePackageDocs` (`beebox/src/core/docs-gen/package-docs.ts`, around line
 219) writes the package docs to `PACKAGE_ROOT/box-docs/`, where

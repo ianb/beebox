@@ -17,6 +17,7 @@ import { loadBoxholders } from "../boxholder-cards.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
+import { pruneGuideRules } from "./guide-rules-prune.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
@@ -114,15 +115,19 @@ export async function compileGuides(boxRoot: string): Promise<GuideSummary[]> {
   const rulesDir = join(boxRoot, ".claude/rules");
   await mkdir(rulesDir, { recursive: true });
 
-  const ctx = { boxRoot, rulesDir };
+  const written = new Set<string>();
+  const ctx = { boxRoot, rulesDir, written };
   const guides = await compileConfigGuides(ctx);
   await compileChatGuides(ctx);
+  await pruneGuideRules(ctx);
   return guides;
 }
 
 interface GuideCompileContext {
   boxRoot: string;
   rulesDir: string;
+  /** Rule filenames this run wrote; anything else in its families is an orphan. */
+  written: Set<string>;
 }
 
 /**
@@ -230,6 +235,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 
     await writeFile(join(rulesDir, ruleFilename),
       withDocId({ relativePath: `.claude/rules/${ruleFilename}`, content: lines.join("\n") }));
+    ctx.written.add(ruleFilename);
   }
 
   return allGuides;
@@ -270,7 +276,7 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
     }
 
     for (const slug of chatSlugs) {
-      await compileChatGuide({ connectorDir, connector, slug, rulesDir, boxRoot });
+      await compileChatGuide({ connectorDir, connector, slug, rulesDir, boxRoot, written: ctx.written });
     }
   }
 }
@@ -281,6 +287,7 @@ interface ChatGuideParams {
   slug: string;
   rulesDir: string;
   boxRoot: string;
+  written: Set<string>;
 }
 
 /**
@@ -328,6 +335,7 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
 
     await writeFile(join(rulesDir, ruleFilename),
       withDocId({ relativePath: `.claude/rules/${ruleFilename}`, content: lines.join("\n") }));
+    params.written.add(ruleFilename);
   } catch (e) {
     // Skip unparseable chat guide cards, but surface them so malformed cards aren't silent.
     console.warn(`[generate-docs] could not compile chat guide ${guideFile}:`, e);

@@ -6,7 +6,13 @@ labels: [maps, templates, box-guidance]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-doc-structure — verifying the 2026-09-26 engine release on production boxes
+resolution: implemented
 ---
+
+Closed 2026-09-26 by commit a3b7aa701 (worktree-doc-structure): the finalizer skips
+directories whose `CLAUDE.md` is a tracked registry row and strips a leading
+include it finds there; the guidance sync strips the same before the tracker
+compares. Doctest in `test/core/box-guidance-sync.doctest.md`.
 
 `ensureClaudeMdInDir` (`beebox/src/core/maps/finalize.ts:95-118`) writes a
 one-line `CLAUDE.md` holding only the MAP include into every directory that gets a `MAP.md`, or
