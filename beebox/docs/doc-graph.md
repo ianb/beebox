@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T21:30:45Z
+Generated: 2026-09-26T21:33:06Z
 Total documents: 445
 
 ## Issues
@@ -2067,6 +2067,7 @@ Title: "Tricks" | 122 lines | current reference
 Referenced by:
 - docs/box-guidance.md:110 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
 - docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
+- ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:12 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
 #### docs/box/what-you-could-do.md
 
@@ -3727,10 +3728,10 @@ References:
 Title: "Box guidance: one delivery class per surface, one home per fact" | 820 lines | shipped history | implemented
 
 References:
-- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (frontmatter)
+- → ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (frontmatter)
 - → docs/README.md (link)
 - → CLAUDE.md (mention)
-- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (link)
+- → ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (link)
 - → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
 - → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
 - → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)

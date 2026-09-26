@@ -3,7 +3,7 @@ title: "Box guidance: one delivery class per surface, one home per fact"
 status: implemented
 workstream: doc-structure
 issues:
-  - ../../../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md
+  - ../../../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md
 ---
 # Box guidance: one delivery class per surface, one home per fact
 
@@ -29,7 +29,7 @@ be a cleaner system. So if we're going to be moving it around we should be
 sure to move it around properly."
 
 **Issues addressed:**
-[tricks CLAUDE.md missing commit and process model](../../../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md)
+[tricks CLAUDE.md missing commit and process model](../../../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md)
 (Track 2 gives tricks an engine-fact home and the missing facts go there).
 Related but not closed by this plan:
 [knowledge budget for always-loaded context](../../../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md)
