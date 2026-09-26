@@ -81,8 +81,9 @@ Prepared review keeps its useful summary and file list, with no active or
 candidate content hashes exposed in the primary view.
 
 ```ts
-preparedMarkup.includes("Prepared files and scan")
-  && preparedMarkup.includes("Files: 1 · scan findings: 0 · skipped binaries: 0")
+preparedMarkup.includes("Potential sensitive content")
+  && preparedMarkup.includes("Files: 1 · findings: 0 · binary files not inspected: 0")
+  && preparedMarkup.includes("No potential sensitive content detected in scanned text.")
   && preparedMarkup.includes("release/very-long-generated-filename-that-should-wrap-on-mobile.html")
   && preparedMarkup.includes("Prepare a new candidate here")
   && preparedMarkup.includes("Prepare update for review")

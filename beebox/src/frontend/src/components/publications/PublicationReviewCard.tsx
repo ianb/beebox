@@ -178,10 +178,12 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
 
   return (
     <Stack gap="sm">
-      <Heading level={3}>Prepared files and scan</Heading>
+      <Heading level={3}>Potential sensitive content</Heading>
+      <Text size="sm">Automated checks scan text files for credential-like strings, personal file paths, and unexpected email addresses. They also flag external URLs. Images and other binary files are not inspected.</Text>
       <Text size="xs" tone="muted">Prepared <FriendlyDate iso={candidate.preparedAt} /></Text>
-      <Text size="sm">Files: {candidate.preview.length} · scan findings: {candidate.scan.total} · skipped binaries: {candidate.scan.skippedBinaries}</Text>
-      {candidate.scan.total > 0 ? <Badge tone="warning">Review the findings below before approving this audience.</Badge> : <Badge tone="success">No text scan findings</Badge>}
+      <Text size="sm">Files: {candidate.preview.length} · findings: {candidate.scan.total} · binary files not inspected: {candidate.scan.skippedBinaries}</Text>
+      {candidate.scan.total > 0 ? <Badge tone="warning">Review the findings below before approving this audience.</Badge> : <Badge tone="success">No potential sensitive content detected in scanned text.</Badge>}
+      <Hint>This check can miss sensitive content; review the prepared files before publishing.</Hint>
       <Stack gap="xs">
         {candidate.preview.map((file) => (
           <Row key={file.path} gap="sm" wrap>
