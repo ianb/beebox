@@ -20,6 +20,7 @@ import { Hint } from "../ui/Hint";
 import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { RecentNotifications } from "./RecentNotifications";
 
 const DESCRIPTION =
   "Get a push notification on this device when the box needs you — health alerts and questions waiting for an answer.";
@@ -169,6 +170,8 @@ export function NotificationsSection() {
             <ErrorText>{error}</ErrorText>
           </div>
         ) : null}
+
+        <RecentNotifications />
       </Stack>
     </AdminSectionCard>
   );

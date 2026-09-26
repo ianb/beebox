@@ -11,6 +11,8 @@ import { createTypedEmission, createVoiceEmission } from "../../src/frontend/src
 import { buildSpeechMessage } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
 import { markUnsureWords, resolveEmissionWords, UNSURE_THRESHOLD, UNSURE_EXTEND } from "../../src/frontend/src/input/unsure-words.js";
 
+import { stripUserDisplayTags } from "../../src/frontend/src/components/chat/message-parsing.js";
+
 const W = { localTime: "14:23", zoomedView: null, timePassed: null };
 ```
 
@@ -120,6 +122,27 @@ Historical order from `handleSend`'s template
 const e = createTypedEmission({ text: "hi", images: [], files: [], selections: [] });
 assembleChatMessage(e, { localTime: "09:05", zoomedView: "view:_content/notes/Foo.md?view=markdown", timePassed: "2d4h" }).message
 => <typed local-time="09:05" zoomed-view="view:_content/notes/Foo.md?view=markdown" time-passed="2d4h">hi</typed>
+```
+
+## A `chat:new` notification rides along with the first message
+
+When a notification tap started the conversation, the witness carries it and
+the message gets a `<notification-opened>` sibling block, in the shape of the
+server's `<schedule-fired>`. Its title and body were written by an agent, so
+they are escaped.
+
+```ts
+const e = createTypedEmission({ text: "yes, sign it", images: [], files: [], selections: [] });
+const notificationOpened = { id: "n1", title: "Field trip form <due>", body: "Sign by Friday.", at: "2026-09-26T12:00:00.000Z" };
+JSON.stringify(assembleChatMessage(e, { ...W, notificationOpened }).message)
+=> "<typed local-time=\"14:23\">yes, sign it</typed>\n<notification-opened id=\"n1\" sent-at=\"2026-09-26T12:00:00.000Z\">\nField trip form &lt;due&gt;\nSign by Friday.\n\nThe boxholder started this conversation by opening this notification.\n</notification-opened>"
+```
+
+The transcript hides the block, as it hides `<schedule-fired>`:
+
+```ts continue
+stripUserDisplayTags(assembleChatMessage(e, { ...W, notificationOpened }).message)
+=> yes, sign it
 ```
 
 ## Site 2 — keyword voice send: diarized attr leads, selections append
