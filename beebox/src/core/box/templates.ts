@@ -26,18 +26,20 @@ const TRICKS_PACKAGE_JSON = JSON.stringify(
   2
 ) + "\n";
 
-const TRICKS_CLAUDE_MD = `# Writing Tricks
+/**
+ * The tricks guide. Engine facts about tricks (script interface, how the engine
+ * runs and commits a trick, secrets, dependencies) live in the package doc
+ * `tricks.md` (`docs/box/tricks.md`); this guide holds the pointer, the
+ * directory layout, and the box's own conventions.
+ */
+const TRICKS_CLAUDE_MD_V2 = `# Writing Tricks
 
-Tricks are custom TypeScript scripts that extend your box's capabilities.
-Each trick runs as a standalone subprocess via tsx with its own package context,
-so you can install and import npm packages.
+Read \`${BOX_PACKAGE_DOCS}/tricks.md\` before writing, changing, or debugging a trick.
 
 ## Structure
 
-Each trick is a directory under \`tricks/scripts/\` with an \`index.ts\` entry point:
-
 \`\`\`
-tricks/
+src/tricks/
   package.json        <- npm dependencies for tricks
   node_modules/       <- installed packages (gitignored)
   lib/                <- Shared utilities (import with relative paths)
@@ -50,85 +52,11 @@ tricks/
       index.ts        <- bbx trick summarize
 \`\`\`
 
-**Every trick must be a directory** -- never put a \`.ts\` file directly in \`tricks/scripts/\`.
+## This box's tricks
 
-## Script Interface
-
-Tricks are standalone TypeScript programs. Environment variables provide context:
-
-- \`BBX_BOX_ROOT\` -- absolute path to the box root
-- \`BBX_TRICK_NAME\` -- the trick name (e.g. "clean-inbox"), useful for usage/help output
-- declared secrets are injected only into this trick's child process environment
-- \`process.argv.slice(2)\` -- extra arguments after the trick name
-
-\`\`\`typescript
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-
-export const description = "Short description shown in bbx trick list";
-
-const boxRoot = process.env.BBX_BOX_ROOT!;
-const trickName = process.env.BBX_TRICK_NAME!;
-const args = process.argv.slice(2);
-
-const inboxDir = path.join(boxRoot, "_content/inbox");
-console.log("Done!");
-\`\`\`
-
-The \`export const description\` line is parsed (not executed) by \`bbx trick\` for the listing.
-
-If the trick needs a credential, add a \`secrets.json\` beside \`index.ts\`:
-
-\`\`\`json
-[{"name":"openai-images","reason":"image-generation","env":"OPENAI_API_KEY"}]
-\`\`\`
-
-The boxholder must supply and grant the secret. \`bbx trick <name>\` resolves
-declared secrets at launch and injects them only into that trick process. Never
-write a resolved value to a file, argument, or log.
-
-## Running
-
-- \`bbx trick\` -- list all tricks with descriptions
-- \`bbx trick <name>\` -- run a trick
-- \`bbx trick <name> arg1 arg2\` -- pass arguments
-
-## Dependencies
-
-Install packages into the tricks directory:
-
-\`\`\`bash
-cd tricks && pnpm add <package>
-\`\`\`
-
-These are available to all tricks via normal imports.
-
-## Shared Code
-
-Put reusable utilities in \`tricks/lib/\` and import them with relative paths:
-
-\`\`\`typescript
-import { helper } from "../../lib/helper.js";
-\`\`\`
-
-## Tips
-
-- Use \`node:fs/promises\` and \`node:path\` for file operations
-- Tricks run via tsx as subprocesses -- no build step needed
-- Keep tricks focused on a single task
-- Use \`bbx\` commands (via \`child_process\`) for card operations
-- The subprocess cwd is \`tricks/\`, so package resolution works naturally
+Add conventions this box's tricks share (naming, shared helpers in \`lib/\`,
+what each trick is for) here.
 `;
-
-/**
- * v2 (package-layout) variant of the tricks guide: tricks live at
- * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
- * substitution so the two stay in lockstep.
- */
-const TRICKS_CLAUDE_MD_V2 = TRICKS_CLAUDE_MD
-  .replaceAll("tricks/", "src/tricks/")
-  .replace("cd tricks &&", "cd src/tricks &&")
-  .replace("into the tricks directory", "into the src/tricks directory");
 
 const VIEWS_CLAUDE_MD = `# Views Directory
 

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T18:51:26Z
-Total documents: 438
+Generated: 2026-09-26T19:09:27Z
+Total documents: 439
 
 ## Issues
 
@@ -717,7 +717,7 @@ Referenced by:
 
 #### docs/box-guidance.md
 
-Title: "Box guidance" | 113 lines | current reference
+Title: "Box guidance" | 116 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
@@ -2016,6 +2016,13 @@ Title: "Quick chat routing rules" | 45 lines | current reference
 Referenced by:
 - docs/chat/quick-chat.md:57 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:19 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
+
+#### docs/box/tricks.md
+
+Title: "Tricks" | 118 lines | current reference
+
+Referenced by:
+- docs/plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
 
 #### docs/box/what-you-could-do.md
 
@@ -6206,6 +6213,7 @@ References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/connectors.md (mention)
+- → docs/box/tricks.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/server/operations.md (mention)
 - → docs/box-guidance.md (mention)

@@ -1,0 +1,67 @@
+# Every `box-docs/<name>.md` pointer names a doc the package ships
+
+Plan: `docs/plans/doc-structure-box-guidance.md`, Track 2. A nested guide, a
+managed skill, and the agent guide send an agent to an engine doc by path,
+`node_modules/beebox/box-docs/<name>.md` (written in source as
+`${BOX_PACKAGE_DOCS}/<name>.md`). A pointer to a file the package does not
+ship leaves the agent with nothing to read, so every such path in those
+sources must be one of the engine doc filenames: the static docs, the prose
+docs under `docs/box/`, and the built-in `card-<type>.md` docs.
+
+```ts setup
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
+import { engineDocFilenames } from "../../src/core/docs-gen/package-docs.js";
+
+const SOURCES = [
+  "src/core/box/skills-content.ts",
+  "src/core/box/templates.ts",
+  "src/core/box/schemas-guide.ts",
+];
+const GUIDE_DIR = "src/core/agent-guide";
+
+const POINTER = /(?:\$\{BOX_PACKAGE_DOCS\}|box-docs)\/([\w.-]+\.md)/g;
+
+async function sourceFiles(): Promise<string[]> {
+  const guide = (await fs.readdir(path.join(PACKAGE_ROOT, GUIDE_DIR)))
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => `${GUIDE_DIR}/${f}`);
+  return [...SOURCES, ...guide];
+}
+
+// Every pointer as "<source>: <name>", in source order.
+async function pointers(): Promise<string[]> {
+  const out: string[] = [];
+  for (const rel of await sourceFiles()) {
+    const text = await fs.readFile(path.join(PACKAGE_ROOT, rel), "utf-8");
+    for (const m of text.matchAll(POINTER)) out.push(`${rel}: ${m[1]}`);
+  }
+  return out;
+}
+
+// Pointers whose target is not a shipped engine doc.
+async function dangling(): Promise<string[]> {
+  const shipped = new Set(engineDocFilenames());
+  return (await pointers()).filter((p) => !shipped.has(p.slice(p.indexOf(": ") + 2)));
+}
+```
+
+## The scan finds pointers
+
+A regex that matched nothing would pass the next check vacuously.
+
+```ts
+(await pointers()).length > 10
+=> true
+```
+
+## Every pointer resolves to a shipped doc
+
+If this lists a pointer, either the doc was renamed or removed (fix the
+pointer) or the pointer has a typo.
+
+```ts
+await dangling()
+=> []
+```

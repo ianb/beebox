@@ -1254,6 +1254,23 @@ tests:
     correct_contains: ["tricks/scripts"]
     tags: [tricks]
 
+  # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
+  # read box-docs/tricks.md, then confirmed in trick.ts; 50k context.
+  # Plan: docs/plans/doc-structure-box-guidance.md, Track 2. How the engine
+  # runs and commits a trick lives in box-docs/tricks.md; the tricks skill and
+  # src/tricks/scripts/CLAUDE.md point there.
+  - id: tricks-auto-commit
+    prompt: >
+      One of my tricks writes a few files and exits normally without committing
+      them. What happens to those files after it exits, and which process is
+      the trick's direct parent? Do not change anything.
+    expected_level: knows_about
+    watch_for: "Opens box-docs/tricks.md and reports that on exit 0 the engine stages the whole tree and commits with a Run-By: trick/<name> trailer, and that the direct parent is the tsx wrapper, not bbx."
+    should_read_any:
+      - "box-docs/tricks.md"
+    correct_contains: ["Run-By", "tsx"]
+    tags: [tricks, engine-docs]
+
   # === Connectors ===
   #
   # Status (2026-07-03): all 3 pass after full rerun.
