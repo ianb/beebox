@@ -17,7 +17,9 @@ function render(value) {
 
 Cards and questions open the card browser, as question alerts did before.
 `chat:<id>` opens that chat; `chat:new` opens an empty chat that shows the
-notification (by id) as a banner.
+notification (by id) as a banner. `admin:<section>` opens the Admin card with
+the section in its view state; the card opens the section's tab and scrolls
+to it.
 
 ```ts
 ["chat:8f2c-41aa", "chat:new", "card:_content/pets/pepper-shots.todo.card", "question:_bookkeeping/questions/Color.question.card", "admin:google-services", "dashboard"].map(render).join("\n")
@@ -26,7 +28,7 @@ chat:8f2c-41aa -> /family/chat?session=8f2c-41aa
 chat:new -> /family/chat?new=1&notification=n7Qx
 card:_content/pets/pepper-shots.todo.card -> /family/browse/_content/pets/pepper-shots.todo.card
 question:_bookkeeping/questions/Color.question.card -> /family/browse/_bookkeeping/questions/Color.question.card
-admin:google-services -> /family/admin#google-services
+admin:google-services -> /family/views/_config/interface/admin.card?viewState=%7B%22section%22%3A%22google-services%22%7D
 dashboard -> /family/
 ```
 
@@ -58,4 +60,10 @@ parseTarget("question:")
 
 parseTarget("chat:a b")
 => throws InvalidTargetError: Invalid notification target "chat:a b": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+
+parseTarget(`card:_content/${"x".repeat(1000)}.card`)
+=> throws InvalidTargetError: Invalid notification target "card:_content/xxxxxxxxxxxxxxxxxxxxxxxxxx…": longer than 1000 characters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 ```
+
+A target over 1,000 characters is refused, so a notification's log line
+stays one atomic append.

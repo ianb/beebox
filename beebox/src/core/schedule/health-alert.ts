@@ -62,7 +62,7 @@ export async function checkHealthAndAlert(
   boxRoot: string,
   { now, tg, push }: { now: Date; tg?: TelegramService; push?: PushService },
 ): Promise<HealthAlertResult | null> {
-  const channels = await notifyChannels(boxRoot);
+  const channels = await notifyChannels(boxRoot, { services: { tg, push } });
   if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const health = await loadScheduleHealth(boxRoot, now);

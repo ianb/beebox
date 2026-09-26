@@ -32,6 +32,8 @@ const ROTATED_FILE = "notifications.1.jsonl";
 /** A line stays under the size the filesystem appends atomically. */
 const MAX_LINE_BYTES = 4000;
 const MAX_TITLE_CHARS = 200;
+const MAX_TAG_CHARS = 200;
+const MAX_SOURCE_CHARS = 200;
 const MAX_DETAIL_CHARS = 500;
 const ROTATE_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const ROTATE_BYTES = 8 * 1024 * 1024;
@@ -47,6 +49,16 @@ export class NotificationLogWriteError extends Error {
   }
 }
 
+/** Thrown when a line would not fit one atomic append even with its body emptied. */
+export class NotificationLogLineTooLongError extends Error {
+  readonly bytes: number;
+  constructor(bytes: number) {
+    super(`A notification log line is ${bytes} bytes even with its body emptied; the limit is ${MAX_LINE_BYTES}`);
+    this.name = "NotificationLogLineTooLongError";
+    this.bytes = bytes;
+  }
+}
+
 export function notificationLogPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", LOG_FILE);
 }
@@ -59,25 +71,33 @@ function clip(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
-/** Serialize, shortening the body until the line fits one atomic append. */
+/**
+ * Serialize, shortening the body until the line fits one atomic append. The
+ * other fields are bounded when the line is built; a line that still does not
+ * fit is refused rather than appended.
+ */
 function serialize(line: LogLine): string {
   let current = line;
   let text = JSON.stringify(current);
   while (Buffer.byteLength(text) >= MAX_LINE_BYTES && current.kind === "intent" && current.body.length > 0) {
-    current = { ...current, body: clip(current.body, Math.floor(current.body.length * 0.75)) };
+    const keep = Math.floor(current.body.length * 0.75);
+    current = { ...current, body: keep < 2 ? "" : clip(current.body, keep) };
     text = JSON.stringify(current);
   }
+  const bytes = Buffer.byteLength(text);
+  if (bytes >= MAX_LINE_BYTES) throw new NotificationLogLineTooLongError(bytes);
   return `${text}\n`;
 }
 
 /** One `O_APPEND` open and one write per line; never a rewrite. */
 function appendLine(boxRoot: string, line: LogLine): void {
   const logPath = notificationLogPath(boxRoot);
+  const text = serialize(line);
   try {
     fs.mkdirSync(path.dirname(logPath), { recursive: true });
     const fd = fs.openSync(logPath, "a");
     try {
-      fs.writeSync(fd, serialize(line));
+      fs.writeSync(fd, text);
     } finally {
       fs.closeSync(fd);
     }
@@ -96,8 +116,8 @@ export function appendIntent(boxRoot: string, opts: { intent: NotificationIntent
     body: intent.body,
     target: formatTarget(intent.target),
     loudness: intent.loudness,
-    ...(intent.tag === undefined ? {} : { tag: intent.tag }),
-    source: intent.source,
+    ...(intent.tag === undefined ? {} : { tag: clip(intent.tag, MAX_TAG_CHARS) }),
+    source: clip(intent.source, MAX_SOURCE_CHARS),
   });
 }
 

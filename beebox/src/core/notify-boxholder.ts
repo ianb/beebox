@@ -14,10 +14,11 @@ import { loadBoxConfig } from "./box/config.js";
 import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
 import { createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
-import { sendPush, VapidNotConfiguredError } from "./send-push.js";
+import { sendPush, VapidNotConfiguredError, webPushConfigured } from "./send-push.js";
 import { endpointsForBox } from "./push-subscriptions.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getBoxTime } from "../lib/time.js";
+import { getPublicUrl } from "../lib/public-url.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { assertNever } from "../lib/invariant.js";
 import { createEventBus } from "./event-bus.js";
@@ -62,14 +63,20 @@ async function audienceFor(boxRoot: string): Promise<{ audience: Audience; teleg
 }
 
 /**
- * Which channels can currently reach the boxholder for this box. Triggers use
- * this to decide whether a proactive alert has anywhere to go.
+ * Which channels can currently reach the boxholder for this box: someone to
+ * send to, and what a send with the same `services` needs (an injected
+ * service, or else VAPID keys for web push and the bot secret for Telegram).
+ * Triggers use this to decide whether a proactive alert has anywhere to go.
  */
 export async function notifyChannels(
   boxRoot: string,
+  opts?: { services?: NotifyServices | undefined },
 ): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
+  const services = opts?.services ?? {};
   const { audience } = await audienceFor(boxRoot);
-  return { apns: audience.apns, webPush: audience["web-push"], telegram: audience.telegram };
+  const webPush = audience["web-push"] && (services.push !== undefined || webPushConfigured());
+  const telegram = audience.telegram && (services.tg !== undefined || (await loadTelegramConfig(boxRoot)) !== null);
+  return { apns: audience.apns, webPush, telegram };
 }
 
 /** Log a line; an unwritable log must not stop delivery, so it is reported and delivery goes on. */
@@ -117,7 +124,7 @@ async function sendWebPush(ctx: SendContext): Promise<Delivery> {
   const { boxRoot, intent, url, services } = ctx;
   try {
     const result = await sendPush(boxRoot, {
-      payload: { title: intent.title, body: intent.body, url, tag: intent.tag },
+      payload: { title: intent.title, body: intent.body, url, tag: intent.tag, silent: intent.loudness === "quiet" },
       push: services.push,
     });
     if (result.sent > 0) return { channel: "web-push", status: "sent" };
@@ -138,14 +145,19 @@ async function telegramService(ctx: SendContext): Promise<TelegramService | null
   return config === null ? null : createTelegramService(config.botToken);
 }
 
+/** Title, body, and the link a tap opens: absolute when the server knows its public URL. */
+function telegramText(intent: NotificationIntent, url: string): string {
+  const link = `${getPublicUrl("").replace(/\/+$/, "")}${url}`;
+  return [intent.title, ...(intent.body ? [intent.body] : []), link].join("\n");
+}
+
 async function sendTelegram(ctx: SendContext): Promise<Delivery> {
-  const { intent, telegramChat } = ctx;
+  const { intent, url, telegramChat } = ctx;
   if (telegramChat === undefined) return { channel: "telegram", status: "skipped", detail: "no-audience" };
   try {
     const tg = await telegramService(ctx);
     if (tg === null) return { channel: "telegram", status: "skipped", detail: "unconfigured" };
-    const text = intent.body ? `${intent.title}\n${intent.body}` : intent.title;
-    await tg.sendMessage(telegramChat, { text, silent: intent.loudness === "quiet" });
+    await tg.sendMessage(telegramChat, { text: telegramText(intent, url), silent: intent.loudness === "quiet" });
     return { channel: "telegram", status: "sent" };
   } catch (e) {
     return { channel: "telegram", status: "failed", detail: errorMessage(e) };
@@ -166,8 +178,9 @@ async function sendOn(channel: ChannelName, ctx: SendContext): Promise<Delivery>
   }
 }
 
+/** A leading letter, so an id is never read as a number (a URL search parser would). */
 function newNotificationId(): string {
-  return randomBytes(6).toString("base64url");
+  return `n${randomBytes(6).toString("base64url")}`;
 }
 
 export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): Promise<NotifyResult> {

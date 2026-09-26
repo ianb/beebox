@@ -50,7 +50,7 @@ export async function checkConnectorActivityAndAlert(
   });
   if (fresh.length === 0) return null;
 
-  const channels = await notifyChannels(boxRoot);
+  const channels = await notifyChannels(boxRoot, { services: { tg, push } });
   if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const slug = await boxSlug(boxRoot);

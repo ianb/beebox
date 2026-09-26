@@ -21,7 +21,8 @@ JSON.stringify(inventoryCardViewState({ projection: "grouped", metric: "bytes", 
 => {"projection":"grouped","metric":"bytes","linkStatus":"linked"}
 ```
 
-Only recognized OAuth return fields and a known tab become renderer state.
+Only recognized OAuth return fields, a known tab, and a known section to land
+on (a notification's `admin:<section>` target) become renderer state.
 Authorization codes remain backend-only, and consuming the arrival keeps the
 open tab and any unrelated future Admin state.
 
@@ -33,15 +34,21 @@ JSON.stringify(adminArrivalViewState({ tab: "nowhere" }))
 => null
 
 JSON.stringify(parseAdminCardState({ google: "connected", message: "Ready" }))
-=> {"ok":true,"arrival":{"google":"connected","message":"Ready"},"tab":null}
+=> {"ok":true,"arrival":{"google":"connected","message":"Ready"},"tab":null,"section":null}
 
 JSON.stringify(parseAdminCardState({ tab: "host" }))
-=> {"ok":true,"arrival":{},"tab":"host"}
+=> {"ok":true,"arrival":{},"tab":"host","section":null}
 
 parseAdminCardState({ google: "maybe" }).ok
 => false
 
 parseAdminCardState({ tab: "nowhere" }).ok
+=> false
+
+JSON.stringify(parseAdminCardState({ section: "google-services" }))
+=> {"ok":true,"arrival":{},"tab":null,"section":"google-services"}
+
+parseAdminCardState({ section: "nowhere" }).ok
 => false
 
 JSON.stringify(clearAdminArrivalState({ google: "error", message: "Denied", reconnect: "google", tab: "host", panel: "future" }))

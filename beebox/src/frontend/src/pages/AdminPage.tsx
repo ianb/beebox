@@ -7,7 +7,7 @@
  * breadcrumbs cover the whole page on every load.
  */
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { AdminArrivalState } from "../lib/admin-card-state";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { CodexSection } from "../components/admin/CodexSection";
@@ -24,7 +24,7 @@ import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { BackupSection } from "../components/admin/BackupSection";
 import { InviteSection } from "../components/admin/InviteSection";
 import { AdminOverview } from "../components/admin/AdminOverview";
-import { ADMIN_TAB_LABELS, ADMIN_TABS, DEFAULT_ADMIN_TAB, adminTabForSection, type AdminSectionId, type AdminTab } from "../components/admin/admin-sections";
+import { ADMIN_TAB_LABELS, ADMIN_TABS, DEFAULT_ADMIN_TAB, adminSectionElementId, adminTabForSection, type AdminSectionId, type AdminTab } from "../components/admin/admin-sections";
 import { Stack } from "../components/ui/Stack";
 import { TabBar } from "../components/ui/TabBar";
 import { AdminHangProbe, ProbeSection } from "../components/admin/AdminHangProbe";
@@ -35,18 +35,24 @@ export interface AdminCardBodyProps {
   onArrivalConsumed: () => void;
   /** The tab the URL names, or null for the default. */
   tab: AdminTab | null;
+  /** The section the URL lands on (a notification's `admin:<section>` target), or null. */
+  section: AdminSectionId | null;
   onTabChange: (tab: AdminTab) => void;
 }
 
-export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab: requestedTab, onTabChange }: AdminCardBodyProps) {
-  // An OAuth return lands on Google's tab unless the URL says otherwise.
+export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab: requestedTab, section, onTabChange }: AdminCardBodyProps) {
+  // A landing section opens its tab, and an OAuth return lands on Google's
+  // tab, unless the URL names a tab.
+  const sectionTab = section === null ? null : adminTabForSection(section);
   const arrivalTab = arrival.google !== undefined || arrival.reconnect !== undefined ? adminTabForSection("google-services") : null;
-  const tab = requestedTab ?? arrivalTab ?? DEFAULT_ADMIN_TAB;
+  const tab = requestedTab ?? sectionTab ?? arrivalTab ?? DEFAULT_ADMIN_TAB;
   const openSection = (id: AdminSectionId) => {
     onTabChange(adminTabForSection(id));
-    // The panel is already mounted, so the section is in the DOM once it is shown.
-    requestAnimationFrame(() => document.getElementById(`bbx-admin-${id}`)?.scrollIntoView({ block: "start" }));
+    scrollToSection(id);
   };
+  useEffect(() => {
+    if (section !== null) scrollToSection(section);
+  }, [section]);
   return (
     <AdminHangProbe page="admin"><Stack gap="none" overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4 w-full">
@@ -68,6 +74,11 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab:
       </Stack>
     </Stack></AdminHangProbe>
   );
+}
+
+/** Every panel stays mounted, so the section is in the DOM once its tab is shown. */
+function scrollToSection(id: AdminSectionId): void {
+  requestAnimationFrame(() => document.getElementById(adminSectionElementId(id))?.scrollIntoView({ block: "start" }));
 }
 
 function AgentsPanel() {

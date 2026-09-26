@@ -131,8 +131,8 @@ function reached(result: NotifyResult): boolean {
   return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
 }
 
-async function check(boxRoot: string): Promise<number> {
-  const can = await notifyChannels(boxRoot);
+async function check(boxRoot: string, services: NotifyServices | undefined): Promise<number> {
+  const can = await notifyChannels(boxRoot, { services });
   const byChannel: Record<ChannelName, boolean> = { apns: can.apns, "web-push": can.webPush, telegram: can.telegram };
   for (const channel of CHANNELS) console.log(`${channel}: ${byChannel[channel] ? "yes" : "no"}`);
   return CHANNELS.some((channel) => byChannel[channel]) ? 0 : 1;
@@ -165,7 +165,7 @@ async function send(boxRoot: string, run: NotifyRun): Promise<number> {
 
 /** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/notify.doctest.md` drives. */
 export async function runNotify(boxRoot: string, run: NotifyRun): Promise<number> {
-  return run.options.check === true ? check(boxRoot) : send(boxRoot, run);
+  return run.options.check === true ? check(boxRoot, run.services) : send(boxRoot, run);
 }
 
 async function readAllStdin(): Promise<string> {

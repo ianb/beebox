@@ -78,7 +78,7 @@ export async function checkGoogleAuthAndAlert(
 
   if (latch.alertedForSince === status.needsReauthSince) return null;
 
-  const channels = await notifyChannels(boxRoot);
+  const channels = await notifyChannels(boxRoot, { services: { tg, push } });
   if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const slug = await boxSlug(boxRoot);

@@ -9,6 +9,7 @@
 
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { assertNever } from "../../lib/invariant.js";
+import { SYSTEM_CARD_PATHS } from "../../shared/system-card-paths.js";
 
 export type Target =
   | { kind: "chat"; sessionId: string }
@@ -39,7 +40,14 @@ function cardPath(value: string, rest: string): string {
   return resolved;
 }
 
+/** Longer targets are refused, so a notification log line stays one atomic append. */
+const MAX_TARGET_CHARS = 1000;
+
 export function parseTarget(value: string): Target {
+  if (value.length > MAX_TARGET_CHARS) {
+    const shown = `${value.slice(0, 40)}…`;
+    throw new InvalidTargetError(shown, "longer than 1000 characters");
+  }
   if (value === "dashboard") return { kind: "dashboard" };
   if (value === "chat:new") return { kind: "chat-new" };
   const colon = value.indexOf(":");
@@ -99,7 +107,8 @@ export function targetUrl(target: Target, opts: { boxSlug: string; notificationI
     case "question":
       return `/${boxSlug}/browse/${target.path}`;
     case "admin":
-      return `/${boxSlug}/admin#${target.section}`;
+      // The Admin card's `section` view state opens the section's tab and scrolls to it.
+      return `/${boxSlug}/views/${SYSTEM_CARD_PATHS.admin}?viewState=${encodeURIComponent(JSON.stringify({ section: target.section }))}`;
     case "dashboard":
       return `/${boxSlug}/`;
     default:

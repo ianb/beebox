@@ -90,6 +90,7 @@ tg.sent[0].text
 - gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.
 «blankline»
 If this is expected, dismiss it on the box dashboard.
+/«*»/
 ```
 
 The episode is stamped, so later ticks, including on later quiet days, send

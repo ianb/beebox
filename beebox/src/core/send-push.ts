@@ -48,13 +48,28 @@ export function vapidPublicKey(): string | null {
   return process.env.BBX_VAPID_PUBLIC_KEY ?? null;
 }
 
-function realPushFromEnv(): PushService {
+function vapidKeys(): { publicKey: string; privateKey: string } | null {
   // TODO(env-migration): BBX_VAPID_* are validated + redacted at startup
   // (lib/env.ts serverEnvSchema); the reads stay here alongside the
   // "throw if unconfigured" logic that a schema shouldn't own.
   const publicKey = process.env.BBX_VAPID_PUBLIC_KEY;
   const privateKey = process.env.BBX_VAPID_PRIVATE_KEY;
-  if (!publicKey || !privateKey) throw new VapidNotConfiguredError();
+  return publicKey && privateKey ? { publicKey, privateKey } : null;
+}
+
+/**
+ * Whether a send without an injected service can go out: VAPID keys are set,
+ * or `BBX_PUSH_FAKE=1` routes it through the fake. Otherwise `sendPush` throws
+ * {@link VapidNotConfiguredError}.
+ */
+export function webPushConfigured(): boolean {
+  return process.env.BBX_PUSH_FAKE === "1" || vapidKeys() !== null;
+}
+
+function realPushFromEnv(): PushService {
+  const keys = vapidKeys();
+  if (keys === null) throw new VapidNotConfiguredError();
+  const { publicKey, privateKey } = keys;
   // VAPID subject must be a mailto: or https: contact URI; the server's public
   // URL is a valid one and avoids hardcoding any address.
   const subject = process.env.BBX_VAPID_SUBJECT ?? process.env.PUBLIC_URL ?? "mailto:bbx@localhost";

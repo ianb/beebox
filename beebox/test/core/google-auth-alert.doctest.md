@@ -67,6 +67,7 @@ Your Google connection stopped working — the authorization expired or was revo
 Gmail, Calendar and Drive sync are paused until you reconnect.
 «blankline»
 Reconnect: /«*»/admin?reconnect=google
+/«*»/views/_config/interface/admin.card?viewState=%7B%22section%22%3A%22google-services%22%7D
 ```
 
 The episode is latched, so the next daemon cycle stays quiet:

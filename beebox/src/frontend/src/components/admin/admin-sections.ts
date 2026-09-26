@@ -59,6 +59,10 @@ export const ADMIN_SECTIONS: Record<AdminSectionId, AdminSectionDef> = {
   "notifications": { title: "Notifications", blurb: "Push notifications from this box on the device you are using now.", scope: "device" },
 };
 
+export function isAdminSectionId(value: unknown): value is AdminSectionId {
+  return typeof value === "string" && Object.hasOwn(ADMIN_SECTIONS, value);
+}
+
 export interface AdminGroupDef {
   tab: Exclude<AdminTab, "overview">;
   label: string;

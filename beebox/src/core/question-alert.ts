@@ -70,7 +70,7 @@ export async function checkPendingQuestionsAndNotify(
   boxRoot: string,
   opts: { now: Date; tg?: TelegramService; push?: PushService },
 ): Promise<QuestionAlertResult | null> {
-  const channels = await notifyChannels(boxRoot);
+  const channels = await notifyChannels(boxRoot, { services: { tg: opts.tg, push: opts.push } });
   if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const { pendingQuestions } = await generateContext(boxRoot);

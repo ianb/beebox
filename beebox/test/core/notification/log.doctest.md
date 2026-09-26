@@ -97,6 +97,30 @@ JSON.stringify([Buffer.byteLength(line) < 4000, JSON.parse(line).body.endsWith("
 await box.cleanup();
 ```
 
+## The other fields are bounded, and a line that cannot fit is refused
+
+The tag and the source are cut to 200 characters. A line that is still over
+4 KB with its body emptied is refused with an error rather than appended, so
+the log never holds a torn line.
+
+```ts
+const box = await makeTmpBox();
+appendIntent(box.root, { intent: { ...intent("tagged", "Tagged"), tag: "t".repeat(5000), source: "s".repeat(5000) }, now: NOW });
+const logged = JSON.parse(fs.readFileSync(notificationLogPath(box.root), "utf-8"));
+JSON.stringify([logged.tag.length, logged.tag.endsWith("…"), logged.source.length])
+=> [200,true,200]
+
+appendIntent(box.root, { intent: { ...intent("x".repeat(5000), "Huge id"), body: "b".repeat(100) }, now: NOW })
+=> throws NotificationLogLineTooLongError
+
+fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n").filter(Boolean).length
+=> 1
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Rotation
 
 The log rotates when its first line is older than 30 days, or when it

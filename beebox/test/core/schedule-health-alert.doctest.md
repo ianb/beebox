@@ -87,6 +87,7 @@ tg.sent[0].text
 - sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported
 «blankline»
 Run `bbx health` in the box for details.
+/«*»/
 ```
 
 The task is latched, so the next daemon cycle stays quiet:

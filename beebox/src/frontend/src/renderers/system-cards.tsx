@@ -44,7 +44,7 @@ function AdminCard(props: RendererProps) {
   const arrivalReceipt = adminArrivalReceipt(historyState.__TSR_index, parsed.arrival) ?? "empty";
   const consumeArrival = () => props.onViewStateChange?.(clearAdminArrivalState(props.viewState), "replace");
   const changeTab = (tab: AdminTab) => props.onViewStateChange?.(adminTabViewState(props.viewState, tab), "replace");
-  return <SystemCardBoundary type="admin" path={props.data.path}><AdminCardBody arrival={parsed.arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={consumeArrival} tab={parsed.tab} onTabChange={changeTab} /></SystemCardBoundary>;
+  return <SystemCardBoundary type="admin" path={props.data.path}><AdminCardBody arrival={parsed.arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={consumeArrival} tab={parsed.tab} section={parsed.section} onTabChange={changeTab} /></SystemCardBoundary>;
 }
 registerFileType({ type: "dashboard" }, { renderer: { name: "Dashboard", Component: DashboardCard, priority: 100 } });
 registerFileType({ type: "settings" }, { renderer: { name: "Settings", Component: SettingsCard, priority: 100 } });

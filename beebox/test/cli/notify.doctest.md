@@ -20,6 +20,7 @@ import { readRecent } from "../../src/core/notification/log.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notify-cli-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
+for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_PUSH_FAKE", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
 // A box whose boxholder subscribed a browser and set a Telegram chat.
 const box = await makeTmpBox({ git: true });
@@ -33,9 +34,10 @@ await addSubscription({
 const tg = createFakeTelegram({ username: "bot" });
 const push = createFakePush();
 
-// Run with captured output; ids are random, so they print as <id>.
-const ID = /[\w-]{8}(?=: (apns|web-push|telegram) )/;
-async function run(title, options, stdin) {
+// Run with captured output; ids are random (a letter, then 8 base64url
+// characters), so they print as <id>.
+const ID = /\bn[\w-]{8}(?=: (apns|web-push|telegram) )/;
+async function run(title, options, stdin, services = { tg, push }) {
   const out = [];
   const origLog = console.log;
   const origErr = console.error;
@@ -48,7 +50,7 @@ async function run(title, options, stdin) {
       options,
       readStdin: stdin === undefined ? null : async () => stdin,
       source: "doctest",
-      services: { tg, push },
+      services,
     });
   } finally {
     console.log = origLog;
@@ -72,6 +74,19 @@ apns: no
 web-push: yes
 telegram: yes
 exit 0
+```
+
+A subscribed browser and a Telegram chat are not enough on their own: without
+VAPID keys a push cannot be sent, and without the bot secret a Telegram
+message cannot, so `--check` says no and exits 1:
+
+```ts
+await run(undefined, { check: true }, undefined, {})
+=>
+apns: no
+web-push: no
+telegram: no
+exit 1
 ```
 
 On a box with no channel it exits 1, so an agent knows not to promise a
@@ -101,8 +116,9 @@ await run("Field trip form due", { target: "card:_content/inbox/field-trip.email
 <id>: apns skipped (no-audience), web-push sent, telegram sent
 exit 0
 
-JSON.stringify([tg.sent.at(-1).text, tg.sent.at(-1).silent])
-=> ["Field trip form due\nSign it by Friday.",false]
+const slug = await boxSlug(box.root);
+JSON.stringify([tg.sent.at(-1).text.replace(slug, "<box>"), tg.sent.at(-1).silent])
+=> ["Field trip form due\nSign it by Friday.\n/<box>/browse/_content/inbox/field-trip.email.card",false]
 ```
 
 ## The body comes from piped stdin when no `--body` is given; `quiet` is the default

@@ -24,6 +24,8 @@ import { notificationHealthChecks } from "../../src/core/notification/health.js"
 
 const storeDir = path.join(os.tmpdir(), `bbx-notify-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
+// No VAPID keys, forced-fake push, or public URL unless a section sets them.
+for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_PUSH_FAKE", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
 const NOW = new Date("2026-09-26T12:00:00Z");
 const SUB = { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } };
@@ -76,16 +78,23 @@ web-push sent
 telegram sent
 ```
 
-The push carries the rendered deep link; Telegram gets the title and body:
+The push carries the rendered deep link and makes a sound. Telegram gets the
+title, the body, and the same link, root-relative because no public URL is
+set:
 
 ```ts continue
-push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/browse/_content/inbox/field-trip.email.card`
+const slug = await boxSlug(box.root);
+push.sent[0]?.payload.url === `/${slug}/browse/_content/inbox/field-trip.email.card`
 => true
 
-tg.sent[0]?.text
+push.sent[0]?.payload.silent
+=> false
+
+tg.sent[0]?.text.replace(slug, "<box>")
 =>
 Field trip form due Friday
 The school emailed: the form is due Friday.
+/<box>/browse/_content/inbox/field-trip.email.card
 
 tg.sent[0]?.silent
 => false
@@ -107,6 +116,16 @@ JSON.stringify([events.length, events[0]?.data.id === result.id, events[0]?.data
 
 await failing(box)
 => all ok
+```
+
+With `PUBLIC_URL` set, the Telegram link is absolute:
+
+```ts continue
+process.env.PUBLIC_URL = "https://box.example.com/";
+await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg }, channel: "telegram" });
+delete process.env.PUBLIC_URL;
+tg.sent[1]?.text.split("\n").at(-1).replace(slug, "<box>")
+=> https://box.example.com/<box>/browse/_content/inbox/field-trip.email.card
 ```
 
 ```ts cleanup
@@ -141,12 +160,13 @@ JSON.stringify([push.sent.length, tg.sent.length])
 => [1,1]
 ```
 
-A `quiet` Telegram message is sent with `disable_notification`, so it makes
-no sound:
+A `quiet` Telegram message is sent with `disable_notification`, and a `quiet`
+push carries `silent`, which the service worker passes to `showNotification`,
+so neither makes a sound:
 
 ```ts continue
-tg.sent[0]?.silent
-=> true
+JSON.stringify([tg.sent[0]?.silent, push.sent[0]?.payload.silent])
+=> [true,true]
 
 await failing(box)
 => all ok
@@ -175,6 +195,51 @@ telegram skipped: no-audience
 
 await failing(box)
 => notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (subscribe a device to push or set healthAlerts.telegramChat): "Field trip form due Friday"
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A channel counts as reachable only when a send could go out
+
+`notifyChannels` needs someone to send to and what the send needs: an
+injected service, or else VAPID keys for web push and the bot secret for
+Telegram. A subscribed browser without VAPID keys, or a Telegram chat without
+the bot secret, is not a way to reach the person.
+
+```ts
+const box = await reachableBox();
+JSON.stringify(await notifyChannels(box.root))
+=> {"apns":false,"webPush":false,"telegram":false}
+
+JSON.stringify(await notifyChannels(box.root, { services: { push: createFakePush(), tg: createFakeTelegram({ username: "bot" }) } }))
+=> {"apns":false,"webPush":true,"telegram":true}
+
+process.env.BBX_VAPID_PUBLIC_KEY = "public";
+process.env.BBX_VAPID_PRIVATE_KEY = "private";
+const withKeys = await notifyChannels(box.root);
+delete process.env.BBX_VAPID_PUBLIC_KEY;
+delete process.env.BBX_VAPID_PRIVATE_KEY;
+withKeys.webPush
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Generated ids start with a letter
+
+A URL search parser reads an all-digit value as a number, so an id is never
+one:
+
+```ts
+const box = await reachableBox();
+const ids = [];
+for (let i = 0; i < 5; i++) ids.push((await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW })).id);
+ids.every((id) => /^n[\w-]{8}$/.test(id))
+=> true
 ```
 
 ```ts cleanup
