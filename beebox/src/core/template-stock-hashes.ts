@@ -46,6 +46,8 @@ export const TEMPLATE_STOCK_HASHES = {
   "schemas-guide-v2": {
     current: "d597ae37034efae913366d3afbf5561785dbc633445df8832ff8cb9e588c855f",
     superseded: [
+      "0dcb1c9c7f4ea860bc4d2312db9fd32ec436d09e90459879d9f0b8f2077cbe31",
+      "5b984a1082f457a5b05e4f959e8c822221902acaf7f5182b593a89696df1b09c",
       "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
       "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
       "f42242f4226592409bd2e95b076f9e88f0bf2270480df68e288a31ea1f6212df",
@@ -58,6 +60,8 @@ export const TEMPLATE_STOCK_HASHES = {
   "tricks-guide-v2": {
     current: "1f9b7ba407d06512cf07a956ca3f29371dc734beb81a8ab110b8707dceead0a2",
     superseded: [
+      "08882d2ce756848de7805fc148a4415e58e929c4e46993126e325becc5e0325c",
+      "c25960f7eccbf7bb99ecdc80598f4dd7faa00b042d945a1e3a7a10047b2177da",
       "137dce417fdadb44e12aaf9c8eb1378bf9dad35491b7f0d5ab0eed92c5c6a52a",
       "7c4e400f08d7ce0f4c524183b39c8e93a96d57ffa0b6794f4c04adce58f5b30f",
       "cb0f9f6f702e68a4033bc1192bd1366ae28038fbfed4726db8500da30e80e2c8",
