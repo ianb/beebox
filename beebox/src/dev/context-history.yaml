@@ -646,6 +646,13 @@ test1:
       peak: 41258
       added: 0
       turns: 1
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46948
+      peak: 53702
+      added: 6754
+      turns: 4
   list-card-types:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -882,6 +889,13 @@ test1:
       peak: 41216
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46915
+      peak: 46915
+      added: 0
+      turns: 2
   quote-when-to-use:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -890,6 +904,13 @@ test1:
       peak: 41251
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46941
+      peak: 46941
+      added: 0
+      turns: 2
   quote-functional-vs-expressive:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -898,6 +919,13 @@ test1:
       peak: 41231
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46921
+      peak: 46921
+      added: 0
+      turns: 2
   quote-no-fabrication:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -906,6 +934,13 @@ test1:
       peak: 41273
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46963
+      peak: 46963
+      added: 0
+      turns: 2
   law-never-paraphrase:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -937,6 +972,13 @@ test1:
       peak: 65421
       added: 18653
       turns: 9
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 55455
+      peak: 59777
+      added: 4322
+      turns: 8
   source-tag-syntax:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -945,6 +987,13 @@ test1:
       peak: 41229
       added: 0
       turns: 1
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46745
+      peak: 52376
+      added: 5631
+      turns: 4
   source-as-is-free-form:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -953,6 +1002,13 @@ test1:
       peak: 41248
       added: 0
       turns: 1
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46938
+      peak: 53197
+      added: 6259
+      turns: 7
   source-vs-quote-composition:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -961,6 +1017,20 @@ test1:
       peak: 41237
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46927
+      peak: 50424
+      added: 3497
+      turns: 4
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46753
+      peak: 52204
+      added: 5451
+      turns: 4
   source-when-to-skip:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -969,6 +1039,13 @@ test1:
       peak: 41243
       added: 0
       turns: 1
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46933
+      peak: 52576
+      added: 5643
+      turns: 4
   box-structure-inbox:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -3945,6 +4022,13 @@ test1:
       peak: 44966
       added: 0
       turns: 2
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46942
+      peak: 50077
+      added: 3135
+      turns: 3
   points-at-ui-where-is-the-mic:
     - date: 2026-08-23T17:03:41.065Z
       boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
@@ -4158,6 +4242,13 @@ test1:
       peak: 46685
       added: 0
       turns: 1
+    - date: 2026-09-26T20:05:08.440Z
+      boxCommit: e730cd00a069d8b1620696867ff6c621592ec254
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46930
+      peak: 52751
+      added: 5821
+      turns: 4
   quote-third-party-from:
     - date: 2026-08-29T19:34:43.609Z
       boxCommit: 5faacdb83a5e5f17be6dab96f9113b6ad54ebf58
@@ -4173,6 +4264,13 @@ test1:
       peak: 46974
       added: 0
       turns: 1
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46947
+      peak: 50390
+      added: 3443
+      turns: 4
   link-fields-external-href-envelope:
     - date: 2026-08-30T17:59:29.933Z
       boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
@@ -4413,6 +4511,13 @@ test1:
       peak: 46956
       added: 1334
       turns: 5
+    - date: 2026-09-26T20:03:42.258Z
+      boxCommit: 4692701d0abdedf77e5bedc2fb305a418da332bb
+      repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
+      initial: 46908
+      peak: 52400
+      added: 5492
+      turns: 6
   landmark-system-theme:
     - date: 2026-09-08T21:40:39.884Z
       boxCommit: a377ba712e5759870aecf89e2b262aaea67b75e3

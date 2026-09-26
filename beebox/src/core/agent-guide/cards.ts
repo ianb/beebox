@@ -13,8 +13,18 @@ import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
-import { REF_PATH_RULE } from "./source.js";
 import { PROMINENCE_FIELD_BULLET } from "./prominence.js";
+
+/**
+ * The one statement of how a ref path is written. ABOUT_CARDS's refs bullet
+ * is its home; `box-docs/provenance.md` points here instead of restating it.
+ * The behavior it describes is `resolveRefPath` (`src/shared/ref-path.ts`).
+ */
+const REF_PATH_RULE =
+  "**Always write a leading `/` — the path resolves from the box root.** " +
+  "The one exception is `attach/…`, the card's own attach scope. Never `../`. " +
+  "A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write. " +
+  "A ref reaches only the box's own areas (`_content`, `_config`, …): package docs under `node_modules/` can be read but not linked, so name them in plain text.";
 
 export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(

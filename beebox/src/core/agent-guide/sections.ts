@@ -29,8 +29,7 @@ export const SECTION = {
   QUESTIONS: "QUESTIONS",
   TODOS: "TODOS",
 
-  // Output vocabulary — verbatim quotes and provenance (the `ref`/`href` home).
-  DIRECT_QUOTES: "DIRECT_QUOTES",
+  // Citing — the `{% quote %}` / `{% source %}` pointer (mechanics in box-docs/provenance.md).
   PROVENANCE: "PROVENANCE",
 } as const;
 

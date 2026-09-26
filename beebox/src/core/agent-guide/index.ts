@@ -28,7 +28,6 @@ import { gitHistorySection, speakingToUserSection, whereToRecordSection } from "
 import { landmarksSection } from "./landmarks.js";
 import { secretsSection } from "./secrets.js";
 import { lawsSection } from "./laws.js";
-import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
 import { whereTheDocsAreSection } from "./where-docs.js";
@@ -90,7 +89,6 @@ This guide is for every agent working in this box — chat, background jobs, and
     guidesSection(guides),
     secretsSection(),
     externalToolsSection(),
-    quotesSection(),
     sourceSection(),
     gitHistorySection(),
     whereToRecordSection(),

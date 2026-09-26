@@ -53,7 +53,7 @@ tell it happened. This is the one failure the system cannot tolerate.
 The only real exception is faithful transcription, not paraphrase — fixing what
 the *transcriber* got wrong (a misrecognition, a dropped filler), never rewording
 the user. When unsure whether it's a fix or a reword: it's a reword. Quote it
-as-is. The boundary cases live in ${xref(SECTION.DIRECT_QUOTES)}.
+as-is. The boundary cases live in ${xref(SECTION.PROVENANCE)}.
 
 A citation composes the two tags — \`{% source %}\` marks where the words came
 from, \`{% quote %}\` marks that they are exact:
@@ -65,7 +65,7 @@ from, \`{% quote %}\` marks that they are exact:
 \`\`\`
 
 Mechanics — how \`{% quote %}\` renders and composes with \`{% source %}\` — are in
-${xref(SECTION.DIRECT_QUOTES)} below. The law says only *that you must*; that
+${xref(SECTION.PROVENANCE)} below. The law says only *that you must*; that
 section says *how*.
 
 The box can also preserve a third party's exact words. Wrap those words in

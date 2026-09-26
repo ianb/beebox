@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T19:39:13Z
-Total documents: 440
+Generated: 2026-09-26T20:09:07Z
+Total documents: 441
 
 ## Issues
 
@@ -717,7 +717,7 @@ Referenced by:
 
 #### docs/box-guidance.md
 
-Title: "Box guidance" | 123 lines | current reference
+Title: "Box guidance" | 128 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
@@ -730,6 +730,7 @@ References:
 - → docs/prompts/logging.md (link)
 - → docs/box/tricks.md (link)
 - → docs/box/schemas.md (link)
+- → docs/box/provenance.md (link)
 
 #### docs/box-layout.md
 
@@ -2001,6 +2002,17 @@ Referenced by:
 - docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
 - docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 - docs/media.md:18 (link) — - Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).
+
+#### docs/box/provenance.md
+
+Title: "Quotes and provenance" | 167 lines | current reference
+
+Referenced by:
+- docs/box-guidance.md:118 (link) — [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
+- docs/plans/doc-structure-box-guidance.md:440 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
+
+References:
+- → docs/plans/narration-mode.md (mention)
 
 #### docs/box/publishing.md
 
@@ -6223,6 +6235,7 @@ References:
 - → docs/box-layout.md (mention)
 - → docs/connectors.md (mention)
 - → docs/box/tricks.md (mention)
+- → docs/box/provenance.md (mention)
 - → docs/server/operations.md (mention)
 - → docs/box-guidance.md (mention)
 
@@ -6584,6 +6597,7 @@ No references in or out.
 Title: "Narration Mode — Design" | 469 lines | proposal | active
 
 Referenced by:
+- docs/box/provenance.md:61 (mention) — See `node_modules/beebox/box-docs/narration-mode.md`.
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/reports/activities-retrospective-2026-05-14.md:47 (mention) — The original design docs ([activities-design-2026-04-19.md](activities-design-2026-04-19.md), and references in `narrati
 - docs/reports/plan-directory-migration-history-2026-09-13.md:27 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
