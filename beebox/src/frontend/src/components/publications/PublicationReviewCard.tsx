@@ -63,6 +63,9 @@ export function PublicationReviewCard({
           <AudienceBlock title="Requested audience" value={candidate?.requestedScope ?? site.requested} />
           <AudienceBlock title="Approved audience" value={site.approved} />
         </Row>
+        {[candidate?.requestedScope ?? site.requested, site.approved].some((audience) => audience?.tier === "secret")
+          ? <Hint>Anyone with the link can view this without signing in. It is unlisted, not private to named people.</Hint>
+          : null}
 
         {candidate ? <CandidateDetails candidate={candidate} pubId={site.pubId} /> : <Text size="sm" tone="muted">No prepared update is waiting for review.</Text>}
         <PublicationActions site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
@@ -192,11 +195,9 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
   return (
     <Stack gap="sm">
       <Heading level={3}>Potential sensitive content</Heading>
-      <Text size="sm">Automated checks scan text files for credential-like strings, personal file paths, and unexpected email addresses. They also flag external URLs. Images and other binary files are not inspected.</Text>
       <Text size="xs" tone="muted">Prepared <FriendlyDate iso={candidate.preparedAt} /></Text>
-      <Text size="sm">Files: {candidate.preview.length} · findings: {candidate.scan.total} · binary files not inspected: {candidate.scan.skippedBinaries}</Text>
-      {candidate.scan.total > 0 ? <Badge tone="warning">Review the findings below before approving this audience.</Badge> : <Badge tone="success">No matches from the automated text checks.</Badge>}
-      <Hint>This check can miss sensitive content; review the prepared files before publishing.</Hint>
+      {candidate.scan.total > 0 ? <Badge tone="warning">Review findings before approving.</Badge> : <Text size="sm">Scanned for known secrets: no matches</Text>}
+      {candidate.scan.skippedBinaries > 0 ? <Text size="xs" tone="muted">Some binary files were skipped.</Text> : null}
       <Stack gap="xs">
         {candidate.preview.map((file) => (
           <Row key={file.path} gap="sm" wrap>
@@ -252,7 +253,6 @@ function AudienceBlock({ title, value }: { title: string; value: AudienceSummary
     <Stack gap="xs" className="min-w-56">
       <Heading level={3}>{title}</Heading>
       <Text size="sm">Tier: <Text weight="medium">{value.tier}</Text></Text>
-      {value.tier === "secret" ? <Hint>Anyone with the link can view this without signing in. It is unlisted, not private to named people.</Hint> : null}
       {"status" in value ? <Text size="sm">State: {value.status}</Text> : null}
       {value.tier === "public" && value.slug ? <Text size="sm">Public path: <Text mono>/p/{value.slug}/</Text></Text> : null}
       {publicationCustomHostname(value) ? <Text size="sm">Custom hostname: <Text mono breakAll>{publicationCustomHostname(value)}</Text></Text> : null}

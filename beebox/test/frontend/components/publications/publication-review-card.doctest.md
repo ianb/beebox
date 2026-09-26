@@ -77,13 +77,15 @@ const preparedMarkup = renderToStaticMarkup(React.createElement(PublicationRevie
 }));
 ```
 
-Prepared review keeps its useful summary and file list, with no active or
+Prepared review keeps the file list and inspection actions, with no active or
 candidate content hashes exposed in the primary view.
 
 ```ts
 preparedMarkup.includes("Potential sensitive content")
-  && preparedMarkup.includes("Files: 1 · findings: 0 · binary files not inspected: 0")
-  && preparedMarkup.includes("No matches from the automated text checks.")
+  && preparedMarkup.includes("Scanned for known secrets: no matches")
+  && !preparedMarkup.includes("Files:")
+  && !preparedMarkup.includes("Automated checks scan")
+  && (preparedMarkup.match(/Anyone with the link can view this without signing in/g) ?? []).length === 1
   && preparedMarkup.includes("Anyone with the link can view this without signing in. It is unlisted, not private to named people.")
   && preparedMarkup.includes("release/very-long-generated-filename-that-should-wrap-on-mobile.html")
   && preparedMarkup.includes("Prepare a new candidate here")
