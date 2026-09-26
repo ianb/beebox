@@ -13,8 +13,10 @@ function PublicationCardView(props: RendererProps) {
   }
   const frontmatter = Object.fromEntries(Object.entries(props.data.frontmatter ?? {}).filter(([key]) => key !== "pubId"));
   const notes = { ...props.data, frontmatter };
+  const hasNotes = typeof props.data.body === "string" && props.data.body.trim() !== "";
+  const hasComments = frontmatter["comments"] !== undefined;
   return <Stack gap="md">
-    <MarkdownCardView {...props} data={notes} />
+    {hasNotes || hasComments ? <MarkdownCardView {...props} data={notes} hideEmptyBody /> : null}
     <PublicationApprovalView pubId={pubId} />
   </Stack>;
 }
