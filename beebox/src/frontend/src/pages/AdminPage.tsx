@@ -63,6 +63,7 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab:
         <AdminPanel tab="agents" open={tab}><AgentsPanel /></AdminPanel>
         <AdminPanel tab="people" open={tab}><PeoplePanel /></AdminPanel>
         <AdminPanel tab="connections" open={tab}><ConnectionsPanel arrival={arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={onArrivalConsumed} /></AdminPanel>
+        <AdminPanel tab="secrets" open={tab}><SecretsPanel /></AdminPanel>
         <AdminPanel tab="host" open={tab}><HostPanel /></AdminPanel>
       </Stack>
     </Stack></AdminHangProbe>
@@ -90,9 +91,12 @@ function ConnectionsPanel({ arrival, arrivalReceipt, onArrivalConsumed }: Pick<A
     <ProbeSection name="GoogleServices"><GoogleServicesSection arrival={arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={onArrivalConsumed} /></ProbeSection>
     <ProbeSection name="GmailFilters"><GmailFiltersSection /></ProbeSection>
     <ProbeSection name="Telegram"><TelegramSection /></ProbeSection>
-    <ProbeSection name="Secrets"><SecretsSection /></ProbeSection>
     <ProbeSection name="CloudflarePublishConnections"><CloudflarePublishConnectionsSection /></ProbeSection>
   </>;
+}
+
+function SecretsPanel() {
+  return <ProbeSection name="Secrets"><SecretsSection /></ProbeSection>;
 }
 
 function HostPanel() {
