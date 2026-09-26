@@ -6,7 +6,12 @@ export interface CloudflareZone { id: string; name: string; status: string; acco
 export interface WorkerDomain { id: string; hostname: string; service: string; environment: string; zoneId: string; zoneName: string }
 type Request = (url: string, init: { method: string; headers?: Record<string, string>; body?: string }) => Promise<Response>;
 
-const envelope = z.object({ success: z.boolean(), errors: z.array(z.object({ code: z.number(), message: z.string() })).optional(), result: z.unknown().optional() });
+const providerError = z.object({ code: z.number(), message: z.string() });
+const envelope = z.object({
+  success: z.boolean(),
+  errors: z.array(providerError).nullable().optional(),
+  result: z.unknown().optional(),
+});
 const zoneSchema = z.object({ id: z.string(), name: z.string(), status: z.string(), account: z.object({ id: z.string() }) });
 const domainSchema = z.object({ id: z.string(), hostname: z.string(), service: z.string(), environment: z.string(), zone_id: z.string(), zone_name: z.string() });
 

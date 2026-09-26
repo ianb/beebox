@@ -534,12 +534,13 @@ box member to enable the site.
    capability, and shortening it makes the link unusable. Share a secret URL
    privately with its intended recipient; do not write it into shared notes,
    a public page, or a public issue. The output also prints a direct
-   Publications link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
-   available. Otherwise the line says to open this box's Publications page from
-   the app menu. Tell the boxholder to sign in to this box, open **Publications**
-   using the returned link or profile menu, select the named site, review its
-   requested audience and file/scan summary, then choose **Enable** or
-   **Approve**. The member's app action is required; no CLI command can enable
+   publication-card approval link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
+   available. Otherwise the line says to open this box's Publications area from
+   the app menu and choose the publication card. Tell the boxholder to sign in
+   to this box, open the linked publication card, review its requested audience
+   and file/scan summary, then choose **Enable** or **Approve**. The Publications
+   area links to existing cards and can create a missing reference card when
+   the member explicitly chooses that action. The member's app action is required; no CLI command can enable
    or approve it.
 2. For a first enable or scope change, the boxholder must review the title,
    destination, requested audience, emitted file summary, and leak-scan findings
@@ -592,8 +593,8 @@ first. A successful API mapping does not prove HTTPS is ready.
 The agent does not run CLI setup or assign a host. It checks
 `bbx pub connections`, uses the selected connection name in publication
 definitions, prepares the site, and gives the boxholder the `approval:` link
-printed by the CLI. A signed-in member reviews and approves the path in
-**Publications**. Public sites require an explicit slug and use
+printed by the CLI. A signed-in member reviews and approves the publication
+card opened by that link. Public sites require an explicit slug and use
 `https://<box-host>/<slug>/`; secret sites use
 `https://<box-host>/s/<pubId>/`. Preserve the complete secret path and share it
 privately. `/s`, `/p`, `/a`, and Worker-owned `__*` routes are reserved and

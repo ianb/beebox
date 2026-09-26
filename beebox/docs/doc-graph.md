@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T17:09:41Z
-Total documents: 437
+Generated: 2026-09-26T20:08:34Z
+Total documents: 438
 
 ## Issues
 
@@ -65,6 +65,7 @@ These documents are not referenced by any other document.
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
+- **docs/plans/publication-approval-card.md** — "Publication approval cards" (126 lines) · proposal · partial
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
@@ -76,7 +77,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **test/manual/README.md** — "Manual tests" (44 lines)
 - **user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
@@ -118,7 +118,7 @@ Referenced by:
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
 - docs/README.md:71 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
-- docs/box/publishing.md:19 (mention) — ├── CLAUDE.md
+- docs/box/publishing.md:21 (mention) — ├── CLAUDE.md
 - docs/cards/migrations.md:482 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
 - docs/cards/schemas.md:331 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
@@ -649,7 +649,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:296 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:307 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:57 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -875,7 +875,7 @@ Referenced by:
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:272 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:283 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -1038,8 +1038,8 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
-- docs/plans/publish-custom-domain-admin.md:27 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
+- docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
 - docs/plans/publish-sites-admin.md:36 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
@@ -1049,6 +1049,7 @@ Referenced by:
 - docs/plans/workstream-exhibits.md:92 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
 - docs/plans/workstreams-app.md:44 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:111 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
+- docs/unimplemented-plans/publish-custom-domain-admin.md:30 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-plan/TEMPLATE.md:33 (mention) — - beebox/docs/engineering-principles.md — the twelve principles, by number
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:110 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
@@ -1430,7 +1431,7 @@ Referenced by:
 
 #### docs/publishing.md
 
-Title: "Operating Cloudflare site publishing" | 294 lines | current reference
+Title: "Operating Cloudflare site publishing" | 304 lines | current reference
 
 Referenced by:
 - docs/guides.md:41 (link) — | Publishing: the managed static-site publisher, operator side | [publishing](publishing.md) |
@@ -1572,7 +1573,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:193 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:204 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:45 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -1585,7 +1586,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 277 lines | current reference
+Title: "Security overview" | 290 lines | current reference
 
 Referenced by:
 - README.md:90 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1594,7 +1595,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:39 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:40 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:51 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -1622,7 +1623,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 522 lines | current reference
+Title: "Security report — structured version" | 540 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
@@ -1632,7 +1633,8 @@ Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/security-overview.md:38 (link) — [`security-report.md`](security-report.md).
+- docs/plans/publication-approval-card.md:19 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
+- docs/security-overview.md:47 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
@@ -1668,6 +1670,7 @@ References:
 - → ../issues/features/2026-09-04-cross-box-filesystem-isolation.md (link)
 - → ../issues/closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md (link)
 - → docs/plans/publish-sites-admin.md (link)
+- → docs/plans/publish-shared-host-per-box.md (link)
 
 #### docs/server.md
 
@@ -1979,7 +1982,7 @@ Referenced by:
 
 #### docs/box/publishing.md
 
-Title: "Publishing a site from this box" | 628 lines | current reference
+Title: "Publishing a site from this box" | 652 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
@@ -2001,6 +2004,7 @@ Title: "What you could do with your box" | 218 lines | current reference
 
 Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
+- docs/plans/publish-shared-host-per-box.md:153 (mention) — Update `beebox/docs/box/publishing.md` and the relevant `beebox/docs/box/what-you-could-do.md` entry to teach agents tha
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:26 (mention) — `what-you-could-do.md`). `landmark-curation.md` lives at `beebox/docs/`
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:79 (mention) — > `beebox/docs/box/what-you-could-do.md`, written for box agents (not the
 - ../issues/features/2026-09-25-agent-maintained-ideas-page.md:35 (mention) — `beebox/docs/box/what-you-could-do.md` (shipped as a package doc) holds
@@ -2133,6 +2137,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/cards/schemas.md`, the box-local schema guide
 - docs/implemented-plans/todo-collection.md:680 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
+- docs/plans/publication-approval-card.md:19 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/cards/schemas.md`
 - user-stories/catalog/2026-08-21.md:9050 (mention) — - **Agent-added card fields survive a connector rewrite** — The mechanism is real, unconditional on the rewrite paths, a
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:9 (mention) — and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
@@ -2398,6 +2403,7 @@ Referenced by:
 - docs/design/README.md:21 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
 - docs/plans/agent-docs.md:104 (mention) — on me. Shared boxes are a design ruling (`design/identity.md`); what
 - docs/plans/publish-pages.md:42 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
+- docs/plans/publish-shared-host-per-box.md:24 (mention) — - **Keep one box sharing granularity.** The identity design says a box has one granularity of sharing (`beebox/docs/desi
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
 
@@ -2887,7 +2893,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:294 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:305 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -5022,7 +5028,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:193 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:209 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:220 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -5747,7 +5753,7 @@ Title: "The agent sees the interface and points at controls in it" | 1306 lines 
 
 Referenced by:
 - docs/mobile-contract.md:584 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
-- ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
+- ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:16 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
 
@@ -6656,24 +6662,20 @@ References:
 - → docs/plans/public-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
 
-#### docs/plans/publish-custom-domain-admin.md
+#### docs/plans/publication-approval-card.md **[ORPHAN]**
 
-Title: "Assign a custom hostname to a prepared publication in Admin" | 156 lines | proposal | partial
-
-Referenced by:
-- docs/plans/publish-custom-domain-admin.review.md:3 (mention) — Independent Fable review of `publish-custom-domain-admin.md`, followed by source verification and adjudication. The user
-- docs/plans/publish-sites-admin.md:247 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
+Title: "Publication approval cards" | 126 lines | proposal | partial
 
 References:
-- → docs/plans/publish-sites-admin.md (mention)
-- → docs/engineering-principles.md (mention)
+- → docs/cards/schemas.md (mention)
+- → docs/security-report.md (mention)
 
 #### docs/plans/publish-custom-domain-admin.review.md **[ORPHAN]**
 
 Title: "Plan Engineering Review — custom hostname assignment" | 91 lines | plan review
 
 References:
-- → docs/plans/publish-custom-domain-admin.md (mention)
+- → docs/unimplemented-plans/publish-custom-domain-admin.md (mention)
 
 #### docs/plans/publish-pages.md
 
@@ -6705,13 +6707,31 @@ References:
 - → docs/publishing.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/plans/publish-shared-host-per-box.md
+
+Title: "Serve box publications from one shared hostname" | 170 lines | proposal | partial
+
+Referenced by:
+- docs/security-report.md:531 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
+- docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
+- docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
+
+References:
+- → docs/unimplemented-plans/publish-custom-domain-admin.md (link)
+- → docs/plans/publish-sites-admin.md (mention)
+- → docs/design/identity.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/box/what-you-could-do.md (mention)
+
 #### docs/plans/publish-sites-admin.md
 
 Title: "Static site publishing with admin setup and human approval" | 292 lines | proposal | partial
 
 Referenced by:
-- docs/plans/publish-custom-domain-admin.md:11 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
-- docs/security-report.md:514 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
+- docs/security-report.md:524 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 
 References:
 - → ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
@@ -6724,7 +6744,7 @@ References:
 - → frontend.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)
-- → docs/plans/publish-custom-domain-admin.md (link)
+- → docs/unimplemented-plans/publish-custom-domain-admin.md (link)
 
 #### docs/plans/publish-sites-admin.review.md **[ORPHAN]**
 
@@ -7619,6 +7639,22 @@ References:
 - → docs/connectors.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 
+#### docs/unimplemented-plans/publish-custom-domain-admin.md
+
+Title: "Assign a custom hostname to a prepared publication in Admin" | 159 lines | past proposal | superseded
+
+Referenced by:
+- docs/plans/publish-custom-domain-admin.review.md:3 (mention) — Independent Fable review of `publish-custom-domain-admin.md`, followed by source verification and adjudication. The user
+- docs/plans/publish-shared-host-per-box.md:11 (link) — **Issues addressed:** none found in `issues/` for shared-host publication routing. This supersedes the [per-publication
+- docs/plans/publish-sites-admin.md:247 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
+- docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
+
+References:
+- → docs/plans/publish-shared-host-per-box.md (frontmatter)
+- → docs/plans/publish-shared-host-per-box.md (link)
+- → docs/plans/publish-sites-admin.md (mention)
+- → docs/engineering-principles.md (mention)
+
 #### docs/unimplemented-plans/query-cards.md
 
 Title: "Query cards — the "select and arrange cards" vocabulary" | 369 lines | past proposal | parked
@@ -7638,7 +7674,7 @@ References:
 
 #### docs/unimplemented-plans/README.md
 
-Title: "Unimplemented plans" | 24 lines | current reference
+Title: "Unimplemented plans" | 25 lines | current reference
 
 Referenced by:
 - docs/unimplemented-plans/design-card-views-superseded.md:54 (mention) — README.md               → [Source]
@@ -7660,6 +7696,8 @@ References:
 - → docs/plans/email-tracking.md (mention)
 - → docs/unimplemented-plans/session-end-sweep-detachment-superseded.md (mention)
 - → docs/implemented-plans/dev-loop-lifecycle.md (mention)
+- → docs/unimplemented-plans/publish-custom-domain-admin.md (mention)
+- → docs/plans/publish-shared-host-per-box.md (mention)
 
 #### docs/unimplemented-plans/session-end-sweep-detachment-superseded.md
 
@@ -7763,14 +7801,6 @@ References:
 - → docs/architecture/CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 14 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 

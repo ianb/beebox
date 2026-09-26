@@ -19,7 +19,7 @@ const client = createCloudflareProvisioningClient(
       return new Response(JSON.stringify({ success: true, result: [{ id: `zone-${page}`, name: page === 1 ? "example.com" : "sub.example.com", status: "active", account: { id: "0123456789abcdef0123456789abcdef" } }], result_info: { page, per_page: 50, total_pages: 2 } }), { status: 200 });
     }
     if (url.pathname.endsWith("/workers/domains") && init.method === "GET") {
-      return new Response(JSON.stringify({ success: true, result: [{ id: "domain-id", hostname: "site.example.com", service: "bbx-site", environment: "production", zone_id: "zone-1", zone_name: "example.com" }], result_info: { page: 1, total_pages: 1 } }), { status: 200 });
+      return new Response(JSON.stringify({ success: true, errors: null, messages: null, result: [{ id: "domain-id", hostname: "site.example.com", service: "bbx-site", environment: "production", zone_id: "zone-1", zone_name: "example.com" }], result_info: { page: 1, total_pages: 1 } }), { status: 200 });
     }
     if (url.pathname.endsWith("/workers/domains") && init.method === "PUT") {
       return new Response(JSON.stringify({ success: true, result: { id: "domain-id", hostname: "site.example.com", service: "bbx-site", environment: "production", zone_id: "zone-1", zone_name: "example.com" } }), { status: 200 });
@@ -49,6 +49,18 @@ const getCall = calls.find((call) => call.url.pathname.endsWith("/workers/domain
 const putCall = calls.find((call) => call.url.pathname.endsWith("/workers/domains") && call.init.method === "PUT");
 JSON.stringify({ hostnameFilter: getCall.url.searchParams.get("hostname"), found: found[0], put: JSON.parse(putCall.init.body), attached })
 => {"hostnameFilter":"site.example.com","found":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"},"put":{"hostname":"site.example.com","service":"bbx-site","zone_id":"zone-1","zone_name":"example.com"},"attached":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"}}
+```
+
+The API's informational `messages` value is not part of the adapter's consumed
+contract, so unexpected non-null shapes remain ignored.
+
+```ts continue
+const informationalMessages = createCloudflareProvisioningClient(
+  { accountId: "0123456789abcdef0123456789abcdef", bearer: staticBearer("test-token") },
+  { fetch: async () => new Response(JSON.stringify({ success: true, errors: null, messages: { notice: true }, result: [] }), { status: 200 }) },
+);
+(await informationalMessages.listWorkerDomains("site.example.com")).length
+=> 0
 ```
 
 HTTP 200 error envelopes preserve only bounded, control-character-free Cloudflare
