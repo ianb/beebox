@@ -97,7 +97,7 @@ Package docs carry no DOCID marker. DOCID is per-box debug state
 (`.beebox/docid-debug`) for tracing what reaches a prompt; the package docs
 are read by the agent through a file-read tool whose call already names the
 path. The agent guide and the box-compiled docs keep their markers.
-`docs/prompt-logging.md` says so.
+`docs/prompts/logging.md` says so.
 
 ### What stays in the box
 
@@ -182,7 +182,7 @@ if present, so an upgraded box does not carry a stale copy beside the live one.
    resolve. Knowledge audit: a card-type question under Claude and under Codex,
    watching that the agent opens the package doc.
 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
-   `docs/prompt-logging.md` describe the new tier; this plan moves to
+   `docs/prompts/logging.md` describe the new tier; this plan moves to
    `implemented-plans/` at finish.
 
 ## Questions

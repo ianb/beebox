@@ -39,8 +39,8 @@ where to put new material.
 | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
 | Deployed-server health-check runbooks | [docs/server/health-checks.md](server/health-checks.md) |
 | Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
-| Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
-| Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt-audits.md](prompt-audits.md)) |
+| Capturing full agent-invocation API traffic | [docs/prompts/logging.md](prompts/logging.md) |
+| Prompt-surface review workflow | [docs/prompts/review.md](prompts/review.md) (lens catalog: [docs/prompts/lenses.md](prompts/lenses.md)) |
 | Triage pipeline current guide | [docs/triage.md](triage.md) |
 | Questions subsystem current reference | [docs/questions.md](questions.md) |
 | The production server (provisioning, configuration, deploying, boxes, operations) | [docs/server.md](server.md) |

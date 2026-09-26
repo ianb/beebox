@@ -294,15 +294,15 @@
   publish: dev/client-debug-log.md
   description: "The browser and iOS debug log format."
 
-- source: beebox/docs/prompt-logging.md
+- source: beebox/docs/prompts/logging.md
   publish: dev/prompt-logging.md
   description: "Capturing full agent API traffic for debugging."
 
-- source: beebox/docs/prompt-audits.md
+- source: beebox/docs/prompts/lenses.md
   publish: dev/prompt-audits.md
   description: "Lens catalog for reviewing what an agent is shown."
 
-- source: beebox/docs/prompt-surface-review.md
+- source: beebox/docs/prompts/review.md
   publish: dev/prompt-surface-review.md
   description: "Workflow for auditing agent context."
 

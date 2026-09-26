@@ -17,7 +17,7 @@ schema `instructions`, box docs). *Not* the beebox dev repo's own
 `CLAUDE.md` — that's ours, not a box's. Auditing the full assembled prompt
 stack (agent guide, system prompts, everything an agent reads end to end) is
 a known workflow, not a skill — the procedure lives in
-`beebox/docs/prompt-surface-review.md`; this skill routes a single
+`beebox/docs/prompts/review.md`; this skill routes a single
 durable instruction to its right tier.
 
 ## The attention budget, not the context window
