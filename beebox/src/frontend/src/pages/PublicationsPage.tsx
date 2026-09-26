@@ -1,5 +1,6 @@
 /** Compatibility index that opens each publication's reference card. */
 
+import { useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
@@ -19,10 +20,15 @@ import { SignInLink } from "../components/BoxSelectionTiles";
 export function PublicationsPage() {
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
+  const [ensureCommitWarning, setEnsureCommitWarning] = useState<{ message: string; cardPath: string } | null>(null);
   const query = trpc.publications.list.useQuery();
   const ensureCard = trpc.publications.ensureCard.useMutation({
-    onSuccess: async ({ cardPath }) => {
-      await navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl({ path: cardPath, viewer: null, params: {}, viewState: null })}`) });
+    onSuccess: async ({ cardPath, commitWarning }) => {
+      if (commitWarning !== null) {
+        setEnsureCommitWarning({ message: commitWarning, cardPath });
+      } else {
+        await navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl({ path: cardPath, viewer: null, params: {}, viewState: null })}`) });
+      }
     },
   });
   const openCard = (cardPath: string) => href(`/${boxSlug}/views/${serializeViewUrl({ path: cardPath, viewer: null, params: {}, viewState: null })}`);
@@ -36,6 +42,7 @@ export function PublicationsPage() {
         </Stack>
 
         {ensureCard.error ? <div role="alert"><Stack gap="xs"><ErrorText>{ensureCard.error.message}</ErrorText>{ensureCard.error.data?.code === "UNAUTHORIZED" || ensureCard.error.data?.code === "FORBIDDEN" ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : null}</Stack></div> : null}
+        {ensureCommitWarning ? <div role="alert"><Stack gap="xs"><ErrorText>{ensureCommitWarning.message}</ErrorText><TextLink id="bbx-publication-open-created-card" className="self-start" to={openCard(ensureCommitWarning.cardPath)}>Open review card</TextLink></Stack></div> : null}
         {query.error ? <div role="alert"><Card><Stack gap="sm"><ErrorText>{query.error.message}</ErrorText>{query.error.data?.code === "UNAUTHORIZED" || query.error.data?.code === "FORBIDDEN" ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : <Button id="bbx-publications-retry" intent="secondary" onClick={() => void query.refetch()}>Retry</Button>}</Stack></Card></div> : null}
         {query.isLoading ? <StatusMessage>Loading publications…</StatusMessage> : null}
         {query.data?.sites.length === 0 ? (
@@ -51,7 +58,7 @@ export function PublicationsPage() {
               </Stack>
               {site.hasCard
                 ? <TextLink id={`bbx-publication-card-${site.pubId}`} className="self-start" to={openCard(site.cardPath)}>Open review card</TextLink>
-                : <Button id={`bbx-publication-ensure-card-${site.pubId}`} className="self-start" intent="secondary" loading={ensureCard.isPending} disabled={ensureCard.isPending} onClick={() => ensureCard.mutate({ pubId: site.pubId })}>Ensure card and open</Button>}
+                : <Button id={`bbx-publication-ensure-card-${site.pubId}`} className="self-start" intent="secondary" loading={ensureCard.isPending} disabled={ensureCard.isPending} onClick={() => { setEnsureCommitWarning(null); ensureCard.mutate({ pubId: site.pubId }); }}>Ensure card and open</Button>}
             </Stack>
           </Card>
         ))}
