@@ -1,7 +1,7 @@
 # The development workflow
 
-Part of [how development happens here](development-process.md). See also
-[agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
+Part of [how development happens here](../development.md). See also
+[agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
 services](technologies.md).
 
 ## Workstreams
@@ -79,7 +79,7 @@ partial, unmet, or unverifiable. A fully met plan moves to
 `docs/implemented-plans/`, a partial one stays put with its prose corrected, and
 an abandoned one moves to `docs/unimplemented-plans/`. Reference documentation
 stays flat in `docs/` and describes the system as it works now. The conventions
-are in [plans/README.md](plans/README.md).
+are in [plans/README.md](../plans/README.md).
 
 ## Exhibits
 

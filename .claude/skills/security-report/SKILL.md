@@ -93,7 +93,7 @@ survive.
 Update at release boundaries that will be shown to people, when a surface-map
 `git diff --stat <generated-at-rev>..HEAD -- <paths>` signals drift, or on demand.
 Use the incremental procedure normally; full regeneration is for first creation
-or suspected drift. This is also tracked in `beebox/docs/maintenance.md`.
+or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
 
 Do not run the report writer unattended or make it a blocking commit gate.
 A scheduled read-only staleness reminder is permitted; scheduling does not

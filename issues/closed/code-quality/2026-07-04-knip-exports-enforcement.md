@@ -8,7 +8,7 @@ resolution: implemented
 
 The `exports` check is on (`knip.ts`, monorepo root) and the backlog is
 **651 → 0**. It runs weekly rather than as a commit gate
-(`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
+(`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/development/maintenance.md` says
 the output should be empty — so it now is.
 
 The measured number was wrong before it was large. Four blind spots made knip

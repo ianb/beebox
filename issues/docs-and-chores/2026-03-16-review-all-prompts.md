@@ -14,7 +14,7 @@ or mis-placed, and comment.
 procedure templates) plus the *assembled* chat / chat-thread / reactor context
 stacks as an agent actually receives them, with word/token counts per layer.
 Regenerate the data with `pnpm prompt-viewer` in `beebox/` (reads
-`~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
+`~/src/boxes/test1`; `docs/development/maintenance.md` has the details). Every fragment has
 a stable kebab-case name (`chat-system-prompt`, `schema-memo`,
 `reactor/claude-md`, …) — **cite prompts by these names when commenting**, so
 review notes are unambiguous and greppable.

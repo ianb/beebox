@@ -11,7 +11,7 @@ what gets built, reviews the plans and the prose, and lands the work. The
 instructions the agents read are checked into the repository and maintained as
 part of the work.
 
-**[Agent coding, and the checks around it](agent-coding.md)** covers where those
+**[Agent coding, and the checks around it](development/agent-coding.md)** covers where those
 instructions live, how the two model families review each other's work, and the
 strictness the code is held to: strict types, lint rules that are never weakened
 to make code pass, noisy output treated as a bug, the pre-commit hooks, and the
@@ -23,7 +23,7 @@ walk that boots a real box before a merge, browser tours, field tests, and
 the two that test agents rather than code, knowledge audits and session
 critiques.
 
-**[The development workflow](development-workflow.md)** covers how a piece of
+**[The development workflow](development/workflow.md)** covers how a piece of
 work moves: its own worktree, branch, and session, started from a briefing and
 landed on `main` by the `finish` skill; the issue queue and its categories and
 next-action tags; recurring work under `schedules/`; document comments; the
@@ -31,5 +31,5 @@ planning taxonomy under `docs/plans/` and how a plan is reconciled when the work
 lands; and exhibits, the page an agent builds to show work with exactly one ask
 on it.
 
-**[Technologies and AI services](technologies.md)** names the stack and the
+**[Technologies and AI services](development/technologies.md)** names the stack and the
 external model services a box can be configured to use.

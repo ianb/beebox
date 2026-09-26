@@ -16,7 +16,7 @@ The harness lives in `src/dev/`:
 
 **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching CLAUDE.md, schemas, prompts, or anything
 that changes what an agent should know; the periodic cadence is in
-[maintenance](../maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
+[maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
 
 ## How it works
 

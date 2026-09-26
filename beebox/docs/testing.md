@@ -24,7 +24,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 selects the tests the diff implicates, plus typecheck and lint. There is no
 full run at merge: full runs were mostly red for reasons the branch did not
 cause. The full suite runs on its own schedule instead
-([recurring work](development-workflow.md#recurring-work)), bisected to the
+([recurring work](development/workflow.md#recurring-work)), bisected to the
 landing that broke it.
 
 ## Instruments
