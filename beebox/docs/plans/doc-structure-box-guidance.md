@@ -72,6 +72,7 @@ remembers to install it.
 | 2 One home per subject | for each subject, name the home tier; other tiers become pointers or same-source renders | ~150 | ~900 moved, ~200 new |
 | 3 Agent guide axis and demotion | section registry gets an axis; on-demand-sized sections move to package docs | ~200 | ~1,200 moved |
 | 4 Measurement and review | audits for every moved fact; before/after find-the-fact on a box; a line in the weekly agent-docs-refresh checklist | ~100 | ~150 |
+| 5 Search reaches the docs | `bbx search` indexes `box-docs/` as kind `engine-doc` | ~150 | ~10 |
 
 Source and test: about 950 lines. Authored prose moved or written: about
 2,450 lines, most of it moved verbatim. Counted together this is a
@@ -478,6 +479,49 @@ recorded; this is the gate for demoting anything else.
   registry's class rule. This is the "periodic review" the boxholder accepted
   in phase one, applied to boxes.
 
+### Track 5: `bbx search` reaches the package docs
+
+**What.** The box search index covers `node_modules/beebox/box-docs/` so an
+agent's ordinary `bbx search <terms>` finds an engine doc by content, not
+only by the README's read-when line. Boxholder decision 2026-09-26: "I'm
+wondering if the search command should be able to search those docs. I
+think it should."
+
+**Why this needs to change.** Tracks 2 and 3 move facts out of the
+always-loaded guide into package docs. The only route to them today is the
+guide's pointer plus the README index, which works when the agent knows the
+subject name and fails when it knows only a term (`x-bbx-`, `rendersCardTypes`,
+"auto-commit"). Search by content is the route that does not depend on
+guessing the filename.
+
+**Direction.** The walker already indexes standalone `*.md` files with a
+heading fragment per section (`src/core/search/walk.ts:39-73`,
+`markdown-sections.ts:51`) and skips `node_modules` by name
+(`walk.ts:19`). Add the package docs directory as a second walk root with
+its own kind:
+
+- Hits carry `kind: "engine-doc"`, `path` box-relative
+  (`node_modules/beebox/box-docs/views.md`), and the section `fragment`, so a
+  hit prints as a path the agent can open with the same Read it uses for a
+  card.
+- `--kind engine-doc` restricts to docs; a plain search ranks docs with
+  cards. Semantic mode embeds them like any markdown file (about 80 files).
+- Refresh keys on the package docs' content hash, which `ensurePackageDocs`
+  already rewrites on a version change, so a deploy re-indexes the docs on
+  the next search without `--rebuild`.
+- `_content/docs/generated/` stays excluded (`walk.ts:27`): it is compiled
+  from guide cards that are themselves indexed.
+- The guide's "Where the docs are" gains one clause: "`bbx search` finds
+  them by content."
+
+**Vocabulary lock-ins.** `engine-doc` as a search kind.
+
+**First implementation chunk.** The walk root and kind, a doctest that
+indexes a fixture box with a two-file `box-docs/` and finds a term that
+appears only in a doc, and the guide clause. Knowledge audit
+`search-finds-engine-doc` (`knows_about`): ask for a term that lives only in
+a package doc and expect a `bbx search` call before the answer.
+
 ## Could this be simpler?
 
 **Simplest version:** the smallest fix (two installers on the sync path, one
@@ -564,6 +608,13 @@ generated class) is small enough to live in Open design questions.
 - **The Codex mirror design**: mirrors follow whatever the registry says.
 - **Retiring `bbx-validate-ignore.md`'s duplicate generator paths** beyond
   the orphan prune.
+- **An environment variable naming the package docs directory** (raised
+  2026-09-26). The path is fixed and box-relative
+  (`node_modules/beebox/box-docs/`), the guide already spells it in full on
+  every card-type line and in "Where the docs are", and an agent cannot count
+  on the same environment across hosts (Claude Code, Codex, a procedure run
+  from a hook). A second name for one fixed path is the "two tiers of
+  anything" smell; Track 5 makes the docs reachable by content instead.
 
 ## Open design questions
 
@@ -636,7 +687,9 @@ generated class) is small enough to live in Open design questions.
    schemas, connectors, schedules (one commit each; each is a verbatim move
    with the section-hash check, then a rewrite commit).
 4. Track 3 provenance (gate), then todos, card types, git history.
-5. Track 4 after-measurement and the weekly checklist line.
+5. Track 5 search kind and guide clause (one commit; independent of 3 and
+   4, so it can land right after Track 1 if wanted).
+6. Track 4 after-measurement and the weekly checklist line.
 
 Each commit gets a Codex diff review; the plan ships as one piece when the
 boxholder says so.
