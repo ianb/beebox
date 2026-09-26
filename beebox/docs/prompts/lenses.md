@@ -4,7 +4,7 @@ What to look for when reviewing prompts: a menu of lenses, each useful at a diff
 
 ## What it is
 
-Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each useful at different times. [prompt-surface-review.md](review.md) is the entry point for actually running a review pass (rendering assembled context stacks, review order); this doc is its lens catalog.
+Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each useful at different times. [Prompt surface review](review.md) is the entry point for actually running a review pass (rendering assembled context stacks, review order); this doc is its lens catalog.
 
 Many of the lenses here, and a number of the related entries in [issues/](../../issues/), originated from working through this Reddit post: [100 tips & tricks for building your own personal AI](https://old.reddit.com/r/ClaudeAI/comments/1thi6nh/100_tips_tricks_for_building_your_own_personal_ai/). The post's specific prescriptions are mostly not adopted as-is — the value was in using them as prompts to articulate what *should* hold for beebox, which often differs from what the post recommends.
 
@@ -58,18 +58,12 @@ Generic warnings ("avoid hallucination," "be accurate") are too vague to act on.
 
 Stock LLM phrases ("Great question!", "Let me unpack that," "That's a real tension") often come from prompt language that invites them. If the prompt says "be thoughtful and engaging," expect thoughtful-and-engaging boilerplate. Prompts that model the desired tone in their *own* writing get closer to that tone in output. See [tone-design.md](../../../.claude/memory/tone-design.md) for the broader problem.
 
-## Cache freshness, surfaced conditionally (a data-design lens)
-
-A lens on the data a prompt reads rather than on prompt text: a convention for
-caches, applied wherever a cache is designed.
-
-Any file that's a cache of an external source of truth (Gmail/Calendar/Drive snapshots, web fetches, synthesized briefings) should carry freshness metadata, but only where staleness would cause confidently-wrong output. Recipe categories: don't bother. Calendar snapshots: definitely.
-
-Two timestamps, not one: `last_sync` (when we last checked) and `data_through` (cutoff of the actual data). They diverge when a check found nothing new — without both, "May 11" is ambiguous between "stopped checking" and "checked, nothing new." Sidecar `<file>.sync.json` is usually cleaner than an inline header (no diff noise in the human-readable file).
+## Cache freshness, surfaced conditionally
 
 Surface freshness to the user *conditionally*: when data is stale past threshold, or when their question depends on recency. Announcing freshness on every response trains the user to skip the disclaimer. The header is for the agent's reasoning; the user only needs to see it when it matters.
 
-Hardest case: synthesized caches. A briefing built from 30 cards has `data_through = min(inputs.data_through)`, not its own generation timestamp. If the pipeline doesn't propagate this, the briefing looks fresh while resting on stale inputs — this is where silent-stale bugs actually live.
+The data shape behind this, two timestamps in a sidecar, is a connector
+convention: [freshness metadata](../connectors.md#freshness-metadata).
 
 ## Lazy summary generation on first use
 

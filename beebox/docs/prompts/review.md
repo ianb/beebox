@@ -4,7 +4,7 @@ Rendering what an agent actually reads, the layering model, the structural rules
 
 ## What it is
 
-The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Read this when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. [prompt-audits.md](lenses.md) is the companion lens catalog for the hunt step. (For routing a single new instruction to the right box surface, use the `bbx-context` skill.)
+The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Read this when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. [Prompt lenses](lenses.md) is the companion lens catalog for the hunt step. (For routing a single new instruction to the right box surface, use the `bbx-context` skill.)
 
 The prompts are how every agent comes to understand Bee Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema `instructions`, `src/core/box/skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
 
@@ -31,7 +31,11 @@ Every agent's context is a stack; each layer has a loading class:
 3. **Situational** — schema `instructions` for the card types in play, `.claude/rules/` path globs, the per-turn `<chat-app>` snapshot.
 4. **On-demand** — skill bodies, the package docs (`node_modules/beebox/box-docs/*`) and box-compiled docs (`_content/docs/generated/*`), guide cards the agent is pointed at.
 
+### Skills: description and body
+
 **Skills are two things at once:** the `description` is always-loaded (it's the trigger) and must be pure routing — no mechanics; the body is on-demand and owns its domain's mechanics. A guide mention of a skill's domain is usually the first overlap — the description *is* the pointer.
+
+### The guide/skill boundary
 
 **The guide/skill boundary is read vs. write:** the always-loaded guide keeps the query surface (`bbx calendar [timespan]`); the skill owns authoring mechanics (VTIMEZONE, conflict resolution).
 
@@ -50,7 +54,7 @@ self-contradiction, examples that earn their place) is in the
 ## Review pass, in order
 
 1. Render the stacks (`agent-context` per situation) and read each end-to-end *as the agent*.
-2. Hunt: overlap (same concept taught twice), contradiction, dated language, claims unverified against code, weight (cost-per-bit), missing role framing. [prompt-audits.md](lenses.md) is the full lens catalog for this step.
+2. Hunt: overlap (same concept taught twice), contradiction, dated language, claims unverified against code, weight (cost-per-bit), missing role framing. [Prompt lenses](lenses.md) is the full lens catalog for this step.
 3. Fix at the canonical home; turn the duplicate sites into cross-references (`SECTION` / `xref`).
 4. Re-render; compare layer word counts before/after.
 5. New conventions get knowledge audits; run them before calling the work done.

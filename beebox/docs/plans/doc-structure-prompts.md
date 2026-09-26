@@ -130,3 +130,33 @@ Questions (pilot protocol):
 | 8 | yes | 3 | prompt-audits.md#Compactness | 1 |
 | 9 | yes | 4 | prompt-surface-review.md#The layering model | 1 |
 | 10 | yes | 3 | prompt-surface-review.md#The layering model | 1 |
+
+### After (2026-09-26, before the review fixes)
+
+| # | Found | Steps | Cited |
+|---|---|---|---|
+| 1 | yes | 5 | prompts/review.md#See the assembled context |
+| 2 | yes | 5 | prompts/review.md#The layering model |
+| 3 | yes | 5 | prompts/review.md#Invariants |
+| 4 | yes | 9 | prompts/logging.md#Enabling it (tried chat and server first) |
+| 5 | yes | 5 | prompts/logging.md#DOCID markers (was a give-up) |
+| 6 | yes | 3 | prompts/logging.md#Correlating sessions |
+| 7 | **gave up** | 18 | the lens catalog, again; the navigator searched connectors and cards |
+| 8 | yes | 4 | prompts/lenses.md#Compactness |
+| 9 | yes | 3 | prompts/review.md#The layering model |
+| 10 | wrong | 11 | cited docs/README.md's restatement rule; the boundary was inline prose under "The layering model" |
+
+Two placements were still wrong after the rewrite and are fixed with the
+review findings below: the cache-freshness data convention now lives on
+the connectors page ("Freshness metadata"), where every navigator looked
+for it, with the surfacing half left as a lens that points there; the
+guide/skill boundary and the skill description/body rule are subheadings
+of the layering model.
+
+### Cross-model review of the diff (Codex, 2026-09-26)
+
+Four findings, all applied: the curated doc-graph table named two moved
+files; the cache-freshness lens should move, not gain another heading;
+the guide/skill boundary needs a heading; two visible link labels still
+showed old filenames. The five moved principles were confirmed present
+once each.
