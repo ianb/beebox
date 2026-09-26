@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T19:57:04Z
-Total documents: 429
+Generated: 2026-09-26T15:51:24Z
+Total documents: 433
 
 ## Issues
 
@@ -58,10 +58,12 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
+- **docs/plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (133 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
+- **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
@@ -221,8 +223,8 @@ Referenced by:
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/plans/workstream-exhibits.md:118 (mention) — - Root `CLAUDE.md`: worktree URLs use the short name; never restart the shared
 - docs/plans/worktree-control-surface.md:635 (mention) — box CLAUDE.md, the generated agent guide, and schema instructions. Everything in
-- docs/prompt-logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
-- docs/prompt-surface-review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
+- docs/prompts/logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
+- docs/prompts/review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
@@ -643,7 +645,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:279 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:296 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:57 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -919,7 +921,7 @@ Referenced by:
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:256 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:272 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -1098,6 +1100,7 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
+- docs/plans/publish-custom-domain-admin.md:27 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/publish-sites-admin.md:36 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
@@ -1234,9 +1237,9 @@ References:
 - → docs/scheduler.md (link)
 - → docs/server/health-checks.md (link)
 - → docs/chat/schedules.md (link)
-- → docs/prompt-logging.md (link)
-- → docs/prompt-surface-review.md (link)
-- → docs/prompt-audits.md (link)
+- → docs/prompts/logging.md (link)
+- → docs/prompts/review.md (link)
+- → docs/prompts/lenses.md (link)
 - → docs/triage.md (link)
 - → docs/questions.md (link)
 - → docs/server.md (link)
@@ -1391,7 +1394,7 @@ Referenced by:
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
-- docs/implemented-plans/secret-entry-guidance.md:532 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
+- docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
@@ -1488,6 +1491,7 @@ Referenced by:
 - docs/mobile-contract.md:917 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
+- docs/plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
@@ -1537,64 +1541,19 @@ Referenced by:
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
 - ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:48 (mention) — (`docs/procedure-implementation.md:176`); restoring is the procedure's
 
-#### docs/prompt-audits.md
+#### docs/prompts.md
 
-Title: "Prompt Audits" | 203 lines | current reference
-
-Referenced by:
-- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt
-- docs/implemented-plans/doc-structure.md:619 (mention) — after: `prompt-audits.md` for "audit results" (Q2), `scheduled/` for the
-- docs/implemented-plans/docs-reorg.md:103 (mention) — `browse`); `prompt-audits.md` → nonexistent `tone-design.md`;
-- docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
-- docs/prompt-audits.md:174 (mention) — **Useful: what-changed closers.** One or two sentences naming what changed and where: "Added the pre-tool-brevity audit
-- docs/prompt-surface-review.md:3 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
-- ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#park-ignored-proactive-
-- ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
-- ../issues/exploration/2026-05-19-universal-confidence-rubric.md:15 (link) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
-- ../issues/features/2026-05-19-agent-loop-hooks.md:19 (link) — - **Link enforcement** (*Link, don't name* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#link-dont-name) audi
-- ../issues/features/2026-05-19-spark-mode.md:15 (link) — - Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/promp
-
-References:
-- → docs/prompt-surface-review.md (link)
-- → ../.claude/memory/tone-design.md (link)
-- → docs/prompt-audits.md (mention)
-
-#### docs/prompt-logging.md
-
-Title: "Prompt Logging for Agent Invocations" | 210 lines | current reference
+Title: "The prompt surface" | 24 lines | current reference
 
 Referenced by:
-- docs/guides.md:42 (link) — | Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
-- docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompt-logging.md` says so.
-- docs/implemented-plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
-- docs/plans/agent-docs.md:70 (mention) — example; `prompt-logging.md` shows `/Users/...` as a redaction example;
-- user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
-
-References:
-- → CLAUDE.md (mention)
-
-#### docs/prompt-surface-review.md
-
-Title: "Reviewing the prompt surface" | 64 lines | current reference
-
-Referenced by:
-- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt
-- docs/prompt-audits.md:3 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
-- src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
-- ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompt-surface-review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
-- ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
-- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
-- ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
-
-References:
-- → docs/prompt-audits.md (link)
-- → CLAUDE.md (mention)
-- → docs/plans/prompt-surface-cleanup-evaluation.md (link)
+- docs/plans/cli-restructure.md:30 (mention) — - **`bbx init-rules` standalone removed.** File moved from `src/cli/commands/init-rules.ts` to `src/core/init-rules.ts`
+- docs/plans/doc-structure-prompts.md:57 (mention) — | (new) | `prompts.md`: what the prompt surface is (the generated sources); members; owned elsewhere |
+- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
+- user-stories/catalog/2026-08-21.md:8565 (mention) — **Code check** — beebox/package.json defines "prompt-report": "tsx src/dev/prompt-report.ts"; the script parses --output
 
 #### docs/publishing.md
 
-Title: "Operating Cloudflare site publishing" | 207 lines | current reference
+Title: "Operating Cloudflare site publishing" | 294 lines | current reference
 
 Referenced by:
 - docs/plans/publish-pages.md:264 (mention) — 9. **Docs + audits run** — reference doc (`docs/publishing.md`) distilled from this plan, box-agent guidance, knowledge
@@ -1643,6 +1602,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
+- docs/plans/doc-structure-prompts.md:9 (link) — Sixth cluster under the [organizing principles](../README.md#organizing-principles):
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -1712,7 +1672,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 551 lines | current reference
+Title: "Secrets: the machine-level store" | 553 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1729,7 +1689,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:177 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:193 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:45 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -1743,7 +1703,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 260 lines | current reference
+Title: "Security overview" | 277 lines | current reference
 
 Referenced by:
 - README.md:90 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1751,7 +1711,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:39 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:25 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:40 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -1779,7 +1739,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 504 lines | current reference
+Title: "Security report — structured version" | 522 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
@@ -1788,7 +1748,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/security-overview.md:28 (link) — [`security-report.md`](security-report.md).
+- docs/security-overview.md:38 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
@@ -2150,7 +2110,7 @@ Referenced by:
 
 #### docs/box/publishing.md
 
-Title: "Publishing a site from this box" | 569 lines | current reference
+Title: "Publishing a site from this box" | 628 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
@@ -2164,6 +2124,7 @@ Title: "Quick chat routing rules" | 45 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:57 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- ../issues/features/2026-09-25-quick-drop-entry-points.md:19 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
 
 #### docs/box/what-you-could-do.md
 
@@ -2173,6 +2134,7 @@ Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:26 (mention) — `what-you-could-do.md`). `landmark-curation.md` lives at `beebox/docs/`
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:79 (mention) — > `beebox/docs/box/what-you-could-do.md`, written for box agents (not the
+- ../issues/features/2026-09-25-agent-maintained-ideas-page.md:35 (mention) — `beebox/docs/box/what-you-could-do.md` (shipped as a package doc) holds
 
 References:
 - → docs/box/phone-photos.md (mention)
@@ -2383,7 +2345,6 @@ Title: "Chat review" | 172 lines | current reference
 Referenced by:
 - docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
 - docs/guides.md:56 (link) — | Chat review (nightly titles + summaries) | [docs/chat/review.md](chat/review.md) |
-- docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
 - ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
 - ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat/review.md`.
@@ -2930,7 +2891,7 @@ References:
 - → docs/plans/narration-mode.md (mention)
 - → docs/triage.md (mention)
 - → README.md (mention)
-- → docs/prompt-logging.md (mention)
+- → docs/prompts/logging.md (mention)
 - → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/box-git-lock.md
@@ -2962,7 +2923,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:277 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:294 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3750,7 +3711,6 @@ References:
 - → docs/chat/history.md (mention)
 - → docs/chat/schedules.md (mention)
 - → docs/implemented-plans/chat-review.md (mention)
-- → docs/chat/review.md (mention)
 - → docs/chat/composer.md (mention)
 - → docs/chat/scroll.md (mention)
 - → CLAUDE.md (mention)
@@ -3842,7 +3802,6 @@ References:
 - → docs/guides.md (mention)
 - → docs/questions.md (mention)
 - → docs/development-workflow.md (mention)
-- → docs/prompt-audits.md (mention)
 - → docs/implemented-plans/chat-review.md (mention)
 
 #### docs/implemented-plans/docs-reorg.gap-analysis.md
@@ -3907,13 +3866,11 @@ References:
 - → docs/procedure-implementation.md (mention)
 - → docs/glossary.md (mention)
 - → docs/connectors.md (mention)
-- → docs/prompt-audits.md (mention)
 - → docs/reports/knowledge-audit-rerun-2026-07-03.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 - → deploy/README.md (mention)
 - → docs/adding-api-endpoints.md (mention)
-- → docs/prompt-logging.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/implemented-plans/link-validation-fix.md (mention)
@@ -5065,7 +5022,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:193 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:193 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:209 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -5102,7 +5059,7 @@ References:
 
 #### docs/implemented-plans/secret-entry-guidance.md
 
-Title: "Secret entry that explains itself" | 542 lines | shipped history | implemented
+Title: "Secret entry that explains itself" | 543 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:19 (mention) — > `beebox/docs/implemented-plans/secret-entry-guidance.md`.
@@ -5481,6 +5438,7 @@ Title: "Web Push notifications" | 514 lines | shipped history | implemented
 Referenced by:
 - docs/implemented-plans/web-push-notifications.review-codex.md:2 (mention) — title: "Codex review — web-push-notifications.md"
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:6 (frontmatter) — design: ../../beebox/docs/implemented-plans/web-push-notifications.md
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:22 (mention) — (plan: `beebox/docs/implemented-plans/web-push-notifications.md`), but prod has no
 
 References:
 - → docs/box-layout.md (mention)
@@ -5696,7 +5654,6 @@ References:
 - → docs/triage.md (mention)
 - → docs/plans/README.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/prompt-logging.md (mention)
 - → docs/doc-graph.md (mention)
 - → ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md (link)
 - → CLAUDE.md (mention)
@@ -5824,7 +5781,7 @@ Referenced by:
 References:
 - → code-style.md (mention)
 - → docs/implemented-plans/selection-commentary.md (mention)
-- → docs/prompt-audits.md (mention)
+- → docs/prompts/lenses.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/plans/box-glm-provider.md
@@ -6045,6 +6002,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/capture-mode.md (mention)
+- → docs/prompts.md (mention)
 - → docs/triage.md (mention)
 - → docs/server/boxes.md (mention)
 - → docs/maintenance.md (mention)
@@ -6150,6 +6108,17 @@ References:
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
+
+#### docs/plans/doc-structure-prompts.md **[ORPHAN]**
+
+Title: "Documentation structured like code: the prompt surface" | 133 lines | proposal | active
+
+References:
+- → docs/README.md (link)
+- → docs/prompts.md (mention)
+- → docs/prompts/lenses.md (mention)
+- → docs/prompts/logging.md (mention)
+- → docs/model-policy.md (mention)
 
 #### docs/plans/document-comments.md
 
@@ -6562,7 +6531,7 @@ Title: "Prompt Surface Cleanup — Evaluation" | 994 lines | proposal | active
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/job-xml-purge.subplan.md:31 (mention) — (`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
-- docs/prompt-surface-review.md:56 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](plans/prompt-surface-cleanup-evaluation.md) is the worked exampl
+- docs/prompts/review.md:56 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
 - → CLAUDE.md (mention)
@@ -6644,6 +6613,25 @@ References:
 - → docs/plans/public-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
 
+#### docs/plans/publish-custom-domain-admin.md
+
+Title: "Assign a custom hostname to a prepared publication in Admin" | 156 lines | proposal | partial
+
+Referenced by:
+- docs/plans/publish-custom-domain-admin.review.md:3 (mention) — Independent Fable review of `publish-custom-domain-admin.md`, followed by source verification and adjudication. The user
+- docs/plans/publish-sites-admin.md:247 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
+
+References:
+- → docs/plans/publish-sites-admin.md (mention)
+- → docs/engineering-principles.md (mention)
+
+#### docs/plans/publish-custom-domain-admin.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — custom hostname assignment" | 91 lines | plan review
+
+References:
+- → docs/plans/publish-custom-domain-admin.md (mention)
+
 #### docs/plans/publish-pages.md
 
 Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 281 lines | proposal | active
@@ -6679,7 +6667,8 @@ References:
 Title: "Static site publishing with admin setup and human approval" | 292 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:496 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/plans/publish-custom-domain-admin.md:11 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
+- docs/security-report.md:514 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 
 References:
 - → ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
@@ -6692,6 +6681,7 @@ References:
 - → frontend.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)
+- → docs/plans/publish-custom-domain-admin.md (link)
 
 #### docs/plans/publish-sites-admin.review.md **[ORPHAN]**
 
@@ -6981,6 +6971,59 @@ References:
 - → ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md (link)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
+
+### docs/prompts/
+
+#### docs/prompts/lenses.md
+
+Title: "Prompt Audits" | 203 lines | current reference
+
+Referenced by:
+- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompts/review.md](prompts/review.md) (lens catalog: [docs/prompts/lenses.md](p
+- docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
+- docs/plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
+- docs/prompts/review.md:3 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
+- ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#park-ignored-proactive
+- ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
+- ../issues/exploration/2026-05-19-universal-confidence-rubric.md:15 (link) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
+- ../issues/features/2026-05-19-agent-loop-hooks.md:19 (link) — - **Link enforcement** (*Link, don't name* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#link-dont-name) aud
+- ../issues/features/2026-05-19-spark-mode.md:15 (link) — - Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/promp
+
+References:
+- → docs/prompts/review.md (link)
+- → ../.claude/memory/tone-design.md (link)
+
+#### docs/prompts/logging.md
+
+Title: "Prompt Logging for Agent Invocations" | 210 lines | current reference
+
+Referenced by:
+- docs/guides.md:42 (link) — | Capturing full agent-invocation API traffic | [docs/prompts/logging.md](prompts/logging.md) |
+- docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompts/logging.md` says so.
+- docs/plans/doc-structure-prompts.md:60 (mention) — | `prompt-logging.md` | `prompts/logging.md`; DOCID markers become a top-level heading |
+- user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompts/logging.md` provides detailed guidance on using the feature, confirming t
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/prompts/review.md
+
+Title: "Reviewing the prompt surface" | 64 lines | current reference
+
+Referenced by:
+- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompts/review.md](prompts/review.md) (lens catalog: [docs/prompts/lenses.md](p
+- docs/prompts/lenses.md:3 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
+- src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
+- ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompts/review.md`; this skill routes a single
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompts/review.md` before writing more than a couple of
+- ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompts/review.md` — the workflow for reasoning about
+- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
+- ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
+
+References:
+- → docs/prompts/lenses.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/prompt-surface-cleanup-evaluation.md (link)
 
 ### docs/reports/
 
@@ -7677,8 +7720,9 @@ Referenced by:
 
 References:
 - → docs/testing/knowledge-audits.md (mention)
+- → docs/prompts.md (mention)
 - → docs/maintenance.md (mention)
-- → docs/prompt-surface-review.md (mention)
+- → docs/prompts/review.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/README.md (mention)
 - → docs/architecture/CLAUDE.md (mention)
@@ -7818,7 +7862,7 @@ References:
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/landmarks.md (mention)
 - → docs/cards/schemas.md (mention)
-- → docs/prompt-logging.md (mention)
+- → docs/prompts/logging.md (mention)
 - → docs/implemented-plans/websocket-chat-transport.md (mention)
 - → CLAUDE.md (mention)
 - → docs/plans/narration-mode.md (mention)
@@ -7865,6 +7909,7 @@ References:
 - → path.md (at-include) **[BROKEN]**
 - → docs/plans/publish-pages.md (mention)
 - → docs/box-layout.md (mention)
+- → docs/prompts.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/maintenance.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)

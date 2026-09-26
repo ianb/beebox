@@ -22,7 +22,7 @@ review notes are unambiguous and greppable.
 **The review itself:**
 
 - Read the three assembled stacks end-to-end, the way an agent does —
-  [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
+  [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
   is the procedure for acting on findings (where an instruction should live,
   what to trim).
 - Triage the duplication findings on the page. Known real signal at filing

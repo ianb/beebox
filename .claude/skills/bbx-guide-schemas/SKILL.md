@@ -51,7 +51,7 @@ Things the schema system does that you'd otherwise miss:
   `import type` only (lint-enforced). See `docs/cards/schemas.md`.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
-  `docs/prompt-surface-review.md` before writing more than a couple of
+  `docs/prompts/review.md` before writing more than a couple of
   lines).
 - **Reserialization reorders frontmatter keys** to the schema's declared
   field order; a one-field mutation rewrites the whole block.
