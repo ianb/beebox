@@ -8,12 +8,6 @@ a clone and for the coding agent beside them. Bee Box is early: one maintainer,
 changing fast. Bug reports are invited; pull requests are not yet solicited
 ([CONTRIBUTING.md](../../CONTRIBUTING.md)).
 
-The codebase is written by coding agents, under one maintainer's direction, in
-two families: Claude Code and Codex. The agents do the typing. The human decides
-what gets built, reviews the plans and the prose, and lands the work. The
-instructions the agents read are checked into the repository and maintained as
-part of the work.
-
 **[Agent coding, and the checks around it](development/agent-coding.md)** covers where those
 instructions live, how the two model families review each other's work, and the
 strictness the code is held to: strict types, lint rules that are never weakened

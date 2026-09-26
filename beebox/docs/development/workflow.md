@@ -55,9 +55,11 @@ One launchd tick drives all of them, and due-ness comes from persisted state, so
 a laptop that slept catches up once. Each run's report is a durable alert
 record, and a run ending with no report is itself a failure.
 
-The current jobs: `deferred-issues` and `full-suite` hourly on `main`; `box-convergence`,
-`docling-update`, and `sdk-update` daily; `cross-box-leak-scan`, `knip-sweep`,
-`manual-tests`, `smoke-review`, `supplemental-lint`, and `tour-check` weekly.
+`bin/schedules list` is the catalog. The jobs, by cadence: hourly on `main`,
+`box-convergence`, `deferred-issues`, and `full-suite`; daily, `alert-filing`,
+`docling-update`, and `sdk-update`; weekly, `agent-docs-refresh`,
+`cross-box-leak-scan`, `knip-sweep`, `manual-tests`, `smoke-review`,
+`supplemental-lint`, and `tour-check`.
 
 ## Document comments
 

@@ -126,3 +126,28 @@ Questions (pilot protocol):
 | 4 | yes | 4 | technologies.md#AI services used | 1 |
 | 5 | yes | 6 | engineering-principles.md#11 | 3 (also agent-coding.md, code-style.md) |
 | 6 | yes | 5 | maintenance.md#Run when you touch the thing | 1 |
+
+### After (2026-09-26)
+
+| # | Found | Steps | Cited |
+|---|---|---|---|
+| 1 | yes | 6 | development/workflow.md#Workstreams |
+| 2 | yes, now correct | 5 | development/workflow.md#Recurring work |
+| 3 | yes | 3 | development/workflow.md#Commit provenance |
+| 4 | over budget | 19 | secrets.md#Secret names, a second statement of the OpenRouter-only backend in the store's vocabulary; the navigator never tried `development/` for "technologies" |
+| 5 | yes | 3 | engineering-principles.md#11 |
+| 6 | yes | 6 | development/maintenance.md#Run when you touch the thing |
+
+The AI-services list sits under "development", which is not where a reader
+asking "which services does box data go to" looks; the security overview's
+"What leaves your machine" is the reader-facing home for that question and
+already points at the technologies page. Left as is; noted for the security
+cluster.
+
+### Cross-model review of the diff (Codex, 2026-09-26)
+
+Two findings, applied: the recurring-work list, now the one doc-side
+statement, disagreed with `schedules/*/schedule.yaml` (two jobs missing,
+one cadence wrong) and is rewritten from the schedule files with
+`bin/schedules list` named as the catalog; the parent restated the
+agent-coding page's opening fact and now keeps only scope and pointers.
