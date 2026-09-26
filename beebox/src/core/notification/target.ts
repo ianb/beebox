@@ -2,7 +2,7 @@
  * Notification targets: where tapping a notification lands.
  *
  * A target is a string with a scheme (`chat:<sessionId>`, `chat:new`,
- * `card:<path>`, `question:<path>`, `dashboard`), parsed once into a
+ * `card:<path>`, `question:<path>`, `admin:<section>`, `dashboard`), parsed once into a
  * discriminated union and rendered to a root-relative deep link per box. It is
  * never a raw URL. See docs/plans/notifications.md ("Ontology", Track A).
  */
@@ -15,9 +15,10 @@ export type Target =
   | { kind: "chat-new" }
   | { kind: "card"; path: string }
   | { kind: "question"; path: string }
+  | { kind: "admin"; section: string }
   | { kind: "dashboard" };
 
-const SCHEMES = "chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard";
+const SCHEMES = "chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard";
 
 /** Thrown by {@link parseTarget} for a string that names no valid target. */
 export class InvalidTargetError extends Error {
@@ -54,6 +55,10 @@ export function parseTarget(value: string): Target {
       return { kind: "card", path: cardPath(value, rest) };
     case "question":
       return { kind: "question", path: cardPath(value, rest) };
+    case "admin":
+      // Admin section ids are the DOM ids in admin-sections.ts: lowercase words and hyphens.
+      if (!/^[\da-z]+(-[\da-z]+)*$/.test(rest)) throw new InvalidTargetError(value, "an admin section id is lowercase words and hyphens");
+      return { kind: "admin", section: rest };
     default:
       throw new InvalidTargetError(value, `unknown scheme "${scheme}"`);
   }
@@ -70,6 +75,8 @@ export function formatTarget(target: Target): string {
       return `card:${target.path}`;
     case "question":
       return `question:${target.path}`;
+    case "admin":
+      return `admin:${target.section}`;
     case "dashboard":
       return "dashboard";
     default:
@@ -91,6 +98,8 @@ export function targetUrl(target: Target, opts: { boxSlug: string; notificationI
     case "card":
     case "question":
       return `/${boxSlug}/browse/${target.path}`;
+    case "admin":
+      return `/${boxSlug}/admin#${target.section}`;
     case "dashboard":
       return `/${boxSlug}/`;
     default:

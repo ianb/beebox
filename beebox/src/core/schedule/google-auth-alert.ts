@@ -92,7 +92,7 @@ export async function checkGoogleAuthAndAlert(
         "",
         `Reconnect: ${url}`,
       ].join("\n"),
-      target: { kind: "dashboard" },
+      target: { kind: "admin", section: "google-services" },
       loudness: "loud",
       source: "google-auth-alert",
     },

@@ -13,19 +13,20 @@ function render(value) {
 }
 ```
 
-## The five schemes
+## The six schemes
 
 Cards and questions open the card browser, as question alerts did before.
 `chat:<id>` opens that chat; `chat:new` opens an empty chat that shows the
 notification (by id) as a banner.
 
 ```ts
-["chat:8f2c-41aa", "chat:new", "card:_content/pets/pepper-shots.todo.card", "question:_bookkeeping/questions/Color.question.card", "dashboard"].map(render).join("\n")
+["chat:8f2c-41aa", "chat:new", "card:_content/pets/pepper-shots.todo.card", "question:_bookkeeping/questions/Color.question.card", "admin:google-services", "dashboard"].map(render).join("\n")
 =>
 chat:8f2c-41aa -> /family/chat?session=8f2c-41aa
 chat:new -> /family/chat?new=1&notification=n7Qx
 card:_content/pets/pepper-shots.todo.card -> /family/browse/_content/pets/pepper-shots.todo.card
 question:_bookkeeping/questions/Color.question.card -> /family/browse/_bookkeeping/questions/Color.question.card
+admin:google-services -> /family/admin#google-services
 dashboard -> /family/
 ```
 
@@ -44,17 +45,17 @@ closed, like every other ref. Each error lists the schemes.
 
 ```ts
 parseTarget("https://example.com/")
-=> throws InvalidTargetError: Invalid notification target "https://example.com/": unknown scheme "https". Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard
+=> throws InvalidTargetError: Invalid notification target "https://example.com/": unknown scheme "https". Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 
 parseTarget("/box/health")
-=> throws InvalidTargetError: Invalid notification target "/box/health": no scheme. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard
+=> throws InvalidTargetError: Invalid notification target "/box/health": no scheme. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 
 parseTarget("card:../elsewhere/secret.card")
-=> throws InvalidTargetError: Invalid notification target "card:../elsewhere/secret.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard
+=> throws InvalidTargetError: Invalid notification target "card:../elsewhere/secret.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 
 parseTarget("question:")
-=> throws InvalidTargetError: Invalid notification target "question:": "question:" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard
+=> throws InvalidTargetError: Invalid notification target "question:": "question:" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 
 parseTarget("chat:a b")
-=> throws InvalidTargetError: Invalid notification target "chat:a b": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, dashboard
+=> throws InvalidTargetError: Invalid notification target "chat:a b": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
 ```
