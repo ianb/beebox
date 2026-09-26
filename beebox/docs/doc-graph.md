@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:20:52Z
-Total documents: 434
+Generated: 2026-09-26T16:23:08Z
+Total documents: 436
 
 ## Issues
 
@@ -60,6 +60,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
+- **docs/plans/doc-structure-media.md** — "Documentation structured like code: media" (113 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -699,42 +700,8 @@ Referenced by:
 - ../research/claude-elixir-phoenix/authoring-craft.md:28 (mention) — > checklist in docs/adding-api-endpoints.md.
 
 References:
-- → docs/image-transforms.md (link)
+- → docs/media/image-transforms.md (link)
 - → docs/secrets.md (mention)
-
-#### docs/assets.md
-
-Title: "Assets" | 234 lines | current reference
-
-Referenced by:
-- docs/cards.md:20 (link) — - Media that cards attach: [assets](assets.md).
-- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
-- docs/guides.md:33 (link) — | Assets (git-annex) | [docs/assets.md](assets.md) |
-- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
-- docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../assets.md).
-- docs/implemented-plans/attach-directories-superseded.md:14 (link) — > [`assets.md`](../assets.md).
-- docs/implemented-plans/bulk-file-upload.md:14 (link) — > upload design is live. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/courseware-phase1.md:12 (link) — > unaffected. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/scanner-ingest.md:14 (link) — > [`assets.md`](../assets.md).
-- docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
-- docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../assets.md).
-- docs/plans/asset-offbox-storage.md:15 (link) — > [`../assets.md`](../assets.md).
-- docs/plans/capture-fast-landing.md:14 (link) — > Current model: [`../assets.md`](../assets.md).
-- docs/plans/container-first-pass2.review.md:91 (mention) — `docs/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
-- docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
-- docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/assets.md:6-21`
-- docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../assets.md).
-- docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/assets.md`) and "artifact" (collides
-- docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../assets.md).
-- docs/server/operations.md:208 (link) — [`assets.md`](../assets.md). Periodic operational checks belong in
-- ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/assets.md` records "3,655 manifests removed", the old
-- ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/assets.md` — no install or deploy doc says to install it.
-- ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
-
-References:
-- → docs/reports/git-annex-conversion-2026-08-01.md (link)
-- → docs/plans/asset-offbox-storage.md (link)
 
 #### docs/attribution.md
 
@@ -755,7 +722,7 @@ Referenced by:
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
 - docs/glossary.md:28 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the
 - docs/guides.md:50 (link) — | Box layout reference | [docs/box-layout.md](box-layout.md) |
-- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
+- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/attach-directories-superseded.md:174 (mention) — - `docs/box-layout.md`
 - docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
@@ -817,7 +784,7 @@ References:
 - → docs/cards/validation.md (link)
 - → docs/cards/migrations.md (link)
 - → docs/box-layout.md (link)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 
 #### docs/chat.md
 
@@ -1148,7 +1115,7 @@ References:
 - → docs/chat/schedules.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/cards/format.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/design/processing.md (mention)
@@ -1193,9 +1160,9 @@ References:
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
 - → docs/cards/migrations.md (link)
 - → docs/mobile-contract.md (link)
-- → docs/image-orientation.md (link)
+- → docs/media/image-orientation.md (link)
 - → docs/mobile-parity.md (link)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/cards/validation.md (link)
 - → docs/adding-api-endpoints.md (link)
 - → docs/connectors.md (link)
@@ -1231,25 +1198,6 @@ References:
 - → docs/attribution.md (link)
 - → docs/glossary.md (link)
 - → docs/example-names.md (link)
-
-#### docs/image-orientation.md
-
-Title: "Image orientation contract" | 50 lines | current reference
-
-Referenced by:
-- docs/guides.md:31 (link) — | Image orientation (EXIF) contract | [docs/image-orientation.md](image-orientation.md) |
-- docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/image-orientation.md`)
-- ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/image-orientation.md`.
-
-References:
-- → ../beebox/test/shared/image-orientation.doctest.md (link)
-
-#### docs/image-transforms.md
-
-Title: "On-demand image transforms" | 33 lines | current reference
-
-Referenced by:
-- docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](image-transforms.md))
 
 #### docs/install.md
 
@@ -1298,6 +1246,20 @@ References:
 - → docs/implemented-plans/card-prominence.md (mention)
 - → docs/triage.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
+
+#### docs/media.md
+
+Title: "Media" | 19 lines | current reference
+
+Referenced by:
+- docs/plans/doc-structure-media.md:45 (mention) — | (new) | `media.md`: what media is in a box; members; owned elsewhere (attach scopes in the card format, phone photos i
+
+References:
+- → docs/media/assets.md (link)
+- → docs/media/image-orientation.md (link)
+- → docs/media/image-transforms.md (link)
+- → docs/cards/format.md (link)
+- → docs/box/phone-photos.md (mention)
 
 #### docs/mobile-contract.md
 
@@ -1530,6 +1492,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
+- docs/plans/doc-structure-media.md:9 (link) — Eighth cluster under the [organizing principles](../README.md#organizing-principles):
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -2017,6 +1980,8 @@ Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current re
 
 Referenced by:
 - docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
+- docs/media.md:18 (mention) — - Getting phone photos into a box, for box agents: `docs/box/phone-photos.md`.
+- docs/plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 
 #### docs/box/publishing.md
 
@@ -2071,6 +2036,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards/format.md` gains the tag reference; the issue file closes
 - docs/implemented-plans/todo-collection.md:535 (mention) — schema instructions, `docs/cards/format.md:80-88`, and the two audits that
+- docs/media.md:17 (link) — - Where a card's media lives and how a ref names it: [card format](cards/format.md#attachments).
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/reports/stack-decisions-2026-09-04.md:20 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -2768,7 +2734,7 @@ References:
 - → ../issues/closed/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md (frontmatter)
 - → ../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md (frontmatter)
 - → code-style.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -2851,7 +2817,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:24 (mention) — on paper: `docs/implemented-plans/asset-manifests.md` opens with **"Status:
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/plans/asset-annex.md (link)
 - → ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md (link)
 
@@ -2864,7 +2830,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (mention)
 
@@ -3112,7 +3078,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/capture-mode.md (mention)
@@ -3583,7 +3549,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:51 (mention) — `courseware-phase1.md` ("built and on `main`"), `web-page-commentary.md`
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
@@ -3644,7 +3610,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/design/trust.md (mention)
 
 #### docs/implemented-plans/design-reconciliation.md
@@ -4987,7 +4953,7 @@ Referenced by:
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/plans/pdf-intake-design.md (mention)
@@ -5679,6 +5645,67 @@ References:
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 - → docs/implemented-plans/expose-dev-router.md (mention)
 
+### docs/media/
+
+#### docs/media/assets.md
+
+Title: "Assets" | 234 lines | current reference
+
+Referenced by:
+- docs/cards.md:20 (link) — - Media that cards attach: [assets](media/assets.md).
+- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
+- docs/guides.md:33 (link) — | Assets (git-annex) | [docs/media/assets.md](media/assets.md) |
+- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
+- docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../media/assets.md).
+- docs/implemented-plans/attach-directories-superseded.md:14 (link) — > [`assets.md`](../media/assets.md).
+- docs/implemented-plans/bulk-file-upload.md:14 (link) — > upload design is live. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/courseware-phase1.md:12 (link) — > unaffected. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/scanner-ingest.md:14 (link) — > [`assets.md`](../media/assets.md).
+- docs/media.md:11 (link) — | [Assets](media/assets.md) | git-annex: the model, the extension allowlist, absent content, configuration, commands, fa
+- docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
+- docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/asset-offbox-storage.md:15 (link) — > [`../assets.md`](../media/assets.md).
+- docs/plans/capture-fast-landing.md:14 (link) — > Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/container-first-pass2.review.md:91 (mention) — `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
+- docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
+- docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
+- docs/plans/doc-structure-media.md:46 (mention) — | `assets.md` | `media/assets.md` |
+- docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
+- docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
+- docs/server/operations.md:208 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
+- ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/media/assets.md` records "3,655 manifests removed", the old
+- ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/media/assets.md` — no install or deploy doc says to install it.
+- ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/media/assets.md`); only migrations
+
+References:
+- → docs/reports/git-annex-conversion-2026-08-01.md (link)
+- → docs/plans/asset-offbox-storage.md (link)
+
+#### docs/media/image-orientation.md
+
+Title: "Image orientation contract" | 50 lines | current reference
+
+Referenced by:
+- docs/guides.md:31 (link) — | Image orientation (EXIF) contract | [docs/media/image-orientation.md](media/image-orientation.md) |
+- docs/media.md:12 (link) — | [Image orientation](media/image-orientation.md) | The invariant that an image at rest is upright with no EXIF orientat
+- docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
+- docs/plans/doc-structure-media.md:47 (mention) — | `image-orientation.md` | `media/image-orientation.md` |
+- ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/media/image-orientation.md`.
+
+References:
+- → ../beebox/test/shared/image-orientation.doctest.md (link)
+
+#### docs/media/image-transforms.md
+
+Title: "On-demand image transforms" | 33 lines | current reference
+
+Referenced by:
+- docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](media/image-transforms.md))
+- docs/media.md:13 (link) — | [Image transforms](media/image-transforms.md) | `/api/images/*`: the parameters, the errors, the cache, and the helper
+- docs/plans/doc-structure-media.md:48 (mention) — | `image-transforms.md` | `media/image-transforms.md`, with headings (its facts sat above any heading) |
+
 ### docs/plans/
 
 #### docs/plans/agent-docs.md
@@ -5718,7 +5745,7 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/cards/migrations.md (mention)
 - → docs/server/health-checks.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/testing.md (mention)
 - → docs/testing/tours.md (mention)
 - → docs/development/maintenance.md (mention)
@@ -5779,14 +5806,14 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md:13 (mention) — `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/plans/asset-offbox-storage.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/image-orientation.md (mention)
+- → docs/media/image-orientation.md (mention)
 - → docs/cards/migrations.md (mention)
 - → docs/testing.md (mention)
 - → docs/plans/README.md (mention)
@@ -5796,12 +5823,12 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 597 lines | proposal | active
 
 Referenced by:
-- docs/assets.md:230 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/media/assets.md:230 (link) — [`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:52 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 - ../issues/closed/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:38 (mention) — Historical mentions in `docs/plans/asset-offbox-storage.md`,
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/plans/asset-annex.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -5851,7 +5878,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-04-tmp-capture-glob-swallows-child-cards.md:36 (mention) — from `beebox/docs/plans/capture-fast-landing.md`, which makes the
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/mobile-contract.md (mention)
 
 #### docs/plans/change-based-test-selection.md
@@ -6101,7 +6128,7 @@ References:
 Title: "Plan Engineering Review 2 — container-first" | 534 lines | plan review
 
 References:
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/engineering-principles.md (mention)
 
 #### docs/plans/container-first.md
@@ -6125,7 +6152,7 @@ References:
 - → docs/plans/installation-story.md (mention)
 - → CLAUDE.md (mention)
 - → deploy/README.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/plans/README.md (mention)
 - → docs/install/docker.md (mention)
 - → docs/install/agent.md (mention)
@@ -6138,7 +6165,7 @@ Title: "Plan Engineering Review — container-first" | 802 lines | plan review
 
 References:
 - → docs/plans/container-first.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/plans/installation-story.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -6150,6 +6177,18 @@ References:
 Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
+
+#### docs/plans/doc-structure-media.md **[ORPHAN]**
+
+Title: "Documentation structured like code: media" | 113 lines | proposal | active
+
+References:
+- → docs/README.md (link)
+- → docs/media.md (mention)
+- → docs/media/assets.md (mention)
+- → docs/media/image-orientation.md (mention)
+- → docs/media/image-transforms.md (mention)
+- → docs/box/phone-photos.md (mention)
 
 #### docs/plans/document-comments.md
 
@@ -6550,7 +6589,7 @@ Referenced by:
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:21 (link) — [pdf-intake-design](../../beebox/docs/plans/pdf-intake-design.md), as
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/scan-upload-contract.md (link)
 - → docs/glossary.md (link)
 - → docs/implemented-plans/asset-manifests.md (link)
@@ -6962,7 +7001,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md (frontmatter)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → docs/plans/workstreams-app.md (mention)
@@ -7120,11 +7159,11 @@ References:
 Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
 
 Referenced by:
-- docs/assets.md:8 (link) — [2026-08-01 conversion report](reports/git-annex-conversion-2026-08-01.md).
+- docs/media/assets.md:8 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
 - docs/server/operations.md:211 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/server/operations.md (link)
 - → docs/server/health-checks.md (link)
 - → ../issues/closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md (link)
@@ -7384,7 +7423,7 @@ References:
 - → docs/server/boxes.md (link)
 - → docs/server/health-checks.md (link)
 - → docs/client-debug-log.md (link)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/reports/git-annex-conversion-2026-08-01.md (link)
 
 #### docs/server/provisioning.md

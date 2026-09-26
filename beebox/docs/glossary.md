@@ -42,7 +42,7 @@ to change a user-facing word, change it here first. Decisions recorded
 **attachment** — Any file inside a `.attach/` scope, regardless of how it's stored in git. A markdown sidecar, a notes file, a photo — all attachments. Commits to git normally unless it's also an asset.
 *User-facing:* same — "attachments" is fine (email trained everyone); introduce it in context ("the photos and files saved with this recipe"). A machine-derived companion file (a transcript next to a voice memo, timing data next to a clip — informally a "sidecar") gets no umbrella noun with users: name the kind ("the transcript").
 
-**asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small pointer, git-annex holds the bytes keyed by SHA-256. See `docs/assets.md`.
+**asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small pointer, git-annex holds the bytes keyed by SHA-256. See `docs/media/assets.md`.
 *User-facing:* internal — say what the file is ("the photo", "the recording"). The dashboard's storage accounting is labeled "Storage", not "Inventory" (that word belongs to the user's own inventorying jobs).
 
 **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's size, mtime, and sha256, with the assets themselves gitignored. Still on disk in any box not yet migrated with `bbx attachments to-annex`. See `docs/implemented-plans/asset-manifests.md`.

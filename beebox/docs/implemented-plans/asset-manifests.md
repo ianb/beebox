@@ -16,7 +16,7 @@ issues: []
 > `src/core/annex/to-annex.ts`, and the `bbx attachments` subcommands `verify`,
 > `migrate`, `add`, `overwrite`, `init-gitignore`, `untrack-assets`, and
 > `to-annex`. `bbx init --skip-git` is gone too. Current model:
-> [`assets.md`](../assets.md).
+> [`assets.md`](../media/assets.md).
 >
 > Specifically misleading here: this document is the *specification* of the
 > retired scheme, so nothing in it describes anything that runs. The sentence
@@ -24,7 +24,7 @@ issues: []
 > empty set — every box was converted and verified with `git check-ignore`
 > before the scheme was deleted.
 
-**Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
+**Status: SUPERSEDED by git-annex — see [`../assets.md`](../media/assets.md).**
 
 This describes the system built in May 2026 and still on disk in every box that
 has not run `bbx attachments to-annex`. It is kept because it accurately records

@@ -11,7 +11,7 @@ issues: []
 > exist, and neither does the migration they implemented — every box is
 > annex-shaped from creation, so there is nothing left to migrate *from*. The
 > scan pipeline this plan describes is otherwise live. Current model:
-> [`assets.md`](../assets.md).
+> [`assets.md`](../media/assets.md).
 
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
 box. ScanSnap profiles save searchable PDFs and images into per-box folders on
@@ -120,7 +120,7 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   output; **reused**, not raised.
 - **Annex migration tooling** — `src/core/annex/to-annex.ts` (plus
   `doctor.ts`, `to-annex-errors.ts`). All 12 local boxes were migrated with it
-  on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
+  on 2026-07-31 (`docs/media/assets.md:6`: *"Status: implemented; all local boxes
   converted, production not yet."*). **Reused** for Track 0.
 - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
   tick` every 60 seconds for each configured box."* Relevant background, but
@@ -191,13 +191,13 @@ Tracks 1–3 live on prod.
   `src/core/commands/scan-import*.ts` and `upload*.ts` is empty). On a
   manifest-scheme box those paths are gitignored
   (`src/core/commands/attachments-gitignore.ts:52-56`), so the commit either
-  errors or strands unmanifested bytes. `docs/assets.md:16`: *"No production
+  errors or strands unmanifested bytes. `docs/media/assets.md:16`: *"No production
   box has been converted."* There is no runtime annex-vs-manifest branch;
   the codebase assumes annex. Migrating prod is the direction the system
   already moved; teaching scan-import the manifest scheme would be new code
   for a scheme being retired (principle #8).
 - **Direction:** Run the existing migration per box on the server, with the
-  same verification the local migration used (`docs/assets.md:10-14`: fsck
+  same verification the local migration used (`docs/media/assets.md:10-14`: fsck
   clean, byte-for-byte spot check). The fresh local backups of both boxes are
   the rollback story. Coordinate with the boxholder on timing; the box is
   briefly wedged mid-migration.

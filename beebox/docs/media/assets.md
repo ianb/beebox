@@ -5,7 +5,7 @@ living in git's object database.
 
 **Status: implemented.** The current asset model and commands are documented
 below. Dated local and production conversion evidence is preserved in the
-[2026-08-01 conversion report](reports/git-annex-conversion-2026-08-01.md).
+[2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
 That report is history, not a claim about current production health.
 
 ## The model
@@ -227,7 +227,7 @@ roll back to.
 This iteration buys integrity, not durability — a box's assets still live on
 exactly one disk, and "on git-annex" does not mean "backed up". The R2 remote
 is the next iteration; its cost and API analysis is in
-[`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+[`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
 
 Dropping local content (`git annex drop`) also waits for that, since there is
 nothing to drop *to*.

@@ -28,9 +28,9 @@ where to put new material.
 | Card format design history (RFC) | [docs/implemented-plans/cards-as-markdown-rfc.md](implemented-plans/cards-as-markdown-rfc.md) |
 | Box migration runbook | [docs/cards/migrations.md](cards/migrations.md) |
 | Cross-platform mobile contract (iOS/Android ↔ box) | [docs/mobile-contract.md](mobile-contract.md) |
-| Image orientation (EXIF) contract | [docs/image-orientation.md](image-orientation.md) |
+| Image orientation (EXIF) contract | [docs/media/image-orientation.md](media/image-orientation.md) |
 | Mobile parity matrix (iOS vs Android capabilities) | [docs/mobile-parity.md](mobile-parity.md) |
-| Assets (git-annex) | [docs/assets.md](assets.md) |
+| Assets (git-annex) | [docs/media/assets.md](media/assets.md) |
 | Card validation hooks | [docs/cards/validation.md](cards/validation.md) |
 | Adding API endpoints | [docs/adding-api-endpoints.md](adding-api-endpoints.md) |
 | Connectors | [docs/connectors.md](connectors.md) |

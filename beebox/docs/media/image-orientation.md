@@ -14,12 +14,12 @@ already upright and it carries no non-trivial EXIF orientation (value `1`, or
 none). Every path that *transcodes* an image must bake the orientation into the
 pixels and emit a value-`1` / absent tag.
 
-The oracle is [`src/shared/image-orientation.ts`](../src/shared/image-orientation.ts)
+The oracle is [`src/shared/image-orientation.ts`](../../src/shared/image-orientation.ts)
 — `readJpegOrientation(bytes)` returns the EXIF orientation (1–8), and
 `isOrientationNormalized(bytes)` is the contract predicate. It is pure and shared
 by the backend and frontend. Tested across all eight values (both TIFF byte
 orders) and hostile inputs in
-[`test/shared/image-orientation.doctest.md`](../test/shared/image-orientation.doctest.md).
+[`test/shared/image-orientation.doctest.md`](../../test/shared/image-orientation.doctest.md).
 
 ## Ingress inventory
 

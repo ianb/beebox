@@ -69,6 +69,7 @@ function isAdmissibleSource(source: string): boolean {
   if (source.startsWith("beebox/docs/cards/")) return true;
   if (source.startsWith("beebox/docs/prompts/")) return true;
   if (source.startsWith("beebox/docs/development/")) return true;
+  if (source.startsWith("beebox/docs/media/")) return true;
   return /^beebox\/docs\/[^/]+\.md$/.test(source);
 }
 
@@ -98,7 +99,7 @@ export function loadManifestEntries(manifestPath: string): ManifestEntry[] {
     if (!isAdmissibleSource(entry.source)) {
       throw new DocsManifestError(
         `${path.basename(manifestPath)}: source "${entry.source}" is outside the admissible prefixes ` +
-          "(beebox/docs/<flat file>.md, beebox/docs/design/, beebox/docs/architecture/, beebox/docs/testing/, beebox/docs/chat/, beebox/docs/install/, beebox/docs/server/, beebox/docs/connectors/, beebox/docs/cards/, beebox/docs/prompts/, beebox/docs/development/, root README.md, " +
+          "(beebox/docs/<flat file>.md, beebox/docs/design/, beebox/docs/architecture/, beebox/docs/testing/, beebox/docs/chat/, beebox/docs/install/, beebox/docs/server/, beebox/docs/connectors/, beebox/docs/cards/, beebox/docs/prompts/, beebox/docs/development/, beebox/docs/media/, root README.md, " +
           `${ADMISSIBLE_SOURCE_FILES.join(", ")})`,
       );
     }

@@ -7,7 +7,7 @@ resolution: wontfix
 
 > **Closed 2026-08-24 — moot.** Both questions this issue poses are about a
 > scheme that no longer exists. The manifest system was retired by the git-annex
-> migration: `docs/assets.md` records "3,655 manifests removed", the old
+> migration: `docs/media/assets.md` records "3,655 manifests removed", the old
 > `docs/asset-manifests.md` is now `docs/implemented-plans/asset-manifests.md`,
 > and every box verifies "no manifests, no LFS". So there is no per-dir manifest
 > to compare against a per-asset sidecar, and no manifest-scoped enforcement to
