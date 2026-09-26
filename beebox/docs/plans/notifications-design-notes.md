@@ -347,3 +347,168 @@ send.
    enforces. Lean: both; the field is the floor, the briefing can be
    stricter. A `loud` inside quiet hours is held until they end unless the
    agent says `--now`.
+
+## Walkthroughs (2026-09-26, after the plan's third draft)
+
+Each scenario traced hop by hop through the plan's mechanism, against the
+code as it is. "Leaves behind" says what persists and where. Problems found
+are marked **found** and are folded into the plan.
+
+### W1. "Remind me Thursday morning to call the vet"
+
+1. In chat, the agent writes
+   `_config/schedules/remind-vet-2026-10-02.scheduled-script.card` with
+   `at`, `once: true`, `requested-by: boxholder`, `notify: { title, loudness:
+   loud, target: chat:new, context: pets/pepper-shots.todo.card }` and
+   commits it. One commit: the rule. The agent replies "Set for Thursday
+   8:30."
+   **Found:** before promising, the agent must know a channel exists. Today
+   nothing tells it. `notifyChannels` exists in code; the agent guide and
+   a `bbx notify --check` must make it the first step, or the calendar-promise
+   bug repeats with reminders.
+2. Thursday 08:30 the scheduler daemon runs the tick in process
+   (`src/core/schedule/scheduler.ts:250` calls `runTick`), finds the card
+   due, and calls `notifyBoxholder` in that process. `loud` tries every
+   channel with an audience. APNs sends to the phone; web push to the
+   desktop. The intent and both deliveries are appended to
+   `.beebox/notifications.jsonl`; a bus event lets an open app show it.
+   The tick records success, deletes the card, and commits. Second commit:
+   the fire. Git has both ends of the reminder.
+   **Found:** the plan had the bus as the record. The server prunes the bus
+   at 24 hours (`src/webapp/server.ts:244`), so it is a live signal only.
+   The record is the JSONL log.
+3. Phone: banner with the title. Tap opens
+   `/<box>/chat?new=1&notification=<id>`. The chat page fetches the intent by
+   id (a new `notifications.get` query over the log), shows it as a banner
+   with the context link, empty composer. "done" goes to the agent with the
+   reminder as context; the agent closes the todo.
+   Feels right. Tapping twice makes two sessions; acceptable.
+4. Nobody paired, nobody subscribed, no Telegram: the log records
+   `no-audience` for every channel and the dashboard health check "1
+   notification had nowhere to go" shows the title. The person learns when
+   they next open the app. Step 1's check is what prevents this.
+
+**Leaves behind:** two commits; one log line plus deliveries; nothing else.
+
+### W2. "Tell me when the school emails about the field trip"
+
+1. The agent checks that the Gmail connector is configured, then writes
+   `_config/watches/field-trip.watch.card`: `under: _content/inbox/`,
+   `criteria`, `threshold`, `then: { notify: { title, loudness: loud } }`,
+   `once: true`, `until`, `requires: { connectors: [gmail] }`. Commits.
+   **Found:** a watch must declare its connector. Without `requires`, a
+   Gmail grant that expires means no new cards, and the watch waits forever
+   with nothing wrong to report. With it, the promotion rule can say "your
+   field-trip watch cannot see mail".
+2. Each wakeup: the reactor runs sync, then jobs, then finalize
+   (`src/core/reactor/engine.ts:2-14`). Gmail writes cards under
+   `_content/inbox/email/` and commits. Triage, in the jobs phase, renames
+   them into `inbox/triaged/<category>/` (`src/core/triage/routing.ts:74`).
+   Finalize evaluates watches: lock, cursor commit to HEAD tree diff under
+   `_content/inbox/` with filter A, one Jev call per new card with the card
+   text as state.
+   **Found:** because finalize runs after triage, the diff sees the card at
+   its post-triage path, which is what the notification should target. But
+   a card triaged in a later cycle moves after the notification was sent,
+   and the tapped target 404s. Targets are paths, and the box moves cards.
+   The plan accepts this for v1 and notes it; a stable card id is a
+   separate problem the box does not have today.
+3. Fire: `loud` to the phone with the title; tap opens the card page. The
+   watch sets `enabled: false` and `fired-at`, and commits with the item
+   path in the message. Git has the rule and the fire.
+4. Cost: ten new mails a day and one watch is ten Noul calls a day, each a
+   few thousand input tokens, under a cent a month.
+
+**Leaves behind:** two commits; a cursor in `.beebox/watches.json`; one log
+line.
+
+### W3. Something finished after you left
+
+1. The chat turn ends. The server already parses `<schedule>` tags from the
+   response at that point (`src/webapp/routes/chat.ts:125-138`); callouts
+   are parsed beside them. The in-memory presence count for the box is
+   zero.
+2. One intent per turn: body is the first callout, `tag` is the session id
+   so a second turn replaces rather than stacks. Loudness is the highest
+   any callout asked for, else `dot`.
+3. `dot` sends a badge-only APNs push. The icon shows 1. Opening the app
+   clears it and shows the last chat, where the reply is. No unread mark;
+   accepted.
+   **Found:** the plan sent `dot` regardless of presence. If the person is
+   in the app on the desktop, every reply badges the phone, and the badge
+   sits there until the phone app is foregrounded. Presence suppresses
+   `dot` too; only `loud` ignores presence.
+
+**Leaves behind:** nothing in git beyond the chat transcript; one log line.
+
+### W4. A question needs an answer
+
+Finalize's sweep finds a newly pending question: `dot`, or `quiet` when the
+card carries `urgency: time-bound`. Tap opens the question with its answer
+buttons. Same presence rule as W3. Feels right and is nearly what exists.
+
+### W5. A capture the agent could not read
+
+The capture agent is an agent; it runs `bbx notify --loudness quiet
+--target chat:<session> "I could not make out the capture from 14:02"
+--body-file /tmp/why`. Presence zero, phone gets a passive banner; tap
+opens the capture chat with the photo.
+**Found:** a body composed by an agent does not belong on a shell command
+line. `bbx notify` takes `--body-file` or stdin.
+
+### W6. The morning summary, if asked for
+
+Cron 07:30 schedule card with `runs: bbx procedure run morning-summary`.
+The procedure's first step: precheck `shells` gather calendar and due
+todos, `judge` asks "Is there anything actionable today?". Below
+threshold: skip, the run dir is removed (`src/core/procedure/engine-orchestrate.ts:109`),
+the schedule records `deferred`, nothing in git. Above: an `agents` step
+writes the summary card and runs `bbx notify --target card:<summary>
+--body-file`. The run card is committed as procedures do today.
+Feels right; the deferred outcome makes a daily cron that usually does
+nothing cost nothing and leave nothing.
+
+### W7. Google auth expired on Monday
+
+The dashboard shows the health entry. Nothing notifies. Thursday's reminder
+does not need Google; it fires. The field-trip watch declares `gmail`;
+the connector's activity record shows the failing episode
+(`src/core/schedule/connector-activity-alert.ts:40` already tracks it), so
+the promotion rule sends `loud` once: "Your field-trip watch cannot see
+mail: Google needs reconnecting", target `dashboard`. Reconnect clears the
+episode. Feels right: the person hears about health exactly when it costs
+them something they asked for.
+
+### W8. "Look at this, I made it for you"
+
+In chat, the turn ends with `<callout loudness="quiet" context="you asked
+for a kitchen budget">The kitchen budget page is ready.</callout>`; W3's
+path delivers it if the person has left. From a procedure, `bbx notify
+--target card:projects/kitchen/budget`. Feels right.
+
+### W9. Cheap polling until something is true
+
+"Tell me when the contractor's quote is in the shared folder." A cron
+schedule every two hours runs a procedure whose precheck lists the folder
+and judges "Is there a quote from the contractor here?". Deferred, deferred,
+deferred, then fires: the step notifies, `once` deletes the schedule. Only
+the firing run leaves a run card. Health shows `waiting: judge 0.2`
+between. Feels right, and it is the same shape as W2 without a per-item
+cursor. Two ways to watch remain: per new item (watch card) and per
+snapshot (cron plus judge). The plan keeps both and the guide says which
+is which; if the second covers the first in practice, the watch card is
+dropped before shipping.
+
+### What the walk changed in the plan
+
+- The record is `.beebox/notifications.jsonl`, not the bus; the bus is the
+  live signal only. No per-channel cursor, no finalize retry: one attempt
+  at emit time, then the log and a health check.
+- Presence suppresses `dot` and `quiet`; only `loud` ignores it.
+- Watches declare `requires.connectors`; the promotion rule covers them.
+- `bbx notify --check` and the agent guide's "check before promising".
+- `bbx notify --body-file` and stdin.
+- Card-path targets can go stale when triage moves a card; accepted for
+  v1 and written down.
+- Health "entries" are computed checks over these files, not a store.
+- An in-app banner component is new work; no toast exists today.
