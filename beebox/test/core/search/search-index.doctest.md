@@ -151,6 +151,25 @@ mdHit.hits[0].document.title
 => Ledger Distribution Letter
 ```
 
+## The engine's package docs index as kind "engine-doc"
+
+The one directory under `node_modules` the walker covers is the installed
+package's `box-docs/`, so an agent finds "how does beebox do X" by content.
+Other package files (source, other markdown) stay out.
+
+```ts continue
+await box.write("node_modules/beebox/box-docs/views.md", "# Views\n\nA view exports rendersCardTypes to attach itself to a card type.\n");
+await box.write("node_modules/beebox/box-docs/nested/ignored.md", "rendersCardTypes mentioned in a nested dir");
+await box.write("node_modules/beebox/README.md", "rendersCardTypes mentioned in the package readme");
+const withDocs = await openSearchIndex(box.root);
+await find(withDocs.db, "rendersCardTypes")
+=> node_modules/beebox/box-docs/views.md
+
+const docHit = await search(withDocs.db, { term: "rendersCardTypes", properties: ["content"] });
+docHit.hits[0].document.kind
+=> engine-doc
+```
+
 ## Gdoc snapshots are watched input files: editing only the attachment re-indexes
 
 ```ts continue

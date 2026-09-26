@@ -13,7 +13,9 @@ export function searchSection(): string {
 \`bbx search "<query>"\` is full-text search over the box's cards — prefer it over
 \`grep\` for finding cards by content: it understands card structure, ranks by
 relevance, and weights the \`contains:\` field heavily. Standalone \`.md\` files
-index too (as kind \`markdown\`); operational card types (jobs, runs) aren't
+index too (as kind \`markdown\`), and so do the engine's reference docs in
+\`node_modules/beebox/box-docs/\` (kind \`engine-doc\`) — a question about how
+beebox itself works is a search too. Operational card types (jobs, runs) aren't
 indexed — find those with \`bbx ls\`.
 
 **Query style:** when the box has an embeddings key configured, search ranks by

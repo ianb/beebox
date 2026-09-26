@@ -21,6 +21,7 @@ import { isRecord } from "../card-io.js";
 import { resolveAttachRef } from "../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../file-summary.js";
 import { splitMarkdownSections } from "./markdown-sections.js";
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 
 /** One Orama document. `fragment` is "" for the card's own document. */
 export interface SearchDoc {
@@ -48,6 +49,18 @@ export const SECTION_SPLIT_THRESHOLD = 2000;
 
 /** The `kind` for standalone markdown files (not cards). */
 export const MARKDOWN_KIND = "markdown";
+
+/**
+ * The `kind` for the engine's reference docs shipped in the installed package
+ * (`node_modules/beebox/box-docs/`). Same extraction as `markdown`; the kind
+ * lets `--kind engine-doc` find "how does beebox do X" without card noise.
+ */
+export const ENGINE_DOC_KIND = "engine-doc";
+
+/** Whether a box-relative markdown path is one of the package's engine docs. */
+export function isEngineDocPath(relPath: string): boolean {
+  return relPath.startsWith(`${BOX_PACKAGE_DOCS}/`);
+}
 
 const TITLE_MAX = 80;
 
@@ -162,8 +175,8 @@ function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
 }
 
 /**
- * Extract documents for a standalone markdown file (kind "markdown"):
- * title from the first heading, same section-splitting rules as card
+ * Extract documents for a standalone markdown file (kind "markdown", or
+ * "engine-doc" under the package docs directory): title from the first heading, same section-splitting rules as card
  * bodies, no contains/created.
  */
 export function extractMarkdownFileDocs(input: {
@@ -177,7 +190,8 @@ export function extractMarkdownFileDocs(input: {
     firstNonEmpty([heading?.[1], titleFromFilename(path)]).replace(/\s+/g, " ").trim(),
     TITLE_MAX
   );
-  const base = { path, kind: MARKDOWN_KIND, title, contains: "", created: "", contentHash };
+  const kind = isEngineDocPath(path) ? ENGINE_DOC_KIND : MARKDOWN_KIND;
+  const base = { path, kind, title, contains: "", created: "", contentHash };
 
   if (content.length <= SECTION_SPLIT_THRESHOLD) {
     return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];

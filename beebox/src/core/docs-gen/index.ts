@@ -19,7 +19,7 @@ import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { fileExists } from "../../lib/file-exists.js";
 import { promisify } from "node:util";
-import { mkdir, writeFile, readFile, readdir, unlink, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
 import { generateAgentGuide } from "../agent-guide/index.js";
@@ -30,10 +30,8 @@ import {
   installBriefing,
   installSchedules,
 } from "../box/index.js";
-import { installFeedbackGuide, installSchemasGuide, installViewsGuide } from "../box/templates.js";
+import { syncBoxGuidance } from "../box/guidance-sync.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
-import { generateRules } from "../init-rules.js";
-import { generateSkills } from "../box/skills.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
 import { getBoxDir } from "../../lib/paths.js";
@@ -79,8 +77,6 @@ const DeployInfoSchema = z.object({
  */
 export const GENERATE_MARKER = ".beebox/docs-generated-at";
 
-const DOCID_DEBUG_MARKER = ".beebox/docid-debug";
-
 /**
  * Version signal for the running beebox code, used to invalidate the
  * doc-generation cache (the `.beebox/docs-generated-at` marker). It
@@ -125,44 +121,10 @@ async function getBeeBoxVersion(): Promise<string | null> {
 export interface GenerateDocsOptions {
   /** Let the maintenance controller commit only measured output paths. */
   commit?: boolean | undefined;
-  /** Add DOCID markers to each generated file for debugging prompt inclusion.
-   *  If not specified, checks for a `.beebox/docid-debug` marker file. */
-  docIdDebug?: boolean | undefined;
   /** Bypass the input-mtime / source-commit cache and regenerate everything.
    *  Use during dev when source has uncommitted changes that affect output,
    *  or in test infrastructure where stale docs would invalidate results. */
   force?: boolean | undefined;
-}
-
-/**
- * Check if the docid-debug marker file exists in the box.
- */
-async function hasDocIdMarker(boxRoot: string): Promise<boolean> {
-  try {
-    await stat(join(boxRoot, DOCID_DEBUG_MARKER));
-    return true;
-  } catch (_e) {
-    // stat throws ENOENT when the marker is absent — that simply means
-    // docid-debug is off. No other failure mode is actionable here.
-    return false;
-  }
-}
-
-/**
- * Set or clear the docid-debug marker file.
- */
-export async function setDocIdDebug(boxRoot: string, enabled: boolean): Promise<void> {
-  const markerPath = join(boxRoot, DOCID_DEBUG_MARKER);
-  if (enabled) {
-    await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
-    await writeFile(markerPath, "");
-  } else {
-    try {
-      await unlink(markerPath);
-    } catch (_e) {
-      // Already gone — disabling an absent marker is a no-op, nothing to report.
-    }
-  }
 }
 
 /**
@@ -267,24 +229,10 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
   await installPersonality(boxRoot);
   await installBriefing(boxRoot);
   await installSchedules(boxRoot);
-  // Refresh the box-local schemas guide so boxes carrying the old XML-only
-  // version pick up the frontmatter-first rewrite on the normal cycle (not
-  // just on an explicit `bbx engine init`). Tracker-based, so user-edited guides are
-  // parked, not clobbered.
-  await installSchemasGuide(boxRoot);
-  // Same tracker treatment for the views guide, so boxes carrying the old
-  // standalone-view guide pick up the attach-to-cards rewrite on the normal
-  // cycle (not just an explicit `bbx engine init`); user-edited guides are parked.
-  await installViewsGuide(boxRoot);
-  await installFeedbackGuide(boxRoot);
-  await generateRules(boxRoot);
-  // Managed box skills refresh on the same path as the rules they mirror.
-  // They used to be provisioned only by `bbx engine init`, so a box that never got a
-  // manual re-init kept whatever skills shipped the day it was created; the
-  // engine's own upgrades (a renamed card type in a skill body, say) never
-  // reached it. Same cache gate as everything else here, so this is a no-op
-  // between deploys.
-  await generateSkills(boxRoot);
+  // Every guidance surface the registry walks: the tracked nested guides, the
+  // card rules, and the managed skills. `initBox` runs the same walk, so a
+  // surface added to `GUIDANCE_SURFACES` reaches new and existing boxes alike.
+  await syncBoxGuidance(boxRoot, { generators: true });
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
 
@@ -356,7 +304,6 @@ async function canSkipGeneration(params: {
 
 interface DocWritePlan {
   boxRoot: string;
-  debug: boolean;
   procedures: ProcedureSummary[];
   allCardSchemas: typeof cardSchemas;
   boxCardSchemas: typeof cardSchemas;
@@ -372,15 +319,14 @@ interface DocWritePlan {
  * package now, `package-docs.ts`).
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
+  const { boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
       withDocId({
         relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
         content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape }),
-        debug,
       })),
-    writeBoxCardDocs({ boxRoot, debug, boxCardSchemas, boxTemplates }),
+    writeBoxCardDocs({ boxRoot, boxCardSchemas, boxTemplates }),
   ]);
 }
 
@@ -422,8 +368,6 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // so newly-installed procedures are picked up by scanProcedures().
   await syncTemplatesFromSource(boxRoot, options.commit !== false);
 
-  const debug = options.docIdDebug ?? await hasDocIdMarker(boxRoot);
-
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
 
@@ -442,12 +386,12 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const shape = await getBoxShape(boxRoot);
 
   // Compile personality first so we can include it in the agent guide
-  const personalitySection = await compilePersonalities(boxRoot, debug);
+  const personalitySection = await compilePersonalities(boxRoot);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape });
+  await writeStaticDocs({ boxRoot, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape });
 
   // Compile guides and generate job-type rules
-  const guides = await compileGuides(boxRoot, debug);
+  const guides = await compileGuides(boxRoot);
 
   // Compile each course's exposition-plan `rules` into a path-loaded box rule.
   await compileExpositionRules(boxRoot);
@@ -457,11 +401,10 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
     withDocId({
       relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
       content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape }),
-      debug,
     }));
 
   // Compile briefing cards to .md files
-  const briefingPaths = await compileBriefings(boxRoot, debug);
+  const briefingPaths = await compileBriefings(boxRoot);
 
   await ensureAgentContext(boxRoot, briefingPaths);
 

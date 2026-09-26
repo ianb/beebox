@@ -17,7 +17,7 @@ export async function refreshDerivedRules(boxRoot: string, fp: string): Promise<
     if (fp.endsWith(".exposition-plan.card")) {
       await compileExpositionRules(boxRoot);
     } else if (fp.endsWith(".guide.card")) {
-      await compileGuides(boxRoot, false);
+      await compileGuides(boxRoot);
     }
   } catch (e) {
     console.debug("derived-rule refresh skipped:", e);

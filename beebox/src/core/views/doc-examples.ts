@@ -14,6 +14,7 @@ export const name = "Recent Memos";
 export const description = "Every processed memo, newest first";
 export const dependencies = ["_content/**/*.memo.card"];
 export const modes = ["page", "chat"];
+export const rendersCardTypes = ["dashboard"];
 
 export default function RecentMemos({ cards }) {
   const memos = cards.filter(c => c.type === "memo");
@@ -38,6 +39,7 @@ export const name = "Inbox Dashboard";
 export const description = "Overview of pending inbox items";
 export const dependencies = ["_content/inbox/**/*.card"];
 export const modes = ["page"];
+export const rendersCardTypes = ["dashboard"];
 
 export default function InboxDashboard({ cards }) {
   const [filter, setFilter] = useState("");

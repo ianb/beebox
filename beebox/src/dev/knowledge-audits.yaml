@@ -27,6 +27,28 @@ tests:
       - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
     tags: [quick-chat]
 
+  # === Engine docs are searchable ===
+  # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
+  # narration-mode.md, 51k context.
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 5. The search index
+  # covers node_modules/beebox/box-docs/ as kind engine-doc, and the guide's
+  # "Where the docs are" and "Searching the Box" sections say so.
+  - id: search-finds-engine-doc
+    prompt: >
+      The chat snapshot for this turn reports narration="on". Before you answer,
+      find the engine's own reference doc for that mode by searching the box
+      for it, then tell me in three sentences what narration mode changes about
+      how you respond and which doc you found it in. Do not change anything.
+    expected_level: knows_about
+    watch_for: "Runs bbx search to locate the engine doc rather than guessing, then reads narration-mode.md and reports its rule."
+    bash_contains:
+      - "bbx search"
+    should_read_any:
+      - "box-docs/narration-mode.md"
+    correct_contains:
+      - "narration-mode.md"
+    tags: [search, engine-docs]
+
   # === Migration recovery ===
   # Status (2026-09-14, Claude): 1/1 passed with no reads/searches using the
   # shipped guide in a standalone installed-package fixture. Cross-repository
@@ -717,8 +739,11 @@ tests:
   - id: create-new-card-type
     prompt: "How would you create a brand new card type for this box?"
     expected_level: discoverable
-    watch_for: "Names _config/schemas/ + cardSchema()/Zod + bbx init; reading _config/schemas/CLAUDE.md is fine but the agent now knows the shape directly"
-    correct_contains_any: ["_config/schemas", "bbx init"]
+    # Status (2026-09-26, doc-structure): keywords updated — schemas live in
+    # src/schemas/ and authoring is in box-docs/schemas.md; the old
+    # `_config/schemas` / `bbx init` answer is retired. Rerun: pass (1 read).
+    watch_for: "Names src/schemas/ + cardSchema()/Zod; reading src/schemas/CLAUDE.md and following it to box-docs/schemas.md is the intended path"
+    correct_contains_any: ["src/schemas", "cardSchema"]
     tags: [schemas, extension]
 
   # Status (2026-07-03): pass. The always-on cards section (agent-guide/cards.ts)
@@ -727,6 +752,13 @@ tests:
   # instead of reaching for its Zod prior. (Regressed after the overhaul when the
   # extension pointer named only Zod; the corrective restored it.) should_read
   # dropped: the agent knows it directly now.
+  # Rerun (2026-09-26, Claude): pass on the doc-structure test1 clone after the
+  # schema-authoring guide moved to box-docs/schemas.md; the agent followed
+  # src/schemas/CLAUDE.md's pointer and read schemas.md (3 reads, 51k ctx).
+  # Rerun (2026-09-26, doc-structure Track 3): pass (2 reads) after the
+  # guide's `validate`-hook corrective moved out of CARD_TYPES; the fact now
+  # lives only in box-docs/schemas.md. box-packageify-schemas-location also
+  # passes (3 reads).
   - id: schema-validate-hook
     prompt: >
       You're adding a card type whose rules go beyond what Zod field types can
@@ -743,9 +775,11 @@ tests:
 
   # Status (2026-09-20): pass on first run (1 file read, 1 search, 51k ctx)
   # against the `summarize` section added to the box's own schema-authoring
-  # guide (src/core/box/schemas-guide.ts). knows_about rather than
+  # guide (src/core/box/schemas-guide.ts; since 2026-09-26 docs/box/schemas.md). knows_about rather than
   # knows_directly: the agent reads that guide, which is where schema
   # authoring is taught.
+  # Rerun (2026-09-26, Claude): pass after the move; followed the pointer to
+  # box-docs/schemas.md (6 reads, 5 searches, 51k ctx).
   - id: schema-summarize-hook
     prompt: "How does a box-local card type control how it appears in lists?"
     expected_level: knows_about
@@ -809,8 +843,8 @@ tests:
   # One rule, three angles: the chat-reply link, a landmark frontmatter ref, and
   # the single exception (`attach/`). The third exists specifically to keep the
   # always-`/` rule from swallowing the attach scope. Rule text lives in one
-  # constant: REF_PATH_RULE (src/core/agent-guide/source.ts), reaching every
-  # agent via ABOUT_CARDS + PROVENANCE.
+  # constant: REF_PATH_RULE (src/core/agent-guide/cards.ts), reaching every
+  # agent via ABOUT_CARDS.
   #
   # Status (2026-07-30): all 3 pass first run against the test1 clone, no
   # guidance changes needed. links-always-box-root and attach-is-the-exception
@@ -1232,6 +1266,23 @@ tests:
     correct_contains: ["tricks/scripts"]
     tags: [tricks]
 
+  # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
+  # read box-docs/tricks.md, then confirmed in trick.ts; 50k context.
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 2. How the engine
+  # runs and commits a trick lives in box-docs/tricks.md; the tricks skill and
+  # src/tricks/scripts/CLAUDE.md point there.
+  - id: tricks-auto-commit
+    prompt: >
+      One of my tricks writes a few files and exits normally without committing
+      them. What happens to those files after it exits, and which process is
+      the trick's direct parent? Do not change anything.
+    expected_level: knows_about
+    watch_for: "Opens box-docs/tricks.md and reports that on exit 0 the engine stages the whole tree and commits with a Run-By: trick/<name> trailer, and that the direct parent is the tsx wrapper, not bbx."
+    should_read_any:
+      - "box-docs/tricks.md"
+    correct_contains: ["Run-By", "tsx"]
+    tags: [tricks, engine-docs]
+
   # === Connectors ===
   #
   # Status (2026-07-03): all 3 pass after full rerun.
@@ -1328,6 +1379,13 @@ tests:
     watch_for: "Lists extension mechanisms: procedures, tricks, guides, schedules; bonus if mentions schemas"
     tags: [extension]
 
+  # Status (2026-09-26, doc-structure Track 3): pass, 0 reads, after
+  # CARD_TYPES's schema-authoring prose became a pointer to
+  # box-docs/schemas.md. Same run: list-card-types, create-task-card-type,
+  # views-render-card-type pass; create-new-card-type fails its stale
+  # keyword gate (expects "_config/schemas" or "bbx init", the retired
+  # answer) with a correct src/schemas/ answer, and fails the same way with
+  # the pre-change guide.
   - id: card-types-and-add-new
     prompt: "What card types do you know about? Can you add new ones?"
     expected_level: knows_directly
@@ -1486,6 +1544,17 @@ tests:
   # older, largely-unused todo-list card type — these test the universal
   # capture-in-place {% todo %} tag, bbx query todos, and the todo-view card.
   #
+  # Status (2026-09-26): all 10 recall audits here pass on test1 after the
+  # TODOS mechanics moved to box-docs/todos.md (doc-structure Track 3; the
+  # guide keeps todo-vs-question, capture in context, one inline example,
+  # the pointer, and the text-is-data rule). Re-leveled to knows_about with
+  # should_read_any todos.md: status-and-start, bbx-todos,
+  # collection-project-scope, collection-position-is-meaning,
+  # agent-own-followup, agent-own-followup-limits, recheck (which also
+  # accepts a todo-review file); each read todos.md (1-5 reads).
+  # tag-shape, vs-question and todo-view-card stay knows_directly
+  # (0-1 reads).
+  #
   # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
   # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
   # todos section (src/core/agent-guide/todos.ts) landed in an earlier
@@ -1503,7 +1572,8 @@ tests:
       A {% todo %} has due="2026-08-01" but no start attribute. Is it
       visible on the plate today, or only once it gets closer to the due
       date? And what are the other status values besides the default?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Says due-without-start is on the plate immediately (no lead-time
       opinion, not "hide until due"); names done/dropped/parked as the
@@ -1514,7 +1584,8 @@ tests:
 
   - id: todo-annotation-bbx-todos
     prompt: "How do you see every open todo across the box, and how do you mark one done?"
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Names `bbx query todos` as the query path (not a browsing UI or a
       search). Marking one done is editing the {% todo %} tag's status
@@ -1539,7 +1610,8 @@ tests:
     prompt: >
       How do you see the open todos for one project directory, including
       todos elsewhere in the box that link to it?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Reaches for `bbx query todos --here <dir>` rather than a glob-only
       scan, a grep, or opening cards one at a time. Should say that the
@@ -1552,7 +1624,8 @@ tests:
     prompt: >
       You are adding a todo to a long planning document. What decides which
       group it shows under in the todo list?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Says the heading it sits under, and the todo it nests beneath — not a
       tag attribute, a card field, or its dates. Bonus if it says to put the
@@ -1570,7 +1643,8 @@ tests:
       While filing something else you notice a card that clearly wants a
       second pass. It is not this turn's job and the boxholder never asked
       for it. What do you do with that observation?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Opens a todo for itself — by="agent" assigned="agent" with created —
       rather than asking permission, raising a question, or dropping the
@@ -1585,7 +1659,8 @@ tests:
     prompt: >
       You have an assigned="agent" todo you wrote four months ago and have
       stepped over every time since. May you close it yourself, and how?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Yes — an agent-owned todo is the agent's to resolve: dropped (saying
       why) when it has decided against it, or done with see-also evidence
@@ -1607,7 +1682,8 @@ tests:
       You are working the daily todo review. One item is the boxholder's todo,
       past its due date, and you see no sign it was done. What do you change
       on that todo, if anything, and what else do you do about it?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md", "todo-review"]
     watch_for: >
       Sets a `recheck` date 1-90 days out on the todo (and nothing else on it:
       not its status, due, or text), notes a short reason, and raises it with
@@ -1703,6 +1779,13 @@ tests:
   # intentions to the old mechanism until agents see enough examples of
   # the new one.
   #
+  # Status (2026-09-26, doc-structure Track 3): question-not-todo,
+  # query-plate, scoped-surface pass. capture-in-passing FAILS its
+  # "2026-08-15" check, and fails the same way with the pre-move guide: the
+  # agent wrote the {% todo %} but left due off and asked which August 15,
+  # because the run date (2026-09-26) is past it. The prompt's fixed date has
+  # gone stale; the audit needs a future date, not a guidance change.
+  #
   # Status (2026-07-30, after retiring todo-list): reran the full 9
   # (5 recall + 4 application) against the migrated test1 box — 9/9 pass.
   # The reworded todos.ts guidance ("the suggested way to make a todo list
@@ -1723,16 +1806,19 @@ tests:
       Here's a quick note from the boxholder: "Great dinner with Priya last
       night — she recommended that book on urban design she's been reading,
       sounds worth checking out. Also, I still need to renew the parking
-      permit before it expires August 15." File this somewhere useful.
+      permit before it expires December 15." File this somewhere useful.
     expected_level: knows_directly
     watch_for: >
       Files the note (memo or record) and marks the parking-permit
       intention with a {% todo %} tag (or a frontmatter todos: entry)
-      carrying the due date as a real attribute — due="2026-08-15" landing
+      carrying the due date as a real attribute — due="2026-12-15" landing
       in an attribute, not left as prose inside the body. The book
       recommendation is preserved as content but should NOT get wrapped in
       a todo — it's not an open intention, there's nothing to act on.
-    cards_contain: ["{% todo", "2026-08-15"]
+    cards_contain: ["{% todo", "2026-12-15"]
+    # Date rolled 2026-08-15 -> 2026-12-15 (2026-09-26): the audit's date had
+    # passed, so the agent asked which year instead of setting due. Roll it
+    # again when it goes stale. Rerun after the roll: pass (6 reads).
     max_turns: 15
     tags: [todos, application]
     notes: >
@@ -3343,6 +3429,8 @@ tests:
       An agent that greps for a real `*.memo.card` on disk is doing better
       than following the doc.
 
+  # Status (2026-09-26, doc-structure Track 3): pass (3 reads) after the
+  # CARD_TYPES trim.
   - id: card-type-from-filename
     prompt: "How does the system know what type a card is? Where does the type discriminator come from?"
     expected_level: knows_directly
@@ -3493,8 +3581,17 @@ tests:
   # voicing an opinion, describing how they see something) are wrapped in
   # a Markdoc `{% quote %}` tag to preserve their authentic voice as
   # distinct from the agent's paraphrase. Verbatim content only inside
-  # the tag; functional asks ("remind me at 4pm") need no tag. The agent
-  # guide's `quotesSection` (loaded via CLAUDE.md) carries the rules.
+  # the tag; functional asks ("remind me at 4pm") need no tag. THE_LAW_OF_QUOTING
+  # in the always-loaded guide carries the rules; the mechanics are in
+  # box-docs/provenance.md (since 2026-09-26; `quotesSection` is gone).
+  #
+  # Status (2026-09-26): all 5 quote-* pass on test1 after the quote and
+  # {% source %} mechanics moved to box-docs/provenance.md (doc-structure
+  # Track 3); the guide keeps THE_LAW_OF_QUOTING and a short PROVENANCE
+  # pointer. tag-syntax, when-to-use, functional-vs-expressive and
+  # no-fabrication answered from the law with 0 reads; third-party-from
+  # grepped provenance.md for from= before answering. Levels unchanged:
+  # the law still states each of these facts.
   #
   # Status (2026-07-03): all 7 pass after full rerun (quote-*, law-*,
   # narration-capture-uses-quote-tag) — the overhaul's quote/law reconciliation
@@ -3672,6 +3769,9 @@ tests:
   # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). "No —
   # never … generated output only … not a syntax I write anywhere", then
   # produced the correct {% source %} form unprompted.
+  # Status (2026-09-26): pass, knows_directly held by the guide's PROVENANCE
+  # pointer, which still names the rule; the agent grepped provenance.md for
+  # the bracket form before answering (1 read). doc-structure Track 3.
   - id: source-no-bracket-form
     prompt: >
       In your briefing you've seen citations that look like
@@ -3767,8 +3867,9 @@ tests:
   # version of Ian's."
   #
   # Why this shape: the guidance is split across two docs that only
-  # cross-link one way. `quotesSection` (always loaded via CLAUDE.md)
-  # teaches `{% quote %}` and points forward to narration-mode.md;
+  # cross-link one way. THE_LAW_OF_QUOTING (always loaded; the mechanics
+  # moved to box-docs/provenance.md on 2026-09-26, and `quotesSection` is
+  # gone) teaches `{% quote %}` and points forward to narration-mode.md;
   # narration-mode-doc.ts:39 ("use the user's wording … don't paraphrase")
   # never names `{% quote %}`. An agent that consults only the narration
   # doc on capture could preserve wording in plain prose without ever
@@ -3791,7 +3892,7 @@ tests:
   # in `{% quote %}` ("...the spark, not the slog" landed inside the tag),
   # and replied with a bare `<ack kind="created">` — textbook narration
   # behavior. So under clean conditions the split guidance is sufficient:
-  # the always-loaded `quotesSection` carried the agent even though
+  # the always-loaded quote guidance (then `quotesSection`, now the law) carried the agent even though
   # narration-mode-doc.ts never names `{% quote %}`. The doc seam was NOT
   # exercised into a failure here, so per "let the test decide" the
   # narration doc is left unchanged. The long-session confound above is
@@ -3830,6 +3931,16 @@ tests:
   # for "verbatim from there." Agent-guide section is the `sourceSection`
   # (loaded via CLAUDE.md).
   #
+  # Status (2026-09-26): all 7 source-* pass on test1 after the section
+  # moved to box-docs/provenance.md (doc-structure Track 3). Re-leveled to
+  # knows_about with should_read_any provenance.md: external-retrieved-date,
+  # as-is-free-form, when-to-skip, anchor-span-not-quote; each read the doc
+  # (as-is-free-form also grepped src for an `as` attribute, then answered
+  # "there's no `as`; it's `usage`, free-form"). tag-syntax and
+  # vs-quote-composition stay knows_directly (the guide's PROVENANCE pointer
+  # and the law's composed example state them) but both opened
+  # provenance.md anyway, which the pointer invites.
+  #
   # Status (2026-07-03): all 5 pass after full rerun — source-tag-syntax,
   # source-as-is-free-form, source-vs-quote-composition, source-when-to-skip,
   # source-anchor-span-not-quote. Agent knows the `usage=` form directly.
@@ -3849,7 +3960,8 @@ tests:
       I am recording a fact from a studio's public website in a research card.
       How do I cite the page so the card preserves both its URL and the date I
       checked it today, August 29, 2026?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/provenance.md"]
     watch_for: >
       Uses a `{% source %}` tag with the external page in `href=` and the
       date-only ISO check date in `retrieved="2026-08-29"`. Does not put the
@@ -3905,16 +4017,19 @@ tests:
     correct_contains_any: ["{% source", "source ref", "source tag"]
     tags: [source, cards, markdown, provenance]
 
+  # Status (2026-09-26): prompt renamed `as` -> `usage` (the attribute was
+  # renamed); rerun: pass, read provenance.md.
   - id: source-as-is-free-form
     prompt: >
       The user's name appears in a captured email header. I'm pulling it
-      out into a person card. What should I put in `{% source %}`'s `as`
+      out into a person card. What should I put in `{% source %}`'s `usage`
       attribute — is there a fixed enum I should pick from?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/provenance.md"]
     watch_for: >
-      Says `as=` is free-form natural language, not an enum. Encourages
-      writing the actual derivation (something like `as="extracted
-      name"` or `as="from email From: header"`), not picking a closest-
+      Says `usage=` is free-form natural language, not an enum. Encourages
+      writing the actual derivation (something like `usage="extracted
+      name"` or `usage="from email From: header"`), not picking a closest-
       fit category.
     correct_contains_any: ["free-form", "natural language", "not an enum", "no enum", "honest", "describe"]
     tags: [source, behavioral, provenance]
@@ -3939,7 +4054,8 @@ tests:
       connective prose between things the user said. Should every
       sentence I write be wrapped in `{% source %}` pointing at
       myself?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/provenance.md"]
     watch_for: >
       Says no — `{% source %}` marks spans derived from another card or
       file, not the agent's own framing prose. Connective tissue and
@@ -3954,7 +4070,8 @@ tests:
       passage from the host document — the exact text I'm commenting on. How do
       I mark that passage in the card body, and should it go inside a
       {% quote %} tag?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/provenance.md"]
     watch_for: >
       Puts the passage in the `{% source %}` body itself — a bare
       `{% source pos="..." %}the passage{% /source %}` — with the remark as
@@ -4276,6 +4393,23 @@ tests:
     should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains: ["bbx view test"]
     tags: [views]
+
+  # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
+  # read src/views/CLAUDE.md, then box-docs/views.md; 51k context. The agent
+  # noticed views.md marked rendersCardTypes optional; the table now says Yes.
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 2. The view API
+  # lives in box-docs/views.md alone; src/views/CLAUDE.md and the views skill
+  # point there and no longer carry an export list.
+  - id: views-api-home
+    prompt: >
+      I'm about to write my first view file. Which exports does the file need,
+      and what props does the default component receive? Do not write anything.
+    expected_level: knows_about
+    watch_for: "Opens box-docs/views.md and lists name, description, dependencies, modes, rendersCardTypes, and the default component, with its props (cards, navigate, boxSlug, params, viewHistory)."
+    should_read_any:
+      - "box-docs/views.md"
+    correct_contains: ["rendersCardTypes", "dependencies", "viewHistory"]
+    tags: [views, engine-docs]
 
   # Status (2026-09-04): 2/2 pass. views-bounded-image read the generated views
   # reference and used imageUrl(width 480, format auto) plus fileUrl for the
@@ -5868,6 +6002,14 @@ tests:
   # (1 file read) and answers correctly — no `.secret.json` mention, names
   # the store/grant flow. secrets-adhoc-use unchanged (0 reads, pass).
 
+  # Status (2026-09-26, doc-structure Track 3): the guide's trick bullet
+  # became a pointer to box-docs/tricks.md, which now holds the resolve-log
+  # and no-raw-curl sentences. secrets-adhoc-use re-leveled to knows_about
+  # (should_read_any tricks.md): pass, read tricks.md. secrets-provisioning
+  # FAILS response_not_contains: correct store/grant answer, but it names
+  # `_config/connectors/mistral.secret.json` as the retired path that "no
+  # longer works". Fails the same way with the pre-change guide; the
+  # negative-mention gate is the problem, not the guidance.
   - id: secrets-provisioning
     prompt: "How does a Mistral API key get configured for this box?"
     expected_level: knows_directly
@@ -5879,7 +6021,10 @@ tests:
       `_config/connectors/mistral.secret.json`, and should NOT describe the
       key as something that lives inside the box tree.
     correct_contains_any: ["machine-level", "bbx secrets", "grant", "admin page", "boxholder"]
-    response_not_contains: ["_config/connectors/mistral.secret.json", "mistral.secret.json", ".secret.json"]
+    # Naming the retired file as retired is fine; instructing to write it is
+    # the failure (2026-09-26: the substring gate failed a correct answer;
+    # rerun with the regex gate: pass).
+    response_not_matches: ['(?:write|edit|create|put|save|add)[^.\n]{0,80}\.secret\.json']
     tags: [secrets]
 
   - id: secrets-adhoc-use
@@ -5888,7 +6033,8 @@ tests:
     prompt: >
       I'm writing a trick that needs to call a credentialed third-party API
       (an API key). How should the trick get and use that key?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/tricks.md"]
     watch_for: >
       Says: `bbx secrets declare <name>` to name the slot, the boxholder
       supplies the value and grants it (at `agent` access) via the capture

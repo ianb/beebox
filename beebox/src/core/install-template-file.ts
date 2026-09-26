@@ -43,6 +43,7 @@ import { z } from "zod";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
+import { GUIDANCE_SURFACES, guidancePathPattern } from "./box/guidance-surfaces.js";
 
 const VERSIONS_FILE = "_config/template-versions.json";
 /** Where a parked update is mirrored, box-relative. */
@@ -64,45 +65,46 @@ export function parkedUpdatePath(relPath: string): string {
 }
 
 /**
- * Box-relative paths that beebox owns as template output (the `install*`,
- * `generateRules`, and `generateSkills` helpers write them).
- * `syncTemplatesFromSource` uses this to commit just their output without
- * sweeping up unrelated user work. Simple regex over relative paths — no
- * globbing needed for what we generate.
+ * Managed paths that are not guidance surfaces: the tracker's own bookkeeping,
+ * stock card templates that are not instructions, and the Claude settings the
+ * validation hooks write.
  *
- * Deliberately matched by directory, not by managed-file name: a hand-authored
- * rule or skill sitting in `.claude/rules/` / `.claude/skills/` is committed
- * alongside ours rather than left dirty. That is the pre-existing convention
- * for `.claude/rules/`, and the alternative — importing the managed skill list
- * here — would drag the whole skill-content module into every consumer.
+ * The two directory-wide entries keep a pre-existing convention: everything
+ * under `.claude/rules/`, `.claude/skills/`, and `.agents/skills/` commits with
+ * the sync. That covers a generator's prune (a deleted orphan has no registry
+ * row to match) and a box's hand-authored rule or skill beside the managed
+ * ones. The `orig-*` spellings are files an older parking scheme left behind.
  */
-const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
-  /^_config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
-  /^_config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
-  /^_config\/.+\.(?:guide|orig-guide)\.card$/,
-  /^_config\/.+\.(?:personality|orig-personality)\.card$/,
+const NON_GUIDANCE_MANAGED_PATTERNS: readonly RegExp[] = [
+  /^_config\/procedures\/.+\.orig-procedure\.card$/,
+  /^_config\/schedules\/.+\.orig-scheduled-script\.card$/,
+  /^_config\/.+\.orig-guide\.card$/,
+  /^_config\/.+\.orig-personality\.card$/,
+  /^_content\/briefing\.orig-briefing\.card$/,
   /^_content\/plate\.todo-view\.card$/,
   /^_config\/_template-updates\/.+$/,
   // The install tracker: installTemplateFile rewrites it when it records a
   // hash, so it commits with the template change instead of leaving dirt.
   /^_config\/template-versions\.json$/,
-  /^_config\/schemas\/CLAUDE\.md$/,
-  /^_config\/feedback\/CLAUDE\.md$/,
   /^_config\/bbx-validate\.ignore$/,
-  /^src\/views\/CLAUDE\.md$/,
-  /^src\/schemas\/CLAUDE\.md$/,
-  /^src\/tricks\/scripts\/CLAUDE\.md$/,
-  /^_content\/briefing\.(?:briefing|orig-briefing)\.card$/,
-  /^_content\/briefing\.md$/,
-  /^\.claude\/rules\/.+\.md$/,
   /^\.claude\/settings\.json$/,
-  // Managed box skills (`generateSkills`), including each skill's
-  // supplementary files.
+  /^\.claude\/rules\/.+\.md$/,
   /^\.claude\/skills\/.+$/,
-  /^AGENTS\.md$/,
-  /^.+\/AGENTS\.md$/,
   /^\.agents\/skills\/.+$/,
-  /^\.codex\/hooks\.json$/,
+];
+
+/**
+ * Box-relative paths that beebox owns as template output.
+ * `syncTemplatesFromSource` uses this to commit just their output without
+ * sweeping up unrelated user work. Derived from the guidance registry (every
+ * git-tracked `tracked` or `generated` surface) plus
+ * {@link NON_GUIDANCE_MANAGED_PATTERNS}.
+ */
+const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
+  ...GUIDANCE_SURFACES
+    .filter((row) => row.gitTracked && (row.class === "tracked" || row.class === "generated"))
+    .map((row) => guidancePathPattern(row.path)),
+  ...NON_GUIDANCE_MANAGED_PATTERNS,
 ];
 
 /** Whether `relPath` is beebox template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */

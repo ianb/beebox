@@ -13,8 +13,18 @@ import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
-import { REF_PATH_RULE } from "./source.js";
 import { PROMINENCE_FIELD_BULLET } from "./prominence.js";
+
+/**
+ * The one statement of how a ref path is written. ABOUT_CARDS's refs bullet
+ * is its home; `box-docs/provenance.md` points here instead of restating it.
+ * The behavior it describes is `resolveRefPath` (`src/shared/ref-path.ts`).
+ */
+const REF_PATH_RULE =
+  "**Always write a leading `/` — the path resolves from the box root.** " +
+  "The one exception is `attach/…`, the card's own attach scope. Never `../`. " +
+  "A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write. " +
+  "A ref reaches only the box's own areas (`_content`, `_config`, …): package docs under `node_modules/` can be read but not linked, so name them in plain text.";
 
 export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
@@ -232,7 +242,7 @@ export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates 
     }
     lines.push("");
   }
-  lines.push("A new kind of thing to keep track of is a conversation before it is a file: when the user shows interest in tracking something (plants, games, bills), first find out what they want out of it and how they'd use it — that decides the shape — and only then build; don't create the first card or type in the same breath as the offer. When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. NOT `_config/schemas/` — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx engine init` after adding a schema to generate rules and docs (it lives under `bbx engine` with the other box-installation commands, but this one is yours to run).");
+  lines.push(`A new kind of thing to keep track of is a conversation before it is a file: when the user shows interest in tracking something (plants, games, bills), first find out what they want out of it and how they'd use it — that decides the shape — and only then build; don't create the first card or type in the same breath as the offer. When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types live in \`src/schemas/\` at the box root, not \`_config/schemas/\` (a schema left there is invisible to the loader); read \`${BOX_PACKAGE_DOCS}/schemas.md\` before writing one.`);
   return lines.join("\n");
 }
 

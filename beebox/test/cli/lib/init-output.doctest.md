@@ -75,32 +75,16 @@ JSON.stringify({
 
 ## A fresh init never says "Updated"
 
-The two headers are mutually exclusive, and the flag that reaches furthest into
-the run — `--docid-debug`, whose marker is written after the fresh flush — is
-the one that used to produce both.
+The two headers are mutually exclusive.
 
 ```ts continue
 const freshBox = path.join(dir, "bbox");
-const both = await withOutput(() => runInit(freshBox, { branch: "main", docidDebug: true }));
+const both = await withOutput(() => runInit(freshBox, { branch: "main" }));
 JSON.stringify({
   initialized: both.filter((l) => l.startsWith("Initialized Bee Box at ")).length,
   updated: both.filter((l) => l.startsWith("Updated Bee Box at ")).length,
-  docid: both.some((l) => l.startsWith("DOCID markers enabled")),
 })
-=> {"initialized":1,"updated":0,"docid":true}
-```
-
-## Clearing the DOCID marker is reported too
-
-The marker persists across runs, so turning it off is as much a change as
-turning it on. `--no-docid-debug` had to be declared for this to be reachable
-from the CLI at all — the help text promised it, and commander does not derive
-it from `--docid-debug`.
-
-```ts continue
-const cleared = await withOutput(() => runInit(freshBox, { branch: "main", docidDebug: false }));
-JSON.stringify({ header: cleared[0].startsWith("Updated Bee Box at "), lines: cleared })
-=> {"header":true,"lines":["Updated Bee Box at «*»","DOCID markers disabled"]}
+=> {"initialized":1,"updated":0}
 ```
 
 ## A rebuilt search index is a change, not just progress

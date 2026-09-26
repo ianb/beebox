@@ -17,7 +17,7 @@ import {
 import { openSearchIndex, type OpenSearchIndexOptions } from "./refresh.js";
 import type { SearchIndex } from "./search-store.js";
 import { generateExcerpt } from "./excerpt.js";
-import { MARKDOWN_KIND, type SearchDoc } from "./extract.js";
+import { ENGINE_DOC_KIND, MARKDOWN_KIND, type SearchDoc } from "./extract.js";
 
 /** Search-time field weights: `contains` is the prime retrieval field. */
 const BOOST = { contains: 3, title: 2 } as const;
@@ -128,7 +128,7 @@ export async function searchBox(
 
   // Validate kinds before the refresh touches anything on disk.
   if (kinds !== undefined && kinds.length > 0) {
-    const valid = [...(await getSearchableTypes(boxRoot)), MARKDOWN_KIND];
+    const valid = [...(await getSearchableTypes(boxRoot)), MARKDOWN_KIND, ENGINE_DOC_KIND];
     for (const kind of kinds) {
       if (!valid.includes(kind)) throw new UnknownKindError(kind, valid.toSorted());
     }

@@ -1,12 +1,21 @@
 ---
 title: "tricks/CLAUDE.md doesn't explain that the engine auto-commits after the trick exits, stages the whole tree, and that the trick's direct parent is a tsx wrapper, not bbx"
-workstream: unattached
+workstream: doc-structure
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: important
+resolution: implemented
 ---
+
+**Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
+states all three facts — child-process/tsx-wrapper parentage, exit-code-0-gated
+whole-tree auto-commit with the `Run-By: trick/<name>` trailer, and the
+commit-your-own-paths pattern for concurrent writers — landed as part of the
+doc-structure box-guidance plan (Track 2, commit range f745215bb..b8b5b366e).
+The suggested engine affordances (grandparent-pid env var, opt-out from
+auto-commit) were not built; documentation was judged sufficient.
 
 While fixing a trick's interaction with the auto-commit step (see the
 companion "trick auto-commit" bug filed in this same triage), an agent hit

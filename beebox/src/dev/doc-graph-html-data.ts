@@ -123,6 +123,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "What a box's filesystem actually looks like, top to bottom.",
     supporting: [
       { path: "docs/server/boxes.md", note: "Procedure for spinning up a new one." },
+      { path: "docs/box-guidance.md", note: "Every instruction file a box agent reads, and who writes it." },
     ],
     code: ["~/src/boxes/"],
   },
