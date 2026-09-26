@@ -22,9 +22,9 @@ routine work succeeded, I want silence. The box has the conscience for all
 of this and none of the voice: web push shipped in July and has never
 delivered; the iPhone app, the main mobile surface, has no notification
 path; only system health code can notify at all. This plan gives the agent
-a small set of pieces (notify now, notify at a time, notify when a condition
-becomes true, judge cheaply inside a procedure) and puts the policy in the
-briefing. The experience and rulings behind it are in
+a small set of pieces (notify now, notify at a time, judge cheaply before
+running, watch a stream) and puts the policy in the briefing. The experience
+and rulings behind it are in
 [notifications-design-notes.md](notifications-design-notes.md).
 
 **Issues addressed:** the frontmatter list. Grepped the queue for notif,
@@ -39,8 +39,8 @@ state, not delivery), the unpushed-box watcher
 (`issues/features/2026-09-04-nothing-notices-a-box-that-stopped-reaching-its-remote.md`,
 gets a channel from this plan but needs its own measurement), the chat timer
 bug (`issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md`,
-the `bbx remind` path here is the durable alternative; the bug stays filed),
-Google auth expiry
+the schedule-card reminder here is the durable alternative; the bug stays
+filed), Google auth expiry
 (`issues/features/2026-07-28-google-auth-expiry-health-and-notify.md`, its
 delivery changes under Track E, its manual test stays open). The dev-side
 schedule alert issues (`issues/features/2026-09-18-deploy-notifications-bypass-alert-priorities.md`
@@ -60,114 +60,130 @@ no timed or conditional piece, and every alert stays as loud as it is today.
 
 | Track | Source lines | Test lines | Docs |
 |---|---|---|---|
-| A. Vocabulary, per-channel cards with loudness, presence, `bbx notify` | 450 | 300 | 40 |
-| B. APNs: server connector and device registration | 500 | 250 | 60 |
+| A. Vocabulary, bus-based delivery, presence, `bbx notify` | 450 | 250 | 40 |
+| B. APNs: server service, device registration, delivery | 400 | 250 | 60 |
 | C. APNs: iOS client | 300 Swift | 60 | 20 |
-| D. Timed and conditional: `bbx remind`, watch cards, Jev judge in procedures | 850 | 450 | 80 |
+| D. Timed and conditional: `notify:` on schedules, judge precheck with defer, watch cards | 620 | 400 | 80 |
 | E. Sources: callouts, question sweep, health demotion and promotion | 250 | 200 | 20 |
 | F. Guidance: briefing section, agent guide, chat prompt, audits | 60 | 40 | 120 |
-| Total | 2,410 | 1,300 | 340 |
+| Total | 2,080 | 1,200 | 340 |
 
-Additions plus deletions, estimated. Authored docs are the last column; there
-is no generated output. **BIG CHANGE:** about 3,800 changed lines. The size
-comes from three channels that each need a delivery path, plus a new card
-type with an evaluator. What the fuller design buys over the smallest fix:
-the phone, which is the surface the boxholder uses; reminders and watches
-with no agent at fire time; and demoted health alerts, without which the
-channel trains the person to ignore it. The boxholder approved the direction
-in discussion on 2026-09-26; approval of this size is requested with the plan.
+Additions plus deletions, estimated; Track A includes about 250 lines of
+deletion (the `web-push` card, its connector, `bbx push test`). Authored
+docs are the last column; there is no generated output. **BIG CHANGE:**
+about 3,600 changed lines. The size comes from three channels that each
+need a delivery path, plus the conditional pieces. What the fuller design
+buys over the smallest fix: the phone, which is the surface the boxholder
+uses; reminders and watches with no agent at fire time; cheap judgments
+before agent runs; and demoted health alerts, without which the channel
+trains the person to ignore it. The boxholder approved the direction in
+discussion on 2026-09-26; approval of this size is requested with the plan.
 
 ## Stated preferences this plan trades against
 
-- **One way to do each thing** (`docs/engineering-principles.md:95`). The July
-  web push plan wrote one output card per channel and deferred a
-  channel-agnostic card "only if channel count grows enough to make
-  N-cards-per-intent the worse cost"
-  (`docs/implemented-plans/web-push-notifications.md`, NOT in scope). A first
-  draft of this plan unified the cards; the cross-model review showed the
-  shared delivery helper has exactly two outcomes
-  (`src/connectors/output-cards.ts:90-103`) and a multi-channel card needs a
-  third. The plan keeps per-channel cards and puts the one shared decision,
-  which channels to write, in a pure function at write time. The boxholder's
-  consolidation preference is honored where it is cheap (one intent type, one
-  decision function) and not where it needs a new lifecycle.
+- **Rules in git, deliveries transient** (boxholder decision, 2026-09-26).
+  The July web push plan routed every push through a committed output card
+  (`docs/implemented-plans/web-push-notifications.md`, Track C). Several
+  notifications a day, each committed on write and deleted on delivery per
+  channel, is git history that is all plumbing. This plan keeps in git what
+  is a rule or a run (a schedule card, a watch card, a procedure run card,
+  the briefing) and puts each delivery in the existing SQLite event bus
+  (`src/core/event-bus.ts:1-17`, persisted, replayable), shown in the app.
+  The boxholder accepts SQLite for transient state and not for durable
+  state; a delivery record is transient.
 - **Minimize invented concepts** (boxholder preference). Loudness is one word
-  with three values, replacing web push's `severity: info | alert`
-  (`src/schemas/web-push.ts:25-35`). The reminder is a scheduled-script card,
-  not a new card type. The watch is a new card type because no existing card
-  can hold a criterion and a cursor. The Jev judge is a phase field on an
-  existing procedure step, not a new step kind.
+  with three values. The reminder is a scheduled-script card with a
+  `notify:` field, not a command and not a card type. The judge is a field
+  on an existing procedure precheck, and its "not yet" is the scheduler's
+  existing `deferred` outcome (`src/core/schedule/state.ts:39-45`). The
+  watch is the one new card type, because a per-item cursor over a stream
+  has no home in an existing card.
+- **`bbx` is the box agent's surface** (`beebox/CLAUDE.md`). `bbx notify` is
+  added because delivery is code the agent must call. `bbx remind` is not
+  added: the reminder is a card the agent writes, with a worked example in
+  the schema instructions (boxholder question, 2026-09-26: "is bbx remind
+  better than just instructing the agent to make the card?").
 - **Arrange context, do not automate judgment** (boxholder preference). Code
   owns delivery, timing, and the yes/no evaluation of a criterion the agent
   wrote. Code never decides that an outcome is notification-worthy; the
   briefing does. The health promotion rule (Track E) is the one place code
-  decides, and it is a mechanical fact: a scheduled thing did not run.
+  decides, and it is a mechanical fact: a requested schedule did not run.
 - **Nothing retries forever** (boxholder preference). APNs 410 and 400
   BadDeviceToken prune the token at once, matching web push's 404/410 rule
   (`docs/implemented-plans/web-push-notifications.md`, Track B). A watch has
-  an `until`.
-- **Resilient and never silent** (`docs/engineering-principles.md:49`). A
-  channel card that fails delivery is stamped `failed` and kept
-  (`src/connectors/output-cards.ts:95-103`), but an intent with no channel
-  at all returns with no card and no trace today
-  (`src/core/notify-boxholder.ts:107-109`). This plan keeps the failed card
-  and adds a health entry for the no-channel case.
+  an `until`. A delivery is attempted at emit time and once more at the
+  next finalize, then recorded failed.
+- **Resilient and never silent** (`docs/engineering-principles.md:49`). An
+  intent with no channel at all returns with no trace today
+  (`src/core/notify-boxholder.ts:107-109`). This plan records every intent
+  and every delivery outcome on the bus and raises a health entry when
+  nothing could send.
 - **Scope anchored to the incident** (boxholder preference). Unread state on
   chat replies and quiet hours are deferred by the boxholder's ruling
   (2026-09-26): device Do Not Disturb covers quiet hours; unread is filed for
-  later.
-- **The most recent shipped precedent** is the web push plan itself
+  later. No migration work: the boxholder has no active pairings or
+  subscriptions, and no `web-push` card exists anywhere.
+- **The most recent shipped precedent** is the web push plan
   (`docs/implemented-plans/web-push-notifications.md`): endpoint-keyed
-  server-level store, `PushService` real and fake, output card flushed by
-  finalize, `push-debug.log` sink. Track B clones this shape for APNs, with
-  the device record instead of a separate store.
+  server-level store, `PushService` real and fake, `push-debug.log` sink.
+  Track B keeps the store and service shape for APNs, with the device record
+  as the store.
 
 ## What already exists
 
 - **Dispatcher.** `src/core/notify-boxholder.ts:69` `notifyBoxholder(boxRoot,
   input)` with `NotifyInput { title, body, url, severity?, tag?, name?,
   deliver?, ... }` (`:45-60`). Writes a web-push card when a device is
-  subscribed and a telegram card when `healthAlerts.telegramChat` is set.
-  **Reuse and extend:** it stays the single writer of channel cards, takes a
-  `NotificationIntent` with `loudness` and `target`, and decides which cards
-  to write from presence (Track A).
+  subscribed and a telegram card when `healthAlerts.telegramChat` is set;
+  returns with nothing when neither (`:107-109`). **Reuse and rewrite:** it
+  stays the single entry point, takes a `NotificationIntent`, emits to the
+  bus, and hands delivery to the channel workers (Track A).
 - **Callers, all system code:** `src/core/question-alert.ts:104`
   (`severity: "alert"`), `src/core/question-aging.ts:214` (`severity:
   "info"`), `src/core/schedule/health-alert.ts:84`,
   `src/core/schedule/connector-activity-alert.ts:61`,
   `src/core/schedule/google-auth-alert.ts:86`,
   `src/core/agent/engine-unavailability-apply.ts:38`. **Reuse:** Track E
-  changes what loudness each passes.
+  changes what each does.
+- **Event bus.** `src/core/event-bus.ts`: SQLite at `.beebox/events.db`,
+  `emit` persists and dispatches, `subscribe({ afterId })` replays
+  (`:174-196`), cross-process with `pollInterval` (`:212-219`). Events are
+  typed by `src/core/event-bus-schemas.ts:84`. `chat-complete` (`:173`)
+  carries `sessionId`. `card-created` (`:126`) is emitted only by the UI
+  action routes (`src/webapp/trpc/routers/actions.ts:111`,
+  `src/webapp/routes/actions.ts:76`), not by connectors or agents.
+  **Reuse:** the bus is the notification queue and the delivery record;
+  `chat-complete` is the callout hook. A watch cannot read new cards from
+  the bus and reads git instead (Track D).
 - **Output-card delivery helper.** `src/connectors/output-cards.ts:57`
-  `deliverPendingOutputCards(...)`: `send` returns `null` on success (card
-  deleted, `:91-92`) or a message (card stamped `status: failed`, `:95-103`).
-  **Reuse unchanged:** each channel card keeps this lifecycle.
+  `deliverPendingOutputCards`: `null` deletes the card (`:91-92`), a
+  message stamps `failed` (`:95-103`). **Keep for Telegram replies; not used
+  for notifications** after this plan.
 - **Web push sender and store.** `src/core/send-push.ts` `sendPush`,
   `src/core/push-subscriptions.ts` endpoint-keyed store,
-  `src/services/push.ts` real and fake, `src/connectors/push.ts:51`
-  `sendOutputPushCards`. **Reuse** all of it; the `apns` connector is its mirror.
-- **Web push card and SW.** `src/schemas/web-push.ts:25-35` fields `status,
-  title, body, url, severity, tag, error`; `createWebPushTemplate` (`:63`).
-  **Keep, rename fields:** `severity` becomes `loudness`, `url` becomes
-  `target`. Zero of these cards exist on disk anywhere (the feature never ran
-  and cards delete on delivery,
-  `issues/code-quality/2026-07-04-web-push-followup-testing.md`), so there is
-  no data migration. The service worker payload `{ title, body, url, tag }`
-  stays; the connector renders `target` to `url`.
-- **Telegram card.** `src/schemas/telegram-message.ts:23-29` fields `status,
-  chat-id, text, response, error`. **Keep:** it is also the outbound chat reply
-  path. Gains an optional `disable-notification` field for `quiet`.
-- **`bbx push test`.** `src/cli/commands/push.ts:14-26` calls `sendPush`
-  directly. **Rebuild** as `bbx notify --channel web-push` so the test goes
-  through the card path.
+  `src/services/push.ts` real and fake. **Reuse** the sender and store as
+  the `web-push` channel worker. **Delete** `src/schemas/web-push.ts`,
+  `src/connectors/push.ts:51`, and `bbx push test`
+  (`src/cli/commands/push.ts:14-26`). No card of that type exists on disk
+  anywhere (the feature never ran; cards delete on delivery;
+  `issues/code-quality/2026-07-04-web-push-followup-testing.md`). The
+  service worker payload `{ title, body, url, tag }` stays.
+- **Telegram.** `src/schemas/telegram-message.ts:23-29` card and
+  `src/connectors/telegram-output-cards.ts:28` stay for chat replies.
+  `TelegramService` (`src/services/telegram.ts`) is called directly by the
+  `telegram` channel worker with `disable_notification` for `quiet`.
 - **Scheduled scripts.** `src/schemas/scheduled-script.tsx` fields `cron, at,
-  rrule, until, once, runs, requires, create-after-success`. `bbx tick` runs
-  `runs` with `execWithTimeout(parsed.runs, { cwd: boxRoot, env: scriptEnv })`
-  (`src/cli/commands/tick-helpers.ts:275-282`), deletes a `once` card after
-  success (`:184-201`), and skips a card whose `requires.connectors` are
-  missing with a log line only: `Skipping ${scriptName}: missing connectors`
-  (`:142-144`). **Reuse:** a reminder is a scheduled script; the skip site is
-  where Track E's promotion rule lives.
+  rrule, until, once, runs, requires, create-after-success`; `runs` is
+  required (`:61`). `bbx tick` runs it with `execWithTimeout(parsed.runs, {
+  cwd: boxRoot, env })` (`src/cli/commands/tick-helpers.ts:275-282`),
+  records `success` (`:285`), deletes a `once` card after success
+  (`:184-201`), and skips a card whose `requires.connectors` are missing
+  with a log line only (`:142-144`). Schedule state records `lastResult:
+  "success" | "failure" | "deferred" | "inconclusive"`
+  (`src/core/schedule/state.ts:45`); `deferred` freezes the failure counter
+  (`:225`). **Extend:** `notify:` as an alternative to `runs`; a judge that
+  says "not yet" records `deferred`; `once` deletes only after a run that
+  was neither deferred nor skipped.
 - **Chat timers.** `<schedule in="20m" ...>` (`src/core/chat/session/prompts.ts:166`)
   arms a `setTimeout` in the server process, persisted in
   `.beebox/chat-schedules.json` (`src/core/chat/schedules.ts:11`), and fires a
@@ -175,25 +191,19 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   (`src/core/chat/session/pool.ts:287`). It runs an agent at fire time, lands
   only in the chat, and breaks past about 25 days
   (`issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md`).
-  **Keep:** it is the right tool for a same-conversation follow-up within
-  hours. Track F tells the chat agent when to use it and when to use
-  `bbx remind`.
+  **Keep:** it is the tool for a same-conversation follow-up within hours.
+  Track F tells the chat agent when to use it and when to write a schedule
+  card.
 - **Callouts.** `<callout context="...">` marks "content the user must
   actually read" and its prompt already says the body must stand alone "in a
   digest or notification" (`src/core/chat/session/prompts.ts:155-160`).
   Consumed by `src/frontend/src/components/chat/CalloutBlock.tsx` and
   `ambient/projection.ts`. **Reuse:** a callout is the chat agent's notify
   (Track E).
-- **Event bus.** `src/core/event-bus.ts` SQLite with replay; `chat-complete`
-  (`src/core/event-bus-schemas.ts:173`) carries `sessionId`. `card-created`
-  (`:126`) is emitted only by the UI action routes
-  (`src/webapp/trpc/routers/actions.ts:111`, `src/webapp/routes/actions.ts:76`),
-  not by connectors or agents. **Consequence:** a watch cannot read new cards
-  from the bus; it reads them from git (Track D). `chat-complete` is the hook
-  for callout delivery.
 - **Live subscribers.** `src/webapp/trpc/routers/events.ts:62` `subscribe` is
   the one long-lived subscription every open web app holds, per box. No
-  registry counts them. **Extend:** Track A counts them for presence.
+  registry counts them, and an idle tab is not presence. **Extend:** a
+  client heartbeat (Track A).
 - **Jev.** `src/services/jev.ts:15-17` `JevService.decide({ state, criteria })`
   returns a Choice distribution; real client at `:118` posts to
   `https://openrouter.ai/api/alpha/decisions` (`:128`) with model
@@ -202,17 +212,25 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   **Extend:** add `judge({ state, question })` for the Noul type (Track D).
 - **Procedures.** `src/schemas/procedure.ts:54` a step has `precheck`, `run`,
   `validate`; each phase has `shells`, `agents`, `instructions`, `whys`
-  (`:30-33`); `precheck` adds `pass-output` (`:39`). **Extend:** `precheck`
-  gains a `judge` field (Track D).
+  (`:30-33`); `precheck` adds `pass-output` (`:36-40`). The runner's
+  `runPrecheck` (`src/core/procedure/engine-step.ts:133`) executes the
+  shells and treats exit 75 (`CHECK_SKIP_CODE`, `src/core/procedure/shell.ts:12`)
+  as skip. The run card records `status: pass | fail | skip`
+  (`src/schemas/procedure-run.ts:15-19`). **Extend:** a `judge` field on
+  `precheck`, evaluated after the shells (Track D).
 - **Pairing device record.** `src/core/mobile/pairing.ts:19`
   `MobileDeviceSchema { id, label, tokenHash, createdAt, createdBy,
   lastUsedAt?, revokedAt? }` in the box-level
-  `.beebox/mobile-devices.secret.json` (`:5`). Bearer resolution at `:167`.
-  **Extend:** the record gains an `apns` field (Track B).
+  `.beebox/mobile-devices.secret.json` (`:5`). `listMobileDevices` strips
+  only `tokenHash` (`:103-104`) and `pairing.devices` returns that to the UI
+  (`src/webapp/trpc/routers/pairing.ts:50`). Bearer resolution at `:167`.
+  **Extend:** an `apns` field and a projection that strips its token
+  (Track B).
 - **iOS app.** `@UIApplicationDelegateAdaptor(BeeBoxAppDelegate.self)`
-  (`ios-app/BeeBox/BeeBoxApp.swift:5`); `onOpenURL` (`:39`) feeds the pairing
-  inbox; `scenePhase` handling at `ios-app/BeeBox/Views/RootView.swift:147`;
-  every request is authenticated by `BoxRequest.apply`
+  (`ios-app/BeeBox/BeeBoxApp.swift:5`) with the `PairedBoxStore` owned by
+  the SwiftUI app (`:6`); `onOpenURL` (`:39`) feeds the pairing inbox;
+  `scenePhase` handling at `ios-app/BeeBox/Views/RootView.swift:147`; every
+  request is authenticated by `BoxRequest.apply`
   (`ios-app/BeeBox/Services/BoxRequest.swift:21`); the webview is loaded from
   `ChatWebView.authenticatedRequest(for:page:)`
   (`ios-app/BeeBox/Views/ChatWebView.swift:1069`). No `UserNotifications`
@@ -225,16 +243,16 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Health page.** `src/frontend/src/pages/DashboardPage.tsx:26` reads
   `trpc.health.check` (`src/webapp/trpc/routers/health.ts:342`);
   `HealthWarnings.tsx:40` renders failing checks. `/box/health` as a deep
-  link does not exist as a route; callers that pass it land on the dashboard.
-  **Reuse:** demoted health alerts appear here; the plan fixes the target to
-  the dashboard path.
+  link does not exist as a route; callers that pass it land on the
+  dashboard. **Reuse:** demoted health alerts appear here; the plan fixes
+  the target to `dashboard`.
 - **Admin Notifications section.**
   `src/frontend/src/components/admin/NotificationsSection.tsx`, registered as
-  `scope: "device"` (`admin-sections.ts:59`). **Reuse:** it lists the phone's
-  registration state too (Track B).
+  `scope: "device"` (`admin-sections.ts:59`). **Reuse:** it also lists paired
+  phones and recent deliveries (Tracks A and B).
 - **Box config.** `healthAlerts.telegramChat` (`src/core/box/config.ts:75-79`)
   is read from an unvalidated cast (`:359-362`). **Keep** the field; no new
-  config keys are added, so no validation work is pulled in.
+  config keys are added.
 - **Searched and not found:** `bbx remind`, `bbx notify`, any watch card, any
   unread concept outside Gmail, any `UIBackgroundModes`, any notification
   mention in the iOS plans.
@@ -287,152 +305,150 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
 ## Ontology
 
 - **Notification intent.** One intent to reach the person: `title`, `body`,
-  `target`, `loudness`, optional `tag` (collapse key), `source` (which code or
-  agent wrote it). A TypeScript type (`NotificationIntent`, Track A) and a
-  line in `.beebox/notifications.jsonl`, identified by that line's id. It is
-  NOT a card; it becomes one channel card per channel chosen at write time.
-- **Channel card.** The durable per-channel output card in
-  `_bookkeeping/output/` (`docs/box-layout.md:177`): `web-push`
-  (`src/schemas/web-push.ts:25`, fields renamed), `apns` (new, Track B),
-  `telegram-message` (`src/schemas/telegram-message.ts:23`). Each has the
-  existing pending/failed lifecycle.
+  `target`, `loudness`, optional `tag` (collapse key), `source` (which code,
+  card, or chat session wrote it). A TypeScript type (`NotificationIntent`)
+  and a persisted `notification` bus event, identified by the event id. It
+  is NOT a card and is never committed. New (Track A).
+- **Delivery.** One attempt on one channel for one intent: `notificationId`,
+  `channel`, `status: sent | skipped | failed`, `detail` (`present`,
+  `no-audience`, `unconfigured`, or the error). A persisted
+  `notification-delivery` bus event. New (Track A).
 - **Loudness.** `dot | quiet | loud`. On the phone: badge only; passive
   banner; active banner with sound. On desktop web push: nothing; muted
-  notification; notification. In the app: an event on the bus for all three.
-  Telegram: `dot` sends nothing; `quiet` and `loud` send a message, `quiet`
-  with `disable_notification`. Replaces `severity`.
+  notification; notification. Telegram: nothing; message with
+  `disable_notification`; message. In an open app: a toast for `quiet` and
+  `loud`, nothing for `dot`.
 - **Target.** Where tapping lands. `chat:<sessionId>`, `chat:new`, `card:<path>`,
   `question:<path>`, `dashboard`. A string with a scheme, parsed by one
   function that also renders the deep-link URL for each channel. It is NOT a
   raw URL. `question:` and `card:` point at cards by path
   (`src/core/question-alert.ts:100` builds the browse URL today).
 - **Channel.** A way to deliver: `apns`, `web-push`, `telegram`. Each has a
-  service (real and fake), an audience lookup, a card type, and a connector.
+  service (real and fake), an audience lookup, and a worker that reads the
+  bus from its cursor and emits deliveries. `web-push` and `telegram`
+  services exist; `apns` is new (Track B).
+- **Channel cursor.** The last `notification` event id a channel worker
+  delivered, in `.beebox/notification-cursors.json`. Transient state.
 - **Device.** A paired phone: the existing `MobileDevice`
   (`src/core/mobile/pairing.ts:19`), extended with
   `apns: { token, environment: "sandbox" | "production", registeredAt }`.
-  A device belongs to a box (the file is box-level) and to the person who
-  paired it (`createdBy`).
+  Belongs to a box (the file is box-level) and to the person who paired it
+  (`createdBy`).
 - **Presence.** The number of web sessions for the box in which a person
   interacted within the last two minutes, reported by a client heartbeat.
-  NOT the count of open subscriptions (`src/webapp/trpc/routers/events.ts:62`
-  has no such registry and an idle tab is not presence). Per box, not per
-  target (target-level presence is deferred with unread).
+  NOT the count of open subscriptions. Per box, not per target.
 - **Reminder.** A scheduled-script card (`src/schemas/scheduled-script.tsx`)
-  with `at`, `once: true`, and `runs: bbx notify ...`. NOT a new card type.
-  Identified by its filename in `_config/schedules/`.
-- **Chat timer.** The existing `<schedule>` tag entry in
-  `.beebox/chat-schedules.json` (`src/core/chat/schedules.ts:26`). NOT a
-  reminder: it re-enters a chat and runs an agent.
+  with `at`, `once: true`, `requested-by: boxholder`, and a `notify:` field
+  in place of `runs`. NOT a new card type and NOT a command. In git, as the
+  rule.
+- **Chat timer.** The existing `<schedule>` tag entry
+  (`src/core/chat/schedules.ts:26`). NOT a reminder: it re-enters a chat and
+  runs an agent.
+- **Judgment.** One Jev Noul question over one state, returning a
+  probability. Exists as `JevDecision` for Choice (`src/services/jev.ts:9`);
+  Track D adds the Noul form. A judgment is NOT a decision: code compares it
+  to a threshold the card set.
+- **Deferred.** The scheduler's existing outcome for "not the task's fault,
+  try again next time" (`src/core/schedule/state.ts:39-45`). A judge below
+  threshold records it, with the probability. NOT a failure and NOT a
+  success: `once` does not fire on it.
 - **Watch.** A criterion the box tests against new cards: `under` (path
   prefix), `criteria` (natural-language yes/no), `threshold`, `then`
   (`notify` fields or `run` command), `once`, `until`, `enabled`. New card
-  type `watch` in `_config/watches/` (Track D). Its cursor (last evaluated
-  commit) lives in `.beebox/watches.json`, never in the card.
-- **Judgment.** One Jev question over one state: `question` (Noul text) and
-  the returned probability. Exists as `JevDecision` for Choice
-  (`src/services/jev.ts:9`); Track D adds the Noul form. A judgment is NOT a
-  decision: code compares it to a threshold the card set.
+  type `watch` in `_config/watches/` (Track D). In git, as the rule. Its
+  cursor lives in `.beebox/watches.json`.
 - **Callout.** The existing chat tag for content the person must read
   (`src/core/chat/session/prompts.ts:155`). Gains an optional `loudness`
-  attribute (Track E). A callout in a turn that completes with no presence
-  becomes a notification targeting that chat.
-- **Judgment record.** What a procedure run card stores for a `judge`
-  precheck: `{ probability, threshold, model }` beside the existing
-  `status: pass | fail | skip` (`src/schemas/procedure-run.ts:15`).
+  attribute (Track E).
 - **Health entry.** A failing check in `getHealthSnapshot`
-  (`src/webapp/trpc/routers/health.ts:342`). Exists. Demoted alerts are health
-  entries; they never notify on their own (Track E).
+  (`src/webapp/trpc/routers/health.ts:342`). Exists. Demoted alerts are
+  health entries; they never notify on their own (Track E).
 
 ## Tracks / scope
 
-### Track A. Vocabulary, per-channel cards with loudness, presence, `bbx notify`
+### Track A. Vocabulary, bus-based delivery, presence, `bbx notify`
 
-**What.** Give every notification a `loudness` and a `target`, keep one durable
-output card per channel (the July decision), decide at write time which
-channel cards to write from presence and loudness, add the `apns` card type
-beside `web-push` and `telegram-message`, and expose it all as `bbx notify`.
+**What.** Give every notification a `loudness` and a `target`; make the
+event bus the queue and the record; decide at emit time which channels to
+try from loudness and presence; deliver through per-channel workers; expose
+it as `bbx notify`; remove the `web-push` card path.
 
 **Why this needs to change.** Agents have no command at all today
 (`src/core/agent-guide/` has no notify section; searched). Every caller
-passes a `severity` that no channel distinguishes. The shared delivery
-helper knows two outcomes, delete on success and stamp `failed`
-(`src/connectors/output-cards.ts:90-103`); a single multi-channel card would
-need a third lifecycle, which the July plan declined for that reason
-(`docs/implemented-plans/web-push-notifications.md`, NOT in scope). The
-cross-model review of this plan (2026-09-26) confirmed the helper does not
-fit; per-channel cards stay.
+passes a `severity` that no channel distinguishes. Committed output cards
+per delivery are git history that is all plumbing (boxholder decision).
 
 **Direction.**
 
 - `src/core/notification/intent.ts`: `NotificationIntent { title, body,
-  target, loudness, tag?, source }` and `Loudness = "dot" | "quiet" | "loud"`.
-  The one type every writer builds.
+  target, loudness, tag?, source }`, `Loudness`, and the Zod schemas for the
+  two new bus events, `notification` (the intent plus `url`) and
+  `notification-delivery`, added to `src/core/event-bus-schemas.ts:84`.
 - `src/core/notification/target.ts`: `parseTarget(s): Target` and
   `targetUrl(target, boxSlug): string` (root-relative, the shape
   `question-alert.ts:100` builds today). `chat:new` renders to
-  `/<box>/chat?new=1&notification=<id>`; the id names a line in
-  `.beebox/notifications.jsonl` (written by `notifyBoxholder`, gitignored)
-  holding the intent, so the text is never in a URL. The chat page shows the
-  intent as a banner above an empty composer and includes it as context in
-  the first message the person sends, the way `<schedule-fired>` carries
-  context (`src/core/chat/session/pool.ts:287`). No agent runs on tap.
+  `/<box>/chat?new=1&notification=<eventId>`; the chat page reads the
+  `notification` event by id from the bus, shows it as a banner above an
+  empty composer, and includes it as context in the first message the person
+  sends, the way `<schedule-fired>` carries context
+  (`src/core/chat/session/pool.ts:287`). No agent runs on tap.
 - `src/core/notification/presence.ts`: `livePresence(boxRoot): { activeWeb:
   number }`. The frontend sends a heartbeat every 30 seconds while a person
   has interacted in the last two minutes (`pointerdown`, `keydown`,
-  `visibilitychange` to visible); `events.subscribe` is not enough, since an
-  open tab in another room is not presence (review finding 2). The server
-  keeps the count in memory and writes `.beebox/presence.json` by atomic
-  rename with a timestamp; another process reads it and treats a timestamp
-  older than 90 seconds as zero.
-- `src/schemas/web-push.ts`: `severity` becomes `loudness`, `url` becomes
-  `target`. Zero cards exist on disk anywhere (the feature never ran and
-  cards delete on delivery), so this is a field rename with no migration.
-  New `src/schemas/apns.ts` with the same fields (Track B). Telegram keeps
-  its card (`src/schemas/telegram-message.ts:23-29`, also the reply path);
-  `notifyBoxholder` renders the intent to `text` and sets
-  `disable-notification: true` for `quiet`, a new optional field the sender
-  passes through.
+  `visibilitychange` to visible). The server keeps the count in memory and
+  writes `.beebox/presence.json` by atomic rename with a timestamp; another
+  process reads it and treats a timestamp older than 90 seconds as zero.
+- `src/core/notification/channels.ts`: `channelsToTry({ intent, audience,
+  presence }): Channel[]`, pure. `loud`: every channel with an audience.
+  `quiet`: every channel with an audience unless `activeWeb > 0`, then
+  none. `dot`: `apns` only, always (a badge is harmless when the app is
+  open and clears on foreground). Channels not tried get a `skipped`
+  delivery with `present` or `no-audience`.
 - `src/core/notify-boxholder.ts`: `notifyBoxholder(boxRoot, intent, {
-  deliver?, now? })`. The write-time rule, one pure function
-  `channelsToWrite({ intent, audience, presence }): Channel[]` with its own
-  doctest: `loud` writes every channel with an audience; `quiet` writes every
-  channel with an audience unless `activeWeb > 0`, in which case only the bus
-  event is emitted; `dot` writes `apns` only (a badge is harmless when the
-  app is open and clears on foreground) and never `web-push` or `telegram`.
-  Every call emits a `notification` bus event (new schema entry: the intent
-  plus the rendered URL) so an open app shows a toast, and appends the
-  intent to `.beebox/notifications.jsonl`. When no channel has an audience
-  and presence is zero, today's code returns with no card and no trace
-  (`src/core/notify-boxholder.ts:107`); the plan writes a health entry
-  `notification had no channel: <title>` so the silence is visible (review
-  finding 3). `notifyChannels` returns `{ apns, webPush, telegram }`.
-- Connectors: `src/connectors/push.ts` stays; `src/connectors/apns.ts`
-  (Track B) mirrors it. Telegram delivery is unchanged.
+  deliver?, now? })` emits `notification`, emits the `skipped` deliveries,
+  and when `deliver` (the default for `bbx notify`; finalize otherwise)
+  runs the channel workers at once. When no channel is tried and presence
+  is zero, it adds a health entry `notification had no channel: <title>`
+  (today: silent return, `src/core/notify-boxholder.ts:107-109`).
+- `src/core/notification/deliver.ts`: `deliverPending(boxRoot, { channels,
+  services })`. Each channel worker reads `notification` events after its
+  cursor (`.beebox/notification-cursors.json`), sends through its service,
+  emits `notification-delivery`, and advances the cursor. A transient error
+  leaves the cursor so finalize retries once; a second failure records
+  `failed` and advances. Workers: `web-push` over `sendPush`, `telegram` over
+  `TelegramService`, `apns` (Track B). Called from `notifyBoxholder` with
+  `deliver` and from `bbx finalize` (`src/cli/commands/finalize.ts:35`
+  neighborhood) for anything left.
 - `src/cli/commands/notify.ts`: `bbx notify <title> [--body] --target <t>
   [--loudness dot|quiet|loud] [--tag] [--later] [--channel <name>]`.
-  Delivers at once unless `--later`. `--channel` restricts the write for
-  testing and replaces `bbx push test`. Exit 1 with the card paths when any
-  card is stamped `failed`, so a procedure sees it.
-- Service worker: `quiet` sets `silent: true` in the payload.
+  `--channel` restricts delivery for testing and replaces `bbx push test`.
+  Exit 1 with the delivery detail when every tried channel failed.
+- Admin Notifications section: a "Recent" list of the last three days of
+  `notification` and `notification-delivery` events (title, when, channel,
+  status, detail).
+- Delete `src/schemas/web-push.ts`, its registry entry,
+  `src/connectors/push.ts`, `src/cli/commands/push.ts`. Service worker:
+  `quiet` sets `silent: true`.
 
 **Vocabulary lock-ins.** `loudness` and its three values; `target` scheme
-strings; channel names `apns`, `web-push`, `telegram`; the bus event name
-`notification`; `.beebox/notifications.jsonl` and `.beebox/presence.json`.
+strings; channel names `apns`, `web-push`, `telegram`; bus event names
+`notification` and `notification-delivery`; delivery statuses and details.
 
-**First implementation chunk.** `intent.ts`, `target.ts`, `channelsToWrite`
-with its doctest over the loudness-by-presence matrix, the field renames on
-`web-push`, the rewritten `notifyBoxholder` with a filesystem doctest: a box
-with a fake subscription and a telegram chat gets two cards for `loud`; gets
-none and a bus event for `quiet` with presence; gets a health entry for
-`quiet` with no audience and no presence. Existing callers pass
-`loudness: "loud"` and a parsed target in this chunk so nothing regresses;
-Track E changes them.
+**First implementation chunk.** `intent.ts`, `target.ts`, `channelsToTry`
+with its doctest over the loudness-by-presence matrix, the bus event
+schemas, the rewritten `notifyBoxholder`, and `deliver.ts` with the
+`web-push` and `telegram` workers, with a filesystem doctest: a box with a
+fake subscription and a telegram chat gets two `sent` deliveries for `loud`;
+gets two `skipped: present` for `quiet` with presence; gets a health entry
+for `quiet` with no audience and no presence; a failing push is retried at
+finalize and then recorded `failed`. Existing callers pass `loudness:
+"loud"` and a parsed target in this chunk so nothing regresses; Track E
+changes them.
 
-### Track B. APNs: server connector and device registration
+### Track B. APNs: server service, device registration, delivery
 
 **What.** An `apns` channel: a service (real via `@parse/node-apn`, fake),
-device token registration on the pairing record, and delivery with pruning.
+device token registration on the pairing record, and a worker with pruning.
 
 **Why this needs to change.** The iPhone app is a `WKWebView` shell
 (`ios-app/README.md`) and cannot receive web push. There is no APNs code
@@ -450,13 +466,16 @@ device token registration on the pairing record, and delivery with pruning.
   provider per environment; fake records calls. Payload builder in
   `src/core/notification/apns-payload.ts`, a pure function: `dot` gives
   `{ aps: { badge: 1 }, target }`; `quiet` gives `{ aps: { alert: { title,
-  body }, "interruption-level": "passive", badge: 1 }, target }`; `loud` adds
-  `sound: "default"` and level `active`. `apns-collapse-id` is the `tag`.
-  `apns-push-type: alert` for all three.
+  body }, "interruption-level": "passive", badge: 1 }, target, loudness }`;
+  `loud` adds `sound: "default"` and level `active`. `apns-collapse-id` is
+  the `tag`. `apns-push-type: alert` for all three.
 - `src/core/mobile/pairing.ts`: `MobileDeviceSchema` gains
   `apns: z.object({ token, environment: z.enum(["sandbox", "production"]),
-  registeredAt }).optional()`. New function `registerDevicePush(boxRoot, {
-  deviceId, token, environment })` and `pruneDevicePush(boxRoot, deviceId)`.
+  registeredAt }).optional()`. New `registerDevicePush(boxRoot, { deviceId,
+  token, environment })` and `pruneDevicePush(boxRoot, deviceId)`. The
+  projection `listMobileDevices` (`:103-104`) strips `apns.token` as it
+  strips `tokenHash` and exposes `push: { environment, registeredAt } |
+  null`, so a raw token never leaves the process.
 - Route: `POST /api/pairing/push-token` body `{ token, environment }`,
   authenticated by the device bearer (`resolveMobileBearerIdentity`,
   `src/core/mobile/pairing.ts:167`), raw Fastify beside the redeem route
@@ -464,32 +483,23 @@ device token registration on the pairing record, and delivery with pruning.
   using the same path family. Contract section 5.8 in
   `docs/mobile-contract.md`, fixture under `test/mobile-contract/fixtures/`,
   same commit.
-- `src/schemas/apns.ts`: the `web-push` card's fields with the `apns`
-  suffix; `src/connectors/apns.ts` mirrors `src/connectors/push.ts:51` over
-  `deliverPendingOutputCards`. Audience is every device of the box with an
-  `apns` field and no `revokedAt`. `gone` prunes the `apns` field and logs
-  the device label, never the token.
-- Token exposure: `listMobileDevices` strips only `tokenHash`
-  (`src/core/mobile/pairing.ts:103`) and `pairing.devices` returns that
-  projection to the UI (`src/webapp/trpc/routers/pairing.ts:50`). The
-  projection changes to strip `apns.token` too and expose
-  `push: { environment, registeredAt } | null`, so a raw token never
-  leaves the process (review finding 5).
-- Admin Notifications section lists paired devices with a push token and
-  their environment, read from the `push` projection above, so the
-  boxholder can see that the phone is registered.
-- `.beebox/push-debug.log` gets one line per APNs send with loudness and
-  target, no token.
+- Worker: audience is every device of the box with an `apns` field and no
+  `revokedAt`. `gone` prunes the `apns` field and logs the device label,
+  never the token. `.beebox/push-debug.log` gets one line per send with
+  loudness and target, no token.
+- Admin Notifications section lists paired devices with a push
+  registration and their environment from the `push` projection.
 
 **Vocabulary lock-ins.** `apns` field name and `environment` values on the
-device record; the route path; the payload's custom `target` key, which the
-iOS client reads.
+device record; the route path; the payload's custom `target` and `loudness`
+keys, which the iOS client reads.
 
 **First implementation chunk.** `apns-payload.ts` with a doctest over the
-three loudnesses, `ApnsService` real and fake, the device record extension,
-`registerDevicePush`, and the route with a route doctest (`makeTestServer()`):
-a device registers, re-registers with a new token, and is pruned on `gone`.
-The channel wiring into the connector is the second chunk.
+three loudnesses, `ApnsService` real and fake, the device record extension
+and projection, `registerDevicePush`, and the route with a route doctest
+(`makeTestServer()`): a device registers, re-registers with a new token,
+the projection hides the token, and `gone` prunes. The worker is the second
+chunk.
 
 ### Track C. APNs: iOS client
 
@@ -518,25 +528,25 @@ foreground.
 - `PushRegistrar` (`ios-app/BeeBox/Services/PushRegistrar.swift`): posts
   `{ token, environment }` to every paired box using `BoxRequest.apply`
   (`ios-app/BeeBox/Services/BoxRequest.swift:21`); `environment` is
-  `sandbox` for `DEBUG` builds and `production` otherwise. Re-posts when the
-  token changes or a box is paired. Permission is requested once, at first
-  successful pairing, with `[.alert, .badge, .sound]`; a denial is shown in
-  the paired-box shell as a one-line state with a link to Settings, per
-  principle 13 (`docs/engineering-principles.md:151`).
+  `sandbox` for `DEBUG` builds and `production` otherwise. Permission is
+  requested once, at first successful pairing, with `[.alert, .badge,
+  .sound]`; a denial is shown in the paired-box shell as a one-line state
+  with a link to Settings, per principle 13
+  (`docs/engineering-principles.md:151`).
 - `willPresent`: read `loudness` from `userInfo`; `loud` presents as banner
   and sound; `quiet` and `dot` present nothing. The webview already shows the
-  bus event when it is open (Track A).
+  bus event toast when it is open (Track A).
 - `didReceive`: read `target` from `userInfo`, build the URL with the paired
   box's base URL, and load it through the existing
   `authenticatedRequest(for:page:)` path
   (`ios-app/BeeBox/Views/ChatWebView.swift:1069`), extended with a
   `.path(String)` page case.
 - On `scenePhase == .active` (`ios-app/BeeBox/Views/RootView.swift:147`),
-  call `setBadgeCount(0)` and `removeAllDeliveredNotifications()` for
-  notifications whose loudness was `dot`.
+  call `setBadgeCount(0)` and remove delivered notifications whose loudness
+  was `dot`.
 
 **Vocabulary lock-ins.** `userInfo` keys `loudness` and `target`, identical
-to the card fields.
+to the bus event fields.
 
 **First implementation chunk.** Entitlement, delegate registration,
 `PushRegistrar`, and a unit test of the environment and URL construction in
@@ -544,93 +554,113 @@ the existing test target. Verified in the simulator up to the registration
 call; the simulator has no APNs token, so the post is exercised with a fake
 token behind a `DEBUG` launch argument.
 
-### Track D. Timed and conditional: `bbx remind`, watch cards, Jev judge in procedures
+### Track D. Timed and conditional: `notify:` on schedules, judge precheck with defer, watch cards
 
-**What.** A one-command reminder that writes a scheduled-script card; a
-`watch` card evaluated over new cards with Jev; a `judge` precheck in
-procedures so a scheduled procedure can ask a cheap question before running
-an agent.
+**What.** A reminder is a scheduled-script card whose action is a
+notification; a procedure precheck can ask Jev a yes/no question and defer
+until it says yes; a `watch` card tests a criterion against each new card
+under a path.
 
 **Why this needs to change.** A reminder today is a chat timer that runs an
-agent, lands only in the chat, and dies past 25 days. A watch does not exist.
-A scheduled procedure that checks a condition runs an agent every time, which
-is what makes many small proactive tasks too expensive
-(`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`).
+agent, lands only in the chat, and dies past 25 days. A scheduled procedure
+that checks a condition runs an agent every time, which is what makes many
+small proactive tasks too expensive
+(`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`). The
+boxholder asked for a defer state: "runs regularly until the judge says it
+fires."
 
 **Direction.**
 
-- `bbx remind --at <iso|"in 2h"|"thursday 08:30"> <text> [--target] [--loudness]
-  [--context <ref>]`: writes `_config/schedules/remind-<slug>-<date>.scheduled-script.card`
-  with `at`, `once: true`, `description`, and `runs: bbx notify "<text>"
-  --target chat:new --loudness loud --context <ref>`. Relative times use the
-  box time zone (`src/lib/time.ts` `getBoxTime`). `bbx remind list` and
-  `bbx remind cancel <name>` are thin over the schedules directory.
-- `src/schemas/watch.ts`: `cardSchema("watch", { fields: { under, criteria,
-  threshold: number.default(0.8), then: { notify?: { title, body?, loudness },
-  run?: string }, once: boolean.default(true), until?, enabled:
-  boolean.default(true), description? } })` in `_config/watches/`. Exactly one
-  of `then.notify` and `then.run`, enforced by a refinement whose message
-  says so.
+- **`notify:` on scheduled scripts.** `src/schemas/scheduled-script.tsx`:
+  `runs` becomes optional and `notify: { title, body?, loudness?, target?,
+  context? }` is added; exactly one of the two, enforced by a refinement
+  whose message says so. `requested-by: "boxholder"` is added as an optional
+  marker that Track E's promotion rule reads. `bbx tick` runs a `notify:`
+  card by calling `notifyBoxholder` in process, with `target` defaulting to
+  `chat:new` and `source` the card path; the `once` deletion and state
+  recording are unchanged. Pure data: no shell quoting of a title. The
+  schema instructions carry this worked example:
+
+  ```yaml
+  # _config/schedules/remind-pepper-vet.scheduled-script.card
+  at: 2026-10-02T08:30
+  once: true
+  requested-by: boxholder
+  description: Reminder asked for in chat on 2026-09-26
+  notify:
+    title: Call the vet about Pepper's shots
+    loudness: loud
+    target: chat:new
+    context: pets/pepper-shots.todo.card
+  ```
+
+  Firing is the scheduler tick; no agent runs. Tapping opens a new chat
+  with the reminder and its context as the banner. `bbx remind` is not
+  added.
+- **`jev.judge`.** `src/services/jev.ts`: `judge({ state, question }):
+  Promise<{ probability, model }>` for the Noul type, same request path;
+  fake support via `createFakeJev({ noul: (question) => number })`.
+- **Judge precheck and defer.** `ProcedurePrecheck` (`src/schemas/procedure.ts:36`)
+  gains `judge?: { question: string, threshold: number.default(0.8) }`; the
+  state is the precheck's `shells` stdout, the only form in this plan.
+  `runPrecheck` (`src/core/procedure/engine-step.ts:133`) calls `jev.judge`
+  after `executePhaseShells`; below threshold is a skip, and the run card's
+  `RunStepPrecheck` (`src/schemas/procedure-run.ts:15`) gains `judge: {
+  probability, threshold, model }` so the run shows why. A procedure whose
+  every step skipped by judge exits with a new `DEFERRED_EXIT_CODE`, which
+  `bbx tick` records as the existing `deferred` outcome
+  (`src/core/schedule/state.ts:45`) with the probability in the log, so
+  `bbx health` shows `waiting: judge 0.31`, not `failing`. `once` deletes
+  the card only after a run recorded `success` (`tick-helpers.ts:184` reads
+  the recorded result, not the exit code). So `cron` plus `once: true` plus
+  a judge precheck is "run regularly until it fires, then stop". The engine
+  receives `JevService` through the same injection the chat router uses
+  (`src/webapp/trpc/routers/quick-chat.ts:68`).
+- **Watch card.** `src/schemas/watch.ts`: `cardSchema("watch", { fields: {
+  under, criteria, threshold: number.default(0.8), then: { notify?: { title,
+  body?, loudness? }, run?: string }, once: boolean.default(true), until?,
+  enabled: boolean.default(true), description? } })` in `_config/watches/`.
+  Exactly one of `then.notify` and `then.run`. It is the judge pattern
+  specialized to a stream: one judgment per new item instead of one per
+  run.
 - `src/core/watch/evaluate.ts`: `evaluateWatches(boxRoot, { jev, now })`.
   Cursor file `.beebox/watches.json` `{ [watchName]: { commit, fired:
   string[] } }`. New items are `git diff --name-only --diff-filter=A
-  <cursor>..HEAD -- <under>` (`src/lib/git.ts` already wraps git). This is a
-  product cut, not a general trigger: a watch sees new cards only; edits to
-  existing cards and calendar changes are polls or scheduled procedures (NOT
-  in scope). With no cursor, the cursor starts at HEAD and evaluates nothing:
-  a watch is about the future. The read-evaluate-write of the cursor file
-  runs under `withFileLock` (`src/lib/file-lock.ts:138`) on
-  `.beebox/watches.lock`, because finalize and the wakeup connector loop
-  both reach `syncConnector` (`src/cli/commands/finalize.ts:82`,
-  `src/cli/commands/wakeup-connectors.ts:121`) and neither holds the box
-  maintenance lock (review finding 4). `withFileLock` retries until
-  `waitMs` (`src/lib/file-lock.ts:464-482`); the evaluator passes a short
-  wait and catches the lock-held error to skip the pass; the next pass
-  catches up from the cursor. For each item, `jev.judge({ state: card text truncated to a
-  fixed byte budget, question: criteria })`; probability at or above
-  `threshold` fires `then`. `notify` fills the target with `card:<item>` and
-  substitutes `$item` in title and body; `run` executes the command with
-  `WATCH_ITEM=<path>` in env through `execWithTimeout`. `once` disables the
-  card after the first fire (sets `enabled: false` and commits, so the agent
-  sees why). Past `until`, the card is disabled the same way with
-  `expired-at`. Called from `bbx finalize` beside the question sweep
-  (`src/cli/commands/finalize.ts:35`) and after `syncConnector`
-  (`src/connectors/activity.ts:188`) in the wakeup path, so mail is tested
-  the pass it arrives.
-- Budget: a per-box daily cap of Jev evaluations in `.beebox/watches.json`
-  (default 500). Over the cap, evaluation stops, the cursor does not advance,
-  and a health entry says `watch backlog: N items waiting`; the next day
-  resumes. Nothing is dropped.
-- `src/services/jev.ts`: `judge({ state, question }): Promise<{ probability,
-  model }>` for the Noul type, same request path, fake support via
-  `createFakeJev({ noul: (question) => number })`.
-- Procedures: `ProcedurePrecheck` (`src/schemas/procedure.ts:36`) gains
-  `judge?: { question: string, threshold: number.default(0.8) }`; the state
-  is the precheck's `shells` stdout, the only form in this plan. Three
-  places change, not one (review finding 6): the schema; the runner's
-  `runPrecheck` (`src/core/procedure/engine-step.ts:133`), which after
-  `executePhaseShells` calls `jev.judge` over the stdout and treats a
-  probability below threshold as the existing skip path; and the run card's
-  `RunStepPrecheck` (`src/schemas/procedure-run.ts:15`), which gains an
-  optional `judge: { probability, threshold, model }` so the run shows why
-  it skipped. The engine receives `JevService` through the same injection
-  the chat router uses (`src/webapp/trpc/routers/quick-chat.ts:68`). So a scheduled procedure like
-  "look at today's calendar and decide if a prep note is needed" runs
-  `shells: [bbx calendar today]`, `judge: { question: "Does today hold an
-  event that needs preparation the person has not done?" }`, and only then
-  an `agents:` step. This is the "extend procedures" the boxholder asked
-  for, and the watch evaluator uses the same `judge` call.
+  <cursor>..HEAD -- <under>` (`src/lib/git.ts` wraps git). A product cut:
+  new cards only; edits and calendar changes are polls or scheduled
+  procedures (NOT in scope). With no cursor, the cursor starts at HEAD: a
+  watch is about the future. The read-evaluate-write runs under
+  `withFileLock` (`src/lib/file-lock.ts:464-482`) on `.beebox/watches.lock`
+  with a short wait; the loser catches the lock error and skips the pass,
+  because finalize and the wakeup connector loop both reach `syncConnector`
+  (`src/cli/commands/finalize.ts:82`, `src/cli/commands/wakeup-connectors.ts:121`).
+  For each item, `jev.judge({ state: card text truncated to a fixed byte
+  budget, question: criteria })`; at or above threshold fires `then`.
+  `notify` fills the target with `card:<item>` and substitutes `$item`;
+  `run` executes with `WATCH_ITEM=<path>` through `execWithTimeout`. `once`
+  sets `enabled: false` and commits with the item path in the message, so
+  the fire is in git. Past `until`, the same with `expired-at`. Called once
+  per finalize beside the question sweep (`src/cli/commands/finalize.ts:35`)
+  and once after the wakeup connector loop.
+- Budget: a per-box daily cap of Jev evaluations (default 500) in
+  `.beebox/watches.json`. Over the cap, evaluation stops, the cursor does
+  not advance, and a health entry says `watch backlog: N items waiting`.
+  Nothing is dropped.
 
-**Vocabulary lock-ins.** `watch` card fields; `$item` and `WATCH_ITEM`;
-`judge` as the precheck field and the service method; `remind-` filename
-prefix.
+**Vocabulary lock-ins.** `notify:` and `requested-by` on scheduled scripts;
+`judge` as the precheck field and the service method; `DEFERRED_EXIT_CODE`;
+`watch` card fields; `$item` and `WATCH_ITEM`.
 
-**First implementation chunk.** `jev.judge` with a doctest against the fake
-and a serialized-request assertion; the `watch` schema; `evaluateWatches`
-with a filesystem doctest: three commits add three cards, a fake Jev answers
-0.9 for one, the watch fires once, disables itself, and the cursor advances;
-the cap stops evaluation with a health entry and resumes. `bbx remind` and
-the procedure `judge` are the second and third chunks.
+**First implementation chunk.** `jev.judge` with a doctest against the fake;
+the `notify:` field and its tick path with a doctest (an `at` card fires a
+notification and deletes itself; a `notify` plus `runs` card fails
+validation with the message). Second chunk: the judge precheck, deferred
+exit, and `once` semantics with a procedure doctest (a cron card with a
+judge at 0.3 records `deferred` twice and survives; at 0.9 it runs, records
+`success`, and is deleted). Third chunk: the watch schema and evaluator
+with a filesystem doctest (three commits add three cards, fake Jev answers
+0.9 for one, the watch fires once, disables itself with a commit, cursor
+advances; the cap stops evaluation with a health entry and resumes).
 
 ### Track E. Sources: callouts, question sweep, health demotion and promotion
 
@@ -648,10 +678,10 @@ reach the person only when the agent marks them.
 - Callouts: `<callout loudness="quiet">` attribute, default none. On
   `chat-complete` (`src/core/event-bus-schemas.ts:173`), the chat runtime
   collects the turn's callouts; when presence is zero, each callout with a
-  loudness, or the turn's callouts as one `dot` when none has one, becomes a
-  notification with target `chat:<sessionId>` and body the callout text.
-  Presence nonzero sends nothing: the callout is on screen. This is the
-  "voice" for `issues/features/2026-08-09-agent-outcomes-need-a-voice.md` and
+  loudness, or the turn's callouts as one `dot` when none has one, becomes an
+  intent with target `chat:<sessionId>` and body the callout text. Presence
+  nonzero sends nothing: the callout is on screen. This is the "voice" for
+  `issues/features/2026-08-09-agent-outcomes-need-a-voice.md` and
   `2026-08-22-file-asks-agent-flagged-attention.md`.
 - Question sweep (`src/core/question-alert.ts:104`): `loudness: "dot"`. The
   question card gains `urgency?: "time-bound"`, set by the agent when the
@@ -661,24 +691,21 @@ reach the person only when the agent marks them.
   `google-auth-alert.ts`, `engine-unavailability-apply.ts` stop calling
   `notifyBoxholder`. Each becomes a health entry in the snapshot the
   dashboard already renders (`HealthWarnings.tsx:40`), with the same
-  once-per-episode latch. No badge, no push: the boxholder's ruling is that
-  health reaches the person only through the promotion rule below.
-- Promotion: at the scheduler's skip site
-  (`src/cli/commands/tick-helpers.ts:142-144`) and the engine-wait skip
-  (`src/core/schedule/engine-wait.ts`), a skipped card whose description or
-  filename marks it as boxholder-requested (`remind-` prefix, or a new
-  `requested-by: boxholder` field on scheduled scripts that `bbx remind`
-  sets) sends `loud` once per episode: "Your reminder could not run: Google
-  needs reconnecting", target `dashboard`. The episode latch reuses
-  `schedule-state.ts`.
-- Capture failure: the capture pipeline's terminal failure
-  (`issues/bugs/2026-08-20-capture-success-is-invisible.md` names the
-  `capture-status` event, `src/core/event-bus-schemas.ts:206`) sends `quiet`
-  with target `chat:<sessionId>` when presence is zero. Success sends
-  nothing.
+  once-per-episode latch. No badge, no push.
+- Promotion: at the scheduler's skip sites
+  (`src/cli/commands/tick-helpers.ts:142-144` for missing connectors,
+  `src/core/schedule/engine-wait.ts` for engine quota), a skipped card with
+  `requested-by: boxholder` sends `loud` once per episode: "Your reminder
+  could not run: Google needs reconnecting", target `dashboard`. The
+  episode latch reuses `schedule-state.ts`. A watch whose evaluation is
+  blocked by a missing Jev key gets the same rule.
+- Capture failure: the capture pipeline's terminal failure (the
+  `capture-status` event, `src/core/event-bus-schemas.ts:206`) sends
+  `quiet` with target `chat:<sessionId>` when presence is zero. Success
+  sends nothing.
 
-**Vocabulary lock-ins.** `urgency: time-bound` on questions; `requested-by`
-on scheduled scripts; the `loudness` attribute on callouts.
+**Vocabulary lock-ins.** `urgency: time-bound` on questions; the
+`loudness` attribute on callouts.
 
 **First implementation chunk.** The loudness changes to the six existing
 callers and the question `urgency` field, with the existing doctests updated
@@ -699,19 +726,20 @@ and the boxholder ruled the judgment lives in briefings.
   (`src/core/box/defaults.ts:229-234`), so existing boxes do not get the
   section from the template. For them, the agent guide carries the default
   text and says: when the root briefing has no "Reaching me" section, apply
-  the default and propose adding the section at the next retro. The
-  boxholder's own rules replace it once written.
+  the default and propose adding the section at the next retro.
 - Agent guide: a "Reaching the boxholder" section in
-  `src/core/agent-guide/commands.ts`: the three commands, loudness, targets,
-  "the briefing owns when". Chat prompt
-  (`src/core/chat/session/prompts.ts:163`): `<schedule>` is for coming back
-  to this conversation within hours; `bbx remind` is for anything that must
-  reach the person later or elsewhere; `<callout loudness>` is how to make
-  an outcome reach them when they have left.
-- Schema instructions on `watch` and the `judge` precheck carry two worked
-  examples each, showing both the notify and the run form.
+  `src/core/agent-guide/commands.ts`: `bbx notify`, loudness, targets, the
+  reminder card, the watch card, the judge precheck, "the briefing owns
+  when". Chat prompt (`src/core/chat/session/prompts.ts:163`): `<schedule>`
+  is for coming back to this conversation within hours; a schedule card
+  with `notify:` is for anything that must reach the person later or
+  elsewhere; `<callout loudness>` is how to make an outcome reach them when
+  they have left.
+- Schema instructions on scheduled-script (`notify:`), `watch`, and the
+  `judge` precheck carry two worked examples each, showing both forms.
 - `docs/notifications.md` reference doc: the vocabulary, the pieces, the
-  channel table, the ops steps, the verification walk.
+  channel table, what is in git and what is transient, the ops steps, the
+  verification walk.
 
 **Vocabulary lock-ins.** The section title "Reaching me".
 
@@ -720,29 +748,32 @@ section, with the knowledge audits below written and run.
 
 ## Could this be simpler?
 
-The simplest version that works: keep the per-channel cards, add `bbx notify`
-and an `apns` card, and skip watches and the procedure judge. Reminders via
-`bbx remind` still work since they are scheduled scripts.
+The simplest version that works: keep the July card path, add an `apns` card
+and `bbx notify`, and skip judges and watches. Reminders work through
+`runs: bbx notify ...` on a schedule card.
 
 What the fuller plan buys:
 
-- **A write-time channel decision** (Track A): one pure function decides
-  which cards to write from loudness and presence, so the rule is tested once
-  and each card keeps its existing lifecycle. The first draft unified the
-  cards instead; the review showed that needs a third lifecycle in the
-  shared helper. Principle 8 is served by one decision function, not one
-  card.
-- **Watches** (Track D): without them, "tell me when X arrives" is an agent
-  run per wakeup, which is the cost that keeps these tasks from existing
-  (the boxholder's stated reason for Jev). The watch is the only new card
-  type in the plan.
-- **The procedure judge** (Track D): a smaller change than the watch, and it
-  is what lets a scheduled procedure be cheap by default. Skipping it leaves
-  "extend procedures" undone.
+- **Bus delivery instead of cards** (Track A): several deliveries a day
+  committed and deleted per channel is git history with no reader
+  (boxholder decision). The bus already exists, persists, and replays; the
+  cost is a cursor file and two event schemas. This is a removal, not an
+  addition: the card schema, its connector, and the test command go.
+- **`notify:` instead of `runs: bbx notify`** (Track D): the shell form
+  needs the agent to quote a title correctly inside YAML inside a shell
+  string; a fabricated-value failure. The field is data.
+- **The judge precheck with defer** (Track D): without it a scheduled
+  procedure runs an agent every time, which is the cost that keeps small
+  proactive tasks from existing. The defer outcome already exists; the
+  change is to record it from a judge and to make `once` respect it.
+- **The watch card** (Track D): the same judge pattern over a stream. It is
+  the only new card type and the last chunk built; if the judge precheck
+  proves enough in practice, it can be dropped before it ships.
 
-Dropped from the fuller version because the simple version does not fail
-without them: unread state, target-level presence, quiet hours in the
-dispatcher, a notification center page, rich actions on notifications.
+Dropped because the simple version does not fail without them: unread
+state, target-level presence, quiet hours in the dispatcher, a notification
+center page beyond the Admin recent list, rich actions on notifications,
+`bbx remind`.
 
 ## Subplans
 
@@ -754,65 +785,68 @@ is fixed by Apple's API and the contract rule.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Intent with no channel to write (no audience, no presence) | Track A doctest | today: returns silently (`src/core/notify-boxholder.ts:107`); plan: health entry naming the title | Clear |
-| One channel card fails, another sends | existing per-card lifecycle (`src/connectors/output-cards.ts:90-103`) | failed card stays, sent card deleted | Clear |
-| Presence heartbeat counts an idle open tab as present | Track A doctest of the heartbeat rule | heartbeat only while interacted within two minutes | Clear |
-| Two evaluators race the watch cursor | Track D doctest | `withFileLock`; the loser skips the pass | Clear |
-| `.beebox/notifications.jsonl` line missing when a `chat:new` target is opened | Track A route doctest | chat page opens without the banner and logs the id | Clear |
-| Present session skips push, person had already walked away | Track A doctest of the rule | heartbeat older than 90 s counts as absent; bus event still shown when they return | Silent by nature, bounded to 90 s: accepted |
-| Presence file written by server, read by scheduler in another process mid-write | Track A doctest | atomic rename write; unreadable file counts as absent | Clear (falls to push) |
+| Intent with no channel to try (no audience, no presence) | Track A doctest | today: silent return (`src/core/notify-boxholder.ts:107-109`); plan: health entry naming the title | Clear |
+| One channel fails, another sends | Track A doctest | per-channel `notification-delivery` events; failed one retried at finalize then recorded | Clear |
+| Channel worker crashes mid-batch | Track A doctest | cursor advances per event after its delivery event is emitted; the crashed one is retried | Clear |
+| Bus DB unreadable | existing bus `unknown` sentinel (`src/core/event-bus.ts:24-31`) | `notifyBoxholder` logs and returns; health entry | Clear |
+| Presence heartbeat counts an idle open tab | Track A doctest of the heartbeat rule | heartbeat only while interacted within two minutes | Clear |
+| Present session skips `quiet`; person walked away within the 90 s window | Track A doctest of the rule | bounded to the heartbeat staleness | Silent by nature, bounded: accepted |
+| Presence file written by server, read by scheduler mid-write | Track A doctest | atomic rename; unreadable counts as absent | Clear (falls to push) |
 | APNs 410 or BadDeviceToken | Track B doctest | prune `apns` from device, log label | Clear |
-| APNs keys unset on server | Track B doctest | channel `skipped: unconfigured`, Admin section says so | Clear |
-| Sandbox token sent to production host | Track B doctest of environment routing | device reports environment; mismatch returns BadDeviceToken and prunes; re-register on next launch restores | Clear |
-| Device token changes after reinstall | Track C unit test of re-register on launch | re-post every launch; old token pruned on 410 | Clear |
+| APNs keys unset on server | Track B doctest | `skipped: unconfigured`, Admin section says so | Clear |
+| Sandbox token sent to production host | Track B doctest of environment routing | device reports environment; mismatch prunes; re-register on next launch restores | Clear |
+| Device token changes after reinstall | Track C unit test | re-post every launch; old token pruned on 410 | Clear |
 | Permission denied on the phone | Track C manual | shell shows the denied state with a Settings link | Clear |
-| `bbx remind` with a past or unparseable time | Track D doctest | error before writing; no card | Clear |
-| Reminder fires while the scheduler is down | existing scheduler catch-up (`docs/scheduler.md` sleep recovery) | fires on next tick | Clear |
+| Schedule card with both `notify` and `runs`, or neither | Track D schema doctest | refinement message names the rule | Clear |
+| Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next tick | Clear |
+| Judge below threshold forever on a `cron` card | Track D doctest | recorded `deferred` each run; health shows `waiting: judge p`; `until` ends it | Clear |
+| Judge exit code taken as failure by an older tick | none needed: same package | `DEFERRED_EXIT_CODE` is added to the tick that reads it in the same change | Clear |
 | Watch cursor lost (`.beebox/` wiped) | Track D doctest | cursor resets to HEAD; items between are never evaluated; health entry `watch cursor reset` | Clear |
+| Two evaluators race the watch cursor | Track D doctest | `withFileLock`; the loser skips the pass | Clear |
 | Watch over the daily cap | Track D doctest | stop, keep cursor, health entry, resume next day | Clear |
-| Jev unreachable or returns an invalid distribution | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | evaluation stops for the pass, cursor kept, health entry after two consecutive passes | Clear |
-| Jev key missing | Track D doctest | watches and judges skip with a health entry naming the secret purpose | Clear |
+| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | evaluation stops for the pass, cursor kept, health entry after two consecutive passes; a judge precheck records `deferred` | Clear |
+| Jev key missing | Track D doctest | watches and judges skip with a health entry; a `requested-by` card promotes (Track E) | Clear |
 | Watch `then.run` command fails | Track D doctest | logged, cursor advances past the item, watch stays enabled, health entry | Clear |
-| Same card matches two watches | Track D doctest | each fires independently; `tag` on the notification is the watch name so the phone collapses only within a watch | Clear |
-| Callout turn completes, presence flips to present during delivery | Track E doctest | notification still sent; the person sees it twice at worst | Clear |
-| Question `urgency` set on a question with no date | schema doctest | allowed; briefing says when | Clear (agent judgment) |
+| Same card matches two watches | Track D doctest | each fires; `tag` is the watch name so the phone collapses only within a watch | Clear |
+| Callout turn completes, presence flips during delivery | Track E doctest | notification still sent; seen twice at worst | Clear |
 | Promotion rule fires for a system-scheduled script | Track E doctest | only `requested-by: boxholder` promotes | Clear |
-| Existing `web-push` cards on disk at deploy | none exist (verified 2026-07-19 and by the delete-on-delivery lifecycle) | the schema is removed; `bbx validate` would flag any survivor as unknown type | Clear |
+| `chat:new` opened after the bus pruned the event | Track A route doctest | chat opens without the banner and logs the id | Clear |
 
 No critical gap. The presence window is the one accepted silent behavior,
-bounded to the heartbeat interval.
+bounded to the heartbeat staleness.
 
 ## Agent-flow / user-flow edge cases
 
 - **Wrong tag / wrong field.** ADDRESSED: `loudness` is one enum; a wrong
   value fails schema validation with the three allowed values in the message.
-  `<schedule>` versus `bbx remind` is the real confusion; Track F's prompt
+  `<schedule>` versus a schedule card is the real confusion; Track F's prompt
   text draws the line by horizon and destination, and the knowledge audit
   tests it.
 - **Stale ref.** ADDRESSED: a `card:` target that no longer exists renders to
   the browse URL, which shows the normal missing-card page. A `chat:` target
-  whose session was deleted opens the chat page with a "conversation no longer
-  exists" state that already exists for deleted sessions
-  (`docs/plans/chat-session-delete.md`).
-- **Two agents touching the same card.** ADDRESSED: channel cards are
-  single-consumer (their connector); the watch cursor file is written only
-  by `evaluateWatches` under `withFileLock` (Track D). A watch card edited
-  by an agent while evaluation runs is read once per pass.
-- **Hand-edit drift.** ADDRESSED: watch and channel cards are
-  schema-validated on load; `threshold` outside 0..1 and a `then` with both
-  or neither form fail with a message naming the rule.
+  whose session was deleted opens the chat page with the existing
+  deleted-session state (`docs/plans/chat-session-delete.md`).
+- **Two agents touching the same card.** ADDRESSED: no card is written per
+  delivery; the watch cursor file is written only by `evaluateWatches` under
+  `withFileLock` (Track D). A watch or schedule card edited by an agent
+  while evaluation runs is read once per pass.
+- **Hand-edit drift.** ADDRESSED: watch and schedule cards are
+  schema-validated on load; `threshold` outside 0..1, a `then` with both or
+  neither form, and a schedule with both `notify` and `runs` fail with a
+  message naming the rule.
 - **Fabricated free-form value.** ADDRESSED for criteria: a watch criterion is
   free text by design and is tested by Jev, not trusted. A `$item` in a
-  notify body is substituted by code. For notification bodies from agents:
-  the briefing asks for a body that stands alone, the same rule callouts have
-  today.
-- **Validation error UX.** ADDRESSED: `bbx notify` and `bbx remind` print the
-  schema message and exit 1; the procedure judge writes the probability and
-  threshold into the run card's step outcome.
-- **Partial migration / transition state.** ADDRESSED: no on-disk
-  `web-push` cards exist; the device record field is optional, so old
-  records load; a box with no paired phone and no keys behaves as today.
-  During Track A before Track B, `apns` is simply not in the channel table.
+  notify body is substituted by code. A reminder title is a YAML string, not
+  a shell argument. For notification bodies from agents: the briefing asks
+  for a body that stands alone, the same rule callouts have today.
+- **Validation error UX.** ADDRESSED: `bbx notify` prints the schema message
+  and exits 1; the procedure judge writes the probability and threshold into
+  the run card's step outcome; `bbx health` shows `waiting: judge p`.
+- **Partial migration / transition state.** ADDRESSED: no `web-push` card
+  exists on disk; the boxholder has no active pairings or subscriptions; the
+  device record field is optional. A box with no paired phone and no keys
+  behaves as today minus the never-delivered web push card. During Track A
+  before Track B, `apns` is not in the channel list.
 
 ## NOT in scope
 
@@ -820,18 +854,23 @@ bounded to the heartbeat interval.
   ruling 2026-09-26: not important now; filed as a follow-up issue when the
   plan lands. The `dot` is a badge, not a count.
 - **Quiet hours in the dispatcher.** Boxholder ruling: device Do Not Disturb.
-- **A notification center or activity feed page.** The app shows the bus
-  event and the health page; a history page is a later ask.
+- **Migration of existing pairings or subscriptions.** None exist
+  (boxholder, 2026-09-26).
+- **`bbx remind`.** The reminder is a card the agent writes.
+- **A notification history beyond the Admin recent list.** The bus keeps
+  events; a page over more than a few days is a later ask.
 - **Web push on iOS via Home-Screen install.** The native app replaces it;
   the coaching text in `NotificationsSection.tsx` is removed when Track C
-  ships, since a person with the app should not be told to install a PWA.
-- **Telegram as a designed channel.** Kept working as it is; no loudness
-  mapping beyond `disable_notification`.
+  ships.
+- **Telegram as a designed channel.** Kept working; only
+  `disable_notification` for `quiet`.
 - **Rich notifications**: actions, images, reply from the notification.
   Deferred until the plain path is verified on a device.
-- **Watch triggers other than new cards under a path.** Card edits,
-  calendar changes, and time-of-day conditions are poll or scheduled
-  procedures for now (the design notes, S3).
+- **Watch triggers other than new cards under a path.** Card edits, calendar
+  changes, and time-of-day conditions are polls or scheduled procedures with
+  a judge (the design notes, S3).
+- **Judge over anything but the precheck's shell output.** A judge over a
+  card ref or a run phase's output waits for a second caller.
 - **Jev for triage routing and quick capture.** Its own issue
   (`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`);
   this plan adds the `judge` method it will also use.
@@ -839,22 +878,21 @@ bounded to the heartbeat interval.
   them; every notification goes to every device of the box. Per-person
   targeting waits for a second boxholder.
 - **The dev-side schedule alert system.** Separate.
-- **Fixing the 25-day chat timer.** Its issue stays open; `bbx remind` is the
-  path for long horizons.
+- **Fixing the 25-day chat timer.** Its issue stays open; the schedule card
+  is the path for long horizons.
 
 ## Open design questions
 
 1. **Where the reminder lands.** `chat:new` seeded with the reminder, or the
    linked todo card. Lean: `chat:new`, because a phone user types one line
-   and the chat agent has the todo through `--context`.
+   and the chat agent has the todo through `context`.
 2. **Presence heartbeat interval.** 30 s write, 90 s stale. Lean as stated;
    tune after the device test.
-3. **Watch evaluation on the wakeup path.** After every `syncConnector` call
-   or once after all connectors. Lean: once after all, at the same point the
-   question sweep runs, plus finalize; simpler and mail arrives in that pass
-   anyway.
-4. **Default loudness for `bbx notify`.** `quiet`. An agent that wants a
-   banner says `loud`. Lean as stated.
+3. **Default loudness for `bbx notify` and `notify:`.** `quiet` for the
+   command, `loud` for a `requested-by: boxholder` schedule. Lean as stated.
+4. **Whether the watch card ships in this plan.** Lean: yes, as the last
+   chunk, dropped if the judge precheck covers the boxholder's first real
+   watch.
 5. **Whether `dot` badge should be a count.** Not without unread state; the
    badge is 1 and clears on foreground. Revisit with the unread issue.
 
@@ -868,64 +906,70 @@ New agent-facing concepts, each with a `knows_directly` entry in
   do you tell them, and how loud?" Expects `bbx notify` with `quiet` and a
   chat target, and cites the briefing section.
 - `remind-vs-schedule`: "The person asks to be reminded next Tuesday to call
-  the vet. In chat, what do you do?" Expects `bbx remind`, not `<schedule>`.
+  the vet. In chat, what do you do?" Expects a schedule card with `notify:`
+  and `requested-by: boxholder`, not `<schedule>` and not a shell `runs`.
 - `watch-setup`: "The person says: tell me when the school emails about the
-  field trip." Expects a watch card under `_config/watches/` with a criterion
-  and `once`, or a stated reason to poll instead.
+  field trip." Expects a watch card, or a cron procedure with a judge
+  precheck, with a stated reason for the choice.
 - `judge-precheck`: "A daily procedure should only run an agent when today's
-  calendar has an event needing preparation. How do you keep it cheap?"
-  Expects a `judge` precheck over a `shells` output.
+  calendar has an event needing preparation. How do you keep it cheap, and
+  how does it stop once it has fired?" Expects a `judge` precheck over a
+  `shells` output and `once: true`.
 - `health-silence`: "Gmail sync has been failing for two days. Do you notify
   the person?" Expects no, unless a requested reminder or watch is blocked.
 
 ## What will hold this after it ships
 
-- **Filesystem doctests** reach every decision: the channel table and
-  presence rule (`send` is a pure function over the card, the audience, and
-  a presence value), the APNs payload builder (pure), the watch evaluator
-  with a fake Jev and a real temporary git repo, the reminder card writer,
-  the promotion rule at the skip site. Cost: ordinary; the fakes exist for
-  push and Jev and the plan adds one for APNs in the same shape.
+- **Filesystem doctests** reach every decision: `channelsToTry` (pure), the
+  delivery workers with a real temporary bus and the service fakes, the
+  APNs payload builder (pure), the `notify:` tick path, the judge precheck
+  and `deferred` outcome through the procedure engine with a fake Jev, the
+  watch evaluator with a real temporary git repo, the promotion rule at the
+  skip site. Cost: ordinary; the fakes exist for push, Telegram, and Jev,
+  and the plan adds one for APNs in the same shape.
 - **Route doctests** for the push-token route and `bbx notify --channel`.
-- **Schema doctests** for `notification`, `watch`, and the question
-  `urgency` field.
+- **Schema doctests** for scheduled-script (`notify` versus `runs`), `watch`,
+  and the question `urgency` field.
 - **The mobile contract fixture** for the new route, checked by the existing
   tripwire.
 - **iOS unit tests** for environment selection and target URL construction;
   the rest of the client is verified on a device by the boxholder, recorded
   in the reference doc's verification walk.
 - **Knowledge audits** above, run and landed.
-- No new test tier. No mock beyond the three service fakes, which record
-  calls rather than encode behavior.
+- No new test tier. No mock beyond the service fakes, which record calls
+  rather than encode behavior.
 
 ## Implementation order
 
-1. **Track A** chunk 1: intent and target types, `channelsToWrite`, the
-   `web-push` field renames, the rewritten dispatcher, doctests. Chunk 2:
-   presence heartbeat and file, `bbx notify`, bus event and the in-app
-   toast, the `chat:new` banner, removal of `bbx push test`.
-2. **Track B** chunk 1: payload builder, service, device record, route,
-   contract update. Chunk 2: the `apns` channel in the connector, Admin
+1. **Track A** chunk 1: intent, target, `channelsToTry`, bus event schemas,
+   rewritten dispatcher, delivery workers for web-push and telegram,
+   doctests; the `web-push` card, connector, and `bbx push test` deleted.
+   Chunk 2: presence heartbeat and file, `bbx notify`, the in-app toast, the
+   `chat:new` banner, the Admin recent list.
+2. **Track B** chunk 1: payload builder, service, device record and
+   projection, route, contract update. Chunk 2: the `apns` worker, Admin
    device list, debug log.
 3. **Track C**: entitlement, delegate, registrar, presentation, tap handling,
    badge clearing. Simulator-verified; device test with the boxholder.
-4. **Track D** chunk 1: `jev.judge`, `watch` schema, evaluator with cursor and
-   cap, finalize and wakeup wiring. Chunk 2: `bbx remind`. Chunk 3: procedure
-   `judge` precheck.
+4. **Track D** chunk 1: `jev.judge`, `notify:` on schedule cards and its tick
+   path. Chunk 2: judge precheck, deferred exit, `once` semantics. Chunk 3:
+   the watch schema and evaluator.
 5. **Track E** chunk 1: loudness on existing callers, question `urgency`.
-   Chunk 2: callouts on `chat-complete`, promotion rule, capture failure.
+   Chunk 2: callouts on `chat-complete`, health entries, promotion rule,
+   capture failure.
 6. **Track F**: briefing section, agent guide, chat prompt, schema
    instructions, reference doc, knowledge audits written and run.
 7. **End-to-end**: `BBX_PUSH_FAKE=1` and the APNs fake through every source;
    then desktop web push with real VAPID keys; then the boxholder's device
-   walk: pair, register, `bbx notify --loud`, tap, land; `bbx remind --at "in
-   2m"`; a watch over a test mail. The ops steps (VAPID keys, APNs key, Apple
-   capability) are the boxholder's.
+   walk: pair, register, `bbx notify --loudness loud`, tap, land; a schedule
+   card with `at` two minutes out; a cron procedure with a judge; a watch
+   over a test mail. The ops steps (VAPID keys, APNs key, Apple capability)
+   are the boxholder's.
 
-Tracks A and D have no dependency on each other beyond the `bbx notify`
-command; they can run in separate sessions once A's chunk 1 has landed in
-the worktree. B depends on A's card; C depends on B's route; E depends on A;
-F is written last so it describes what shipped.
+Tracks A and D have no dependency on each other beyond `notifyBoxholder`'s
+new signature; they can run in separate sessions once A's chunk 1 has landed
+in the worktree. B depends on A's events; C depends on B's route; E depends
+on A; F is written last so it describes what shipped.
 
 ## Rollout shape
 
@@ -933,17 +977,17 @@ F is written last so it describes what shipped.
   passes with typecheck and lint. The Failure-modes column names the doctest
   for each row.
 - **Knowledge audits** land with Track F, run against the test box.
-- **Migration.** None on disk: `web-push` cards do not exist; the device
-  record field is optional; watch and notification are new types. The
-  briefing section reaches new boxes through the template; existing boxes
-  get the default from the agent guide until the section is written (Track
-  F). Adding it to the boxholder's own boxes is a step in the verification
-  walk.
+- **Migration.** None on disk: no `web-push` card exists; no active pairings
+  or subscriptions exist; the device record field is optional; `runs` on
+  existing schedule cards stays valid; watch is a new type. The briefing
+  section reaches new boxes through the template; existing boxes get the
+  default from the agent guide until the section is written (Track F).
+  Adding it to the boxholder's own boxes is a step in the verification walk.
 - **Ops, reserved for the boxholder.** VAPID keys on prod; an APNs key
   (`.p8`) from the Apple Developer account, its key id, and the team id in
   `/home/beebox/.env`; the Push Notifications capability on the app target in
   Xcode; a Debug build on the boxholder's phone for the sandbox walk, then a
   Release build for production.
 - **Ships as one unit** when the device walk passes and the boxholder says
-  so. Track A alone renames fields every existing alert passes and must not
-  land without Track E's loudness changes.
+  so. Track A alone removes the card path every existing alert uses and
+  must not land without Track E's loudness changes.
