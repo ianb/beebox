@@ -18,6 +18,7 @@ import { Text } from "../ui/Text";
 import { publicationUrl as buildPublicationUrl, samePublicationAudience } from "@shared/publication-url";
 
 type Publication = RouterOutput["publications"]["list"]["sites"][number];
+type SharedHost = NonNullable<RouterOutput["publications"]["list"]["sharedHost"]>;
 export type Candidate = NonNullable<Publication["pending"]>;
 type PreviewResult = RouterOutput["publications"]["previewFile"];
 type AudienceSummary = NonNullable<Publication["pending"]>["requestedScope"] | NonNullable<Publication["requested"]> | NonNullable<Publication["approved"]>;
@@ -25,6 +26,7 @@ type RemoteUnavailable = Extract<Publication["remoteStatus"], { status: "unavail
 export type { Publication };
 export function PublicationReviewCard({
   site,
+  sharedHost,
   pending,
   onPrepare,
   onApprove,
@@ -32,6 +34,7 @@ export function PublicationReviewCard({
   onDisable,
 }: {
   site: Publication;
+  sharedHost: SharedHost | null;
   pending: boolean;
   onPrepare: () => void;
   onApprove: (candidate: Candidate) => void;
@@ -40,9 +43,10 @@ export function PublicationReviewCard({
 }) {
   const candidate = site.pending;
   const { siteUrl, workerAlias, requestedUrl, requestedDiffers } = publicationLinks(site);
+  const migrateToSharedHost = needsSharedHostMigration(site, sharedHost);
 
   return (
-    <Card as="article" aria-labelledby={`bbx-publication-heading-${site.pubId}`} shadow>
+    <Card as="article" aria-label={`Publication ${site.title || site.name}`} shadow>
       <Stack gap="md">
         <Stack gap="xs">
           <PublicationHeading site={site} />
@@ -50,6 +54,7 @@ export function PublicationReviewCard({
           {workerAlias ? <ExternalLink id={`bbx-publication-workers-alias-${site.pubId}`} href={workerAlias} variant="inline">Open legacy workers.dev URL</ExternalLink> : null}
           {requestedDiffers && requestedUrl ? <Text size="sm">Requested destination awaiting member approval: <Text mono breakAll>{requestedUrl}</Text></Text> : null}
           {!siteUrl && !requestedUrl ? <Text size="sm" tone="muted">Site URL is assigned after the first successful preparation.</Text> : null}
+          {migrateToSharedHost ? <Hint>The shared host is attached, but this publication still uses its current workers.dev URL. Prepare a new candidate here; a member must approve it before traffic moves to <Text mono>/s/{site.pubId}/</Text>.</Hint> : null}
         </Stack>
 
         {site.remoteStatus.status === "unavailable" ? <RemoteState reason={site.remoteStatus.reason} /> : null}
@@ -59,13 +64,8 @@ export function PublicationReviewCard({
           <AudienceBlock title="Approved audience" value={site.approved} />
         </Row>
 
-        <Stack gap="xs">
-          <Heading level={3}>Current release</Heading>
-          <Text size="sm">{site.activeReleaseId === null ? "No release is active." : <><Text mono>{site.activeReleaseId}</Text> · {candidate?.preview.length ?? 0} files in latest preparation</>}</Text>
-        </Stack>
-
         {candidate ? <CandidateDetails candidate={candidate} pubId={site.pubId} /> : <Text size="sm" tone="muted">No prepared update is waiting for review.</Text>}
-        <PublicationActions site={site} candidate={candidate} pending={pending} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
+        <PublicationActions site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
       </Stack>
     </Card>
   );
@@ -94,22 +94,32 @@ function publicationLinks(site: Publication): { siteUrl: string | null; workerAl
   return { siteUrl, workerAlias, requestedUrl, requestedDiffers: requestedCustomHostDiffers || requestedSharedRouteDiffers };
 }
 
+function needsSharedHostMigration(site: Publication, sharedHost: SharedHost | null): boolean {
+  if (sharedHost?.status !== "attached" || sharedHost.connectionName !== site.connection.name
+    || site.approved?.tier !== "secret" || site.approved.customHostname !== undefined
+    || site.hostname === null || site.sharedRoute !== null) return false;
+  const requestedDestination = site.pending?.requestedScope;
+  return requestedDestination === undefined || !("sharedHost" in requestedDestination)
+    || requestedDestination.sharedHost === undefined
+    || requestedDestination.sharedHost.hostname !== sharedHost.hostname;
+}
+
 function PublicationHeading({ site }: { site: Publication }) {
   const state = site.remoteStatus.status === "unavailable" ? "serving state unknown" : site.approved?.status ?? "not enabled";
   const tone = state === "live" ? "success" : state === "disabled" ? "warning" : "neutral";
   return (
     <Row gap="sm" wrap align="center">
-      <Heading id={`bbx-publication-heading-${site.pubId}`} level={2}>{site.title || site.name}</Heading>
       <Badge tone={tone}>{state}</Badge>
       {site.connection.status !== "active" ? <Badge tone="danger">connection {site.connection.status}</Badge> : null}
     </Row>
   );
 }
 
-function PublicationActions({ site, candidate, pending, onPrepare, onApprove, onEnable, onDisable }: {
+function PublicationActions({ site, candidate, pending, migrateToSharedHost, onPrepare, onApprove, onEnable, onDisable }: {
   site: Publication;
   candidate: Candidate | null;
   pending: boolean;
+  migrateToSharedHost: boolean;
   onPrepare: () => void;
   onApprove: (candidate: Candidate) => void;
   onEnable: () => void;
@@ -127,7 +137,7 @@ function PublicationActions({ site, candidate, pending, onPrepare, onApprove, on
   const disabled = site.approved?.status === "disabled";
   return (
     <Stack gap="xs">
-      <PublicationActionButtons site={site} candidate={candidate} pending={pending} connectionAvailable={connectionAvailable} accessNeedsVerification={accessNeedsVerification} requiresApproval={requiresApproval} enabled={enabled} disabled={disabled} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
+      <PublicationActionButtons site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} connectionAvailable={connectionAvailable} accessNeedsVerification={accessNeedsVerification} requiresApproval={requiresApproval} enabled={enabled} disabled={disabled} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
       {site.connection.status !== "active" ? <Hint>Restore this box&apos;s Cloudflare server grant in Admin before managing the site.</Hint> : null}
       {accessNeedsVerification ? <Hint>Account-restricted sites cannot be approved until this connection&apos;s Cloudflare Access capability has been verified.</Hint> : null}
       {disabled && !requiresApproval ? <Hint>Enabling allows the agent to update this site within the approved audience. Audience changes always need your approval.</Hint> : null}
@@ -136,10 +146,11 @@ function PublicationActions({ site, candidate, pending, onPrepare, onApprove, on
   );
 }
 
-function PublicationActionButtons({ site, candidate, pending, connectionAvailable, accessNeedsVerification, requiresApproval, enabled, disabled, onPrepare, onApprove, onEnable, onDisable }: {
+function PublicationActionButtons({ site, candidate, pending, migrateToSharedHost, connectionAvailable, accessNeedsVerification, requiresApproval, enabled, disabled, onPrepare, onApprove, onEnable, onDisable }: {
   site: Publication;
   candidate: Candidate | null;
   pending: boolean;
+  migrateToSharedHost: boolean;
   connectionAvailable: boolean;
   accessNeedsVerification: boolean;
   requiresApproval: boolean;
@@ -151,9 +162,9 @@ function PublicationActionButtons({ site, candidate, pending, connectionAvailabl
   onDisable: () => void;
 }) {
   const sameRequestedAudience = samePublicationAudience({ requested: site.requested, approved: site.approved });
-  const prepareLabel = enabled && sameRequestedAudience ? "Publish latest files" : enabled ? "Prepare update for review" : "Prepare latest files";
+  const prepareLabel = enabled && migrateToSharedHost ? "Prepare update for review" : enabled && sameRequestedAudience ? "Publish latest files" : enabled ? "Prepare update for review" : "Prepare latest files";
   return (
-    <Row gap="sm" wrap>
+    <Row gap="sm" wrap className="flex-col sm:flex-row">
       <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending || !connectionAvailable} loading={pending} onClick={onPrepare}>{prepareLabel}</Button>
       {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved }) ? "Approve update and publish" : "Approve audience and publish"}</Button> : null}
       {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending || !connectionAvailable} loading={pending} onClick={onDisable}>Disable site</Button> : null}
@@ -164,26 +175,23 @@ function PublicationActionButtons({ site, candidate, pending, connectionAvailabl
 
 function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: string }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const filePreview = trpc.publications.previewFile.useQuery(
-    { pubId, expectedRevision: candidate.revision, path: selectedPath ?? "" },
-    { enabled: selectedPath !== null },
-  );
 
   return (
     <Stack gap="sm">
       <Heading level={3}>Prepared files and scan</Heading>
-      <Text size="xs" tone="muted">Prepared <FriendlyDate iso={candidate.preparedAt} /> · release <Text mono>{candidate.releaseId}</Text></Text>
+      <Text size="xs" tone="muted">Prepared <FriendlyDate iso={candidate.preparedAt} /></Text>
       <Text size="sm">Files: {candidate.preview.length} · scan findings: {candidate.scan.total} · skipped binaries: {candidate.scan.skippedBinaries}</Text>
       {candidate.scan.total > 0 ? <Badge tone="warning">Review the findings below before approving this audience.</Badge> : <Badge tone="success">No text scan findings</Badge>}
       <Stack gap="xs">
         {candidate.preview.map((file) => (
           <Row key={file.path} gap="sm" wrap>
-            <Text size="xs"><Text mono>{file.path}</Text> · {formatBytes(file.bytes)}</Text>
-          <Button id={`bbx-publication-preview-${pubId}-${encodeURIComponent(file.path)}`} size="sm" intent="ghost" onClick={() => setSelectedPath(file.path)}>Inspect text</Button>
+            <Text size="xs" breakAll><Text mono breakAll>{file.path}</Text></Text>
+            <Text size="xs" tone="muted">· {formatBytes(file.bytes)}</Text>
+            <Button id={`bbx-publication-preview-${pubId}-${encodeURIComponent(file.path)}`} size="sm" intent="ghost" onClick={() => setSelectedPath(file.path)}>Inspect text</Button>
           </Row>
         ))}
       </Stack>
-      {selectedPath !== null ? <FilePreview path={selectedPath} error={filePreview.error?.message ?? null} loading={filePreview.isLoading} result={filePreview.data ?? undefined} /> : null}
+      {selectedPath !== null ? <SelectedFilePreview path={selectedPath} pubId={pubId} candidate={candidate} /> : null}
       {candidate.scan.sample.map((finding) => (
         <Card key={finding.id} muted>
           <Stack gap="xs"><Row gap="sm" wrap><Badge tone="warning">{finding.kind}</Badge><Text mono size="xs">{finding.file}:{finding.line}</Text></Row><Text size="sm">{finding.detail}</Text><Text size="xs" tone="muted" breakAll>{finding.match}</Text></Stack>
@@ -192,6 +200,11 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
       {candidate.scan.total > candidate.scan.sample.length ? <Hint>Showing {candidate.scan.sample.length} of {candidate.scan.total} findings.</Hint> : null}
     </Stack>
   );
+}
+
+function SelectedFilePreview({ path, pubId, candidate }: { path: string; pubId: string; candidate: Candidate }) {
+  const filePreview = trpc.publications.previewFile.useQuery({ pubId, expectedRevision: candidate.revision, path });
+  return <FilePreview path={path} error={filePreview.error?.message ?? null} loading={filePreview.isLoading} result={filePreview.data ?? undefined} />;
 }
 
 function FilePreview({ path, error, loading, result }: { path: string; error: string | null; loading: boolean; result: PreviewResult | undefined }) {
