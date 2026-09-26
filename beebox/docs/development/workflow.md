@@ -20,6 +20,8 @@ reviews the changed lines, reconciles the plan, closes the issues the work
 resolved, and merges with `bin/land`. It cannot ask questions mid-run, so it
 merges only on a clean path and otherwise stops and says what needs deciding.
 
+### Commit provenance
+
 Commits carry provenance. Hooks stamp `Workstream:` and, when exactly one plan
 matches, `Plan:`. An `Issue:` trailer is added by hand and must name a real
 public issue. One shared dev router serves every checkout by path prefix, main

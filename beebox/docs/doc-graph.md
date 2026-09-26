@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:09:26Z
+Generated: 2026-09-26T16:09:50Z
 Total documents: 434
 
 ## Issues
@@ -925,7 +925,7 @@ Referenced by:
 
 #### docs/development.md
 
-Title: "How development happens here" | 36 lines | current reference
+Title: "How development happens here" | 49 lines | current reference
 
 Referenced by:
 - docs/development/agent-coding.md:3 (link) — Part of [how development happens here](../development.md). See also
@@ -940,6 +940,7 @@ References:
 - → docs/testing.md (link)
 - → docs/development/workflow.md (link)
 - → docs/development/technologies.md (link)
+- → docs/development/maintenance.md (link)
 
 #### docs/doc-graph.md
 
@@ -1743,7 +1744,7 @@ Title: "Testing" | 57 lines | current reference
 Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
-- docs/development.md:20 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
+- docs/development.md:23 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
 - docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
 - docs/development/technologies.md:5 (link) — workflow](workflow.md), and [testing](../testing.md).
 - docs/development/workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
@@ -2579,10 +2580,10 @@ References:
 
 #### docs/development/agent-coding.md
 
-Title: "Agent coding, and the checks around it" | 51 lines | current reference
+Title: "Agent coding, and the checks around it" | 50 lines | current reference
 
 Referenced by:
-- docs/development.md:14 (link) — **[Agent coding, and the checks around it](development/agent-coding.md)** covers where those
+- docs/development.md:17 (link) — **[Agent coding, and the checks around it](development/agent-coding.md)** covers where those
 - docs/development/technologies.md:4 (mention) — coding and the checks around it](agent-coding.md), [the development
 - docs/development/workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
 - docs/guides.md:19 (link) — | Agent coding, and the checks around it | [docs/development/agent-coding.md](development/agent-coding.md) |
@@ -2606,6 +2607,7 @@ Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
 - docs/README.md:120 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
 - docs/cards/migrations.md:515 (link) — - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic to
+- docs/development.md:47 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/guides.md:58 (link) — | Periodic maintenance | [docs/development/maintenance.md](development/maintenance.md) |
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
@@ -2633,6 +2635,7 @@ Referenced by:
 
 References:
 - → CLAUDE.md (mention)
+- → docs/development/workflow.md (link)
 - → docs/implemented-plans/scheduled-workstreams.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 - → docs/testing/session-critiques.md (mention)
@@ -2646,7 +2649,7 @@ References:
 Title: "Technologies and AI services" | 44 lines | current reference
 
 Referenced by:
-- docs/development.md:34 (link) — **[Technologies and AI services](development/technologies.md)** names the stack and the
+- docs/development.md:37 (link) — **[Technologies and AI services](development/technologies.md)** names the stack and the
 - docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/guides.md:21 (link) — | Technologies and AI services | [docs/development/technologies.md](development/technologies.md) |
@@ -2662,11 +2665,12 @@ References:
 
 #### docs/development/workflow.md
 
-Title: "The development workflow" | 100 lines | current reference
+Title: "The development workflow" | 102 lines | current reference
 
 Referenced by:
-- docs/development.md:26 (link) — **[The development workflow](development/workflow.md)** covers how a piece of
+- docs/development.md:29 (link) — **[The development workflow](development/workflow.md)** covers how a piece of
 - docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
+- docs/development/maintenance.md:32 (link) — [recurring work](workflow.md#recurring-work).
 - docs/development/technologies.md:5 (mention) — workflow](workflow.md), and [testing](../testing.md).
 - docs/guides.md:20 (link) — | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development/workflow.md](development/wo
 - docs/plans/doc-structure-development.md:63 (mention) — | `development-workflow.md` | `development/workflow.md` |
@@ -6721,7 +6725,7 @@ Title: "docs/plans/ — proposals and in-flight plans" | 79 lines | current refe
 
 Referenced by:
 - docs/README.md:19 (link) — status line. See [plan conventions](plans/README.md) for required fields.
-- docs/development/workflow.md:82 (link) — are in [plans/README.md](../plans/README.md).
+- docs/development/workflow.md:84 (link) — are in [plans/README.md](../plans/README.md).
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/workstreams.md:706 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review

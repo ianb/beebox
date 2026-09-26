@@ -1,5 +1,8 @@
 # How development happens here
 
+The process rather than the code: who writes it, how a piece of work moves,
+what it runs on, and what runs periodically. One page per member.
+
 This describes the process rather than the code, for a contributor reading from
 a clone and for the coding agent beside them. Bee Box is early: one maintainer,
 changing fast. Bug reports are invited; pull requests are not yet solicited
@@ -33,3 +36,13 @@ on it.
 
 **[Technologies and AI services](development/technologies.md)** names the stack and the
 external model services a box can be configured to use.
+
+## Members
+
+| Member | What it covers |
+|---|---|
+| [Agent coding](development/agent-coding.md) | Who does the typing, how the two model families review each other, and the strictness the code is held to. |
+| [Workflow](development/workflow.md) | Workstreams, commit provenance, the issue queue, recurring work, document comments, planning, exhibits. |
+| [Technologies](development/technologies.md) | The stack, and every outside AI service a box can be configured to use. |
+| [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to run when you touch a thing. |
+| [Testing](testing.md) | The verification instruments; its own subject. |
