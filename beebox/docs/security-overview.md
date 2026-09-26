@@ -1,6 +1,6 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: dde93e373b30f4f12dc66cce1acf0c34f4b64cfc
+generated-at-rev: 22945e70c764f1a8847a3ded24adc1f3000d1492
 date: 2026-09-26
 model: gpt-6-luna
 reviewed-by: DRAFT — unreviewed

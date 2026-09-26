@@ -1,12 +1,15 @@
 ---
 title: "Assign a custom hostname to a prepared publication in Admin"
-status: partial
+status: superseded
 workstream: publish-pages
 issues: []
+superseded-by: ../plans/publish-shared-host-per-box.md
 ---
 # Assign a custom hostname to a prepared publication in Admin
 
 When a prepared site is disabled, a global admin can attach one exact hostname from an active Cloudflare zone to that site's Worker. A signed-in member of the owning box sees the hostname in the pending destination and approves it before enabling the site.
+
+**Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-publication hostname setup. The old setup UI, RPC, and service were removed. Existing Workers, custom-host assignments, and URLs remain compatible; this plan records the retired setup direction, not the current workflow. See [the shared-host plan](../plans/publish-shared-host-per-box.md).
 
 **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in `beebox/docs/plans/publish-sites-admin.md` without closing its separate Access, submissions, or knowledge-audit follow-ups.
 
