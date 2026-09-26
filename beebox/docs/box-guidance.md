@@ -120,6 +120,14 @@ mechanics that the guide's PROVENANCE section points at, and
 [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
 rules behind the guide's TODOS section.
 
+Review the week's changes against these rules before landing docs work: list
+the guidance sources touched since the last review
+(`git log --since=1.week --name-only -- src/core/box src/core/agent-guide
+src/core/docs-gen docs/box src/core/init-rules.ts`) and, for each, check
+that the surface is a registry row of the right class and that any fact it
+adds has one home. A `read-when:` line that promises a subject the doc does
+not cover is the failure the check most often finds.
+
 To add a surface, add its row to `GUIDANCE_SURFACES` and to the table above.
 A tracked row also needs its content in `MANAGED_STOCK_TEMPLATES`
 (`src/core/box/templates.ts`) and a ledger entry from
