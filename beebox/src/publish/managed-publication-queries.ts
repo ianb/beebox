@@ -8,6 +8,8 @@ import type { ManagedPublicationRuntime } from "../services/managed-publication-
 import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
 import type { PublicationCandidate } from "./managed-publications.js";
 import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications.js";
+import { hasPublicationReferenceCard } from "./publication-reference-card.js";
+import { publicationCardPath } from "../shared/publication-card.js";
 
 const TEXT_ASSET_EXTENSIONS = new Set([".html", ".htm", ".css", ".js", ".mjs", ".json", ".svg", ".txt", ".md", ".xml", ".webmanifest"]);
 const PREVIEW_TEXT_LIMIT = 64 * 1024;
@@ -40,8 +42,12 @@ async function managedPublicationRow(args: {
     : { name: row.name, status: row.tokenStatus, capabilities: row.capabilities };
   const remote = await readRemotePublication({ ...args, row });
   const { manifest, candidate, sharedRoute, hostname, remoteStatus } = remote;
+  const cardPath = publicationCardPath(binding.pubId);
+  const hasCard = await hasPublicationReferenceCard(args.args.boxRoot, binding.pubId);
   return {
     pubId: binding.pubId,
+    cardPath,
+    hasCard,
     assignedCustomHostname: binding.customHostname ?? null,
     customHostnameStatus: binding.customHostnameStatus ?? null,
     name: typeof candidate?.name === "string" ? candidate.name : binding.pubId,

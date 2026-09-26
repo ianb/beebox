@@ -6110,7 +6110,9 @@ tests:
   # before the agent prompt: the Codex runner exited with “No such file or
   # directory (os error 2).” One current Claude-runner attempt also failed
   # before prompt execution because the bundled binary could not launch in this
-  # environment. No agent knowledge result is claimed for the new expectations.
+  # environment. The 2026-09-26 focused card-approval audit also failed before
+  # prompt execution because the test box package-doc README is a symlink; no
+  # agent knowledge result is claimed for this expectation.
 
   - id: publishing-site-authoring
     prompt: >
@@ -6191,9 +6193,11 @@ tests:
   - id: publishing-secret-link-and-approval
     prompt: >
       You prepare a new secret-link site, and the CLI prints a full destination
-      URL ending in `/s/<pubId>/` plus a direct link to this box's Publications
-      page. What exact URL do you preserve for the boxholder, who can enable
-      the site and where, and what do you say if no direct app link was printed?
+      URL ending in `/s/<pubId>/` plus a direct approval-card link. What exact URL
+      do you preserve for the boxholder, who can enable the site and where, and
+      what do you say if no direct app link was printed? Explain whether the
+      publication card itself contains approval authority or only identifies the
+      publication for server-side lookup.
       Explain how you choose the connection if the definition does not have one
       yet, how you later verify the managed state, and what you do if status
       reports missing box-server credentials. Consult
@@ -6205,8 +6209,10 @@ tests:
       Uses only an active, granted connection from `bbx pub connections`; does
       not inspect machine credentials; preserves the complete `/s/<pubId>/`
       capability path and shares it privately with the boxholder. Directs a
-      signed-in member to the returned app link or profile menu → Publications,
-      and does not treat the CLI as able to enable or approve. Uses managed
+      signed-in member to the returned publication card link or the profile
+      menu → Publications, and does not treat the CLI or card contents as able
+      to enable or approve. The card identifies the publication; the server
+      resolves its state and requires a signed-in member for permission changes. Uses managed
       status through the configured box agent; if server credentials are
       missing, reports the status error and asks the operator to restore the
       box-server connection if it persists. Wrangler diagnostics require
@@ -6215,9 +6221,11 @@ tests:
       - "bbx pub connections"
       - "bbx pub status"
       - "/s/"
-      - "Publications"
+      - "publication card"
     correct_matches:
       - '(?:complete|full|entire|exact)[\s\S]{0,160}(?:secret|destination|site)?[\s\S]{0,120}URL|URL[\s\S]{0,180}(?:full|entire|exact|complete)'
+      - '(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)[\s\S]{0,160}(?:server|permission|approval)|(?:server|permission|approval)[\s\S]{0,160}(?:card|frontmatter)[\s\S]{0,160}(?:identif|lookup|reference)'
+      - '(?:signed-in|signed in|member of (?:this|the) box)[\s\S]{0,180}(?:approve|enable)|(?:approve|enable)[\s\S]{0,180}(?:signed-in|member)'
       - '/s/[\s\S]{0,180}(?:PubId|publication id|id-bearing|capability)|(?:PubId|publication id)[\s\S]{0,160}/s/'
       - '(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)[\s\S]{0,180}(?:Publications|enable|approve)|(?:Publications|enable|approve)[\s\S]{0,180}(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)'
       - '(?:cannot|can.t|must not|no CLI)[\s\S]{0,160}(?:enable|approve)|(?:enable|approve)[\s\S]{0,160}(?:app|member|not.*CLI)'
