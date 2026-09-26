@@ -1,7 +1,7 @@
 /**
  * The voice chip: a Dropdown-triggered chip whose face shows
  * mute/narration/transcribing state, and whose menu holds the I/O voice
- * controls (Mute, Narration mode, Voice settings) — moved here from
+ * controls (Mute speech, Narration mode, Voice settings) — moved here from
  * `ChatMenu`/`MuteButton`/`NarrationStatusBadge` by chunk 3 of
  * docs/plans/chat-header-chips.md. Model selection moved out to the session
  * chip in the chip polish round (docs/plans/chat-header-chips.md follow-up)
@@ -126,7 +126,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
         <>
           <VoiceNoticeList />
           <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<span className="inline-flex w-[34px] justify-center"><SpeakerIcon muted={muted} /></span>}>
-            {muted ? "✓ " : ""}Mute
+            {muted ? "✓ " : ""}Mute speech
           </MenuItem>
           <MenuItem
             id="bbx-voice-narration"
