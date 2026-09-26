@@ -348,12 +348,14 @@ network path; an injected `fetch` still runs.
 The owner-only **Secrets** section on any box's admin page is the boxholder's
 surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
 
-- **This box** — every granted name with its access level, verification badge,
-  note, **what it is used for** (built-in, declared, and observed — see "Why a
-  secret exists"), and last-used; set/rotate a value (masked input, soft format warnings);
-  raise/lower access; revoke; supply values for slots the agent declared; revoke
-  stale grants; grant an existing machine-level name (the picker hides names
-  another box owns exclusively).
+- **This box** — every granted name as one collapsed row (name, access level,
+  verification badge); open a row for its note, **what it is used for**
+  (built-in, declared, and observed — see "Why a secret exists"), last-used,
+  and the actions: set/rotate a value (masked input, soft format warnings),
+  raise/lower access, revoke. Below the rows, "Add a key to this box": grant an
+  existing machine-level name (the picker hides names another box owns
+  exclusively), or add a new one through the service picker. Slots the agent
+  declared and stale grants are listed when present.
 - **Machine-wide** (Decision 8) — every name on the machine, its grants across
   every box, `shareable` flags, uses, last-used, and removal. Reachable from any box's
   page, since the store is machine-level and there is no separate hub UI.
@@ -493,13 +495,13 @@ real store.
 
 From Admin → Secrets on a box, adding a key means "and use it here": the value
 is stored and this box is granted it at `server` access in one locked write
-(`setAndGrantSecret`), and the page says what the key now does. Granting is
-the advanced case — one store, many boxes, a second box borrowing what the
-first holds — and lives under *"Use a key another box already has"* at the
-bottom of the tab, shown only when there is something to borrow. The
+(`setAndGrantSecret`), and the page says what the key now does. Granting a
+name another box already holds is offered first under "Add a key to this box",
+shown when there is something to grant; with several boxes it is the ordinary
+case (2026-09-25; it was a closed disclosure at the bottom before). The
 Machine-wide tab's add form stores without granting, for that deliberate case.
 
-The names the engine recognises are offered as buttons, each with a
+The names the engine recognises are offered in the service picker, each with a
 **guide** (`core/secrets/guide-registry.ts`): what the credential is, where a
 person gets one, and what it looks like. What it is *used for* is not in the
 guide — it is joined from `uses.ts`, so a new consumer of a key shows up on the

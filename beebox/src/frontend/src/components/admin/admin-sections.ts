@@ -6,7 +6,7 @@
  * the boxholder, the box agent, and `bin/browse`.
  */
 
-export const ADMIN_TABS = ["overview", "agents", "people", "connections", "host"] as const;
+export const ADMIN_TABS = ["overview", "agents", "people", "connections", "secrets", "host"] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number];
 
 export const DEFAULT_ADMIN_TAB: AdminTab = "overview";
@@ -70,7 +70,8 @@ export interface AdminGroupDef {
 export const ADMIN_GROUPS: readonly AdminGroupDef[] = [
   { tab: "agents", label: "Agents", description: "What runs the box's agents: the engine, its models, and the accounts behind them.", sections: ["agent-engine", "openrouter-models", "claude-code", "codex"] },
   { tab: "people", label: "People", description: "Who can sign in to this box.", sections: ["allowed-users", "invite"] },
-  { tab: "connections", label: "Connections", description: "Outside services this box talks to, and the keys it uses.", sections: ["google-services", "gmail-filters", "telegram", "secrets", "cloudflare-publishing"] },
+  { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "telegram", "cloudflare-publishing"] },
+  { tab: "secrets", label: "Secrets", description: "API keys this box can use, and the keys shared across boxes on this host.", sections: ["secrets"] },
   { tab: "host", label: "Host", description: "The machine this box runs on and the device you are using.", sections: ["tailscale", "backup", "notifications"] },
 ];
 
@@ -79,6 +80,7 @@ export const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
   agents: "Agents",
   people: "People",
   connections: "Connections",
+  secrets: "Secrets",
   host: "Host",
 };
 

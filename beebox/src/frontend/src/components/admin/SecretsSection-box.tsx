@@ -11,6 +11,7 @@ import { useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Accordion } from "../ui/Accordion";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
@@ -48,15 +49,20 @@ function GrantedRow({
   const revoke = trpc.secrets.revoke.useMutation({ onSuccess: refresh });
   const nextAccess = secret.access === "server" ? "agent" : "server";
 
+  // One line closed: the name and its badges. Open for what it is used for and the actions.
   return (
-    <Card border="subtle" padding="sm">
-      <Stack gap="sm">
+    <Accordion
+      id={`bbx-admin-secrets-key-${secret.name}`}
+      title={
         <Row gap="sm" wrap align="center">
           <Text mono size="sm">{secret.name}</Text>
           <Badge tone={secret.access === "agent" ? "warning" : "info"}>{secret.access}</Badge>
           {secret.hasValue ? <VerificationBadge secret={secret} /> : <Badge tone="warning">no value yet</Badge>}
           {secret.shareable === false ? <Badge tone="neutral">single-box</Badge> : null}
         </Row>
+      }
+    >
+      <Stack gap="sm">
         {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
         <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">
@@ -90,7 +96,7 @@ function GrantedRow({
         {setAccess.error ? <div role="alert"><ErrorText>{setAccess.error.message}</ErrorText></div> : null}
         {revoke.error ? <div role="alert"><ErrorText>{revoke.error.message}</ErrorText></div> : null}
       </Stack>
-    </Card>
+    </Accordion>
   );
 }
 

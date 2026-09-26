@@ -1,24 +1,15 @@
 /**
- * "Connect a service" — the first thing on the "This box" tab
- * (`docs/plans/secret-entry-guidance.md`, Track 1 + 3): a row of buttons, one
- * per registered guide this box does not already hold, plus "Something
- * else". Choosing one opens {@link SecretValueForm} with the name fixed (a
- * guide) or free-text (something else) and the value granted to this box in
- * the same submit — the word "grant" never appears here, per the
- * boxholder's framing that granting is the advanced/multi-box case, not the
- * primary one.
+ * Adding a new key to this box: pick the service (each known one has a
+ * guide) or "Something else", then the value form. One picker rather than a
+ * button per service, so the section stays short when nothing is being added.
  */
 
 import { useState } from "react";
-import { Button } from "../ui/Button";
-import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
-import { Heading } from "../ui/Heading";
+import { SelectField } from "../ui/fields";
 import { SecretValueForm, type SecretValueFormIds } from "./SecretsSection-forms";
 import type { SecretGuideEntry } from "./SecretsSection-guide";
 import type { RouterOutput } from "../../lib/trpc";
-
-type FormatHints = RouterOutput["secrets"]["formatHints"];
 
 const PRIMARY_IDS: SecretValueFormIds = {
   name: "bbx-admin-secrets-add-name",
@@ -27,10 +18,13 @@ const PRIMARY_IDS: SecretValueFormIds = {
   submit: "bbx-admin-secrets-add-submit",
 };
 
-/** A guide names a service worth a button; a trailing-slash key is a family provisioned
- *  by its own flow (Telegram, publish) and never offered here. */
+/** The picker's value for a key the engine has no guide for. */
+const OTHER = "other";
+
+type FormatHints = RouterOutput["secrets"]["formatHints"];
+
 function connectableGuides(guides: SecretGuideEntry[], grantedNames: string[]): SecretGuideEntry[] {
-  return guides.filter((guide) => !guide.key.endsWith("/") && !grantedNames.includes(guide.key));
+  return guides.filter((guide) => !grantedNames.includes(guide.key));
 }
 
 export function ConnectServiceSection({
@@ -46,35 +40,32 @@ export function ConnectServiceSection({
   hints: FormatHints | undefined;
   onSaved: () => void;
 }) {
-  // null = closed; { key: string } = a guide button was chosen (fixed name);
+  // null = nothing chosen; { key: string } = a guided service (fixed name);
   // { key: null } = "Something else" (free-text name).
   const [target, setTarget] = useState<{ key: string | null } | null>(null);
   const connectable = connectableGuides(guides ?? [], grantedNames);
+  const selected = target === null ? "" : (target.key ?? OTHER);
 
   return (
     <Stack gap="sm">
-      <Heading level={3}>Connect a service</Heading>
-      <Row gap="sm" wrap>
-        {connectable.map((guide) => (
-          <Button
-            key={guide.key}
-            id={`bbx-admin-secrets-connect-${guide.key}`}
-            intent="secondary"
-            onClick={() => setTarget({ key: guide.key })}
-          >
-            {guide.title}
-          </Button>
-        ))}
-        <Button id="bbx-admin-secrets-connect-other" intent="secondary" onClick={() => setTarget({ key: null })}>
-          Something else
-        </Button>
-      </Row>
+      <SelectField
+        id="bbx-admin-secrets-connect"
+        label="Add a new key"
+        helper="Each known service comes with a guide to where its key is issued."
+        value={selected}
+        onChange={(value) => setTarget(value === "" ? null : { key: value === OTHER ? null : value })}
+        options={[
+          { value: "", label: "Choose a service…" },
+          ...connectable.map((guide) => ({ value: guide.key, label: guide.title })),
+          { value: OTHER, label: "Something else" },
+        ]}
+      />
       {target === null ? null : (
         // Keyed by target: after one accepted save the form shows its result
         // in place of the fields, and choosing another service must mount a
         // fresh form rather than reuse that finished one.
         <SecretValueForm
-          key={target.key ?? "other"}
+          key={target.key ?? OTHER}
           fixedName={target.key}
           hints={hints}
           guides={guides}

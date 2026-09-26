@@ -14,6 +14,8 @@ export interface AccordionProps {
   /** Visual style. Default `"bordered"` — a boxed card. `"plain"` has no border/padding. */
   variant?: "bordered" | "plain";
   disabled?: boolean;
+  /** Stable `bbx-` address on the shell (see lib/ui-scan). */
+  id?: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -37,6 +39,7 @@ export function Accordion({
   onOpenChange,
   variant: variantArg,
   disabled: disabledArg,
+  id,
   className,
 }: AccordionProps) {
   const defaultOpen = defaultOpenArg ?? false;
@@ -64,7 +67,7 @@ export function Accordion({
   const bodyClass = variant === "bordered" ? "border-t border-warm-200 px-3 py-2" : "mt-2";
 
   return (
-    <div className={shellClass}>
+    <div id={id} className={shellClass}>
       <button
         type="button"
         onClick={toggle}

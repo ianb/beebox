@@ -13,7 +13,7 @@ import { useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
+import { Accordion } from "../ui/Accordion";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -44,18 +44,22 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
   const [confirming, setConfirming] = useState(false);
   const remove = trpc.secrets.remove.useMutation({ onSuccess: refresh });
   return (
-    <Card border="subtle" padding="sm">
-      <Stack gap="xs">
+    <Accordion
+      id={`bbx-admin-secrets-machine-key-${secret.name}`}
+      title={
         <Row gap="sm" wrap align="center">
           <Text mono size="sm">{secret.name}</Text>
           {secret.hasValue ? null : <Badge tone="warning">empty slot</Badge>}
           {secret.verified?.status === "failed" ? <Badge tone="danger">may be expired</Badge> : null}
           {secret.verified?.status === "ok" ? <Badge tone="success">verified</Badge> : null}
           {secret.shareable === false ? <Badge tone="neutral">single-box{secret.owningBox === undefined ? "" : `: ${secret.owningBox}`}</Badge> : null}
+          <Text size="xs" tone="muted">{grantSummary(secret)}</Text>
         </Row>
+      }
+    >
+      <Stack gap="xs">
         {secret.note === undefined ? null : <Hint>{secret.note}</Hint>}
         <SecretUsesBlock uses={secret.uses} />
-        <Text size="xs" tone="muted">{grantSummary(secret)}</Text>
         <Text size="xs" tone="muted">
           {lastUsedSummary(secret)}
           {secret.declaredBy === undefined ? "" : ` · declared by ${secret.declaredBy}`}
@@ -82,7 +86,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
         </Row>
         {remove.error ? <div role="alert"><ErrorText>{remove.error.message}</ErrorText></div> : null}
       </Stack>
-    </Card>
+    </Accordion>
   );
 }
 
