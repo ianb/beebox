@@ -605,6 +605,14 @@ the agent prepares it against this box's selected connection and a signed-in
 member approves the new destination. Publications on another granted
 connection remain on their current URLs; they are not silently moved. New
 publications use the per-box shared Worker and do not create a Worker per site.
+An existing public publication without a slug stays on its legacy Worker URL
+until you choose a slug and prepare it for the shared host; public shared-host
+routes require an explicit slug. Preparing a changed slug creates a candidate:
+the currently approved destination remains live until a signed-in member
+approves the candidate. Keep the current approved URL and the candidate URL
+distinct while review is pending. If the old per-publication Worker still has
+an active URL, the app and status output identify it separately from the
+shared-host destination.
 
 ## Private publication notes
 

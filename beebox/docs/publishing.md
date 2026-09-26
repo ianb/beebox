@@ -138,6 +138,21 @@ their current URLs. New publications use only the shared Worker, whose
 DNS change was performed during implementation; actual HTTPS, provider
 permissions, and browser behavior need separate live verification.
 
+For a legacy public publication without a slug, the old per-publication URL
+continues serving until its owner chooses an explicit slug and prepares it for
+the shared hostname. When a slug or audience change is pending, keep the
+approved destination distinct from the candidate destination: the old approved
+route remains live until a signed-in member approves the candidate. The app and
+managed status report the approved shared-host path independently of a pending
+candidate; a legacy per-publication URL is identified separately while its
+Worker remains available.
+
+After an application update changes the shared Worker bundle, an owner can
+repeat shared-host setup for the already-configured host in Admin. This updates
+the box's shared Worker and verifies its attachment without changing the
+hostname or moving legacy Workers. If preparation reports that the shared
+Worker is stale, have the owner retry that setup before preparing content.
+
 ## Box agent and member workflow
 
 The agent owns files under `src/publications/<name>/`. It asks the server to

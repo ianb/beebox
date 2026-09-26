@@ -6254,7 +6254,11 @@ tests:
       This box has never published a site. Explain what the administrator
       configures before the first publication, how the agent discovers the
       selected connection and what it does after preparing the site, and which
-      exact paths public and secret sites use. Do not create or change files.
+      exact paths public and secret sites use. A legacy public site has no
+      slug yet and a slug change may be pending; explain how it joins the
+      shared host, what stays live until approval, and how status distinguishes
+      the approved destination from the legacy URL and candidate. Do not create
+      or change files.
     context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
@@ -6263,7 +6267,10 @@ tests:
       selects one granted connection for this box in Admin before any site;
       the agent uses that connection, prepares, and gives the boxholder the
       approval link rather than setting up Cloudflare; public uses an explicit
-      `/<slug>/` and secret uses the full `/s/<pubId>/` capability path.
+      `/<slug>/` and secret uses the full `/s/<pubId>/` capability path. A
+      legacy public site needs an explicit slug before it can join the shared
+      host; its current Worker URL continues until approval, and the candidate
+      destination is distinct from the approved route.
     correct_contains:
       - "Admin"
       - "bbx pub connections"
@@ -6275,6 +6282,8 @@ tests:
       - '(?:explicit|chosen|set)[\s\S]{0,100}slug|slug[\s\S]{0,100}(?:explicit|required|set)'
       - '/<slug>/|/[a-z0-9-]+/'
       - '(?:agent|CLI)[\s\S]{0,160}(?:does not|never|cannot)[\s\S]{0,140}(?:assign|configure|set up)[\s\S]{0,120}(?:host|hostname|Cloudflare)|(?:owner|administrator)[\s\S]{0,180}Admin[\s\S]{0,180}(?:host|hostname)'
+      - '(?:legacy|old)[\s\S]{0,140}(?:Worker|workers\.dev|publication)[\s\S]{0,160}(?:URL|route)[\s\S]{0,120}(?:live|serving|continues)|(?:live|serving)[\s\S]{0,160}(?:legacy|old)[\s\S]{0,120}(?:Worker|URL|route)'
+      - '(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)[\s\S]{0,160}(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)|(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)[\s\S]{0,160}(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)'
     tags: [publish-sites]
 
   - id: publishing-shared-origin-trust
