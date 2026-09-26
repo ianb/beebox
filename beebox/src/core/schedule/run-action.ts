@@ -5,6 +5,9 @@
  * notification in this process through `notifyBoxholder`, with no shell and no
  * agent. See docs/plans/notifications.md (Track D).
  *
+ * `runAndRecord` wraps a run in schedule memory (`memory.ts`) and records its
+ * outcome in the schedule's state.
+ *
  * A notification that reached nobody (every tried channel failed, or none
  * could be tried) throws, so the run records a failure the way `bbx notify`
  * exiting 1 inside a `runs:` pipeline would.
@@ -13,12 +16,15 @@
 import { performance } from "node:perf_hooks";
 import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
 import type { ScheduleNotify } from "../../schemas/scheduled-script-fields.js";
-import { execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
+import { CommandError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
 import { scheduleCardForTask } from "./parked-templates.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { notificationReached, notifyBoxholder, type NotificationInput } from "../notify-boxholder.js";
 import { parseTarget } from "../notification/target.js";
 import type { Loudness } from "../notification/intent.js";
+import { DEFAULT_RUN_WINDOW_MS, recordOutcome, saveScriptState, type ScriptState } from "./state.js";
+import { classifyScheduleFailure, type ScheduleOutcomeResult } from "./engine-wait.js";
+import { finishRunMemory, prepareRunMemory } from "./memory.js";
 
 class ScheduledNotificationUndeliveredError extends Error {
   constructor(detail: string) {
@@ -81,4 +87,49 @@ export async function runScheduleAction(args: RunActionArgs): Promise<ExecTiming
     timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
     env,
   });
+}
+
+/** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
+ * no measurement exists, so record zero rather than invent one. */
+export function fallbackTiming(err: unknown): ExecTiming {
+  if (err instanceof CommandError) return err.timing;
+  return { durationMs: 0, sleepAffected: false };
+}
+
+export type RecordedRun =
+  | { result: "success"; durationMs: number }
+  | { result: ScheduleOutcomeResult; error: string; durationMs: number };
+
+/**
+ * Run the action with schedule memory, classify a failure (deferred,
+ * inconclusive, or failure), record the outcome, take the carry and move the
+ * cursor, and save the state. `runStartedAt` bounds the deferred
+ * classification to this script's own span.
+ */
+export async function runAndRecord(
+  args: RunActionArgs & { state: ScriptState; now: Date; runStartedAt: Date },
+): Promise<RecordedRun> {
+  const { boxRoot, parsed, scriptName, state, now, runStartedAt } = args;
+  const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+  // Memory belongs to commands: a notify: card has no shell to read it.
+  const memory = parsed.action.kind === "runs" ? await prepareRunMemory(boxRoot, { state, scriptName }) : null;
+  try {
+    let run: RecordedRun;
+    let timing: ExecTiming;
+    try {
+      timing = await runScheduleAction({ ...args, env: memory?.env });
+      run = { result: "success", durationMs: timing.durationMs };
+    } catch (err) {
+      timing = fallbackTiming(err);
+      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt, error: err });
+      run = { ...outcome, durationMs: timing.durationMs };
+    }
+    const error = run.result === "success" ? null : run.error;
+    recordOutcome(state, { result: run.result, error, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
+    if (memory !== null) await finishRunMemory(boxRoot, { memory, state, scriptName });
+    await saveScriptState({ boxRoot, scriptName, state });
+    return run;
+  } finally {
+    await memory?.dispose();
+  }
 }

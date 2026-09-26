@@ -96,6 +96,17 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_LOG_PROMPTS", // src/core/agent/run.ts -- prompt-logging debug flag.
   "TSX_TSCONFIG_PATH", // set by src/cli/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
 
+  // --- Schedule memory (src/core/schedule/memory.ts): set by the tick on a
+  //     scheduled `runs:` command, and listed here so a `bbx procedure run` it
+  //     starts passes them to the procedure's shells, which rebuild their env
+  //     through this list (src/core/procedure/shell.ts). Cursors and temp
+  //     paths, not credentials. ---
+  "BBX_SINCE_COMMIT", // the box HEAD at the schedule's previous run; `bbx changes`' default --since.
+  "BBX_SINCE_TIME", // the previous run's time.
+  "BBX_CARRY_IN", // the value the previous run carried forward.
+  "BBX_CARRY_OUT", // a temp file path the run writes the next carry to.
+  "BBX_DEFER_FILE", // a temp file path `--or-skip` writes its defer reason to.
+
   // --- Test/scenario harness (src/scenario/runner.ts sets these on process.env
   //     precisely so its spawned `bbx wakeup`/`bbx finalize` children inherit them) ---
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.

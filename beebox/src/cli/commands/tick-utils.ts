@@ -25,8 +25,7 @@ import {
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
-import { CommandError, type ExecTiming } from "../../lib/exec-with-timeout.js";
-import { runScheduleAction } from "../../core/schedule/run-action.js";
+import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
 import { parseCardName, getBoxDir } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
@@ -37,13 +36,6 @@ import {
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
 import { getBoxTime } from "../../lib/time.js";
-
-/** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
- * no measurement exists, so record zero rather than invent one. */
-export function fallbackTiming(err: unknown): ExecTiming {
-  if (err instanceof CommandError) return err.timing;
-  return { durationMs: 0, sleepAffected: false };
-}
 
 /**
  * Run all on-wakeup scheduled scripts that are due.
@@ -126,24 +118,25 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 
     console.log(`  Running ${scriptName}...`);
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
-    const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
     // This script's own span, not the pass's — the deferred classification
     // must not attribute an unavailability detected by an EARLIER script in
     // this pass to this script's unrelated failure.
     const scriptStartedAt = getBoxTime(boxRoot);
     try {
-      const { durationMs, sleepAffected } = await runScheduleAction({
+      const run = await runAndRecord({
         boxRoot, parsed, scriptName, triggeredBy: "wakeup", stdio: "inherit",
+        state, now, runStartedAt: scriptStartedAt,
       });
-
-      recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
-      await saveScriptState({ boxRoot, scriptName, state });
-      ranCount++;
-
-      await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+      if (run.result === "success") {
+        ranCount++;
+        await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+      } else {
+        console.error(`  ${scheduleOutcomeLine(run)}`);
+      }
     } catch (err) {
+      // Post-success housekeeping failed: the run is recorded again as its outcome.
       const { durationMs, sleepAffected } = fallbackTiming(err);
-
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
       const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });

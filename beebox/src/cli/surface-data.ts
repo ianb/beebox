@@ -92,6 +92,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // when the boxholder asks for a run from chat. The scheduler daemon does not
   // go through this verb — it calls `runTick` in-process.
   { name: "tick", audience: "agent", smoke: { run: ["tick", "--dry-run"] } },
+  // Read-only: the paths changed since a commit, for a schedule's `runs:`.
+  { name: "changes", audience: "agent", smoke: { run: ["changes", "--since", "HEAD"] } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },

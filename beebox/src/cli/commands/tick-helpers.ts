@@ -17,7 +17,6 @@ import {
   recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
-  loadRunningProcedures,
   loadActiveChats,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
@@ -25,8 +24,9 @@ import type {
   loadScriptState,
   loadRunningScripts,
 } from "../../core/schedule/state.js";
-import { runScheduleAction } from "../../core/schedule/run-action.js";
-import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
+import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
+import { loadRunningProcedures } from "../../core/schedule/running-procedures.js";
+import { handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -35,6 +35,7 @@ import {
   boxEngineUnavailability,
   classifyScheduleFailure,
   engineWaitReason,
+  type ScheduleOutcomeResult,
 } from "../../core/schedule/engine-wait.js";
 import { getBoxTime } from "../../lib/time.js";
 
@@ -236,6 +237,21 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
   });
 }
 
+/** A run that did not succeed, as the tick reports it. An inconclusive run is
+ * not an error (its work completed), so it keeps its own status and the tick
+ * summary does not count it as one. */
+function outcomeResult(
+  { scriptName, command, outcome }: { scriptName: string; command: string; outcome: { result: ScheduleOutcomeResult; error: string; durationMs: number } },
+): ScriptResult {
+  return {
+    name: scriptName,
+    status: outcome.result === "inconclusive" ? "inconclusive" : "error",
+    command,
+    durationMs: outcome.durationMs,
+    error: outcome.error,
+  };
+}
+
 interface ExecuteScriptArgs {
   boxRoot: string;
   parsed: ParsedScript;
@@ -264,39 +280,31 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     // mtime as a recreation. No actionable error info here.
   }
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
-  const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
   // This script's own span, not the tick's — the deferred classification must
   // not attribute an unavailability detected by an EARLIER script in this
   // tick to this script's unrelated failure.
   const scriptStartedAt = getBoxTime(boxRoot);
+  const command = describeScheduleAction(parsed.action);
   try {
-    const { durationMs, sleepAffected } = await runScheduleAction({
+    const run = await runAndRecord({
       boxRoot, parsed, scriptName, triggeredBy: "schedule", stdio: options.quiet ? "ignore" : "inherit",
+      state, now, runStartedAt: scriptStartedAt,
     });
-
-    recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
-    await saveScriptState({ boxRoot, scriptName, state });
-
+    if (run.result !== "success") {
+      if (!options.quiet) console.error(`  ${scheduleOutcomeLine(run)}`);
+      return outcomeResult({ scriptName, command, outcome: run });
+    }
     await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
-
-    return { name: scriptName, status: "ran", command: describeScheduleAction(parsed.action), durationMs };
+    return { name: scriptName, status: "ran", command, durationMs: run.durationMs };
   } catch (err) {
+    // Post-success housekeeping failed: the run is recorded again as its outcome.
     const { durationMs, sleepAffected } = fallbackTiming(err);
+    const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
     const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
-    if (!options.quiet) {
-      console.error(`  ${scheduleOutcomeLine(outcome)}`);
-    }
-    // An inconclusive run is not an error: its work completed. It gets its own
-    // ScriptResult status so the tick summary doesn't count it as one.
-    return {
-      name: scriptName,
-      status: outcome.result === "inconclusive" ? "inconclusive" : "error",
-      command: describeScheduleAction(parsed.action),
-      durationMs,
-      error: outcome.error,
-    };
+    if (!options.quiet) console.error(`  ${scheduleOutcomeLine(outcome)}`);
+    return outcomeResult({ scriptName, command, outcome: { ...outcome, durationMs } });
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }
