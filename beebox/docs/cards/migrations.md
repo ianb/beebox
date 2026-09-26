@@ -512,7 +512,7 @@ The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.
 
 - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) for the design rationale.
 - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
-- [Maintenance](../maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
+- [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
 - `scripts/migrate/_warnings.ts`, the noisy-mode helper every migrator uses; `scripts/migrate/_harness.ts`, the shared scaffold.
 
 ## Recovery and reversal

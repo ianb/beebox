@@ -15,10 +15,10 @@ where to put new material.
 | Module map (lib/shared/types boundary) | [docs/module-map.md](module-map.md) |
 | Design rationale | [docs/design/README.md](design/README.md) |
 | Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked example), `src/schemas/templates*.ts` (template registry) |
-| How development happens (overview) | [docs/development-process.md](development-process.md) |
-| Agent coding, and the checks around it | [docs/agent-coding.md](agent-coding.md) |
-| Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-workflow.md) |
-| Technologies and AI services | [docs/technologies.md](technologies.md) |
+| How development happens (overview) | [docs/development.md](development.md) |
+| Agent coding, and the checks around it | [docs/development/agent-coding.md](development/agent-coding.md) |
+| Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development/workflow.md](development/workflow.md) |
+| Technologies and AI services | [docs/development/technologies.md](development/technologies.md) |
 | Testing philosophy | [docs/testing.md](testing.md) |
 | Field tests (current runbook) | [docs/testing/field-testing.md](testing/field-testing.md) |
 | Tours (browser walks for UI/a11y review) | [docs/testing/tours.md](testing/tours.md) |
@@ -55,7 +55,7 @@ where to put new material.
 | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
 | Chat review (nightly titles + summaries) | [docs/chat/review.md](chat/review.md) |
 | Content-Security-Policy | [docs/content-security-policy.md](content-security-policy.md) |
-| Periodic maintenance | [docs/maintenance.md](maintenance.md) |
+| Periodic maintenance | [docs/development/maintenance.md](development/maintenance.md) |
 | Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
 | Docs shipped to box agents ([box-docs/](../box-docs)) | [docs/box/](box) (prose sources) + [src/core/docs-gen/package-docs.ts](../src/core/docs-gen/package-docs.ts) (generated reference) |
 | Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
