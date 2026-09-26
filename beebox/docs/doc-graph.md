@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:02:52Z
+Generated: 2026-09-26T16:06:51Z
 Total documents: 433
 
 ## Issues
@@ -26,6 +26,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (113 lines) · shipped history · implemented
@@ -58,7 +59,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -1488,12 +1488,12 @@ Referenced by:
 - docs/box-layout.md:206 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/chat.md:20 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/guides.md:55 (link) — | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
+- docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
 - docs/mobile-contract.md:917 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
-- docs/plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
@@ -1548,8 +1548,8 @@ Referenced by:
 Title: "The prompt surface" | 24 lines | current reference
 
 Referenced by:
+- docs/implemented-plans/doc-structure-prompts.md:57 (mention) — | (new) | `prompts.md`: what the prompt surface is (the generated sources); members; owned elsewhere |
 - docs/plans/cli-restructure.md:30 (mention) — - **`bbx init-rules` standalone removed.** File moved from `src/cli/commands/init-rules.ts` to `src/core/init-rules.ts`
-- docs/plans/doc-structure-prompts.md:57 (mention) — | (new) | `prompts.md`: what the prompt surface is (the generated sources); members; owned elsewhere |
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
 - user-stories/catalog/2026-08-21.md:8565 (mention) — **Code check** — beebox/package.json defines "prompt-report": "tsx src/dev/prompt-report.ts"; the script parses --output
 
@@ -1600,11 +1600,11 @@ Referenced by:
 - docs/implemented-plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
 - docs/implemented-plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
 - docs/implemented-plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
+- docs/implemented-plans/doc-structure-prompts.md:9 (link) — Sixth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure-prompts.md:9 (link) — Sixth cluster under the [organizing principles](../README.md#organizing-principles):
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -3765,6 +3765,17 @@ References:
 - → deploy/CLAUDE.md (mention)
 - → docs/technologies.md (mention)
 - → docs/security-report.md (mention)
+
+#### docs/implemented-plans/doc-structure-prompts.md **[ORPHAN]**
+
+Title: "Documentation structured like code: the prompt surface" | 163 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → docs/prompts.md (mention)
+- → docs/prompts/lenses.md (mention)
+- → docs/prompts/logging.md (mention)
+- → docs/model-policy.md (mention)
 
 #### docs/implemented-plans/doc-structure.md
 
@@ -6111,17 +6122,6 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
-#### docs/plans/doc-structure-prompts.md **[ORPHAN]**
-
-Title: "Documentation structured like code: the prompt surface" | 163 lines | proposal | active
-
-References:
-- → docs/README.md (link)
-- → docs/prompts.md (mention)
-- → docs/prompts/lenses.md (mention)
-- → docs/prompts/logging.md (mention)
-- → docs/model-policy.md (mention)
-
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -6983,8 +6983,8 @@ Title: "Prompt lenses" | 214 lines | current reference
 Referenced by:
 - docs/connectors.md:101 (link) — [prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
 - docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompts/review.md](prompts/review.md) (lens catalog: [docs/prompts/lenses.md](p
+- docs/implemented-plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
 - docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
-- docs/plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
 - docs/prompts/review.md:7 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
 - ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#park-ignored-proactive
 - ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
@@ -7004,7 +7004,7 @@ Title: "Prompt logging" | 213 lines | current reference
 Referenced by:
 - docs/guides.md:42 (link) — | Capturing full agent-invocation API traffic | [docs/prompts/logging.md](prompts/logging.md) |
 - docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompts/logging.md` says so.
-- docs/plans/doc-structure-prompts.md:60 (mention) — | `prompt-logging.md` | `prompts/logging.md`; DOCID markers become a top-level heading |
+- docs/implemented-plans/doc-structure-prompts.md:60 (mention) — | `prompt-logging.md` | `prompts/logging.md`; DOCID markers become a top-level heading |
 - user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompts/logging.md` provides detailed guidance on using the feature, confirming t
 
 References:
