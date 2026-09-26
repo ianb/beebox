@@ -706,7 +706,8 @@ then a `judge` precheck field; both are replaced by commands.
   the next command in the pipe gets paths. `--or-skip` exits 75 when
   nothing passed. `--dry-run` prints the exact request without sending.
   `--replay <file>` runs the card against a saved state file, for tuning a
-  prompt against a kept example. Every call and its answers go to
+  prompt against a kept example. `--echo` passes stdin through to stdout
+  on a pass, for a `pass-output` precheck that feeds an agent. Every call and its answers go to
   `.beebox/jev-debug.log` (state truncated), the learning record.
 - **Deferred at the tick.** `bbx tick` treats exit 75 from `runs` as the
   existing `deferred` outcome (`src/core/schedule/state.ts:45`), the way
@@ -721,14 +722,23 @@ then a `judge` precheck field; both are replaced by commands.
   `lastCommit` for a run that ended that way, so the items are judged next
   time. A health check says how many runs deferred for budget.
 - **Schedule versus procedure.** A schedule card holds when, `once`,
-  `until`, `requires`, `requested-by`, the memory, and a one-line `runs:`
-  pipeline. A procedure holds several steps or an agent step. Nothing about
-  Jev lives in the procedure schema; a `shells` step runs `bbx judge` like
-  any command. The judge precheck field from the earlier draft is gone.
+  `until`, `requires`, `requested-by`, the memory, and `runs:`. When the
+  notification text is fixed, `runs:` is a one-line pipeline. In the common
+  case the judge gets everything and gives one answer ("is there something
+  here worth telling?"), and turning that into a relevant notification
+  needs an agent: then `runs:` is `bbx procedure run <name>`, the
+  procedure's precheck is the `changes | judge` pipeline with
+  `pass-output: true` (`src/schemas/procedure.ts:39`), and its run phase is
+  an `agents:` step whose prompt receives that output and ends with `bbx
+  notify`. Nothing about Jev lives in the procedure schema; a `shells` step
+  runs `bbx judge` like any command. The judge precheck field from the
+  earlier draft is gone.
 - **Worked examples**, in the scheduled-script and judgment schema
   instructions and the agent guide:
 
-  Stream, one judgment per new item, one schedule card:
+  The common shape: one judgment over everything new, then an agent
+  writes the notification. A schedule card, a procedure card, a judgment
+  card:
 
   ```yaml
   # _config/schedules/watch-field-trip.scheduled-script.card
@@ -739,24 +749,50 @@ then a `judge` precheck field; both are replaced by commands.
   requested-by: boxholder
   requires: { connectors: [gmail] }
   description: Tell me when the school emails about the field trip
-  runs: >
-    bbx changes --match '_content/inbox/**/*.email.card' --or-skip
-    | bbx judge _config/judgments/field-trip.judgment.card --per-line --cards --min trip=0.8 --select --or-skip
-    | bbx notify --loudness loud --targets-from-stdin "School field trip email arrived"
+  runs: bbx procedure run watch-field-trip
+  ```
+  ```yaml
+  # _config/procedures/watch-field-trip.procedure.card
+  name: watch-field-trip
+  steps:
+    - id: look
+      precheck:
+        pass-output: true
+        shells:
+          - |
+            bbx changes --match '_content/inbox/**/*.email.card' --or-skip \
+              | xargs bbx cat \
+              | bbx judge _config/judgments/field-trip.judgment.card --min trip=0.8 --or-skip --echo
+      run:
+        agents:
+          - model: efficient
+            prompt: |
+              The emails below arrived since the last check, and a judge
+              says at least one is the school writing about the spring field
+              trip. Find it, and tell the boxholder what matters (dates,
+              form, payment, deadline) in one or two sentences with
+              `bbx notify --loudness loud --target card:<the email> --body-file -`.
+              If none of them is really about the trip, do nothing.
   ```
   ```yaml
   # _config/judgments/field-trip.judgment.card
   questions:
     trip:
       type: noul
-      criteria: "This email is from the school about the spring field trip: dates, permission form, or payment."
+      criteria: "At least one of these emails is from the school about the spring field trip: dates, permission form, or payment."
   ---
-  You are looking at one email card from a family inbox. Judge only what
-  the email says, not what it might lead to.
+  You are looking at the email cards that arrived in a family inbox since
+  the last check, concatenated. Judge only what the emails say.
   ```
 
-  Snapshot, one judgment over the state, no call when nothing moved, with
-  the carry slot remembering what was already reported:
+  `bbx judge --echo` passes its stdin through on success so the agent gets
+  the same material the judge saw. The agent runs only when the judge said
+  yes; a quiet inbox costs nothing and a busy one costs one Jev call. The
+  per-line form (`--per-line --cards --select`) is for the rarer case where
+  each item is judged alone and the text is fixed.
+
+  The fixed-text shape: one schedule card, no agent, for when the
+  notification needs no wording beyond what the card says:
 
   ```yaml
   # _config/schedules/watch-contractor-quote.scheduled-script.card
@@ -773,8 +809,10 @@ then a `judge` precheck field; both are replaced by commands.
   ```
 
   `bbx notify --targets-from-stdin` takes one target path per line and
-  sends one notification per line, so a per-item judge that passes two
-  emails sends two, each tapping to its card.
+  sends one notification per line, for the per-line form. The carry slot
+  is for "what I already told them": an agent step can read
+  `$BBX_CARRY_IN`, and write to `$BBX_CARRY_OUT`, to avoid repeating a
+  notification across runs when `once` is not set.
 
 **Vocabulary lock-ins.** `notify:` and `requested-by` on scheduled scripts;
 `lastCommit` and `carry` in schedule state; `BBX_SINCE_COMMIT`,
@@ -1076,8 +1114,9 @@ New agent-facing concepts, each with a `knows_directly` entry in
   and `requested-by: boxholder`, not `<schedule>` and not a shell `runs`.
 - `changes-since`: "The person says: tell me when the school emails about
   the field trip." Expects an `on-wakeup` schedule whose `runs:` is `bbx
-  changes --match ... --or-skip | bbx judge <card> --per-line --cards ...
-  --select --or-skip | bbx notify ...`, a judgment card, `once`, and
+  procedure run ...` whose precheck pipes `bbx changes --or-skip` through
+  `bbx judge <card> --or-skip --echo` with `pass-output`, and whose run is
+  an agent that ends with `bbx notify`; a judgment card; `once`;
   `requires: { connectors: [gmail] }`.
 - `judge-precheck`: "A daily procedure should only run an agent when today's
   calendar has an event needing preparation. How do you keep it cheap, and
