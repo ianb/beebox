@@ -250,7 +250,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 
 | Path | Purpose |
 |------|---------|
-| `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md. |
+| `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md, which points at the [schema-authoring doc](box/schemas.md). |
 | `src/views/` | Custom view definitions (rendering customization). |
 | `src/publications/` | Agent-authored static site files and site-local frontend projects. Read `node_modules/beebox/box-docs/publishing.md` before publishing; shared notes stay private here. |
 | `src/tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |

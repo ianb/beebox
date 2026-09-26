@@ -106,6 +106,13 @@ row, plus the tracker's own bookkeeping and everything under `.claude/rules/`,
 
 ## Changing it
 
+Engine facts about a subject go in that subject's package doc under
+`docs/box/` (for example [tricks](box/tricks.md) or
+[schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
+plus the box's own conventions, and a managed skill holds its trigger, its
+first commands, and a pointer. `test/core/box-docs-pointers.doctest.md` fails
+when a pointer names a doc the package does not ship.
+
 To add a surface, add its row to `GUIDANCE_SURFACES` and to the table above.
 A tracked row also needs its content in `MANAGED_STOCK_TEMPLATES`
 (`src/core/box/templates.ts`) and a ledger entry from

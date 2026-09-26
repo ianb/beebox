@@ -280,7 +280,7 @@ scaffolds:
 
 ```ts continue
 const schemasGuide = await fs.readFile(path.join(boxRoot, "src/schemas/CLAUDE.md"), "utf-8");
-schemasGuide.includes("src/schemas/")
+schemasGuide.includes("node_modules/beebox/box-docs/schemas.md")
 => true
 
 (await exists(path.join(boxRoot, "src/views/CLAUDE.md")))
@@ -290,20 +290,22 @@ schemasGuide.includes("src/schemas/")
 => true
 ```
 
-The schemas guide teaches `import { z } from "beebox/schema"` (and
-`stringifyYaml` from the same specifier) — not the bare `zod`/`yaml`
-specifiers, which `src/schemas/` can't resolve (only `beebox/*` resolves
-there, via the box's own `node_modules`; see
+The schema-authoring doc that guide points at, the package's `schemas.md`,
+teaches `import { z } from "beebox/schema"` (and `stringifyYaml` from the same
+specifier) — not the bare `zod`/`yaml` specifiers, which `src/schemas/` can't
+resolve (only `beebox/*` resolves there, via the box's own `node_modules`; see
 `test/schemas/box-schemas-v2.doctest.md`'s "bare zod import fails" case):
 
 ```ts continue
-schemasGuide.includes('from "beebox/schema"')
+const { engineDocs } = await import("../../../src/core/docs-gen/package-docs.js");
+const schemasDoc = engineDocs().find((d) => d.filename === "schemas.md")?.content ?? "";
+schemasDoc.includes('from "beebox/schema"')
 => true
 
-schemasGuide.includes('from "zod"')
+schemasDoc.includes('from "zod"')
 => false
 
-schemasGuide.includes('from "yaml"')
+schemasDoc.includes('from "yaml"')
 => false
 ```
 

@@ -17,7 +17,6 @@ import { engineDocFilenames } from "../../src/core/docs-gen/package-docs.js";
 const SOURCES = [
   "src/core/box/skills-content.ts",
   "src/core/box/templates.ts",
-  "src/core/box/schemas-guide.ts",
 ];
 const GUIDE_DIR = "src/core/agent-guide";
 

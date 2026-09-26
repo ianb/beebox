@@ -14,7 +14,6 @@ import * as path from "node:path";
 import type { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { boxCodePaths, getBoxShape } from "../../lib/box-shape.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
-import { SCHEMAS_CLAUDE_MD_V2 } from "./schemas-guide.js";
 
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {
@@ -25,6 +24,25 @@ const TRICKS_PACKAGE_JSON = JSON.stringify(
   null,
   2
 ) + "\n";
+
+/**
+ * The schemas guide. How to write a box-local schema (cardSchema, the
+ * validate and summarize hooks, imports, templates, regenerating docs) lives
+ * in the package doc `schemas.md` (`docs/box/schemas.md`); this guide holds
+ * the pointer, the frontmatter-form default, and the box's own conventions.
+ */
+const SCHEMAS_CLAUDE_MD_V2 = `# Writing Box-Local Schemas
+
+Read \`${BOX_PACKAGE_DOCS}/schemas.md\` before adding or changing a schema in this directory.
+
+**Default to the frontmatter form** (\`cardSchema\`): it produces standard cards —
+YAML frontmatter plus a markdown body.
+
+## This box's schemas
+
+Add conventions this box's schemas share (naming, which card types exist and
+why) here.
+`;
 
 /**
  * The tricks guide. Engine facts about tricks (script interface, how the engine

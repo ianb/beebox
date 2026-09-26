@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T19:09:27Z
-Total documents: 439
+Generated: 2026-09-26T19:39:13Z
+Total documents: 440
 
 ## Issues
 
@@ -717,7 +717,7 @@ Referenced by:
 
 #### docs/box-guidance.md
 
-Title: "Box guidance" | 116 lines | current reference
+Title: "Box guidance" | 123 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
@@ -728,6 +728,8 @@ Referenced by:
 References:
 - → CLAUDE.md (mention)
 - → docs/prompts/logging.md (link)
+- → docs/box/tricks.md (link)
+- → docs/box/schemas.md (link)
 
 #### docs/box-layout.md
 
@@ -790,6 +792,7 @@ References:
 - → docs/secrets.md (mention)
 - → docs/plans/tts-backend-selection.md (mention)
 - → docs/client-debug-log.md (mention)
+- → docs/box/schemas.md (link)
 
 #### docs/cards.md
 
@@ -2017,11 +2020,20 @@ Referenced by:
 - docs/chat/quick-chat.md:57 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:19 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
 
+#### docs/box/schemas.md
+
+Title: "Writing Box-Local Schemas" | 177 lines | current reference
+
+Referenced by:
+- docs/box-guidance.md:111 (link) — [schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
+- docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md, which points at the [s
+
 #### docs/box/tricks.md
 
 Title: "Tricks" | 118 lines | current reference
 
 Referenced by:
+- docs/box-guidance.md:110 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
 - docs/plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
 
 #### docs/box/what-you-could-do.md
@@ -2154,7 +2166,6 @@ Referenced by:
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
-- docs/implemented-plans/doc-structure-cards.md:59 (mention) — | `adding-schemas.md` | `cards/schemas.md` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
 - docs/implemented-plans/mvp-implementation-guide.md:418 (link) — See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
@@ -2162,7 +2173,6 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/cards/schemas.md`, the box-local schema guide
 - docs/implemented-plans/todo-collection.md:680 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
-- docs/plans/doc-structure-box-guidance.md:394 (mention) — | schemas | `card-<type>.md` family plus a new `schemas.md` (box-local schema authoring, moved from the 1,007-word neste
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/cards/schemas.md`
 - user-stories/catalog/2026-08-21.md:9050 (mention) — - **Agent-added card fields survive a connector rewrite** — The mechanism is real, unconditional on the rewrite paths, a
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:9 (mention) — and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
@@ -3686,7 +3696,6 @@ References:
 - → docs/README.md (link)
 - → docs/cards.md (mention)
 - → docs/cards/format.md (mention)
-- → docs/cards/schemas.md (mention)
 - → docs/cards/validation.md (mention)
 - → docs/cards/migrations.md (mention)
 - → docs/reports/migration-rollout-2026-05-23.md (mention)
@@ -6214,7 +6223,6 @@ References:
 - → docs/box-layout.md (mention)
 - → docs/connectors.md (mention)
 - → docs/box/tricks.md (mention)
-- → docs/cards/schemas.md (mention)
 - → docs/server/operations.md (mention)
 - → docs/box-guidance.md (mention)
 
