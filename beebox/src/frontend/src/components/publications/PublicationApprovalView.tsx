@@ -15,15 +15,24 @@ interface MutationNotice {
   needsSignIn: boolean;
 }
 
+export function handlePublicationMutationError(
+  input: {
+    error: { message: string; data?: { code?: string } | null };
+    setNotice: (notice: MutationNotice) => void;
+    refreshList: () => Promise<unknown>;
+  },
+): Promise<unknown> {
+  input.setNotice({ message: input.error.message, needsSignIn: input.error.data?.code === "UNAUTHORIZED" || input.error.data?.code === "FORBIDDEN" });
+  return input.refreshList();
+}
+
 /** Fetches current server authority and wires the existing member-gated actions. */
 export function PublicationApprovalView({ pubId }: { pubId: string }) {
   const query = trpc.publications.list.useQuery();
   const utils = trpc.useUtils();
   const [mutationError, setMutationError] = useState<MutationNotice | null>(null);
   const refreshList = () => utils.publications.list.invalidate();
-  const onMutationError = (error: { message: string; data?: { code?: string } | null }) => {
-    setMutationError({ message: error.message, needsSignIn: error.data?.code === "UNAUTHORIZED" || error.data?.code === "FORBIDDEN" });
-  };
+  const onMutationError = (error: { message: string; data?: { code?: string } | null }) => handlePublicationMutationError({ error, setNotice: setMutationError, refreshList });
   const prepare = trpc.publications.prepare.useMutation({
     onSuccess: async () => { setMutationError(null); await refreshList(); },
     onError: onMutationError,
