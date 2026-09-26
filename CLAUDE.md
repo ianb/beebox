@@ -22,6 +22,8 @@ When asked to spin off work, use [launch-worktree-session](.claude/skills/launch
 
 One shared dev router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...`. Use the worktree's short name, without the branch's `worktree-` prefix. HTTP requests wake idle worktrees; WebSockets do not. **Do not restart or `panic` the shared router from a worktree without asking the boxholder.** Lifecycle details: [bin/CLAUDE.md](bin/CLAUDE.md#lifecycle-commands).
 
+Never search the whole home directory (`find ~`, `grep -r ~`, `rg ~`). It walks iCloud Drive, Photos, Music, and Calendars and raises macOS privacy prompts. Search the specific directory, or ask where a file lives.
+
 Use [browse](.claude/skills/browse/SKILL.md) and `bin/browse` for browser work; `/`-leading paths resolve in this worktree. Tracked HTML and Markdown in `dev/` are served at `/<worktree>/dev/`; the repository doc browser is at `/<worktree>/dev/docs/`. See [dev/README.md](dev/README.md).
 
 For recurring work or missed scheduled runs, use [bbx-authoring-schedules](.claude/skills/bbx-authoring-schedules/SKILL.md). `bin/schedules list` shows the catalog, last runs, and overdue work; [bin/CLAUDE.md](bin/CLAUDE.md#schedules-binschedules) covers scheduling mechanics.
