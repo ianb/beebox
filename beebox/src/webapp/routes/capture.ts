@@ -25,6 +25,7 @@ import {
 import { discardStagingSessionIfCancellable, type DiscardResult } from "../../core/capture/staging-teardown.js";
 import { StagingSessionGoneError } from "../../core/capture/staging-errors.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
+import { capturePreparationReason } from "../../core/capture/failure-notice.js";
 import { selectResumableCaptures } from "../../core/capture/pending.js";
 import {
   authorizeCaptureSessionOwner,
@@ -70,7 +71,7 @@ function scheduleAbandonmentSweep(opts: {
           wireSession: runtime.wireSession,
         }).catch(async (err: unknown) => {
           console.error(`[capture] Swept preparation of ${id} failed:`, err);
-          await markCapturePreparationFailed({ boxRoot, id, eventBus });
+          await markCapturePreparationFailed({ boxRoot, id, eventBus, reason: capturePreparationReason(err) });
         });
       },
     });
@@ -244,7 +245,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
           wireSession: runtime.wireSession,
         }).catch(async (err: unknown) => {
           console.error(`[capture] Preparation of ${session.id} failed:`, err);
-          await markCapturePreparationFailed({ boxRoot, id: session.id, eventBus });
+          await markCapturePreparationFailed({ boxRoot, id: session.id, eventBus, reason: capturePreparationReason(err) });
         });
       }
 
