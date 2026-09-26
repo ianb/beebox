@@ -707,7 +707,10 @@ then a `judge` precheck field; both are replaced by commands.
   nothing passed. `--dry-run` prints the exact request without sending.
   `--replay <file>` runs the card against a saved state file, for tuning a
   prompt against a kept example. `--echo` passes stdin through to stdout
-  on a pass, for a `pass-output` precheck that feeds an agent. Every call and its answers go to
+  on a pass, for a `pass-output` precheck that feeds an agent. The model
+  id is `typesafe/jev-1.13` as in `src/services/jev.ts:92`; `jev-latest`
+  is not served by OpenRouter (trial, 2026-09-26). Every question carries
+  `instructions`; the API rejects one without. Every call and its answers go to
   `.beebox/jev-debug.log` (state truncated), the learning record.
 - **Deferred at the tick.** `bbx tick` treats exit 75 from `runs` as the
   existing `deferred` outcome (`src/core/schedule/state.ts:45`), the way
@@ -915,8 +918,20 @@ and the boxholder ruled the judgment lives in briefings.
   they have left.
 - Schema instructions on scheduled-script (`notify:`, the pipelines) and
   on the `judgment` card carry the worked examples from Track D, plus a
-  short "writing a judgment" section: one question per thing decided,
-  criteria in plain words, instructions that name what the state is.
+  "writing a judgment" section drawn from a trial against two real boxes
+  (2026-09-26, findings in the workstream's scratch): one question per
+  thing decided; `instructions` say what the state is and name what does
+  NOT count (with loose criteria a quarterly statement scored 54% as a
+  renewal notice, with explicit negatives 12%); the state must carry the
+  body, since a subject and snippet alone put every answer near 50%, which
+  reads as uncertainty and not as no; code computes numbers and dates
+  before the call (raw due dates 79% and the wrong bill, precomputed days
+  93% and the right one); a batch yes/no finds a salient condition (90%+)
+  and a negative control sits near 10%, but a subtle condition among many
+  items muddles toward 50%, so ask a crisp gate question and let the agent
+  read; a Choice over the items is a pointer for the agent, not a
+  decision; Score is fooled by dates in marketing and needs negatives too.
+  `bbx judge` warns when a state is under a few hundred characters.
 - `docs/notifications.md` reference doc: the vocabulary, the pieces, the
   channel table, what is in git and what is transient, the ops steps, the
   verification walk.
