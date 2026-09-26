@@ -194,7 +194,7 @@ web-push skipped: no-audience
 telegram skipped: no-audience
 
 await failing(box)
-=> notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (subscribe a device to push or set healthAlerts.telegramChat): "Field trip form due Friday"
+=> notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (open the paired iPhone app, subscribe a browser to push, or set healthAlerts.telegramChat): "Field trip form due Friday"
 ```
 
 ```ts cleanup

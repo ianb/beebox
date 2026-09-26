@@ -49,9 +49,17 @@ start until the keys exist.
 - **Generate + install prod VAPID keys.** `npx web-push generate-vapid-keys`, add
   `BBX_VAPID_PUBLIC_KEY` / `BBX_VAPID_PRIVATE_KEY` (optional `BBX_VAPID_SUBJECT`) to
   `/home/beebox/.env`, then `systemctl restart bbx-hub beebox-scheduler`.
-  Documented in `beebox/deploy/README.md` → "Web Push (VAPID) keys". Until
+  Documented in `beebox/docs/server/configuration.md` → "Web Push (VAPID) keys". Until
   then the Admin "Enable notifications" button reports "Push is not configured on
   the server" and nothing sends. (Ops task, not a code change.)
+- **The keys never reach a hub-spawned box server.** (Found 2026-09-26 in the
+  notifications worktree.) Prod runs `bbx engine hub`, which spawns each box's
+  `bbx serve` with the fail-closed allowlist in `beebox/src/hub/child-env.ts`, and
+  `BBX_VAPID_*` is not on it. So even with the keys in `.env`, a box server's
+  `push.vapidPublicKey` returns null and its server-side sends are `unconfigured`;
+  only the scheduler (which reads `.env` directly) could send. Adding the private
+  key to every child's env is a custody decision for the boxholder (the APNs key is
+  passed by path, `BBX_APNS_KEY_PATH`, which is on the allowlist).
 
 ## Verification not yet done
 

@@ -14,7 +14,7 @@ import type { Audience } from "./channels.js";
 import { notifyFakeMode } from "./fake-mode.js";
 
 /** The synthetic phone fake mode sends to when no device is registered. */
-export const SYNTHETIC_DEVICE: DevicePushRegistration = {
+const SYNTHETIC_DEVICE: DevicePushRegistration = {
   deviceId: "synthetic",
   label: "synthetic phone",
   token: "fake-synthetic",

@@ -60,7 +60,7 @@ function noChannelCheck(recent: LoggedNotification[]): NotificationHealthCheck {
     message: stranded.length === 0
       ? "Every notification in the last 24 hours had a channel to reach the boxholder"
       : `${stranded.length} notification(s) in the last 24 hours had no channel to reach the boxholder ` +
-        `(subscribe a device to push or set healthAlerts.telegramChat): ${listTitles(stranded)}`,
+        `(open the paired iPhone app, subscribe a browser to push, or set healthAlerts.telegramChat): ${listTitles(stranded)}`,
     severity: "warning",
   };
 }
