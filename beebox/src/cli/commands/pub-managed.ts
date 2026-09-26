@@ -23,22 +23,29 @@ export function publicationDestinationUrl(args: { hostname: string | null; pubId
   return buildPublicationUrl({ workersHostname: args.hostname, pubId: args.pubId, scope: args.scope });
 }
 
-export function publicationApprovalUrl(serverUrl: string | undefined, boxName: string | undefined): string | null {
-  if (serverUrl === undefined || boxName === undefined || serverUrl.length === 0 || boxName.length === 0) return null;
+export function publicationApprovalUrl(args: { serverUrl: string | undefined; boxName?: string; approvalPath?: string }): string | null {
+  const { serverUrl, boxName, approvalPath } = args;
+  if (serverUrl === undefined || serverUrl.length === 0 || (approvalPath === undefined && (boxName === undefined || boxName.length === 0))) return null;
   try {
     const base = new URL(serverUrl);
     if (base.protocol !== "https:" && base.protocol !== "http:") return null;
-    return new URL(`/${encodeURIComponent(boxName)}/publications`, base.origin).toString();
+    const target = approvalPath ?? `/${encodeURIComponent(boxName ?? "")}/publications`;
+    if (!target.startsWith("/") || target.startsWith("//")) return null;
+    return new URL(target, base.origin).toString();
   } catch (error) {
     void error;
     return null;
   }
 }
 
-function approvalLinkLines(): string[] {
-  const url = publicationApprovalUrl(process.env.BBX_SERVER_URL, process.env.BBX_BOX_NAME);
+function approvalLinkLines(approvalPath?: string): string[] {
+  const url = publicationApprovalUrl({
+    serverUrl: process.env.BBX_SERVER_URL,
+    ...(process.env.BBX_BOX_NAME === undefined ? {} : { boxName: process.env.BBX_BOX_NAME }),
+    ...(approvalPath === undefined ? {} : { approvalPath }),
+  });
   return url === null
-    ? ["  approval: open this box's Publications page from the app menu."]
+    ? [approvalPath === undefined ? "  approval: open this box's Publications page from the app menu." : `  approval: open the publication card ${approvalPath} in this box's app.`]
     : [`  approval: ${url}${new URL(url).hostname === "localhost" ? " (local app URL)" : ""}`];
 }
 
@@ -120,7 +127,7 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   if (legacyAlias !== null) lines.push(`  legacy workers.dev URL: ${legacyAlias}`);
   if (candidateUrl !== null && candidateUrl !== servingUrl) lines.push(`  candidate URL (awaiting member approval): ${candidateUrl}`);
   else if (candidateUrl !== null) lines.push(`  publication URL: ${candidateUrl}`);
-  lines.push(...approvalLinkLines());
+  lines.push(...approvalLinkLines(candidate.approvalUrl));
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {
     lines.push("  serving state is unknown; check the Publications page before describing it as live or disabled.");

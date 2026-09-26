@@ -10,6 +10,8 @@ export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
 export { BrowserTaskSchema } from "./browser-task.js";
 export { FeedbackSchema } from "./feedback.js";
+export { PublicationSchema, createPublicationCardTemplate } from "./publication.js";
+export type { PublicationFields } from "./publication.js";
 export { ImageSchema } from "./image.js";
 export { AudioSchema } from "./audio.js";
 export { FileSchema } from "./file.js";

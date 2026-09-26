@@ -210,29 +210,19 @@ async function shouldAutoRefreshManifest(args: { latest: SiteEdgeManifest | null
   return sharedMarkerMatchesScope(marker, { schemaVersion: 1, pubId: args.pubId, boxHostHandle: host.hostHandle, hostname: host.hostname, path: host.path, manifestHostHandle: args.scope.hostHandle });
 }
 
-export interface ManagedPublicationCandidate {
-  pubId: string;
-  name: string;
-  title: string;
-  revision: string;
-  releaseId: string;
-  requestedScope: ReturnType<typeof requestedScope>;
-  preparedAt: string;
-  preview: PreparedPublication["preview"];
-  scan: ReturnType<typeof scanSummary>;
-}
-
 export async function prepareManagedPublication(args: {
   boxRoot: string;
   boxSlug: string;
   name: string;
   ownerEmail: string | null;
-}, injectedRuntime?: ManagedPublicationRuntime): Promise<ManagedPublicationCandidate> {
+  ensureReferenceCard?: (identity: { boxRoot: string; pubId: string; title: string }) => Promise<{ cardPath: string; created: boolean }>;
+}, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
   const result = await runtime.prepare({ boxRoot: args.boxRoot, name: args.name }, { ownerEmail: args.ownerEmail });
   if (!result.ok) throw publicationError(result.message);
   const prepared = result.prepared;
   try {
+    await ensurePreparedReferenceCard(args.ensureReferenceCard, { boxRoot: args.boxRoot, pubId: prepared.pubId, title: prepared.definition.title });
     const binding = await reservePublicationBinding({ prepared, args, runtime });
     const connection = await runtime.resolveCredential({ name: prepared.definition.connection, boxSlug: args.boxSlug, purpose: "publish-prepare", at: runtime.now(args.boxRoot).toISOString() });
     if (connection.accountId !== binding.accountId) throw publicationError("The publication binding is pinned to another Cloudflare account.");
@@ -241,11 +231,12 @@ export async function prepareManagedPublication(args: {
     const provisioning = runtime.createProvisioning({ accountId: connection.accountId, bearer });
     await provisioning.createBucket(binding.bucketName);
     const boxHost = await runtime.getBoxHost(args.boxSlug);
-    const sameConnectionHost = boxHost !== null && boxHost.status === "attached" && boxHost.connectionName === binding.connectionName;
-    const alreadyUsesSharedWorker = sameConnectionHost && boxHost.workerName === binding.workerName && boxHost.hostHandle === binding.hostHandle && boxHost.bucketName === binding.bucketName;
+    const attachedHost = attachedHostForConnection(boxHost, binding.connectionName);
+    const sameConnectionHost = attachedHost !== null;
+    const alreadyUsesSharedWorker = attachedHost !== null && attachedHost.workerName === binding.workerName && attachedHost.hostHandle === binding.hostHandle && attachedHost.bucketName === binding.bucketName;
     const unscopedLegacyPublic = prepared.definition.tier === "public" && prepared.definition.slug === undefined && !alreadyUsesSharedWorker;
     const useSharedHost = sameConnectionHost && !unscopedLegacyPublic;
-    const sharedHost = useSharedHost ? boxHost : null;
+    const sharedHost = useSharedHost ? attachedHost : null;
     if (!useSharedHost && await provisioning.getAccountSubdomain() === null) throw publicationError("This Cloudflare account has no workers.dev subdomain configured.");
     if (useSharedHost && prepared.definition.tier === "public") sharedPublicPath(prepared.definition.slug);
     const files = Object.fromEntries(prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]));
@@ -282,6 +273,20 @@ export async function prepareManagedPublication(args: {
   } finally {
     await prepared.cleanup();
   }
+}
+
+function attachedHostForConnection(
+  boxHost: Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>,
+  connectionName: string,
+): NonNullable<Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>> | null {
+  return boxHost !== null && boxHost.status === "attached" && boxHost.connectionName === connectionName ? boxHost : null;
+}
+
+async function ensurePreparedReferenceCard(
+  ensureReferenceCard: Parameters<typeof prepareManagedPublication>[0]["ensureReferenceCard"],
+  identity: { boxRoot: string; pubId: string; title: string },
+): Promise<{ cardPath: string; created: boolean } | undefined> {
+  return ensureReferenceCard?.(identity);
 }
 
 async function reservePublicationBinding(args: {

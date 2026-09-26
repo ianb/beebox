@@ -19,6 +19,9 @@ const candidate: Candidate = {
   pubId: "abcdefghijklmnopqrstuvwxyz",
   name: "notes",
   title: "Notes",
+  cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
+  approvalUrl: "/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
+  commitWarning: null,
   revision: "b".repeat(64),
   releaseId,
   requestedScope: { kind: "site", hostHandle: "notes-host", tier: "public", expiresAt: null, slug: "notes" },
@@ -31,6 +34,8 @@ function site(overrides: Partial<Site> = {}): Site {
     pubId: candidate.pubId,
     name: "notes",
     title: "Notes",
+    cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
+    hasCard: true,
     hostname: "notes.example.workers.dev",
     requested: { tier: "public", slug: "notes" },
     approved: { tier: "public", status: "live", slug: "notes", expiresAt: null },
@@ -125,9 +130,12 @@ publicationSiteLines([site({
 })])[0].includes("legacy workers.dev URL")
 => false
 
-publicationApprovalUrl("https://boxes.example", "family")
+publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family" })
 => https://boxes.example/family/publications
 
-publicationApprovalUrl(undefined, "family")
+publicationApprovalUrl({ serverUrl: "https://boxes.example", boxName: "family", approvalPath: candidate.approvalUrl })
+=> https://boxes.example/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card
+
+publicationApprovalUrl({ serverUrl: undefined, boxName: "family" })
 => null
 ```

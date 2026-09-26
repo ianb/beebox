@@ -144,6 +144,51 @@ JSON.stringify({ stale, disabled: disabled.status, enabled: enabled.status })
 => {"stale":true,"disabled":"disabled","enabled":"live"}
 ```
 
+The explicit card ensure action is member-only, idempotent, and returns the
+canonical card route. Listing detects the card without creating it.
+
+```ts continue
+const beforeCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
+const firstCard = await publicationCaller("user").publications.ensureCard({ pubId });
+const secondCard = await publicationCaller("user").publications.ensureCard({ pubId });
+const agentCard = await Promise.resolve()
+  .then(() => publicationCaller("agent").publications.ensureCard({ pubId }))
+  .then(() => "allowed", (error) => error.code);
+const afterCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
+JSON.stringify({
+  before: beforeCard.sites[0]?.hasCard,
+  created: firstCard.created,
+  repeated: secondCard.created,
+  path: firstCard.cardPath,
+  url: firstCard.approvalUrl,
+  listed: afterCard.sites[0]?.hasCard,
+  agentCard,
+})
+=> {"before":false,"created":true,"repeated":false,"path":"_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","url":"/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","listed":true,"agentCard":"FORBIDDEN"}
+```
+
+A mismatched reference card fails before binding reservation or remote writes.
+
+```ts continue
+const collisionCardPath = `_content/publications/${pubId}.publication.card`;
+await writeFile(box.path(collisionCardPath), "---\ntitle: Wrong publication\npubId: bcdefghijklmnopqrstuvwxyz2\n---\n");
+let bindingReserved = false;
+const collisionRuntime = {
+  ...runtime,
+  getBinding: async () => null,
+  reserveBinding: async (input) => {
+    bindingReserved = true;
+    return { ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt };
+  },
+};
+const putsBeforeCollision = store.puts.length;
+const collisionError = await Promise.resolve()
+  .then(() => publicationCaller("user", true, "box-a", collisionRuntime).publications.prepare({ name: "home" }))
+  .then(() => "prepared", (error) => error.message);
+JSON.stringify({ actionable: collisionError.includes(collisionCardPath) && collisionError.includes("Move or rename"), bindingReserved, remoteWrites: store.puts.length - putsBeforeCollision })
+=> {"actionable":true,"bindingReserved":false,"remoteWrites":0}
+```
+
 Agent and open contexts cannot change serving state; a signed-in member can.
 
 ```ts continue
