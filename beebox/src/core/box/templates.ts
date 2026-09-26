@@ -75,16 +75,17 @@ Add conventions this box's views share (layout, shared components, which card
 types have views) here.
 `;
 
+/**
+ * The publications guide. Every publishing rule (folder layout, notes scopes,
+ * what stays out of a release, member approval) lives in the package doc
+ * `publishing.md` (`docs/box/publishing.md`); this box's own lessons live in
+ * the box-owned `NOTES.md` beside this guide.
+ */
 export const PUBLICATIONS_CLAUDE_MD = `# Publication Sites
 
 Before creating, preparing, or changing a site, read \`${BOX_PACKAGE_DOCS}/publishing.md\`.
 
-Independent publication sources live in child folders here. Read the shared
-\`NOTES.md\` and apply only the \`All sites\`, matching \`Site: <name>\`, and
-matching \`Path: <site>/<relative-path>\` notes. Keep source/build code and
-private notes out of published output. A prepared site does not become live
-until a signed-in member of this box enables it in the app; audience or
-destination changes need fresh member approval.
+This box's authoring notes for its sites are in \`NOTES.md\` in this directory.
 `;
 
 export const PUBLICATIONS_NOTES = `# Publication Notes

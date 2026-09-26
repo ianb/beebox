@@ -38,9 +38,9 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "publications-guide-v1": {
-    current: "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
+    current: "05eb76019f668aa2d613aa248faf4687d51ce9e56cd060787a9d35c5a90de372",
     superseded: [
-
+      "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
     ],
   },
   "schemas-guide-v2": {
