@@ -1,4 +1,8 @@
-# Prompt Audits
+# Prompt lenses
+
+What to look for when reviewing prompts: a menu of lenses, each useful at a different time.
+
+## What it is
 
 Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each useful at different times. [prompt-surface-review.md](review.md) is the entry point for actually running a review pass (rendering assembled context stacks, review order); this doc is its lens catalog.
 
@@ -14,15 +18,23 @@ Caveat: "explain the why" is not a license for philosophical preamble. One claus
 
 ## Compactness
 
-Long prompts dilute attention, cost tokens, and hide contradictions. Compactness audit:
+Long prompts dilute attention, cost tokens, and hide contradictions. Always-loaded words are the scarcest resource. A 39-line list where every line says the same thing (the old CARD_TYPES) is "correct" and still a bug. Cut what the agent can infer or load on demand. Compactness audit:
 
 - **Redundancy** — same instruction repeated in different words across sections. Pick one phrasing, delete the rest.
 - **Dead clauses** — "please be helpful," "use your best judgment," "respond appropriately." These do nothing; the model already does this by default. Cut.
 - **Negative space** — long lists of "don't do X" where the underlying principle would cover all of them. Replace with the principle.
-- **Examples that don't earn their length** — an example justifies its tokens only if it disambiguates something the rule alone leaves ambiguous. Generic examples ("for instance, if the user asks a question, answer it") are filler.
+- **Examples that don't earn their length** — an example justifies its tokens only if it disambiguates something the rule alone leaves ambiguous. Generic examples ("for instance, if the user asks a question, answer it") are filler. Every example shows the mechanics AND models good behavior (real fields, honest values, the judgment call inline). No padding examples.
 - **Stale scaffolding** — instructions written for an earlier version of the feature, no longer applicable but never removed.
 
 Rule of thumb: if you can cut 30% without changing behavior in eval, the prompt was bloated. Try it.
+
+## Corrective framing where the prior is wrong
+
+"Cards are not XML; anything that says so is stale" inoculates; a neutral description doesn't. State the wrong default and correct it.
+
+## No archaeology, no dated status claims
+
+"now", "legacy", "replaced the old…", "not wired into X yet" address agents with stale priors (none exist) and become lies when the system moves. Phrase timelessly; describe behavior, not project status.
 
 ## Hard rules vs. behavioral defaults
 
@@ -46,7 +58,10 @@ Generic warnings ("avoid hallucination," "be accurate") are too vague to act on.
 
 Stock LLM phrases ("Great question!", "Let me unpack that," "That's a real tension") often come from prompt language that invites them. If the prompt says "be thoughtful and engaging," expect thoughtful-and-engaging boilerplate. Prompts that model the desired tone in their *own* writing get closer to that tone in output. See [tone-design.md](../../../.claude/memory/tone-design.md) for the broader problem.
 
-## Cache freshness, surfaced conditionally
+## Cache freshness, surfaced conditionally (a data-design lens)
+
+A lens on the data a prompt reads rather than on prompt text: a convention for
+caches, applied wherever a cache is designed.
 
 Any file that's a cache of an external source of truth (Gmail/Calendar/Drive snapshots, web fetches, synthesized briefings) should carry freshness metadata, but only where staleness would cause confidently-wrong output. Recipe categories: don't bother. Calendar snapshots: definitely.
 
@@ -200,3 +215,5 @@ Audit each rule surface: is there a mechanism for the agent to flag when rules c
 ## Conflicts and precedence
 
 When two instructions could conflict (e.g., "be concise" + "explain your reasoning"), is the precedence stated? If not, the model picks arbitrarily per turn. Either resolve the conflict or state which wins when.
+
+Two statements about the same signal must agree ("absence means all healthy" vs "don't treat absence as all-clear" survived in one bullet). Read each section asking: does any sentence undercut another?

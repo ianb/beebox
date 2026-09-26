@@ -1,4 +1,8 @@
-# Reviewing the prompt surface
+# Prompt surface review
+
+Rendering what an agent actually reads, the layering model, the structural rules, and the review pass in order.
+
+## What it is
 
 The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Read this when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. [prompt-audits.md](lenses.md) is the companion lens catalog for the hunt step. (For routing a single new instruction to the right box surface, use the `bbx-context` skill.)
 
@@ -35,14 +39,13 @@ Every agent's context is a stack; each layer has a loading class:
 
 - **One home per concept.** ABOUT_CARDS/PROVENANCE own card concepts; a schema's `instructions` own that type's fields; a skill owns its domain. Everything else *points*, via the `SECTION` registry (`agent-guide/sections.ts`) so references can't drift from headings. Re-teaching is the disease; per-section drift is how prompts rot.
 - **Deliberate duplication only.** The Laws may restate what a mechanics section carries — high-stakes, high-drift rules earn it. Anything else stated twice is a bug: fix at the canonical home, make the other site defer.
-- **Judge cost-per-bit, not correctness alone.** Always-loaded words are the scarcest resource. A 39-line list where every line says the same thing (the old CARD_TYPES) is "correct" and still a bug. Cut what the agent can infer or load on demand.
-- **Corrective framing where the model's prior is wrong.** "Cards are not XML; anything that says so is stale" inoculates; a neutral description doesn't. State the wrong default and correct it.
-- **No archaeology, no dated status claims.** "now", "legacy", "replaced the old…", "not wired into X yet" address agents with stale priors (none exist) and become lies when the system moves. Phrase timelessly; describe behavior, not project status.
-- **Check for self-contradiction.** Two statements about the same signal must agree ("absence means all healthy" vs "don't treat absence as all-clear" survived in one bullet). Read each section asking: does any sentence undercut another?
-- **Examples do double duty.** Every example shows the mechanics AND models good behavior (real fields, honest values, the judgment call inline). No padding examples.
 - **Role before mechanics.** Lead surfaces open with identity ("a personal workspace where the filesystem is state, Git is history, and you do the work") so every rule after it has a why.
 - **Verify claims against code.** A prompt asserting a trailer, flag, or field that code doesn't emit is worse than silence. Audit prompt claims against the implementation; add `src/dev/knowledge-audits.yaml` entries for conventions agents must retain (`pnpm knowledge-audit`).
 - **Never hardcode personal values** — resolve real per-box values (timezone, names) at `bbx init` generation time instead of baking a sample into shared prose.
+
+What a review hunts for (cost per bit, corrective framing, dated language,
+self-contradiction, examples that earn their place) is in the
+[lens catalog](lenses.md).
 
 ## Review pass, in order
 
