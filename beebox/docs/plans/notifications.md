@@ -869,7 +869,7 @@ then a `judge` precheck field; both are replaced by commands.
   runs: >
     bbx changes --match 'drive/Quotes/**' --kind any --cat --all --or-skip
     | bbx judge _config/judgments/contractor-quote.judgment.card --min quote=0.8 --or-skip
-    && bbx notify --loudness loud --target card:drive/Quotes "The contractor's quote is in"
+    && bbx notify --loudness loud --target chat:new "The contractor's quote is in"
   ```
 
   `bbx notify --targets-from-stdin` takes one target path per line and
@@ -922,7 +922,10 @@ reach the person only when the agent marks them.
   sibling `parseCalloutTags`. One intent per turn: body is the first
   callout, loudness the highest any callout asked for, else `dot`, target
   `chat:<sessionId>`, tag the session id so a later turn replaces rather
-  than stacks. Presence nonzero sends nothing: the callout is on screen. This is the "voice" for
+  than stacks. The intent then goes through `channelsToTry` like any other:
+  a `quiet` or `loud` callout is not pushed while a session is present (it
+  is on screen, and the banner shows it), a `dot` still badges the phone.
+  This is the "voice" for
   `issues/features/2026-08-09-agent-outcomes-need-a-voice.md` and
   `2026-08-22-file-asks-agent-flagged-attention.md`.
 - Question sweep (`src/core/question-alert.ts:104`): `loudness: "dot"`. The
