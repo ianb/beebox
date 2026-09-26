@@ -210,15 +210,21 @@ owner — nor correctly fail to be, when a non-owner paired it.
 
 ### 3.1 The URL the app loads
 
-- **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>][&mobileToken=<token>]`.
+- **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>]`.
 - **Contract param:** `nativeComposer=1`. Mirrored: native
   `PairedBox.chatURL` builds `nativeComposer=1` (with an in-code "keep in sync" comment); web
   `ChatPage` reads it and the router schema declares it.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native URL build | `ios-app/BeeBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/BeeBox/Views/ChatWebView.swift` — `authenticatedChatURL` (appends `&mobileToken=`) |
+  | native URL build | `ios-app/BeeBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/BeeBox/Views/ChatWebView.swift` — `authenticatedRequest(for:page:)` (sets `Authorization`; the URL carries no credential, §2); `PairedBox.url(forBoxPath:)` for notification-tap paths |
   | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
+- **Notification-tap navigation.** A tapped notification (§5.10) loads a box-relative path in the
+  same chat webview: `ChatWebView.authenticatedRequest(for:page:)` with `.path(<path>)`, built by
+  `PairedBox.url(forBoxPath:)`. The chat page keeps `nativeComposer=1` there too (inserted first,
+  as `chatURL` does); other pages (`browse/…`, `views/…`, the dashboard) load as the box renders
+  them. The request authenticates by header like the initial load and carries no credential in
+  the URL.
 - **Drift:** SILENT (wrong/missing param → web composer not suppressed, bridges never enabled).
 
 ### 3.2 What `nativeComposer` changes web-side
@@ -1120,6 +1126,15 @@ See §1.3 (full request/response/errors).
 - **When:** on every launch after notification permission is granted. Tokens change on reinstall
   and restore with no signal, so a single registration goes stale. The latest post replaces the
   device's earlier registration, and the same token on any other device record is cleared.
+- **iOS posting rule.** The app registers with APNs on every launch and posts to each paired box
+  that has a device credential, once notifications are allowed. It skips a box whose last accepted
+  post (2xx) had the same token, environment, and device credential and is less than 24 hours old,
+  so an ordinary relaunch posts nothing; a new token, a newly paired or re-paired box, or a day-old
+  registration posts again. The day bound is how a registration the box pruned (below) comes back.
+  A failed post is not recorded and is retried at the next launch, foreground, or pairing change.
+  Permission `[.alert, .badge, .sound]` is requested when the first box is paired, or at launch
+  when a box is paired and the user has not decided. A denial shows one line in the paired-box
+  shell ("Notifications off", with a Settings button), and nothing is posted while it lasts.
 - **Response:** `204`, no body.
 - **Server record:** `MobileDevice.apns = { token, environment, registeredAt }`. When APNs answers a
   send with 410 Unregistered or 400 `BadDeviceToken`, the server deletes that registration and logs
@@ -1131,12 +1146,15 @@ See §1.3 (full request/response/errors).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native caller | Track C (not yet built) |
+  | native caller | `ios-app/BeeBox/Services/PushRegistrar.swift` — `PushRegistrar.syncRegistrations()`, `PushTokenRequest.urlRequest(box:token:environment:)`, `PushEnvironment` (`sandbox` under `DEBUG`), `PushRegistrationLedger` (the posting rule above) |
+  | native token source | `ios-app/BeeBox/BeeBoxAppDelegate.swift` — `didRegisterForRemoteNotificationsWithDeviceToken` (`PushToken.hex`, lowercase); DEBUG launch argument `-BBXFakePushToken <hex>` substitutes a token on the simulator |
+  | native entitlement | `ios-app/BeeBox/BeeBox.entitlements` — `aps-environment` (`development`; export signing rewrites it to `production`) |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/push-token`, `PushTokenBody` |
   | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
 - **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
-  `test/mobile-contract/fixtures.doctest.md` and posted at the route by
-  `test/webapp/routes/pairing-push-token.doctest.md`.
+  `test/mobile-contract/fixtures.doctest.md`, posted at the route by
+  `test/webapp/routes/pairing-push-token.doctest.md`, and matched against the request iOS builds by
+  `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
   Admin Notifications section shows (no device listed under Phones).
 
@@ -1158,13 +1176,27 @@ See §1.3 (full request/response/errors).
   `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it renders to.
   `notificationId` is the log id; `chat:new` carries it so the chat page can show the
   notification. `loudness` is absent for `dot`.
+- **What iOS does with them.** In the foreground (`willPresent`), `loud` presents banner, sound,
+  and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
+  webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
+  box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
+  `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
+  nothing new and logs a warning. On every foreground the app clears the badge and removes
+  delivered `dot` notifications.
+- **Box identity.** The payload does not name the box. A phone paired to one box opens the target
+  there; a phone paired to several opens it on the selected box, which can be the wrong one (§9).
 - **Anchors:**
   | side | anchor |
   |---|---|
   | box builder | `src/core/notification/apns-payload.ts` — `buildApnsRequest` |
   | box sender | `src/core/notification/apns-channel.ts` — `sendApns`; `src/services/apns.ts` |
-  | native reader | Track C (not yet built) |
-- **Fixtures:** `test/mobile-contract/fixtures/apns-payload/`, run through `buildApnsRequest`.
+  | native reader | `ios-app/BeeBox/Services/NotificationCenterDelegate.swift` — `NotificationCenterDelegate` (`willPresent`, `didReceive`, `clearOnForeground`), `NotificationTapInbox` |
+  | native keys + target mirror | `ios-app/BeeBox/Models/NotificationTarget.swift` — `NotificationLoudness(userInfo:)`, `NotificationTap(userInfo:)`, `NotificationTarget` (mirrors `src/core/notification/target.ts`) |
+  | native navigation | `ios-app/BeeBox/Views/RootView.swift` — `openNotificationTap`; `ios-app/BeeBox/Views/ChatWebView.swift` — `Page.path`, `NavigationRequest` |
+- **Fixtures:** `test/mobile-contract/fixtures/apns-payload/`, run through `buildApnsRequest` by
+  the box and read through `NotificationLoudness` / `NotificationTap` by
+  `ios-app/BeeBoxTests/PushNotificationTests.swift`. The same test runs the cases of
+  `test/core/notification/target.doctest.md` against the Swift target mirror.
 - **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
 
 ---
@@ -1228,8 +1260,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `batch`? then `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
-| P4 | `POST /api/pairing/push-token` | native→box | req `{token,environment:sandbox\|production}`; res `204` | Track C | `routes/pairing.ts` · `PushTokenBody`; `core/mobile/pairing.ts` · `registerDevicePush` | LOUD server / SILENT (no push) |
-| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | Track C | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
+| P4 | `POST /api/pairing/push-token` | native→box | req `{token,environment:sandbox\|production}`; res `204` | `Services/PushRegistrar.swift` · `PushRegistrar.syncRegistrations`, `PushTokenRequest`; `BeeBoxAppDelegate.swift` · `didRegisterForRemoteNotificationsWithDeviceToken` | `routes/pairing.ts` · `PushTokenBody`; `core/mobile/pairing.ts` · `registerDevicePush` | LOUD server / SILENT (no push) |
+| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | `Services/NotificationCenterDelegate.swift` · `NotificationCenterDelegate`; `Models/NotificationTarget.swift` · `NotificationTarget`, `NotificationLoudness` | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
@@ -1300,9 +1332,17 @@ without the other is a contract break.
   offset datetime — `Services/LogForwarder.swift` ↔
   `trpc/routers/debugLog.ts` · `submit`.
 - **APNs registration** `{token,environment}`, `environment` closed to `sandbox|production` —
-  Track C ↔ `routes/pairing.ts` · `PushTokenBody`. **APNs payload keys** `target`, `loudness`
-  (`quiet|loud`, absent for `dot`), `notificationId` beside `aps` — Track C ↔
-  `core/notification/apns-payload.ts` · `buildApnsRequest`.
+  `Services/PushRegistrar.swift` · `PushTokenRequest`, `PushEnvironment` ↔ `routes/pairing.ts` ·
+  `PushTokenBody`. **APNs payload keys** `target`, `loudness` (`quiet|loud`, absent for `dot`),
+  `notificationId` beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
+  `NotificationTap` ↔ `core/notification/apns-payload.ts` · `buildApnsRequest`.
+- **Notification target rules** — `Models/NotificationTarget.swift` · `NotificationTarget` ↔
+  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the six schemes, the 1000-character
+  limit, the chat-session and admin-section character rules, `encodeURIComponent`, and the admin
+  card path `_config/interface/admin.card` (`shared/system-card-paths.ts` · `SYSTEM_CARD_PATHS`).
+  One deliberate difference: Swift fences a card path to a first segment starting with `_`, where
+  the box checks the exact underscore-area list; the box canonicalizes the target before sending
+  and the browse route fences it again.
 - **Speech command V1** `{version,action:"stop"}` — `Models/NativeComposerContract.swift` ·
   `NativeSpeechCommand` ↔ `native-speech-command.ts` · `nativeSpeechCommandFromDetail`.
 - **Bridge globals** `beeboxNativeReceive` / `beeboxNativeQueue` /
@@ -1403,6 +1443,9 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
   `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
   remaining piece.
+- **APNs payload names no box (OPEN).** §5.10's payload carries a target but not the box, so a
+  phone paired to several boxes opens a tap on its selected box. Adding the box slug to the payload
+  (and matching it against `baseURL`'s last path component) closes this.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
@@ -1492,6 +1535,7 @@ beebox/src/webapp/routes/bulk-upload.ts
 beebox/src/core/capture/staging-stream.ts
 beebox/src/webapp/trpc/routers/debugLog.ts
 beebox/src/core/notification/apns-payload.ts
+beebox/src/core/notification/target.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/BeeBox/Views/ChatWebView.swift
@@ -1505,6 +1549,11 @@ ios-app/BeeBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/BeeBox/Models/PairedBox.swift
 ios-app/BeeBox/Storage/PairedBoxStore.swift
 ios-app/BeeBox/Services/LogForwarder.swift
+ios-app/BeeBox/Services/PushRegistrar.swift
+ios-app/BeeBox/Services/NotificationCenterDelegate.swift
+ios-app/BeeBox/Models/NotificationTarget.swift
+ios-app/BeeBox/BeeBoxAppDelegate.swift
+ios-app/BeeBox/BeeBox.entitlements
 
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 beebox/test/mobile-contract/

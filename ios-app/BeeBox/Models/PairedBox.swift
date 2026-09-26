@@ -55,6 +55,24 @@ struct PairedBox: Codable, Equatable, Identifiable {
         return components?.url ?? baseURL
     }
 
+    /// A box-relative path (a notification target's deep link, contract §5.10)
+    /// as a URL under `baseURL`. The chat page gets `nativeComposer=1`, as
+    /// `chatURL` does, so the web composer stays hidden under the native one.
+    func url(forBoxPath path: String) -> URL? {
+        let base = baseURL.absoluteString.hasSuffix("/")
+            ? String(baseURL.absoluteString.dropLast())
+            : baseURL.absoluteString
+        guard var components = URLComponents(string: "\(base)/\(path)") else {
+            return nil
+        }
+        if path == "chat" || path.hasPrefix("chat?") {
+            // Keep this query parameter in sync with ChatPage's nativeComposer search option.
+            let rest = components.percentEncodedQuery.map { "&\($0)" } ?? ""
+            components.percentEncodedQuery = "nativeComposer=1\(rest)"
+        }
+        return components.url
+    }
+
     var apiURL: URL {
         baseURL.appendingPathComponent("api")
     }

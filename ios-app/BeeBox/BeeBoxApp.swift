@@ -12,6 +12,11 @@ struct BeeBoxApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(boxLockManager)
+                .task {
+                    // The registrar observes pairings from here on; the app
+                    // delegate supplies the APNs token (contract §5.9).
+                    PushRegistrar.shared.attach(store: store)
+                }
                 .onReceive(store.$boxes) { boxes in
                     let runtime = CaptureUploadRuntime.shared
                     runtime.updateBoxes(boxes)

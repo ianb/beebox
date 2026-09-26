@@ -90,6 +90,10 @@
 		E2A000062D7B000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */; };
 		E2A000072D7B000100000001 /* ShareExtensionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000122D7B000100000001 /* ShareExtensionAPI.swift */; };
 		E2A000082D7B000100000001 /* ShareExtensionAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */; };
+		F1A000002E00000100000001 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E00000100000001 /* PushRegistrar.swift */; };
+		F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000032E00000100000001 /* NotificationCenterDelegate.swift */; };
+		F1A000042E00000100000001 /* NotificationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000052E00000100000001 /* NotificationTarget.swift */; };
+		F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A000072E00000100000001 /* PushNotificationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -209,6 +213,10 @@
 		E2A000142D7B000100000001 /* BeeBoxShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBoxShareExtension.entitlements; sourceTree = "<group>"; };
 		E2A000152D7B000100000001 /* BeeBox.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeBox.entitlements; sourceTree = "<group>"; };
 		E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionAPITests.swift; sourceTree = "<group>"; };
+		F1A000012E00000100000001 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
+		F1A000032E00000100000001 /* NotificationCenterDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterDelegate.swift; sourceTree = "<group>"; };
+		F1A000052E00000100000001 /* NotificationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTarget.swift; sourceTree = "<group>"; };
+		F1A000072E00000100000001 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -277,6 +285,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
+				F1A000052E00000100000001 /* NotificationTarget.swift */,
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
@@ -336,6 +345,8 @@
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 				5A1000912C3C000100000001 /* BulkUploadAPI.swift */,
 				E1A000012C3C000100000001 /* BoxRequest.swift */,
+				F1A000032E00000100000001 /* NotificationCenterDelegate.swift */,
+				F1A000012E00000100000001 /* PushRegistrar.swift */,
 				E1A000032C3C000100000001 /* BoxLog.swift */,
 				E1A000052C3C000100000001 /* LogForwarder.swift */,
 				5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */,
@@ -359,6 +370,7 @@
 				5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
+				F1A000072E00000100000001 /* PushNotificationTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
@@ -556,6 +568,7 @@
 			files = (
 				5A1000012C3C000100000001 /* BeeBoxApp.swift in Sources */,
 				5A1000022C3C000100000001 /* PairedBox.swift in Sources */,
+				F1A000042E00000100000001 /* NotificationTarget.swift in Sources */,
 				5A1000032C3C000100000001 /* PairedBoxStore.swift in Sources */,
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
@@ -594,6 +607,8 @@
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
 				5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */,
 				E1A000002C3C000100000001 /* BoxRequest.swift in Sources */,
+				F1A000022E00000100000001 /* NotificationCenterDelegate.swift in Sources */,
+				F1A000002E00000100000001 /* PushRegistrar.swift in Sources */,
 				E1A000022C3C000100000001 /* BoxLog.swift in Sources */,
 				E1A000042C3C000100000001 /* LogForwarder.swift in Sources */,
 				5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */,
@@ -616,6 +631,7 @@
 				5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */,
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
+				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
