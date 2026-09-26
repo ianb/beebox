@@ -32,21 +32,20 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.281`, Codex `0.156.1` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.282`, Codex `0.156.1` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.283` (SDK), `2.1.283` (Claude Code), `0.157.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.283` (SDK), `2.1.283` (Claude Code), `0.157.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved this turn — Agent SDK to
-  `0.3.281` and Codex to `0.156.1` (taking `0.156.0` with it). Next: `0.3.282`
-  (settles 2026-09-26T15:53Z), then `0.3.283`, **whose changelog did not exist
-  at review time** — its entry says what to re-read. Codex `0.157.0` settles
-  2026-09-27T02:35Z. With `0.3.280`+ pinned, `verbatimPrompts` is available and
-  still unset; see the `0.3.280` entry.
+- **Current recommendation:** Agent SDK moved to `0.3.282` this turn. The
+  `0.3.283` re-read owed from the last turn is done (its entry is now a review,
+  not a bound); it settles 2026-09-27T18:49Z. Codex `0.157.0` settles
+  2026-09-27T02:35Z, `0.157.1` a day later. `verbatimPrompts` remains available
+  in the pin and unset; see the `0.3.280` entry.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -73,13 +72,34 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.283 / Claude Code 2.1.283 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+### 0.3.283 / Claude Code 2.1.283 — pending (published 2026-09-25T18:49Z); reviewed 2026-09-26 after its changelog appeared
 
-Published 2026-09-25T18:49Z, about 2h before this turn. **Neither changelog had
-a section for it** — the SDK changelog on `main` stops at `0.3.282`, Claude
-Code's at `2.1.282`, and there is no `v2.1.283` tag yet. This entry is a bound,
-not a review; the next turn must read both changelogs once they carry the
-section.
+First recorded 2026-09-25 as a bound, when neither changelog had a section for
+it and there was no `v2.1.283` tag. **Re-read 2026-09-26** once both appeared;
+the changelogs confirm what the type diff below showed and add the following.
+
+- **SDK, checked and clear:** *"Changed stream-json output to include warnings
+  and notices raised during a turn as `system/informational` messages; it
+  previously dropped them."* A new message shape could become chat noise, so
+  checked: `adaptSdkMessage`'s `system` case
+  (`src/core/chat/session/messages.ts`) maps only `init` and the four task
+  subtypes and returns `null` for any other subtype, so these are dropped as
+  before. The `unknown` sentinel catches only unrecognized top-level types.
+  Surfacing those warnings would be a deliberate choice, not an accident. Also:
+  `getSessionMessages()` / `forkSession()` no longer return a rewound-away branch
+  (beebox calls neither); omitting `max_thinking_tokens` in
+  `set_max_thinking_tokens` now leaves the budget alone (beebox does not send it).
+- **2.1.283, relevant:** SDK sessions no longer lose a deferred tool call or a
+  finished tool result when a turn ends early, or a held approval prompt after a
+  worker restart; the Skill tool now says a skill's plugin failed to load instead
+  of calling it uninstalled (beside the new `plugin_errors` field below); stdio
+  MCP servers still starting at session end are no longer left running.
+  `/doctor prompt-audit` audits CLAUDE.md files, skills, agents and commands for
+  prompting patterns written for older models — this repo has many of each, which
+  makes it a candidate to run. Managed `sandbox` settings with one invalid value
+  now fail closed instead of being ignored.
+
+What the type diff showed at the first look:
 
 What the published package shows: `sdk.d.ts` differs from `0.3.282` by 38 lines,
 all additive or clarifying — nothing removed or renamed. Bundled CLI is 2.1.283.
@@ -92,7 +112,16 @@ all additive or clarifying — nothing removed or renamed. Bundled CLI is 2.1.28
   `claude-opus-5-5`.
 - `max_thinking_tokens` omitted now leaves the budget unchanged (null resets
   it), and the startup-failure reason list gains a managed-model case.
-- **Action:** Settled path; takeable 2026-09-27 — after the re-read.
+- **Action:** Settled path; takeable 2026-09-27. Re-read done.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03283), [Claude Code 2.1.283](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21283)
+
+### Codex 0.157.1 — pending, nothing to assess (published 2026-09-26T01:06Z, ~20h at this turn)
+
+The release notes say only that highlights "could not be determined: the supplied
+PR index is empty, and the GitHub tag comparison returned 404" — their notes
+generator failed, so the release is opaque. Nothing to assess on beebox's path.
+- **Action:** Settled path; takeable 2026-09-28 with the deploy gate.
+- **Sources:** [Codex rust-v0.157.1](https://github.com/openai/codex/releases/tag/rust-v0.157.1)
 
 ### Codex 0.157.0 — pending (published 2026-09-25T02:35Z, ~18h at this turn)
 
@@ -107,7 +136,7 @@ bump time.
 - **Action:** Settled path; takeable 2026-09-27 with the deploy gate.
 - **Sources:** [Codex rust-v0.157.0](https://github.com/openai/codex/releases/tag/rust-v0.157.0)
 
-### 0.3.282 / Claude Code 2.1.282 — pending (published 2026-09-24T15:53Z, ~29h at this turn)
+### 0.3.282 / Claude Code 2.1.282 — APPLIED 2026-09-26 (published 2026-09-24T15:53Z)
 
 - **SDK:** a smaller `@anthropic-ai/claude-agent-sdk/core` entry point for apps
   that bundle the SDK; `prewarm()` / `SpareProcess.claim()` (alpha) to start a
@@ -125,7 +154,8 @@ bump time.
   concurrency family; and Bash hiding a full disk quota behind "Exit code 1".
   Bash permission rules with a mid-pattern `:*` in settings files now match;
   this repo's schedules pass rules on the command line, where they already did.
-- **Action:** Settled path; takeable 2026-09-26.
+- **Action:** Applied 2026-09-26 on the settled path (~53h old). `pnpm -C beebox test`: **11,519 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03282), [Claude Code 2.1.282](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21282)
 
 ### Codex 0.156.0 / 0.156.1 — APPLIED 2026-09-25 (published 2026-09-22T19:55Z and 2026-09-23T02:45Z)
