@@ -976,11 +976,13 @@ and the boxholder ruled the judgment lives in briefings.
 
 - `createBriefingTemplate` (`src/schemas/briefing.tsx:241`) installs a
   "Reaching me" section in the root briefing with the default text from the
-  design notes. `bbx init` installs the briefing only when it is missing
-  (`src/core/box/defaults.ts:229-234`), so existing boxes do not get the
-  section from the template. For them, the agent guide carries the default
-  text and says: when the root briefing has no "Reaching me" section, apply
-  the default and propose adding the section at the next retro.
+  design notes. As implemented, the template's prior stock hash is recorded
+  as superseded (`src/core/template-stock-hashes.ts`), so a box whose
+  briefing is still the untouched stock seed gets the section on its next
+  `bbx engine init`; a box with a written briefing parks the update and is
+  never overwritten. For those, the agent guide carries the default text
+  and says: when the root briefing has no "Reaching me" section, apply the
+  default and propose adding the section at the next retro.
 - Agent guide: a "Reaching the boxholder" section in
   `src/core/agent-guide/commands.ts`: `bbx notify`, loudness, targets, the
   reminder card, schedule memory and `bbx changes`, the judgment card and
