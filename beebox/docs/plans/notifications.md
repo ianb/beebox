@@ -650,10 +650,12 @@ and the boxholder ruled the judgment lives in briefings.
 
 - `createBriefingTemplate` (`src/schemas/briefing.tsx:241`) installs a
   "Reaching me" section in the root briefing with the default text from the
-  design notes. `bbx init` already installs the briefing
-  (`src/cli/commands/init.ts:161`); existing boxes get the section through
-  the template tracker's usual path, and the agent guide points at it
-  either way.
+  design notes. `bbx init` installs the briefing only when it is missing
+  (`src/core/box/defaults.ts:229-234`), so existing boxes do not get the
+  section from the template. For them, the agent guide carries the default
+  text and says: when the root briefing has no "Reaching me" section, apply
+  the default and propose adding the section at the next retro. The
+  boxholder's own rules replace it once written.
 - Agent guide: a "Reaching the boxholder" section in
   `src/core/agent-guide/commands.ts`: the three commands, loudness, targets,
   "the briefing owns when". Chat prompt
@@ -886,10 +888,10 @@ F is written last so it describes what shipped.
 - **Knowledge audits** land with Track F, run against the test box.
 - **Migration.** None on disk: `web-push` cards do not exist; the device
   record field is optional; watch and notification are new types. The
-  briefing section is a template addition and reaches existing boxes through
-  the template tracker, which parks on boxes without a tracker entry
-  (`config/template-versions.json`); the rollout to prod boxes is an
-  explicit step in the verification walk.
+  briefing section reaches new boxes through the template; existing boxes
+  get the default from the agent guide until the section is written (Track
+  F). Adding it to the boxholder's own boxes is a step in the verification
+  walk.
 - **Ops, reserved for the boxholder.** VAPID keys on prod; an APNs key
   (`.p8`) from the Apple Developer account, its key id, and the team id in
   `/home/beebox/.env`; the Push Notifications capability on the app target in
