@@ -30,7 +30,13 @@ import {
   installBriefing,
   installSchedules,
 } from "../box/index.js";
-import { installFeedbackGuide, installSchemasGuide, installViewsGuide } from "../box/templates.js";
+import {
+  installFeedbackGuide,
+  installPublicationsGuidance,
+  installSchemasGuide,
+  installTricksFiles,
+  installViewsGuide,
+} from "../box/templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { generateRules } from "../init-rules.js";
 import { generateSkills } from "../box/skills.js";
@@ -277,6 +283,12 @@ async function syncTemplatesFromSource(boxRoot: string, shouldCommit: boolean): 
   // cycle (not just an explicit `bbx engine init`); user-edited guides are parked.
   await installViewsGuide(boxRoot);
   await installFeedbackGuide(boxRoot);
+  // The tricks and publications guides used to install only from `bbx engine
+  // init`, so a box created before a guide existed never received it (test1
+  // had no `src/publications/CLAUDE.md`). Every tracked guide takes the same
+  // sync path now.
+  await installTricksFiles(boxRoot);
+  await installPublicationsGuidance(boxRoot);
   await generateRules(boxRoot);
   // Managed box skills refresh on the same path as the rules they mirror.
   // They used to be provisioned only by `bbx engine init`, so a box that never got a

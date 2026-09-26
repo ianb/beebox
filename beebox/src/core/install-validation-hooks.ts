@@ -105,6 +105,11 @@ const POST_COMMIT_PATH = ".git/hooks/post-commit";
 // only fires when an agent actually opens the file (Claude Code's `paths:`
 // frontmatter — the same mechanism the generated card rules use).
 const IGNORE_RULE_PATH = ".claude/rules/bbx-validate-ignore.md";
+/**
+ * The rule's path before the CLI rename. `generateRules` prunes only
+ * `card-*`/`connector-*`, so a box carried both files until this prune.
+ */
+const RETIRED_IGNORE_RULE_PATH = ".claude/rules/cb-validate-ignore.md";
 
 /**
  * `paths:` frontmatter is resolved by Claude Code relative to the project
@@ -364,6 +369,14 @@ async function installIgnoreScaffold(boxRoot: string): Promise<string[]> {
     await fs.mkdir(path.dirname(seedAbs), { recursive: true });
     await fs.writeFile(seedAbs, IGNORE_SEED_BODY);
     changed.push(path.relative(boxRoot, seedAbs));
+  }
+
+  const retiredAbs = path.join(boxRoot, RETIRED_IGNORE_RULE_PATH);
+  try {
+    await fs.rm(retiredAbs);
+    changed.push(RETIRED_IGNORE_RULE_PATH);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   const ruleBody = ignoreRuleBody();

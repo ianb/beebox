@@ -92,6 +92,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^src\/views\/CLAUDE\.md$/,
   /^src\/schemas\/CLAUDE\.md$/,
   /^src\/tricks\/scripts\/CLAUDE\.md$/,
+  /^src\/publications\/CLAUDE\.md$/,
   /^_content\/briefing\.(?:briefing|orig-briefing)\.card$/,
   /^_content\/briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
