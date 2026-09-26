@@ -117,12 +117,15 @@ recorded there that supersede the observations above:
   `cli/commands/`, and `trpc/routers/` all fail today.
 - Two side-effect registries exist (`connectors/index.ts`,
   `renderers/index.ts`) and become explicit lists.
-- `index.ts` is banned as a file name; `package.json` `exports` targets are
-  the one tooling-forced exception, with a recommendation to rename them in
-  the move step.
-- A directory has at least two children.
-- Tests mirror source directory-for-directory and file-for-file, with a
-  containment check on what a test imports.
+- Every set is declared by its registry through one `defineRegistry`
+  helper; the check finds sets from those calls and needs no config,
+  allowlist, or ignore list.
+- No module is named `index`; re-export modules exist only as public
+  surfaces in `src/exports/`, whose registry is the `package.json` `exports`
+  map.
+- The minimum-two-children rule was dropped (boxholder, 2026-09-26).
+- Each package has one source root; tests mirror it directory-for-directory
+  and file-for-file, with containment, naming, and structure checks.
 
 Open questions for the boxholder are listed in the plan. Steps 3 and 4 each
 get their own plan.
