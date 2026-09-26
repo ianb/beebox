@@ -57,11 +57,15 @@ export interface NotifyResult {
   deliveries: Delivery[];
 }
 
+/** A yes or no for each channel. */
+export interface ChannelFlags {
+  apns: boolean;
+  webPush: boolean;
+  telegram: boolean;
+}
+
 /** Whether a send on each channel has what it needs: an injected service, fake mode, or the server's keys. */
-async function channelsConfigured(
-  boxRoot: string,
-  opts: { services: NotifyServices; fake: boolean },
-): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
+async function channelsConfigured(boxRoot: string, opts: { services: NotifyServices; fake: boolean }): Promise<ChannelFlags> {
   const { services, fake } = opts;
   return {
     apns: services.apns !== undefined || apnsConfigured(),
@@ -71,24 +75,35 @@ async function channelsConfigured(
 }
 
 /**
+ * Which channels can reach the boxholder (`reach`: someone to send to, and
+ * what a send needs), and which have what a send needs regardless of audience
+ * (`configured`). The second is what `bbx notify --dry-run` reports when it
+ * asks the box server, whose keys the CLI process does not have.
+ */
+export async function notifyChannelsDetail(
+  boxRoot: string,
+  opts?: { services?: NotifyServices | undefined },
+): Promise<{ reach: ChannelFlags; configured: ChannelFlags }> {
+  const services = opts?.services ?? {};
+  const detail = await audienceDetail(boxRoot);
+  const audience = audienceFlags(detail);
+  const configured = await channelsConfigured(boxRoot, { services, fake: detail.fake });
+  const reach = {
+    apns: audience.apns && configured.apns,
+    webPush: audience["web-push"] && configured.webPush,
+    telegram: audience.telegram && configured.telegram,
+  };
+  return { reach, configured };
+}
+
+/**
  * Which channels can currently reach the boxholder for this box: someone to
  * send to, and what a send with the same `services` needs (an injected
  * service, or else the APNs key, VAPID keys, and the bot secret).
  * Triggers use this to decide whether a proactive alert has anywhere to go.
  */
-export async function notifyChannels(
-  boxRoot: string,
-  opts?: { services?: NotifyServices | undefined },
-): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
-  const services = opts?.services ?? {};
-  const detail = await audienceDetail(boxRoot);
-  const audience = audienceFlags(detail);
-  const configured = await channelsConfigured(boxRoot, { services, fake: detail.fake });
-  return {
-    apns: audience.apns && configured.apns,
-    webPush: audience["web-push"] && configured.webPush,
-    telegram: audience.telegram && configured.telegram,
-  };
+export async function notifyChannels(boxRoot: string, opts?: { services?: NotifyServices | undefined }): Promise<ChannelFlags> {
+  return (await notifyChannelsDetail(boxRoot, opts)).reach;
 }
 
 /** Log a line; an unwritable log must not stop delivery, so it is reported and delivery goes on. */
@@ -204,7 +219,7 @@ function newNotificationId(): string {
 /** What a send would do, without sending: `bbx notify --dry-run`. */
 export interface NotifyPlan {
   audience: AudienceDetail;
-  configured: { apns: boolean; webPush: boolean; telegram: boolean };
+  configured: ChannelFlags;
   presence: Presence;
   plan: ChannelPlan;
 }
@@ -216,7 +231,9 @@ function restrict(plan: ChannelPlan, only: ChannelName | undefined): ChannelPlan
 
 /**
  * Read the audience and presence and decide the channels, exactly as a send
- * would, and send nothing and log nothing. `presence` overrides the reading.
+ * would, and send nothing and log nothing. `presence` overrides the reading;
+ * `configured` replaces this process's reading of the keys with another
+ * process's (the box server's, for a dry run that asked it).
  */
 export async function planNotification(
   boxRoot: string,
@@ -224,12 +241,13 @@ export async function planNotification(
     intent: { loudness: NotificationIntent["loudness"] };
     channel?: ChannelName | undefined;
     presence?: Presence | undefined;
+    configured?: ChannelFlags | undefined;
     services?: NotifyServices | undefined;
     now?: Date | undefined;
   },
 ): Promise<NotifyPlan> {
   const audience = await audienceDetail(boxRoot);
-  const configured = await channelsConfigured(boxRoot, { services: opts.services ?? {}, fake: audience.fake });
+  const configured = opts.configured ?? (await channelsConfigured(boxRoot, { services: opts.services ?? {}, fake: audience.fake }));
   const presence = opts.presence ?? (await livePresence(boxRoot, { now: opts.now ?? getBoxTime(boxRoot) }));
   const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence }), opts.channel);
   return { audience, configured, presence, plan };

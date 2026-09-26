@@ -9,6 +9,9 @@
  * reach, the presence reading, and the channels a send would try, and sends
  * and logs nothing. See docs/plans/notifications.md (Track A, "Testability").
  *
+ * From a box-spawned shell every mode asks the box server, which holds the
+ * channel keys; elsewhere it runs in this process (`notify-route.ts`).
+ *
  * Exit codes: 0 when the notification reached the person (a channel sent it,
  * or it was held back because the person is in the app, which shows it); 1
  * when it reached nobody (every tried channel failed, or none could be tried),
@@ -20,9 +23,10 @@ import * as fs from "node:fs/promises";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { notifyBoxholder, notifyChannels, type NotifyResult, type NotifyServices } from "../../core/notify-boxholder.js";
+import { notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../core/notify-boxholder.js";
+import { describeRoute, notifyRoute, onServer, type NotifyRoute } from "./notify-route.js";
 import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } from "../../core/notification/intent.js";
-import { InvalidTargetError, parseTarget, type Target } from "../../core/notification/target.js";
+import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../core/notification/target.js";
 import { printDryRun } from "./notify-dry-run.js";
 import { err, ok, type Result } from "../../lib/result.js";
 import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
@@ -38,6 +42,7 @@ export interface NotifyCliOptions {
   targetsFromStdin?: boolean | undefined;
   dryRun?: boolean | undefined;
   presence?: string | undefined;
+  verbose?: boolean | undefined;
 }
 
 export interface NotifyRun {
@@ -47,6 +52,7 @@ export interface NotifyRun {
   readStdin: (() => Promise<string>) | null;
   /** Which code or chat session wrote it. */
   source: string;
+  /** Services for an in-process delivery; a delivery through the box server uses the server's. */
   services?: NotifyServices | undefined;
 }
 
@@ -155,29 +161,49 @@ function reached(result: NotifyResult): boolean {
   return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
 }
 
-async function check(boxRoot: string, services: NotifyServices | undefined): Promise<number> {
-  const can = await notifyChannels(boxRoot, { services });
+async function check(boxRoot: string, opts: { route: NotifyRoute; services: NotifyServices | undefined }): Promise<number> {
+  const { route, services } = opts;
+  const can =
+    route.kind === "server"
+      ? (await onServer(() => route.client.notifications.channels.query())).reach
+      : await notifyChannels(boxRoot, { services });
   const byChannel: Record<ChannelName, boolean> = { apns: can.apns, "web-push": can.webPush, telegram: can.telegram };
   for (const channel of CHANNELS) console.log(`${channel}: ${byChannel[channel] ? "yes" : "no"}`);
   return CHANNELS.some((channel) => byChannel[channel]) ? 0 : 1;
 }
 
-async function send(boxRoot: string, run: NotifyRun): Promise<number> {
+async function deliver(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun; intent: NotificationInput; channel: ChannelName | undefined }): Promise<NotifyResult> {
+  const { route, run, intent, channel } = opts;
+  if (route.kind === "local") return notifyBoxholder(boxRoot, { intent, services: run.services, channel });
+  const { title, body, loudness, source, tag } = intent;
+  return onServer(() =>
+    route.client.notifications.send.mutate({
+      intent: { title, body, target: formatTarget(intent.target), loudness, source, ...(tag === undefined ? {} : { tag }) },
+      channel,
+    }),
+  );
+}
+
+async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun }): Promise<number> {
+  const { route, run } = opts;
   const parsed = await parseRequest(run);
   if (!parsed.ok) {
     console.error(`Error: ${parsed.error}`);
     return 2;
   }
   if (run.options.dryRun === true) {
-    await printDryRun(boxRoot, { request: parsed.value, tag: run.options.tag, services: run.services });
+    const configured =
+      route.kind === "server" ? (await onServer(() => route.client.notifications.channels.query())).configured : undefined;
+    await printDryRun(boxRoot, { request: parsed.value, tag: run.options.tag, services: run.services, configured });
     return 0;
   }
   const { title, loudness, channel, targets, body } = parsed.value;
   let exitCode = 0;
   for (const t of targets) {
-    const result = await notifyBoxholder(boxRoot, {
+    const result = await deliver(boxRoot, {
+      route,
+      run,
       intent: { title, body, target: t, loudness, tag: run.options.tag, source: run.source },
-      services: run.services,
       channel,
     });
     const line = `${result.id}: ${result.deliveries.map(describe).join(", ") || "no channel tried"}`;
@@ -193,7 +219,9 @@ async function send(boxRoot: string, run: NotifyRun): Promise<number> {
 
 /** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/notify.doctest.md` drives. */
 export async function runNotify(boxRoot: string, run: NotifyRun): Promise<number> {
-  return run.options.check === true ? check(boxRoot, run.services) : send(boxRoot, run);
+  const route = notifyRoute();
+  if (run.options.verbose === true) console.error(describeRoute(route));
+  return run.options.check === true ? check(boxRoot, { route, services: run.services }) : send(boxRoot, { route, run });
 }
 
 async function readAllStdin(): Promise<string> {
@@ -214,6 +242,7 @@ export const notifyCommand = new Command("notify")
   .option("--check", "Print which channels can reach the person and send nothing; exit 1 when none can")
   .option("--dry-run", "Print the intent, who each channel would reach, the presence reading, and the channels a send would try; send and log nothing")
   .option("--presence <n>", "With --dry-run: assume this many active web sessions in place of the live reading")
+  .option("-v, --verbose", "Say on stderr whether delivery went through the box server or ran in this process")
   .option("--targets-from-stdin", "Read one target per line from stdin and send one notification each (body from --body or --body-file)")
   .action(async (title: string | undefined, options: NotifyCliOptions) => {
     try {

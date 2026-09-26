@@ -1,7 +1,8 @@
 # `bbx notify`: reach the boxholder from an agent
 
 `src/cli/commands/notify.ts` parses the flags, reads the body, and calls
-`notifyBoxholder`. `runNotify(boxRoot, run)` is driven directly and returns the
+`notifyBoxholder`, in this process or, from a box-spawned shell, in the box
+server's (last section). `runNotify(boxRoot, run)` is driven directly and returns the
 exit code (same approach as `test/cli/todos.doctest.md`): 0 when the
 notification reached the person, 1 when it reached nobody, 2 on a bad flag or
 target.
@@ -19,10 +20,14 @@ import { createFakeTelegram } from "../../src/services/telegram.js";
 import { readRecent } from "../../src/core/notification/log.js";
 import { writePresence } from "../../src/core/notification/presence.js";
 import { pairFakePushDevice } from "../../src/core/mobile/pairing.js";
+import { createFakeApns } from "../../src/services/apns.js";
+import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
+import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notify-cli-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
-for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
+// No box environment: every section but the last delivers in this process.
+for (const name of ["BBX_SERVER_URL", "BBX_BOX_NAME", "BBX_AGENT_TOKEN", "BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
 // A box whose boxholder subscribed a browser and set a Telegram chat.
 const box = await makeTmpBox({ git: true });
@@ -39,7 +44,7 @@ const push = createFakePush();
 // Run with captured output; ids are random (a letter, then 8 base64url
 // characters), so they print as <id>.
 const ID = /\bn[\w-]{8}(?=: (apns|web-push|telegram) )/;
-async function run(title, options, stdin, services = { tg, push }) {
+async function run(title, options, stdin, services = { tg, push }, root = box.root) {
   const out = [];
   const origLog = console.log;
   const origErr = console.error;
@@ -47,7 +52,7 @@ async function run(title, options, stdin, services = { tg, push }) {
   console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
   let code;
   try {
-    code = await runNotify(box.root, {
+    code = await runNotify(root, {
       title,
       options,
       readStdin: stdin === undefined ? null : async () => stdin,
@@ -298,6 +303,107 @@ would try: apns
 would skip: none
 dry run: nothing sent, nothing logged
 exit 0
+```
+
+## From a box-spawned shell, the box server delivers
+
+An agent's shell, or a script a schedule runs, has `BBX_SERVER_URL`,
+`BBX_BOX_NAME`, and the agent token, and none of the APNs or VAPID keys. There
+`bbx notify` asks the box server, which has them, through
+`notifications.send` and `notifications.channels`. The server here holds fake
+services for every channel; this process holds its own, which must stay
+untouched. The auth wall is up, so the agent bearer is doing real work.
+
+```ts
+const serverApns = createFakeApns();
+const serverPush = createFakePush();
+const serverTg = createFakeTelegram({ username: "bot" });
+const server = await makeTestServer({ openAccess: false, services: { notify: { apns: serverApns, push: serverPush, tg: serverTg } } });
+await fs.writeFile(path.join(server.boxRoot, "_config/box.json"), JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
+await pairFakePushDevice(server.boxRoot, { label: "test phone" });
+await addSubscription({
+  boxSlug: await boxSlug(server.boxRoot),
+  subscription: { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } },
+  now: new Date(),
+});
+process.env.BBX_SERVER_URL = await server.server.listen({ port: 0, host: "127.0.0.1" });
+process.env.BBX_BOX_NAME = TEST_SLUG;
+process.env.BBX_AGENT_TOKEN = getOrCreateAgentToken(server.boxRoot);
+
+const localApns = createFakeApns();
+const local = { apns: localApns, push, tg };
+const localBefore = [localApns.sent.length, push.sent.length, tg.sent.length];
+await run("Pick up Sam", { target: "chat:new", loudness: "loud", body: "At 3." }, undefined, local, server.boxRoot)
+=>
+<id>: apns sent, web-push sent, telegram sent
+exit 0
+
+JSON.stringify({
+  server: [serverApns.sent.length, serverPush.sent.length, serverTg.sent.length],
+  localUntouched: JSON.stringify([localApns.sent.length, push.sent.length, tg.sent.length]) === JSON.stringify(localBefore),
+})
+=> {"server":[1,1,1],"localUntouched":true}
+```
+
+The server logged it, with this shell's source:
+
+```ts continue
+JSON.stringify((await readRecent(server.boxRoot, { days: 1 })).at(-1).intent.source)
+=> "doctest"
+```
+
+`--check` reports what the server can reach, so an agent never hears "no" for
+a channel only the server has keys for. `--verbose` names the path, on stderr;
+without it nothing about the path is printed.
+
+```ts continue
+(await run(undefined, { check: true, verbose: true }, undefined, {}, server.boxRoot)).replace(process.env.BBX_SERVER_URL, "<server>")
+=>
+stderr: [notify] via the box server (<server>)
+apns: yes
+web-push: yes
+telegram: yes
+exit 0
+```
+
+`--dry-run` reads the same audience from the box and takes the channel keys
+from the server, so the phone is not `[unconfigured]` here:
+
+```ts continue
+await run("Pick up Sam", { target: "chat:new", loudness: "loud", dryRun: true, presence: "0" }, undefined, {}, server.boxRoot)
+=>
+intent: loud "Pick up Sam" -> chat:new
+presence: 0 active web sessions (--presence)
+audience:
+  apns: 1 device (test phone, sandbox)
+  web-push: 1 subscription
+  telegram: chat 777
+would try: apns, web-push, telegram
+would skip: none
+dry run: nothing sent, nothing logged
+exit 0
+```
+
+A server that is named but does not answer is an error: delivering in this
+process instead would quietly lose the channels only the server has keys for.
+
+```ts continue
+await server.cleanup();
+const beforeDown = [localApns.sent.length, push.sent.length, tg.sent.length].join();
+const down = await run("Pick up Sam", { target: "dashboard", loudness: "loud" }, undefined, local, server.boxRoot).catch((e) => `threw: ${e.name}: ${e.message.split(":")[0]}`);
+JSON.stringify([down, [localApns.sent.length, push.sent.length, tg.sent.length].join() === beforeDown])
+=> ["threw: NotifyServerError: The box's server could not be reached",true]
+```
+
+With no box environment it delivers in this process again, and `--verbose`
+says why:
+
+```ts continue
+delete process.env.BBX_SERVER_URL;
+delete process.env.BBX_BOX_NAME;
+delete process.env.BBX_AGENT_TOKEN;
+(await run(undefined, { check: true, verbose: true })).split("\n")[0]
+=> stderr: [notify] in this process (BBX_SERVER_URL is not set)
 ```
 
 ```ts cleanup

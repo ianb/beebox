@@ -45,8 +45,8 @@ export interface Delivery {
   detail?: string | undefined;
 }
 
-/** A target string as stored in the log and carried by the bus event. */
-const targetStringSchema = z.string().superRefine((value, ctx) => {
+/** A target string as stored in the log, carried by the bus event, and sent to `notifications.send`. */
+export const targetStringSchema = z.string().superRefine((value, ctx) => {
   try {
     parseTarget(value);
   } catch (e) {
