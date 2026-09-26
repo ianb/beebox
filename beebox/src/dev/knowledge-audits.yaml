@@ -27,6 +27,26 @@ tests:
       - '(?:existing|continu|resum)[\s\S]{0,350}(?:new|start)|(?:new|start)[\s\S]{0,350}(?:existing|continu|resum)'
     tags: [quick-chat]
 
+  # === Engine docs are searchable ===
+  # Plan: docs/plans/doc-structure-box-guidance.md, Track 5. The search index
+  # covers node_modules/beebox/box-docs/ as kind engine-doc, and the guide's
+  # "Where the docs are" and "Searching the Box" sections say so.
+  - id: search-finds-engine-doc
+    prompt: >
+      The chat snapshot for this turn reports narration="on". Before you answer,
+      find the engine's own reference doc for that mode by searching the box
+      for it, then tell me in three sentences what narration mode changes about
+      how you respond and which doc you found it in. Do not change anything.
+    expected_level: knows_about
+    watch_for: "Runs bbx search to locate the engine doc rather than guessing, then reads narration-mode.md and reports its rule."
+    bash_contains:
+      - "bbx search"
+    should_read_any:
+      - "box-docs/narration-mode.md"
+    correct_contains:
+      - "narration-mode.md"
+    tags: [search, engine-docs]
+
   # === Migration recovery ===
   # Status (2026-09-14, Claude): 1/1 passed with no reads/searches using the
   # shipped guide in a standalone installed-package fixture. Cross-repository

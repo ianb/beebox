@@ -12,6 +12,7 @@ import { isInsideAttachScope } from "../../shared/attach-path.js";
 import { cardTypeFromName } from "../../shared/card-name.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 
 /** Directories never descended into. `_bookkeeping/trash` is handled by path. */
 const SKIP_DIRS = new Set([
@@ -82,7 +83,40 @@ export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardSt
   }
 
   await walk(boxRoot, "");
+  await walkEngineDocs(boxRoot, out);
   return out;
+}
+
+/**
+ * The engine's reference docs (`node_modules/beebox/box-docs/*.md`) are the
+ * one thing under `node_modules` the index covers: an agent asking "how does
+ * beebox do X" should find the doc by content, not only by its README line.
+ * Flat directory, markdown only. `ensurePackageDocs` rewrites the files on a
+ * package version change, so their mtime carries the refresh signal the
+ * manifest diff already uses. A box without the package installed (or an
+ * older package without docs) simply contributes nothing.
+ */
+async function walkEngineDocs(boxRoot: string, out: Map<string, CardStat>): Promise<void> {
+  const absDir = path.join(boxRoot, BOX_PACKAGE_DOCS);
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(absDir, { withFileTypes: true });
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`search walk: could not read ${absDir}, skipping:`, e);
+    }
+    return;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    const rel = `${BOX_PACKAGE_DOCS}/${entry.name}`;
+    try {
+      const st = await fs.stat(path.join(absDir, entry.name));
+      out.set(rel, { mtimeMs: st.mtimeMs, size: st.size });
+    } catch (_e) {
+      // Deleted between readdir and stat; the next refresh reconciles.
+    }
+  }
 }
 
 /**
