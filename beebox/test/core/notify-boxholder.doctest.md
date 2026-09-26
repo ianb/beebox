@@ -86,6 +86,9 @@ tg.sent[0]?.text
 =>
 Field trip form due Friday
 The school emailed: the form is due Friday.
+
+tg.sent[0]?.silent
+=> false
 ```
 
 The intent line is in the log under the id the result returns, and open apps
@@ -136,6 +139,14 @@ await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 120_
 await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push, tg } });
 JSON.stringify([push.sent.length, tg.sent.length])
 => [1,1]
+```
+
+A `quiet` Telegram message is sent with `disable_notification`, so it makes
+no sound:
+
+```ts continue
+tg.sent[0]?.silent
+=> true
 
 await failing(box)
 => all ok
@@ -164,6 +175,28 @@ telegram skipped: no-audience
 
 await failing(box)
 => notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (subscribe a device to push or set healthAlerts.telegramChat): "Field trip form due Friday"
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `channel` restricts delivery to one channel
+
+`bbx notify --channel` uses this to test one channel. The others are neither
+tried nor logged.
+
+```ts
+const box = await reachableBox();
+const push = createFakePush();
+const tg = createFakeTelegram({ username: "bot" });
+await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push, tg }, channel: "telegram" });
+
+await logged(box)
+=> telegram sent
+
+JSON.stringify([push.sent.length, tg.sent.length])
+=> [0,1]
 ```
 
 ```ts cleanup

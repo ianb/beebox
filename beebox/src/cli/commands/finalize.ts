@@ -15,6 +15,8 @@ import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
+import { rotateIfNeeded } from "../../core/notification/log.js";
+import { getBoxTime } from "../../lib/time.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { syncConnector } from "../../connectors/activity.js";
@@ -49,6 +51,13 @@ export const finalizeCommand = new Command("finalize")
         }
       } catch (err) {
         console.error(`  Question aging failed: ${errorMessage(err)}`);
+      }
+
+      // Rotate the notification log at 30 days or 8 MB (log.ts owns the rule).
+      try {
+        if (await rotateIfNeeded(boxRoot, { now: getBoxTime(boxRoot) })) console.log("  Notification log rotated");
+      } catch (err) {
+        console.error(`  Notification log rotation failed: ${errorMessage(err)}`);
       }
     }
 

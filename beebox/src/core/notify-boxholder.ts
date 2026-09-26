@@ -40,6 +40,12 @@ export interface NotifyRequest {
   intent: NotificationInput;
   services?: NotifyServices | undefined;
   now?: Date | undefined;
+  /**
+   * Restrict delivery to this one channel (`bbx notify --channel`, for
+   * testing). The others are neither tried nor logged; the named channel
+   * still follows the loudness and presence rules.
+   */
+  channel?: ChannelName | undefined;
 }
 
 export interface NotifyResult {
@@ -138,9 +144,8 @@ async function sendTelegram(ctx: SendContext): Promise<Delivery> {
   try {
     const tg = await telegramService(ctx);
     if (tg === null) return { channel: "telegram", status: "skipped", detail: "unconfigured" };
-    // TelegramService.sendMessage has no disable_notification option yet, so
-    // a `quiet` message still makes a sound on Telegram.
-    await tg.sendMessage(telegramChat, intent.body ? `${intent.title}\n${intent.body}` : intent.title);
+    const text = intent.body ? `${intent.title}\n${intent.body}` : intent.title;
+    await tg.sendMessage(telegramChat, { text, silent: intent.loudness === "quiet" });
     return { channel: "telegram", status: "sent" };
   } catch (e) {
     return { channel: "telegram", status: "failed", detail: errorMessage(e) };
@@ -177,7 +182,12 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
 
   const { audience, telegramChat } = await audienceFor(boxRoot);
   const presence = await livePresence(boxRoot, { now });
-  const plan = channelsToTry({ intent, audience, presence });
+  const planned = channelsToTry({ intent, audience, presence });
+  const only = request.channel;
+  const plan =
+    only === undefined
+      ? planned
+      : { channels: planned.channels.filter((c) => c === only), skipped: planned.skipped.filter((d) => d.channel === only) };
   const ctx: SendContext = { boxRoot, intent, url, telegramChat, services };
   const sent: Delivery[] = [];
   for (const channel of plan.channels) sent.push(await sendOn(channel, ctx));

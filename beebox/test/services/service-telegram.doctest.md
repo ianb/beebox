@@ -24,9 +24,9 @@ me.username
 
 ```ts
 const tg = createFakeTelegram({ username: "bot" });
-await tg.sendMessage(123, "hello");
-await tg.sendMessage(123, "world");
-await tg.sendMessage(456, "different chat");
+await tg.sendMessage(123, { text: "hello" });
+await tg.sendMessage(123, { text: "world" });
+await tg.sendMessage(456, { text: "different chat" });
 tg.sent.length
 => 3
 ```
@@ -43,8 +43,8 @@ tg.sent.map(m => `${m.chatId}: ${m.text}`).join("\n")
 
 ```ts
 const tg = createFakeTelegram({ username: "bot" });
-const r1 = await tg.sendMessage(1, "a");
-const r2 = await tg.sendMessage(1, "b");
+const r1 = await tg.sendMessage(1, { text: "a" });
+const r2 = await tg.sendMessage(1, { text: "b" });
 `${r1.message_id}, ${r2.message_id}`
 => 1, 2
 ```
@@ -132,12 +132,12 @@ tg.webhookUrl
 
 ```ts
 const tg = withCallLog(createFakeTelegram({ username: "bot" }));
-await tg.sendMessage(123, "hello");
+await tg.sendMessage(123, { text: "hello" });
 await tg.getMe();
-await tg.sendMessage(456, "bye");
+await tg.sendMessage(456, { text: "bye" });
 
 printCalls(tg.callLog, "sendMessage")
 =>
-sendMessage(123, "hello")
-sendMessage(456, "bye")
+sendMessage(123, {"text":"hello"})
+sendMessage(456, {"text":"bye"})
 ```
