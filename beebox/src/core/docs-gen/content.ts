@@ -40,6 +40,26 @@ const CONNECTORS: ConnectorInfo[] = [
       "to confirm the first sync.",
     ].join("\n"),
   },
+  {
+    name: "google-calendar",
+    produces: [],
+    description: [
+      "Two-way sync between Google Calendar and `.ics` files in `_content/calendar/`. Viewing,",
+      "creating, editing, and deleting events is the `calendar` skill (`.claude/skills/calendar/`);",
+      "the file format, editability by calendar role, and filename form are the",
+      "`connector-calendar` rule, which loads when an `.ics` file is in play. Sync state lives in",
+      "`_bookkeeping/connectors/`.",
+    ].join("\n"),
+  },
+  {
+    name: "telegram",
+    produces: ["telegram-message"],
+    description: [
+      "Messages the boxholder sends the box's Telegram bot arrive as cards under",
+      "`_content/chat/telegram/`; replies go back through the same chat. There is nothing to",
+      "author by hand: a Telegram conversation is a chat like any other.",
+    ].join("\n"),
+  },
 ];
 
 export interface CardDocInput {
