@@ -1,12 +1,12 @@
 /** Shared-host routing through an approved per-publication route marker. */
 
-import { releaseIdSchema, sharedPublicSlugSchema, sharedRouteMarkerSchema } from "../../src/publish/manifest-edge";
+import { sharedPublicSlugSchema, sharedRouteMarkerSchema } from "../../src/publish/manifest-edge";
 import { decodeSegment } from "./asset-path";
 import type { WorkerDeps } from "./deps";
 import type { Env } from "./env";
 import { isExpired, loadManifest } from "./manifest-store";
 import { gone, methodNotAllowed, notFound } from "./responses";
-import { serveSiteAssets } from "./site";
+import { redirectStableDirectory, serveSiteAssets } from "./site";
 
 const PUB_ID_RE = /^[2-7a-z]{26}$/;
 
@@ -55,17 +55,14 @@ export async function handleSharedSite({ request, env, deps, identity }: {
   if (manifest.status === "revoked" || isExpired(manifest.expiresAt, deps.now())) return gone();
   if (manifest.status !== "live") return gone();
 
-  const releaseRequest = parseSharedReleaseRequest(route.assetSegments);
-  if (releaseRequest === null) return notFound();
+  const directoryRedirect = redirectStableDirectory({ request, basePath: route.basePath, assetSegments: route.assetSegments, manifest });
+  if (directoryRedirect !== null) return directoryRedirect;
   return serveSiteAssets({
     request,
     env,
     manifest,
     pubId,
-    basePath: route.basePath,
-    releaseId: releaseRequest.releaseId,
-    assetSegments: releaseRequest.assetSegments,
-    deps,
+    assetSegments: route.assetSegments,
   });
 }
 
@@ -107,13 +104,6 @@ async function loadAuthorizedSharedManifest({ route, pubId, identity, env }: {
     return null;
   }
   return stored;
-}
-
-function parseSharedReleaseRequest(assetSegments: readonly string[]): { releaseId: string | null; assetSegments: readonly string[] } | null {
-  if (assetSegments[0] !== "__release") return { releaseId: null, assetSegments };
-  const releaseId = decodeSegment(assetSegments[1] ?? "");
-  if (releaseId === null || !releaseIdSchema.safeParse(releaseId).success) return null;
-  return { releaseId, assetSegments: assetSegments.slice(2) };
 }
 
 type SharedRoute =

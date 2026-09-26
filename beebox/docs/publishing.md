@@ -245,25 +245,27 @@ URL, preserve and provide the complete path printed by the CLI.
 4. The member reviews the candidate in **Publications** and enables it. Use
    the app-displayed `https://<box-host>/<slug>/` URL; do not construct one
    from the PubId.
-5. The agent checks that the public route serves the release-qualified page
-   and that its relative stylesheet loads under the same slug prefix. For a
-   public page, use a request with no Bee Box or Cloudflare Access cookies:
+5. The agent checks that the stable public route serves the current page and
+   that its relative stylesheet loads under the same slug prefix. Each request
+   uses the active release at that moment, so an update can occur between page
+   and asset requests. For a public page, use a request with no Bee Box or
+   Cloudflare Access cookies:
 
    ```sh
-   curl -sS -I -L "$PUBLICATION_URL"
-   curl -sS -I -L "$PUBLICATION_URL/styles.css"
+   curl -sS -I "$PUBLICATION_URL"
+   curl -sS -I "$PUBLICATION_URL/styles.css"
    ```
 
-   Expect the final page and asset to return 200 with the correct MIME type,
+   Expect the page and asset to return 200 with the correct MIME type,
    `Content-Security-Policy`, `Cross-Origin-Resource-Policy: same-origin`,
    `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`.
-   The redirect and asset path must remain beneath the approved publication
+   The page and asset paths must remain beneath the approved publication
    path. Do not print or retain a secret-tier capability URL if the smoke test
    uses one. Same-origin headers do not isolate sites on this box host.
 
 6. The agent changes one harmless sentence and runs `bbx pub prepare <name>`
-   again. Confirm the active release changes without a new member click and
-   the page's relative asset still comes from the matching release.
+   again. Confirm the page at the same stable URL changes without a new member
+   click. Each later asset request also uses the active release at that time.
 7. The member disables the page in **Publications**. The agent verifies
    `bbx pub status` reports disabled and the previously working public URL now
    returns 410. Re-enable only after the member takes a fresh deliberate
