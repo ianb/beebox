@@ -37,16 +37,20 @@ async function lastLogged(box) {
 
 ## Parsing
 
-`context` and `loudness` are optional; an unknown `loudness` is ignored (with a
-warning), and the body is trimmed:
+A callout needs a `context` and a body, as the frontend's `parseCallouts`
+requires; one missing either is not a callout and sends nothing. `loudness` is
+optional; an unknown `loudness` is ignored (with a warning), and the body is
+trimmed:
 
 ```ts
 JSON.stringify(parseCalloutTags(`Done.
 <callout context="you asked about Saturday">
 Saturday: sunny, high of 72.
 </callout>
-<callout loudness="loud">The form is due Friday.</callout>
-<callout loudness="shout">Odd one.</callout>`), null, 1)
+<callout loudness="loud">No context, so not a callout.</callout>
+<callout context="empty" loudness="loud">  </callout>
+<callout context="the form" loudness="loud">The form is due Friday.</callout>
+<callout context="odd" loudness="shout">Odd one.</callout>`), null, 1)
 => [
  {
   "context": "you asked about Saturday",
@@ -54,12 +58,12 @@ Saturday: sunny, high of 72.
   "body": "Saturday: sunny, high of 72."
  },
  {
-  "context": null,
+  "context": "the form",
   "loudness": "loud",
   "body": "The form is due Friday."
  },
  {
-  "context": null,
+  "context": "odd",
   "loudness": null,
   "body": "Odd one."
  }
@@ -81,20 +85,23 @@ await notifyTurnCallouts(box.root, { text: "All filed.", sessionId: SESSION, ser
 
 await lastLogged(box)
 => nothing logged
+
+await notifyTurnCallouts(box.root, { text: `<callout loudness="loud">No context.</callout>`, sessionId: SESSION, services: { push } })
+=> null
 ```
 
 ## A `quiet` callout with nobody present is pushed
 
-The loudest callout sets the loudness; the first one titles and carries the
-notification. With no `context`, the title is the body's first line.
+The loudest callout sets the loudness; the first one titles (by its
+`context`) and carries the notification.
 
 ```ts continue
-const text = `<callout loudness="quiet">The school moved the field trip to Thursday.
+const text = `<callout context="the field trip" loudness="quiet">The school moved the field trip to Thursday.
 Forms are due Wednesday.</callout> and <callout context="later">second</callout>`;
 await notifyTurnCallouts(box.root, { text, sessionId: SESSION, services: { push } });
 await lastLogged(box)
 =>
-quiet | The school moved the field trip to Thursday. | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
+quiet | the field trip | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
 The school moved the field trip to Thursday.
 Forms are due Wednesday.
 apns skipped: no-audience
@@ -105,9 +112,10 @@ push.sent[0].payload.url === `/${await boxSlug(box.root)}/chat?session=${SESSION
 => true
 ```
 
-## With someone present, a `quiet` callout is not pushed
+## With someone present, a callout is not pushed, however loud
 
-The open app shows it; each channel logs `skipped: present`.
+The callout is on screen in the open app, so each channel logs
+`skipped: present`, for a `quiet` callout and for a `loud` one alike.
 
 ```ts continue
 await writePresence(box.root, { activeWeb: 1, now: new Date() });
@@ -124,6 +132,23 @@ push.sent.length
 => 1
 ```
 
+Two callouts, one `loud`: still on screen, still not pushed.
+
+```ts continue
+const two = `<callout context="first">Filed.</callout><callout context="the form" loudness="loud">Due Friday.</callout>`;
+await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
+await lastLogged(box)
+=>
+loud | first | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
+Filed.
+apns skipped: present
+web-push skipped: present
+telegram skipped: present
+
+push.sent.length
+=> 1
+```
+
 A callout with no `loudness` is a `dot`: a badge on paired phones only, sent
 whatever the presence.
 
@@ -131,6 +156,18 @@ whatever the presence.
 await notifyTurnCallouts(box.root, { text: `<callout context="note">Filed the receipt.</callout>`, sessionId: SESSION, services: { push } });
 (await lastLogged(box)).split("\n")[0].startsWith("dot | note")
 => true
+```
+
+With nobody present, the same `loud` pair is pushed.
+
+```ts continue
+await writePresence(box.root, { activeWeb: 0, now: new Date() });
+await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
+(await lastLogged(box)).split("\n").filter((l) => l.startsWith("web-push")).join()
+=> web-push sent
+
+push.sent.length
+=> 2
 ```
 
 ```ts cleanup

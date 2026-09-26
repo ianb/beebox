@@ -6,17 +6,20 @@
  * turns a turn's callouts into one notification intent: the first callout
  * titles and carries it, the loudest `loudness` any callout asked for sets its
  * loudness (else `dot`), and it targets the chat session, tagged with the
- * session id so a later turn replaces it rather than stacking. Delivery follows
- * the channel rule like every intent: a `quiet` callout is not pushed while
- * someone is present in the app. See docs/plans/notifications.md (Track E).
+ * session id so a later turn replaces it rather than stacking. A callout
+ * without a `context` or a body is not a callout, as in the frontend's
+ * `parseCallouts`. While a web session is present the callout is on screen,
+ * so a `quiet` or `loud` one is not pushed (`onScreen`); a `dot` still badges
+ * the phone. See docs/plans/notifications.md (Track E).
  */
 
 import { parseAttrs } from "../../shared/parse-attrs.js";
 import { LOUDNESS, type Loudness } from "../notification/intent.js";
+import { livePresence } from "../notification/presence.js";
 import { notifyBoxholder, type NotifyResult, type NotifyServices } from "../notify-boxholder.js";
 
 export interface ParsedCalloutTag {
-  context: string | null;
+  context: string;
   loudness: Loudness | null;
   body: string;
 }
@@ -27,19 +30,28 @@ function isLoudness(value: string): value is Loudness {
   return LOUDNESS_VALUES.has(value);
 }
 
-/** Parse callout tags from an assistant response, in order. An unknown `loudness` is ignored with a warning. */
+/**
+ * Parse callout tags from an assistant response, in order. An unknown
+ * `loudness` is ignored with a warning; a callout with no `context` or an
+ * empty body is dropped (logged at debug), as the frontend drops it.
+ */
 export function parseCalloutTags(text: string): ParsedCalloutTag[] {
   const results: ParsedCalloutTag[] = [];
   for (const match of text.matchAll(/<callout\b([^>]*)>([\S\s]*?)<\/callout\s*>/gi)) {
     const attrs = parseAttrs(match[1] ?? "");
+    const context = attrs["context"]?.trim() ?? "";
+    const body = (match[2] ?? "").trim();
+    if (context.length === 0 || body.length === 0) {
+      console.debug(`[callouts] ignoring a <callout> with no ${context.length === 0 ? "context" : "body"}`);
+      continue;
+    }
     const raw = attrs["loudness"];
     let loudness: Loudness | null = null;
     if (raw !== undefined) {
       if (isLoudness(raw)) loudness = raw;
       else console.warn(`[callouts] ignoring unknown loudness "${raw}" on a <callout>`);
     }
-    const context = attrs["context"]?.trim();
-    results.push({ context: context ? context : null, loudness, body: (match[2] ?? "").trim() });
+    results.push({ context, loudness, body });
   }
   return results;
 }
@@ -47,7 +59,7 @@ export function parseCalloutTags(text: string): ParsedCalloutTag[] {
 const MAX_TITLE_CHARS = 80;
 
 function titleFor(callout: ParsedCalloutTag): string {
-  const title = callout.context ?? callout.body.split("\n")[0] ?? "";
+  const title = callout.context;
   return title.length > MAX_TITLE_CHARS ? `${title.slice(0, MAX_TITLE_CHARS - 1)}…` : title;
 }
 
@@ -67,6 +79,7 @@ export async function notifyTurnCallouts(
   const callouts = parseCalloutTags(opts.text);
   const first = callouts[0];
   if (first === undefined) return null;
+  const presence = await livePresence(boxRoot);
   return notifyBoxholder(boxRoot, {
     intent: {
       title: titleFor(first),
@@ -77,5 +90,6 @@ export async function notifyTurnCallouts(
       source: `chat:${opts.sessionId}`,
     },
     services: opts.services,
+    onScreen: presence.activeWeb > 0,
   });
 }

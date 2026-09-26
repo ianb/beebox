@@ -332,6 +332,22 @@ exit 2
 await judge(box, trip, { min: ["school=0.5"] }, { stdin: "x" })
 => stderr: Error: school: the card has no question "school" (it has trip)
 exit 2
+```
+
+A probability bound (a noul, or `name.option`) lies between 0 and 1; a score's
+level bound keeps its range.
+
+```ts continue
+await judge(box, trip, { decide: '{"trip": {"min": 70}}' }, { stdin: "x" })
+=> stderr: Error: trip: min 70 is a probability, between 0 and 1
+exit 2
+
+await judge(box, "_config/judgments/needs-reply.judgment.card", { decide: '{"reply.expects": {"max": -0.1}}' }, { stdin: "x" })
+=> stderr: Error: reply.expects: max -0.1 is a probability, between 0 and 1
+exit 2
+
+(await judge(box, "_config/judgments/needs-reply.judgment.card", { decide: '{"urgency": {"min": 2}}' }, { stdin: "x", service })).split("\n").at(-1)
+=> exit 0
 
 await judge(box, trip, { select: true, echo: true }, { stdin: "x" })
 => stderr: Error: give --select or --echo, not both

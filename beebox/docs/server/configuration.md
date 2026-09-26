@@ -60,9 +60,12 @@ script does **not** seed these — add them as an explicit step:
 1. Generate once: `npx web-push generate-vapid-keys`
 2. Add `BBX_VAPID_PUBLIC_KEY` and `BBX_VAPID_PRIVATE_KEY` to `/home/beebox/.env`
    (private key stays server-only; it's excluded from the deploy rsync).
-3. Restart **both** services so the server (serves the public key) and the
-   scheduler/finalize (sends pushes) pick them up:
-   `systemctl restart beebox-hub beebox-scheduler`
+3. Restart **both** services so both senders pick them up:
+   `systemctl restart beebox-hub beebox-scheduler`. The box server serves the
+   public key and sends (callouts, and `bbx notify` from a box agent, which goes
+   through it); the scheduler daemon sends reminders and alerts. Every delivery
+   attempt is logged to the box's `.beebox/notifications.jsonl`; see
+   [notifications](../notifications.md).
 
 Subscriptions are stored server-side at `~/.local/share/beebox/push-subscriptions.json`
 (gitignored, never committed). Boxholders enable push per-device from a box's Admin

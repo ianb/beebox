@@ -86,6 +86,15 @@ function optionsOf(question: JudgeQuestion): string[] {
   }
 }
 
+/** A probability bound (a noul, or `name.option`) lies in 0..1; a score's level bound does not. */
+function checkProbabilityBounds({ key, min, max }: Condition): void {
+  for (const [label, bound] of [["min", min], ["max", max]] as const) {
+    if (bound !== undefined && !Probability.safeParse(bound).success) {
+      throw new ConditionError({ key, rule: `${label} ${bound} is a probability, between 0 and 1` });
+    }
+  }
+}
+
 /** Check each condition against the card's questions before any call; throws {@link ConditionError}. */
 export function checkConditions(conditions: readonly Condition[], questions: Record<string, JudgeQuestion>): void {
   for (const condition of conditions) {
@@ -98,11 +107,13 @@ export function checkConditions(conditions: readonly Condition[], questions: Rec
       if (question.type === "noul") throw new ConditionError({ key: key, rule: "a noul has no options; bound its probability as the bare name" });
       if (!optionsOf(question).includes(option)) throw new ConditionError({ key: key, rule: `"${option}" is not one of ${optionsOf(question).join(", ")}` });
       if (is !== undefined) throw new ConditionError({ key: key, rule: "an option takes min and max (its probability), not is" });
+      checkProbabilityBounds(condition);
       continue;
     }
     switch (question.type) {
       case "noul":
         if (is !== undefined) throw new ConditionError({ key: key, rule: "a noul takes min and max (its probability), not is" });
+        checkProbabilityBounds(condition);
         break;
       case "choice":
         if (min !== undefined || max !== undefined) throw new ConditionError({ key: key, rule: "a choice takes is (the chosen option); bound an option's probability as name.option" });

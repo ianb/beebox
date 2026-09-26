@@ -30,11 +30,23 @@ function taskLine(task: TaskHealth, now: Date): string {
 /**
  * `scheduled-tasks`: tasks failing twice in a row, invalid, or overdue. An
  * overdue task counts only while the scheduler daemon is running: with no
- * daemon (a dev box) nothing is expected to run, and a stale daemon is its own
- * finding.
+ * daemon (a dev box) nothing is expected to run. A stale daemon (it ran here
+ * and stopped) is a warning whatever the tasks say, naming its last heartbeat;
+ * its overdue tasks fold into that finding.
  */
 export function scheduledTasksCheck(health: BoxScheduleHealth, now: Date): HealthCheck {
   const unhealthy = selectAlertableTasks(health).filter((t) => t.status !== "overdue" || health.scheduler.status === "running");
+  const { scheduler } = health;
+  if (scheduler.status === "stale") {
+    const age = scheduler.ageMs === null ? "" : ` (${formatDurationShort(scheduler.ageMs)} ago)`;
+    const tasks = unhealthy.length === 0 ? "" : `; ${unhealthy.map((t) => taskLine(t, now)).join("; ")}`;
+    return {
+      name: "scheduled-tasks",
+      ok: false,
+      message: `The scheduler is not running: last heartbeat ${scheduler.lastTickAt ?? "unknown"}${age}${tasks}`,
+      severity: "warning",
+    };
+  }
   if (unhealthy.length === 0) {
     return { name: "scheduled-tasks", ok: true, message: "Scheduled tasks are running", severity: "warning" };
   }

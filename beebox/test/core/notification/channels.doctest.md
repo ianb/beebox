@@ -72,3 +72,22 @@ quiet present=1  try []  skip [apns:present web-push:present telegram:present]
 dot   present=0  try []  skip [apns:no-audience]
 dot   present=1  try []  skip [apns:no-audience]
 ```
+
+## The target is on screen
+
+A caller that knows its target is on screen right now (a chat callout while a
+web session is present) passes `onScreen`: a `quiet` or `loud` intent is
+`present` on every channel, and a `dot` still badges the phone.
+
+```ts
+function onScreenRow(loudness) {
+  const plan = channelsToTry({ intent: { loudness }, audience: ALL, presence: { activeWeb: 1 }, onScreen: true });
+  return `${loudness.padEnd(5)} try [${plan.channels.join(" ")}]  skip [${plan.skipped.map((d) => `${d.channel}:${d.detail}`).join(" ")}]`;
+}
+
+["loud", "quiet", "dot"].map(onScreenRow).join("\n")
+=>
+loud  try []  skip [apns:present web-push:present telegram:present]
+quiet try []  skip [apns:present web-push:present telegram:present]
+dot   try [apns]  skip []
+```

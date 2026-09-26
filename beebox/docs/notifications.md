@@ -52,7 +52,9 @@ Vocabulary:
 | `loud` | banner with sound | notification | message | sent anyway |
 
 A channel with nobody to reach is `skipped: no-audience`; one whose server keys
-are missing is `skipped: unconfigured`.
+are missing is `skipped: unconfigured`. A caller that knows its target is on
+screen passes `onScreen` to `notifyBoxholder`: a `quiet` or `loud` intent is
+then `skipped: present` on every channel, and a `dot` still badges.
 
 ### Sources
 
@@ -62,8 +64,9 @@ are missing is `skipped: unconfigured`.
   person; agents run it before promising a reminder or a watch.
 - **Callouts.** `<callout loudness="quiet|loud">` in a chat turn becomes one
   intent at turn end, targeted at that chat, tagged with the session so a later
-  turn replaces it (`src/core/chat/callout-tags.ts`). A callout with no
-  `loudness` is a `dot`.
+  turn replaces it (`src/core/chat/callout-tags.ts`). A callout needs a
+  `context` and a body; with no `loudness` it is a `dot`. While a web session
+  is present the callout is on screen, so even a `loud` one is not pushed.
 - **Questions.** The question sweep sends a `dot`; a question with
   `urgency: time-bound` sends `quiet`; the aging nudge is `quiet`.
 - **Capture failure.** A capture that fails for good sends `quiet` to its chat

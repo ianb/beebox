@@ -50,6 +50,12 @@ export interface NotifyRequest {
    * still follows the loudness and presence rules.
    */
   channel?: ChannelName | undefined;
+  /**
+   * The target is on screen right now (a chat callout while a web session is
+   * present): every push channel is skipped `present` whatever the loudness,
+   * except a `dot` on `apns`. The bus event is still emitted.
+   */
+  onScreen?: boolean | undefined;
 }
 
 export interface NotifyResult {
@@ -245,6 +251,7 @@ export async function planNotification(
   opts: {
     intent: { loudness: NotificationIntent["loudness"] };
     channel?: ChannelName | undefined;
+    onScreen?: boolean | undefined;
     presence?: Presence | undefined;
     configured?: ChannelFlags | undefined;
     services?: NotifyServices | undefined;
@@ -254,7 +261,7 @@ export async function planNotification(
   const audience = await audienceDetail(boxRoot);
   const configured = opts.configured ?? (await channelsConfigured(boxRoot, { services: opts.services ?? {}, fake: audience.fake }));
   const presence = opts.presence ?? (await livePresence(boxRoot, { now: opts.now ?? getBoxTime(boxRoot) }));
-  const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence }), opts.channel);
+  const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence, onScreen: opts.onScreen }), opts.channel);
   return { audience, configured, presence, plan };
 }
 
@@ -268,7 +275,13 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   logSafely(() => appendIntent(boxRoot, { intent, now }));
   emitLive(boxRoot, { intent, url });
 
-  const { audience, plan } = await planNotification(boxRoot, { intent, channel: request.channel, services, now });
+  const { audience, plan } = await planNotification(boxRoot, {
+    intent,
+    channel: request.channel,
+    onScreen: request.onScreen,
+    services,
+    now,
+  });
   const ctx: SendContext = { boxRoot, intent, url, audience, services };
   const sent: Delivery[] = [];
   for (const channel of plan.channels) sent.push(await sendOn(channel, ctx));

@@ -100,6 +100,25 @@ JSON.stringify(await recordScheduleEpisodes(box.root, { now: new Date("2026-06-0
 await box.cleanup();
 ```
 
+## A stale scheduler is a warning, whatever the tasks say
+
+The daemon ran here and stopped: no task can fail or run late in a way the
+check would see, so the heartbeat itself is the finding.
+
+```ts
+const health = {
+  tasks: [],
+  scheduler: { status: "stale", lastTickAt: "2026-06-09T09:00:00.000Z", ageMs: 3 * 3_600_000 },
+  engineWait: null,
+};
+const stale = scheduledTasksCheck(health, NOW);
+`${stale.ok} | ${stale.severity} | ${stale.message}`
+=> false | warning | The scheduler is not running: last heartbeat 2026-06-09T09:00:00.000Z (3h ago)
+
+scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:00.000Z", ageMs: 60_000 } }, NOW).ok
+=> true
+```
+
 ## Engine quota is a check too
 
 An engine out of usage quota used to notify; it is now the `engine-quota`

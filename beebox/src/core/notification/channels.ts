@@ -7,6 +7,9 @@
  *   none: the open app shows it.
  * - `dot`: `apns` only, whatever the presence. A dot is a badge; suppressing
  *   it for a person on some unrelated tab would lose it.
+ * - `onScreen`: the caller knows the target is on screen right now (a chat
+ *   callout while a web session is present), so a `quiet` or `loud` is
+ *   skipped `present` on every channel. A `dot` still badges.
  *
  * Every candidate channel not tried gets a `skipped` delivery (`present` or
  * `no-audience`) for the caller to log. `web-push` and `telegram` are not
@@ -33,12 +36,15 @@ export function channelsToTry(opts: {
   intent: { loudness: Loudness };
   audience: Audience;
   presence: Presence;
+  onScreen?: boolean | undefined;
 }): ChannelPlan {
   const { intent, audience, presence } = opts;
+  const suppressed =
+    intent.loudness !== "dot" && (opts.onScreen === true || (intent.loudness === "quiet" && presence.activeWeb > 0));
   const channels: ChannelName[] = [];
   const skipped: Delivery[] = [];
   for (const channel of candidates(intent.loudness)) {
-    if (intent.loudness === "quiet" && presence.activeWeb > 0) {
+    if (suppressed) {
       skipped.push({ channel, status: "skipped", detail: "present" });
     } else if (!audience[channel]) {
       skipped.push({ channel, status: "skipped", detail: "no-audience" });
