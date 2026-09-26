@@ -31,6 +31,7 @@ const markup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
   site,
   sharedHost: null,
   pending: false,
+  pendingAction: null,
   onPrepare: () => undefined,
   onApprove: () => undefined,
   onEnable: () => undefined,
@@ -70,6 +71,7 @@ const preparedMarkup = renderToStaticMarkup(React.createElement(PublicationRevie
   site: preparedSite,
   sharedHost: { hostname: "publish.example.com", connectionName: "publishing", status: "attached" },
   pending: false,
+  pendingAction: null,
   onPrepare: () => undefined,
   onApprove: () => undefined,
   onEnable: () => undefined,
@@ -112,6 +114,7 @@ const alreadyApprovedMarkup = renderToStaticMarkup(React.createElement(Publicati
   site: alreadyApprovedSite as Publication,
   sharedHost: null,
   pending: false,
+  pendingAction: null,
   onPrepare: () => undefined,
   onApprove: () => undefined,
   onEnable: () => undefined,
@@ -130,6 +133,7 @@ const destinationChangeMarkup = renderToStaticMarkup(React.createElement(Publica
   } as Publication,
   sharedHost: { hostname: "publish.example.com", connectionName: "publishing", status: "attached" },
   pending: false,
+  pendingAction: null,
   onPrepare: () => undefined,
   onApprove: () => undefined,
   onEnable: () => undefined,
@@ -142,5 +146,44 @@ alreadyApprovedMarkup.includes("Enable site")
   && !alreadyApprovedMarkup.includes("Approve audience and publish")
   && !alreadyApprovedMarkup.includes("Publish prepared update")
   && destinationChangeMarkup.includes("Approve destination and publish")
+=> true
+```
+
+While an action runs, every action is disabled to prevent overlapping
+mutations, but only the running action carries the busy state and spinner.
+
+```ts setup
+function actionButton(markup: string, action: string) {
+  return markup.match(new RegExp(`<button[^>]*id="bbx-publication-${action}-pub-reference-1"[^>]*>[\\s\\S]*?<\\/button>`))?.[0] ?? "";
+}
+const preparingMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
+  site: { ...site, approved: { ...site.approved!, status: "live" } } as Publication,
+  sharedHost: null,
+  pending: true,
+  pendingAction: "prepare",
+  onPrepare: () => undefined,
+  onApprove: () => undefined,
+  onEnable: () => undefined,
+  onDisable: () => undefined,
+}));
+const disablingMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
+  site: { ...site, approved: { ...site.approved!, status: "live" } } as Publication,
+  sharedHost: null,
+  pending: true,
+  pendingAction: "disable",
+  onPrepare: () => undefined,
+  onApprove: () => undefined,
+  onEnable: () => undefined,
+  onDisable: () => undefined,
+}));
+```
+
+```ts
+actionButton(preparingMarkup, "prepare").includes('aria-busy="true"')
+  && actionButton(preparingMarkup, "disable").includes('aria-busy="true"') === false
+  && actionButton(preparingMarkup, "disable").includes("disabled")
+  && actionButton(disablingMarkup, "disable").includes('aria-busy="true"')
+  && actionButton(disablingMarkup, "prepare").includes('aria-busy="true"') === false
+  && actionButton(disablingMarkup, "prepare").includes("disabled")
 => true
 ```

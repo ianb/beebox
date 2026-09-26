@@ -23,11 +23,13 @@ export type Candidate = NonNullable<Publication["pending"]>;
 type PreviewResult = RouterOutput["publications"]["previewFile"];
 type AudienceSummary = NonNullable<Publication["pending"]>["requestedScope"] | NonNullable<Publication["requested"]> | NonNullable<Publication["approved"]>;
 type RemoteUnavailable = Extract<Publication["remoteStatus"], { status: "unavailable" }>;
+type PublicationAction = "prepare" | "approve" | "enable" | "disable";
 export type { Publication };
 export function PublicationReviewCard({
   site,
   sharedHost,
   pending,
+  pendingAction,
   onPrepare,
   onApprove,
   onEnable,
@@ -36,6 +38,7 @@ export function PublicationReviewCard({
   site: Publication;
   sharedHost: SharedHost | null;
   pending: boolean;
+  pendingAction: PublicationAction | null;
   onPrepare: () => void;
   onApprove: (candidate: Candidate) => void;
   onEnable: () => void;
@@ -68,7 +71,7 @@ export function PublicationReviewCard({
           : null}
 
         {candidate ? <CandidateDetails candidate={candidate} pubId={site.pubId} /> : <Text size="sm" tone="muted">No prepared update is waiting for review.</Text>}
-        <PublicationActions site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
+        <PublicationActions site={site} candidate={candidate} pending={pending} pendingAction={pendingAction} migrateToSharedHost={migrateToSharedHost} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
       </Stack>
     </Card>
   );
@@ -118,10 +121,11 @@ function PublicationHeading({ site }: { site: Publication }) {
   );
 }
 
-function PublicationActions({ site, candidate, pending, migrateToSharedHost, onPrepare, onApprove, onEnable, onDisable }: {
+function PublicationActions({ site, candidate, pending, pendingAction, migrateToSharedHost, onPrepare, onApprove, onEnable, onDisable }: {
   site: Publication;
   candidate: Candidate | null;
   pending: boolean;
+  pendingAction: PublicationAction | null;
   migrateToSharedHost: boolean;
   onPrepare: () => void;
   onApprove: (candidate: Candidate) => void;
@@ -140,7 +144,7 @@ function PublicationActions({ site, candidate, pending, migrateToSharedHost, onP
   const disabled = site.approved?.status === "disabled";
   return (
     <Stack gap="xs">
-      <PublicationActionButtons site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} connectionAvailable={connectionAvailable} accessNeedsVerification={accessNeedsVerification} requiresApproval={requiresApproval} enabled={enabled} disabled={disabled} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
+      <PublicationActionButtons site={site} candidate={candidate} pending={pending} pendingAction={pendingAction} migrateToSharedHost={migrateToSharedHost} connectionAvailable={connectionAvailable} accessNeedsVerification={accessNeedsVerification} requiresApproval={requiresApproval} enabled={enabled} disabled={disabled} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
       {site.connection.status !== "active" ? <Hint>Restore this box&apos;s Cloudflare server grant in Admin before managing the site.</Hint> : null}
       {accessNeedsVerification ? <Hint>Account-restricted sites cannot be approved until this connection&apos;s Cloudflare Access capability has been verified.</Hint> : null}
       {disabled && !requiresApproval ? <Hint>Enabling allows the agent to update this site within the approved audience. Audience changes always need your approval.</Hint> : null}
@@ -149,10 +153,11 @@ function PublicationActions({ site, candidate, pending, migrateToSharedHost, onP
   );
 }
 
-function PublicationActionButtons({ site, candidate, pending, migrateToSharedHost, connectionAvailable, accessNeedsVerification, requiresApproval, enabled, disabled, onPrepare, onApprove, onEnable, onDisable }: {
+function PublicationActionButtons({ site, candidate, pending, pendingAction, migrateToSharedHost, connectionAvailable, accessNeedsVerification, requiresApproval, enabled, disabled, onPrepare, onApprove, onEnable, onDisable }: {
   site: Publication;
   candidate: Candidate | null;
   pending: boolean;
+  pendingAction: PublicationAction | null;
   migrateToSharedHost: boolean;
   connectionAvailable: boolean;
   accessNeedsVerification: boolean;
@@ -175,10 +180,10 @@ function PublicationActionButtons({ site, candidate, pending, migrateToSharedHos
   const prepareLabel = enabled && migrateToSharedHost ? "Prepare update for review" : enabled && sameRequestedAudience ? "Publish latest files" : enabled ? "Prepare update for review" : "Prepare latest files";
   return (
     <Row gap="sm" wrap className="flex-col sm:flex-row">
-      <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending} loading={pending} onClick={onPrepare}>{prepareLabel}</Button>
-      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{approvalLabel}</Button> : null}
-      {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending} loading={pending} onClick={onDisable}>Disable site</Button> : null}
-      {disabled && (!candidate || candidateMatchesApproved) ? <Button id={`bbx-publication-enable-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pending} onClick={onEnable}>Enable site</Button> : null}
+      <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending} loading={pendingAction === "prepare"} onClick={onPrepare}>{prepareLabel}</Button>
+      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pendingAction === "approve"} onClick={() => onApprove(candidate)}>{approvalLabel}</Button> : null}
+      {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending} loading={pendingAction === "disable"} onClick={onDisable}>Disable site</Button> : null}
+      {disabled && (!candidate || candidateMatchesApproved) ? <Button id={`bbx-publication-enable-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pendingAction === "enable"} onClick={onEnable}>Enable site</Button> : null}
     </Row>
   );
 }

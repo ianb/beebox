@@ -50,6 +50,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
     onError: onMutationError,
   });
   const pending = prepare.isPending || approve.isPending || enable.isPending || disable.isPending;
+  const pendingAction = prepare.isPending ? "prepare" : approve.isPending ? "approve" : enable.isPending ? "enable" : disable.isPending ? "disable" : null;
   const site = query.data?.sites.find((publication) => publication.pubId === pubId);
   const sharedHost = query.data?.sharedHost ?? null;
 
@@ -63,6 +64,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
       site={site}
       sharedHost={sharedHost}
       pending={pending}
+      pendingAction={pendingAction}
       onPrepare={() => { setMutationError(null); prepare.mutate({ name: site.name }); }}
       onApprove={(candidate) => { setMutationError(null); approve.mutate({ pubId: site.pubId, expectedRevision: candidate.revision }); }}
       onEnable={() => { setMutationError(null); enable.mutate({ pubId: site.pubId }); }}
