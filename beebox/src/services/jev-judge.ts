@@ -22,6 +22,8 @@ export type JudgeQuestion =
   | { type: "score"; instructions: JudgeInstructions; criteria: string[] };
 
 export interface JudgeInput {
+  /** A model id in place of the pinned {@link JEV_MODEL}. */
+  model?: string | undefined;
   /** Whose box this is and what it is for; sent first in every question's instructions. */
   situation?: string | undefined;
   /** Instructions shared by every question, after the situation. */
@@ -58,7 +60,7 @@ export function serializeJudgeRequest(input: JudgeInput): string {
       { type: question.type, instructions: questionInstructions(input, question), criteria: question.criteria },
     ]),
   );
-  return JSON.stringify({ model: JEV_MODEL, provider: JEV_PROVIDER, state: input.state, questions });
+  return JSON.stringify({ model: input.model ?? JEV_MODEL, provider: JEV_PROVIDER, state: input.state, questions });
 }
 
 /** Keys of the distribution a question must return, or the level count for a score. */

@@ -44,6 +44,7 @@ import { EmailOutboundSchema } from "./email-outbound.js";
 import { IntakeJobSchema } from "./intake-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
+import { JudgmentSchema } from "./judgment.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { PubSubmissionSchema } from "./pub-submission.js";
 import { ChatSchema } from "./chat.js";
@@ -115,6 +116,7 @@ export const cardSchemas: CardSchema[] = [
   ViewSchema,
   ProcedureSchema,
   ScheduledScriptSchema,
+  JudgmentSchema,
   EmailOutboundSchema,
   // authored — the course family
   CourseSchema,

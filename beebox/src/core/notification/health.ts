@@ -3,14 +3,17 @@
  * channel, notifications no channel could carry, and whether the log itself
  * can be appended to. The first two read the last 24 hours of the log; the
  * third probes by opening the file for append, so an unwritable log is
- * reported by a check that does not depend on reading it. See
- * docs/plans/notifications.md (Track A).
+ * reported by a check that does not depend on reading it. The Jev budget
+ * check rides along: a judgment deferred for budget is a check that did not
+ * run, so a notification that did not go out. See
+ * docs/plans/notifications.md (Tracks A and D).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errorMessage } from "../../lib/error-guards.js";
 import { notificationLogPath, readRecent, type LoggedNotification } from "./log.js";
+import { jevBudgetHealthCheck } from "../judgment/budget.js";
 
 /** Structurally a `HealthCheck` (`webapp/trpc/routers/health.ts`). */
 interface NotificationHealthCheck {
@@ -87,12 +90,14 @@ export async function notificationHealthChecks(
   opts: { now: Date },
 ): Promise<NotificationHealthCheck[]> {
   const writable = await logWritableCheck(boxRoot);
+  const budget = await jevBudgetHealthCheck(boxRoot, opts);
   let recent: LoggedNotification[];
   try {
     recent = await readRecent(boxRoot, { days: 1, now: opts.now });
   } catch (e) {
     return [
       writable,
+      budget,
       {
         name: "notification-log-readable",
         ok: false,
@@ -101,5 +106,5 @@ export async function notificationHealthChecks(
       },
     ];
   }
-  return [undeliveredCheck(recent), noChannelCheck(recent), writable];
+  return [undeliveredCheck(recent), noChannelCheck(recent), writable, budget];
 }

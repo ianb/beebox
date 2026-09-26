@@ -115,6 +115,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_STRICT_FETCH", // src/cli/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
   "BBX_AUTH_SCRYPT_N", // src/webapp/local-users-scrypt.ts -- test-only work-factor override.
   "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- every notification channel through its fake.
+  "BBX_JEV_FAKE", // src/core/judgment/service.ts -- `bbx judge` answers through a fixed fake (1 yes, 0 no).
   "BBX_PUSH_FAKE", // src/core/notification/fake-mode.ts -- the old name of BBX_NOTIFY_FAKE, read for one release.
   "BBX_PUSH_STORE_DIR", // src/core/push-subscriptions.ts -- push-store path override for tests.
 ];
