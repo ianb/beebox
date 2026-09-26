@@ -72,6 +72,12 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_APNS_KEY_ID",
   "BBX_APNS_TEAM_ID",
   "BBX_APNS_BUNDLE_ID",
+  // src/core/send-push.ts -- the server sends web push. The private key reaches every box
+  // child, like the APNs key above: box servers are the sending side, and without it web
+  // push could never send under the hub (found 2026-09-26 while adding APNs).
+  "BBX_VAPID_PUBLIC_KEY",
+  "BBX_VAPID_PRIVATE_KEY",
+  "BBX_VAPID_SUBJECT",
 
   // --- Claude Agent SDK config knobs (not credentials) ---
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.

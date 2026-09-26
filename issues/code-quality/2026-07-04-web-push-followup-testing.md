@@ -60,6 +60,10 @@ start until the keys exist.
   only the scheduler (which reads `.env` directly) could send. Adding the private
   key to every child's env is a custody decision for the boxholder (the APNs key is
   passed by path, `BBX_APNS_KEY_PATH`, which is on the allowlist).
+  **2026-09-26, later:** the notifications workstream added `BBX_VAPID_*` to
+  the allowlist (`src/hub/child-env.ts`), on the reasoning that box servers
+  are the sending side and the APNs key already reaches them the same way.
+  The boxholder can reverse this by removing the three names.
 
 ## Verification not yet done
 
