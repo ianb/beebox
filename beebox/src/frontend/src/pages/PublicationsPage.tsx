@@ -16,6 +16,7 @@ import { StatusMessage } from "../components/ui/StatusMessage";
 import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 import { SignInLink } from "../components/BoxSelectionTiles";
+import { publicationUrl as buildPublicationUrl, samePublicationAudience } from "@shared/publication-url";
 
 type Publication = RouterOutput["publications"]["list"]["sites"][number];
 type Candidate = NonNullable<Publication["pending"]>;
@@ -93,14 +94,26 @@ function PublicationCard({
   onDisable: () => void;
 }) {
   const candidate = site.pending;
-  const siteUrl = publicationUrl(site);
+  const primaryScope = site.approved ?? (site.requested === null ? null : { ...site.requested, customHostname: undefined });
+  const siteUrl = buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: primaryScope });
+  const workerAlias = site.approved?.customHostname
+    ? buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: { ...site.approved, customHostname: undefined } })
+    : null;
+  const requestedHostname = publicationCustomHostname(candidate?.requestedScope ?? null);
+  const requestedUrl = candidate !== null && requestedHostname
+    ? buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: candidate.requestedScope })
+    : null;
+  const requestedDiffers = requestedHostname !== undefined && requestedHostname !== (site.approved?.customHostname ?? null);
 
   return (
     <Card as="article" aria-labelledby={`bbx-publication-heading-${site.pubId}`} shadow>
       <Stack gap="md">
         <Stack gap="xs">
           <PublicationHeading site={site} />
-          {siteUrl ? <ExternalLink id={`bbx-publication-open-${site.pubId}`} href={siteUrl} variant="button">Open site</ExternalLink> : <Text size="sm" tone="muted">Site URL is assigned after the first successful preparation.</Text>}
+          {siteUrl ? <ExternalLink id={`bbx-publication-open-${site.pubId}`} href={siteUrl} variant="button">Open site</ExternalLink> : null}
+          {workerAlias ? <ExternalLink id={`bbx-publication-workers-alias-${site.pubId}`} href={workerAlias} variant="inline">Open workers.dev alias</ExternalLink> : null}
+          {requestedDiffers && requestedUrl ? <Text size="sm">Requested destination awaiting member approval: <Text mono breakAll>{requestedUrl}</Text></Text> : null}
+          {!siteUrl && !requestedUrl ? <Text size="sm" tone="muted">Site URL is assigned after the first successful preparation.</Text> : null}
         </Stack>
 
         {site.remoteStatus.status === "unavailable" ? <RemoteState reason={site.remoteStatus.reason} /> : null}
@@ -147,7 +160,7 @@ function PublicationActions({ site, candidate, pending, onPrepare, onApprove, on
   const requestedTier = candidate?.requestedScope.tier ?? site.approved?.tier;
   const accessNeedsVerification = (requestedTier === "accounts" || requestedTier === "any-account") && site.connection.capabilities.accessLive !== "verified";
   const requiresApproval = candidate !== null && (
-    !sameAudience(candidate.requestedScope, site.approved) ||
+    !samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved }) ||
     site.approved?.status === "disabled" ||
     site.approved === null
   );
@@ -159,7 +172,7 @@ function PublicationActions({ site, candidate, pending, onPrepare, onApprove, on
       {site.connection.status !== "active" ? <Hint>Restore this box&apos;s Cloudflare server grant in Admin before managing the site.</Hint> : null}
       {accessNeedsVerification ? <Hint>Account-restricted sites cannot be approved until this connection&apos;s Cloudflare Access capability has been verified.</Hint> : null}
       {disabled && !requiresApproval ? <Hint>Enabling allows the agent to update this site within the approved audience. Audience changes always need your approval.</Hint> : null}
-      {enabled && sameAudience(site.requested, site.approved) ? <Hint>Publishing within the approved audience takes effect immediately. Audience changes wait for your approval.</Hint> : null}
+      {enabled && samePublicationAudience({ requested: site.requested, approved: site.approved }) ? <Hint>Publishing within the approved audience takes effect immediately. Audience changes wait for your approval.</Hint> : null}
     </Stack>
   );
 }
@@ -178,12 +191,12 @@ function PublicationActionButtons({ site, candidate, pending, connectionAvailabl
   onEnable: () => void;
   onDisable: () => void;
 }) {
-  const sameRequestedAudience = sameAudience(site.requested, site.approved);
+  const sameRequestedAudience = samePublicationAudience({ requested: site.requested, approved: site.approved });
   const prepareLabel = enabled && sameRequestedAudience ? "Publish latest files" : enabled ? "Prepare update for review" : "Prepare latest files";
   return (
     <Row gap="sm" wrap>
       <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending || !connectionAvailable} loading={pending} onClick={onPrepare}>{prepareLabel}</Button>
-      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{sameAudience(candidate.requestedScope, site.approved) ? "Approve update and publish" : "Approve audience and publish"}</Button> : null}
+      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved }) ? "Approve update and publish" : "Approve audience and publish"}</Button> : null}
       {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending || !connectionAvailable} loading={pending} onClick={onDisable}>Disable site</Button> : null}
       {disabled && !requiresApproval ? <Button id={`bbx-publication-enable-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={onEnable}>Enable site</Button> : null}
     </Row>
@@ -246,6 +259,7 @@ function AudienceBlock({ title, value }: { title: string; value: AudienceSummary
       <Text size="sm">Tier: <Text weight="medium">{value.tier}</Text></Text>
       {"status" in value ? <Text size="sm">State: {value.status}</Text> : null}
       {value.tier === "public" && value.slug ? <Text size="sm">Public path: <Text mono>/p/{value.slug}/</Text></Text> : null}
+      {publicationCustomHostname(value) ? <Text size="sm">Custom hostname: <Text mono breakAll>{publicationCustomHostname(value)}</Text></Text> : null}
       {emails.length > 0 ? <Text size="sm">Allowed accounts: {emails.join(", ")}</Text> : null}
       {value.expiresAt ? <Text size="sm">Expires: <FriendlyDate iso={value.expiresAt} /></Text> : null}
     </Stack>
@@ -262,26 +276,14 @@ function RemoteState({ reason }: { reason: RemoteUnavailable["reason"] }) {
   return <div role="alert"><Badge tone="danger">Remote state unavailable</Badge><Text size="sm"> {message} Mutations are disabled until the site state can be checked.</Text></div>;
 }
 
-function sameAudience(requested: AudienceSummary | null, approved: Publication["approved"]): boolean {
-  if (requested === null || approved === null || requested.tier !== approved.tier) return false;
-  if (requested.tier === "public" && approved.tier === "public") return (requested.slug ?? null) === (approved.slug ?? null);
-  if (requested.tier === "accounts" && approved.tier === "accounts") {
-    return JSON.stringify([...(requested.allowedEmails ?? [])].toSorted()) === JSON.stringify([...(approved.allowedEmails ?? [])].toSorted());
-  }
-  return requested.tier === "secret" || requested.tier === "any-account";
-}
-
-function publicationUrl(site: Publication): string | null {
-  if (site.hostname === null) return null;
-  const hostname = site.hostname;
-  const pubId = site.pubId;
-  const tier = site.approved?.tier ?? site.requested?.tier ?? "secret";
-  const prefix = tier === "secret" ? `/s/${pubId}/` : tier === "accounts" || tier === "any-account" ? `/a/${pubId}/` : "/";
-  return `https://${hostname}${prefix}`;
-}
-
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function publicationCustomHostname(value: object | null): string | undefined {
+  return value !== null && "customHostname" in value && typeof value.customHostname === "string"
+    ? value.customHostname
+    : undefined;
 }

@@ -6102,10 +6102,17 @@ tests:
   # === Static site publishing ===
   # The nested publication guide is intentionally lazy: agents should find
   # it when working under src/publications, not carry it on every turn.
-  # Status (2026-09-24): 4/4 passed with Claude in a disposable synthetic box
-  # against the final installed guide. The audience audit distinguishes new
-  # sites remaining disabled, same-scope refreshes publishing immediately,
-  # and scope changes waiting for member approval while the old release stays live.
+  # Status (2026-09-25): all 6 current audits passed with Claude in a
+  # disposable synthetic box against the installed guide and shared notes; the
+  # custom-hostname case passed in a focused run. A first run had one false
+  # negative: the positive-export answer correctly described building a new
+  # object from intended fields, but the predicate recognized only alternate
+  # wording; the predicate now covers that equivalent wording, and the focused
+  # rerun passed. The audience audit distinguishes disabled first publication,
+  # immediate same-scope refresh, and member approval for scope changes. A later
+  # filtered status-audit retry was blocked before agent launch: the bundled
+  # Claude binary failed to launch, and a Codex override failed with a missing
+  # executable. The revised status rule is unverified.
 
   - id: publishing-site-authoring
     prompt: >
@@ -6113,7 +6120,10 @@ tests:
       source belongs in static mode and in project mode, how to prepare it, and
       what must remain private. Give full example paths from the box root for
       the static folder, project folder, and shared private notes. Consult the
-      installed publishing guide; do not create or change files.
+      installed publishing guide; also explain how to find an eligible
+      connection name, what to do if none is listed, and which private
+      credentials or configuration must not be inspected. Do not create or
+      change files.
     context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
@@ -6125,6 +6135,10 @@ tests:
       - "field-guide/site/"
       - "field-guide/project/"
       - "src/publications/NOTES.md"
+      - "bbx pub connections"
+    correct_matches:
+      - '(?:no|none|nothing|empty)[\s\S]{0,180}(?:connection|grant)[\s\S]{0,160}(?:ask|request)[\s\S]{0,120}(?:admin|boxholder)|(?:ask|request)[\s\S]{0,160}(?:admin|boxholder)[\s\S]{0,120}(?:connection|grant)'
+      - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
     tags: [publish-sites]
 
   - id: publishing-positive-data-export
@@ -6140,7 +6154,7 @@ tests:
       Uses positive field selection into a new public object, validates the
       shape strictly, and treats raw refs/ref-to-URL maps as private.
     correct_matches:
-      - 'positive[- ]list (?:export|selection)[\s\S]{0,180}|(?:new|fresh) object[\s\S]{0,180}(?:only|exactly)[\s\S]{0,100}(?:intended|public|two) fields'
+      - 'positive[- ]list (?:export|selection)[\s\S]{0,180}|(?:new|fresh|separate) object[\s\S]{0,180}(?:only|exactly)[\s\S]{0,100}(?:intended|public|two) fields|(?:new|separate) object[\s\S]{0,100}(?:list of the fields|fields?)[\s\S]{0,120}(?:intend|mean|choose)[\s\S]{0,80}(?:publish|include|export)'
       - '(?:strict|unknown)[\s\S]{0,180}(?:schema|field|reject)|(?:schema|field)[\s\S]{0,180}(?:strict|reject unknown)'
       - '(?:raw|private)[\s\S]{0,120}refs?|refs?[\s\S]{0,160}(?:private|same publication|not publish)'
     tags: [publish-sites]
@@ -6170,6 +6184,44 @@ tests:
       - '(?:current|existing|old)[\s\S]{0,140}(?:release|audience|site)[\s\S]{0,140}(?:live|remain|serve)|(?:remain|stays)[\s\S]{0,140}(?:live|active)'
     tags: [publish-sites]
 
+  - id: publishing-secret-link-and-approval
+    prompt: >
+      You prepare a new secret-link site, and the CLI prints a full destination
+      URL ending in `/s/<pubId>/` plus a direct link to this box's Publications
+      page. What exact URL do you preserve for the boxholder, who can enable
+      the site and where, and what do you say if no direct app link was printed?
+      Explain how you choose the connection if the definition does not have one
+      yet, how you later verify the managed state, and what you do if status
+      reports missing box-server credentials. Consult
+      the installed publishing guide; do not create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Uses only an active, granted connection from `bbx pub connections`; does
+      not inspect machine credentials; preserves the complete `/s/<pubId>/`
+      capability path and shares it privately with the boxholder. Directs a
+      signed-in member to the returned app link or profile menu → Publications,
+      and does not treat the CLI as able to enable or approve. Uses managed
+      status through the configured box agent; if server credentials are
+      missing, reports the status error and asks the operator to restore the
+      box-server connection if it persists. Wrangler diagnostics require
+      explicit `--legacy`, not as a substitute for managed status.
+    correct_contains:
+      - "bbx pub connections"
+      - "bbx pub status"
+      - "/s/"
+      - "Publications"
+    correct_matches:
+      - '(?:complete|full|entire|exact)[\s\S]{0,160}(?:secret|destination|site)?[\s\S]{0,120}URL|URL[\s\S]{0,180}(?:full|entire|exact|complete)'
+      - '/s/[\s\S]{0,180}(?:PubId|publication id|id-bearing|capability)|(?:PubId|publication id)[\s\S]{0,160}/s/'
+      - '(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)[\s\S]{0,180}(?:Publications|enable|approve)|(?:Publications|enable|approve)[\s\S]{0,180}(?:signed-in|signed in)[\s\S]{0,140}(?:member|boxholder)'
+      - '(?:cannot|can.t|must not|no CLI)[\s\S]{0,160}(?:enable|approve)|(?:enable|approve)[\s\S]{0,160}(?:app|member|not.*CLI)'
+      - '(?:missing|no)[\s\S]{0,100}box.server credentials[\s\S]{0,180}(?:error|run (?:it|the command) through (?:the )?configured box agent|restore|operator|connection)|(?:error|cannot|can.t)[\s\S]{0,140}(?:box.server credentials|managed status)[\s\S]{0,160}(?:restore|operator|connection)'
+    response_not_contains:
+      - "legacy fallback"
+    tags: [publish-sites]
+
   - id: publishing-private-notes-scope
     prompt: >
       You learned one rule that applies to every published site, a layout
@@ -6191,4 +6243,40 @@ tests:
     correct_matches:
       - '(?:read|check|review)[\s\S]{0,180}(?:shared )?NOTES\.md'
       - 'not be spread to other sites|skip notes scoped to other sites|(?:ignore|do not apply|don.t apply)[\s\S]{0,180}(?:other|different|site-specific)|(?:do not|don.t|should not|do not blindly)[\s\S]{0,120}(?:carry|copy|spread|apply)[\s\S]{0,120}(?:over|other sites|another site)'
+    tags: [publish-sites]
+
+  - id: publishing-custom-hostname-admin
+    prompt: >
+      A Cloudflare administrator has assigned a custom hostname to a prepared
+      secret-link site, but the box member has not approved the new destination
+      yet. Explain who may assign it versus who approves, what the agent should
+      and should not do next, how to find the eventual viewer URL, and what
+      caveats remain after approval, including what to do if Cloudflare
+      attachment is still pending. Consult the installed publishing guide; do
+      not create or change files.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Says the hostname assignment requires the authenticated Bee Box owner,
+      not a definition or CLI field; waits for a signed-in box member to
+      approve the candidate; checks
+      managed status for the approved URL and keeps `/s/<pubId>/`; mentions
+      workers.dev remains alternate, HTTPS may still be provisioning, pending
+      attachment blocks approval and can only retry the reserved exact host,
+      and Bee Box has no detach/remap flow.
+    correct_contains:
+      - "publication.json"
+      - "bbx pub status"
+      - "/s/"
+      - "workers.dev"
+      - "pending"
+    correct_matches:
+      - '(?:authenticated|global)[\s\S]{0,80}(?:Bee Box )?(?:owner|administrator)[\s\S]{0,160}(?:assign|custom hostname)|(?:assign|custom hostname)[\s\S]{0,160}(?:authenticated|global)[\s\S]{0,80}(?:owner|administrator)'
+      - '(?:do not|don.t|never)[\s\S]{0,120}(?:set|add|put|assign)[\s\S]{0,100}(?:hostname|host)[\s\S]{0,120}(?:publication\.json|definition|CLI|command)|(?:hostname|host)[\s\S]{0,180}(?:admin|administrator)[\s\S]{0,180}(?:not|never|cannot)[\s\S]{0,120}(?:agent|CLI|definition)'
+      - '(?:signed-in|signed in)[\s\S]{0,120}(?:member of this box|box member|member)[\s\S]{0,160}(?:approve|approval)|(?:approve|approval)[\s\S]{0,180}(?:signed-in|box member|member of this box)'
+      - '/s/[\s\S]{0,120}(?:PubId|publication id|full|complete|preserve|secret)|(?:PubId|publication id)[\s\S]{0,120}/s/'
+      - '(?:HTTPS|certificate)[\s\S]{0,140}(?:provision|time|ready|reach)|(?:provision|time)[\s\S]{0,140}(?:HTTPS|certificate)'
+      - '(?:cannot|can.t|no)[\s\S]{0,100}(?:detach|remap)|(?:detach|remap)[\s\S]{0,100}(?:not available|not supported|manual|Cloudflare)'
+      - '(?:pending|unconfirmed)[\s\S]{0,180}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)[\s\S]{0,120}(?:retry|again)|(?:retry|again)[\s\S]{0,160}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)'
     tags: [publish-sites]

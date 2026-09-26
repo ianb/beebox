@@ -5138,6 +5138,13 @@ publishing-audit-RCBhzs:
       peak: 35313
       added: 11294
       turns: 4
+    - date: 2026-09-25T19:38:25.801Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 22073
+      peak: 31287
+      added: 9214
+      turns: 4
   publishing-positive-data-export:
     - date: 2026-09-24T18:19:03.257Z
       boxCommit: fb8509886f684812572511873310bc9848a03dd5
@@ -5180,6 +5187,20 @@ publishing-audit-RCBhzs:
       initial: 23742
       peak: 34791
       added: 11049
+      turns: 4
+    - date: 2026-09-25T19:38:25.801Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 21929
+      peak: 26034
+      added: 4105
+      turns: 4
+    - date: 2026-09-25T19:40:05.119Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 24652
+      peak: 26077
+      added: 1425
       turns: 4
   publishing-audience-approval:
     - date: 2026-09-24T18:19:03.257Z
@@ -5230,6 +5251,13 @@ publishing-audit-RCBhzs:
       initial: 24021
       peak: 34822
       added: 10801
+      turns: 3
+    - date: 2026-09-25T19:38:25.801Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 21784
+      peak: 31168
+      added: 9384
       turns: 3
   publishing-private-notes-scope:
     - date: 2026-09-24T18:19:03.257Z
@@ -5288,3 +5316,33 @@ publishing-audit-RCBhzs:
       peak: 27822
       added: 4030
       turns: 4
+    - date: 2026-09-25T19:38:25.801Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 21979
+      peak: 26080
+      added: 4101
+      turns: 3
+  publishing-secret-link-and-approval:
+    - date: 2026-09-25T19:38:25.801Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 22953
+      peak: 33541
+      added: 10588
+      turns: 3
+  publishing-custom-hostname-admin:
+    - date: 2026-09-25T19:47:53.894Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 22219
+      peak: 34380
+      added: 12161
+      turns: 3
+    - date: 2026-09-25T20:04:09.629Z
+      boxCommit: 8b12bce2be178291707aff7febad68fde1de3708
+      repoCommit: 0136dfb3465f2273de6790f8a3c652d43d54dcc9
+      initial: 22071
+      peak: 31540
+      added: 9469
+      turns: 3

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pubIdSchema } from "../../../publish/manifest.js";
 import { getOwnerEmail } from "../../auth.js";
+import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime.js";
 import {
   prepareManagedPublication,
 } from "../../../publish/managed-publications.js";
@@ -13,7 +14,8 @@ import {
   revokeManagedPublication,
 } from "../../../publish/managed-publication-actions.js";
 import { listManagedPublications, previewManagedPublicationFile } from "../../../publish/managed-publication-queries.js";
-import { authedProcedure, router } from "../trpc.js";
+import { assignManagedPublicationHostname } from "../../../publish/managed-publication-custom-domain.js";
+import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
 
 const pubIdInput = pubIdSchema;
 
@@ -39,6 +41,18 @@ const publicationHumanProcedure = authedProcedure.use(({ ctx, next }) => {
 });
 
 export const publicationsRouter = router({
+  /** Names only, scoped to this box; never expose global connection metadata to agents. */
+  connections: publicationReadProcedure.query(async ({ ctx }) => {
+    const runtime = ctx.services.managedPublicationRuntime ?? defaultManagedPublicationRuntime;
+    const rows = await runtime.listConnections();
+    return {
+      connections: rows
+        .filter((row) => row.tokenStatus === "active" && row.grants.some((grant) => grant.boxSlug === ctx.boxSlug))
+        .map((row) => row.name)
+        .toSorted(),
+    };
+  }),
+
   list: publicationReadProcedure.query(async ({ ctx }) => {
     try {
       return { sites: await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime) };
@@ -50,6 +64,14 @@ export const publicationsRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         return await prepareManagedPublication({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, name: input.name, ownerEmail: getOwnerEmail() }, ctx.services.managedPublicationRuntime);
+      } catch (error) { publicationError(error); }
+    }),
+
+  assignCustomHostname: authenticatedOwnerProcedure
+    .input(z.object({ pubId: pubIdInput, hostname: z.string().min(1).max(253) }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await assignManagedPublicationHostname({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
       } catch (error) { publicationError(error); }
     }),
 

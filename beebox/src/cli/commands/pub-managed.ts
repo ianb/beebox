@@ -5,19 +5,52 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import { errorMessage } from "../../lib/error-guards.js";
 import { generatePubId } from "../../publish/manifest.js";
+import { publicationUrl as buildPublicationUrl, samePublicationAudience, type PublicationUrlScope } from "../../shared/publication-url.js";
 import type { AppRouter } from "../../webapp/trpc/router.js";
 import { boxClient } from "../lib/box-client.js";
 
 type PublicationCandidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
 type PublicationSite = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
+type PublicationConnections = inferRouterOutputs<AppRouter>["publications"]["connections"];
 
 function printBoxClientError(message: string): never {
   console.error(`Error: ${message}`);
   process.exit(1);
 }
 
-function audienceLabel(site: PublicationSite): string {
-  const scope = site.pending?.requestedScope ?? site.requested ?? site.approved;
+export function publicationDestinationUrl(args: { hostname: string | null; pubId: string; scope: PublicationUrlScope | null }): string | null {
+  return buildPublicationUrl({ workersHostname: args.hostname, pubId: args.pubId, scope: args.scope });
+}
+
+export function publicationApprovalUrl(serverUrl: string | undefined, boxName: string | undefined): string | null {
+  if (serverUrl === undefined || boxName === undefined || serverUrl.length === 0 || boxName.length === 0) return null;
+  try {
+    const base = new URL(serverUrl);
+    if (base.protocol !== "https:" && base.protocol !== "http:") return null;
+    return new URL(`/${encodeURIComponent(boxName)}/publications`, base.origin).toString();
+  } catch (error) {
+    void error;
+    return null;
+  }
+}
+
+function approvalLinkLines(): string[] {
+  const url = publicationApprovalUrl(process.env.BBX_SERVER_URL, process.env.BBX_BOX_NAME);
+  return url === null
+    ? ["  approval: open this box's Publications page from the app menu."]
+    : [`  approval: ${url}${new URL(url).hostname === "localhost" ? " (local app URL)" : ""}`];
+}
+
+function siteDestination(site: PublicationSite): string | null {
+  const scope = site.approved ?? site.pending?.requestedScope ?? site.requested;
+  return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope });
+}
+
+function candidateDestination(site: PublicationSite): string | null {
+  return site.pending === null ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: site.pending.requestedScope });
+}
+
+function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[] } | null): string {
   if (scope === null) return "unknown audience";
   if (scope.tier === "public") return `public${scope.slug ? ` at /p/${scope.slug}/` : ""}`;
   if (scope.tier === "accounts") return `accounts (${scope.allowedEmails?.length ?? 0} allowed)`;
@@ -32,8 +65,29 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
       : site.approved?.status ?? "not enabled";
     const active = site.activeReleaseId === null ? "no active release" : `active ${site.activeReleaseId.slice(0, 12)}`;
     const prepared = site.pending === null ? "no prepared update" : `prepared ${site.pending.releaseId.slice(0, 12)}`;
-    return `${site.name} — ${serving}; ${audienceLabel(site)}; ${active}; ${prepared}${site.hostname ? `; https://${site.hostname}` : ""}`;
+    const servingScope = site.approved;
+    const requestedScope = site.pending?.requestedScope ?? site.requested;
+    const destination = siteDestination(site);
+    const nextDestination = candidateDestination(site);
+    const audience = servingScope === null
+      ? `requested audience ${audienceLabel(requestedScope)}`
+      : `serving audience ${audienceLabel(servingScope)}`;
+    const candidate = site.pending !== null && servingScope !== null && !samePublicationAudience({ requested: servingScope, approved: site.pending.requestedScope })
+      ? `; prepared audience ${audienceLabel(site.pending.requestedScope)}${nextDestination ? `; candidate URL: ${nextDestination}` : ""}`
+      : "";
+    const destinationLabel = servingScope === null ? "candidate URL" : "publication";
+    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${candidate}`;
   });
+}
+
+export function publicationConnectionsLines(result: PublicationConnections): string[] {
+  return result.connections.length === 0
+    ? ["No active Cloudflare publishing connections are granted to this box."]
+    : ["Active Cloudflare publishing connections granted to this box:", ...result.connections.map((name) => `  ${name}`)];
+}
+
+export function publicationApprovalLines(): string[] {
+  return approvalLinkLines();
 }
 
 export function publicationPreparedLines(candidate: PublicationCandidate, site: PublicationSite | undefined): string[] {
@@ -44,6 +98,12 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
     `  release: ${candidate.releaseId}`,
     `  files: ${candidate.preview.length}; scan findings: ${candidate.scan.total}; skipped binaries: ${candidate.scan.skippedBinaries}`,
   ];
+  const servingUrl = site?.approved === null || site === undefined ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: candidate.pubId, scope: site.approved });
+  const candidateUrl = publicationDestinationUrl({ hostname: site?.hostname ?? null, pubId: candidate.pubId, scope: candidate.requestedScope });
+  if (servingUrl !== null) lines.push(`  publication URL: ${servingUrl}`);
+  if (candidateUrl !== null && candidateUrl !== servingUrl) lines.push(`  candidate URL (awaiting member approval): ${candidateUrl}`);
+  else if (candidateUrl !== null) lines.push(`  publication URL: ${candidateUrl}`);
+  lines.push(...approvalLinkLines());
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {
     lines.push("  serving state is unknown; check the Publications page before describing it as live or disabled.");
@@ -54,6 +114,19 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   }
   return lines;
 }
+
+const connectionsCommand = new Command("connections")
+  .description("List active Cloudflare publishing connections granted to this box")
+  .action(async () => {
+    const client = boxClient();
+    if (!client.ok) printBoxClientError(client.error.message);
+    try {
+      const result: PublicationConnections = await client.value.publications.connections.query();
+      for (const line of publicationConnectionsLines(result)) console.log(line);
+    } catch (error) {
+      printBoxClientError(errorMessage(error));
+    }
+  });
 
 const idCommand = new Command("id")
   .description("Generate a cryptographically random publication id for publication.json")
@@ -67,6 +140,7 @@ const sitesCommand = new Command("sites")
     try {
       const result = await client.value.publications.list.query();
       for (const line of publicationSiteLines(result.sites)) console.log(line);
+      if (result.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
     } catch (error) {
       printBoxClientError(errorMessage(error));
     }
@@ -91,3 +165,4 @@ const prepareCommand = new Command("prepare")
 export const pubManagedPrepareCommand = prepareCommand;
 export const pubManagedSitesCommand = sitesCommand;
 export const pubManagedIdCommand = idCommand;
+export const pubManagedConnectionsCommand = connectionsCommand;

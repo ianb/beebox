@@ -27,8 +27,8 @@ export function publicationError(message: string): ManagedPublicationError {
 }
 const scanFindingSchema = z.object({ id: z.string(), kind: z.enum(["home-path", "email", "credential", "external-url"]), file: z.string(), match: z.string(), detail: z.string(), line: z.number().int().positive() }).strict();
 const candidateScopeSchema = z.discriminatedUnion("tier", [
-  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("public"), expiresAt: z.null(), slug: z.string().optional() }).strict(),
-  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("secret"), expiresAt: z.null() }).strict(),
+  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("public"), expiresAt: z.null(), slug: z.string().optional(), customHostname: z.string().optional() }).strict(),
+  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("secret"), expiresAt: z.null(), customHostname: z.string().optional() }).strict(),
   z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("accounts"), expiresAt: z.null(), allowedEmails: z.array(z.string().email()) }).strict(),
   z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("any-account"), expiresAt: z.null() }).strict(),
 ]);
@@ -57,17 +57,13 @@ export function stable(value: unknown): string {
   if (!isObjectRecord(value)) return JSON.stringify(value);
   return `{${Object.keys(value).toSorted().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
 }
-
 function isObjectRecord(value: object): value is Record<string, unknown> { return !Array.isArray(value); }
 
-function revision(value: unknown): string {
-  return createHash("sha256").update(stable(value)).digest("hex");
-}
-
-function requestedScope(prepared: PreparedPublication, hostHandle: string) {
+function requestedScope(prepared: PreparedPublication, routing: { hostHandle: string; customHostname?: string }) {
+  const { hostHandle, customHostname } = routing;
   const definition = prepared.definition;
-  if (definition.tier === "public") return { kind: "site" as const, hostHandle, tier: "public" as const, expiresAt: null, ...(definition.slug === undefined ? {} : { slug: definition.slug }) };
-  if (definition.tier === "secret") return { kind: "site" as const, hostHandle, tier: "secret" as const, expiresAt: null };
+  if (definition.tier === "public") return { kind: "site" as const, hostHandle, tier: "public" as const, expiresAt: null, ...(definition.slug === undefined ? {} : { slug: definition.slug }), ...(customHostname === undefined ? {} : { customHostname }) };
+  if (definition.tier === "secret") return { kind: "site" as const, hostHandle, tier: "secret" as const, expiresAt: null, ...(customHostname === undefined ? {} : { customHostname }) };
   if (definition.tier === "accounts") return { kind: "site" as const, hostHandle, tier: "accounts" as const, expiresAt: null, allowedEmails: definition.emails };
   return { kind: "site" as const, hostHandle, tier: "any-account" as const, expiresAt: null };
 }
@@ -75,34 +71,25 @@ function requestedScope(prepared: PreparedPublication, hostHandle: string) {
 function sameScope(a: SiteEdgeManifest, scope: ReturnType<typeof requestedScope>): boolean {
   return stable({ ...a, status: undefined, activeRelease: undefined, previousRelease: undefined }) === stable({ ...scope, status: undefined, activeRelease: undefined, previousRelease: undefined });
 }
-
 async function hasObject(store: PublishRemoteStore, key: string): Promise<boolean> {
   return (await store.list(key)).includes(key);
 }
-
 export async function readSiteManifest(store: PublishRemoteStore, pubId: string): Promise<SiteEdgeManifest | null> {
-  const key = `pubs/${pubId}/manifest.json`;
-  if (!(await hasObject(store, key))) return null;
+  const key = `pubs/${pubId}/manifest.json`; if (!(await hasObject(store, key))) return null;
   const raw = await store.get(key);
   const parsed = siteEdgeManifestSchema.safeParse(JSON.parse(new TextDecoder().decode(raw)));
   if (!parsed.success) throw publicationError("The publication edge manifest is invalid; refusing to replace it.");
   return parsed.data;
 }
-
 export type PublicationCandidate = z.infer<typeof candidateSchema>;
 
 export async function readCandidate(store: PublishRemoteStore, pubId: string): Promise<PublicationCandidate | null> {
-  const key = `pubs/${pubId}/pending.json`;
-  if (!(await hasObject(store, key))) return null;
-  let json: unknown;
-  try { json = JSON.parse(new TextDecoder().decode(await store.get(key))); }
-  catch (_error) { throw publicationError("The pending publication candidate is invalid JSON."); }
+  const key = `pubs/${pubId}/pending.json`; if (!(await hasObject(store, key))) return null;
+  let json: unknown; try { json = JSON.parse(new TextDecoder().decode(await store.get(key))); } catch (_error) { throw publicationError("The pending publication candidate is invalid JSON."); }
   const parsed = candidateSchema.safeParse(json);
   if (!parsed.success || parsed.data.pubId !== pubId) throw publicationError("The pending publication candidate is malformed or bound to another publication.");
   const { revision: candidateRevision, ...body } = parsed.data;
-  if (revision(body) !== candidateRevision || await releaseIdForFiles(parsed.data.files) !== parsed.data.releaseId) {
-    throw publicationError("The pending publication candidate revision or release inventory does not match its contents.");
-  }
+  if (createHash("sha256").update(stable(body)).digest("hex") !== candidateRevision || await releaseIdForFiles(parsed.data.files) !== parsed.data.releaseId) throw publicationError("The pending publication candidate revision or release inventory does not match its contents.");
   return parsed.data;
 }
 
@@ -201,6 +188,7 @@ function workerIdentityMatches(args: { bindings: Map<string, DeployedBinding>; p
 
 async function persistPreparedCandidate(args: {
   boxRoot: string;
+  boxSlug: string;
   pubId: string;
   store: PublishRemoteStore;
   existing: SiteEdgeManifest | null;
@@ -211,6 +199,11 @@ async function persistPreparedCandidate(args: {
   const lockDir = path.join(args.boxRoot, ".beebox", "publish-locks");
   await mkdir(lockDir, { recursive: true });
   await withFileLock({ lockPath: path.join(lockDir, `${args.pubId}.lock`), metadata: { purpose: "managed-publication-prepare", pubId: args.pubId }, waitMs: 10_000 }, async () => {
+    const binding = await args.runtime.getBinding({ pubId: args.pubId, boxSlug: args.boxSlug });
+    if (binding === null || binding.hostHandle !== args.scope.hostHandle) throw publicationError("The publication binding changed during preparation; prepare it again before continuing.");
+    const assignedHostname = binding.customHostname;
+    const candidateHostname = "customHostname" in args.scope ? args.scope.customHostname : undefined;
+    if ((assignedHostname ?? null) !== (candidateHostname ?? null)) throw publicationError("The hostname assignment changed during preparation; retry preparation to retain the assigned hostname.");
     const latest = await readSiteManifest(args.store, args.pubId);
     if (args.existing === null && latest !== null) throw publicationError("Publication was created concurrently; refresh and review its latest state.");
     if (args.existing !== null && latest === null) throw publicationError("Publication state disappeared during preparation; no update was made.");
@@ -272,7 +265,10 @@ export async function prepareManagedPublication(args: {
     await assertRemoteOwnership({ existing, store, pubId: prepared.pubId, hostHandle: binding.hostHandle });
     if (existing?.status === "revoked") throw publicationError("This publication is revoked and cannot be refreshed. Create a new publication id.");
     await ensureWorkerDeployment({ runtime, boxRoot: args.boxRoot, credential: connection, provisioning, pubId: prepared.pubId, reserved: binding, connectionName: prepared.definition.connection });
-    const scope = requestedScope(prepared, binding.hostHandle);
+    if (binding.customHostname !== undefined && prepared.definition.tier !== "public" && prepared.definition.tier !== "secret") {
+      throw publicationError("Custom hostnames are supported only for public or secret publications.");
+    }
+    const scope = requestedScope(prepared, { hostHandle: binding.hostHandle, ...(binding.customHostname === undefined ? {} : { customHostname: binding.customHostname }) });
     const candidateBody = {
       schemaVersion: 1 as const,
       pubId: prepared.pubId,
@@ -285,8 +281,8 @@ export async function prepareManagedPublication(args: {
       scan: scanSummary(prepared),
       preparedAt: runtime.now(args.boxRoot).toISOString(),
     };
-    const candidate = { ...candidateBody, revision: revision(candidateBody) };
-    await persistPreparedCandidate({ boxRoot: args.boxRoot, pubId: prepared.pubId, store, existing, scope, candidate, runtime });
+    const candidate = { ...candidateBody, revision: createHash("sha256").update(stable(candidateBody)).digest("hex") };
+    await persistPreparedCandidate({ boxRoot: args.boxRoot, boxSlug: args.boxSlug, pubId: prepared.pubId, store, existing, scope, candidate, runtime });
     return { pubId: prepared.pubId, name: args.name, title: prepared.definition.title, revision: candidate.revision, releaseId, requestedScope: scope, preparedAt: candidate.preparedAt, preview: prepared.preview, scan: candidate.scan };
   } finally {
     await prepared.cleanup();

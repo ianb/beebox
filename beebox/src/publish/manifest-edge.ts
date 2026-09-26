@@ -157,6 +157,7 @@ const previousSiteReleaseSchema = z
 const siteCommonFields = {
   kind: z.literal("site"),
   hostHandle: z.string().regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/),
+  customHostname: z.string().min(1).optional(),
   status: z.enum(["disabled", "live", "revoked"]),
   expiresAt: z.string().datetime({ offset: true }).nullable(),
   activeRelease: siteReleaseSchema,

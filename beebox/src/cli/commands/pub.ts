@@ -30,7 +30,7 @@ import {
 } from "../../publish/lifecycle.js";
 import { goPublication } from "../../publish/go.js";
 import { pubSetupCommand, pubStatusCommand } from "./pub-setup.js";
-import { pubManagedIdCommand, pubManagedPrepareCommand, pubManagedSitesCommand } from "./pub-managed.js";
+import { pubManagedConnectionsCommand, pubManagedIdCommand, pubManagedPrepareCommand, pubManagedSitesCommand } from "./pub-managed.js";
 
 /** Commander accumulator for repeatable options (e.g. `--accept-leak`). */
 function collect(val: string, acc: string[]): string[] {
@@ -263,4 +263,5 @@ export const pubCommand = new Command("pub")
   .addCommand(pubManagedPrepareCommand)
   .addCommand(pubManagedSitesCommand)
   .addCommand(pubManagedIdCommand)
+  .addCommand(pubManagedConnectionsCommand)
   .addCommand(pubStatusCommand);

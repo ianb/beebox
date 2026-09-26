@@ -23,6 +23,8 @@ import { createCloudflareTokensClient } from "../../services/cloudflare-tokens.j
 import { createCloudflareProvisioningClient } from "../../services/cloudflare-provisioning.js";
 import { createWranglerService } from "../../services/wrangler.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
+import { boxClient } from "../lib/box-client.js";
+import { publicationApprovalLines, publicationConnectionsLines, publicationSiteLines } from "./pub-managed.js";
 
 /** Resolve login → auth bundle, or print the precise refusal and exit. */
 async function requireAuthBundle(accountId: string | undefined): Promise<SetupAuthBundle> {
@@ -185,11 +187,35 @@ function formatStatusReport(report: StatusReport): string[] {
 }
 
 export const pubStatusCommand = new Command("status")
-  .description("Report the deployed publishing state and flag drift between the committed Worker and what's deployed")
+  .description("Report this box's managed publication status; use --legacy for the Wrangler deployment diagnostic")
+  .option("--legacy", "Show the legacy local Wrangler/Worker deployment diagnostic")
   .option("--account-id <id>", "Cloudflare account to act on (required when the wrangler login can see several)")
-  .action(async (...actionArgs: [options: { accountId?: string }, ...unknown[]]) => {
+  .action(async (...actionArgs: [options: { accountId?: string; legacy?: boolean }, ...unknown[]]) => {
     const [options] = actionArgs;
     try {
+      if (!options.legacy) {
+        const client = boxClient();
+        if (client.ok) {
+          try {
+            const [connections, publications] = await Promise.all([
+              client.value.publications.connections.query(),
+              client.value.publications.list.query(),
+            ]);
+            console.log("Server-managed publication status:");
+            for (const line of publicationConnectionsLines(connections)) console.log(line);
+            for (const line of publicationSiteLines(publications.sites)) console.log(line);
+            if (publications.sites.length > 0) for (const line of publicationApprovalLines()) console.log(line);
+            return;
+          } catch (error) {
+            console.error(`Error: ${errorMessage(error)}`);
+            process.exit(1);
+          }
+        }
+        console.error(`Error: no box-server credentials (${client.error.missing}); run this command through the configured box agent, or use --legacy only to inspect the old local Wrangler deployment.`);
+        process.exit(1);
+      } else {
+        console.log("Legacy Wrangler/Worker deployment diagnostic:");
+      }
       const boxRoot = await requireBoxRoot();
       const wrangler = createWranglerService();
       const resolved = await resolveCloudflareAuth({ accountId: options.accountId }, { wrangler });

@@ -11,11 +11,9 @@
  * calls Cloudflare's REST API (`api.cloudflare.com/client/v4/accounts/<id>/...`)
  * through the injected {@link BearerProvider}.
  *
- * ⚠️ UNVERIFIED: the real adapter cannot be exercised without live Cloudflare
- * credentials, so it is NOT covered by any doctest. The setup/status *logic* is
- * fully tested through the fake; the adapter is the thin, best-effort seam.
- * Treat its request shaping / error mapping as unproven until the manual
- * end-to-end run (the plan's step-5/7 verification).
+ * ⚠️ UNVERIFIED: the adapter's API shaping is covered by injected-response
+ * tests; actual token permissions and live account behavior still need an
+ * operator-side run.
  *
  * CREDENTIAL MODEL (decided 2026-07-31 — `docs/implemented-plans/pub-setup-wrangler.md`):
  * this client rides the interactive wrangler-OAuth login through a
@@ -28,6 +26,12 @@
 import { z } from "zod";
 
 import type { BearerProvider } from "./cloudflare-bearer.js";
+import { createCloudflareDomainMethods } from "./cloudflare-provisioning-domains.js";
+import type { CloudflareZone, WorkerDomain } from "./cloudflare-provisioning-domains.js";
+
+export type { CloudflareZone, WorkerDomain } from "./cloudflare-provisioning-domains.js";
+export { createFakeProvisioningClient } from "./cloudflare-provisioning-fake.js";
+export type { FakeProvisioningClient, FakeProvisioningOptions } from "./cloudflare-provisioning-fake.js";
 
 /** One entry of a Cloudflare API JSON error body's `errors` array. */
 export interface CloudflareApiErrorDetail {
@@ -88,6 +92,12 @@ export interface CloudflareProvisioningClient {
   getScriptSubdomain(scriptName: string): Promise<ScriptSubdomainSettings | null>;
   /** Set the script's workers.dev routing state (setup enforces `enabled` + previews DISABLED). */
   setScriptSubdomain(scriptName: string, settings: ScriptSubdomainSettings): Promise<void>;
+  /** Active DNS zones visible to this token, including account ownership. */
+  listZones(): Promise<CloudflareZone[]>;
+  /** Existing Worker-domain assignment for this exact hostname. */
+  listWorkerDomains(hostname: string): Promise<WorkerDomain[]>;
+  /** Attach a custom domain to an existing Worker service. */
+  attachWorkerDomain(args: { hostname: string; service: string; zoneId: string; zoneName: string }): Promise<WorkerDomain>;
 }
 
 export interface ProvisioningConfig {
@@ -115,7 +125,6 @@ const scriptSettingsResultSchema = z.object({
     .array(z.object({ type: z.string(), name: z.string(), text: z.string().optional(), bucket_name: z.string().optional() }))
     .optional(),
 });
-
 /** Cloudflare error code for "bucket already exists" — mapped to idempotent success. */
 const R2_BUCKET_ALREADY_EXISTS = 10004;
 
@@ -161,7 +170,8 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
     if (!res.ok) {
       throw new ProvisioningRequestError({ op, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
     }
-    const envelope = envelopeSchema.safeParse(await res.json());
+    const body: unknown = await res.json();
+    const envelope = envelopeSchema.safeParse(body);
     if (!envelope.success || !envelope.data.success) {
       throw new ProvisioningRequestError({ op, status: res.status, statusText: "malformed or unsuccessful response envelope", cfErrors: envelope.success ? envelope.data.errors : undefined });
     }
@@ -218,68 +228,6 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
         throw new ProvisioningRequestError({ op: "script subdomain update", status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
       }
     },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Fake — in-memory, for setup/status doctests. No network.
-// ---------------------------------------------------------------------------
-
-export interface FakeProvisioningClient extends CloudflareProvisioningClient {
-  /** Bucket names that exist. Mutated by `createBucket`. */
-  buckets: Set<string>;
-  /** The account's workers.dev subdomain label (`null` = none registered). */
-  accountSubdomain: string | null;
-  /** Deployed scripts by name. Absent name ⇒ never deployed. */
-  scripts: Map<string, DeployedScriptSettings>;
-  /** Per-script workers.dev routing state. */
-  scriptSubdomains: Map<string, ScriptSubdomainSettings>;
-  /** Every mutating op in call order (`create-bucket:<name>` / `set-subdomain:<script>:<enabled>:<previews>`). */
-  ops: string[];
-}
-
-export interface FakeProvisioningOptions {
-  buckets?: string[];
-  accountSubdomain?: string | null;
-  scripts?: Record<string, DeployedScriptSettings>;
-  scriptSubdomains?: Record<string, ScriptSubdomainSettings>;
-}
-
-/** Build a network-free {@link CloudflareProvisioningClient} with observable state. */
-export function createFakeProvisioningClient(options?: FakeProvisioningOptions): FakeProvisioningClient {
-  const buckets = new Set(options?.buckets);
-  const scripts = new Map(Object.entries(options?.scripts ?? {}));
-  const scriptSubdomains = new Map(Object.entries(options?.scriptSubdomains ?? {}));
-  const ops: string[] = [];
-
-  return {
-    buckets,
-    accountSubdomain: options?.accountSubdomain === undefined ? "examplesub" : options.accountSubdomain,
-    scripts,
-    scriptSubdomains,
-    ops,
-    bucketExists(name: string): Promise<boolean> {
-      return Promise.resolve(buckets.has(name));
-    },
-    createBucket(name: string): Promise<{ created: boolean }> {
-      ops.push(`create-bucket:${name}`);
-      if (buckets.has(name)) return Promise.resolve({ created: false });
-      buckets.add(name);
-      return Promise.resolve({ created: true });
-    },
-    getAccountSubdomain(): Promise<string | null> {
-      return Promise.resolve(this.accountSubdomain);
-    },
-    getScriptSettings(scriptName: string): Promise<DeployedScriptSettings | null> {
-      return Promise.resolve(scripts.get(scriptName) ?? null);
-    },
-    getScriptSubdomain(scriptName: string): Promise<ScriptSubdomainSettings | null> {
-      return Promise.resolve(scriptSubdomains.get(scriptName) ?? null);
-    },
-    setScriptSubdomain(scriptName: string, settings: ScriptSubdomainSettings): Promise<void> {
-      ops.push(`set-subdomain:${scriptName}:${settings.enabled}:${settings.previewsEnabled}`);
-      scriptSubdomains.set(scriptName, settings);
-      return Promise.resolve();
-    },
+    ...createCloudflareDomainMethods({ accountId: config.accountId, base, request: authedFetch }),
   };
 }
