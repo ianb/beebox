@@ -68,7 +68,9 @@ then `skipped: present` on every channel, and a `dot` still badges.
   `context` and a body; with no `loudness` it is a `dot`. While a web session
   is present the callout is on screen, so even a `loud` one is not pushed.
 - **Questions.** The question sweep sends a `dot`; a question with
-  `urgency: time-bound` sends `quiet`; the aging nudge is `quiet`.
+  `urgency: time-bound` sends `quiet`. The aging nudge is `quiet` by design: a
+  question unanswered for a week gets one quiet push before it expires, the one
+  exception to "a question is a dot unless time-bound".
 - **Capture failure.** A capture that fails for good sends `quiet` to its chat
   when nobody is present.
 - **Health** never notifies on its own: failing syncs, expired auth, and
@@ -184,17 +186,33 @@ Run on a real device after the server setup, on a box whose briefing has a
    dashboard. Repeat with `quiet` (no sound) and `dot` (badge only).
 3. Write a schedule card with `at` two minutes out, `once: true`, and
    `notify:`; it arrives on time and the card is gone.
-4. Set up the field-trip watch from the agent guide's example (schedule,
-   procedure, and judgment cards). Mail yourself a test message about the
-   trip; after the next wakeup the notification names the trip and its tap
-   opens the email card. A second wakeup with no new mail shows `waiting:
-   nothing to do` in `bbx health`.
+4. Set up the field-trip watch: the schedule and procedure cards from the
+   agent guide's example (`src/core/agent-guide/reaching.ts`), and this
+   judgment card, from the judgment card instructions
+   (`src/schemas/judgment-instructions.ts`):
+
+   ```yaml
+   # _config/judgments/field-trip.judgment.card
+   questions:
+     trip:
+       type: noul
+       criteria:
+         true: "At least one of these emails is from the school about the spring field trip: dates, permission form, or payment."
+         false: "None is; a newsletter that mentions the school, or a receipt, does not count."
+   ---
+   You are looking at the email cards that arrived in a family inbox since
+   the last check, concatenated. Judge only what the emails say.
+   ```
+
+   Mail yourself a test message about the trip; after the next wakeup the
+   notification names the trip and its tap opens the email card. A second
+   wakeup with no new mail shows `waiting: nothing to do` in `bbx health`.
 5. Set up the fixed-text quote watch from the scheduled-script card
    instructions over a mounted folder; drop a file in and see one loud
    notification.
-6. Save a test email card to a file and run `bbx judge --replay <file>`
-   against the field-trip judgment; tune the criteria until the answer is
-   clear.
+6. Save a test email card to a file and run
+   `bbx judge _config/judgments/field-trip.judgment.card --replay <file>`;
+   tune the criteria until the answer is clear.
 
 ## Failure modes
 

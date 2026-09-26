@@ -23,7 +23,7 @@ ${quotedDefault}
 
 Before you promise a reminder or a watch, run \`bbx notify --check\`. If nothing can reach the person, say so instead of promising.
 
-**Now: \`bbx notify\`.** \`--loudness\` is \`dot\` (badge only), \`quiet\` (muted; held back while they are in the app), or \`loud\` (sound). \`--target\` is where a tap lands: \`chat:<sessionId>\`, \`chat:new\`, \`card:<path>\`, \`question:<path>\`, \`dashboard\`. \`--tag <key>\` makes a later notification replace this one. A failure the person must fix, after they left the chat it came from:
+**Now: \`bbx notify\`.** \`--loudness\` is \`dot\` (badge only), \`quiet\` (muted; held back while they are in the app), or \`loud\` (sound). \`--target\` is where a tap lands: \`chat:<sessionId>\`, \`chat:new\`, \`card:<path>\`, \`question:<path>\`, \`admin:<section>\`, \`dashboard\`. \`--tag <key>\` makes a later notification replace this one. A failure the person must fix, after they left the chat it came from:
 
 \`\`\`sh
 bbx notify "I couldn't read the receipt you photographed" --loudness quiet \\
@@ -31,6 +31,8 @@ bbx notify "I couldn't read the receipt you photographed" --loudness quiet \\
 \`\`\`
 
 In a chat turn, \`<callout loudness="quiet">\` does this for the turn's outcome. Do not notify about health (a failing sync, expired auth): the dashboard shows it, and the scheduler itself sends a loud notice when it blocks a schedule the person asked for.
+
+Do not notify about a question card you file: the box sends a \`dot\` for it, or \`quiet\` when it is \`time-bound\`. A question left unanswered for a week gets one \`quiet\` nudge before it expires; that nudge is the deliberate exception to "a question is a dot".
 
 **At a time: a schedule card with \`notify:\`.** Not \`<schedule>\`, which only returns to one chat within hours, and not a \`runs:\` that shells out to \`bbx notify\`. No agent runs; the scheduler sends it and deletes the card:
 
