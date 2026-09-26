@@ -772,13 +772,16 @@ then a `judge` precheck field; both are replaced by commands.
   its inner command wrote, so the same rule covers both shapes. `cron` or
   `on-wakeup`, plus `once`, plus a pipeline that defers, is "run until it
   fires, then stop".
-- **When `lastCommit` advances.** Settled, not an open question: `success`
-  advances; `failure` advances (a failing run is on the health page, and
-  re-judging the same items on every retry multiplies Jev calls for a bug
-  the person has to fix); `deferred` with `no-change` or `no-pass`
-  advances (the items were seen); `deferred` with `budget`,
-  `jev-unavailable`, or `unconfigured` keeps the cursor, so the items are
-  judged next time. The tick reads the reason from the marker file.
+- **When `lastCommit` advances.** Settled (boxholder, 2026-09-26): `success`
+  advances; `deferred` with `no-change` or `no-pass` advances (the items
+  were seen and judged); `failure` and `deferred` with `budget`,
+  `jev-unavailable`, or `unconfigured` keep the cursor, so nothing is
+  dropped. A run that keeps failing re-sees the same items each time; that
+  is the existing `consecutiveFailures` path (`src/core/schedule/state.ts:51`),
+  which `bbx health` and the schedule health check already report as
+  `failing`, and the Jev budget bounds what a stuck schedule can spend. A
+  stuck schedule is a health notice, never a silent drop. The tick reads
+  the defer reason from the marker file.
 - **Jev budget.** A per-box daily cap of Jev calls (default 500) in
   `.beebox/jev-budget.json`, enforced in `bbx judge`: over the cap it
   writes `budget` to the defer file and exits 75; the cursor rule above
@@ -1099,7 +1102,8 @@ is fixed by Apple's API and the contract rule.
 | Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | marker `jev-unavailable`, exit 75; `deferred`, cursor held; health check after two consecutive | Clear |
 | Jev key missing | Track D doctest | marker `unconfigured`, exit 75; health check; a `requested-by` card promotes (Track E) | Clear |
 | `bbx changes` with a bad `--since` (commit gone after a history rewrite) | Track D doctest | error, precheck fails, run recorded `failure` with the message | Clear |
-| `bbx notify` fails after the judge passed | Track D doctest | pipeline exits 1; `failure` recorded; cursor advanced; the item is not re-judged; the failure is on the health page | Clear |
+| `bbx notify` fails after the judge passed | Track D doctest | pipeline exits 1; `failure` recorded; cursor held, so the item is re-judged next run; `consecutiveFailures` puts it on the health page | Clear |
+| A schedule fails every run (stuck) | existing schedule health (`consecutiveFailures`) plus Track D doctest | cursor held; `failing` on the health page; Jev budget bounds the spend; `until` ends it | Clear |
 | Judgment card invalid (a `noul` with `options`) | schema doctest | `bbx judge` exits 2 with the refinement message; run recorded `failure` | Clear |
 | Carry over 4 KB | Track D doctest | truncated with a warning line in the tick log | Clear |
 | Pipeline exits 75 forever (nothing ever matches) | Track D doctest | `deferred` each run; `until` ends it; health shows `waiting` | Clear |
