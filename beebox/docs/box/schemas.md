@@ -7,6 +7,9 @@ read-when: Adding or changing a box-local card schema under `src/schemas/`, its 
 Box-local schemas let you define new card types inside your box. Each schema is a `.ts` file
 in `src/schemas/` that uses the same tools as built-in schemas.
 
+**Default to the frontmatter form** (`cardSchema`): it produces standard cards, YAML
+frontmatter plus a markdown body, which every tool in the box understands.
+
 ## Creating a Schema
 
 Create a `.ts` file in `src/schemas/` that default-exports a `cardSchema()`:
@@ -105,10 +108,9 @@ export default cardSchema("plant", {
 
 ## Available Imports
 
-From `beebox/cards`:
+From `beebox/cards` (`validate` and `summarize` are config hooks on `cardSchema`, not imports):
 - `cardSchema(type, config)` — define a frontmatter card schema
 - `body(zodSchema)` — declare the single markdown body field
-- `summarize` — the config hook above, for how the card reads in a list
 - `type LintIssue` — the issue type a `validate` hook returns (see above)
 
 From `beebox/schema`:

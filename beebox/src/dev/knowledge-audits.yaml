@@ -739,8 +739,11 @@ tests:
   - id: create-new-card-type
     prompt: "How would you create a brand new card type for this box?"
     expected_level: discoverable
-    watch_for: "Names _config/schemas/ + cardSchema()/Zod + bbx init; reading _config/schemas/CLAUDE.md is fine but the agent now knows the shape directly"
-    correct_contains_any: ["_config/schemas", "bbx init"]
+    # Status (2026-09-26, doc-structure): keywords updated — schemas live in
+    # src/schemas/ and authoring is in box-docs/schemas.md; the old
+    # `_config/schemas` / `bbx init` answer is retired.
+    watch_for: "Names src/schemas/ + cardSchema()/Zod; reading src/schemas/CLAUDE.md and following it to box-docs/schemas.md is the intended path"
+    correct_contains_any: ["src/schemas", "cardSchema"]
     tags: [schemas, extension]
 
   # Status (2026-07-03): pass. The always-on cards section (agent-guide/cards.ts)
@@ -1803,16 +1806,19 @@ tests:
       Here's a quick note from the boxholder: "Great dinner with Priya last
       night — she recommended that book on urban design she's been reading,
       sounds worth checking out. Also, I still need to renew the parking
-      permit before it expires August 15." File this somewhere useful.
+      permit before it expires December 15." File this somewhere useful.
     expected_level: knows_directly
     watch_for: >
       Files the note (memo or record) and marks the parking-permit
       intention with a {% todo %} tag (or a frontmatter todos: entry)
-      carrying the due date as a real attribute — due="2026-08-15" landing
+      carrying the due date as a real attribute — due="2026-12-15" landing
       in an attribute, not left as prose inside the body. The book
       recommendation is preserved as content but should NOT get wrapped in
       a todo — it's not an open intention, there's nothing to act on.
-    cards_contain: ["{% todo", "2026-08-15"]
+    cards_contain: ["{% todo", "2026-12-15"]
+    # Date rolled 2026-08-15 -> 2026-12-15 (2026-09-26): the audit's date had
+    # passed, so the agent asked which year instead of setting due. Roll it
+    # again when it goes stale.
     max_turns: 15
     tags: [todos, application]
     notes: >
@@ -4012,14 +4018,14 @@ tests:
   - id: source-as-is-free-form
     prompt: >
       The user's name appears in a captured email header. I'm pulling it
-      out into a person card. What should I put in `{% source %}`'s `as`
+      out into a person card. What should I put in `{% source %}`'s `usage`
       attribute — is there a fixed enum I should pick from?
     expected_level: knows_about
     should_read_any: ["box-docs/provenance.md"]
     watch_for: >
-      Says `as=` is free-form natural language, not an enum. Encourages
-      writing the actual derivation (something like `as="extracted
-      name"` or `as="from email From: header"`), not picking a closest-
+      Says `usage=` is free-form natural language, not an enum. Encourages
+      writing the actual derivation (something like `usage="extracted
+      name"` or `usage="from email From: header"`), not picking a closest-
       fit category.
     correct_contains_any: ["free-form", "natural language", "not an enum", "no enum", "honest", "describe"]
     tags: [source, behavioral, provenance]
@@ -6011,7 +6017,9 @@ tests:
       `_config/connectors/mistral.secret.json`, and should NOT describe the
       key as something that lives inside the box tree.
     correct_contains_any: ["machine-level", "bbx secrets", "grant", "admin page", "boxholder"]
-    response_not_contains: ["_config/connectors/mistral.secret.json", "mistral.secret.json", ".secret.json"]
+    # Naming the retired file as retired is fine; instructing to write it is
+    # the failure (2026-09-26: the substring gate failed a correct answer).
+    response_not_matches: ['(?:write|edit|create|put|save|add)[^.\n]{0,80}\.secret\.json']
     tags: [secrets]
 
   - id: secrets-adhoc-use

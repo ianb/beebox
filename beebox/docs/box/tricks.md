@@ -65,8 +65,9 @@ Facts a trick author needs and cannot see from inside the script:
   being run by bbx", has to look at the grandparent.
 - **The engine commits after the trick exits, and only on exit code 0.**
   Once the child closes with status 0, the engine checks the box's git
-  status and, if anything is dirty, stages the **whole working tree** and
-  commits it with the trailer `Run-By: trick/<name>`. A non-zero exit, or a
+  status and, if anything is dirty, stages the **whole working tree** (minus
+  any oversized regular blob, which the stage step unstages so a sweep cannot
+  commit one) and commits it with the trailer `Run-By: trick/<name>`. A non-zero exit, or a
   trick that fails to start, leaves the tree as the trick left it. The trick's
   own `finally` blocks and exit handlers all run before that commit, so a
   trick cannot observe or guard the engine's commit from inside its own
