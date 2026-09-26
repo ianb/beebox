@@ -24,8 +24,7 @@ delivered; the iPhone app, the main mobile surface, has no notification
 path; only system health code can notify at all. This plan gives the agent
 a small set of pieces (notify now, notify at a time, judge cheaply before
 running, act on what changed since last time) and puts the policy in the
-briefing. The experience
-and rulings behind it are in
+briefing. The experience and rulings behind it are in
 [notifications-design-notes.md](notifications-design-notes.md).
 
 **Issues addressed:** the frontmatter list. Grepped the queue for notif,
@@ -61,7 +60,7 @@ no timed or conditional piece, and every alert stays as loud as it is today.
 
 | Track | Source lines | Test lines | Docs |
 |---|---|---|---|
-| A. Vocabulary, bus-based delivery, presence, `bbx notify` | 450 | 250 | 40 |
+| A. Vocabulary, log-based delivery, presence, `bbx notify` | 450 | 250 | 40 |
 | B. APNs: server service, device registration, delivery | 400 | 250 | 60 |
 | C. APNs: iOS client | 300 Swift | 60 | 20 |
 | D. Timed and conditional: `notify:`, schedule memory, `bbx changes`, `bbx judge`, judgment card | 640 | 420 | 100 |
@@ -95,9 +94,10 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   (`src/webapp/server.ts:244`), so it is not a record.
 - **Minimize invented concepts** (boxholder preference). Loudness is one word
   with three values. The reminder is a scheduled-script card with a
-  `notify:` field, not a command and not a card type. The judge is a field
-  on an existing procedure precheck, and its "not yet" is the scheduler's
-  existing `deferred` outcome (`src/core/schedule/state.ts:39-45`). "What
+  `notify:` field, not a command and not a card type. The judge is a
+  command, and its "not yet" is the scheduler's existing `deferred`
+  outcome (`src/core/schedule/state.ts:39-45`) via the procedure runner's
+  existing skip exit code. "What
   changed since my last run" is a field in schedule state and a command,
   not a card type: an earlier draft had a `watch` card with its own cursor,
   and the boxholder's direction (2026-09-26, "passing in the git log since
@@ -146,8 +146,8 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   deliver?, ... }` (`:45-60`). Writes a web-push card when a device is
   subscribed and a telegram card when `healthAlerts.telegramChat` is set;
   returns with nothing when neither (`:107-109`). **Reuse and rewrite:** it
-  stays the single entry point, takes a `NotificationIntent`, emits to the
-  bus, and hands delivery to the channel workers (Track A).
+  stays the single entry point, takes a `NotificationIntent`, logs it,
+  emits the live bus event, and calls each chosen channel once (Track A).
 - **Callers, all system code:** `src/core/question-alert.ts:104`
   (`severity: "alert"`), `src/core/question-aging.ts:214` (`severity:
   "info"`), `src/core/schedule/health-alert.ts:84`,
@@ -222,7 +222,8 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   `https://openrouter.ai/api/alpha/decisions` (`:128`) with model
   `typesafe/jev-1.13` (`:92`); fake at `:169` `createFakeJev`. Key via the
   `openrouter` secret, purpose listed at `src/core/secrets/uses.ts:78`.
-  **Extend:** add `judge({ state, question })` for the Noul type (Track D).
+  **Extend:** add `judge({ situation, instructions, questions, state })`
+  for all three question types (Track D).
 - **Procedures.** `src/schemas/procedure.ts:54` a step has `precheck`, `run`,
   `validate`; each phase has `shells`, `agents`, `instructions`, `whys`
   (`:30-33`); `precheck` adds `pass-output` (`:36-40`). The runner's
@@ -406,7 +407,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
 
 ## Tracks / scope
 
-### Track A. Vocabulary, bus-based delivery, presence, `bbx notify`
+### Track A. Vocabulary, log-based delivery, presence, `bbx notify`
 
 **What.** Give every notification a `loudness` and a `target`; log every
 intent and delivery; decide at emit time which channels to try from
@@ -464,7 +465,8 @@ per delivery are git history that is all plumbing (boxholder decision).
   both read from the log with the titles.
 - `src/cli/commands/notify.ts`: `bbx notify <title> [--body <text> |
   --body-file <path> | stdin] --target <t> [--loudness dot|quiet|loud]
-  [--tag] [--channel <name>] [--check]`. `--body-file` and stdin exist
+  [--tag] [--channel <name>] [--check] [--targets-from-stdin]`.
+  `--body-file` and stdin exist
   because a body an agent composed does not belong on a command line.
   `--check` prints which channels can reach the person and exits 1 when
   none can, so an agent can check before promising (the failure in
@@ -499,7 +501,8 @@ them.
 ### Track B. APNs: server service, device registration, delivery
 
 **What.** An `apns` channel: a service (real via `@parse/node-apn`, fake),
-device token registration on the pairing record, and a worker with pruning.
+device token registration on the pairing record, and a channel `send` with
+pruning.
 
 **Why this needs to change.** The iPhone app is a `WKWebView` shell
 (`ios-app/README.md`) and cannot receive web push. There is no APNs code
@@ -585,8 +588,8 @@ foreground.
   with a link to Settings, per principle 13
   (`docs/engineering-principles.md:151`).
 - `willPresent`: read `loudness` from `userInfo`; `loud` presents as banner
-  and sound; `quiet` and `dot` present nothing. The webview already shows the
-  bus event toast when it is open (Track A).
+  and sound; `quiet` and `dot` present nothing. The webview shows the in-app
+  banner when it is open (Track A).
 - `didReceive`: read `target` from `userInfo`, build the URL with the paired
   box's base URL, and load it through the existing
   `authenticatedRequest(for:page:)` path
@@ -684,15 +687,16 @@ then a `judge` precheck field; both are replaced by commands.
   Flags only; no JSON argument, the surface is small.
 - **The judgment card.** `src/schemas/judgment.ts`: `cardSchema("judgment",
   { fields: { questions: record(name, { type: enum(noul, choice, score),
-  criteria?, options?, levels? }), situation?: ref, model? }, body })`,
-  filename
+  criteria }), situation?: ref, model? }, body })`, where `criteria` takes
+  the wire shape for its type: `{ true, false }` for `noul`, a map of option
+  to description for `choice`, an ordered list of level descriptions for
+  `score` (the Decisions API reference under *Prior art*); filename
   `<name>.judgment.card`, anywhere in the box, by convention
   `_config/judgments/`. The body is the instructions Jev receives, after
   the `situation:` text (an optional ref; default the root briefing's
   purpose statement) so every judgment knows whose box this is. The
   state is never in the card: it arrives on stdin at run time. One
-  refinement per type says which of `criteria`, `options`, `levels` it
-  needs. The card is the prompt, so it is what the agent edits, versions,
+  refinement per type says which `criteria` shape it needs. The card is the prompt, so it is what the agent edits, versions,
   and tests when a judgment is wrong.
 - **`bbx judge`.** `bbx judge <card-path> [--per-line [--cards]] [--min
   name=p]... [--choice name=option]... [--decide <json>] [--select]
@@ -710,7 +714,13 @@ then a `judge` precheck field; both are replaced by commands.
   nothing passed. `--dry-run` prints the exact request without sending.
   `--replay <file>` runs the card against a saved state file, for tuning a
   prompt against a kept example. `--echo` passes stdin through to stdout
-  on a pass, for a `pass-output` precheck that feeds an agent. The model
+  on a pass, for a `pass-output` precheck that feeds an agent. Without
+  `--per-line` the whole of stdin is one state; `--cards` reads each card
+  in full, with a per-card body cap of 4,000 characters (the trial's 400
+  was too short to judge on) and a `--max-batch` (default 20 items) above
+  which the command refuses a batch and says to use `--per-line`, because
+  a batch is only right when the whole says something the items do not,
+  and a batch of 69 with 39 duplicates diluted a clear positive to 55%. The model
   id is `typesafe/jev-1.13` as in `src/services/jev.ts:92`; `jev-latest`
   is not served by OpenRouter (trial, 2026-09-26). Every question carries
   `instructions`; the API rejects one without. Every call and its answers go to
@@ -785,7 +795,9 @@ then a `judge` precheck field; both are replaced by commands.
   questions:
     trip:
       type: noul
-      criteria: "At least one of these emails is from the school about the spring field trip: dates, permission form, or payment."
+      criteria:
+        true: "At least one of these emails is from the school about the spring field trip: dates, permission form, or payment."
+        false: "None is; a newsletter that mentions the school, or a receipt, does not count."
   ---
   You are looking at the email cards that arrived in a family inbox since
   the last check, concatenated. Judge only what the emails say.
@@ -839,6 +851,7 @@ doctest (per-line cards, `--min`, `--select`, `--decide`, `--dry-run`
 output, `--replay`, budget exit); then exit 75 as `deferred` at the tick
 with a doctest (a pipeline that skips records `deferred` and survives
 `once`; one that passes records `success` and is deleted).
+
 ### Track E. Sources: callouts, question sweep, health demotion and promotion
 
 **What.** Change what each existing source sends, and add the chat callout as
@@ -934,8 +947,10 @@ and the boxholder ruled the judgment lives in briefings.
   items muddles toward 50%, so ask a crisp gate question and let the agent
   read; a Choice over the items is a pointer for the agent, not a
   decision; Score is fooled by dates in marketing and needs negatives too.
-  Prefer a Choice with a counter-category and a "cannot tell" option over a
-  bare yes/no: per item, {expects a reply, needs none, cannot tell} was
+  Batch only when the whole says something the items do not ("is anything
+  here worth an agent's look"); judge per item when each item is its own
+  question, and never batch more than `--max-batch`. Prefer a Choice with a
+  counter-category and a "cannot tell" option over a bare yes/no: per item, {expects a reply, needs none, cannot tell} was
   right on every email in the trial at 90%+ confidence where the yes/no
   batch had given 55%, and "cannot tell" surfaced the thin-state case that
   a yes/no hides as 50%. Give Jev the situation: a judgment card carries an
@@ -1017,7 +1032,6 @@ is fixed by Apple's API and the contract rule.
 | Permission denied on the phone | Track C manual | shell shows the denied state with a Settings link | Clear |
 | Schedule card with both `notify` and `runs`, or neither | Track D schema doctest | refinement message names the rule | Clear |
 | Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next tick | Clear |
-| Judge below threshold forever on a `cron` card | Track D doctest | recorded `deferred` each run; health shows `waiting: judge p`; `until` ends it | Clear |
 | Judge exit code taken as failure by an older tick | none needed: same package | `DEFERRED_EXIT_CODE` is added to the tick that reads it in the same change | Clear |
 | Schedule state lost (`.beebox/` wiped) | Track D doctest | `lastCommit` null; the next run sees nothing and sets it; cards added meanwhile are never judged; health check `schedule cursors reset` | Clear |
 | Two ticks run the same schedule | existing schedule lock (`tick-helpers.ts:250`) | serialized | Clear |
@@ -1054,18 +1068,19 @@ bounded to the heartbeat staleness.
   the filesystems in use; the change cursor is written by the tick under
   the existing per-schedule lock (Track D). A schedule or procedure card
   edited by an agent while a run is in progress is read once per run.
-- **Hand-edit drift.** ADDRESSED: schedule and procedure cards are
-  schema-validated on load; `threshold` outside 0..1, a `then` with both or
-  neither form, and a schedule with both `notify` and `runs` fail with a
-  message naming the rule.
+- **Hand-edit drift.** ADDRESSED: schedule, procedure, and judgment cards
+  are schema-validated on load; a `noul` with a map `criteria`, a `choice`
+  with fewer than two options, and a schedule with both `notify` and `runs`
+  fail with a message naming the rule.
 - **Fabricated free-form value.** ADDRESSED for criteria: a judge question is
-  free text by design and is tested by Jev, not trusted. A `$item` in a
-  notify body is substituted by code. A reminder title is a YAML string, not
-  a shell argument. For notification bodies from agents: the briefing asks
+  free text by design and is tested by Jev, not trusted. Target paths for
+  `--targets-from-stdin` come from `bbx judge --select`, not from the agent.
+  A reminder title is a YAML string, not a shell argument. For notification bodies from agents: the briefing asks
   for a body that stands alone, the same rule callouts have today.
-- **Validation error UX.** ADDRESSED: `bbx notify` prints the schema message
-  and exits 1; the procedure judge writes the probability and threshold into
-  the run card's step outcome; `bbx health` shows `waiting: judge p`.
+- **Validation error UX.** ADDRESSED: `bbx notify` and `bbx judge` print the
+  schema message and exit 2; `bbx judge` prints its answers as JSON and says
+  on stderr why it skipped; `bbx health` shows `waiting` with the last
+  stderr line.
 - **Partial migration / transition state.** ADDRESSED: no `web-push` card
   exists on disk; the boxholder has no active pairings or subscriptions; the
   device record field is optional. A box with no paired phone and no keys
@@ -1098,8 +1113,6 @@ bounded to the heartbeat staleness.
 - **Field-level matching in `bbx changes`.** `--match` is a path glob; a
   filter on frontmatter is a shell pipe after it, until a second caller
   wants more.
-- **Judge over anything but the precheck's shell output.** A judge over a
-  card ref or a run phase's output waits for a second caller.
 - **Jev for triage routing and quick capture.** Its own issue
   (`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`);
   this plan adds the `judge` method it will also use.
@@ -1123,11 +1136,11 @@ bounded to the heartbeat staleness.
    a failing run is on the health page, and re-judging the same items on
    every retry would multiply Jev calls for a bug the person has to fix
    anyway.
+5. **Whether `dot` badge should be a count.** Not without unread state; the
+   badge is 1 and clears on foreground. Revisit with the unread issue.
 6. **The `--decide` JSON shape.** Lean: an object of `{ name: { min?, max?,
    is? } }` combined with AND; anything else is `jq`. Settled in Track D's
    third chunk, not before.
-5. **Whether `dot` badge should be a count.** Not without unread state; the
-   badge is 1 and clears on foreground. Revisit with the unread issue.
 
 ## Knowledge audits
 
@@ -1147,7 +1160,7 @@ New agent-facing concepts, each with a `knows_directly` entry in
   `bbx judge <card> --or-skip --echo` with `pass-output`, and whose run is
   an agent that ends with `bbx notify`; a judgment card; `once`;
   `requires: { connectors: [gmail] }`.
-- `judge-precheck`: "A daily procedure should only run an agent when today's
+- `judge-gate`: "A daily procedure should only run an agent when today's
   calendar has an event needing preparation. How do you keep it cheap, and
   how does it stop once it has fired?" Expects `bbx changes --or-skip`
   before `bbx judge`, and `once: true`.
@@ -1194,7 +1207,7 @@ New agent-facing concepts, each with a `knows_directly` entry in
    changes`. Chunk 3: the `judgment` card, `bbx judge`, exit 75 as
    deferred, `once` semantics, budget.
 5. **Track E** chunk 1: loudness on existing callers, question `urgency`.
-   Chunk 2: callouts on `chat-complete`, health entries, promotion rule,
+   Chunk 2: callouts at turn end, health entries, promotion rule,
    capture failure.
 6. **Track F**: briefing section, agent guide, chat prompt, schema
    instructions, reference doc, knowledge audits written and run.
