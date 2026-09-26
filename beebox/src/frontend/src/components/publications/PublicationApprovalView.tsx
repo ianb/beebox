@@ -51,6 +51,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
   });
   const pending = prepare.isPending || approve.isPending || enable.isPending || disable.isPending;
   const site = query.data?.sites.find((publication) => publication.pubId === pubId);
+  const sharedHost = query.data?.sharedHost ?? null;
 
   if (query.isLoading) return <StatusMessage>Loading publication review…</StatusMessage>;
   if (query.error) return <div role="alert"><Card><Stack gap="sm"><ErrorText>{query.error.message}</ErrorText>{query.error.data?.code === "UNAUTHORIZED" || query.error.data?.code === "FORBIDDEN" ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : <Button id={`bbx-publication-review-retry-${pubId}`} intent="secondary" onClick={() => void query.refetch()}>Retry</Button>}</Stack></Card></div>;
@@ -60,6 +61,7 @@ export function PublicationApprovalView({ pubId }: { pubId: string }) {
     {mutationError ? <div role="alert"><Stack gap="xs"><ErrorText>{mutationError.message}</ErrorText>{mutationError.needsSignIn ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : null}</Stack></div> : null}
     <PublicationReviewCard
       site={site}
+      sharedHost={sharedHost}
       pending={pending}
       onPrepare={() => { setMutationError(null); prepare.mutate({ name: site.name }); }}
       onApprove={(candidate) => { setMutationError(null); approve.mutate({ pubId: site.pubId, expectedRevision: candidate.revision }); }}
