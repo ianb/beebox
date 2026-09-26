@@ -60,16 +60,16 @@ no timed or conditional piece, and every alert stays as loud as it is today.
 
 | Track | Source lines | Test lines | Docs |
 |---|---|---|---|
-| A. Vocabulary, one notification card, presence, `bbx notify` | 550 | 350 | 40 |
+| A. Vocabulary, per-channel cards with loudness, presence, `bbx notify` | 450 | 300 | 40 |
 | B. APNs: server connector and device registration | 500 | 250 | 60 |
 | C. APNs: iOS client | 300 Swift | 60 | 20 |
-| D. Timed and conditional: `bbx remind`, watch cards, Jev judge in procedures | 700 | 400 | 80 |
+| D. Timed and conditional: `bbx remind`, watch cards, Jev judge in procedures | 850 | 450 | 80 |
 | E. Sources: callouts, question sweep, health demotion and promotion | 250 | 200 | 20 |
 | F. Guidance: briefing section, agent guide, chat prompt, audits | 60 | 40 | 120 |
-| Total | 2,360 | 1,300 | 340 |
+| Total | 2,410 | 1,300 | 340 |
 
 Additions plus deletions, estimated. Authored docs are the last column; there
-is no generated output. **BIG CHANGE:** about 3,700 changed lines. The size
+is no generated output. **BIG CHANGE:** about 3,800 changed lines. The size
 comes from three channels that each need a delivery path, plus a new card
 type with an evaluator. What the fuller design buys over the smallest fix:
 the phone, which is the surface the boxholder uses; reminders and watches
@@ -83,11 +83,14 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   web push plan wrote one output card per channel and deferred a
   channel-agnostic card "only if channel count grows enough to make
   N-cards-per-intent the worse cost"
-  (`docs/implemented-plans/web-push-notifications.md`, NOT in scope). This
-  plan adds a third channel and a presence gate that applies to the intent,
-  not the channel. That condition is met; Track A replaces the two per-channel
-  cards with one `notification` card. The boxholder's standing preference is
-  to consolidate over blast-radius fear.
+  (`docs/implemented-plans/web-push-notifications.md`, NOT in scope). A first
+  draft of this plan unified the cards; the cross-model review showed the
+  shared delivery helper has exactly two outcomes
+  (`src/connectors/output-cards.ts:90-103`) and a multi-channel card needs a
+  third. The plan keeps per-channel cards and puts the one shared decision,
+  which channels to write, in a pure function at write time. The boxholder's
+  consolidation preference is honored where it is cheap (one intent type, one
+  decision function) and not where it needs a new lifecycle.
 - **Minimize invented concepts** (boxholder preference). Loudness is one word
   with three values, replacing web push's `severity: info | alert`
   (`src/schemas/web-push.ts:25-35`). The reminder is a scheduled-script card,
@@ -135,25 +138,22 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Output-card delivery helper.** `src/connectors/output-cards.ts:57`
   `deliverPendingOutputCards(...)`: `send` returns `null` on success (card
   deleted, `:91-92`) or a message (card stamped `status: failed`, `:95-103`).
-  **Reuse:** the `notification` card's connector uses it; the per-channel
-  status lives inside the card, see Ontology.
+  **Reuse unchanged:** each channel card keeps this lifecycle.
 - **Web push sender and store.** `src/core/send-push.ts` `sendPush`,
   `src/core/push-subscriptions.ts` endpoint-keyed store,
   `src/services/push.ts` real and fake, `src/connectors/push.ts:51`
-  `sendOutputPushCards`. **Reuse** the sender and store; the connector is
-  folded into the notification connector.
+  `sendOutputPushCards`. **Reuse** all of it; the `apns` connector is its mirror.
 - **Web push card and SW.** `src/schemas/web-push.ts:25-35` fields `status,
   title, body, url, severity, tag, error`; `createWebPushTemplate` (`:63`).
-  **Rebuild:** replaced by the `notification` card. Zero of these cards exist
-  on disk anywhere (the feature never ran and cards delete on delivery,
-  `issues/code-quality/2026-07-04-web-push-followup-testing.md`), so this is
-  a schema removal with no data migration. The service worker payload
-  `{ title, body, url, tag }` stays.
+  **Keep, rename fields:** `severity` becomes `loudness`, `url` becomes
+  `target`. Zero of these cards exist on disk anywhere (the feature never ran
+  and cards delete on delivery,
+  `issues/code-quality/2026-07-04-web-push-followup-testing.md`), so there is
+  no data migration. The service worker payload `{ title, body, url, tag }`
+  stays; the connector renders `target` to `url`.
 - **Telegram card.** `src/schemas/telegram-message.ts:23-29` fields `status,
-  chat-id, text, response, error`. **Keep unchanged:** it is also the outbound
-  chat reply path, not only notifications. `notifyBoxholder` stops writing it;
-  the notification connector sends Telegram directly through
-  `TelegramService` as one channel of the notification card.
+  chat-id, text, response, error`. **Keep:** it is also the outbound chat reply
+  path. Gains an optional `disable-notification` field for `quiet`.
 - **`bbx push test`.** `src/cli/commands/push.ts:14-26` calls `sendPush`
   directly. **Rebuild** as `bbx notify --channel web-push` so the test goes
   through the card path.
@@ -283,13 +283,16 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
 
 ## Ontology
 
-- **Notification.** One intent to reach the person: `title`, `body`,
+- **Notification intent.** One intent to reach the person: `title`, `body`,
   `target`, `loudness`, optional `tag` (collapse key), `source` (which code or
-  agent wrote it). Identified by its card path in `_bookkeeping/output/`
-  (`docs/box-layout.md:177`). It is NOT a channel message; one notification
-  fans out to every channel that can reach the person. New card type
-  `notification` (Track A), replacing `web-push`
-  (`src/schemas/web-push.ts:25`).
+  agent wrote it). A TypeScript type (`NotificationIntent`, Track A) and a
+  line in `.beebox/notifications.jsonl`, identified by that line's id. It is
+  NOT a card; it becomes one channel card per channel chosen at write time.
+- **Channel card.** The durable per-channel output card in
+  `_bookkeeping/output/` (`docs/box-layout.md:177`): `web-push`
+  (`src/schemas/web-push.ts:25`, fields renamed), `apns` (new, Track B),
+  `telegram-message` (`src/schemas/telegram-message.ts:23`). Each has the
+  existing pending/failed lifecycle.
 - **Loudness.** `dot | quiet | loud`. On the phone: badge only; passive
   banner; active banner with sound. On desktop web push: nothing; muted
   notification; notification. In the app: an event on the bus for all three.
@@ -301,18 +304,17 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   raw URL. `question:` and `card:` point at cards by path
   (`src/core/question-alert.ts:100` builds the browse URL today).
 - **Channel.** A way to deliver: `apns`, `web-push`, `telegram`. Each has a
-  service (real and fake), an audience lookup, and a per-notification
-  status inside the card. Exists today as separate connectors; Track A folds
-  delivery into one connector with a table of channels.
+  service (real and fake), an audience lookup, a card type, and a connector.
 - **Device.** A paired phone: the existing `MobileDevice`
   (`src/core/mobile/pairing.ts:19`), extended with
   `apns: { token, environment: "sandbox" | "production", registeredAt }`.
   A device belongs to a box (the file is box-level) and to the person who
   paired it (`createdBy`).
-- **Presence.** Whether a live web session exists for the box: the count of
-  open `events.subscribe` subscriptions (`src/webapp/trpc/routers/events.ts:62`).
-  A boolean per box, not per target (target-level presence is deferred with
-  unread).
+- **Presence.** The number of web sessions for the box in which a person
+  interacted within the last two minutes, reported by a client heartbeat.
+  NOT the count of open subscriptions (`src/webapp/trpc/routers/events.ts:62`
+  has no such registry and an idle tab is not presence). Per box, not per
+  target (target-level presence is deferred with unread).
 - **Reminder.** A scheduled-script card (`src/schemas/scheduled-script.tsx`)
   with `at`, `once: true`, and `runs: bbx notify ...`. NOT a new card type.
   Identified by its filename in `_config/schedules/`.
@@ -332,84 +334,95 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   (`src/core/chat/session/prompts.ts:155`). Gains an optional `loudness`
   attribute (Track E). A callout in a turn that completes with no presence
   becomes a notification targeting that chat.
+- **Judgment record.** What a procedure run card stores for a `judge`
+  precheck: `{ probability, threshold, model }` beside the existing
+  `status: pass | fail | skip` (`src/schemas/procedure-run.ts:15`).
 - **Health entry.** A failing check in `getHealthSnapshot`
   (`src/webapp/trpc/routers/health.ts:342`). Exists. Demoted alerts are health
   entries plus a `dot`.
 
 ## Tracks / scope
 
-### Track A. Vocabulary, one notification card, presence, `bbx notify`
+### Track A. Vocabulary, per-channel cards with loudness, presence, `bbx notify`
 
-**What.** Replace the per-channel output cards written by `notifyBoxholder`
-with one `notification` card, add `loudness` and `target`, deliver through one
-connector with a channel table, gate the push channels on presence, and expose
-it all as `bbx notify`.
+**What.** Give every notification a `loudness` and a `target`, keep one durable
+output card per channel (the July decision), decide at write time which
+channel cards to write from presence and loudness, add the `apns` card type
+beside `web-push` and `telegram-message`, and expose it all as `bbx notify`.
 
-**Why this needs to change.** Two per-channel cards were the July decision
-for two channels. A third channel and a presence gate that applies once per
-intent make the per-channel shape the worse cost, by the July plan's own
-condition. Agents have no command at all today
-(`src/core/agent-guide/` has no notify section; searched).
+**Why this needs to change.** Agents have no command at all today
+(`src/core/agent-guide/` has no notify section; searched). Every caller
+passes a `severity` that no channel distinguishes. The shared delivery
+helper knows two outcomes, delete on success and stamp `failed`
+(`src/connectors/output-cards.ts:90-103`); a single multi-channel card would
+need a third lifecycle, which the July plan declined for that reason
+(`docs/implemented-plans/web-push-notifications.md`, NOT in scope). The
+cross-model review of this plan (2026-09-26) confirmed the helper does not
+fit; per-channel cards stay.
 
 **Direction.**
 
-- `src/schemas/notification.ts`: `cardSchema("notification", { fields: {
-  title, body, target, loudness: enum(dot, quiet, loud).default("quiet"),
-  tag?, source, status: enum(pending, failed, partial).default("pending"),
-  channels: record(channel, { status: enum(sent, skipped, failed), detail?
-  }), error? } })`. `partial` means at least one channel sent and one failed;
-  the card stays for inspection like `failed`. Delete `src/schemas/web-push.ts`
-  and its registry entry.
+- `src/core/notification/intent.ts`: `NotificationIntent { title, body,
+  target, loudness, tag?, source }` and `Loudness = "dot" | "quiet" | "loud"`.
+  The one type every writer builds.
 - `src/core/notification/target.ts`: `parseTarget(s): Target` and
   `targetUrl(target, boxSlug): string` (root-relative, the shape
-  `question-alert.ts:100` builds today). `chat:new` renders to the chat page
-  with a `seed` query carrying the notification's body, so the first message
-  is the reminder context; the frontend reads `seed` once and drops it from
-  the URL.
-- `src/core/notification/presence.ts`: `livePresence(boxRoot): { web: number }`
-  from a module-level counter that `events.subscribe` increments on entry and
-  decrements in its `finally` (`src/webapp/trpc/routers/events.ts:62`). The
-  scheduler and `bbx` run in other processes, so the count is written to
-  `.beebox/presence.json` with a heartbeat timestamp every 30 seconds by the
-  server and read by anyone; a stale heartbeat (older than 90 seconds) counts
-  as zero.
-- `src/core/notify-boxholder.ts`: `notifyBoxholder(boxRoot, { title, body,
-  target, loudness, tag?, source, deliver? })` writes one card, emits a
-  `notification` bus event (new schema entry: the card's fields plus the
-  rendered URL) so an open app shows it at once, commits, and delivers when
-  asked. `notifyChannels` returns `{ apns, webPush, telegram }` booleans from
-  the device records, the subscription store, and box config.
-- `src/connectors/notification.ts`: one connector using
-  `deliverPendingOutputCards` with `cardSuffix: ".notification.card"`. Its
-  `send` walks a channel table: `apns` (Track B), `web-push` (`sendPush`),
-  `telegram` (`TelegramService.sendMessage` to `healthAlerts.telegramChat`).
-  Presence rule inside `send`: when `livePresence.web > 0` and loudness is
-  not `loud`, push channels are `skipped` with detail `present`; Telegram
-  follows the same rule. A channel with no audience is `skipped` with detail
-  `no-audience`. The card deletes when every channel is `sent` or `skipped`
-  and at least one is `sent` or the bus event was emitted to a present
-  session; it is stamped `failed` when no channel sent and none was skipped
-  for presence. Replace `src/connectors/push.ts` and the telegram write in
-  `notify-boxholder.ts`.
+  `question-alert.ts:100` builds today). `chat:new` renders to
+  `/<box>/chat?new=1&notification=<id>`; the id names a line in
+  `.beebox/notifications.jsonl` (written by `notifyBoxholder`, gitignored)
+  holding the intent, so the text is never in a URL. The chat page shows the
+  intent as a banner above an empty composer and includes it as context in
+  the first message the person sends, the way `<schedule-fired>` carries
+  context (`src/core/chat/session/pool.ts:287`). No agent runs on tap.
+- `src/core/notification/presence.ts`: `livePresence(boxRoot): { activeWeb:
+  number }`. The frontend sends a heartbeat every 30 seconds while a person
+  has interacted in the last two minutes (`pointerdown`, `keydown`,
+  `visibilitychange` to visible); `events.subscribe` is not enough, since an
+  open tab in another room is not presence (review finding 2). The server
+  keeps the count in memory and writes `.beebox/presence.json` by atomic
+  rename with a timestamp; another process reads it and treats a timestamp
+  older than 90 seconds as zero.
+- `src/schemas/web-push.ts`: `severity` becomes `loudness`, `url` becomes
+  `target`. Zero cards exist on disk anywhere (the feature never ran and
+  cards delete on delivery), so this is a field rename with no migration.
+  New `src/schemas/apns.ts` with the same fields (Track B). Telegram keeps
+  its card (`src/schemas/telegram-message.ts:23-29`, also the reply path);
+  `notifyBoxholder` renders the intent to `text` and sets
+  `disable-notification: true` for `quiet`, a new optional field the sender
+  passes through.
+- `src/core/notify-boxholder.ts`: `notifyBoxholder(boxRoot, intent, {
+  deliver?, now? })`. The write-time rule, one pure function
+  `channelsToWrite({ intent, audience, presence }): Channel[]` with its own
+  doctest: `loud` writes every channel with an audience; `quiet` writes every
+  channel with an audience unless `activeWeb > 0`, in which case only the bus
+  event is emitted; `dot` writes `apns` only (a badge is harmless when the
+  app is open and clears on foreground) and never `web-push` or `telegram`.
+  Every call emits a `notification` bus event (new schema entry: the intent
+  plus the rendered URL) so an open app shows a toast, and appends the
+  intent to `.beebox/notifications.jsonl`. When no channel has an audience
+  and presence is zero, today's code returns with no card and no trace
+  (`src/core/notify-boxholder.ts:107`); the plan writes a health entry
+  `notification had no channel: <title>` so the silence is visible (review
+  finding 3). `notifyChannels` returns `{ apns, webPush, telegram }`.
+- Connectors: `src/connectors/push.ts` stays; `src/connectors/apns.ts`
+  (Track B) mirrors it. Telegram delivery is unchanged.
 - `src/cli/commands/notify.ts`: `bbx notify <title> [--body] --target <t>
-  [--loudness dot|quiet|loud] [--tag] [--later]`. Delivers at once unless
-  `--later` (wait for finalize). `--channel <name>` restricts delivery for
-  testing and replaces `bbx push test`. Exit 1 with the card path when the
+  [--loudness dot|quiet|loud] [--tag] [--later] [--channel <name>]`.
+  Delivers at once unless `--later`. `--channel` restricts the write for
+  testing and replaces `bbx push test`. Exit 1 with the card paths when any
   card is stamped `failed`, so a procedure sees it.
-- Service worker: `severity` never reached the payload; no change. The
-  `quiet` loudness sets `silent: true` in the payload; `dot` is not sent to
-  web push.
+- Service worker: `quiet` sets `silent: true` in the payload.
 
 **Vocabulary lock-ins.** `loudness` and its three values; `target` scheme
-strings; channel names `apns`, `web-push`, `telegram`; card status
-`pending | failed | partial`; the bus event name `notification`.
+strings; channel names `apns`, `web-push`, `telegram`; the bus event name
+`notification`; `.beebox/notifications.jsonl` and `.beebox/presence.json`.
 
-**First implementation chunk.** The schema, `target.ts`, the rewritten
-`notifyBoxholder`, the connector with the `web-push` and `telegram` channels,
-and a filesystem doctest: a box with a fake subscription and a telegram chat
-gets one card; delivery marks both channels `sent` and deletes the card; a
-failing push marks `partial` and keeps the card; a present session skips
-push and the card deletes with `skipped: present`. Existing callers pass
+**First implementation chunk.** `intent.ts`, `target.ts`, `channelsToWrite`
+with its doctest over the loudness-by-presence matrix, the field renames on
+`web-push`, the rewritten `notifyBoxholder` with a filesystem doctest: a box
+with a fake subscription and a telegram chat gets two cards for `loud`; gets
+none and a bus event for `quiet` with presence; gets a health entry for
+`quiet` with no audience and no presence. Existing callers pass
 `loudness: "loud"` and a parsed target in this chunk so nothing regresses;
 Track E changes them.
 
@@ -448,13 +461,20 @@ device token registration on the pairing record, and delivery with pruning.
   using the same path family. Contract section 5.8 in
   `docs/mobile-contract.md`, fixture under `test/mobile-contract/fixtures/`,
   same commit.
-- Channel in the notification connector: audience is every device of the box
-  with an `apns` field and no `revokedAt`. `gone` prunes the `apns` field and
-  logs the device label, never the token.
+- `src/schemas/apns.ts`: the `web-push` card's fields with the `apns`
+  suffix; `src/connectors/apns.ts` mirrors `src/connectors/push.ts:51` over
+  `deliverPendingOutputCards`. Audience is every device of the box with an
+  `apns` field and no `revokedAt`. `gone` prunes the `apns` field and logs
+  the device label, never the token.
+- Token exposure: `listMobileDevices` strips only `tokenHash`
+  (`src/core/mobile/pairing.ts:103`) and `pairing.devices` returns that
+  projection to the UI (`src/webapp/trpc/routers/pairing.ts:50`). The
+  projection changes to strip `apns.token` too and expose
+  `push: { environment, registeredAt } | null`, so a raw token never
+  leaves the process (review finding 5).
 - Admin Notifications section lists paired devices with a push token and
-  their environment, read from `pairing.devices`
-  (`src/webapp/trpc/routers/pairing.ts:50`), so the boxholder can see that
-  the phone is registered.
+  their environment, read from the `push` projection above, so the
+  boxholder can see that the phone is registered.
 - `.beebox/push-debug.log` gets one line per APNs send with loudness and
   target, no token.
 
@@ -486,7 +506,11 @@ foreground.
   `didFinishLaunching`, set `UNUserNotificationCenter.current().delegate` and
   call `registerForRemoteNotifications()`; in
   `didRegisterForRemoteNotificationsWithDeviceToken`, hand the hex token to
-  a new `PushRegistrar` service. `didFailToRegister` logs through the existing
+  `PushRegistrar.shared`. The delegate has no access to the SwiftUI-owned
+  `PairedBoxStore` (`ios-app/BeeBox/BeeBoxApp.swift:6`), so `BeeBoxApp`
+  injects the store into the registrar at launch and the registrar observes
+  it for pairings; the token callback and the store change both call one
+  `syncRegistrations()`. `didFailToRegister` logs through the existing
   native log forwarding (`docs/mobile-contract.md:1021`).
 - `PushRegistrar` (`ios-app/BeeBox/Services/PushRegistrar.swift`): posts
   `{ token, environment }` to every paired box using `BoxRequest.apply`
@@ -547,9 +571,17 @@ is what makes many small proactive tasks too expensive
 - `src/core/watch/evaluate.ts`: `evaluateWatches(boxRoot, { jev, now })`.
   Cursor file `.beebox/watches.json` `{ [watchName]: { commit, fired:
   string[] } }`. New items are `git diff --name-only --diff-filter=A
-  <cursor>..HEAD -- <under>` (`src/lib/git.ts` already wraps git). With no
-  cursor, the cursor starts at HEAD and evaluates nothing: a watch is about
-  the future. For each item, `jev.judge({ state: card text truncated to a
+  <cursor>..HEAD -- <under>` (`src/lib/git.ts` already wraps git). This is a
+  product cut, not a general trigger: a watch sees new cards only; edits to
+  existing cards and calendar changes are polls or scheduled procedures (NOT
+  in scope). With no cursor, the cursor starts at HEAD and evaluates nothing:
+  a watch is about the future. The read-evaluate-write of the cursor file
+  runs under `withFileLock` (`src/lib/file-lock.ts:138`) on
+  `.beebox/watches.lock`, because finalize and the wakeup connector loop
+  both reach `syncConnector` (`src/cli/commands/finalize.ts:82`,
+  `src/cli/commands/wakeup-connectors.ts:121`) and neither holds the box
+  maintenance lock (review finding 4). A second evaluator that finds the
+  lock held skips the pass; the next pass catches up from the cursor. For each item, `jev.judge({ state: card text truncated to a
   fixed byte budget, question: criteria })`; probability at or above
   `threshold` fires `then`. `notify` fills the target with `card:<item>` and
   substitutes `$item` in title and body; `run` executes the command with
@@ -567,11 +599,17 @@ is what makes many small proactive tasks too expensive
 - `src/services/jev.ts`: `judge({ state, question }): Promise<{ probability,
   model }>` for the Noul type, same request path, fake support via
   `createFakeJev({ noul: (question) => number })`.
-- Procedures: `ProcedurePrecheck` gains `judge?: { question: string,
-  threshold: number.default(0.8), state?: "output" }` where the state is the
-  precheck's `shells` output (the only form in this plan). A judge below
-  threshold ends the step as `skipped` with the probability in the run card,
-  which is the existing precheck-fails path. So a scheduled procedure like
+- Procedures: `ProcedurePrecheck` (`src/schemas/procedure.ts:36`) gains
+  `judge?: { question: string, threshold: number.default(0.8) }`; the state
+  is the precheck's `shells` stdout, the only form in this plan. Three
+  places change, not one (review finding 6): the schema; the runner's
+  `runPrecheck` (`src/core/procedure/engine-step.ts:133`), which after
+  `executePhaseShells` calls `jev.judge` over the stdout and treats a
+  probability below threshold as the existing skip path; and the run card's
+  `RunStepPrecheck` (`src/schemas/procedure-run.ts:15`), which gains an
+  optional `judge: { probability, threshold, model }` so the run shows why
+  it skipped. The engine receives `JevService` through the same injection
+  the chat router uses (`src/webapp/trpc/routers/quick-chat.ts:68`). So a scheduled procedure like
   "look at today's calendar and decide if a prep note is needed" runs
   `shells: [bbx calendar today]`, `judge: { question: "Does today hold an
   event that needs preparation the person has not done?" }`, and only then
@@ -681,11 +719,12 @@ and an `apns` card, and skip watches and the procedure judge. Reminders via
 
 What the fuller plan buys:
 
-- **One card instead of three per intent** (Track A): the presence gate runs
-  once per intent, and a failed delivery is one card to inspect. With three
-  per-channel cards, a present session would need three skips and the July
-  plan's own condition for unifying is met. Principle 8, one way to do each
-  thing.
+- **A write-time channel decision** (Track A): one pure function decides
+  which cards to write from loudness and presence, so the rule is tested once
+  and each card keeps its existing lifecycle. The first draft unified the
+  cards instead; the review showed that needs a third lifecycle in the
+  shared helper. Principle 8 is served by one decision function, not one
+  card.
 - **Watches** (Track D): without them, "tell me when X arrives" is an agent
   run per wakeup, which is the cost that keeps these tasks from existing
   (the boxholder's stated reason for Jev). The watch is the only new card
@@ -708,8 +747,11 @@ is fixed by Apple's API and the contract rule.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Notification card with no channel able to send | Track A doctest | stamped `failed`, health entry | Clear |
-| One channel fails, another sends | Track A doctest | `partial`, card kept | Clear |
+| Intent with no channel to write (no audience, no presence) | Track A doctest | today: returns silently (`src/core/notify-boxholder.ts:107`); plan: health entry naming the title | Clear |
+| One channel card fails, another sends | existing per-card lifecycle (`src/connectors/output-cards.ts:90-103`) | failed card stays, sent card deleted | Clear |
+| Presence heartbeat counts an idle open tab as present | Track A doctest of the heartbeat rule | heartbeat only while interacted within two minutes | Clear |
+| Two evaluators race the watch cursor | Track D doctest | `withFileLock`; the loser skips the pass | Clear |
+| `.beebox/notifications.jsonl` line missing when a `chat:new` target is opened | Track A route doctest | chat page opens without the banner and logs the id | Clear |
 | Present session skips push, person had already walked away | Track A doctest of the rule | heartbeat older than 90 s counts as absent; bus event still shown when they return | Silent by nature, bounded to 90 s: accepted |
 | Presence file written by server, read by scheduler in another process mid-write | Track A doctest | atomic rename write; unreadable file counts as absent | Clear (falls to push) |
 | APNs 410 or BadDeviceToken | Track B doctest | prune `apns` from device, log label | Clear |
@@ -745,13 +787,11 @@ bounded to the heartbeat interval.
   whose session was deleted opens the chat page with a "conversation no longer
   exists" state that already exists for deleted sessions
   (`docs/plans/chat-session-delete.md`).
-- **Two agents touching the same card.** ADDRESSED: notification cards are
-  single-consumer (the connector); the watch cursor file is written only by
-  `evaluateWatches`, which runs from finalize and sync, both serialized by
-  the box maintenance lock (`src/lib/box-maintenance.ts`, used by
-  `schedules.ts:1`). A watch card edited by an agent while evaluation runs
-  is read once per pass.
-- **Hand-edit drift.** ADDRESSED: watch and notification cards are
+- **Two agents touching the same card.** ADDRESSED: channel cards are
+  single-consumer (their connector); the watch cursor file is written only
+  by `evaluateWatches` under `withFileLock` (Track D). A watch card edited
+  by an agent while evaluation runs is read once per pass.
+- **Hand-edit drift.** ADDRESSED: watch and channel cards are
   schema-validated on load; `threshold` outside 0..1 and a `then` with both
   or neither form fail with a message naming the rule.
 - **Fabricated free-form value.** ADDRESSED for criteria: a watch criterion is
@@ -853,10 +893,10 @@ New agent-facing concepts, each with a `knows_directly` entry in
 
 ## Implementation order
 
-1. **Track A** chunk 1: schema, target, dispatcher, connector with web-push
-   and telegram channels, doctests. Chunk 2: presence counter and heartbeat,
-   `bbx notify`, bus event and the in-app toast, removal of `bbx push test`
-   and `web-push.ts`.
+1. **Track A** chunk 1: intent and target types, `channelsToWrite`, the
+   `web-push` field renames, the rewritten dispatcher, doctests. Chunk 2:
+   presence heartbeat and file, `bbx notify`, bus event and the in-app
+   toast, the `chat:new` banner, removal of `bbx push test`.
 2. **Track B** chunk 1: payload builder, service, device record, route,
    contract update. Chunk 2: the `apns` channel in the connector, Admin
    device list, debug log.
@@ -898,5 +938,5 @@ F is written last so it describes what shipped.
   Xcode; a Debug build on the boxholder's phone for the sandbox walk, then a
   Release build for production.
 - **Ships as one unit** when the device walk passes and the boxholder says
-  so. Track A alone changes what every existing alert does and must not land
-  without Track E's loudness changes.
+  so. Track A alone renames fields every existing alert passes and must not
+  land without Track E's loudness changes.
