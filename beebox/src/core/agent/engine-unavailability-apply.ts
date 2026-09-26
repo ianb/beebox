@@ -36,15 +36,17 @@ async function notifyEpisode(
   const name = PROVIDER_NAMES[unavailability.provider];
   const now = getBoxTime(boxRoot);
   await notifyBoxholder(boxRoot, {
-    title: `${name} is out of usage quota`,
-    body:
-      `${name} quota is exhausted until ${formatRetryAt(unavailability.retryAt)}. ` +
-      `Scheduled work is deferred until then; chat on ${name}-engine boxes will fail. ` +
-      "No action needed unless this recurs.",
-    url: "/box/health",
-    tag: `engine-unavailable-${unavailability.provider}`,
-    name: "engine-unavailable",
-    deliver: true,
+    intent: {
+      title: `${name} is out of usage quota`,
+      body:
+        `${name} quota is exhausted until ${formatRetryAt(unavailability.retryAt)}. ` +
+        `Scheduled work is deferred until then; chat on ${name}-engine boxes will fail. ` +
+        "No action needed unless this recurs.",
+      target: { kind: "dashboard" },
+      loudness: "loud",
+      tag: `engine-unavailable-${unavailability.provider}`,
+      source: "engine-unavailable",
+    },
     now,
   });
   await markEngineUnavailabilityNotified({ provider: unavailability.provider, now });

@@ -51,7 +51,7 @@ export async function checkConnectorActivityAndAlert(
   if (fresh.length === 0) return null;
 
   const channels = await notifyChannels(boxRoot);
-  if (!channels.telegram && !channels.push) return null;
+  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const slug = await boxSlug(boxRoot);
   const lines = fresh.flatMap(({ connector, verdict }) => {
@@ -59,20 +59,20 @@ export async function checkConnectorActivityAndAlert(
     return line === null ? [] : [`- ${line}`];
   });
   const result = await notifyBoxholder(boxRoot, {
-    title: `A connector needs attention (${slug})`,
-    body: [...lines, "", "If this is expected, dismiss it on the box dashboard."].join("\n"),
-    url: `/${slug}/`,
-    severity: "alert",
-    name: "connector-activity-alert",
-    deliver: true,
+    intent: {
+      title: `A connector needs attention (${slug})`,
+      body: [...lines, "", "If this is expected, dismiss it on the box dashboard."].join("\n"),
+      target: { kind: "dashboard" },
+      loudness: "loud",
+      source: "connector-activity-alert",
+    },
     now,
-    tg,
-    push,
+    services: { tg, push },
   });
 
   // Stamp only the episodes this message covered, and only if they are still
   // the stored episode: one that ended or restarted meanwhile gets its own.
-  // A delivery failure leaves an inspectable `failed` output card, so stamping
+  // A delivery failure is logged and raised as a health check, so stamping
   // here cannot silently drop the alert (same contract as google-auth-alert).
   const sent = new Map(fresh.map(({ connector, episode }) => [connector, episode]));
   await updateConnectorActivity(boxRoot, (file) => {
@@ -87,5 +87,5 @@ export async function checkConnectorActivityAndAlert(
     return { ...file, connectors };
   });
 
-  return { alerted: fresh.map(({ connector }) => connector), delivered: result.channels.length > 0 };
+  return { alerted: fresh.map(({ connector }) => connector), delivered: result.deliveries.some((d) => d.status === "sent") };
 }

@@ -79,29 +79,29 @@ export async function checkGoogleAuthAndAlert(
   if (latch.alertedForSince === status.needsReauthSince) return null;
 
   const channels = await notifyChannels(boxRoot);
-  if (!channels.telegram && !channels.push) return null;
+  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const slug = await boxSlug(boxRoot);
   const url = reauthorizeUrl(slug);
   const result = await notifyBoxholder(boxRoot, {
-    title: `Google connection needs re-authorization (${slug})`,
-    body: [
-      "Your Google connection stopped working — the authorization expired or was revoked.",
-      "Gmail, Calendar and Drive sync are paused until you reconnect.",
-      "",
-      `Reconnect: ${url}`,
-    ].join("\n"),
-    url,
-    severity: "alert",
-    name: "google-auth-alert",
-    deliver: true,
+    intent: {
+      title: `Google connection needs re-authorization (${slug})`,
+      body: [
+        "Your Google connection stopped working — the authorization expired or was revoked.",
+        "Gmail, Calendar and Drive sync are paused until you reconnect.",
+        "",
+        `Reconnect: ${url}`,
+      ].join("\n"),
+      target: { kind: "dashboard" },
+      loudness: "loud",
+      source: "google-auth-alert",
+    },
     now,
-    tg,
-    push,
+    services: { tg, push },
   });
 
-  // Latch the episode. A delivery failure leaves an inspectable `failed` output
-  // card rather than vanishing, so latching here can't silently drop the alert.
+  // Latch the episode. A delivery failure is logged and raised as a health
+  // check rather than vanishing, so latching here can't silently drop the alert.
   await updateTransientState<AlertLatch>({
     boxRoot,
     connectorName: LATCH_NAME,
@@ -112,6 +112,6 @@ export async function checkGoogleAuthAndAlert(
   return {
     probed,
     alertedForSince: status.needsReauthSince,
-    delivered: result.channels.length > 0,
+    delivered: result.deliveries.some((d) => d.status === "sent"),
   };
 }

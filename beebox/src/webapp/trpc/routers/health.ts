@@ -43,6 +43,7 @@ import { watchLimitHealthChecks } from "./health-watch-limit.js";
 import { connectorHealthChecks, dismissConnectorEpisodeProcedure } from "./health-connectors.js";
 import { hostPackagesCheck } from "./health-host-packages.js";
 import { queryInstalledPackages } from "../../../core/host-packages-system.js";
+import { notificationHealthChecks } from "../../../core/notification/health.js";
 
 export interface HealthCheck {
   name: string;
@@ -241,6 +242,7 @@ export async function runHealthChecks(
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
   checks.push(...watchLimitHealthChecks(boxRoot));
   checks.push(...(await connectorHealthChecks(boxRoot, { now })));
+  checks.push(...(await notificationHealthChecks(boxRoot, { now })));
 
   // --- Interface card checks ---
 

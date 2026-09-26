@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { checkPendingQuestionsAndNotify } from "../../src/core/question-alert.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
+import { createFakePush } from "../../src/services/push.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-qalert-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -36,23 +37,23 @@ await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now
 await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
 box.commitAll("seed question");
 
-const first = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
+const push = createFakePush();
+const first = await checkPendingQuestionsAndNotify(box.root, { now: NOW, push });
 JSON.stringify(first.notified)
 => ["_bookkeeping/questions/Color.question.card"]
 ```
 
-A web-push card was written for it:
+The push went to the subscribed device, deep-linked to the question card:
 
 ```ts continue
-const cards = (await fs.readdir(path.join(box.root, "_bookkeeping/output"))).filter((f) => f.endsWith(".web-push.card"));
-cards.length
-=> 1
+push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/browse/_bookkeeping/questions/Color.question.card`
+=> true
 ```
 
 A second sweep finds nothing new (the question is latched):
 
 ```ts continue
-await checkPendingQuestionsAndNotify(box.root, { now: NOW })
+await checkPendingQuestionsAndNotify(box.root, { now: NOW, push })
 => null
 ```
 
@@ -60,7 +61,7 @@ await checkPendingQuestionsAndNotify(box.root, { now: NOW })
 
 ```ts continue
 await box.seed("_bookkeeping/questions/Size.question.card", question("What size?"));
-const third = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
+const third = await checkPendingQuestionsAndNotify(box.root, { now: NOW, push });
 JSON.stringify(third.notified)
 => ["_bookkeeping/questions/Size.question.card"]
 ```

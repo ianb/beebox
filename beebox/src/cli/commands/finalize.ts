@@ -13,7 +13,6 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
-import { createPushConnector } from "../../connectors/push.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
 import { getAllConnectors } from "../../connectors/index.js";
@@ -28,9 +27,9 @@ export const finalizeCommand = new Command("finalize")
 
     console.log("[Finalize: running outbound connectors]");
 
-    // Notify the boxholder about newly-pending questions before the connectors
-    // run, so the cards it writes get delivered in this same finalize pass.
-    if (!options.connector || options.connector === "push") {
+    // Notify the boxholder about newly-pending questions (delivered in
+    // process by notifyBoxholder) and age the pending ones.
+    if (!options.connector) {
       try {
         const result = await checkPendingQuestionsAndNotify(boxRoot, { now: new Date() });
         if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
@@ -58,7 +57,6 @@ export const finalizeCommand = new Command("finalize")
     createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
     createGoogleDriveConnector(boxRoot);
-    createPushConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

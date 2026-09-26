@@ -67,7 +67,6 @@ import { triageCommand } from "./commands/triage.js";
 import { handleCommand } from "./commands/handle.js";
 import { extfileCommand } from "./commands/extfile.js";
 import { locationCommand } from "./commands/location.js";
-import { pushCommand } from "./commands/push.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
 import { todoReviewCommand } from "./commands/todo-review.js";
@@ -133,7 +132,6 @@ const ALL: readonly Command[] = [
   handleCommand,
   extfileCommand,
   locationCommand,
-  pushCommand,
   tailscaleCommand,
   todosCommand,
   todoReviewCommand,

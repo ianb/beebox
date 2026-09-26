@@ -12,9 +12,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { boxSlug } from "../lib/box-slug.js";
 import { generateContext } from "../webapp/context.js";
 import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
+import { parseTarget, type Target } from "./notification/target.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -68,10 +68,10 @@ export interface QuestionAlertResult {
 
 export async function checkPendingQuestionsAndNotify(
   boxRoot: string,
-  opts: { now: Date; deliver?: boolean; tg?: TelegramService; push?: PushService },
+  opts: { now: Date; tg?: TelegramService; push?: PushService },
 ): Promise<QuestionAlertResult | null> {
   const channels = await notifyChannels(boxRoot);
-  if (!channels.telegram && !channels.push) return null;
+  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const { pendingQuestions } = await generateContext(boxRoot);
   const pendingPaths = pendingQuestions.map((q) => q.path);
@@ -91,26 +91,19 @@ export async function checkPendingQuestionsAndNotify(
 
   if (fresh.length === 0) return null;
 
-  const boxName = await boxSlug(boxRoot);
   const title = fresh.length === 1
     ? "❓ A question needs an answer"
     : `❓ ${fresh.length} questions need answers`;
   const body = fresh.map((q) => `- ${q.prompt}`).join("\n");
-  // One question → deep-link to its card; several → the questions list.
-  const url = fresh.length === 1 && fresh[0]
-    ? `/${boxName}/browse/${fresh[0].path}`
-    : `/${boxName}/`;
+  // One question → its card; several → the dashboard's questions list.
+  const target: Target = fresh.length === 1 && fresh[0]
+    ? parseTarget(`question:${fresh[0].path}`)
+    : { kind: "dashboard" };
 
   await notifyBoxholder(boxRoot, {
-    title,
-    body,
-    url,
-    severity: "alert",
-    name: "question-alert",
-    deliver: opts.deliver ?? false,
+    intent: { title, body, target, loudness: "loud", source: "question-alert" },
     now: opts.now,
-    tg: opts.tg,
-    push: opts.push,
+    services: { tg: opts.tg, push: opts.push },
   });
 
   return { notified: fresh.map((q) => q.path) };

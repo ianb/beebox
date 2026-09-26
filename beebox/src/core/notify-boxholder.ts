@@ -1,161 +1,191 @@
 /**
- * notifyBoxholder — proactively reach the boxholder across every configured
- * channel with one call.
+ * notifyBoxholder — the single entry point for reaching the person.
  *
- * Fan-out happens at card-write time: it writes a durable `web-push` card
- * (always) and a `telegram-message` card (when `healthAlerts.telegramChat` is
- * set), each a single-consumer output card delivered by its own connector at
- * `bbx finalize`. This keeps the telegram path untouched and makes web push its
- * mirror — no channel-agnostic card, no multi-consumer lifecycle. Prefer this
- * over hand-writing a telegram card from box code. See
- * docs/plans/web-push-notifications.md (Track D).
- *
- * With `deliver: true` the cards are also flushed immediately (used by the
- * scheduler's health alert, which fires outside a finalize pass and shouldn't
- * wait for the next one).
+ * Logs the intent, emits the live `notification` bus event for open apps,
+ * decides which channels to try from loudness, audience, and presence
+ * (`notification/channels.ts`), sends once per chosen channel in process, and
+ * logs one delivery line per channel. No queue and no retry: a failure is a
+ * `failed` line, and the notification health checks surface it. See
+ * docs/plans/notifications.md (Track A).
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { randomBytes } from "node:crypto";
 import { loadBoxConfig } from "./box/config.js";
-import { createWebPushTemplate, type WebPushSeverityValue } from "../schemas/web-push.js";
-import { createTelegramMessageTemplate } from "../schemas/telegram-message.js";
-import { stageAndCommitPaths } from "../lib/git.js";
-import { sendOutputCards } from "../connectors/telegram-output-cards.js";
-import { sendOutputPushCards } from "../connectors/push.js";
 import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
 import { createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
+import { sendPush, VapidNotConfiguredError } from "./send-push.js";
 import { endpointsForBox } from "./push-subscriptions.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { getBoxTime } from "../lib/time.js";
+import { errorMessage } from "../lib/error-guards.js";
+import { assertNever } from "../lib/invariant.js";
+import { createEventBus } from "./event-bus.js";
+import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
+import { formatTarget, targetUrl } from "./notification/target.js";
+import { appendDelivery, appendIntent } from "./notification/log.js";
+import { channelsToTry, type Audience } from "./notification/channels.js";
+import { livePresence } from "./notification/presence.js";
 
-/**
- * Which channels can currently reach the boxholder for this box: telegram if
- * `healthAlerts.telegramChat` is configured, push if any device is subscribed.
- * Triggers use this to decide whether a proactive alert has anywhere to go.
- */
-export async function notifyChannels(boxRoot: string): Promise<{ telegram: boolean; push: boolean }> {
-  const config = await loadBoxConfig(boxRoot);
-  const telegram = config.healthAlerts?.telegramChat != null;
-  const push = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
-  return { telegram, push };
-}
+/** A notification as a caller writes it: the id is assigned when absent. */
+export type NotificationInput = Omit<NotificationIntent, "id"> & { id?: string | undefined };
 
-export interface NotifyInput {
-  title: string;
-  body: string;
-  /** Root-relative deep link opened on click (e.g. `/box/health`). */
-  url: string;
-  severity?: WebPushSeverityValue;
-  tag?: string | undefined;
-  /** Filename base for the output cards (default "notify"). */
-  name?: string;
-  /** Flush the cards immediately instead of waiting for the next finalize. */
-  deliver?: boolean;
-  now?: Date;
-  /** Injected services (tests / immediate delivery). */
+/** Injected services (tests); omitted ones are built from the box's config. */
+export interface NotifyServices {
   tg?: TelegramService | undefined;
   push?: PushService | undefined;
 }
 
+export interface NotifyRequest {
+  intent: NotificationInput;
+  services?: NotifyServices | undefined;
+  now?: Date | undefined;
+}
+
 export interface NotifyResult {
-  /** Relative paths of the output cards written. */
-  cards: string[];
-  /** Channels a card was written for. */
-  channels: Array<"web-push" | "telegram">;
+  id: string;
+  deliveries: Delivery[];
 }
 
-export async function notifyBoxholder(
-  boxRoot: string,
-  input: NotifyInput,
-): Promise<NotifyResult> {
-  const now = input.now ?? new Date();
-  const base = `${input.name ?? "notify"}-${now.toISOString().replace(/[.:]/g, "-")}`;
+async function audienceFor(boxRoot: string): Promise<{ audience: Audience; telegramChat: string | undefined }> {
   const config = await loadBoxConfig(boxRoot);
-  const chatId = config.healthAlerts?.telegramChat;
-  const hasSubs = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
-
-  const cards: string[] = [];
-  const channels: Array<"web-push" | "telegram"> = [];
-
-  // Web push card — written only when a device is subscribed (subscribing is
-  // the opt-in). Skipping it when nobody's subscribed keeps a telegram-only
-  // box from accruing failed cards on every alert.
-  if (hasSubs) {
-    const pushRel = path.join(BOX_DIRS.output, `${base}.web-push.card`);
-    await writeCard(path.join(boxRoot, pushRel), createWebPushTemplate({
-      title: input.title,
-      body: input.body,
-      url: input.url,
-      severity: input.severity ?? "alert",
-      tag: input.tag,
-    }));
-    cards.push(pushRel);
-    channels.push("web-push");
-  }
-
-  // Telegram card — only when the box has opted in with a chat id.
-  if (chatId) {
-    const tgRel = path.join(BOX_DIRS.output, `${base}.telegram-message.card`);
-    const text = input.body ? `${input.title}\n${input.body}` : input.title;
-    await writeCard(path.join(boxRoot, tgRel), createTelegramMessageTemplate({ chatId, text }));
-    cards.push(tgRel);
-    channels.push("telegram");
-  }
-
-  if (cards.length === 0) {
-    // No channel can reach the boxholder; nothing to write.
-    return { cards, channels };
-  }
-
-  await stageAndCommitPaths(boxRoot, {
-    paths: cards,
-    message: `Notify boxholder: ${input.title}`,
-    trailers: { "Created-By": "notify-boxholder" },
-  });
-
-  if (input.deliver) {
-    await deliverNow({ boxRoot, tg: input.tg, push: input.push, hasTelegram: chatId != null });
-  }
-
-  return { cards, channels };
-}
-
-async function writeCard(absPath: string, content: string): Promise<void> {
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, content);
+  const telegramChat = config.healthAlerts?.telegramChat;
+  const webPush = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
+  // APNs arrives with Track B; until then no device can be reached by it.
+  return { audience: { apns: false, "web-push": webPush, telegram: telegramChat != null }, telegramChat };
 }
 
 /**
- * Flush both output-card connectors immediately so an alert doesn't wait for
- * the next finalize. Telegram needs its bot config; push reads the server-level
- * store. Failures are left to the connectors (a failed card stays for inspection).
+ * Which channels can currently reach the boxholder for this box. Triggers use
+ * this to decide whether a proactive alert has anywhere to go.
  */
-async function deliverNow(opts: {
-  boxRoot: string;
-  tg: TelegramService | undefined;
-  push: PushService | undefined;
-  hasTelegram: boolean;
-}): Promise<void> {
-  const { boxRoot, push, hasTelegram } = opts;
-  await sendOutputPushCards({ boxRoot, triggeredBy: "notify-boxholder", push });
+export async function notifyChannels(
+  boxRoot: string,
+): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
+  const { audience } = await audienceFor(boxRoot);
+  return { apns: audience.apns, webPush: audience["web-push"], telegram: audience.telegram };
+}
 
-  if (hasTelegram) {
-    const tg = opts.tg ?? (await buildTelegram(boxRoot));
-    if (tg) {
-      await sendOutputCards({ boxRoot, triggeredBy: "notify-boxholder", tg });
-    }
+/** Log a line; an unwritable log must not stop delivery, so it is reported and delivery goes on. */
+function logSafely(write: () => void): void {
+  try {
+    write();
+  } catch (e) {
+    console.error("[notify-boxholder] could not write the notification log; delivery continues:", e);
   }
 }
 
-async function buildTelegram(boxRoot: string): Promise<TelegramService | null> {
-  const telegramConfig = await loadTelegramConfig(boxRoot);
-  if (!telegramConfig) {
-    console.warn(
-      "[notify-boxholder] telegram card written but the telegram connector is not configured; card left pending",
-    );
-    return null;
+function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: string }): void {
+  const { intent, url } = opts;
+  try {
+    const bus = createEventBus(boxRoot);
+    try {
+      bus.emit("notification", {
+        id: intent.id,
+        title: intent.title,
+        body: intent.body,
+        target: formatTarget(intent.target),
+        loudness: intent.loudness,
+        ...(intent.tag === undefined ? {} : { tag: intent.tag }),
+        source: intent.source,
+        url,
+      });
+    } finally {
+      bus.close();
+    }
+  } catch (e) {
+    // The bus is the live signal only; the log and the channels still carry it.
+    console.warn("[notify-boxholder] could not emit the notification bus event:", e);
   }
-  return createTelegramService(telegramConfig.botToken);
+}
+
+interface SendContext {
+  boxRoot: string;
+  intent: NotificationIntent;
+  url: string;
+  telegramChat: string | undefined;
+  services: NotifyServices;
+}
+
+async function sendWebPush(ctx: SendContext): Promise<Delivery> {
+  const { boxRoot, intent, url, services } = ctx;
+  try {
+    const result = await sendPush(boxRoot, {
+      payload: { title: intent.title, body: intent.body, url, tag: intent.tag },
+      push: services.push,
+    });
+    if (result.sent > 0) return { channel: "web-push", status: "sent" };
+    return {
+      channel: "web-push",
+      status: "failed",
+      detail: `no device received the push (sent 0, pruned ${result.pruned}, failed ${result.failed})`,
+    };
+  } catch (e) {
+    if (e instanceof VapidNotConfiguredError) return { channel: "web-push", status: "skipped", detail: "unconfigured" };
+    return { channel: "web-push", status: "failed", detail: errorMessage(e) };
+  }
+}
+
+async function telegramService(ctx: SendContext): Promise<TelegramService | null> {
+  if (ctx.services.tg !== undefined) return ctx.services.tg;
+  const config = await loadTelegramConfig(ctx.boxRoot);
+  return config === null ? null : createTelegramService(config.botToken);
+}
+
+async function sendTelegram(ctx: SendContext): Promise<Delivery> {
+  const { intent, telegramChat } = ctx;
+  if (telegramChat === undefined) return { channel: "telegram", status: "skipped", detail: "no-audience" };
+  try {
+    const tg = await telegramService(ctx);
+    if (tg === null) return { channel: "telegram", status: "skipped", detail: "unconfigured" };
+    // TelegramService.sendMessage has no disable_notification option yet, so
+    // a `quiet` message still makes a sound on Telegram.
+    await tg.sendMessage(telegramChat, intent.body ? `${intent.title}\n${intent.body}` : intent.title);
+    return { channel: "telegram", status: "sent" };
+  } catch (e) {
+    return { channel: "telegram", status: "failed", detail: errorMessage(e) };
+  }
+}
+
+async function sendOn(channel: ChannelName, ctx: SendContext): Promise<Delivery> {
+  switch (channel) {
+    case "apns":
+      // No APNs service until Track B; `audienceFor` never offers this channel.
+      return { channel, status: "skipped", detail: "unconfigured" };
+    case "web-push":
+      return sendWebPush(ctx);
+    case "telegram":
+      return sendTelegram(ctx);
+    default:
+      return assertNever(channel);
+  }
+}
+
+function newNotificationId(): string {
+  return randomBytes(6).toString("base64url");
+}
+
+export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): Promise<NotifyResult> {
+  const now = request.now ?? getBoxTime(boxRoot);
+  const services = request.services ?? {};
+  const input = request.intent;
+  const intent: NotificationIntent = { ...input, id: input.id ?? newNotificationId() };
+  const url = targetUrl(intent.target, { boxSlug: await boxSlug(boxRoot), notificationId: intent.id });
+
+  logSafely(() => appendIntent(boxRoot, { intent, now }));
+  emitLive(boxRoot, { intent, url });
+
+  const { audience, telegramChat } = await audienceFor(boxRoot);
+  const presence = await livePresence(boxRoot, { now });
+  const plan = channelsToTry({ intent, audience, presence });
+  const ctx: SendContext = { boxRoot, intent, url, telegramChat, services };
+  const sent: Delivery[] = [];
+  for (const channel of plan.channels) sent.push(await sendOn(channel, ctx));
+
+  const order = (d: Delivery): number => CHANNELS.indexOf(d.channel);
+  const deliveries = [...plan.skipped, ...sent].toSorted((a, b) => order(a) - order(b));
+  for (const delivery of deliveries) {
+    logSafely(() => appendDelivery(boxRoot, { notificationId: intent.id, delivery, now }));
+  }
+  return { id: intent.id, deliveries };
 }

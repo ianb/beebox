@@ -3,15 +3,15 @@
  * after each box's tick (scheduler.ts).
  *
  * Explicit opt-in: a box must have a reachable channel — `healthAlerts.telegramChat`
- * in _config/box.json and/or a subscribed Web Push device. The alert fans out via
- * notifyBoxholder to durable per-channel cards in _bookkeeping/output/ (the documented
- * outbound contract), flushed immediately so it doesn't wait for the next finalize.
+ * in _config/box.json and/or a subscribed Web Push device. The alert goes out
+ * through notifyBoxholder, which delivers it in process on every channel.
  *
  * One alert per unhealthy episode: alerting stamps each task's latch
  * (alertedAt/alertedFor); a successful run clears it (recordOutcome),
  * so a relapse alerts again. Tasks already latched are skipped, so a
  * task failing for days produces one message, not one per tick. A delivery
- * failure leaves a `failed` card (inspectable), so latching is safe.
+ * failure is a `failed` line in the notification log and a health check, so
+ * latching is safe.
  */
 
 import { boxSlug } from "../../lib/box-slug.js";
@@ -63,7 +63,7 @@ export async function checkHealthAndAlert(
   { now, tg, push }: { now: Date; tg?: TelegramService; push?: PushService },
 ): Promise<HealthAlertResult | null> {
   const channels = await notifyChannels(boxRoot);
-  if (!channels.telegram && !channels.push) return null;
+  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
 
   const health = await loadScheduleHealth(boxRoot, now);
   const fresh = selectAlertableTasks(health).filter((t) => t.alertedAt === null);
@@ -77,20 +77,19 @@ export async function checkHealthAndAlert(
     "Run `bbx health` in the box for details.",
   ].join("\n");
 
-  // Fan out to durable per-channel cards and flush immediately — a scheduler
-  // tick fires outside a finalize pass, so the alert shouldn't wait for one.
-  // A delivery failure leaves a `failed` card (inspectable, never silent), so
-  // latching the episode below can't silently drop it.
+  // notifyBoxholder delivers in process. A delivery failure is logged and
+  // raised as a health check (never silent), so latching the episode below
+  // can't silently drop it.
   const result = await notifyBoxholder(boxRoot, {
-    title,
-    body,
-    url: `/${boxName}/`,
-    severity: "alert",
-    name: "health-alert",
-    deliver: true,
+    intent: {
+      title,
+      body,
+      target: { kind: "dashboard" },
+      loudness: "loud",
+      source: "health-alert",
+    },
     now,
-    tg,
-    push,
+    services: { tg, push },
   });
 
   // Latch each task so the same episode doesn't re-alert every tick.
@@ -101,5 +100,5 @@ export async function checkHealthAndAlert(
     await saveScriptState({ boxRoot, scriptName: task.name, state });
   }
 
-  return { alerted: fresh.map((t) => t.name), delivered: result.channels.length > 0 };
+  return { alerted: fresh.map((t) => t.name), delivered: result.deliveries.some((d) => d.status === "sent") };
 }
