@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T20:09:07Z
-Total documents: 441
+Generated: 2026-09-26T20:30:06Z
+Total documents: 442
 
 ## Issues
 
@@ -717,7 +717,7 @@ Referenced by:
 
 #### docs/box-guidance.md
 
-Title: "Box guidance" | 128 lines | current reference
+Title: "Box guidance" | 130 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
@@ -731,6 +731,7 @@ References:
 - → docs/box/tricks.md (link)
 - → docs/box/schemas.md (link)
 - → docs/box/provenance.md (link)
+- → docs/box/todos.md (link)
 
 #### docs/box-layout.md
 
@@ -2039,6 +2040,14 @@ Title: "Writing Box-Local Schemas" | 177 lines | current reference
 Referenced by:
 - docs/box-guidance.md:111 (link) — [schemas](box/schemas.md)). A tracked nested `CLAUDE.md` holds a pointer to it
 - docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own CLAUDE.md, which points at the [s
+
+#### docs/box/todos.md
+
+Title: "Todos" | 88 lines | current reference
+
+Referenced by:
+- docs/box-guidance.md:120 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
+- docs/plans/doc-structure-box-guidance.md:441 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
 
 #### docs/box/tricks.md
 
@@ -6236,6 +6245,7 @@ References:
 - → docs/connectors.md (mention)
 - → docs/box/tricks.md (mention)
 - → docs/box/provenance.md (mention)
+- → docs/box/todos.md (mention)
 - → docs/server/operations.md (mention)
 - → docs/box-guidance.md (mention)
 

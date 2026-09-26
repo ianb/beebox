@@ -1530,6 +1530,17 @@ tests:
   # older, largely-unused todo-list card type — these test the universal
   # capture-in-place {% todo %} tag, bbx query todos, and the todo-view card.
   #
+  # Status (2026-09-26): all 10 recall audits here pass on test1 after the
+  # TODOS mechanics moved to box-docs/todos.md (doc-structure Track 3; the
+  # guide keeps todo-vs-question, capture in context, one inline example,
+  # the pointer, and the text-is-data rule). Re-leveled to knows_about with
+  # should_read_any todos.md: status-and-start, bbx-todos,
+  # collection-project-scope, collection-position-is-meaning,
+  # agent-own-followup, agent-own-followup-limits, recheck (which also
+  # accepts a todo-review file); each read todos.md (1-5 reads).
+  # tag-shape, vs-question and todo-view-card stay knows_directly
+  # (0-1 reads).
+  #
   # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
   # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
   # todos section (src/core/agent-guide/todos.ts) landed in an earlier
@@ -1547,7 +1558,8 @@ tests:
       A {% todo %} has due="2026-08-01" but no start attribute. Is it
       visible on the plate today, or only once it gets closer to the due
       date? And what are the other status values besides the default?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Says due-without-start is on the plate immediately (no lead-time
       opinion, not "hide until due"); names done/dropped/parked as the
@@ -1558,7 +1570,8 @@ tests:
 
   - id: todo-annotation-bbx-todos
     prompt: "How do you see every open todo across the box, and how do you mark one done?"
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Names `bbx query todos` as the query path (not a browsing UI or a
       search). Marking one done is editing the {% todo %} tag's status
@@ -1583,7 +1596,8 @@ tests:
     prompt: >
       How do you see the open todos for one project directory, including
       todos elsewhere in the box that link to it?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Reaches for `bbx query todos --here <dir>` rather than a glob-only
       scan, a grep, or opening cards one at a time. Should say that the
@@ -1596,7 +1610,8 @@ tests:
     prompt: >
       You are adding a todo to a long planning document. What decides which
       group it shows under in the todo list?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Says the heading it sits under, and the todo it nests beneath — not a
       tag attribute, a card field, or its dates. Bonus if it says to put the
@@ -1614,7 +1629,8 @@ tests:
       While filing something else you notice a card that clearly wants a
       second pass. It is not this turn's job and the boxholder never asked
       for it. What do you do with that observation?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Opens a todo for itself — by="agent" assigned="agent" with created —
       rather than asking permission, raising a question, or dropping the
@@ -1629,7 +1645,8 @@ tests:
     prompt: >
       You have an assigned="agent" todo you wrote four months ago and have
       stepped over every time since. May you close it yourself, and how?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
     watch_for: >
       Yes — an agent-owned todo is the agent's to resolve: dropped (saying
       why) when it has decided against it, or done with see-also evidence
@@ -1651,7 +1668,8 @@ tests:
       You are working the daily todo review. One item is the boxholder's todo,
       past its due date, and you see no sign it was done. What do you change
       on that todo, if anything, and what else do you do about it?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md", "todo-review"]
     watch_for: >
       Sets a `recheck` date 1-90 days out on the todo (and nothing else on it:
       not its status, due, or text), notes a short reason, and raises it with
@@ -1746,6 +1764,13 @@ tests:
   # boxes with existing todo-list cards may keep attracting new
   # intentions to the old mechanism until agents see enough examples of
   # the new one.
+  #
+  # Status (2026-09-26, doc-structure Track 3): question-not-todo,
+  # query-plate, scoped-surface pass. capture-in-passing FAILS its
+  # "2026-08-15" check, and fails the same way with the pre-move guide: the
+  # agent wrote the {% todo %} but left due off and asked which August 15,
+  # because the run date (2026-09-26) is past it. The prompt's fixed date has
+  # gone stale; the audit needs a future date, not a guidance change.
   #
   # Status (2026-07-30, after retiring todo-list): reran the full 9
   # (5 recall + 4 application) against the migrated test1 box — 9/9 pass.

@@ -116,7 +116,9 @@ when a pointer names a doc the package does not ship.
 The agent guide follows the same rule. A section whose facts only some runs
 need moves to a package doc and leaves one short pointer section behind:
 [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
-mechanics that the guide's PROVENANCE section points at.
+mechanics that the guide's PROVENANCE section points at, and
+[todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
+rules behind the guide's TODOS section.
 
 To add a surface, add its row to `GUIDANCE_SURFACES` and to the table above.
 A tracked row also needs its content in `MANAGED_STOCK_TEMPLATES`
