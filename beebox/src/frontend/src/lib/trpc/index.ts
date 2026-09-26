@@ -6,6 +6,7 @@ import { getApiBase, getWebSocketUrl, withBase } from "../../api-core.js";
 import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
 import { toastError } from "../../components/ui/toast-store";
 import { fetchFromBox, retryDelayMs, shouldRetryOperation } from "./transient";
+import { TRPC_MAX_URL_LENGTH } from "@shared/trpc-url-limit";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -176,7 +177,7 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
       splitLink({
         condition: (op) => op.path === "files.summarize",
         true: httpBatchStreamLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
-        false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+        false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: TRPC_MAX_URL_LENGTH, fetch: trpcFetch }),
       }),
     ],
   });
