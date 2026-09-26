@@ -707,6 +707,105 @@ marker reuses `withDocId` instead of a second vocabulary; open question 1 was
 restated with the deciding rule; the prior-art premises were verified against
 vendor pages, with the Codex skills page recorded as unreachable.
 
+## Implementation record (2026-09-26)
+
+All five tracks landed in the worktree in nineteen commits
+(`f745215bb..9ff085407`), each with typecheck, `lint:changed`, doc-check,
+and `test:changed` green (6,241 of 6,241 at the last full selection). Size:
+source and tests 1,649 added / 1,014 deleted; authored docs 872 lines. Three
+Codex diff reviews ran (Tracks 1, 2, 3); every accepted finding is fixed in a
+follow-up commit and the rejected ones are listed below.
+
+### What shipped
+
+- **Track 1.** `GUIDANCE_SURFACES` (`src/core/box/guidance-surfaces.ts`),
+  `syncBoxGuidance` called from `initBox` and `syncTemplatesFromSource`,
+  `TEMPLATE_MANAGED_PATTERNS` derived from the registry, the DOCID marker
+  always on (`withDocId`; the debug-only flag is gone), manifest pruning for
+  rules, skills, and Codex mirrors, `docs/box-guidance.md`, and the doctests
+  `box-guidance-sync` and `box-docs-pointers`. Two decisions differ from the
+  plan text: `initBox` skips the rule and skill generators because `bbx init`
+  runs `generateDocs(force)` right after, and running them inside `initBox`
+  polluted the process-wide schema cache in neighbor tests; and
+  `src/publications/NOTES.md` is `owned` (seeded once), not `tracked`,
+  because the tracker would park a stock copy on every box that used it.
+- **Track 2.** New package docs `tricks.md` and `schemas.md`; the nested
+  guides for tricks, views, publications, and schemas are pointers plus
+  conventions (397→82, 265→82, 75→25, 1,007→50 words); `connectors.md` points
+  at the guide's secrets section and gained calendar and Telegram entries
+  that point at the skill and rule holding their facts.
+- **Track 3.** `provenance.md` and `todos.md`; the guide keeps one pointer
+  section each. CARD_TYPES and the secrets section point at `schemas.md` and
+  `tricks.md`. The section list carries axis comments; no section moved.
+- **Track 5.** `bbx search` indexes `box-docs/` as kind `engine-doc`.
+- **Track 4.** Below.
+
+### Measurement
+
+| Layer (test1 clone, `agent-context chat`) | Before | After |
+|---|---|---|
+| Agent guide | 11,285 words / 1,036 lines | 9,402 / 806 |
+| Box `CLAUDE.md` with includes | 11,682 | 9,799 |
+| Always-loaded total | 16,077 | 14,194 |
+
+The plan's targets (7,000 guide words, 12,000 always-loaded) were not
+reached. What remains large is ABOUT_CARDS (2,137 words) and the generated
+CARD_TYPES list (1,420); demoting either is a boxholder decision (open
+question 2).
+
+**Knowledge audits.** 31 run on the clone box, 31 pass after four stale
+fixtures were repaired (a retired `_config/schemas` answer, a past due date,
+a substring gate that failed a correct answer, the renamed `usage`
+attribute). Re-leveled to `knows_about`: four `source-*`, seven `todo-*`,
+`secrets-adhoc-use`, `create-new-card-type`; each read the doc it points at.
+New: `search-finds-engine-doc`, `tricks-auto-commit`, `views-api-home`.
+
+**Find-the-fact, after** (name-only walk from the box root, fresh Sonnet
+navigator, 15-step cap; no before walk exists because the before state has no
+clone with the old package docs and new engine, so the before measure is the
+subject-homes table above: views three homes, calendar five):
+
+| Question | Steps | Cited | Name failures |
+|---|---|---|---|
+| trick auto-commit and trailer | 5 | `tricks.md` | none |
+| view export that attaches to a type | 6 | `views.md` | none |
+| `{% source %}` `usage` | 5 | `provenance.md` | none |
+| add a box-local schema | 5 | `schemas.md` | none |
+| agent's own todo attributes | 4 | `todos.md` | none |
+| narration mode | 5 | `narration-mode.md` | none |
+| delete a calendar event | 8 | calendar skill | `connectors.md` promised calendar and had no entry: fixed (`73ff81061`) |
+| mount a Drive folder | 10 | `bbx-commands.md` | guide's connectors bullet named Drive without saying where authoring lives: fixed (`195621aa1`) |
+| scheduled script gets a granted key | 17, gave up on the access level | guide secrets + `tricks.md` | fact lived only under `connectors.md` Credentials with nothing always-loaded pointing there: fixed (`9ff085407`) |
+| file the engine overwrites | 7 | guide line 1 marker | partial: found the marker, answered "guide card" for the durable rule |
+
+### Codex adjudication
+
+- Track 1 (six findings): three name-family prunes (`card-`, `connector-`,
+  `exposition-`, `beebox-rule-*`) delete unmarked files; accepted as the
+  engine-owned namespaces they always were, documented in `box-guidance.md`.
+  `.codex/hooks.json` cannot carry the marker (JSON); documented exception.
+  Legacy `_config/schemas/CLAUDE.md` left the managed patterns; nothing
+  writes it, accepted. Stale `docid-debug` mentions in implemented plans:
+  history, left.
+- Track 2 (five): tricks.md auto-commit caveat, `summarize` is a hook not an
+  import, the loopback resolve request restored, default-to-frontmatter rule
+  in `schemas.md`: fixed (`688910e7f`). "box-layout.md ships into boxes":
+  rejected, it is a developer doc.
+- Track 3 (one): three stale audit comments naming `quotesSection`: fixed.
+
+### Deviations and residuals
+
+- The weekly review line went into `docs/box-guidance.md` instead of the
+  `agent-docs-refresh` schedule, whose corpus is the public site.
+- `quote-*` audits stayed `knows_directly`: THE_LAW_OF_QUOTING already
+  states the verbatim rule, so nothing moved for them.
+- `todo-application-capture-in-passing` needs its due date rolled forward
+  again when it passes.
+- The `.agents/skills/<managed-skill>` symlinks prune dangling links only;
+  `guides-for-*` rules and dangling `AGENTS.md` symlinks are still not pruned.
+- `pnpm lint:circular` reports one pre-existing cycle
+  (`services/cloudflare-provisioning.ts` ↔ `-domains.ts`), unrelated.
+
 ## Rollout shape
 
 Tests first: the registry-equals-disk doctest is written before the registry,
