@@ -342,7 +342,7 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   `status: pass | fail | skip` (`src/schemas/procedure-run.ts:15`).
 - **Health entry.** A failing check in `getHealthSnapshot`
   (`src/webapp/trpc/routers/health.ts:342`). Exists. Demoted alerts are health
-  entries plus a `dot`.
+  entries; they never notify on their own (Track E).
 
 ## Tracks / scope
 
