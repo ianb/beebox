@@ -22,7 +22,7 @@ import { z } from "zod";
 import {
   type CloudflareApiErrorDetail,
   ProvisioningRequestError,
-} from "./cloudflare-provisioning.js";
+} from "./cloudflare-provisioning-error.js";
 
 /** The Zero Trust org slice setup reads. `authDomain` is bare (`<team>.cloudflareaccess.com`). */
 export interface AccessOrganization {
