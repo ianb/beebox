@@ -41,12 +41,13 @@ async function exitWithProcedureError(message: string | undefined): Promise<neve
  * Every step's precheck skipped: exit `CHECK_SKIP_CODE` (75), so a scheduled
  * `runs: bbx procedure run <name>` defers as a pipeline would. The defer marker
  * an inner `bbx changes --or-skip` or `bbx judge --or-skip` wrote names the
- * reason and wins; with none, the run records `no-pass`. See
+ * reason and wins; with none, nothing needed doing and the run records
+ * `no-change`. See
  * docs/plans/notifications.md (Track D, "Deferred at the tick, with evidence").
  */
 async function exitSkipped(): Promise<never> {
   const deferFile = process.env[MEMORY_ENV.deferFile];
-  if (deferFile !== undefined && deferFile !== "") await writeDeferMarker(deferFile, "no-pass");
+  if (deferFile !== undefined && deferFile !== "") await writeDeferMarker(deferFile, "no-change");
   process.exit(CHECK_SKIP_CODE);
 }
 

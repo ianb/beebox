@@ -62,7 +62,7 @@ await tick(box)
 => skipped | deferred no-change failures=0 | card kept
 
 (await loadScriptState(box.root, "watch")).lastError
-=> no-change: nothing changed since the last run
+=> no-change: nothing to do
 ```
 
 `bbx health` shows the schedule as waiting, with the reason; waiting is not
@@ -71,7 +71,7 @@ unhealthy.
 ```ts continue
 const [task] = (await loadScheduleHealth(box.root, new Date())).tasks;
 `${task.status}: ${task.deferReason} (${task.reason})`
-=> waiting: no-change (nothing changed since the last run)
+=> waiting: no-change (nothing to do)
 ```
 
 ## The cursor advances for `no-change` and `no-pass`, and holds otherwise
@@ -167,7 +167,8 @@ await box.cleanup();
 `runs: bbx procedure run <name>` is the common shape when an agent writes the
 notification. When every step's precheck skips, `bbx procedure run` exits 75,
 and the marker its inner `bbx changes --or-skip` wrote names the reason. A
-precheck that skips without a marker records `no-pass`.
+precheck that skips without a marker had nothing to do, and records
+`no-change`: `no-pass` is for a judgment that said no.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -211,7 +212,7 @@ runs: bbx procedure run bare
 `);
 box.commitAll("bare");
 await tick(box)
-=> skipped | deferred no-pass failures=0 | card kept
+=> skipped | deferred no-change failures=0 | card kept
 
 await box.read("_tmp/ran").then(() => "a step ran", () => "no step ran")
 => no step ran
