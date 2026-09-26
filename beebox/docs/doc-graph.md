@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T20:30:06Z
+Generated: 2026-09-26T20:45:04Z
 Total documents: 442
 
 ## Issues
@@ -2051,7 +2051,7 @@ Referenced by:
 
 #### docs/box/tricks.md
 
-Title: "Tricks" | 118 lines | current reference
+Title: "Tricks" | 121 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:110 (link) — `docs/box/` (for example [tricks](box/tricks.md) or

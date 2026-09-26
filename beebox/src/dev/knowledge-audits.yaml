@@ -752,6 +752,10 @@ tests:
   # Rerun (2026-09-26, Claude): pass on the doc-structure test1 clone after the
   # schema-authoring guide moved to box-docs/schemas.md; the agent followed
   # src/schemas/CLAUDE.md's pointer and read schemas.md (3 reads, 51k ctx).
+  # Rerun (2026-09-26, doc-structure Track 3): pass (2 reads) after the
+  # guide's `validate`-hook corrective moved out of CARD_TYPES; the fact now
+  # lives only in box-docs/schemas.md. box-packageify-schemas-location also
+  # passes (3 reads).
   - id: schema-validate-hook
     prompt: >
       You're adding a card type whose rules go beyond what Zod field types can
@@ -1372,6 +1376,13 @@ tests:
     watch_for: "Lists extension mechanisms: procedures, tricks, guides, schedules; bonus if mentions schemas"
     tags: [extension]
 
+  # Status (2026-09-26, doc-structure Track 3): pass, 0 reads, after
+  # CARD_TYPES's schema-authoring prose became a pointer to
+  # box-docs/schemas.md. Same run: list-card-types, create-task-card-type,
+  # views-render-card-type pass; create-new-card-type fails its stale
+  # keyword gate (expects "_config/schemas" or "bbx init", the retired
+  # answer) with a correct src/schemas/ answer, and fails the same way with
+  # the pre-change guide.
   - id: card-types-and-add-new
     prompt: "What card types do you know about? Can you add new ones?"
     expected_level: knows_directly
@@ -3412,6 +3423,8 @@ tests:
       An agent that greps for a real `*.memo.card` on disk is doing better
       than following the doc.
 
+  # Status (2026-09-26, doc-structure Track 3): pass (3 reads) after the
+  # CARD_TYPES trim.
   - id: card-type-from-filename
     prompt: "How does the system know what type a card is? Where does the type discriminator come from?"
     expected_level: knows_directly
@@ -5979,6 +5992,14 @@ tests:
   # (1 file read) and answers correctly — no `.secret.json` mention, names
   # the store/grant flow. secrets-adhoc-use unchanged (0 reads, pass).
 
+  # Status (2026-09-26, doc-structure Track 3): the guide's trick bullet
+  # became a pointer to box-docs/tricks.md, which now holds the resolve-log
+  # and no-raw-curl sentences. secrets-adhoc-use re-leveled to knows_about
+  # (should_read_any tricks.md): pass, read tricks.md. secrets-provisioning
+  # FAILS response_not_contains: correct store/grant answer, but it names
+  # `_config/connectors/mistral.secret.json` as the retired path that "no
+  # longer works". Fails the same way with the pre-change guide; the
+  # negative-mention gate is the problem, not the guidance.
   - id: secrets-provisioning
     prompt: "How does a Mistral API key get configured for this box?"
     expected_level: knows_directly
@@ -5999,7 +6020,8 @@ tests:
     prompt: >
       I'm writing a trick that needs to call a credentialed third-party API
       (an API key). How should the trick get and use that key?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["box-docs/tricks.md"]
     watch_for: >
       Says: `bbx secrets declare <name>` to name the slot, the boxholder
       supplies the value and grants it (at `agent` access) via the capture

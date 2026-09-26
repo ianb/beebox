@@ -91,8 +91,11 @@ If the trick needs a credential, declare it in a `secrets.json` beside
 
 The boxholder supplies and grants the secret; you never see the value in the
 tree. `bbx trick <name>` resolves each declaration at launch and injects the
-value only into that trick process under the declared environment name. Never
-write a resolved value to a file, an argument, or a log. How secrets are
+value only into that trick process under the declared environment name. Every
+resolve is logged with the reason. A refusal or unreachable server is reported
+without the value; relay the message rather than trying a raw `curl` (which
+prints the credential into the transcript). Never write a resolved value to a
+file, an argument, or a log. How secrets are
 granted and why they never live in the box is in the agent guide's "API keys &
 secrets" section.
 
