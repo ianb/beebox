@@ -100,8 +100,9 @@ async function loadCard(boxRoot: string, cardPath: string): Promise<{ path: stri
 
 async function defer(reason: DeferReason, { env, detail }: { env: NodeJS.ProcessEnv; detail: string }): Promise<number> {
   const deferFile = env[MEMORY_ENV.deferFile];
-  if (deferFile !== undefined && deferFile !== "") await writeDeferMarker(deferFile, reason);
-  console.error(`bbx judge: deferred (${reason}): ${detail}`);
+  const written = deferFile === undefined || deferFile === "" || (await writeDeferMarker(deferFile, reason));
+  // An earlier step's marker (`bbx changes --or-skip`) names the run's reason; say so rather than claim ours.
+  console.error(written ? `bbx judge: deferred (${reason}): ${detail}` : `bbx judge: deferred: ${detail}; keeping the earlier reason in $${MEMORY_ENV.deferFile}`);
   return CHECK_SKIP_CODE;
 }
 

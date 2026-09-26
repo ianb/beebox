@@ -101,13 +101,15 @@ function truncateUtf8(text: string, maxBytes: number): string {
  * Write the marker a skipping command leaves before exiting 75. The first
  * marker of a run wins: in `bbx changes --or-skip | bbx judge --or-skip`, the
  * judge sees empty stdin because nothing changed, and `no-change` is the
- * reason the run should record.
+ * reason the run should record. Returns whether this marker was the one written.
  */
-export async function writeDeferMarker(filePath: string, reason: DeferReason): Promise<void> {
+export async function writeDeferMarker(filePath: string, reason: DeferReason): Promise<boolean> {
   try {
     await fs.writeFile(filePath, `${JSON.stringify({ reason })}\n`, { flag: "wx" });
+    return true;
   } catch (e) {
     if (errnoCode(e) !== "EEXIST") throw e;
+    return false;
   }
 }
 

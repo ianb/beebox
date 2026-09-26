@@ -7,8 +7,8 @@
  * - Otherwise the box's OpenRouter key, read the way quick chat reads it;
  *   none means `unconfigured`.
  *
- * `.beebox/jev-debug.log` gets one JSON line per call, with the state
- * truncated and never the key: the record for learning what a judgment card
+ * `.beebox/jev-debug.log` gets one JSON line per call, with the state (and a
+ * whole-stdin input, which is the state) truncated and never the key: the record for learning what a judgment card
  * does with real states.
  */
 
@@ -74,10 +74,12 @@ export interface JevDebugEntry {
 /** Append one call to `.beebox/jev-debug.log`; a write failure warns and never fails the judgment. */
 export async function appendJevDebug(boxRoot: string, entry: JevDebugEntry): Promise<void> {
   const logPath = path.join(boxRoot, ".beebox", "jev-debug.log");
-  const state = entry.state.length > LOGGED_STATE_CHARS ? `${entry.state.slice(0, LOGGED_STATE_CHARS)}… (${String(entry.state.length)} chars)` : entry.state;
+  const cut = (text: string): string => (text.length > LOGGED_STATE_CHARS ? `${text.slice(0, LOGGED_STATE_CHARS)}… (${String(text.length)} chars)` : text);
+  const state = cut(entry.state);
+  const input = cut(entry.input);
   try {
     await fs.mkdir(path.dirname(logPath), { recursive: true });
-    await fs.appendFile(logPath, `${JSON.stringify({ ...entry, state })}\n`);
+    await fs.appendFile(logPath, `${JSON.stringify({ ...entry, input, state })}\n`);
   } catch (e) {
     console.warn("[judge] could not write jev-debug.log:", e);
   }
