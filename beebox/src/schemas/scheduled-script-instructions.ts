@@ -1,3 +1,5 @@
+import { SECTION } from "../core/agent-guide/sections.js";
+
 /**
  * The `instructions` prose for scheduled-script cards (agent-facing prompt
  * surface). Split out of scheduled-script.tsx to keep that file under the
@@ -53,4 +55,32 @@ notify:
   context: _content/pets/pepper-shots.todo.card
 \`\`\`
 
-The scheduler sends it at that time and then deletes the card. Tapping it opens a new chat with the reminder and its context.`;
+The scheduler sends it at that time and then deletes the card. Tapping it opens a new chat with the reminder and its context.
+
+## Deferring: run until it fires
+A \`runs:\` command that finds nothing to do exits 75 after writing its reason to \`$BBX_DEFER_FILE\`; \`bbx changes --or-skip\` and \`bbx judge --or-skip\` do both. The run records \`deferred\` (\`bbx health\` shows \`waiting: <reason>\`), which is neither a failure nor a success, so \`once: true\` deletes the card only after the run that got through. Exit 75 without the file is a failure. \`bbx procedure run\` exits 75 the same way when every precheck skipped. After \`no-change\` or \`no-pass\` the next run's \`BBX_SINCE_COMMIT\` moves on; after a failure, \`budget\`, \`jev-unavailable\`, or \`unconfigured\` it stays, so the same items are seen again.
+
+## Example: a watch whose notification text is fixed
+
+No agent: the judge gates a fixed notification.
+
+\`\`\`yaml
+# _config/schedules/watch-contractor-quote.scheduled-script.card
+cron: "0 */2 * * *"
+once: true
+until: 2026-10-31
+requested-by: boxholder
+requires: { connectors: [google-drive] }
+runs: >
+  bbx changes --match 'drive/Quotes/**' --kind any --cat --all --or-skip
+  | bbx judge _config/judgments/contractor-quote.judgment.card --min quote=0.8 --or-skip
+  && bbx notify --loudness loud --target chat:new "The contractor's quote is in"
+\`\`\`
+
+\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${SECTION.REACHING_THE_BOXHOLDER} section of the agent guide has that example, and the judgment card instructions say how to write the judgment.
+
+## Testing a schedule
+- \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing.
+- \`BBX_NOTIFY_FAKE=1\` sends every notification through fake channels and logs \`sent (fake)\`.
+- \`BBX_JEV_FAKE=1\` (or \`=0\`) makes \`bbx judge\` answer yes (or no) with no key; \`bbx judge --dry-run\` and \`--replay <file>\` test the judgment itself.
+- \`bbx changes --since <commit>\` runs the change list outside a schedule.`;
