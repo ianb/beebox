@@ -1,91 +1,43 @@
 /**
- * "A connector went quiet or keeps failing" alert, run by the scheduler daemon
- * after each box's tick (scheduler.ts), beside the task-health and Google-auth
- * alerts.
+ * Connector quiet/failing episodes, run by the scheduler daemon after each
+ * box's tick (`box-alerts.ts`).
  *
- * One message per episode. The episode lives in the connector activity record
- * (`connectors/activity.ts`): it is stored when a verdict turns quiet or
- * failing, stamped `notifiedAt` once the message is sent, and dropped when the
- * condition clears, so a relapse alerts again while a condition that holds
- * stays quiet. The dashboard warning holds the condition until then, and the
- * boxholder can dismiss it there. Nothing repeats.
- *
- * With no channel configured nothing is stamped: the dashboard still shows the
- * warning, and a channel added later gets the message.
+ * The episode lives in the connector activity record (`connectors/activity.ts`):
+ * it is stored when a verdict turns quiet or failing, stamped `notifiedAt` once
+ * this pass has recorded it, and dropped when the condition clears, so a
+ * relapse is a new episode. The dashboard shows the condition as a
+ * `connector-activity:<name>` health check until it clears or the boxholder
+ * dismisses it there. It never notifies on its own (docs/plans/notifications.md,
+ * Track E); a boxholder-requested schedule that needs the connector is
+ * promoted separately (`promotion.ts`).
  */
 
-import { boxSlug } from "../../lib/box-slug.js";
 import { boxLocalDay, updateConnectorActivity } from "../../connectors/activity.js";
-import { describeVerdict, evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "../../connectors/activity-verdict.js";
-import { notifyBoxholder, notifyChannels } from "../notify-boxholder.js";
-import type { TelegramService } from "../../services/telegram.js";
-import type { PushService } from "../../services/push.js";
+import { evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "../../connectors/activity-verdict.js";
 
-interface ConnectorActivityAlertResult {
-  /** Connectors named in the message. */
-  alerted: string[];
-  /** Whether the message reached at least one channel. */
-  delivered: boolean;
+interface ConnectorEpisodeResult {
+  /** Connectors whose episode began since the last pass. */
+  connectors: string[];
 }
 
-function needsMessage(state: ConnectorEpisodeState): boolean {
+function isNew(state: ConnectorEpisodeState): boolean {
   return state.episode !== null && state.episode.notifiedAt === null && state.episode.dismissedAt === null;
 }
 
 /**
- * Bring every connector's episode up to date, then send one message covering
- * the episodes nobody has been told about. Returns null when there is nothing
- * new to say or no channel to say it on.
+ * Bring every connector's episode up to date and stamp the new ones. Returns
+ * null when no episode is new.
  */
-export async function checkConnectorActivityAndAlert(
-  boxRoot: string,
-  { now, tg, push }: { now: Date; tg?: TelegramService; push?: PushService },
-): Promise<ConnectorActivityAlertResult | null> {
+export async function updateConnectorEpisodes(boxRoot: string, { now }: { now: Date }): Promise<ConnectorEpisodeResult | null> {
   const today = await boxLocalDay(boxRoot, now);
-  let fresh: ConnectorEpisodeState[] = [];
+  let fresh: string[] = [];
   await updateConnectorActivity(boxRoot, (file) => {
     const states = evaluateConnectors(file, today);
-    fresh = states.filter(needsMessage);
-    return withEpisodes(file, states);
+    fresh = states.filter(isNew).map(({ connector }) => connector);
+    const stamped = states.map((state) =>
+      isNew(state) && state.episode !== null ? { ...state, episode: { ...state.episode, notifiedAt: now.toISOString() } } : state,
+    );
+    return withEpisodes(file, stamped);
   });
-  if (fresh.length === 0) return null;
-
-  const channels = await notifyChannels(boxRoot, { services: { tg, push } });
-  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
-
-  const slug = await boxSlug(boxRoot);
-  const lines = fresh.flatMap(({ connector, verdict }) => {
-    const line = describeVerdict(connector, verdict);
-    return line === null ? [] : [`- ${line}`];
-  });
-  const result = await notifyBoxholder(boxRoot, {
-    intent: {
-      title: `A connector needs attention (${slug})`,
-      body: [...lines, "", "If this is expected, dismiss it on the box dashboard."].join("\n"),
-      target: { kind: "dashboard" },
-      loudness: "loud",
-      source: "connector-activity-alert",
-    },
-    now,
-    services: { tg, push },
-  });
-
-  // Stamp only the episodes this message covered, and only if they are still
-  // the stored episode: one that ended or restarted meanwhile gets its own.
-  // A delivery failure is logged and raised as a health check, so stamping
-  // here cannot silently drop the alert (same contract as google-auth-alert).
-  const sent = new Map(fresh.map(({ connector, episode }) => [connector, episode]));
-  await updateConnectorActivity(boxRoot, (file) => {
-    const connectors = { ...file.connectors };
-    for (const [connector, episode] of sent) {
-      const activity = connectors[connector];
-      const stored = activity?.episode;
-      if (activity === undefined || stored == null || episode === null) continue;
-      if (stored.kind !== episode.kind || stored.since !== episode.since) continue;
-      connectors[connector] = { ...activity, episode: { ...stored, notifiedAt: now.toISOString() } };
-    }
-    return { ...file, connectors };
-  });
-
-  return { alerted: fresh.map(({ connector }) => connector), delivered: result.deliveries.some((d) => d.status === "sent") };
+  return fresh.length === 0 ? null : { connectors: fresh };
 }

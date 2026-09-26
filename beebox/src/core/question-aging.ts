@@ -214,7 +214,7 @@ export async function ageQuestions(
           title: "⏰ Reminder: a question is waiting",
           body: fields.prompt,
           target: parseTarget(`question:${q.relativePath}`),
-          loudness: "loud",
+          loudness: "quiet",
           source: "question-nudge",
         },
         now,

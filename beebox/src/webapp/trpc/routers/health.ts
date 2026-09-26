@@ -44,6 +44,8 @@ import { connectorHealthChecks, dismissConnectorEpisodeProcedure } from "./healt
 import { hostPackagesCheck } from "./health-host-packages.js";
 import { queryInstalledPackages } from "../../../core/host-packages-system.js";
 import { notificationHealthChecks } from "../../../core/notification/health.js";
+import { engineQuotaChecks, scheduledTasksCheck } from "./health-schedules.js";
+import { boxEngineUnavailability } from "../../../core/schedule/engine-wait.js";
 
 export interface HealthCheck {
   name: string;
@@ -220,6 +222,8 @@ export async function runHealthChecks(
   checks.push(await pendingMigrationsCheck(boxRoot));
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
+  checks.push(scheduledTasksCheck(scheduleHealth, getBoxTime(boxRoot)));
+  checks.push(...engineQuotaChecks(await boxEngineUnavailability(boxRoot), getBoxTime(boxRoot)));
   checks.push(await packageDocsCheck(boxRoot));
   const hostPackages = await hostPackagesCheck(boxRoot, { queryInstalled: queryInstalledPackages });
   if (hostPackages !== null) checks.push(hostPackages);

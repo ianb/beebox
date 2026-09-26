@@ -82,7 +82,7 @@ JSON.stringify(before)
 => {"nudged":[],"expired":[]}
 ```
 
-At the 7-day mark it nudges exactly once. The nudge is pushed to the
+At the 7-day mark it nudges exactly once. The nudge is `quiet`, pushed to the
 subscribed device, targets the question, and is in the notification log:
 
 ```ts continue
@@ -98,7 +98,7 @@ push.describe()
 
 const [logged] = await readRecent(box.root, { days: 1 });
 JSON.stringify([logged.intent.target, logged.intent.loudness, logged.deliveries.find((d) => d.channel === "web-push").status])
-=> ["question:_bookkeeping/questions/Color.question.card","loud","sent"]
+=> ["question:_bookkeeping/questions/Color.question.card","quiet","sent"]
 ```
 
 A second sweep at the same age (or later, still under expiry) does not

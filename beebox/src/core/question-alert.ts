@@ -4,8 +4,8 @@
  * The cheap hook the boxholder asked for: instead of instrumenting every
  * producer that writes a question card, a finalize-time sweep diffs the box's
  * currently-pending questions against a per-box latch and notifies the
- * boxholder (via notifyBoxholder, fanning out to push + Telegram) about the
- * newly-pending ones. Each question is notified once while it stays pending;
+ * boxholder (via notifyBoxholder) about the newly-pending ones: a `dot` (a
+ * badge), or `quiet` when one of them carries `urgency: time-bound`. Each question is notified once while it stays pending;
  * when it's answered it leaves the pending set and the latch, so a later
  * question can notify again. See docs/plans/web-push-notifications.md (Track D).
  */
@@ -100,8 +100,11 @@ export async function checkPendingQuestionsAndNotify(
     ? parseTarget(`question:${fresh[0].path}`)
     : { kind: "dashboard" };
 
+  // A dot badges the phone; a question that blocks something with a date
+  // also sends a muted notification.
+  const loudness = fresh.some((q) => q.urgency === "time-bound") ? "quiet" : "dot";
   await notifyBoxholder(boxRoot, {
-    intent: { title, body, target, loudness: "loud", source: "question-alert" },
+    intent: { title, body, target, loudness, source: "question-alert" },
     now: opts.now,
     services: { tg: opts.tg, push: opts.push },
   });

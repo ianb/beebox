@@ -52,13 +52,14 @@ const episodeSchema = z.strictObject({
   kind: z.enum(["quiet", "failing"]),
   /** First box-local day of the episode. */
   since: dayKey,
+  /** When the scheduler's episode pass recorded this episode; it no longer notifies (the name predates that). */
   notifiedAt: z.iso.datetime().nullable(),
   dismissedAt: z.iso.datetime().nullable(),
 });
 
 const connectorActivitySchema = z.strictObject({
   days: z.record(dayKey, connectorDaySchema),
-  /** The open quiet/failing episode, if any — the alert latch. */
+  /** The open quiet/failing episode, if any — the episode latch. */
   episode: episodeSchema.nullable(),
 });
 

@@ -25,6 +25,7 @@ import {
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
+import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
 import { parseCardName, getBoxDir } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
@@ -82,9 +83,12 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     // same pass may have just detected the episode. `lastRun` stays
     // untouched, so scripts stay due and run on the first wakeup after the
     // reset.
+    // The promotion rule, as in `bbx tick`: a requested schedule that cannot run says so once.
+    const promotion = { boxRoot, scriptName, parsed, state, now };
     const engineWait = await boxEngineUnavailability(boxRoot);
     if (engineWait !== null) {
       console.log(`  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`);
+      await noteTickSkip(promotion, { reason: "engine-quota", live: engineWait });
       continue;
     }
 
@@ -93,6 +97,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       const missing = await checkMissingConnectors(boxRoot, parsed.requires);
       if (missing.length > 0) {
         console.log(`  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`);
+        await noteTickSkip(promotion, { reason: "missing-connectors", connectors: missing });
         continue;
       }
     }
@@ -117,6 +122,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       }
     }
 
+    await checkRequiredConnectors(promotion);
     console.log(`  Running ${scriptName}...`);
     const preRunMtimeMs = await cardMtimeMs(cardPath);
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
@@ -142,6 +148,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
         }
       } else if (run.deferReason !== undefined) {
         console.log(`  ${scheduleOutcomeLine(run)}`);
+        await promoteDeferredRun(promotion);
       } else {
         console.error(`  ${scheduleOutcomeLine(run)}`);
       }

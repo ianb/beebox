@@ -19,6 +19,8 @@ export interface PendingQuestion {
   path: string;
   prompt: string;
   options?: string[] | undefined;
+  /** `time-bound` when the question blocks something with a date. */
+  urgency?: "time-bound" | undefined;
 }
 
 export interface ContextOutput {
@@ -46,6 +48,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
         path: q.relativePath,
         prompt: fields.prompt,
         options: options && options.length > 0 ? options : undefined,
+        ...(fields.urgency === undefined ? {} : { urgency: fields.urgency }),
       });
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") {

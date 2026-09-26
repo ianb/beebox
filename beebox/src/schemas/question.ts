@@ -165,6 +165,7 @@ export const QuestionSchema = cardSchema("question", {
     context: z.array(QuestionContextEntry).optional(),
     "asked-at": z.string().datetime({ offset: true }).optional(),
     "expires-after": IsoDuration.optional(),
+    urgency: z.enum(["time-bound"]).optional(),
     answer: QuestionAnswer.optional(),
     "answered-at": z.string().datetime({ offset: true }).optional(),
     "answered-via": z.enum(["web", "cli"]).optional(),
@@ -191,6 +192,7 @@ A question card asks the user something and routes the answer back for processin
 - \`context:\` — array of \`{ref, text?}\` linking to related cards.
 - \`asked-at:\` — ISO 8601 timestamp, set automatically by the template that creates the card. The aging sweep computes a question's age from this field, never from notification/latch state.
 - \`expires-after:\` — optional ISO-8601 duration (e.g. \`P30D\`, \`PT12H\`) overriding the default expiry window for this question. Use it for a time-sensitive ask that should expire sooner, or an evergreen one that should last longer.
+- \`urgency:\` — optional; the one value is \`time-bound\`. Set it when the question blocks something with a date (a form due Friday, a booking that closes). A new question badges the phone; a \`time-bound\` one also sends a notification.
 
 After the user answers, the system fills in:
 - \`answer:\` — \`{text, selected?}\` where \`selected\` is the option id for select questions.

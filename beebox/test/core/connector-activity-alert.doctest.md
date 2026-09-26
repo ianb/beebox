@@ -1,33 +1,24 @@
-# Connector quiet/failing alert and dashboard warning
+# Connector quiet/failing episodes and the dashboard warning
 
-`checkConnectorActivityAndAlert` runs from the scheduler daemon after each tick.
-It sends one message per episode — a connector that has gone quiet or keeps
-failing — and the dashboard shows a warning until the condition clears or the
-owner dismisses it. See `connectors/activity-verdict.ts` for the rule and
+`updateConnectorEpisodes` runs from the scheduler daemon after each tick. It
+brings each connector's episode up to date (a connector that has gone quiet or
+keeps failing) and records a new episode once, for the scheduler log. The
+dashboard shows a warning until the condition clears or the owner dismisses
+it. Nothing is sent: health never notifies on its own
+(docs/plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
 `connector-activity-verdict.doctest.md` for its cases.
 
 ```ts setup
-import * as os from "node:os";
-import * as path from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createFakeTelegram } from "../../src/services/telegram.js";
+import { readRecent } from "../../src/core/notification/log.js";
 import { syncConnector, addDays, loadConnectorActivity } from "../../src/connectors/activity.js";
-import { checkConnectorActivityAndAlert } from "../../src/core/schedule/connector-activity-alert.js";
+import { updateConnectorEpisodes } from "../../src/core/schedule/connector-activity-alert.js";
 import { connectorActivityHealthChecks } from "../../src/webapp/trpc/routers/health-connectors.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 
-// Isolate the server-level push store so only the Telegram channel exists.
-process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-push-connector-${process.pid}-${Date.now()}`);
-
-async function seedBox({ telegram }) {
+async function seedBox() {
   const box = await makeTmpBox({ git: true });
-  await box.seed("_config/box.json", JSON.stringify({
-    timezone: "UTC",
-    ...(telegram ? { healthAlerts: { telegramChat: "777" } } : {}),
-  }));
-  if (telegram) {
-    await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({ botToken: "fake:token", webhookSecret: "s" }));
-  }
+  await box.seed("_config/box.json", JSON.stringify({ timezone: "UTC" }));
   box.commitAll("seed");
   return box;
 }
@@ -68,44 +59,39 @@ function caller(boxRoot, isOwner) {
 }
 ```
 
-## A steady producer that goes quiet alerts once
+## A steady producer that goes quiet is one episode
 
 Thirty days of new mail, then three days of successful syncs that only refresh
 tracked threads:
 
 ```ts
-const box = await seedBox({ telegram: true });
-const tg = createFakeTelegram({ username: "bot" });
+const box = await seedBox();
 const last = await runDays(box.root, { start: FIRST_DAY, pattern: "P".repeat(30) + "ZZ" });
-await checkConnectorActivityAndAlert(box.root, { now: at(last), tg })
+await updateConnectorEpisodes(box.root, { now: at(last) })
 => null
 
 const day3 = await runDays(box.root, { start: addDays(last, 1), pattern: "Z" });
-const alert = await checkConnectorActivityAndAlert(box.root, { now: at(day3), tg });
-JSON.stringify(alert)
-=> {"alerted":["gmail"],"delivered":true}
+JSON.stringify(await updateConnectorEpisodes(box.root, { now: at(day3) }))
+=> {"connectors":["gmail"]}
 
-tg.sent[0].text
-=> A connector needs attention («*»)
-- gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.
-«blankline»
-If this is expected, dismiss it on the box dashboard.
-/«*»/
+const [warning] = await connectorActivityHealthChecks(box.root, { now: at(day3) });
+warning.message
+=> gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.
+
+(await readRecent(box.root, { days: 1, now: at(day3) })).length
+=> 0
 ```
 
-The episode is stamped, so later ticks, including on later quiet days, send
-nothing more:
+The episode is stamped, so later ticks, including on later quiet days, record
+nothing new:
 
 ```ts continue
-await checkConnectorActivityAndAlert(box.root, { now: at(day3), tg })
+await updateConnectorEpisodes(box.root, { now: at(day3) })
 => null
 
 const day4 = await runDays(box.root, { start: addDays(day3, 1), pattern: "Z" });
-await checkConnectorActivityAndAlert(box.root, { now: at(day4), tg })
+await updateConnectorEpisodes(box.root, { now: at(day4) })
 => null
-
-tg.sent.length
-=> 1
 ```
 
 ## The dashboard warns until the owner dismisses it
@@ -132,39 +118,22 @@ await caller(box.root, true).health.dismissConnectorEpisode({ check: "connector-
 => NOT_FOUND
 ```
 
-## New items end the episode; the next one alerts again
+## New items end the episode; the next one is new
 
 ```ts continue
 const recovered = await runDays(box.root, { start: addDays(day4, 1), pattern: "P" });
-await checkConnectorActivityAndAlert(box.root, { now: at(recovered), tg })
+await updateConnectorEpisodes(box.root, { now: at(recovered) })
 => null
 
 (await loadConnectorActivity(box.root)).connectors.gmail.episode
 => null
 
 const failing = await runDays(box.root, { start: addDays(recovered, 1), pattern: "EE" });
-const relapse = await checkConnectorActivityAndAlert(box.root, { now: at(failing), tg });
-`${relapse.alerted} | ${tg.sent.length} | ${tg.sent[1].text.includes("gmail has failed every sync on its last 2 days of running")}`
-=> gmail | 2 | true
-```
+JSON.stringify(await updateConnectorEpisodes(box.root, { now: at(failing) }))
+=> {"connectors":["gmail"]}
 
-```ts cleanup
-await box.cleanup();
-```
-
-## No channel: the dashboard still warns, and nothing is stamped
-
-```ts
-const box = await seedBox({ telegram: false });
-const last = await runDays(box.root, { start: FIRST_DAY, pattern: "P".repeat(30) + "ZZZ" });
-await checkConnectorActivityAndAlert(box.root, { now: at(last) })
-=> null
-
-(await loadConnectorActivity(box.root)).connectors.gmail.episode.notifiedAt
-=> null
-
-(await connectorActivityHealthChecks(box.root, { now: at(last) })).length
-=> 1
+(await connectorActivityHealthChecks(box.root, { now: at(failing) }))[0].message.includes("gmail has failed every sync on its last 2 days of running")
+=> true
 ```
 
 ```ts cleanup
@@ -174,7 +143,7 @@ await box.cleanup();
 ## A damaged record is a warning, not a reset
 
 ```ts
-const box = await seedBox({ telegram: false });
+const box = await seedBox();
 await box.seed("_bookkeeping/connectors/connector-activity.state.json", "{\"version\":2}");
 const [check] = await connectorActivityHealthChecks(box.root, { now: at(FIRST_DAY) });
 `${check.name} | ${check.ok} | ${check.message.includes("is invalid")}`

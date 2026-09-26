@@ -37,6 +37,7 @@ import {
   engineWaitReason,
   type ScheduleOutcomeResult,
 } from "../../core/schedule/engine-wait.js";
+import type { SkipCause } from "../../core/schedule/skip.js";
 import { getBoxTime } from "../../lib/time.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
@@ -109,23 +110,27 @@ interface SkipContext {
   options: TickOptions;
 }
 
+/** A skip: the line to print (empty means "skip silently") and, when recorded, its cause. */
+export interface SkipDecision {
+  line: string;
+  cause?: SkipCause | undefined;
+}
+
 /** Evaluate the pre-run skip gates (due, requires, budget, lock-group).
- * Returns a human-readable reason to skip, or null if the script should run.
- * An empty-string reason means "skip silently".
+ * Returns the skip, or null if the script should run.
  *
  * With `options.force`, the schedule (due-ness) and budget gates are
  * bypassed — but not `enabled: false` (an explicit user statement), not
  * missing connectors (the run would just fail), and not a live lock-group
  * holder (never preempt running work). */
-export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
+export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | null> {
   const { boxRoot, parsed, scriptName, state, now, running, options } = ctx;
+  const say = (text: string, cause?: SkipCause): SkipDecision => ({ line: options.quiet ? "" : `  Skipping ${scriptName}: ${text}`, cause });
 
   if (options.force) {
-    if (!parsed.enabled) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: disabled (enabled: false)`;
-    }
+    if (!parsed.enabled) return say("disabled (enabled: false)");
   } else if (!isDue(parsed, { lastRun: state.lastRun, now })) {
-    return "";
+    return { line: "" };
   }
 
   // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
@@ -134,32 +139,24 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   // the other schedule gates.
   if (!options.force) {
     const engineWait = await boxEngineUnavailability(boxRoot);
-    if (engineWait !== null) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`;
-    }
+    if (engineWait !== null) return say(engineWaitReason(engineWait), { reason: "engine-quota", live: engineWait });
   }
 
   if (parsed.requires) {
     const missing = await checkMissingConnectors(boxRoot, parsed.requires);
-    if (missing.length > 0) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`;
-    }
+    if (missing.length > 0) return say(`missing connectors: ${missing.join(", ")}`, { reason: "missing-connectors", connectors: missing });
   }
 
   if (parsed.budget && !options.force) {
     const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
-    if (!check.allowed) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: budget exceeded (${Math.round(check.usedMs / 1000)}s used)`;
-    }
+    if (!check.allowed) return say(`budget exceeded (${Math.round(check.usedMs / 1000)}s used)`);
   }
 
   if (parsed.lockGroup) {
     const conflict = [...running.entries()].find(
       ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== scriptName
     );
-    if (conflict) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: lock-group "${parsed.lockGroup}" held by ${conflict[0]}`;
-    }
+    if (conflict) return say(`lock-group "${parsed.lockGroup}" held by ${conflict[0]}`);
   }
 
   return null;

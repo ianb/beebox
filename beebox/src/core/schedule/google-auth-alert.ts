@@ -1,117 +1,64 @@
 /**
- * Proactive "your Google connection died" alert, run by the scheduler daemon
- * after each box's tick (scheduler.ts), beside the scheduled-task health alert.
+ * Keep the Google grant verdict fresh, run by the scheduler daemon after each
+ * box's tick (`box-alerts.ts`).
  *
  * Two jobs, in order:
  *  1. Refresh the verdict — `probeGoogleAuthIfStale` forces a token refresh at
  *     most about once a day, so an idle box still learns its grant expired
  *     rather than discovering it the next time someone syncs.
- *  2. Alert once per breakage. The latch stores the `needsReauthSince` stamp it
- *     alerted for, so a repaired-then-broken-again grant alerts again while a
- *     grant that stays broken stays quiet. No re-nag: the condition also holds
- *     a permanent dashboard warning and a `bbx health` line, so repeating the
- *     message would add pressure without adding information.
+ *  2. Record each breakage once. The latch stores the `needsReauthSince` stamp
+ *     already recorded, so the scheduler log names an episode once, and a
+ *     repaired-then-broken-again grant is a new episode.
  *
- * The notification carries a link to the admin page's Google Services section
- * rather than a one-click reconnect: `googleSetup` is an owner-gated procedure
- * that mints a one-time nonce, and pre-minting one into an outbound message is
- * exactly the token-fixation surface `google-oauth-state.ts` exists to close.
- *
- * See docs/plans/google-auth-reauth-health.md.
+ * A dead grant is a health entry (the `google-auth` check, with the reconnect
+ * link) and never notifies on its own (docs/plans/notifications.md, Track E).
+ * A boxholder-requested schedule it stops is promoted separately
+ * (`promotion.ts`). See docs/plans/google-auth-reauth-health.md.
  */
 
-import { boxSlug } from "../../lib/box-slug.js";
 import { probeGoogleAuthIfStale } from "../../connectors/google-auth-status.js";
-import { reauthorizeUrl } from "../../webapp/trpc/routers/health-google.js";
 import { loadTransientState, updateTransientState } from "../../connectors/transient-state.js";
-import { notifyBoxholder, notifyChannels } from "../notify-boxholder.js";
-import type { TelegramService } from "../../services/telegram.js";
-import type { PushService } from "../../services/push.js";
 
 const LATCH_NAME = "google-auth-alert";
 
 interface AlertLatch {
-  /** The `needsReauthSince` stamp we have already alerted about, if any. */
+  /** The `needsReauthSince` stamp already recorded, if any. */
   alertedForSince: string | null;
 }
 
 const EMPTY_LATCH: AlertLatch = { alertedForSince: null };
 
-export interface GoogleAuthAlertResult {
+export interface GoogleAuthEpisode {
   /** Whether a fresh probe ran this tick. */
   probed: boolean;
-  /** The breakage timestamp alerted about, or null if nothing was sent. */
-  alertedForSince: string | null;
-  /** Whether the alert reached at least one channel. */
-  delivered: boolean;
+  /** When the newly recorded breakage began. */
+  since: string;
 }
 
-/**
- * Probe if stale, then send one notification per breakage episode. Returns null
- * when there is nothing to say (grant healthy, never connected, or already
- * alerted for this episode).
- */
-export async function checkGoogleAuthAndAlert(
-  boxRoot: string,
-  { now, tg, push }: { now: Date; tg?: TelegramService; push?: PushService },
-): Promise<GoogleAuthAlertResult | null> {
-  const { probed, status } = await probeGoogleAuthIfStale(boxRoot, { now });
-
-  const latch = await loadTransientState<AlertLatch>({
-    boxRoot,
-    connectorName: LATCH_NAME,
-    defaultValue: EMPTY_LATCH,
-  });
-
-  // Healthy again (or never broken): drop the latch so the next breakage alerts.
-  if (!status.needsReauthSince) {
-    if (latch.alertedForSince !== null) {
-      await updateTransientState<AlertLatch>({
-        boxRoot,
-        connectorName: LATCH_NAME,
-        defaultValue: EMPTY_LATCH,
-        update: (s) => ({ ...s, alertedForSince: null }),
-      });
-    }
-    return null;
-  }
-
-  if (latch.alertedForSince === status.needsReauthSince) return null;
-
-  const channels = await notifyChannels(boxRoot, { services: { tg, push } });
-  if (!channels.telegram && !channels.webPush && !channels.apns) return null;
-
-  const slug = await boxSlug(boxRoot);
-  const url = reauthorizeUrl(slug);
-  const result = await notifyBoxholder(boxRoot, {
-    intent: {
-      title: `Google connection needs re-authorization (${slug})`,
-      body: [
-        "Your Google connection stopped working — the authorization expired or was revoked.",
-        "Gmail, Calendar and Drive sync are paused until you reconnect.",
-        "",
-        `Reconnect: ${url}`,
-      ].join("\n"),
-      target: { kind: "admin", section: "google-services" },
-      loudness: "loud",
-      source: "google-auth-alert",
-    },
-    now,
-    services: { tg, push },
-  });
-
-  // Latch the episode. A delivery failure is logged and raised as a health
-  // check rather than vanishing, so latching here can't silently drop the alert.
+async function setLatch(boxRoot: string, alertedForSince: string | null): Promise<void> {
   await updateTransientState<AlertLatch>({
     boxRoot,
     connectorName: LATCH_NAME,
     defaultValue: EMPTY_LATCH,
-    update: (s) => ({ ...s, alertedForSince: status.needsReauthSince }),
+    update: (s) => ({ ...s, alertedForSince }),
   });
+}
 
-  return {
-    probed,
-    alertedForSince: status.needsReauthSince,
-    delivered: result.deliveries.some((d) => d.status === "sent"),
-  };
+/**
+ * Probe if stale, then return the breakage episode when it is new. Returns
+ * null when there is nothing new (grant healthy, never connected, or this
+ * episode already recorded).
+ */
+export async function refreshGoogleAuth(boxRoot: string, { now }: { now: Date }): Promise<GoogleAuthEpisode | null> {
+  const { probed, status } = await probeGoogleAuthIfStale(boxRoot, { now });
+  const latch = await loadTransientState<AlertLatch>({ boxRoot, connectorName: LATCH_NAME, defaultValue: EMPTY_LATCH });
+
+  // Healthy again (or never broken): drop the latch so the next breakage is new.
+  if (!status.needsReauthSince) {
+    if (latch.alertedForSince !== null) await setLatch(boxRoot, null);
+    return null;
+  }
+  if (latch.alertedForSince === status.needsReauthSince) return null;
+  await setLatch(boxRoot, status.needsReauthSince);
+  return { probed, since: status.needsReauthSince };
 }

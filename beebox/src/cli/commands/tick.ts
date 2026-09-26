@@ -23,6 +23,7 @@ import {
   executeScript,
 } from "./tick-helpers.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 
 export interface TickOptions {
   dryRun?: boolean;
@@ -119,9 +120,12 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     const state = await loadScriptState(boxRoot, scriptName);
-    const skipReason = await evaluateSkip({ boxRoot, parsed, scriptName, state, now, running, options });
-    if (skipReason !== null) {
-      if (skipReason) console.log(skipReason);
+    const skip = await evaluateSkip({ boxRoot, parsed, scriptName, state, now, running, options });
+    // The promotion rule (a requested schedule that cannot run says so once).
+    const promotion = { boxRoot, scriptName, parsed, state, now };
+    if (skip !== null) {
+      if (skip.line) console.log(skip.line);
+      if (skip.cause !== undefined && !options.dryRun) await noteTickSkip(promotion, skip.cause);
       skipCount++;
       scripts.push({ name: scriptName, status: "skipped" });
       continue;
@@ -135,7 +139,9 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       continue;
     }
 
+    await checkRequiredConnectors(promotion);
     const result = await executeScript({ boxRoot, parsed, scriptName, cardPath, file, state, now, options });
+    await promoteDeferredRun(promotion);
     scripts.push(result);
     if (result.status === "ran") ranCount++;
     else if (result.status === "inconclusive") inconclusiveCount++;

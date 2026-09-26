@@ -17,6 +17,7 @@ import {
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxDir } from "../../lib/paths.js";
 import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
+import { ALERTED_FOR, latchSurvivesRun, TICK_SKIP_REASONS, type AlertedFor, type SkippedEpisode } from "./skip.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -50,10 +51,14 @@ export interface ScriptState {
   lastSuccess: string | null;
   /** Failures since the last success; 0 after any success. */
   consecutiveFailures: number;
-  /** Health-alert latch: when a proactive alert was last sent for the
-   * current unhealthy episode. Cleared on success so a relapse re-alerts. */
+  /** Episode latch: when the current unhealthy episode was recorded
+   * (`failing`/`overdue`/`invalid`, cleared on success), or when a
+   * boxholder-requested schedule said it could not run (`skipped:<reason>`,
+   * see `skip.ts` for when each clears). */
   alertedAt: string | null;
-  alertedFor: "failing" | "overdue" | "invalid" | null;
+  alertedFor: AlertedFor | null;
+  /** The tick held this due schedule back (missing connector, engine quota); cleared by any run. */
+  skipped: SkippedEpisode | null;
   runCount: number;
   /** Schedule memory: the box HEAD at this schedule's last run (`BBX_SINCE_COMMIT`). */
   lastCommit: string | null;
@@ -78,7 +83,8 @@ const ScriptStatePartialSchema = z
     lastSuccess: z.string().nullable(),
     consecutiveFailures: z.number(),
     alertedAt: z.string().nullable(),
-    alertedFor: z.enum(["failing", "overdue", "invalid"]).nullable(),
+    alertedFor: z.enum(ALERTED_FOR).nullable(),
+    skipped: z.object({ reason: z.enum(TICK_SKIP_REASONS), since: z.string() }).nullable(),
     runCount: z.number(),
     lastCommit: z.string().nullable(),
     carry: z.string().nullable(),
@@ -97,6 +103,7 @@ const EMPTY_STATE: ScriptState = {
   consecutiveFailures: 0,
   alertedAt: null,
   alertedFor: null,
+  skipped: null,
   runCount: 0,
   lastCommit: null,
   carry: null,
@@ -121,6 +128,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
     consecutiveFailures: raw.consecutiveFailures ?? EMPTY_STATE.consecutiveFailures,
     alertedAt: raw.alertedAt ?? EMPTY_STATE.alertedAt,
     alertedFor: raw.alertedFor ?? EMPTY_STATE.alertedFor,
+    skipped: raw.skipped ?? EMPTY_STATE.skipped,
     runCount: raw.runCount ?? EMPTY_STATE.runCount,
     lastCommit: raw.lastCommit ?? EMPTY_STATE.lastCommit,
     carry: raw.carry ?? EMPTY_STATE.carry,
@@ -233,11 +241,14 @@ export function recordOutcome(state: ScriptState, opts: RecordOutcomeOptions): v
   state.lastError = error;
   state.lastDurationMs = durationMs;
   state.runCount++;
+  state.skipped = null;
+  if (!latchSurvivesRun(state.alertedFor, { result, deferReason: state.lastDeferReason })) {
+    state.alertedAt = null;
+    state.alertedFor = null;
+  }
   if (result === "success") {
     state.lastSuccess = now.toISOString();
     state.consecutiveFailures = 0;
-    state.alertedAt = null;
-    state.alertedFor = null;
   } else if (result === "failure") {
     state.consecutiveFailures++;
   }
