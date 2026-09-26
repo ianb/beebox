@@ -38,6 +38,7 @@ where to put new material.
 | Procedures | [docs/procedure-implementation.md](procedure-implementation.md) |
 | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
 | Deployed-server health-check runbooks | [docs/server/health-checks.md](server/health-checks.md) |
+| Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [docs/notifications.md](notifications.md) |
 | Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
 | Capturing full agent-invocation API traffic | [docs/prompts/logging.md](prompts/logging.md) |
 | Prompt-surface review workflow | [docs/prompts/review.md](prompts/review.md) (lens catalog: [docs/prompts/lenses.md](prompts/lenses.md)) |
