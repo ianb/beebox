@@ -115,6 +115,7 @@ export function CloudflarePublishConnectionsSection() {
         <Accordion
           id="bbx-admin-cf-publish-add"
           title={<Text weight="medium">{rotateTarget === null ? "Add a connection" : `Rotate ${rotateTarget}`}</Text>}
+          keepMounted
           open={editorOpen || rotateTarget !== null || connections.data?.length === 0}
           onOpenChange={(open) => {
             setEditorOpen(open);

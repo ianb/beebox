@@ -12,6 +12,7 @@ import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Accordion } from "../ui/Accordion";
+import { controlAddress } from "@shared/control-address";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
@@ -52,14 +53,15 @@ function GrantedRow({
   // One line closed: the name and its badges. Open for what it is used for and the actions.
   return (
     <Accordion
-      id={`bbx-admin-secrets-key-${secret.name}`}
+      id={controlAddress("bbx-admin-secrets-key", secret.name)}
+      keepMounted
       title={
-        <Row gap="sm" wrap align="center">
+        <>
           <Text mono size="sm">{secret.name}</Text>
           <Badge tone={secret.access === "agent" ? "warning" : "info"}>{secret.access}</Badge>
           {secret.hasValue ? <VerificationBadge secret={secret} /> : <Badge tone="warning">no value yet</Badge>}
           {secret.shareable === false ? <Badge tone="neutral">single-box</Badge> : null}
-        </Row>
+        </>
       }
     >
       <Stack gap="sm">

@@ -172,7 +172,8 @@ primary path is noise.
 
 **Vocabulary lock-ins.** `setValue.input.grant`, the response field `granted`
 (the machinery keeps its name at the API; only the boxholder-facing copy drops
-it), the disclosure id `bbx-admin-secrets-advanced`.
+it), the disclosure id `bbx-admin-secrets-advanced` (retired 2026-09-25: the
+grant form now sits open under "Add a key to this box").
 
 **First implementation chunk.** The mutation extension plus its route doctest
 (grant present → grant exists; absent → not), then the form change. No

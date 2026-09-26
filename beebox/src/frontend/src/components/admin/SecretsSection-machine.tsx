@@ -14,6 +14,7 @@ import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Accordion } from "../ui/Accordion";
+import { controlAddress } from "@shared/control-address";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -45,16 +46,17 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
   const remove = trpc.secrets.remove.useMutation({ onSuccess: refresh });
   return (
     <Accordion
-      id={`bbx-admin-secrets-machine-key-${secret.name}`}
+      id={controlAddress("bbx-admin-secrets-machine-key", secret.name)}
+      keepMounted
       title={
-        <Row gap="sm" wrap align="center">
+        <>
           <Text mono size="sm">{secret.name}</Text>
           {secret.hasValue ? null : <Badge tone="warning">empty slot</Badge>}
           {secret.verified?.status === "failed" ? <Badge tone="danger">may be expired</Badge> : null}
           {secret.verified?.status === "ok" ? <Badge tone="success">verified</Badge> : null}
           {secret.shareable === false ? <Badge tone="neutral">single-box{secret.owningBox === undefined ? "" : `: ${secret.owningBox}`}</Badge> : null}
           <Text size="xs" tone="muted">{grantSummary(secret)}</Text>
-        </Row>
+        </>
       }
     >
       <Stack gap="xs">

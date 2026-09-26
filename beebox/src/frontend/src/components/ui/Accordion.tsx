@@ -14,8 +14,13 @@ export interface AccordionProps {
   /** Visual style. Default `"bordered"` — a boxed card. `"plain"` has no border/padding. */
   variant?: "bordered" | "plain";
   disabled?: boolean;
-  /** Stable `bbx-` address on the shell (see lib/ui-scan). */
+  /** Stable `bbx-` address on the toggle button, the control an agent acts on (see lib/ui-scan). */
   id?: string;
+  /**
+   * Keep the body in the DOM while closed (hidden) instead of unmounting it,
+   * so a form inside keeps its state and its last result across a collapse.
+   */
+  keepMounted?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -40,6 +45,7 @@ export function Accordion({
   variant: variantArg,
   disabled: disabledArg,
   id,
+  keepMounted,
   className,
 }: AccordionProps) {
   const defaultOpen = defaultOpenArg ?? false;
@@ -67,8 +73,9 @@ export function Accordion({
   const bodyClass = variant === "bordered" ? "border-t border-warm-200 px-3 py-2" : "mt-2";
 
   return (
-    <div id={id} className={shellClass}>
+    <div className={shellClass}>
       <button
+        id={id}
         type="button"
         onClick={toggle}
         disabled={disabled}
@@ -77,15 +84,12 @@ export function Accordion({
         className={buttonClass}
       >
         <Chevron open={open} />
-        <span className="flex-1 min-w-0">{title}</span>
+        {/* A span, so a title made of inline pieces stays valid inside the button. */}
+        <span className="flex-1 min-w-0 flex flex-wrap items-center gap-2">{title}</span>
       </button>
-      {open ? (
-        <div id={bodyId} role="region">
-          {variant === "bordered" ? (
-            <div className={bodyClass}>{children}</div>
-          ) : (
-            <div className={bodyClass}>{children}</div>
-          )}
+      {open || keepMounted === true ? (
+        <div id={bodyId} role="region" hidden={!open}>
+          <div className={bodyClass}>{children}</div>
         </div>
       ) : null}
     </div>

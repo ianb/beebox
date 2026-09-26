@@ -23,8 +23,10 @@ const OTHER = "other";
 
 type FormatHints = RouterOutput["secrets"]["formatHints"];
 
+/** Guides for names a box can hold. A key ending in "/" is a family entry
+ *  (`telegram-bot/`): explanatory, not a secret anyone pastes. */
 function connectableGuides(guides: SecretGuideEntry[], grantedNames: string[]): SecretGuideEntry[] {
-  return guides.filter((guide) => !grantedNames.includes(guide.key));
+  return guides.filter((guide) => !guide.key.endsWith("/") && !grantedNames.includes(guide.key));
 }
 
 export function ConnectServiceSection({
