@@ -1031,6 +1031,32 @@ and the boxholder ruled the judgment lives in briefings.
 **First implementation chunk.** The briefing section and the agent guide
 section, with the knowledge audits below written and run.
 
+## Testability
+
+Every piece must be exercisable without reaching a phone, a browser, a
+Telegram chat, or Jev (boxholder, 2026-09-26). Per track:
+
+- **Channels (A, B).** Each channel has a real and a fake service in the
+  existing `src/services/` shape; the fakes record calls. `BBX_NOTIFY_FAKE=1`
+  routes every channel to its fake with a synthetic audience, so nothing is
+  skipped as `no-audience`, and the log records `sent (fake)`. The former
+  `BBX_PUSH_FAKE` becomes this. `bbx notify --dry-run` prints the intent,
+  the audience per channel, the presence reading, and the channels that
+  would be tried, and exits without sending or logging; `--presence <n>`
+  overrides the reading for a dry run. `--check` sends nothing. Track B adds
+  `bbx pairing register-fake-push <label>` (dev only, refuses on a box with
+  a production environment) so the APNs path runs with no iPhone.
+- **Sources (E).** A callout, a question, a capture failure, and a promotion
+  can each be driven from a doctest with the fakes injected, and on a dev
+  box under `BBX_NOTIFY_FAKE=1`.
+- **Judgments (D).** `createFakeJev` takes a probability function; `bbx judge
+  --dry-run` prints the exact request and sends nothing; `--replay <file>`
+  runs a card against a saved state; `.beebox/jev-debug.log` records every
+  real call.
+- **Reading back.** The JSONL log, `notifications.recent`, the Admin recent
+  list, and `bbx health` are the probes; every attempt, real or fake, is
+  visible there.
+
 ## Could this be simpler?
 
 The simplest version that works: keep the July card path, add an `apns` card
