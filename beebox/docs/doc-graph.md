@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:23:25Z
+Generated: 2026-09-26T16:27:32Z
 Total documents: 436
 
 ## Issues
@@ -60,7 +60,7 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-media.md** — "Documentation structured like code: media" (113 lines) · proposal · active
+- **docs/plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · proposal · active
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -1259,7 +1259,7 @@ References:
 - → docs/media/image-orientation.md (link)
 - → docs/media/image-transforms.md (link)
 - → docs/cards/format.md (link)
-- → docs/box/phone-photos.md (mention)
+- → docs/box/phone-photos.md (link)
 
 #### docs/mobile-contract.md
 
@@ -1980,7 +1980,7 @@ Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current re
 
 Referenced by:
 - docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
-- docs/media.md:18 (mention) — - Getting phone photos into a box, for box agents: `docs/box/phone-photos.md`.
+- docs/media.md:18 (link) — - Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).
 - docs/plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 
 #### docs/box/publishing.md
@@ -6180,7 +6180,7 @@ No references in or out.
 
 #### docs/plans/doc-structure-media.md **[ORPHAN]**
 
-Title: "Documentation structured like code: media" | 113 lines | proposal | active
+Title: "Documentation structured like code: media" | 130 lines | proposal | active
 
 References:
 - → docs/README.md (link)

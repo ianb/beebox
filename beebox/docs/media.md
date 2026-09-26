@@ -15,4 +15,4 @@ and how a display-sized version is produced. One page per member.
 ## Owned elsewhere
 
 - Where a card's media lives and how a ref names it: [card format](cards/format.md#attachments).
-- Getting phone photos into a box, for box agents: `docs/box/phone-photos.md`.
+- Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).

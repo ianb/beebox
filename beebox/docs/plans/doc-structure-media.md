@@ -110,3 +110,20 @@ Questions (pilot protocol):
 | 4 | yes | 3 | image-orientation.md#The invariant |
 | 5 | yes | 3 | image-transforms.md (no heading; the title section) |
 | 6 | yes | 3 | image-transforms.md (no heading; the title section) |
+
+### After (2026-09-26)
+
+| # | Found | Steps | Cited |
+|---|---|---|---|
+| 1 | yes | 3 | media/assets.md#Absent content |
+| 2 | yes | 4 | media/assets.md#Configuration |
+| 3 | yes | 4 | media/assets.md#What counts as an asset |
+| 4 | yes | 3 | media/image-orientation.md#The invariant |
+| 5 | yes | 4 | media/image-transforms.md#Parameters |
+| 6 | yes | 3 | media/image-transforms.md#The cache |
+
+### Cross-model review of the diff (Codex, 2026-09-26)
+
+One finding, applied: the parent's phone-photos pointer was code text,
+not a link. The transform limits (4096, `dpr` at most 2, quality 85, 30
+days, 512 MiB, two concurrent) were verified against the route code.
