@@ -1,6 +1,6 @@
 ---
 title: "Notifications and proactive work are half built and do not work: design what reaches the person, and how"
-workstream: unattached
+workstream: notifications
 area: beebox
 needs: [design]
 priority: important
