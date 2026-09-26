@@ -300,6 +300,16 @@ service.judgeCalls.length + " " + String(service.judgeCalls[0].state).split("\n"
 => 1 === _content/inbox/trip.email.card, === _content/inbox/lunch.email.card, === _content/inbox/receipt.email.card
 ```
 
+A state over 60,000 characters exits 2 before any call: Jev's request limit
+is about 80,000, so it would fail on every run and defer as `jev-unavailable`
+forever. The message says what to change.
+
+```ts continue
+const huge = await judge(box, trip, {}, { stdin: "x".repeat(60_001), service });
+`${huge.split("\n").length} | ${huge.includes("is 60001 characters, over the 60000 a Jev request can carry; judge smaller states with --per-line or a narrower --match")} | ${huge.endsWith("exit 2")} | ${service.judgeCalls.length}`
+=> 2 | true | true | 1
+```
+
 A bad card or flag exits 2 with the message, before any call.
 
 ```ts continue

@@ -162,6 +162,65 @@ await box.read(".beebox/jev-debug.log").then(() => "judge called", () => "no jud
 await box.cleanup();
 ```
 
+## A procedure whose prechecks all skip defers the same way
+
+`runs: bbx procedure run <name>` is the common shape when an agent writes the
+notification. When every step's precheck skips, `bbx procedure run` exits 75,
+and the marker its inner `bbx changes --or-skip` wrote names the reason. A
+precheck that skips without a marker records `no-pass`.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("_config/procedures/look.procedure.card", `---
+name: look
+steps:
+  - id: look
+    precheck:
+      shells:
+        - bbx changes --match '_content/inbox/**' --or-skip
+    run:
+      shells:
+        - echo ran > _tmp/ran
+---
+`);
+await box.write("_config/procedures/bare.procedure.card", `---
+name: bare
+steps:
+  - id: bare
+    precheck:
+      shells:
+        - exit $CHECK_SKIP
+    run:
+      shells:
+        - echo ran > _tmp/ran
+---
+`);
+await box.write("_config/schedules/watch.scheduled-script.card", `---
+cron: "0 0 1 1 *"
+runs: bbx procedure run look
+---
+`);
+box.commitAll("setup");
+await tick(box)
+=> skipped | deferred no-change failures=0 | card kept
+
+await box.write("_config/schedules/watch.scheduled-script.card", `---
+cron: "0 0 1 1 *"
+runs: bbx procedure run bare
+---
+`);
+box.commitAll("bare");
+await tick(box)
+=> skipped | deferred no-pass failures=0 | card kept
+
+await box.read("_tmp/ran").then(() => "a step ran", () => "no step ran")
+=> no step ran
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## On wakeup: `once` deletes after success, and a deferral survives
 
 `bbx wakeup`'s on-wakeup pass records runs through the same path as the tick,

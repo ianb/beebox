@@ -19,6 +19,13 @@ export const CARD_BODY_CAP = 4000;
 
 export const DEFAULT_MAX_BATCH = 20;
 
+/**
+ * Over this a state is refused (exit 2): Jev's request limit is about 80,000
+ * characters, so the call would fail every run and defer as `jev-unavailable`
+ * forever instead of saying what to change.
+ */
+export const MAX_STATE_CHARS = 60_000;
+
 /** Below this a state is probably a subject line, not the body; the judge warns. */
 export const THIN_STATE_CHARS = 300;
 
@@ -60,7 +67,22 @@ async function readCards(boxRoot: string, lines: string[]): Promise<Array<{ path
   return cards;
 }
 
+/** The states to judge, refused when one is over {@link MAX_STATE_CHARS}. */
 export async function readStates(
+  boxRoot: string,
+  opts: { text: string; perLine: boolean; cards: boolean; maxBatch: number },
+): Promise<ReadStates> {
+  const read = await splitStates(boxRoot, opts);
+  if (!read.ok) return read;
+  const oversized = read.states.find((s) => s.state.length > MAX_STATE_CHARS);
+  if (oversized === undefined) return read;
+  return {
+    ok: false,
+    error: `the state for ${oversized.input.split("\n")[0] ?? ""} is ${String(oversized.state.length)} characters, over the ${String(MAX_STATE_CHARS)} a Jev request can carry; judge smaller states with --per-line or a narrower --match`,
+  };
+}
+
+async function splitStates(
   boxRoot: string,
   opts: { text: string; perLine: boolean; cards: boolean; maxBatch: number },
 ): Promise<ReadStates> {

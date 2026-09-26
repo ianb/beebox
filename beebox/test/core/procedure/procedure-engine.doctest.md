@@ -158,7 +158,7 @@ box.commitAll("Add idle procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "idle" });
-print(`success: ${result.ok}`);
+print(`success: ${result.ok}, status: ${result.value.status}`);
 
 // No run directory persists
 const runs = await box.list("_bookkeeping/procedure/runs");
@@ -168,7 +168,7 @@ print(`runs dir contents: "${runs}"`);
 const log = await getLog(box.root);
 print(`commits: ${log.length}`);
 =>
-success: true
+success: true, status: skipped
 runs dir contents: "_bookkeeping/procedure/runs/.gitkeep"
 commits: 2
 ```

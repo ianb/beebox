@@ -108,7 +108,7 @@ export async function finalizeRun(args: {
     // No-op run: every executed step skipped, nothing was ever committed.
     await fs.rm(runDir, { recursive: true, force: true });
     ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
-    return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
+    return ok({ status: "skipped", procedure: procedureName, inconclusive: [] });
   }
 
   const completedAt = getBoxTimeISO(boxRoot);
