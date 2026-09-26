@@ -94,16 +94,7 @@ function PublicationCard({
   onDisable: () => void;
 }) {
   const candidate = site.pending;
-  const primaryScope = site.approved ?? (site.requested === null ? null : { ...site.requested, customHostname: undefined });
-  const siteUrl = buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: primaryScope });
-  const workerAlias = site.approved?.customHostname
-    ? buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: { ...site.approved, customHostname: undefined } })
-    : null;
-  const requestedHostname = publicationCustomHostname(candidate?.requestedScope ?? null);
-  const requestedUrl = candidate !== null && requestedHostname
-    ? buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: candidate.requestedScope })
-    : null;
-  const requestedDiffers = requestedHostname !== undefined && requestedHostname !== (site.approved?.customHostname ?? null);
+  const { siteUrl, workerAlias, requestedUrl, requestedDiffers } = publicationLinks(site);
 
   return (
     <Card as="article" aria-labelledby={`bbx-publication-heading-${site.pubId}`} shadow>
@@ -111,7 +102,7 @@ function PublicationCard({
         <Stack gap="xs">
           <PublicationHeading site={site} />
           {siteUrl ? <ExternalLink id={`bbx-publication-open-${site.pubId}`} href={siteUrl} variant="button">Open site</ExternalLink> : null}
-          {workerAlias ? <ExternalLink id={`bbx-publication-workers-alias-${site.pubId}`} href={workerAlias} variant="inline">Open workers.dev alias</ExternalLink> : null}
+          {workerAlias ? <ExternalLink id={`bbx-publication-workers-alias-${site.pubId}`} href={workerAlias} variant="inline">Open legacy workers.dev URL</ExternalLink> : null}
           {requestedDiffers && requestedUrl ? <Text size="sm">Requested destination awaiting member approval: <Text mono breakAll>{requestedUrl}</Text></Text> : null}
           {!siteUrl && !requestedUrl ? <Text size="sm" tone="muted">Site URL is assigned after the first successful preparation.</Text> : null}
         </Stack>
@@ -133,6 +124,29 @@ function PublicationCard({
       </Stack>
     </Card>
   );
+}
+
+function publicationLinks(site: Publication): { siteUrl: string | null; workerAlias: string | null; requestedUrl: string | null; requestedDiffers: boolean } {
+  const approved = site.approved;
+  const candidate = site.pending;
+  const siteUrl = buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: approved });
+  let workerAlias: string | null = null;
+  if (site.hostname !== null && approved !== null && (approved.tier === "public" || approved.tier === "secret")
+    && (approved.customHostname !== undefined || approved.sharedHost !== undefined)) {
+    const { customHostname: _customHostname, sharedHost: _sharedHost, ...legacyScope } = approved;
+    workerAlias = buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: legacyScope });
+  }
+  const requestedHostname = publicationCustomHostname(candidate?.requestedScope ?? null);
+  const requestedUrl = candidate !== null
+    ? buildPublicationUrl({ workersHostname: site.hostname, pubId: site.pubId, scope: candidate.requestedScope })
+    : null;
+  const requestedCustomHostDiffers = requestedHostname !== undefined && requestedHostname !== (approved?.customHostname ?? null);
+  const candidateSharedHost = candidate !== null && "sharedHost" in candidate.requestedScope
+    ? candidate.requestedScope.sharedHost
+    : undefined;
+  const requestedSharedRouteDiffers = candidateSharedHost !== undefined
+    && (site.sharedRoute === null || site.sharedRoute.hostname !== candidateSharedHost.hostname || site.sharedRoute.path !== candidateSharedHost.path);
+  return { siteUrl, workerAlias, requestedUrl, requestedDiffers: requestedCustomHostDiffers || requestedSharedRouteDiffers };
 }
 
 function PublicationHeading({ site }: { site: Publication }) {

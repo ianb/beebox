@@ -64,47 +64,62 @@ export async function handleSite({
 
   const access = await authorizeViewer({ manifest, request, env, deps });
   if (access !== null) return access;
+  const basePath = manifest.tier === "public" ? "/" : `/${manifest.tier === "secret" ? "s" : "a"}/${identity.pubId}/`;
+  return serveSiteAssets({
+    request,
+    env,
+    deps,
+    manifest,
+    pubId: identity.pubId,
+    basePath,
+    releaseId: requested.releaseId,
+    assetSegments: requested.assetSegments,
+  });
+}
 
-  if (requested.releaseId === null) {
-    const stablePath = resolveAssetPath(requested.assetSegments);
-    if (stablePath === null || !Object.prototype.hasOwnProperty.call(manifest.activeRelease.files, stablePath)) return notFound();
-    const target = new URL(request.url);
-    target.pathname = releaseQualifiedPath({
-      manifest,
-      pubId: identity.pubId,
-      releaseId: manifest.activeRelease.id,
-      assetPath: stablePath,
-    });
-    return Response.redirect(target.toString(), 302);
-  }
-
-  const release = selectRelease({ manifest, releaseId: requested.releaseId, nowMs: deps.now() });
-  const assetPath = resolveAssetPath(requested.assetSegments);
+/** Common immutable-release renderer used by pinned and shared-host Workers. */
+export async function serveSiteAssets({ request, env, deps, manifest, pubId, basePath, releaseId, assetSegments }: {
+  request: Request;
+  env: Env;
+  deps: WorkerDeps;
+  manifest: SiteEdgeManifest;
+  pubId: string;
+  /** Stable route prefix including its trailing slash (`/`, `/slug/`, or `/s/<id>/`). */
+  basePath: string;
+  releaseId: string | null;
+  assetSegments: readonly string[];
+}): Promise<Response> {
+  const assetPath = resolveAssetPath(assetSegments);
   if (assetPath === null) return notFound();
-  if (release === null) {
-    const stillListedHtml = contentTypeFor(assetPath).startsWith("text/html")
-      && Object.prototype.hasOwnProperty.call(manifest.activeRelease.files, assetPath);
-    if (!stillListedHtml) return notFound();
-    const target = new URL(request.url);
-    target.pathname = releaseQualifiedPath({
-      manifest,
-      pubId: identity.pubId,
-      releaseId: manifest.activeRelease.id,
-      assetPath,
-    });
-    return Response.redirect(target.toString(), 302);
+  const active = manifest.activeRelease;
+  if (releaseId === null) {
+    if (!Object.prototype.hasOwnProperty.call(active.files, assetPath)) return notFound();
+    return releaseRedirect({ request, basePath, releaseId: active.id, assetPath });
   }
-  if (!Object.prototype.hasOwnProperty.call(release.files, assetPath)) return notFound();
 
-  const key = `pubs/${identity.pubId}/releases/${release.id}/${assetPath}`;
-  const object = await env.PUB_STORE.get(key);
+  const release = selectRelease({ manifest, releaseId, nowMs: deps.now() });
+  if (release === null || !Object.prototype.hasOwnProperty.call(release.files, assetPath)) {
+    const stillListedHtml = contentTypeFor(assetPath).startsWith("text/html")
+      && Object.prototype.hasOwnProperty.call(active.files, assetPath);
+    if (!stillListedHtml) return notFound();
+    return releaseRedirect({ request, basePath, releaseId: active.id, assetPath });
+  }
+
+  const object = await env.PUB_STORE.get(`pubs/${pubId}/releases/${release.id}/${assetPath}`);
   if (object === null) return notFound();
-
   const headers = new Headers({
     "Content-Type": contentTypeFor(assetPath),
     "Content-Length": String(release.files[assetPath]?.bytes ?? 0),
   });
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers });
+}
+
+function releaseRedirect({ request, basePath, releaseId, assetPath }: { request: Request; basePath: string; releaseId: string; assetPath: string }): Response {
+  const encodedAsset = assetPath.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+  const prefix = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+  const target = new URL(request.url);
+  target.pathname = `${prefix}/__release/${releaseId}/${encodedAsset}`;
+  return Response.redirect(target.toString(), 302);
 }
 
 interface SitePath {
@@ -194,21 +209,4 @@ function selectRelease({
   if (!Number.isFinite(expiresAt) || expiresAt <= nowMs) return null;
   if (expiresAt - nowMs > MAX_PREVIOUS_AGE_MS) return null;
   return previous;
-}
-
-function releaseQualifiedPath({
-  manifest,
-  pubId,
-  releaseId,
-  assetPath,
-}: {
-  manifest: SiteEdgeManifest;
-  pubId: string;
-  releaseId: string;
-  assetPath: string;
-}): string {
-  const encodedAsset = assetPath.split("/").map((segment) => encodeURIComponent(segment)).join("/");
-  if (manifest.tier === "public") return `/__release/${releaseId}/${encodedAsset}`;
-  const prefix = manifest.tier === "secret" ? "s" : "a";
-  return `/${prefix}/${pubId}/__release/${releaseId}/${encodedAsset}`;
 }

@@ -9,7 +9,7 @@ audience or is waiting for a signed-in member.
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../src/webapp/trpc/router.js";
 import { pubCommand } from "../../../src/cli/commands/pub.js";
-import { publicationApprovalUrl, publicationDestinationUrl, publicationPreparedLines, publicationSiteLines } from "../../../src/cli/commands/pub-managed.js";
+import { publicationApprovalUrl, publicationDestinationUrl, publicationPreparedLines, publicationSharedHostLines, publicationSiteLines } from "../../../src/cli/commands/pub-managed.js";
 
 type Site = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type Candidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
@@ -36,6 +36,7 @@ function site(overrides: Partial<Site> = {}): Site {
     approved: { tier: "public", status: "live", slug: "notes", expiresAt: null },
     activeReleaseId: releaseId,
     pending: null,
+    sharedRoute: null,
     remoteStatus: { status: "available" },
     connection: { name: "primary", status: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "verified", workerDeploy: "verified", accessLive: "not-ready" } },
     ...overrides,
@@ -90,10 +91,28 @@ publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pu
 publicationDestinationUrl({ hostname: "example.workers.dev", pubId: candidate.pubId, scope: { tier: "public", slug: "notes" } })
 => https://example.workers.dev/p/notes/
 
+publicationDestinationUrl({ hostname: null, pubId: candidate.pubId, scope: { tier: "public", slug: "hello", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/hello/" } } })
+=> https://publish.example.org/hello/
+
+publicationSharedHostLines(null)[0]
+=> Shared publication host: not configured; a member must set it up in Admin before new publications can be prepared.
+
+publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "pending" })[0]
+=> Shared publication host: https://publish.example.org/ (setup pending; member should retry in Admin; connection primary)
+
+publicationSharedHostLines({ hostname: "publish.example.org", connectionName: "primary", status: "attached" })[0]
+=> Shared publication host: https://publish.example.org/ (ready; connection primary)
+
 publicationSiteLines([site({
   requested: { tier: "public", customHostname: "www.example.org" },
   approved: { tier: "public", status: "live", customHostname: "www.example.org", expiresAt: null },
 })])[0].includes("publication: https://www.example.org/")
+=> true
+
+publicationSiteLines([site({
+  approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
+  sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
+})])[0].includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
 => true
 
 publicationApprovalUrl("https://boxes.example", "family")

@@ -30,6 +30,12 @@ export interface Env {
   PUB_ID?: string;
   /** Random non-capability Worker identity; checked against the R2 site manifest. */
   HOST_HANDLE?: string;
+  /** Explicit shared-host serving mode. Missing means legacy unpinned routing. */
+  PUB_WORKER_MODE?: string;
+  /** Random box identity used to validate approved shared-route markers. */
+  PUB_BOX_HANDLE?: string;
+  /** Exact custom hostname this shared Worker may serve. */
+  PUB_HOSTNAME?: string;
   /**
    * The R2 bucket holding Worker-WRITTEN ingestion data: `submissions/<id>/...`
    * (Track F) and `access-log/<pub-id>/<id>.json` (Track D). Split from
