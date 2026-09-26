@@ -103,6 +103,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
+  { name: "notify", audience: "agent", smoke: { skip: "sends a notification; `--check` exits 1 on a box with no channel" } },
 
   // ---- Credentialed: these delegate to the box's server under the agent
   //      profile (`cli/lib/credentialed-verb.ts`), which is exactly what the

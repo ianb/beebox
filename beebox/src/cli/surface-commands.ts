@@ -69,6 +69,7 @@ import { extfileCommand } from "./commands/extfile.js";
 import { locationCommand } from "./commands/location.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
+import { notifyCommand } from "./commands/notify.js";
 import { todoReviewCommand } from "./commands/todo-review.js";
 import { queryCommand } from "./commands/query.js";
 import { connectorCommand } from "./commands/connector.js";
@@ -134,6 +135,7 @@ const ALL: readonly Command[] = [
   locationCommand,
   tailscaleCommand,
   todosCommand,
+  notifyCommand,
   todoReviewCommand,
   queryCommand,
   connectorCommand,

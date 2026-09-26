@@ -39,6 +39,8 @@ import { searchRouter } from "./routers/search.js";
 import { cloudflarePublishConnectionsRouter } from "./routers/cloudflare-publish-connections.js";
 import { publicationsRouter } from "./routers/publications.js";
 import { todosRouter } from "./routers/todos.js";
+import { presenceRouter } from "./routers/presence.js";
+import { notificationsRouter } from "./routers/notifications.js";
 
 export const appRouter = router({
   quickChat: quickChatRouter,
@@ -81,6 +83,8 @@ export const appRouter = router({
   gmail: gmailRouter,
   search: searchRouter,
   todos: todosRouter,
+  presence: presenceRouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;
