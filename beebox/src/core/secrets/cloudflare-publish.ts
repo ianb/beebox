@@ -10,6 +10,7 @@ import {
   loadSecretStore,
   mutateSecretStore,
   type CloudflarePublishBindingRecord,
+  type CloudflarePublishBoxHostRecord,
   type CloudflarePublishConnectionRecord,
 } from "./store.js";
 
@@ -54,6 +55,83 @@ function connectionMap(store: { cloudflarePublishConnections?: Record<string, Cl
 
 function bindingMap(store: { cloudflarePublishBindings?: Record<string, CloudflarePublishBindingRecord> | undefined }): Record<string, CloudflarePublishBindingRecord> {
   return store.cloudflarePublishBindings ?? (store.cloudflarePublishBindings = {});
+}
+
+function boxHostMap(store: { cloudflarePublishBoxHosts?: Record<string, CloudflarePublishBoxHostRecord> | undefined }): Record<string, CloudflarePublishBoxHostRecord> {
+  return store.cloudflarePublishBoxHosts ?? (store.cloudflarePublishBoxHosts = {});
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname.trim().toLowerCase().replace(/\.$/, "");
+}
+
+export interface CloudflarePublishBoxHost extends CloudflarePublishBoxHostRecord {
+  boxSlug: string;
+}
+
+export async function getCloudflarePublishBoxHost(boxSlug: string): Promise<CloudflarePublishBoxHost | null> {
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
+  const mapping = loaded.value.cloudflarePublishBoxHosts?.[boxSlug];
+  return mapping === undefined ? null : { boxSlug, ...mapping };
+}
+
+/** Reserve an immutable per-box destination before creating or attaching its Worker. */
+export async function reserveCloudflarePublishBoxHost(opts: {
+  boxSlug: string;
+  connectionName: string;
+  hostname: string;
+  bucketName: string;
+  workerName: string;
+  hostHandle: string;
+  createdAt: string;
+}): Promise<CloudflarePublishBoxHost> {
+  const hostname = normalizeHostname(opts.hostname);
+  if (hostname.length === 0 || hostname.includes("/") || hostname.includes(":") || hostname.includes("@")) {
+    throw connectionError("Enter a hostname without a scheme, path, port, or credentials.");
+  }
+  return mutateSecretStore({ purpose: "cloudflare-publish-box-host-reserve" }, (store) => {
+    const mappings = boxHostMap(store);
+    const existing = mappings[opts.boxSlug];
+    if (existing !== undefined) {
+      if (existing.connectionName !== opts.connectionName || existing.hostname !== hostname) {
+        throw connectionError("This box already has a shared publishing hostname and connection. Bee Box cannot rename or move it.");
+      }
+      return { boxSlug: opts.boxSlug, ...existing };
+    }
+    const connection = store.cloudflarePublishConnections?.[opts.connectionName];
+    if (connection === undefined || connection.apiToken === undefined) throw connectionError(`Cloudflare publishing connection '${opts.connectionName}' is missing or revoked.`);
+    if (connection.grants[opts.boxSlug] !== "server") throw connectionError(`Cloudflare publishing connection '${opts.connectionName}' has no server grant for box '${opts.boxSlug}'.`);
+    const otherBox = Object.entries(mappings).find(([, mapping]) => mapping.hostname === hostname);
+    if (otherBox !== undefined) throw connectionError(`Hostname '${hostname}' is already assigned to box '${otherBox[0]}'.`);
+    const pubOwner = Object.entries(store.cloudflarePublishBindings ?? {}).find(([, binding]) => binding.customHostname !== undefined && normalizeHostname(binding.customHostname) === hostname);
+    if (pubOwner !== undefined) throw connectionError("This hostname is already assigned to a per-publication Worker. Bee Box will not move or detach that existing hostname.");
+    const mapping: CloudflarePublishBoxHostRecord = {
+      connectionName: opts.connectionName,
+      accountId: connection.accountId,
+      bucketName: opts.bucketName,
+      workerName: opts.workerName,
+      hostHandle: opts.hostHandle,
+      hostname,
+      status: "pending",
+      createdAt: opts.createdAt,
+    };
+    mappings[opts.boxSlug] = mapping;
+    return { boxSlug: opts.boxSlug, ...mapping };
+  });
+}
+
+/** Mark the one reserved hostname ready only after exact Worker-domain readback. */
+export async function attachCloudflarePublishBoxHost(opts: { boxSlug: string; connectionName: string; hostname: string }): Promise<CloudflarePublishBoxHost> {
+  const hostname = normalizeHostname(opts.hostname);
+  return mutateSecretStore({ purpose: "cloudflare-publish-box-host-attached" }, (store) => {
+    const mapping = store.cloudflarePublishBoxHosts?.[opts.boxSlug];
+    if (mapping === undefined || mapping.connectionName !== opts.connectionName || mapping.hostname !== hostname) {
+      throw connectionError("The shared hostname mapping changed before Cloudflare confirmed the Worker attachment.");
+    }
+    mapping.status = "attached";
+    return { boxSlug: opts.boxSlug, ...mapping };
+  });
 }
 
 function summary(name: string, record: CloudflarePublishConnectionRecord): CloudflarePublishConnectionSummary {
@@ -244,44 +322,6 @@ export async function listCloudflarePublishBindings(boxSlug: string): Promise<Cl
     .filter(([, binding]) => binding.boxSlug === boxSlug)
     .map(([pubId, binding]) => ({ pubId, ...binding }))
     .toSorted((a, b) => a.pubId.localeCompare(b.pubId));
-}
-
-/** Check the machine-wide hostname reservation before changing Cloudflare. */
-export async function getCloudflarePublishHostnameOwner(hostname: string): Promise<CloudflarePublishBinding | null> {
-  const normalizedHostname = hostname.trim().toLowerCase().replace(/\.$/, "");
-  const loaded = await loadSecretStore();
-  if (!loaded.ok) throw connectionError(`The machine secret store could not be read: ${loaded.error}`);
-  const found = Object.entries(loaded.value.cloudflarePublishBindings ?? {}).find(([, binding]) => binding.customHostname !== undefined && binding.customHostname.trim().toLowerCase().replace(/\.$/, "") === normalizedHostname);
-  return found === undefined ? null : { pubId: found[0], ...found[1] };
-}
-
-async function mutateCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string; status: "pending" | "attached" }): Promise<CloudflarePublishBinding> {
-  const hostname = opts.hostname.trim().toLowerCase().replace(/\.$/, "");
-  if (hostname.length === 0) throw connectionError("A custom hostname is required.");
-  return mutateSecretStore({ purpose: "cloudflare-publish-hostname-assign" }, (store) => {
-    const bindings = bindingMap(store);
-    const binding = bindings[opts.pubId];
-    if (binding === undefined) throw connectionError("Publication is not registered on this server.");
-    if (binding.boxSlug !== opts.boxSlug) throw connectionError("This publication id is already bound to a different box.");
-    if (binding.customHostname !== undefined && binding.customHostname !== hostname) {
-      throw connectionError("This publication already has a different custom hostname. Bee Box cannot remap or release a hostname reservation, even after a Cloudflare detach. Use a different hostname.");
-    }
-    const owner = Object.entries(bindings).find(([pubId, row]) => pubId !== opts.pubId && row.customHostname !== undefined && row.customHostname.trim().toLowerCase().replace(/\.$/, "") === hostname);
-    if (owner !== undefined) throw connectionError("This hostname is already assigned to another Bee Box publication.");
-    binding.customHostname = hostname;
-    binding.customHostnameStatus = opts.status;
-    return { pubId: opts.pubId, ...binding };
-  });
-}
-
-/** Reserve hostname before remote writes so an uncertain attach cannot be enabled unapproved. */
-export function reserveCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string }): Promise<CloudflarePublishBinding> {
-  return mutateCloudflarePublishHostname({ ...opts, status: "pending" });
-}
-
-/** Mark a reserved hostname attached only after Cloudflare exact-tuple readback. */
-export function assignCloudflarePublishHostname(opts: { pubId: string; boxSlug: string; hostname: string }): Promise<CloudflarePublishBinding> {
-  return mutateCloudflarePublishHostname({ ...opts, status: "attached" });
 }
 
 /** Used by legacy CLI paths to refuse mutation of server-managed publications. */

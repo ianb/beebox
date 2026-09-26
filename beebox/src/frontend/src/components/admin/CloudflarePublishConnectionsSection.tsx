@@ -16,7 +16,7 @@ import { TextField } from "../ui/fields";
 import { ExternalLink } from "../ui/ExternalLink";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { AdminSectionCard } from "./AdminSectionCard";
-import { CustomHostnameAssignment } from "./CustomHostnameAssignment";
+import { SharedPublicationHost } from "./SharedPublicationHost";
 import { Accordion } from "../ui/Accordion";
 import { TokenSetupGuidance } from "./CloudflarePublishConnectionsSection-guidance";
 
@@ -112,7 +112,7 @@ export function CloudflarePublishConnectionsSection() {
             />
           ))}
         </Stack>
-        <CustomHostnameAssignment />
+        <SharedPublicationHost />
 
         <Accordion
           id="bbx-admin-cf-publish-add"
