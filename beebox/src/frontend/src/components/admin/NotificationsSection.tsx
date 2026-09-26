@@ -21,6 +21,7 @@ import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
 import { AdminSectionCard } from "./AdminSectionCard";
 import { RecentNotifications } from "./RecentNotifications";
+import { PhonePushDevices } from "./PhonePushDevices";
 
 const DESCRIPTION =
   "Get a push notification on this device when the box needs you — health alerts and questions waiting for an answer.";
@@ -170,6 +171,8 @@ export function NotificationsSection() {
             <ErrorText>{error}</ErrorText>
           </div>
         ) : null}
+
+        <PhonePushDevices />
 
         <RecentNotifications />
       </Stack>

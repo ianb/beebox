@@ -17,10 +17,12 @@ import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { readRecent } from "../../src/core/notification/log.js";
+import { writePresence } from "../../src/core/notification/presence.js";
+import { pairFakePushDevice } from "../../src/core/mobile/pairing.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-notify-cli-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
-for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_PUSH_FAKE", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
+for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
 // A box whose boxholder subscribed a browser and set a Telegram chat.
 const box = await makeTmpBox({ git: true });
@@ -214,6 +216,88 @@ exit 2
 
 (await readRecent(box.root, { days: 1 })).length === before
 => true
+```
+
+## `--dry-run` shows what a send would do, and sends nothing
+
+It prints the intent, who each channel would reach (and whether the server
+could send on it), the presence reading, and the channels a send would try
+and skip. Nothing is sent and nothing is logged. The paired phone here has a
+registration, but the server has no APNs key.
+
+```ts
+await pairFakePushDevice(box.root, { label: "test phone" });
+await writePresence(box.root, { activeWeb: 0, now: new Date() });
+const sentBefore = [push.sent.length, tg.sent.length];
+const loggedBefore = (await readRecent(box.root, { days: 1 })).length;
+await run("Pick up Sam", { target: "chat:new", loudness: "loud", body: "At 3.", tag: "pickup", dryRun: true })
+=>
+intent: loud "Pick up Sam" -> chat:new (tag pickup)
+body: At 3.
+presence: 0 active web sessions (live reading)
+audience:
+  apns: 1 device (test phone, sandbox) [unconfigured]
+  web-push: 1 subscription
+  telegram: chat 777
+would try: apns, web-push, telegram
+would skip: none
+dry run: nothing sent, nothing logged
+exit 0
+
+JSON.stringify([JSON.stringify([push.sent.length, tg.sent.length]) === JSON.stringify(sentBefore), (await readRecent(box.root, { days: 1 })).length === loggedBefore])
+=> [true,true]
+```
+
+The dry run applies the same rule a send does, so it shows the effect of the
+live presence reading and of `--channel`. `--presence <n>` substitutes a
+reading, to preview a `quiet` notification with someone in the app:
+
+```ts continue
+await run("Pick up Sam", { target: "chat:new", loudness: "quiet", dryRun: true, presence: "2", channel: "telegram" })
+=>
+intent: quiet "Pick up Sam" -> chat:new
+presence: 2 active web sessions (--presence)
+audience:
+  apns: 1 device (test phone, sandbox) [unconfigured]
+  web-push: 1 subscription
+  telegram: chat 777
+would try: none
+would skip: telegram (present)
+dry run: nothing sent, nothing logged
+exit 0
+
+[
+  await run("x", { target: "dashboard", presence: "1" }),
+  await run("x", { target: "dashboard", presence: "some", dryRun: true }),
+].join("\n")
+=>
+stderr: Error: --presence applies only with --dry-run
+exit 2
+stderr: Error: --presence must be a whole number of active web sessions (got "some")
+exit 2
+```
+
+## Fake mode shows in a dry run
+
+Under `BBX_NOTIFY_FAKE=1` every channel is configured through its fake:
+
+```ts continue
+process.env.BBX_NOTIFY_FAKE = "1";
+const fakeRun = await run("Pick up Sam", { target: "dashboard", loudness: "dot", dryRun: true }, undefined, {});
+delete process.env.BBX_NOTIFY_FAKE;
+fakeRun
+=>
+intent: dot "Pick up Sam" -> dashboard
+presence: 0 active web sessions (live reading)
+fake mode: every channel sends through its fake (BBX_NOTIFY_FAKE)
+audience:
+  apns: 1 device (test phone, sandbox)
+  web-push: 1 subscription
+  telegram: chat 777
+would try: apns
+would skip: none
+dry run: nothing sent, nothing logged
+exit 0
 ```
 
 ```ts cleanup

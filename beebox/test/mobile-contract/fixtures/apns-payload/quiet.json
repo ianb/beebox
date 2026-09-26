@@ -1,0 +1,15 @@
+{
+  "input": {
+    "intent": { "id": "nQuiet1", "title": "Field trip form due Friday", "body": "The school emailed the form.", "target": "card:_content/inbox/field-trip.email.card", "loudness": "quiet", "tag": "field-trip", "source": "fixture" },
+    "bundleId": "app.beebox.ios"
+  },
+  "expected": {
+    "payload": {
+      "aps": { "alert": { "title": "Field trip form due Friday", "body": "The school emailed the form." }, "interruption-level": "passive", "badge": 1 },
+      "target": "card:_content/inbox/field-trip.email.card",
+      "loudness": "quiet",
+      "notificationId": "nQuiet1"
+    },
+    "headers": { "apns-push-type": "alert", "apns-topic": "app.beebox.ios", "apns-collapse-id": "field-trip" }
+  }
+}

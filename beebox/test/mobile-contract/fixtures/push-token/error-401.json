@@ -1,0 +1,6 @@
+{
+  "variant": "error",
+  "status": 401,
+  "input": { "error": "Mobile device token is invalid or revoked." },
+  "expected": { "error": "Mobile device token is invalid or revoked." }
+}

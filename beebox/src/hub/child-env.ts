@@ -65,6 +65,13 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- scan-import photo-analysis backend selection (claude default, gemini opt-in).
+  "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- dev harness: every notification channel through its fake.
+  // src/core/notification/apns-channel.ts -- the server sends APNs pushes (callouts). The .p8 key is
+  // passed by PATH, like BBX_GOOGLE_TOKENS_FILE; the other three identify the key and the app.
+  "BBX_APNS_KEY_PATH",
+  "BBX_APNS_KEY_ID",
+  "BBX_APNS_TEAM_ID",
+  "BBX_APNS_BUNDLE_ID",
 
   // --- Claude Agent SDK config knobs (not credentials) ---
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.

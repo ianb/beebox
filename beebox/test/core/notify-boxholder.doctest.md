@@ -25,7 +25,7 @@ import { notificationHealthChecks } from "../../src/core/notification/health.js"
 const storeDir = path.join(os.tmpdir(), `bbx-notify-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
 // No VAPID keys, forced-fake push, or public URL unless a section sets them.
-for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_PUSH_FAKE", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
+for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_KEY_ID", "BBX_APNS_TEAM_ID", "BBX_APNS_BUNDLE_ID", "BBX_PUBLIC_URL", "PUBLIC_URL"]) delete process.env[name];
 
 const NOW = new Date("2026-09-26T12:00:00Z");
 const SUB = { endpoint: "https://push.example/phone", keys: { p256dh: "p", auth: "a" } };

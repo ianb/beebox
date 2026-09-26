@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { router, authedProcedure } from "../trpc.js";
 import { getIntent, readRecent, type LoggedNotification } from "../../../core/notification/log.js";
+import { apnsConfigured } from "../../../core/notification/apns-channel.js";
 
 export const notificationsRouter = router({
   /** Intents logged in the last `days` days (default 3), newest first, each with its deliveries. */
@@ -21,4 +22,7 @@ export const notificationsRouter = router({
   get: authedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }): Promise<LoggedNotification | null> => getIntent(ctx.boxRoot, input.id)),
+
+  /** Whether this server can send APNs pushes (its key is set, or fake mode is on). */
+  apnsStatus: authedProcedure.query((): { configured: boolean } => ({ configured: apnsConfigured() })),
 });

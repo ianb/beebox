@@ -10,9 +10,10 @@
  *
  * Every call appends a payload-only line to the box's gitignored
  * `.beebox/push-debug.log` (no endpoints or keys) so triggers are
- * inspectable even with zero real subscribers. `BBX_PUSH_FAKE=1` routes through
- * a fake service (and a synthetic endpoint when none are subscribed), so any
- * trigger can be exercised on desktop with no setup. See
+ * inspectable even with zero real subscribers. `BBX_NOTIFY_FAKE=1`
+ * (`notification/fake-mode.ts`) routes through a fake service (and a synthetic
+ * endpoint when none are subscribed), so any trigger can be exercised on
+ * desktop with no setup. See
  * docs/plans/web-push-notifications.md (Track B).
  */
 
@@ -28,6 +29,7 @@ import {
 import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { boxSlug as resolveBoxSlug } from "../lib/box-slug.js";
+import { notifyFakeMode } from "./notification/fake-mode.js";
 
 export interface SendPushResult {
   sent: number;
@@ -59,11 +61,11 @@ function vapidKeys(): { publicKey: string; privateKey: string } | null {
 
 /**
  * Whether a send without an injected service can go out: VAPID keys are set,
- * or `BBX_PUSH_FAKE=1` routes it through the fake. Otherwise `sendPush` throws
+ * or fake mode (`BBX_NOTIFY_FAKE=1`) routes it through the fake. Otherwise `sendPush` throws
  * {@link VapidNotConfiguredError}.
  */
 export function webPushConfigured(): boolean {
-  return process.env.BBX_PUSH_FAKE === "1" || vapidKeys() !== null;
+  return notifyFakeMode() || vapidKeys() !== null;
 }
 
 function realPushFromEnv(): PushService {
@@ -103,7 +105,7 @@ export async function sendPush(
   // behind the dev router. A leading slash would skip that prefix and 404 in
   // dev only.
   const payload: PushPayload = { icon: `${boxSlug}/icon-192.png`, ...opts.payload };
-  const forceFake = process.env.BBX_PUSH_FAKE === "1";
+  const forceFake = notifyFakeMode();
   const push = opts.push ?? (forceFake ? createFakePush() : realPushFromEnv());
 
   let endpoints = await endpointsForBox(boxSlug);

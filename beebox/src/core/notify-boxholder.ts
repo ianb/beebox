@@ -10,12 +10,11 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { loadBoxConfig } from "./box/config.js";
 import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
-import { createTelegramService, type TelegramService } from "../services/telegram.js";
+import { createFakeTelegram, createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
+import type { ApnsService } from "../services/apns.js";
 import { sendPush, VapidNotConfiguredError, webPushConfigured } from "./send-push.js";
-import { endpointsForBox } from "./push-subscriptions.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getBoxTime } from "../lib/time.js";
 import { getPublicUrl } from "../lib/public-url.js";
@@ -25,8 +24,11 @@ import { createEventBus } from "./event-bus.js";
 import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
 import { formatTarget, targetUrl } from "./notification/target.js";
 import { appendDelivery, appendIntent } from "./notification/log.js";
-import { channelsToTry, type Audience } from "./notification/channels.js";
-import { livePresence } from "./notification/presence.js";
+import { channelsToTry, type ChannelPlan } from "./notification/channels.js";
+import { livePresence, type Presence } from "./notification/presence.js";
+import { audienceDetail, audienceFlags, type AudienceDetail } from "./notification/audience.js";
+import { apnsConfigured, sendApns } from "./notification/apns-channel.js";
+import { FAKE_DETAIL } from "./notification/fake-mode.js";
 
 /** A notification as a caller writes it: the id is assigned when absent. */
 export type NotificationInput = Omit<NotificationIntent, "id"> & { id?: string | undefined };
@@ -35,6 +37,7 @@ export type NotificationInput = Omit<NotificationIntent, "id"> & { id?: string |
 export interface NotifyServices {
   tg?: TelegramService | undefined;
   push?: PushService | undefined;
+  apns?: ApnsService | undefined;
 }
 
 export interface NotifyRequest {
@@ -54,18 +57,23 @@ export interface NotifyResult {
   deliveries: Delivery[];
 }
 
-async function audienceFor(boxRoot: string): Promise<{ audience: Audience; telegramChat: string | undefined }> {
-  const config = await loadBoxConfig(boxRoot);
-  const telegramChat = config.healthAlerts?.telegramChat;
-  const webPush = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
-  // APNs arrives with Track B; until then no device can be reached by it.
-  return { audience: { apns: false, "web-push": webPush, telegram: telegramChat != null }, telegramChat };
+/** Whether a send on each channel has what it needs: an injected service, fake mode, or the server's keys. */
+async function channelsConfigured(
+  boxRoot: string,
+  opts: { services: NotifyServices; fake: boolean },
+): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
+  const { services, fake } = opts;
+  return {
+    apns: services.apns !== undefined || apnsConfigured(),
+    webPush: services.push !== undefined || webPushConfigured(),
+    telegram: services.tg !== undefined || fake || (await loadTelegramConfig(boxRoot)) !== null,
+  };
 }
 
 /**
  * Which channels can currently reach the boxholder for this box: someone to
  * send to, and what a send with the same `services` needs (an injected
- * service, or else VAPID keys for web push and the bot secret for Telegram).
+ * service, or else the APNs key, VAPID keys, and the bot secret).
  * Triggers use this to decide whether a proactive alert has anywhere to go.
  */
 export async function notifyChannels(
@@ -73,10 +81,14 @@ export async function notifyChannels(
   opts?: { services?: NotifyServices | undefined },
 ): Promise<{ apns: boolean; webPush: boolean; telegram: boolean }> {
   const services = opts?.services ?? {};
-  const { audience } = await audienceFor(boxRoot);
-  const webPush = audience["web-push"] && (services.push !== undefined || webPushConfigured());
-  const telegram = audience.telegram && (services.tg !== undefined || (await loadTelegramConfig(boxRoot)) !== null);
-  return { apns: audience.apns, webPush, telegram };
+  const detail = await audienceDetail(boxRoot);
+  const audience = audienceFlags(detail);
+  const configured = await channelsConfigured(boxRoot, { services, fake: detail.fake });
+  return {
+    apns: audience.apns && configured.apns,
+    webPush: audience["web-push"] && configured.webPush,
+    telegram: audience.telegram && configured.telegram,
+  };
 }
 
 /** Log a line; an unwritable log must not stop delivery, so it is reported and delivery goes on. */
@@ -116,8 +128,13 @@ interface SendContext {
   boxRoot: string;
   intent: NotificationIntent;
   url: string;
-  telegramChat: string | undefined;
+  audience: AudienceDetail;
   services: NotifyServices;
+}
+
+/** A send that went through fake mode says so in the log. */
+function sentDelivery(channel: ChannelName, ctx: SendContext): Delivery {
+  return ctx.audience.fake ? { channel, status: "sent", detail: FAKE_DETAIL } : { channel, status: "sent" };
 }
 
 async function sendWebPush(ctx: SendContext): Promise<Delivery> {
@@ -127,7 +144,7 @@ async function sendWebPush(ctx: SendContext): Promise<Delivery> {
       payload: { title: intent.title, body: intent.body, url, tag: intent.tag, silent: intent.loudness === "quiet" },
       push: services.push,
     });
-    if (result.sent > 0) return { channel: "web-push", status: "sent" };
+    if (result.sent > 0) return sentDelivery("web-push", ctx);
     return {
       channel: "web-push",
       status: "failed",
@@ -141,6 +158,7 @@ async function sendWebPush(ctx: SendContext): Promise<Delivery> {
 
 async function telegramService(ctx: SendContext): Promise<TelegramService | null> {
   if (ctx.services.tg !== undefined) return ctx.services.tg;
+  if (ctx.audience.fake) return createFakeTelegram({ username: "fake-bot" });
   const config = await loadTelegramConfig(ctx.boxRoot);
   return config === null ? null : createTelegramService(config.botToken);
 }
@@ -152,13 +170,14 @@ function telegramText(intent: NotificationIntent, url: string): string {
 }
 
 async function sendTelegram(ctx: SendContext): Promise<Delivery> {
-  const { intent, url, telegramChat } = ctx;
+  const { intent, url } = ctx;
+  const telegramChat = ctx.audience.telegramChat;
   if (telegramChat === undefined) return { channel: "telegram", status: "skipped", detail: "no-audience" };
   try {
     const tg = await telegramService(ctx);
     if (tg === null) return { channel: "telegram", status: "skipped", detail: "unconfigured" };
     await tg.sendMessage(telegramChat, { text: telegramText(intent, url), silent: intent.loudness === "quiet" });
-    return { channel: "telegram", status: "sent" };
+    return sentDelivery("telegram", ctx);
   } catch (e) {
     return { channel: "telegram", status: "failed", detail: errorMessage(e) };
   }
@@ -167,8 +186,7 @@ async function sendTelegram(ctx: SendContext): Promise<Delivery> {
 async function sendOn(channel: ChannelName, ctx: SendContext): Promise<Delivery> {
   switch (channel) {
     case "apns":
-      // No APNs service until Track B; `audienceFor` never offers this channel.
-      return { channel, status: "skipped", detail: "unconfigured" };
+      return sendApns({ boxRoot: ctx.boxRoot, intent: ctx.intent, devices: ctx.audience.apnsDevices, apns: ctx.services.apns });
     case "web-push":
       return sendWebPush(ctx);
     case "telegram":
@@ -183,6 +201,40 @@ function newNotificationId(): string {
   return `n${randomBytes(6).toString("base64url")}`;
 }
 
+/** What a send would do, without sending: `bbx notify --dry-run`. */
+export interface NotifyPlan {
+  audience: AudienceDetail;
+  configured: { apns: boolean; webPush: boolean; telegram: boolean };
+  presence: Presence;
+  plan: ChannelPlan;
+}
+
+function restrict(plan: ChannelPlan, only: ChannelName | undefined): ChannelPlan {
+  if (only === undefined) return plan;
+  return { channels: plan.channels.filter((c) => c === only), skipped: plan.skipped.filter((d) => d.channel === only) };
+}
+
+/**
+ * Read the audience and presence and decide the channels, exactly as a send
+ * would, and send nothing and log nothing. `presence` overrides the reading.
+ */
+export async function planNotification(
+  boxRoot: string,
+  opts: {
+    intent: { loudness: NotificationIntent["loudness"] };
+    channel?: ChannelName | undefined;
+    presence?: Presence | undefined;
+    services?: NotifyServices | undefined;
+    now?: Date | undefined;
+  },
+): Promise<NotifyPlan> {
+  const audience = await audienceDetail(boxRoot);
+  const configured = await channelsConfigured(boxRoot, { services: opts.services ?? {}, fake: audience.fake });
+  const presence = opts.presence ?? (await livePresence(boxRoot, { now: opts.now ?? getBoxTime(boxRoot) }));
+  const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence }), opts.channel);
+  return { audience, configured, presence, plan };
+}
+
 export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): Promise<NotifyResult> {
   const now = request.now ?? getBoxTime(boxRoot);
   const services = request.services ?? {};
@@ -193,15 +245,8 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   logSafely(() => appendIntent(boxRoot, { intent, now }));
   emitLive(boxRoot, { intent, url });
 
-  const { audience, telegramChat } = await audienceFor(boxRoot);
-  const presence = await livePresence(boxRoot, { now });
-  const planned = channelsToTry({ intent, audience, presence });
-  const only = request.channel;
-  const plan =
-    only === undefined
-      ? planned
-      : { channels: planned.channels.filter((c) => c === only), skipped: planned.skipped.filter((d) => d.channel === only) };
-  const ctx: SendContext = { boxRoot, intent, url, telegramChat, services };
+  const { audience, plan } = await planNotification(boxRoot, { intent, channel: request.channel, services, now });
+  const ctx: SendContext = { boxRoot, intent, url, audience, services };
   const sent: Delivery[] = [];
   for (const channel of plan.channels) sent.push(await sendOn(channel, ctx));
 

@@ -100,7 +100,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   |---|---|
   | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
-  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
+  | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt?,apns? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
   | hub wall allowance | `src/hub/hub-server.ts` — `isMobilePairingRedeem` |
   | box-scope allowance | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` |
 - **Drift:** LOUD server-side (401/400); SILENT on iOS (maps to `false`, no toast).
@@ -120,6 +120,9 @@ composer not suppressed, wrong attribution — with no error surfaced).
   `devices` returns `{ scope: "box" | "own", devices }` so the UI names the list it got rather
   than implying a short one is the whole box. `revokeDevice` answers NOT_FOUND, not FORBIDDEN,
   for somebody else's device: a distinct refusal would confirm the id exists on this box.
+- **Projection:** `listMobileDevices` strips `tokenHash` and the APNs token. A device's push
+  registration (§5.9) appears as `push: { environment, registeredAt } | null`; the raw APNs token
+  never leaves the server process.
 
 ---
 
@@ -1106,6 +1109,64 @@ See §1.3 (full request/response/errors).
 - **Drift:** LOUD. Malformed envelopes, stale destinations, stale chats, authentication failure,
   and conflicting retries remain visible in the sheet and do not dismiss it.
 
+### 5.9 `POST /api/pairing/push-token` — APNs registration
+
+- **Direction:** native → box. Auth: `Authorization: Bearer <device token>` only (§2); the
+  registration belongs to the device the bearer names, so a cookie-only web request is 401.
+- **Request:** `{ token: string, environment: "sandbox" | "production" }`. `token` is the APNs
+  device token as hex (any case; stored lowercase; at most 512 characters, since Apple does not
+  promise a length). `environment` is the APNs host the build was signed for: a debug build's token
+  sent to the production host is rejected as `BadDeviceToken`, so the server cannot guess it.
+- **When:** on every launch after notification permission is granted. Tokens change on reinstall
+  and restore with no signal, so a single registration goes stale. The latest post replaces the
+  device's earlier registration, and the same token on any other device record is cleared.
+- **Response:** `204`, no body.
+- **Server record:** `MobileDevice.apns = { token, environment, registeredAt }`. When APNs answers a
+  send with 410 Unregistered or 400 `BadDeviceToken`, the server deletes that registration and logs
+  the device label; the next launch's post restores it.
+- **Errors:** 400 `{ error }` (bad body: non-hex token, unknown environment). 401 `{ error }`: the
+  box auth wall refuses a missing, bad, or revoked bearer with `"Not authenticated"`; a request that
+  cleared the wall another way (a web session) has no device, and the route refuses it with
+  `"Mobile device token is invalid or revoked."`.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native caller | Track C (not yet built) |
+  | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/push-token`, `PushTokenBody` |
+  | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
+- **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
+  `test/mobile-contract/fixtures.doctest.md` and posted at the route by
+  `test/webapp/routes/pairing-push-token.doctest.md`.
+- **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
+  Admin Notifications section shows (no device listed under Phones).
+
+### 5.10 APNs notification payload (box → Apple → native)
+
+- **Direction:** box → APNs → native. Not an HTTP call the native client makes; the body the
+  phone's notification delegate receives.
+- **Headers:** `apns-push-type: alert` for every loudness, `apns-topic: <bundle id>`
+  (`BBX_APNS_BUNDLE_ID`), and `apns-collapse-id: <tag>` when the notification has a tag (a tag over
+  64 bytes is replaced by its SHA-256 hex).
+- **Body by loudness:**
+  | loudness | body |
+  |---|---|
+  | `dot` | `{ aps: { badge: 1 }, target, notificationId }` |
+  | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId }` |
+  | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId }` |
+- **Custom keys the client reads:** `target` is the notification target string
+  (`chat:<sessionId>`, `chat:new`, `card:<path>`, `question:<path>`, `admin:<section>`,
+  `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it renders to.
+  `notificationId` is the log id; `chat:new` carries it so the chat page can show the
+  notification. `loudness` is absent for `dot`.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | box builder | `src/core/notification/apns-payload.ts` — `buildApnsRequest` |
+  | box sender | `src/core/notification/apns-channel.ts` — `sendApns`; `src/services/apns.ts` |
+  | native reader | Track C (not yet built) |
+- **Fixtures:** `test/mobile-contract/fixtures/apns-payload/`, run through `buildApnsRequest`.
+- **Drift:** SILENT. A renamed key lands the tap on the app's default page with no error.
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -1167,6 +1228,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `batch`? then `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
+| P4 | `POST /api/pairing/push-token` | native→box | req `{token,environment:sandbox\|production}`; res `204` | Track C | `routes/pairing.ts` · `PushTokenBody`; `core/mobile/pairing.ts` · `registerDevicePush` | LOUD server / SILENT (no push) |
+| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | Track C | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
@@ -1236,6 +1299,10 @@ without the other is a contract break.
   `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
   offset datetime — `Services/LogForwarder.swift` ↔
   `trpc/routers/debugLog.ts` · `submit`.
+- **APNs registration** `{token,environment}`, `environment` closed to `sandbox|production` —
+  Track C ↔ `routes/pairing.ts` · `PushTokenBody`. **APNs payload keys** `target`, `loudness`
+  (`quiet|loud`, absent for `dot`), `notificationId` beside `aps` — Track C ↔
+  `core/notification/apns-payload.ts` · `buildApnsRequest`.
 - **Speech command V1** `{version,action:"stop"}` — `Models/NativeComposerContract.swift` ·
   `NativeSpeechCommand` ↔ `native-speech-command.ts` · `nativeSpeechCommandFromDetail`.
 - **Bridge globals** `beeboxNativeReceive` / `beeboxNativeQueue` /
@@ -1424,6 +1491,7 @@ beebox/src/webapp/routes/chat-uploads.ts
 beebox/src/webapp/routes/bulk-upload.ts
 beebox/src/core/capture/staging-stream.ts
 beebox/src/webapp/trpc/routers/debugLog.ts
+beebox/src/core/notification/apns-payload.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/BeeBox/Views/ChatWebView.swift

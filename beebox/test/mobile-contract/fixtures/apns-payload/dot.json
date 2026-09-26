@@ -1,0 +1,10 @@
+{
+  "input": {
+    "intent": { "id": "nDot1", "title": "Two new emails", "body": "", "target": "dashboard", "loudness": "dot", "source": "fixture" },
+    "bundleId": "app.beebox.ios"
+  },
+  "expected": {
+    "payload": { "aps": { "badge": 1 }, "target": "dashboard", "notificationId": "nDot1" },
+    "headers": { "apns-push-type": "alert", "apns-topic": "app.beebox.ios" }
+  }
+}
