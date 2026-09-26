@@ -6,16 +6,17 @@ import type { PrepareResult } from "../publish/prepare.js";
 import { preparePublication } from "../publish/prepare.js";
 import type {
   CloudflarePublishBinding,
+  CloudflarePublishBoxHost,
   CloudflarePublishConnectionSummary,
 } from "../core/secrets/cloudflare-publish.js";
 import {
-  assignCloudflarePublishHostname,
-  getCloudflarePublishHostnameOwner,
-  reserveCloudflarePublishHostname,
+  attachCloudflarePublishBoxHost,
+  getCloudflarePublishBoxHost,
   getCloudflarePublishBinding,
   listCloudflarePublishBindings,
   listCloudflarePublishConnections,
   markCloudflarePublishCapability,
+  reserveCloudflarePublishBoxHost,
   reserveCloudflarePublishBinding,
   resolveCloudflarePublishCredential,
 } from "../core/secrets/cloudflare-publish.js";
@@ -34,9 +35,9 @@ export interface ManagedPublicationRuntime {
   getBinding: typeof getCloudflarePublishBinding;
   reserveBinding(args: Parameters<typeof reserveCloudflarePublishBinding>[0]): Promise<CloudflarePublishBinding>;
   listBindings: typeof listCloudflarePublishBindings;
-  assignHostname: typeof assignCloudflarePublishHostname;
-  reserveHostname: typeof reserveCloudflarePublishHostname;
-  findHostnameOwner: typeof getCloudflarePublishHostnameOwner;
+  getBoxHost: typeof getCloudflarePublishBoxHost;
+  reserveBoxHost(args: Parameters<typeof reserveCloudflarePublishBoxHost>[0]): Promise<CloudflarePublishBoxHost>;
+  attachBoxHost: typeof attachCloudflarePublishBoxHost;
   listConnections: () => Promise<CloudflarePublishConnectionSummary[]>;
   markCapability: typeof markCloudflarePublishCapability;
   createStore(config: R2PublishStoreConfig): PublishRemoteStore;
@@ -54,9 +55,9 @@ export const defaultManagedPublicationRuntime: ManagedPublicationRuntime = {
   getBinding: getCloudflarePublishBinding,
   reserveBinding: reserveCloudflarePublishBinding,
   listBindings: listCloudflarePublishBindings,
-  assignHostname: assignCloudflarePublishHostname,
-  reserveHostname: reserveCloudflarePublishHostname,
-  findHostnameOwner: getCloudflarePublishHostnameOwner,
+  getBoxHost: getCloudflarePublishBoxHost,
+  reserveBoxHost: reserveCloudflarePublishBoxHost,
+  attachBoxHost: attachCloudflarePublishBoxHost,
   listConnections: listCloudflarePublishConnections,
   markCapability: markCloudflarePublishCapability,
   createStore: createR2PublishStore,

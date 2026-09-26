@@ -1,13 +1,13 @@
-# Cloudflare publication hostname reservations are canonical and machine-wide
+# Cloudflare publication host mapping is canonical and machine-wide
 
-Hostname spellings are normalized at the machine-store boundary so case and a
-trailing dot cannot create duplicate reservations across publications or boxes.
+A box can reserve one immutable shared host mapping. The reservation is keyed by
+box, uses the granted connection, and normalizes host spelling.
 
 ```ts setup
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { saveCloudflarePublishConnection, grantCloudflarePublishConnection, reserveCloudflarePublishBinding, reserveCloudflarePublishHostname, getCloudflarePublishHostnameOwner } from "../../src/core/secrets/cloudflare-publish.js";
+import { saveCloudflarePublishConnection, grantCloudflarePublishConnection, reserveCloudflarePublishBoxHost, attachCloudflarePublishBoxHost } from "../../src/core/secrets/cloudflare-publish.js";
 
 const secretDir = await mkdtemp(path.join(tmpdir(), "bbx-hostnames-"));
 process.env.BBX_SECRETS_FILE = path.join(secretDir, "secrets.json");
@@ -16,24 +16,24 @@ const now = "2026-09-25T12:00:00.000Z";
 await saveCloudflarePublishConnection({ name: "main", accountId: connection, credentialType: "account-api-token", apiToken: "placeholder", tokenId: "token-id", verifiedAt: now });
 await grantCloudflarePublishConnection({ name: "main", boxSlug: "box-a" });
 await grantCloudflarePublishConnection({ name: "main", boxSlug: "box-b" });
-const bindings = [
-  { pubId: "abcdefghijklmnopqrstuvwxyz", boxSlug: "box-a", hostHandle: "site-a" },
-  { pubId: "bcdefghijklmnopqrstuvwxyz2", boxSlug: "box-b", hostHandle: "site-b" },
-];
-for (const [index, binding] of bindings.entries()) await reserveCloudflarePublishBinding({ ...binding, connectionName: "main", bucketName: `bucket-${index}`, workerName: binding.hostHandle, createdAt: now });
+const hostInput = { boxSlug: "box-a", connectionName: "main", hostname: "Sites.Example.org.", bucketName: "bucket-a", workerName: "worker-a", hostHandle: "box-host-a", createdAt: now };
 ```
 
-An owner-entered spelling is stored canonically, and a second box cannot
-reserve another spelling of the same hostname.
+An identical reservation is retryable, while other-box reuse and renaming are
+refused. The mapping becomes attached only after an exact host readback.
 
 ```ts
-await reserveCloudflarePublishHostname({ pubId: bindings[0].pubId, boxSlug: "box-a", hostname: "Www.Example.org." });
-const owner = await getCloudflarePublishHostnameOwner("www.example.org");
+const reserved = await reserveCloudflarePublishBoxHost(hostInput);
+const retry = await reserveCloudflarePublishBoxHost({ ...hostInput, hostname: "sites.example.org" });
 const duplicate = await Promise.resolve()
-  .then(() => reserveCloudflarePublishHostname({ pubId: bindings[1].pubId, boxSlug: "box-b", hostname: "www.example.org" }))
+  .then(() => reserveCloudflarePublishBoxHost({ ...hostInput, boxSlug: "box-b", hostname: "sites.example.org", bucketName: "bucket-b", workerName: "worker-b", hostHandle: "box-host-b" }))
   .then(() => "allowed", (error) => error.message);
-JSON.stringify({ canonical: owner?.customHostname, ownerPubId: owner?.pubId, duplicateRejected: duplicate.includes("already assigned") })
-=> {"canonical":"www.example.org","ownerPubId":"abcdefghijklmnopqrstuvwxyz","duplicateRejected":true}
+const rename = await Promise.resolve()
+  .then(() => reserveCloudflarePublishBoxHost({ ...hostInput, hostname: "new.example.org" }))
+  .then(() => "allowed", (error) => error.message);
+const attached = await attachCloudflarePublishBoxHost({ boxSlug: "box-a", connectionName: "main", hostname: "sites.example.org" });
+JSON.stringify({ canonical: reserved.hostname, retry: retry.status, duplicateRejected: duplicate.includes("already assigned"), renameRejected: rename.includes("cannot rename"), attached: attached.status })
+=> {"canonical":"sites.example.org","retry":"pending","duplicateRejected":true,"renameRejected":true,"attached":"attached"}
 ```
 
 ```ts teardown
