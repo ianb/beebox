@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:53:36Z
+Generated: 2026-09-26T17:07:20Z
 Total documents: 437
 
 ## Issues
@@ -1430,7 +1430,6 @@ Referenced by:
 - docs/guides.md:17 (link) — | The prompt surface: review, lenses, logging | [prompts](prompts.md) |
 - docs/implemented-plans/doc-structure-prompts.md:57 (mention) — | (new) | `prompts.md`: what the prompt surface is (the generated sources); members; owned elsewhere |
 - docs/plans/cli-restructure.md:30 (mention) — - **`bbx init-rules` standalone removed.** File moved from `src/cli/commands/init-rules.ts` to `src/core/init-rules.ts`
-- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/development/maintenance.md` |
 - user-stories/catalog/2026-08-21.md:8565 (mention) — **Code check** — beebox/package.json defines "prompt-report": "tsx src/dev/prompt-report.ts"; the script parses --output
 
 #### docs/publishing.md
@@ -2576,7 +2575,7 @@ Referenced by:
 - docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
 - docs/testing/knowledge-audits.md:19 (link) — [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun
-- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/development/maintenance.md` |
+- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/d
 - user-stories/catalog/2026-08-21.md:8797 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/development/maintenance.md`
 - ../.claude/skills/security-report/SKILL.md:96 (mention) — or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `beebox/docs/development/maintenance.md`.
@@ -7786,7 +7785,6 @@ Referenced by:
 
 References:
 - → docs/testing/knowledge-audits.md (mention)
-- → docs/prompts.md (mention)
 - → docs/development/maintenance.md (mention)
 - → docs/prompts/review.md (mention)
 - → docs/doc-graph.md (mention)
