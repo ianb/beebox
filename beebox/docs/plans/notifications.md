@@ -684,9 +684,12 @@ then a `judge` precheck field; both are replaced by commands.
   Flags only; no JSON argument, the surface is small.
 - **The judgment card.** `src/schemas/judgment.ts`: `cardSchema("judgment",
   { fields: { questions: record(name, { type: enum(noul, choice, score),
-  criteria?, options?, levels? }), model? }, body })`, filename
+  criteria?, options?, levels? }), situation?: ref, model? }, body })`,
+  filename
   `<name>.judgment.card`, anywhere in the box, by convention
-  `_config/judgments/`. The body is the instructions Jev receives. The
+  `_config/judgments/`. The body is the instructions Jev receives, after
+  the `situation:` text (an optional ref; default the root briefing's
+  purpose statement) so every judgment knows whose box this is. The
   state is never in the card: it arrives on stdin at run time. One
   refinement per type says which of `criteria`, `options`, `levels` it
   needs. The card is the prompt, so it is what the agent edits, versions,
@@ -931,7 +934,18 @@ and the boxholder ruled the judgment lives in briefings.
   items muddles toward 50%, so ask a crisp gate question and let the agent
   read; a Choice over the items is a pointer for the agent, not a
   decision; Score is fooled by dates in marketing and needs negatives too.
-  `bbx judge` warns when a state is under a few hundred characters.
+  Prefer a Choice with a counter-category and a "cannot tell" option over a
+  bare yes/no: per item, {expects a reply, needs none, cannot tell} was
+  right on every email in the trial at 90%+ confidence where the yes/no
+  batch had given 55%, and "cannot tell" surfaced the thin-state case that
+  a yes/no hides as 50%. Give Jev the situation: a judgment card carries an
+  optional `situation:` ref, defaulting to the root briefing's purpose
+  statement (`src/schemas/briefing.tsx`, the `{% purpose %}` block), which
+  `bbx judge` prepends to the instructions; in the trial the situation let
+  Jev apply "the recipient's own messages are not requests of him", which
+  it could not without knowing who the recipient was. Include identity
+  fields (`to:`, `from:`) in email state. `bbx judge` warns when a state is
+  under a few hundred characters.
 - `docs/notifications.md` reference doc: the vocabulary, the pieces, the
   channel table, what is in git and what is transient, the ops steps, the
   verification walk.
