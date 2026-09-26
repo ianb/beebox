@@ -70,7 +70,8 @@ export function GrantExistingForm({
       <Stack gap="sm">
         <SelectField
           id="bbx-admin-secrets-grant-name"
-          label="Grant an existing secret to this box"
+          label="Grant a key this machine already has"
+          helper="Keys another box owns exclusively are not offered."
           value={name === "" ? (grantable[0]?.name ?? "") : name}
           onChange={setName}
           options={grantable.map((secret) => ({ value: secret.name, label: secret.name }))}

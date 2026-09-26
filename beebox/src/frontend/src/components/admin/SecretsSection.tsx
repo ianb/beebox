@@ -6,22 +6,22 @@
  * on) and offers the machine-wide table behind a toggle, since the store is one
  * file per machine but an admin page belongs to one box.
  *
- * The "This box" tab leads with "Connect a service" — paste a key and it is
- * this box's in the same submit — per the boxholder's framing (2026-09-10):
- * granting is the advanced, multi-box case, not the primary one
- * (`docs/plans/secret-entry-guidance.md`, Track 1). Granting a name another
- * box already holds is a disclosure at the bottom.
+ * The "This box" tab leads with what the box holds, one collapsed row per
+ * key, then "Add a key to this box": grant a name the machine already has
+ * (first, since with several boxes that is the ordinary case; see
+ * issues/bugs/2026-09-21-granting-an-existing-key-to-a-box-is-hidden-and-unguided.md)
+ * or add a new one through the service picker.
  *
- * Nothing here can read a value back. A value saved through "Connect a
- * service" is granted to this box in the same write; a value saved from the
- * Machine-wide tab is not granted to any box.
+ * Nothing here can read a value back. A value saved through the picker is
+ * granted to this box in the same write; a value saved from the Machine-wide
+ * tab is not granted to any box.
  */
 
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
+import { Heading } from "../ui/Heading";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Button } from "../ui/Button";
@@ -69,22 +69,20 @@ export function SecretsSection() {
         machine.data ? <MachineSecretsView machine={machine.data} refresh={refresh} /> : null
       ) : (
         <Stack gap="md">
-          <ConnectServiceSection
-            guides={guides.data}
-            grantedNames={grantedNames}
-            boxSlug={status.data?.slug ?? ""}
-            hints={hints.data}
-            onSaved={refresh}
-          />
           {status.data ? <BoxSecretsView status={status.data} hints={hints.data} refresh={refresh} /> : null}
-          {machine.data && grantable.length > 0 ? (
-            <details id="bbx-admin-secrets-advanced">
-              <summary><Text as="span" size="sm" weight="medium">Use a key another box already has</Text></summary>
-              <div className="pt-3">
-                <GrantExistingForm machine={machine.data} grantedNames={grantedNames} onGranted={refresh} />
-              </div>
-            </details>
-          ) : null}
+          <Stack gap="sm">
+            <Heading level={3}>Add a key to this box</Heading>
+            {machine.data && grantable.length > 0 ? (
+              <GrantExistingForm machine={machine.data} grantedNames={grantedNames} onGranted={refresh} />
+            ) : null}
+            <ConnectServiceSection
+              guides={guides.data}
+              grantedNames={grantedNames}
+              boxSlug={status.data?.slug ?? ""}
+              hints={hints.data}
+              onSaved={refresh}
+            />
+          </Stack>
         </Stack>
       )}
 
