@@ -64,15 +64,15 @@ no timed or conditional piece, and every alert stays as loud as it is today.
 | A. Vocabulary, bus-based delivery, presence, `bbx notify` | 450 | 250 | 40 |
 | B. APNs: server service, device registration, delivery | 400 | 250 | 60 |
 | C. APNs: iOS client | 300 Swift | 60 | 20 |
-| D. Timed and conditional: `notify:` on schedules, change cursor, judge precheck with defer | 560 | 380 | 80 |
+| D. Timed and conditional: `notify:`, schedule memory, `bbx changes`, `bbx judge`, judgment card | 640 | 420 | 100 |
 | E. Sources: callouts, question sweep, health demotion and promotion | 250 | 200 | 20 |
 | F. Guidance: briefing section, agent guide, chat prompt, audits | 60 | 40 | 120 |
-| Total | 2,020 | 1,180 | 340 |
+| Total | 2,100 | 1,220 | 360 |
 
 Additions plus deletions, estimated; Track A includes about 250 lines of
 deletion (the `web-push` card, its connector, `bbx push test`). Authored
 docs are the last column; there is no generated output. **BIG CHANGE:**
-about 3,500 changed lines. The size comes from three channels that each
+about 3,700 changed lines. The size comes from three channels that each
 need a delivery path, plus the conditional pieces. What the fuller design
 buys over the smallest fix: the phone, which is the surface the boxholder
 uses; reminders and change-triggered checks with no agent at fire time; cheap judgments
@@ -102,7 +102,10 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   not a card type: an earlier draft had a `watch` card with its own cursor,
   and the boxholder's direction (2026-09-26, "passing in the git log since
   the last call is an excellent way to do this kind of check") put the
-  cursor on the schedule instead. This plan adds no card type.
+  cursor on the schedule instead. The one new card type is the
+  `judgment` card: a Jev prompt is an authored artifact the agent edits,
+  versions, and replays ("building prompts for Jev is something we need to
+  learn and iterate on"), and a shell string is not a home for that.
 - **`bbx` is the box agent's surface** (`beebox/CLAUDE.md`). `bbx notify` is
   added because delivery is code the agent must call. `bbx remind` is not
   added: the reminder is a card the agent writes, with a worked example in
@@ -226,8 +229,9 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   `runPrecheck` (`src/core/procedure/engine-step.ts:133`) executes the
   shells and treats exit 75 (`CHECK_SKIP_CODE`, `src/core/procedure/shell.ts:12`)
   as skip. The run card records `status: pass | fail | skip`
-  (`src/schemas/procedure-run.ts:15-19`). **Extend:** a `judge` field on
-  `precheck`, evaluated after the shells (Track D).
+  (`src/schemas/procedure-run.ts:15-19`). **Reuse unchanged:** a `shells`
+  step runs `bbx judge` like any command; the skip code is the precedent
+  for the tick's deferred (Track D).
 - **Pairing device record.** `src/core/mobile/pairing.ts:19`
   `MobileDeviceSchema { id, label, tokenHash, createdAt, createdBy,
   lastUsedAt?, revokedAt? }` in the box-level
@@ -371,14 +375,20 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
 - **Chat timer.** The existing `<schedule>` tag entry
   (`src/core/chat/schedules.ts:26`). NOT a reminder: it re-enters a chat and
   runs an agent.
-- **Judgment.** One Jev Noul question over one state, returning a
-  probability. Exists as `JevDecision` for Choice (`src/services/jev.ts:9`);
-  Track D adds the Noul form. A judgment is NOT a decision: code compares it
-  to a threshold the card set.
+- **Judgment card.** An authored Jev prompt: named questions of the three
+  types in frontmatter, instructions in the body, no state. New card type
+  `<name>.judgment.card` (Track D). In git, as the rule.
+- **Judgment.** One Jev call: a judgment card plus one state from stdin,
+  returning an answer per question. Exists as `JevDecision` for Choice
+  (`src/services/jev.ts:9`); Track D adds the Noul and Score forms. A
+  judgment is NOT a decision: `bbx judge`'s filters or a `jq` after it make
+  the decision.
+- **Carry.** One value a schedule's script writes for its next run, in
+  schedule state, replaced each run. NOT a log.
 - **Deferred.** The scheduler's existing outcome for "not the task's fault,
-  try again next time" (`src/core/schedule/state.ts:39-45`). A judge below
-  threshold records it, with the probability. NOT a failure and NOT a
-  success: `once` does not fire on it.
+  try again next time" (`src/core/schedule/state.ts:39-45`). A `runs:`
+  pipeline that exits 75 records it. NOT a failure and NOT a success:
+  `once` does not fire on it.
 - **Change cursor.** `lastCommit` in a schedule's state: the box HEAD when
   that schedule last ran. Per schedule, transient, never in git. Exposed
   to the script as `BBX_SINCE_COMMIT`. NOT a global cursor: two schedules
@@ -595,27 +605,28 @@ the existing test target. Verified in the simulator up to the registration
 call; the simulator has no APNs token, so the post is exercised with a fake
 token behind a `DEBUG` launch argument.
 
-### Track D. Timed and conditional: `notify:` on schedules, the change cursor, judge precheck with defer
+### Track D. Timed and conditional: `notify:` on schedules, schedule memory, `bbx changes`, `bbx judge`
 
 **What.** A reminder is a scheduled-script card whose action is a
-notification. A schedule remembers the commit it last saw, so a procedure
-can ask "what changed since my last run" and skip everything, including
-Jev, when nothing did. A procedure precheck can ask Jev a yes/no question
-over that change set, per item or as a batch, and defer until it says yes.
-"Tell me when the school emails" and "tell me when the quote is in the
-folder" are both this one pattern.
+notification. A schedule remembers the commit and time it last ran and
+carries one value forward. `bbx changes` lists what changed in the box
+since then. `bbx judge <path>` sends state on stdin to Jev through an
+authored prompt card and applies a basic decision. A schedule's `runs:`
+composes these in one pipeline; a procedure is for several steps or an
+agent. A pipeline that skips is the scheduler's existing `deferred`.
 
 **Why this needs to change.** A reminder today is a chat timer that runs an
-agent, lands only in the chat, and dies past 25 days. A scheduled procedure
-that checks a condition runs an agent every time, which is what makes many
+agent, lands only in the chat, and dies past 25 days. A scheduled check
+that asks a question runs an agent every time, which is what makes many
 small proactive tasks too expensive
 (`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`). The
-boxholder asked for a defer state ("runs regularly until the judge says it
-fires"), for the check to cost nothing when nothing happened ("shouldn't
-even call Jev if there's no activity"), and for "the git log since the last
-call" to be a supported and suggested pattern. An earlier draft had a
-separate `watch` card with its own cursor; the cursor belongs on the
-schedule, where every scheduled thing can use it.
+boxholder's direction (2026-09-26): a defer state ("runs regularly until
+the judge says it fires"); no Jev call when nothing happened; "the git log
+since the last call" as a supported and suggested pattern, with a place
+to pass information forward; the judge not hard-coded to one question and
+one rule, because "building prompts for Jev is something we need to learn
+and iterate on"; paths, not names. Earlier drafts had a `watch` card and
+then a `judge` precheck field; both are replaced by commands.
 
 **Direction.**
 
@@ -645,61 +656,79 @@ schedule, where every scheduled thing can use it.
   Firing is the scheduler tick; no agent runs. Tapping opens a new chat
   with the reminder and its context as the banner. `bbx remind` is not
   added.
-- **The change cursor.** Schedule state (`src/core/schedule/state.ts:45`)
-  gains `lastCommit: string | null`, set to `getHead(boxRoot)`
-  (`src/lib/git.ts:557`) at the end of every run whose precheck evaluated
-  (success, failure, or a judge that said no). The tick puts the previous
-  value in the script's environment as `BBX_SINCE_COMMIT` and the current
-  head as `BBX_HEAD_COMMIT` (`src/cli/commands/tick-helpers.ts:275`, beside
-  the existing env). A procedure started by the tick passes both through
-  to its shells (`src/core/procedure/shell.ts:51` already adds
-  `CHECK_SKIP`). On the first run `BBX_SINCE_COMMIT` is empty and "since"
-  means "nothing": a schedule is about the future.
-- **`bbx changes`.** `bbx changes [--since <commit>] [--match <glob>]...
-  [--kind added|modified|any] [--or-skip] [--log]` prints one box-relative
-  card path per line that was added (default) or modified under the
-  matching globs between `--since` (default `$BBX_SINCE_COMMIT`) and HEAD,
-  from a tree diff (`getDiff`, `src/lib/git.ts:455`, with `--diff-filter`).
-  A tree diff sees a card triage moved during the window at its final
-  path, once (`src/core/triage/routing.ts:74`). `--or-skip` exits
-  `CHECK_SKIP_CODE` (75, `src/core/procedure/shell.ts:12`) when the list is
-  empty, so a precheck built on it skips with no Jev call. `--log` prints
-  the commit subjects in the window instead of paths, for a batch judge
-  over "what happened". `--match` is a path glob, which is how a card type
-  is named (`**/*.email.card`); a field-level filter is a shell pipe after
-  it. With an empty `--since` it prints nothing and exits 75 under
-  `--or-skip`.
-- **`jev.judge`.** `src/services/jev.ts`: `judge({ state, question }):
-  Promise<{ probability, model }>` for the Noul type, same request path;
-  fake support via `createFakeJev({ noul: (question, state) => number })`.
-- **Judge precheck and defer.** `ProcedurePrecheck` (`src/schemas/procedure.ts:36`)
-  gains `judge?: { question: string, threshold: number.default(0.8), per:
-  enum("batch", "item").default("batch") }`. `runPrecheck`
-  (`src/core/procedure/engine-step.ts:133`) calls the judge after
-  `executePhaseShells` when the shells did not skip. `batch`: one call with
-  the shells' stdout as state. `item`: stdout is card paths, one per line;
-  one call per card with the card text (truncated to a fixed byte budget)
-  as state; the step passes when any item clears the threshold, and the
-  passing paths are exported to the run phase as `BBX_JUDGED_ITEMS`
-  (newline-separated) and `BBX_JUDGED_ITEM` (the first). The run card's
-  `RunStepPrecheck` (`src/schemas/procedure-run.ts:15`) gains `judge: {
-  per, threshold, model, results: [{ item?, probability }] }` so the run
-  shows why. A procedure whose every step skipped, by shells or by judge,
-  exits with a new `DEFERRED_EXIT_CODE`, which `bbx tick` records as the
-  existing `deferred` outcome (`src/core/schedule/state.ts:45`), so
-  `bbx health` shows `waiting`, not `failing`. `once` deletes the card only
-  after a run recorded `success` (`tick-helpers.ts:184` reads the recorded
-  result, not the exit code). The engine receives `JevService` through the
-  same injection the chat router uses (`src/webapp/trpc/routers/quick-chat.ts:68`).
-- **Jev budget.** A per-box daily cap of judge calls (default 500) in
-  `.beebox/jev-budget.json`. Over the cap, a judge precheck defers without
-  calling and the run card says `budget`; the tick does not advance
-  `lastCommit` for that run, so the items are judged next time. A health
-  check says how many runs deferred for budget. Nothing is dropped.
-- **The two worked examples** in the procedure schema instructions and the
-  agent guide, both with `once: true` so the schedule ends when it fires:
+- **Schedule memory.** Schedule state (`src/core/schedule/state.ts:45`)
+  gains `lastCommit: string | null` (the box HEAD from `getHead`,
+  `src/lib/git.ts:557`, recorded at the end of every run that was not
+  deferred for budget) and `carry: string | null` (at most 4 KB; the last
+  value the script wrote, replaced each run, never appended). `lastRun`
+  exists. The tick exposes them to the script's environment
+  (`src/cli/commands/tick-helpers.ts:275`, beside the existing env) as
+  `BBX_SINCE_COMMIT`, `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and a writable file
+  path `BBX_CARRY_OUT`; after the run the tick reads that file into
+  `carry`. A procedure started by the tick passes them to its shells
+  (`src/core/procedure/shell.ts:51` already adds `CHECK_SKIP`). On a
+  schedule's first run the since variables are empty: a schedule is about
+  the future.
+- **`bbx changes`.** New command; the env variables are its defaults, not
+  its contract: `bbx changes [--since <commit>] [--match <glob>]... [--kind
+  added|modified|any] [--log] [--or-skip]` prints one box-relative card
+  path per line changed under the matching globs between `--since`
+  (default `$BBX_SINCE_COMMIT`) and HEAD, from a tree diff (`getDiff`,
+  `src/lib/git.ts:455`, with `--diff-filter`), so a card triage moved
+  during the window appears once at its final path
+  (`src/core/triage/routing.ts:74`). `--log` prints the commit subjects in
+  the window instead. `--or-skip` exits `CHECK_SKIP_CODE` (75,
+  `src/core/procedure/shell.ts:12`) on an empty result. With no `--since`
+  and no env it exits 2 with "no since: pass --since or run from a
+  schedule", never a guess. Usable from chat, a procedure, or a schedule.
+  Flags only; no JSON argument, the surface is small.
+- **The judgment card.** `src/schemas/judgment.ts`: `cardSchema("judgment",
+  { fields: { questions: record(name, { type: enum(noul, choice, score),
+  criteria?, options?, levels? }), model? }, body })`, filename
+  `<name>.judgment.card`, anywhere in the box, by convention
+  `_config/judgments/`. The body is the instructions Jev receives. The
+  state is never in the card: it arrives on stdin at run time. One
+  refinement per type says which of `criteria`, `options`, `levels` it
+  needs. The card is the prompt, so it is what the agent edits, versions,
+  and tests when a judgment is wrong.
+- **`bbx judge`.** `bbx judge <card-path> [--per-line [--cards]] [--min
+  name=p]... [--choice name=option]... [--decide <json>] [--select]
+  [--or-skip] [--dry-run] [--replay <file>]`. Reads the state from stdin;
+  with `--per-line` each line is one state (with `--cards`, each line is a
+  card path and the card text is the state); sends the card's questions
+  in one Jev call per state (`jev.judge`, the Noul, Choice, and Score
+  forms added to `src/services/jev.ts` beside `decide`); prints one JSON
+  line per state: `{ input, answers: { name: { probability | choice |
+  score, confidence } } }`. The decision is separate and basic: `--min`
+  and `--choice` are the common cases, `--decide` takes a JSON object of
+  the same conditions for anything with several, and `jq` is the escape
+  hatch. `--select` prints only the inputs that passed, one per line, so
+  the next command in the pipe gets paths. `--or-skip` exits 75 when
+  nothing passed. `--dry-run` prints the exact request without sending.
+  `--replay <file>` runs the card against a saved state file, for tuning a
+  prompt against a kept example. Every call and its answers go to
+  `.beebox/jev-debug.log` (state truncated), the learning record.
+- **Deferred at the tick.** `bbx tick` treats exit 75 from `runs` as the
+  existing `deferred` outcome (`src/core/schedule/state.ts:45`), the way
+  the procedure runner treats a precheck skip, so `bbx health` shows
+  `waiting`, not `failing`, and `once` deletes the card only after a run
+  recorded `success` (`tick-helpers.ts:184` reads the recorded result).
+  `cron` or `on-wakeup`, plus `once`, plus a pipeline that skips, is "run
+  until it fires, then stop".
+- **Jev budget.** A per-box daily cap of Jev calls (default 500) in
+  `.beebox/jev-budget.json`, enforced in `bbx judge`: over the cap it
+  exits 75 with `budget` on stderr, and the tick does not advance
+  `lastCommit` for a run that ended that way, so the items are judged next
+  time. A health check says how many runs deferred for budget.
+- **Schedule versus procedure.** A schedule card holds when, `once`,
+  `until`, `requires`, `requested-by`, the memory, and a one-line `runs:`
+  pipeline. A procedure holds several steps or an agent step. Nothing about
+  Jev lives in the procedure schema; a `shells` step runs `bbx judge` like
+  any command. The judge precheck field from the earlier draft is gone.
+- **Worked examples**, in the scheduled-script and judgment schema
+  instructions and the agent guide:
 
-  Stream, one judgment per new item:
+  Stream, one judgment per new item, one schedule card:
 
   ```yaml
   # _config/schedules/watch-field-trip.scheduled-script.card
@@ -710,65 +739,62 @@ schedule, where every scheduled thing can use it.
   requested-by: boxholder
   requires: { connectors: [gmail] }
   description: Tell me when the school emails about the field trip
-  runs: bbx procedure run watch-field-trip
+  runs: >
+    bbx changes --match '_content/inbox/**/*.email.card' --or-skip
+    | bbx judge _config/judgments/field-trip.judgment.card --per-line --cards --min trip=0.8 --select --or-skip
+    | bbx notify --loudness loud --targets-from-stdin "School field trip email arrived"
   ```
   ```yaml
-  # _config/procedures/watch-field-trip.procedure.card
-  name: watch-field-trip
-  steps:
-    - id: look
-      precheck:
-        shells:
-          - bbx changes --match '_content/inbox/**/*.email.card' --or-skip
-        judge:
-          per: item
-          question: "This is an email from the school about the spring field trip: dates, permission form, or payment."
-      run:
-        shells:
-          - bbx notify --loudness loud --target "card:$BBX_JUDGED_ITEM" "School field trip email arrived"
+  # _config/judgments/field-trip.judgment.card
+  questions:
+    trip:
+      type: noul
+      criteria: "This email is from the school about the spring field trip: dates, permission form, or payment."
+  ---
+  You are looking at one email card from a family inbox. Judge only what
+  the email says, not what it might lead to.
   ```
 
-  Snapshot, one judgment over the state, and no call when nothing moved:
+  Snapshot, one judgment over the state, no call when nothing moved, with
+  the carry slot remembering what was already reported:
 
   ```yaml
-  # _config/procedures/watch-contractor-quote.procedure.card
-  name: watch-contractor-quote
-  steps:
-    - id: look
-      precheck:
-        shells:
-          - bbx changes --match 'drive/Quotes/**' --kind any --or-skip
-          - bbx cat drive/Quotes/*.card
-        judge:
-          question: "Is there a quote from the kitchen contractor here?"
-      run:
-        shells:
-          - bbx notify --loudness loud --target card:drive/Quotes "The contractor's quote is in"
+  # _config/schedules/watch-contractor-quote.scheduled-script.card
+  cron: "0 */2 * * *"
+  once: true
+  until: 2026-10-31
+  requested-by: boxholder
+  requires: { connectors: [google-drive] }
+  runs: >
+    bbx changes --match 'drive/Quotes/**' --kind any --or-skip
+    && bbx cat drive/Quotes/*.card
+    | bbx judge _config/judgments/contractor-quote.judgment.card --min quote=0.8 --or-skip
+    && bbx notify --loudness loud --target card:drive/Quotes "The contractor's quote is in"
   ```
 
-  Both cost nothing on a wakeup with no matching change, one or a few Jev
-  calls when there is, and one agent-free notification when it fires.
-  `on-wakeup: true` makes the check run when connectors have just synced.
+  `bbx notify --targets-from-stdin` takes one target path per line and
+  sends one notification per line, so a per-item judge that passes two
+  emails sends two, each tapping to its card.
 
 **Vocabulary lock-ins.** `notify:` and `requested-by` on scheduled scripts;
-`lastCommit` in schedule state; `BBX_SINCE_COMMIT`, `BBX_HEAD_COMMIT`,
-`BBX_JUDGED_ITEMS`, `BBX_JUDGED_ITEM`; `bbx changes` and its flags; `judge`
-with `per` as the precheck field and the service method;
-`DEFERRED_EXIT_CODE`.
+`lastCommit` and `carry` in schedule state; `BBX_SINCE_COMMIT`,
+`BBX_SINCE_TIME`, `BBX_CARRY_IN`, `BBX_CARRY_OUT`; `bbx changes` and `bbx
+judge` and their flags; the `judgment` card and its `questions` shape;
+exit 75 as deferred at the tick.
 
-**First implementation chunk.** `jev.judge` with a doctest against the fake;
-the `notify:` field and its tick path with a doctest (an `at` card fires a
-notification and deletes itself; a `notify` plus `runs` card fails
-validation with the message). Second chunk: `lastCommit`, the env
-variables, and `bbx changes` with a filesystem doctest over a temporary
-repo (three commits add three cards, one moved by a rename; `--match`
-selects; `--or-skip` exits 75 on empty; the first run sees nothing). Third
-chunk: the judge precheck with `per`, the deferred exit, `once` semantics,
-and the budget, with a procedure doctest (an `on-wakeup` card with no
-changes defers with zero Jev calls; with one matching card and a fake Jev
-at 0.9 it runs, exports the item, records `success`, and is deleted; at
-0.3 it records `deferred` and survives; over budget it defers without a
-call and keeps the cursor).
+**First implementation chunk.** `jev.judge` for the three question types
+with a doctest against the fake; the `notify:` field and its tick path with
+a doctest (an `at` card fires a notification and deletes itself; a `notify`
+plus `runs` card fails validation with the message). Second chunk: the
+memory fields, the env variables, the carry file, and `bbx changes` with a
+filesystem doctest over a temporary repo (three commits add three cards,
+one moved by a rename; `--match` selects; `--or-skip` exits 75 on empty;
+no since exits 2; the first run sees nothing; a carry written is read back
+next run). Third chunk: the `judgment` schema and `bbx judge` with a
+doctest (per-line cards, `--min`, `--select`, `--decide`, `--dry-run`
+output, `--replay`, budget exit); then exit 75 as `deferred` at the tick
+with a doctest (a pipeline that skips records `deferred` and survives
+`once`; one that passes records `success` and is deleted).
 ### Track E. Sources: callouts, question sweep, health demotion and promotion
 
 **What.** Change what each existing source sends, and add the chat callout as
@@ -839,9 +865,9 @@ and the boxholder ruled the judgment lives in briefings.
   the default and propose adding the section at the next retro.
 - Agent guide: a "Reaching the boxholder" section in
   `src/core/agent-guide/commands.ts`: `bbx notify`, loudness, targets, the
-  reminder card, the change cursor and `bbx changes`, the judge precheck,
-  "check what changed before you judge, and judge before you run an
-  agent", "the briefing owns
+  reminder card, schedule memory and `bbx changes`, the judgment card and
+  `bbx judge`, "check what changed before you judge, and judge before you
+  run an agent", "the briefing owns
   when", and "run `bbx notify --check` before promising a reminder or a
   change-triggered check; if nothing can reach the person, say so instead
   of promising". Chat prompt (`src/core/chat/session/prompts.ts:163`): `<schedule>`
@@ -849,8 +875,10 @@ and the boxholder ruled the judgment lives in briefings.
   with `notify:` is for anything that must reach the person later or
   elsewhere; `<callout loudness>` is how to make an outcome reach them when
   they have left.
-- Schema instructions on scheduled-script (`notify:`) and on the procedure
-  `judge` precheck carry the worked examples from Track D.
+- Schema instructions on scheduled-script (`notify:`, the pipelines) and
+  on the `judgment` card carry the worked examples from Track D, plus a
+  short "writing a judgment" section: one question per thing decided,
+  criteria in plain words, instructions that name what the state is.
 - `docs/notifications.md` reference doc: the vocabulary, the pieces, the
   channel table, what is in git and what is transient, the ops steps, the
   verification walk.
@@ -877,10 +905,12 @@ What the fuller plan buys:
 - **`notify:` instead of `runs: bbx notify`** (Track D): the shell form
   needs the agent to quote a title correctly inside YAML inside a shell
   string; a fabricated-value failure. The field is data.
-- **The judge precheck with defer** (Track D): without it a scheduled
-  procedure runs an agent every time, which is the cost that keeps small
-  proactive tasks from existing. The defer outcome already exists; the
-  change is to record it from a judge and to make `once` respect it.
+- **`bbx judge` and the judgment card** (Track D): without them a
+  scheduled check runs an agent every time, which is the cost that keeps
+  small proactive tasks from existing. A command plus a prompt card, rather
+  than a schema field with one question type and one rule, is what lets
+  prompts be iterated and replayed. The defer outcome already exists; the
+  change is to record it from exit 75 and to make `once` respect it.
 - **The change cursor and `bbx changes`** (Track D): without them a
   scheduled check either calls Jev every run over a growing pile or keeps
   its own cursor in shell, which is the same thing written badly in every
@@ -924,11 +954,14 @@ is fixed by Apple's API and the contract rule.
 | Judge exit code taken as failure by an older tick | none needed: same package | `DEFERRED_EXIT_CODE` is added to the tick that reads it in the same change | Clear |
 | Schedule state lost (`.beebox/` wiped) | Track D doctest | `lastCommit` null; the next run sees nothing and sets it; cards added meanwhile are never judged; health check `schedule cursors reset` | Clear |
 | Two ticks run the same schedule | existing schedule lock (`tick-helpers.ts:250`) | serialized | Clear |
-| Judge over the daily budget | Track D doctest | defer without a call, cursor not advanced, health check | Clear |
-| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | the run records `deferred` with the error, cursor not advanced; health check after two consecutive | Clear |
-| Jev key missing | Track D doctest | judge defers with a health check; a `requested-by` card promotes (Track E) | Clear |
+| `bbx judge` over the daily budget | Track D doctest | exits 75 with `budget`; cursor not advanced; health check | Clear |
+| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | `bbx judge` exits 75 with the error; the run records `deferred`, cursor not advanced; health check after two consecutive | Clear |
+| Jev key missing | Track D doctest | `bbx judge` exits 75 with `unconfigured`; health check; a `requested-by` card promotes (Track E) | Clear |
 | `bbx changes` with a bad `--since` (commit gone after a history rewrite) | Track D doctest | error, precheck fails, run recorded `failure` with the message | Clear |
-| Run phase fails after the judge passed | existing procedure failure path | `failure` recorded; cursor advanced; the item is not re-judged; the failure is on the health page | Clear |
+| `bbx notify` fails after the judge passed | Track D doctest | pipeline exits 1; `failure` recorded; cursor advanced; the item is not re-judged; the failure is on the health page | Clear |
+| Judgment card invalid (a `noul` with `options`) | schema doctest | `bbx judge` exits 2 with the refinement message; run recorded `failure` | Clear |
+| Carry over 4 KB | Track D doctest | truncated with a warning line in the tick log | Clear |
+| Pipeline exits 75 forever (nothing ever matches) | Track D doctest | `deferred` each run; `until` ends it; health shows `waiting` | Clear |
 | Same card judged by two schedules | Track D doctest | each fires; `tag` is the schedule name so the phone collapses only within one | Clear |
 | Callout turn completes, presence flips during delivery | Track E doctest | notification still sent; seen twice at worst | Clear |
 | Promotion rule fires for a system-scheduled script | Track E doctest | only `requested-by: boxholder` promotes | Clear |
@@ -990,9 +1023,11 @@ bounded to the heartbeat staleness.
   `disable_notification` for `quiet`.
 - **Rich notifications**: actions, images, reply from the notification.
   Deferred until the plain path is verified on a device.
-- **A `watch` card type.** Considered and folded into the change cursor plus
-  the judge precheck; two cards (schedule and procedure) per watch is the
-  authoring cost, and the schema instructions carry the pair as one example.
+- **A `watch` card type and a `judge` precheck field.** Both considered and
+  replaced by `bbx changes` and `bbx judge` in a schedule's `runs:`
+  pipeline; the schema instructions carry the pipelines as examples.
+- **A JSON argument for `bbx changes`.** Its surface is a few flags; `bbx
+  judge` has `--decide` because a decision can have several conditions.
 - **Field-level matching in `bbx changes`.** `--match` is a path glob; a
   filter on frontmatter is a shell pipe after it, until a second caller
   wants more.
@@ -1021,6 +1056,9 @@ bounded to the heartbeat staleness.
    a failing run is on the health page, and re-judging the same items on
    every retry would multiply Jev calls for a bug the person has to fix
    anyway.
+6. **The `--decide` JSON shape.** Lean: an object of `{ name: { min?, max?,
+   is? } }` combined with AND; anything else is `jq`. Settled in Track D's
+   third chunk, not before.
 5. **Whether `dot` badge should be a count.** Not without unread state; the
    badge is 1 and clears on foreground. Revisit with the unread issue.
 
@@ -1037,13 +1075,14 @@ New agent-facing concepts, each with a `knows_directly` entry in
   the vet. In chat, what do you do?" Expects a schedule card with `notify:`
   and `requested-by: boxholder`, not `<schedule>` and not a shell `runs`.
 - `changes-since`: "The person says: tell me when the school emails about
-  the field trip." Expects an `on-wakeup` schedule running a procedure whose
-  precheck is `bbx changes --match ... --or-skip` and a per-item judge, with
-  `once` and `requires: { connectors: [gmail] }`.
+  the field trip." Expects an `on-wakeup` schedule whose `runs:` is `bbx
+  changes --match ... --or-skip | bbx judge <card> --per-line --cards ...
+  --select --or-skip | bbx notify ...`, a judgment card, `once`, and
+  `requires: { connectors: [gmail] }`.
 - `judge-precheck`: "A daily procedure should only run an agent when today's
   calendar has an event needing preparation. How do you keep it cheap, and
-  how does it stop once it has fired?" Expects a `judge` precheck over a
-  `shells` output and `once: true`.
+  how does it stop once it has fired?" Expects `bbx changes --or-skip`
+  before `bbx judge`, and `once: true`.
 - `health-silence`: "Gmail sync has been failing for two days. Do you notify
   the person?" Expects no, unless a requested schedule is blocked.
 
@@ -1051,14 +1090,14 @@ New agent-facing concepts, each with a `knows_directly` entry in
 
 - **Filesystem doctests** reach every decision: `channelsToTry` (pure), the
   dispatcher with the log and the service fakes, the
-  APNs payload builder (pure), the `notify:` tick path, the judge precheck
-  and `deferred` outcome through the procedure engine with a fake Jev, the
+  APNs payload builder (pure), the `notify:` tick path, `bbx judge` with a
+  fake Jev, exit 75 as `deferred` at the tick, the
   `bbx changes` over a real temporary git repo, the promotion rule at the
   skip site. Cost: ordinary; the fakes exist for push, Telegram, and Jev,
   and the plan adds one for APNs in the same shape.
 - **Route doctests** for the push-token route and `bbx notify --channel`.
 - **Schema doctests** for scheduled-script (`notify` versus `runs`), the
-  procedure `judge` field,
+  `judgment` card,
   and the question `urgency` field.
 - **The mobile contract fixture** for the new route, checked by the existing
   tripwire.
@@ -1083,8 +1122,9 @@ New agent-facing concepts, each with a `knows_directly` entry in
 3. **Track C**: entitlement, delegate, registrar, presentation, tap handling,
    badge clearing. Simulator-verified; device test with the boxholder.
 4. **Track D** chunk 1: `jev.judge`, `notify:` on schedule cards and its tick
-   path. Chunk 2: `lastCommit`, the env variables, `bbx changes`. Chunk 3:
-   judge precheck with `per`, deferred exit, `once` semantics, budget.
+   path. Chunk 2: schedule memory, the env variables, the carry file, `bbx
+   changes`. Chunk 3: the `judgment` card, `bbx judge`, exit 75 as
+   deferred, `once` semantics, budget.
 5. **Track E** chunk 1: loudness on existing callers, question `urgency`.
    Chunk 2: callouts on `chat-complete`, health entries, promotion rule,
    capture failure.
@@ -1093,8 +1133,9 @@ New agent-facing concepts, each with a `knows_directly` entry in
 7. **End-to-end**: `BBX_PUSH_FAKE=1` and the APNs fake through every source;
    then desktop web push with real VAPID keys; then the boxholder's device
    walk: pair, register, `bbx notify --loudness loud`, tap, land; a schedule
-   card with `at` two minutes out; the field-trip pair over a test mail;
-   the quote pair over a mounted folder. The ops steps (VAPID keys, APNs key, Apple capability)
+   card with `at` two minutes out; the field-trip pipeline over a test
+   mail; the quote pipeline over a mounted folder; `bbx judge --replay`
+   against a saved email to tune the prompt. The ops steps (VAPID keys, APNs key, Apple capability)
    are the boxholder's.
 
 Tracks A and D have no dependency on each other beyond `notifyBoxholder`'s
@@ -1110,8 +1151,8 @@ depends on A; F is written last so it describes what shipped.
 - **Knowledge audits** land with Track F, run against the test box.
 - **Migration.** None on disk: no `web-push` card exists; no active pairings
   or subscriptions exist; the device record field is optional; `runs` on
-  existing schedule cards stays valid; `lastCommit` is a new optional
-  state field. The briefing
+  existing schedule cards stays valid; `lastCommit` and `carry` are new
+  optional state fields; `judgment` is a new type. The briefing
   section reaches new boxes through the template; existing boxes get the
   default from the agent guide until the section is written (Track F).
   Adding it to the boxholder's own boxes is a step in the verification walk.

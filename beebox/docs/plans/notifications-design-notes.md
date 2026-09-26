@@ -523,3 +523,17 @@ one pattern: a schedule card (`on-wakeup` or `cron`, `once`, `requires`)
 running a procedure whose precheck is `bbx changes --match <glob> --or-skip`
 followed by a judge, per item for a stream or over the state for a
 snapshot. No new card type. The plan's Track D has both worked examples.
+
+### Addendum, later still: the judge is a command and the prompt is a card
+
+The boxholder: the judge should not be hard-coded to one question and one
+rule; prompts for Jev are something to learn and iterate on; paths, not
+names; the schedule should know its last commit and time and have a spot
+to carry one value forward. So: `bbx judge <card-path>` reads a `judgment`
+card (questions in frontmatter, instructions in the body, state on
+stdin), prints answers, and applies a basic filter; `bbx changes` lists
+what changed since the schedule's last run, with the env variables as
+defaults it can override; a schedule's `runs:` is a pipeline of the two
+plus `bbx notify`, and a pipeline that skips is the scheduler's deferred.
+A procedure is for several steps or an agent. The plan's Track D has both
+pipelines.
