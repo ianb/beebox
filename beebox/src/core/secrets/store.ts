@@ -114,6 +114,19 @@ const cloudflarePublishBindingSchema = z.object({
 });
 export type CloudflarePublishBindingRecord = z.infer<typeof cloudflarePublishBindingSchema>;
 
+/** One immutable shared publishing origin per box and Cloudflare connection. */
+const cloudflarePublishBoxHostSchema = z.object({
+  connectionName: z.string().min(1),
+  accountId: z.string().regex(/^[\da-f]{32}$/i),
+  bucketName: z.string().min(1),
+  workerName: z.string().min(1),
+  hostHandle: z.string().min(1),
+  hostname: z.string().min(1),
+  status: z.enum(["pending", "attached"]),
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type CloudflarePublishBoxHostRecord = z.infer<typeof cloudflarePublishBoxHostSchema>;
+
 const secretStoreSchema = z.object({
   secrets: z.record(z.string(), secretEntrySchema),
   grants: z.record(z.string(), z.record(z.string(), secretAccessLevelSchema)),
@@ -121,6 +134,8 @@ const secretStoreSchema = z.object({
   cloudflarePublishConnections: z.record(z.string(), cloudflarePublishConnectionSchema).optional(),
   /** Keyed globally by PubId so one box cannot claim another box's publication. */
   cloudflarePublishBindings: z.record(z.string(), cloudflarePublishBindingSchema).optional(),
+  /** Optional for compatibility with machine stores written before shared hosts. */
+  cloudflarePublishBoxHosts: z.record(z.string(), cloudflarePublishBoxHostSchema).optional(),
 });
 export type SecretStoreData = z.infer<typeof secretStoreSchema>;
 

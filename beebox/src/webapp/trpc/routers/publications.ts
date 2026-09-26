@@ -14,7 +14,7 @@ import {
   revokeManagedPublication,
 } from "../../../publish/managed-publication-actions.js";
 import { listManagedPublications, previewManagedPublicationFile } from "../../../publish/managed-publication-queries.js";
-import { assignManagedPublicationHostname } from "../../../publish/managed-publication-custom-domain.js";
+import { configureManagedPublicationSharedHost } from "../../../publish/managed-publication-shared-host.js";
 import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
 
 const pubIdInput = pubIdSchema;
@@ -55,7 +55,7 @@ export const publicationsRouter = router({
 
   list: publicationReadProcedure.query(async ({ ctx }) => {
     try {
-      return { sites: await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime) };
+      return await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime);
     } catch (error) { publicationError(error); }
   }),
 
@@ -67,11 +67,11 @@ export const publicationsRouter = router({
       } catch (error) { publicationError(error); }
     }),
 
-  assignCustomHostname: authenticatedOwnerProcedure
-    .input(z.object({ pubId: pubIdInput, hostname: z.string().min(1).max(253) }).strict())
+  configureSharedHost: authenticatedOwnerProcedure
+    .input(z.object({ connectionName: z.string().regex(/^[a-z][\da-z-]{0,39}$/), hostname: z.string().min(1).max(253) }).strict())
     .mutation(async ({ ctx, input }) => {
       try {
-        return await assignManagedPublicationHostname({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
+        return await configureManagedPublicationSharedHost({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
       } catch (error) { publicationError(error); }
     }),
 

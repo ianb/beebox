@@ -50,3 +50,17 @@ const putCall = calls.find((call) => call.url.pathname.endsWith("/workers/domain
 JSON.stringify({ hostnameFilter: getCall.url.searchParams.get("hostname"), found: found[0], put: JSON.parse(putCall.init.body), attached })
 => {"hostnameFilter":"site.example.com","found":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"},"put":{"hostname":"site.example.com","service":"bbx-site","zone_id":"zone-1","zone_name":"example.com"},"attached":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"}}
 ```
+
+HTTP 200 error envelopes preserve only bounded, control-character-free Cloudflare
+error codes and messages, so permission failures are diagnosable without dumping
+an arbitrary response body.
+
+```ts continue
+const rejected = createCloudflareProvisioningClient(
+  { accountId: "0123456789abcdef0123456789abcdef", bearer: staticBearer("test-token") },
+  { fetch: async () => new Response(JSON.stringify({ success: false, errors: [{ code: 10000, message: "missing permission\nplease check" }, { code: 2, message: "ignored" }], result: [] }), { status: 200 }) },
+);
+const providerError = await Promise.resolve().then(() => rejected.listZones()).then(() => null, (error) => ({ message: error.message, count: error.cfErrors.length }));
+JSON.stringify(providerError)
+=> {"message":"Cloudflare zone list failed: 200 Cloudflare rejected the request: [10000] missing permission please check, [2] ignored","count":2}
+```

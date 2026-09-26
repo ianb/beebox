@@ -32,6 +32,7 @@ import { withSecurityHeaders } from "./headers";
 import { isExpired, loadManifest } from "./manifest-store";
 import { forbidden, gone, methodNotAllowed, notFound } from "./responses";
 import { handleSite, hasPinnedSiteBindings, readSiteWorkerIdentity } from "./site";
+import { handleSharedSite, hasSharedHostBindings, readSharedHostIdentity } from "./shared-site";
 import { handleSubmit, matchSubmitPath } from "./submit";
 
 type Prefix = "p" | "s" | "a";
@@ -53,10 +54,13 @@ export default {
 export async function handle({ request, env, deps }: { request: Request; env: Env; deps: WorkerDeps }): Promise<Response> {
   // Single exit: every response (including errors) gets the full header set.
   const siteMode = hasPinnedSiteBindings(env);
-  const response = siteMode
-    ? await handleSite({ request, env, deps, identity: readSiteWorkerIdentity(env) })
-    : await route({ request, env, deps });
-  return withSecurityHeaders(response, siteMode ? "site" : "legacy");
+  const sharedMode = hasSharedHostBindings(env);
+  const response = sharedMode
+    ? await handleSharedSite({ request, env, deps, identity: readSharedHostIdentity(env) })
+    : siteMode
+      ? await handleSite({ request, env, deps, identity: readSiteWorkerIdentity(env) })
+      : await route({ request, env, deps });
+  return withSecurityHeaders(response, siteMode || sharedMode ? "site" : "legacy");
 }
 
 /** Route a request to a response WITHOUT security headers (the caller adds them). */

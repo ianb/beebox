@@ -6102,17 +6102,15 @@ tests:
   # === Static site publishing ===
   # The nested publication guide is intentionally lazy: agents should find
   # it when working under src/publications, not carry it on every turn.
-  # Status (2026-09-25): all 6 current audits passed with Claude in a
-  # disposable synthetic box against the installed guide and shared notes; the
-  # custom-hostname case passed in a focused run. A first run had one false
-  # negative: the positive-export answer correctly described building a new
-  # object from intended fields, but the predicate recognized only alternate
-  # wording; the predicate now covers that equivalent wording, and the focused
-  # rerun passed. The audience audit distinguishes disabled first publication,
-  # immediate same-scope refresh, and member approval for scope changes. A later
-  # filtered status-audit retry was blocked before agent launch: the bundled
-  # Claude binary failed to launch, and a Codex override failed with a missing
-  # executable. The revised status rule is unverified.
+  # Status (2026-09-26): the previous authoring and custom-hostname audits
+  # passed against the then-current guide; those expectations were replaced by
+  # shared-host setup and shared-origin-trust audits. The changed audits remain
+  # unverified. Attempts on the worktree's symlinked package were correctly
+  # blocked by the box safety guard. A disposable standalone box then failed
+  # before the agent prompt: the Codex runner exited with “No such file or
+  # directory (os error 2).” One current Claude-runner attempt also failed
+  # before prompt execution because the bundled binary could not launch in this
+  # environment. No agent knowledge result is claimed for the new expectations.
 
   - id: publishing-site-authoring
     prompt: >
@@ -6121,21 +6119,27 @@ tests:
       what must remain private. Give full example paths from the box root for
       the static folder, project folder, and shared private notes. Consult the
       installed publishing guide; also explain how to find an eligible
-      connection name, what to do if none is listed, and which private
-      credentials or configuration must not be inspected. Do not create or
-      change files.
+      connection name, how the box's one host is configured, what to do if
+      setup is missing, and which private credentials or configuration must
+      not be inspected. Give the public and secret URL shapes. Do not create
+      or change files.
     context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
       Reads the installed guide, distinguishes finished static files from the
       site-local project, notes the separate package/lock for project mode,
-      and keeps private notes out of the release.
+      and keeps private notes out of the release. Says Admin selects one
+      connection and hostname for the box before publishing; public sites need
+      an explicit slug and secret links keep the PubId path.
     correct_contains:
       - "field-guide/site/"
       - "field-guide/project/"
       - "src/publications/NOTES.md"
       - "bbx pub connections"
+      - "Admin"
+      - "/s/"
+      - "slug"
     correct_matches:
       - '(?:no|none|nothing|empty)[\s\S]{0,180}(?:connection|grant)[\s\S]{0,160}(?:ask|request)[\s\S]{0,120}(?:admin|boxholder)|(?:ask|request)[\s\S]{0,160}(?:admin|boxholder)[\s\S]{0,120}(?:connection|grant)'
       - '(?:never|do not|don.t)[\s\S]{0,120}(?:read|inspect|search|open)[\s\S]{0,120}(?:machine )?(?:secret|credential|server config)'
@@ -6245,38 +6249,64 @@ tests:
       - 'not be spread to other sites|skip notes scoped to other sites|(?:ignore|do not apply|don.t apply)[\s\S]{0,180}(?:other|different|site-specific)|(?:do not|don.t|should not|do not blindly)[\s\S]{0,120}(?:carry|copy|spread|apply)[\s\S]{0,120}(?:over|other sites|another site)'
     tags: [publish-sites]
 
-  - id: publishing-custom-hostname-admin
+  - id: publishing-shared-host-setup
     prompt: >
-      A Cloudflare administrator has assigned a custom hostname to a prepared
-      secret-link site, but the box member has not approved the new destination
-      yet. Explain who may assign it versus who approves, what the agent should
-      and should not do next, how to find the eventual viewer URL, and what
-      caveats remain after approval, including what to do if Cloudflare
-      attachment is still pending. Consult the installed publishing guide; do
-      not create or change files.
+      This box has never published a site. Explain what the administrator
+      configures before the first publication, how the agent discovers the
+      selected connection and what it does after preparing the site, and which
+      exact paths public and secret sites use. A legacy public site has no
+      slug yet and a slug change may be pending; explain how it joins the
+      shared host, what stays live until approval, and how status distinguishes
+      the approved destination from the legacy URL and candidate. Do not create
+      or change files.
     context_dir: src/publications
     expected_level: knows_about
     should_read: ["node_modules/beebox/box-docs/publishing.md"]
     watch_for: >
-      Says the hostname assignment requires the authenticated Bee Box owner,
-      not a definition or CLI field; waits for a signed-in box member to
-      approve the candidate; checks
-      managed status for the approved URL and keeps `/s/<pubId>/`; mentions
-      workers.dev remains alternate, HTTPS may still be provisioning, pending
-      attachment blocks approval and can only retry the reserved exact host,
-      and Bee Box has no detach/remap flow.
+      Reads the installed guide; says the owner configures one hostname and
+      selects one granted connection for this box in Admin before any site;
+      the agent uses that connection, prepares, and gives the boxholder the
+      approval link rather than setting up Cloudflare; public uses an explicit
+      `/<slug>/` and secret uses the full `/s/<pubId>/` capability path. A
+      legacy public site needs an explicit slug before it can join the shared
+      host; its current Worker URL continues until approval, and the candidate
+      destination is distinct from the approved route.
     correct_contains:
-      - "publication.json"
-      - "bbx pub status"
+      - "Admin"
+      - "bbx pub connections"
       - "/s/"
-      - "workers.dev"
-      - "pending"
+      - "approval"
     correct_matches:
-      - '(?:authenticated|global)[\s\S]{0,80}(?:Bee Box )?(?:owner|administrator)[\s\S]{0,160}(?:assign|custom hostname)|(?:assign|custom hostname)[\s\S]{0,160}(?:authenticated|global)[\s\S]{0,80}(?:owner|administrator)'
-      - '(?:do not|don.t|never)[\s\S]{0,120}(?:set|add|put|assign)[\s\S]{0,100}(?:hostname|host)[\s\S]{0,120}(?:publication\.json|definition|CLI|command)|(?:hostname|host)[\s\S]{0,180}(?:admin|administrator)[\s\S]{0,180}(?:not|never|cannot)[\s\S]{0,120}(?:agent|CLI|definition)'
-      - '(?:signed-in|signed in)[\s\S]{0,120}(?:member of this box|box member|member)[\s\S]{0,160}(?:approve|approval)|(?:approve|approval)[\s\S]{0,180}(?:signed-in|box member|member of this box)'
-      - '/s/[\s\S]{0,120}(?:PubId|publication id|full|complete|preserve|secret)|(?:PubId|publication id)[\s\S]{0,120}/s/'
-      - '(?:HTTPS|certificate)[\s\S]{0,140}(?:provision|time|ready|reach)|(?:provision|time)[\s\S]{0,140}(?:HTTPS|certificate)'
-      - '(?:cannot|can.t|no)[\s\S]{0,100}(?:detach|remap)|(?:detach|remap)[\s\S]{0,100}(?:not available|not supported|manual|Cloudflare)'
-      - '(?:pending|unconfirmed)[\s\S]{0,180}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)[\s\S]{0,120}(?:retry|again)|(?:retry|again)[\s\S]{0,160}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)'
+      - '(?:one|a single)[\s\S]{0,100}(?:hostname|host)[\s\S]{0,100}(?:box|Admin)|(?:box|Admin)[\s\S]{0,140}(?:one|a single)[\s\S]{0,100}(?:hostname|host)'
+      - '(?:before|prior to)[\s\S]{0,100}(?:first|new)[\s\S]{0,100}(?:site|publication)|(?:first|new)[\s\S]{0,100}(?:site|publication)[\s\S]{0,100}(?:before|after Admin|host setup)'
+      - '(?:explicit|chosen|set)[\s\S]{0,100}slug|slug[\s\S]{0,100}(?:explicit|required|set)'
+      - '/<slug>/|/[a-z0-9-]+/'
+      - '(?:agent|CLI)[\s\S]{0,160}(?:does not|never|cannot)[\s\S]{0,140}(?:assign|configure|set up)[\s\S]{0,120}(?:host|hostname|Cloudflare)|(?:owner|administrator)[\s\S]{0,180}Admin[\s\S]{0,180}(?:host|hostname)'
+      - '(?:legacy|old)[\s\S]{0,140}(?:Worker|workers\.dev|publication)[\s\S]{0,160}(?:URL|route)[\s\S]{0,120}(?:live|serving|continues)|(?:live|serving)[\s\S]{0,160}(?:legacy|old)[\s\S]{0,120}(?:Worker|URL|route)'
+      - '(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)[\s\S]{0,160}(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)|(?:candidate|pending)[\s\S]{0,120}(?:separate|different|distinct)[\s\S]{0,160}(?:approved|current)[\s\S]{0,120}(?:destination|route|URL)'
+    tags: [publish-sites]
+
+  - id: publishing-shared-origin-trust
+    prompt: >
+      Two different sites are published by the same box. Can their JavaScript
+      read each other's same-origin data or the box's browser storage? Does
+      CORS or an iframe isolate them? Explain the boxholder's decision and one
+      practical consequence. Read the installed publishing guide.
+    context_dir: src/publications
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    watch_for: >
+      Says same-box pages share one origin, web storage, and same-origin script
+      access by deliberate boxholder choice; CORS is not isolation and no
+      iframe is supplied. Treats sites as mutually trusted and does not put
+      sensitive data in browser storage shared by those pages.
+    correct_contains:
+      - "CORS"
+      - "iframe"
+    correct_matches:
+      - '(?:same.origin|same origin)[\s\S]{0,180}(?:share|access|storage|read|request)|(?:share|access|storage)[\s\S]{0,180}(?:same.origin|same origin)'
+      - '(?:mutually trust|trust each other|mutual trust)[\s\S]{0,160}(?:box|site|publication)|(?:box|site|publication)[\s\S]{0,160}(?:mutually trust|trust each other|mutual trust)'
+      - '(?:CORS)[\s\S]{0,120}(?:does not|cannot|no)[\s\S]{0,100}(?:isolate|separate)|(?:does not|cannot)[\s\S]{0,100}(?:isolate|separate)[\s\S]{0,100}CORS'
+      - '(?:iframe)[\s\S]{0,100}(?:not|no|does not|without)|(?:no|not)[\s\S]{0,100}iframe'
+      - '(?:sensitive|private)[\s\S]{0,140}(?:browser|web)[\s\S]{0,100}storage|(?:browser|web)[\s\S]{0,100}storage[\s\S]{0,140}(?:sensitive|private)'
     tags: [publish-sites]

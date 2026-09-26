@@ -30,7 +30,30 @@ publicationUrl({ workersHostname: "site.workers.dev", pubId, scope: null })
 
 samePublicationAudience({ requested: { tier: "public", customHostname: "new.example.org" }, approved: { tier: "public", customHostname: "old.example.org" } })
 => false
+```
 
+Shared-host routes put the public slug at the host root and keep secret URLs
+under the unguessable PubId path. They take precedence over legacy custom hosts.
+
+```ts
+const sharedPublic = { tier: "public", slug: "hello", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/hello/" } };
+publicationUrl({ workersHostname: null, pubId, scope: sharedPublic })
+=> https://publish.example.org/hello/
+
+publicationUrl({ workersHostname: null, pubId, scope: { tier: "secret", sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: `/s/${pubId}/` } } })
+=> https://publish.example.org/s/abcdefghijklmnopqrstuvwxyz/
+
+publicationUrl({ workersHostname: "legacy.workers.dev", pubId, scope: { ...sharedPublic, customHostname: "legacy.example.org" } })
+=> https://publish.example.org/hello/
+
+publicationUrl({ workersHostname: null, pubId, scope: { ...sharedPublic, sharedHost: { ...sharedPublic.sharedHost, path: "//attacker.example/" } } })
+=> null
+
+samePublicationAudience({ requested: sharedPublic, approved: { ...sharedPublic, sharedHost: { ...sharedPublic.sharedHost, hostname: "other.example.org" } } })
+=> false
+```
+
+```ts
 samePublicationAudience({ requested: { tier: "accounts", allowedEmails: ["b@example.org", "a@example.org"] }, approved: { tier: "accounts", allowedEmails: ["a@example.org", "b@example.org"] } })
 => true
 ```

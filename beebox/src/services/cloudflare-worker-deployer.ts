@@ -5,10 +5,19 @@ import type { BearerProvider } from "./cloudflare-bearer.js";
 
 export interface PublicationWorkerDeployer {
   deploy(args: {
+    mode: "pinned";
     scriptName: string;
     bucketName: string;
     pubId: string;
     hostHandle: string;
+    workerVersion: string;
+    bundle: Uint8Array;
+  } | {
+    mode: "shared";
+    scriptName: string;
+    bucketName: string;
+    hostHandle: string;
+    hostname: string;
     workerVersion: string;
     bundle: Uint8Array;
   }): Promise<void>;
@@ -29,7 +38,7 @@ function deployError(message: string): CloudflareWorkerDeployError {
   return new CloudflareWorkerDeployError(message);
 }
 
-/** Upload the packaged module Worker and bind it to exactly one R2 bucket and PubId. */
+/** Upload the packaged Worker with either a legacy PubId pin or shared box routing. */
 export function createCloudflareWorkerDeployer(
   config: { accountId: string; bearer: BearerProvider },
   deps?: { fetch?: WorkerDeployFetch },
@@ -39,13 +48,22 @@ export function createCloudflareWorkerDeployer(
   return {
     async deploy(args) {
       const form = new FormData();
+      const routingBindings = args.mode === "shared"
+        ? [
+          { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
+          { type: "plain_text", name: "PUB_BOX_HANDLE", text: args.hostHandle },
+          { type: "plain_text", name: "PUB_HOSTNAME", text: args.hostname },
+        ]
+        : [
+          { type: "plain_text", name: "PUB_ID", text: args.pubId },
+          { type: "plain_text", name: "HOST_HANDLE", text: args.hostHandle },
+        ];
       form.set("metadata", JSON.stringify({
         main_module: "index.js",
         compatibility_date: "2026-07-06",
         bindings: [
           { type: "r2_bucket", name: "PUB_STORE", bucket_name: args.bucketName },
-          { type: "plain_text", name: "PUB_ID", text: args.pubId },
-          { type: "plain_text", name: "HOST_HANDLE", text: args.hostHandle },
+          ...routingBindings,
           { type: "plain_text", name: "PUB_WORKER_VERSION", text: args.workerVersion },
         ],
       }));

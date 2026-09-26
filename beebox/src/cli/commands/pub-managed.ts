@@ -12,6 +12,7 @@ import { boxClient } from "../lib/box-client.js";
 type PublicationCandidate = inferRouterOutputs<AppRouter>["publications"]["prepare"];
 type PublicationSite = inferRouterOutputs<AppRouter>["publications"]["list"]["sites"][number];
 type PublicationConnections = inferRouterOutputs<AppRouter>["publications"]["connections"];
+type SharedHost = inferRouterOutputs<AppRouter>["publications"]["list"]["sharedHost"];
 
 function printBoxClientError(message: string): never {
   console.error(`Error: ${message}`);
@@ -50,9 +51,16 @@ function candidateDestination(site: PublicationSite): string | null {
   return site.pending === null ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: site.pending.requestedScope });
 }
 
-function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[] } | null): string {
+function legacyWorkersDestination(site: PublicationSite): string | null {
+  const approved = site.approved;
+  if (site.hostname === null || approved === null || (approved.customHostname === undefined && approved.sharedHost === undefined)) return null;
+  const { customHostname: _customHostname, sharedHost: _sharedHost, ...legacyScope } = approved;
+  return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: legacyScope });
+}
+
+function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[]; sharedHost?: { path: string } } | null): string {
   if (scope === null) return "unknown audience";
-  if (scope.tier === "public") return `public${scope.slug ? ` at /p/${scope.slug}/` : ""}`;
+  if (scope.tier === "public") return `public${scope.sharedHost?.path ? ` at ${scope.sharedHost.path}` : scope.slug ? ` at /${scope.slug}/` : ""}`;
   if (scope.tier === "accounts") return `accounts (${scope.allowedEmails?.length ?? 0} allowed)`;
   return scope.tier;
 }
@@ -76,7 +84,8 @@ export function publicationSiteLines(sites: PublicationSite[]): string[] {
       ? `; prepared audience ${audienceLabel(site.pending.requestedScope)}${nextDestination ? `; candidate URL: ${nextDestination}` : ""}`
       : "";
     const destinationLabel = servingScope === null ? "candidate URL" : "publication";
-    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${candidate}`;
+    const legacyAlias = legacyWorkersDestination(site);
+    return `${site.name} — ${serving}; ${audience}; ${active}; ${prepared}${destination ? `; ${destinationLabel}: ${destination}` : ""}${legacyAlias ? `; legacy workers.dev URL: ${legacyAlias}` : ""}${candidate}`;
   });
 }
 
@@ -84,6 +93,12 @@ export function publicationConnectionsLines(result: PublicationConnections): str
   return result.connections.length === 0
     ? ["No active Cloudflare publishing connections are granted to this box."]
     : ["Active Cloudflare publishing connections granted to this box:", ...result.connections.map((name) => `  ${name}`)];
+}
+
+export function publicationSharedHostLines(sharedHost: SharedHost): string[] {
+  if (sharedHost === null) return ["Shared publication host: not configured; a member must set it up in Admin before new publications can be prepared."];
+  const state = sharedHost.status === "attached" ? "ready" : "setup pending; member should retry in Admin";
+  return [`Shared publication host: https://${sharedHost.hostname}/ (${state}; connection ${sharedHost.connectionName})`];
 }
 
 export function publicationApprovalLines(): string[] {
@@ -101,6 +116,8 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   const servingUrl = site?.approved === null || site === undefined ? null : publicationDestinationUrl({ hostname: site.hostname, pubId: candidate.pubId, scope: site.approved });
   const candidateUrl = publicationDestinationUrl({ hostname: site?.hostname ?? null, pubId: candidate.pubId, scope: candidate.requestedScope });
   if (servingUrl !== null) lines.push(`  publication URL: ${servingUrl}`);
+  const legacyAlias = site === undefined ? null : legacyWorkersDestination(site);
+  if (legacyAlias !== null) lines.push(`  legacy workers.dev URL: ${legacyAlias}`);
   if (candidateUrl !== null && candidateUrl !== servingUrl) lines.push(`  candidate URL (awaiting member approval): ${candidateUrl}`);
   else if (candidateUrl !== null) lines.push(`  publication URL: ${candidateUrl}`);
   lines.push(...approvalLinkLines());
@@ -139,6 +156,7 @@ const sitesCommand = new Command("sites")
     if (!client.ok) printBoxClientError(client.error.message);
     try {
       const result = await client.value.publications.list.query();
+      for (const line of publicationSharedHostLines(result.sharedHost)) console.log(line);
       for (const line of publicationSiteLines(result.sites)) console.log(line);
       if (result.sites.length > 0) for (const line of approvalLinkLines()) console.log(line);
     } catch (error) {
