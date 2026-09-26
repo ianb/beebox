@@ -10,7 +10,6 @@ const providerError = z.object({ code: z.number(), message: z.string() });
 const envelope = z.object({
   success: z.boolean(),
   errors: z.array(providerError).nullable().optional(),
-  messages: z.array(providerError).nullable().optional(),
   result: z.unknown().optional(),
 });
 const zoneSchema = z.object({ id: z.string(), name: z.string(), status: z.string(), account: z.object({ id: z.string() }) });

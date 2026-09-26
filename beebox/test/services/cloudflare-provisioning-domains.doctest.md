@@ -51,6 +51,18 @@ JSON.stringify({ hostnameFilter: getCall.url.searchParams.get("hostname"), found
 => {"hostnameFilter":"site.example.com","found":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"},"put":{"hostname":"site.example.com","service":"bbx-site","zone_id":"zone-1","zone_name":"example.com"},"attached":{"id":"domain-id","hostname":"site.example.com","service":"bbx-site","environment":"production","zoneId":"zone-1","zoneName":"example.com"}}
 ```
 
+The API's informational `messages` value is not part of the adapter's consumed
+contract, so unexpected non-null shapes remain ignored.
+
+```ts continue
+const informationalMessages = createCloudflareProvisioningClient(
+  { accountId: "0123456789abcdef0123456789abcdef", bearer: staticBearer("test-token") },
+  { fetch: async () => new Response(JSON.stringify({ success: true, errors: null, messages: { notice: true }, result: [] }), { status: 200 }) },
+);
+(await informationalMessages.listWorkerDomains("site.example.com")).length
+=> 0
+```
+
 HTTP 200 error envelopes preserve only bounded, control-character-free Cloudflare
 error codes and messages, so permission failures are diagnosable without dumping
 an arbitrary response body.
