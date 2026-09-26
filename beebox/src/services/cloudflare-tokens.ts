@@ -23,7 +23,7 @@ import { z } from "zod";
 import {
   type CloudflareApiErrorDetail,
   ProvisioningRequestError,
-} from "./cloudflare-provisioning.js";
+} from "./cloudflare-provisioning-error.js";
 
 /** One token permission group (opaque per-account id + display name). */
 export interface TokenPermissionGroup {

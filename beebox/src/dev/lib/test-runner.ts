@@ -126,11 +126,9 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   try {
     if (engine === "codex" && test.fixture !== undefined) {
       await generateAgentContextMirrors(boxRoot);
-      for (const fixturePath of [...fixturePaths]) {
-        if (path.basename(fixturePath) === CLAUDE_MD) {
-          fixturePaths.push(path.join(path.dirname(fixturePath), AGENTS_MD));
-        }
-      }
+      fixturePaths.push(...fixturePaths
+        .filter((fixturePath) => path.basename(fixturePath) === CLAUDE_MD)
+        .map((fixturePath) => path.join(path.dirname(fixturePath), AGENTS_MD)));
     }
     const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
     // In chat mode, mirror what ChatSession.resolveSystemPrompt builds.
