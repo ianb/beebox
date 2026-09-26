@@ -26,7 +26,7 @@ defaults to `--status open`, and `bbx query todos` defaults to open plus parked.
 - `beebox/test/cli/todos.doctest.md`.
 - Comments in `beebox/src/core/todo/` and `beebox/src/shared/todo-model.ts`.
 - `beebox/src/schemas/todo-review-job.ts` instructions, if they still name it.
-- `beebox/docs/cards-as-markdown.md` and the implemented todo-annotation plan
+- `beebox/docs/cards/format.md` and the implemented todo-annotation plan
   (history; leave the plan alone).
 
 Run `grep -rn "bbx todos" beebox/src beebox/docs beebox/test` for the current

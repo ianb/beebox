@@ -19,8 +19,10 @@ export interface ChatMessageContent {
    * more kinds we don't surface individually); everything we *build* here is
    * one of these.
    */
-  type: "text" | "image" | "tool_use";
+  type: "text" | "image" | "tool_use" | "thinking";
   text?: string;
+  /** For thinking blocks: empty unless the model's thinking display returns text. */
+  thinking?: string;
   id?: string;
   name?: string;
   input?: Record<string, unknown>;
@@ -101,6 +103,8 @@ export interface ChatMessageAssistant {
     role: string;
     content: ChatMessageContent[];
     stop_reason?: string | null;
+    /** The API model that produced this message, when the backend reports one. */
+    model?: string;
   };
 }
 

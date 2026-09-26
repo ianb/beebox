@@ -326,8 +326,8 @@ box-local `element()` schema converted to `cardSchema`. Note (Codex round 2):
 that audit**, since it breaks any box still defining an XML schema (the ledger
 `bill` schema). So "A+B land first, box-independent" holds for everything
 *except* chunk 2, which ships with Track C's gate. Doc updates: `CLAUDE.md:87` (the cardworks bullet),
-`CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
-it now means "from `src/cards/`"); retire `docs/migrations.md` references to
+`CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
+it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
 the deleted migrators as appropriate.
 
 **First implementation chunk.** After box migration is confirmed complete,

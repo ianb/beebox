@@ -50,6 +50,11 @@ export interface ResolvedWorktree {
   root: string;
   backendCwd: string;
   frontendCwd: string;
+  /** The frontend package's own `vite` binary: the one `pnpm build` runs there,
+   *  so dev and the production build use the same Vite. The workspace root's
+   *  hoisted `node_modules/.bin/vite` can be a different major pulled in by
+   *  another package. */
+  viteBin: string;
   boxes: string[];
 }
 

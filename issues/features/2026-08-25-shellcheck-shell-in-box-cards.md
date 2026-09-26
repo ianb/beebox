@@ -19,7 +19,7 @@ only.
 Where shell lives in cards today:
 
 - procedure cards — step `validate.shells` gate commands (the only enforced
-  gate for agent-applied migrations, per `docs/migrations.md`), and any `runs:`
+  gate for agent-applied migrations, per `docs/cards/migrations.md`), and any `runs:`
   in steps;
 - `*.scheduled-script.card` — the `runs:` command `bbx tick` executes
   (`src/cli/commands/tick.ts`, `tick-helpers.ts`);
@@ -36,5 +36,5 @@ hook `bbx init` installs runs `bbx validate --pre-commit` on every box commit,
 so a hard error would block box commits on any machine without shellcheck.
 
 Provisioning: add `shellcheck` to `deploy/setup-server.sh:22` and the
-developer install lists (`docs/developer-install.md:32,36`) — today only the
+developer install lists (`docs/install/developer.md:32,36`) — today only the
 dev-machine `schedules/` gate needs it, and it is not in either list.

@@ -12,7 +12,7 @@ any box is crash-looping or crash-budget-latched, 200 otherwise — a `stopped`
 prove a child can serve (what the passive verdict can't see on a lazy hub).
 Both are diag-key-gated (`hub-health-routes.ts`) — they used to be open and
 leaked slugs/PIDs/ports. The deploy verifies both; full rationale in
-`docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
+`docs/server/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 counter) — the live signal is `consecutiveFailures`.
 
 ## Spawned children get an allowlisted env, not a spread

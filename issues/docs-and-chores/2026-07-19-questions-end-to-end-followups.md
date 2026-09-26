@@ -12,7 +12,7 @@ unfinished operational steps, and the review passes left named test gaps.
 ## Rollout (blocking — the feature is half-deployed until these run)
 
 - **Run the `question-lifecycle` migration on prod boxes and
-  `~/src/boxes/test1`** per `beebox/docs/migrations.md`
+  `~/src/boxes/test1`** per `beebox/docs/cards/migrations.md`
   (`scripts/migrate/question-lifecycle-run.ts` — dry-run first, then
   `--apply`; exit code 2 means select-options violations to fix by hand).
   It has only run on the questions worktree's test-box clone. Until it

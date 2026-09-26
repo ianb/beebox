@@ -59,6 +59,7 @@ const sessionContentBlockSchema = z.object({
   dataBase64: z.string().optional(),
   imageUrl: z.string().optional(),
   imageRef: z.string().optional(),
+  progressUpdate: z.literal(true).optional(),
 });
 
 /**

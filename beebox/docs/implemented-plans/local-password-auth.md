@@ -530,8 +530,8 @@ BoxSelection rewire; setup page and banner follow.
 
 ### Track H — docs, deploy, migration
 
-**What.** `docs/developer-install.md` + `docs/docker-install.md` +
-`docs/agent-install.md` gain the first-run account step;
+**What.** `docs/install/developer.md` + `docs/install/docker.md` +
+`docs/install/agent.md` gain the first-run account step;
 `deploy/README.md:196-217` env template gains `BBX_AUTH_FILE` (default is
 fine — `/home/beebox/.beebox-auth.json`) and drops "Auth (optional…)" framing;
 `docs/todo-security.md` records the new posture; the issue file moves to

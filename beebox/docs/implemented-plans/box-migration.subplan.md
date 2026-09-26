@@ -51,7 +51,7 @@ loader but without schema validation. Migration restores them to first-class.
   is the discriminator, **no `type:` field** in frontmatter; `bbx validate`
   output is the correctness gate; "don't add features beyond what the task
   requires."
-- **`docs/migrations.md`** — the established migration framework: `bbx migrate`
+- **`docs/cards/migrations.md`** — the established migration framework: `bbx migrate`
   drives the ordered `MIGRATIONS` manifest (`src/core/migrations.ts`), each box
   tracks applied entries in `config/migrations.jsonl`, a failed entry halts the
   run and is not recorded. New transforms are added as **manifest entries**, not
@@ -160,7 +160,7 @@ designed here.
 **What.** For each box, in a safe order: `bbx migrate --apply` (runs Tracks 0-1
 entries + the 28 existing), then `bbx validate`, then commit within the box repo.
 
-**Server mechanics** (`docs/server-operations.md`). Boxes are
+**Server mechanics** (`docs/server/operations.md`). Boxes are
 `/home/beebox/boxes/<box>/`, owned by `callback`; the server runs source via
 tsx (no build step), so migrators run in place:
 

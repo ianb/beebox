@@ -32,6 +32,7 @@ export function printConfigureHelp(): void {
       "  <server-url-with-box>  e.g. https://beebox.run/family",
       "  --folder <path>        folder to watch for scans (prompted if omitted on a TTY)",
       "  --disposition <value>  keep (default), archive, or trash",
+      "  --photos-album <name> export new Apple Photos album items before upload (requires keep)",
       "  --name <token-name>    label shown in the confirmation message (default: uploader)",
       "  --config <path>        config file to write (default: ./scan-uploader.json if",
       "                          present, else ~/.config/scan-uploader.json)",
@@ -47,6 +48,7 @@ export interface ConfigureFlags {
   readonly serverUrlWithBox: string | undefined;
   readonly folder: string | undefined;
   readonly disposition: string | undefined;
+  readonly photosAlbum: string | undefined;
   readonly name: string | undefined;
   readonly configPath: string | undefined;
 }
@@ -76,6 +78,7 @@ export function parseConfigureArgs(args: readonly string[]): ConfigureFlags {
     serverUrlWithBox,
     folder: flags.get("folder"),
     disposition: flags.get("disposition"),
+    photosAlbum: flags.get("photos-album"),
     name: flags.get("name"),
     configPath: flags.get("config"),
   };
@@ -144,6 +147,7 @@ async function runConfigure(args: readonly string[]): Promise<ConfigureResult> {
     serverUrlWithBox: flags.serverUrlWithBox,
     folder,
     disposition,
+    ...(flags.photosAlbum === undefined ? {} : { photosAlbum: flags.photosAlbum }),
     name: flags.name ?? DEFAULT_NAME,
     token,
     configPath,

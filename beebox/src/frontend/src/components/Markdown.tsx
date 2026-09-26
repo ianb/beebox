@@ -23,7 +23,6 @@
 
 import { Fragment, useMemo } from "react";
 import * as React from "react";
-import { useParams } from "@tanstack/react-router";
 import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
@@ -33,6 +32,7 @@ import { makeRecipeComponents } from "./RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
+import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { makeLink, type LinkContext } from "./markdown-link";
 import { Image } from "./ui/Image";
 import { VideoEmbed } from "./ui/VideoEmbed";
@@ -45,6 +45,7 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { parseMarkdown } from "../lib/markdoc-parse";
+import { useBoxSlug } from "../lib/box-slug";
 import { transformedResolvedImageUrl } from "../lib/image-transform-url";
 import type { ReactNode } from "react";
 
@@ -133,7 +134,7 @@ interface RenderConfigBundle {
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
 
-function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
+function buildRenderConfig(linkCtx: LinkContext, cardPath: string | null): RenderConfigBundle {
   const config: Config = {
     ...markdocConfig,
     nodes: {
@@ -167,7 +168,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const briefing = makeBriefingComponents();
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
-  const { TodoInline, TodoBlock } = makeTodoComponents();
+  const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
     <input
@@ -272,6 +273,14 @@ interface MarkdownProps {
   basePath?: string;
   /** See LinkContext.onJumpToQuote — wired by CommentaryView for source chips. */
   onJumpToQuote?: (quoteText: string) => Promise<boolean>;
+  /**
+   * The card whose whole body `children` is, and how many file lines precede
+   * that body. Given, each `{% todo %}` learns its locator
+   * (`shared/todo-locators.ts`) and card path, so it can find its plate state
+   * (`todo/card-todos-context.ts`). Omitted for anything that is not a card's
+   * body (chat, commit messages, a body excerpt): no locators, no controls.
+   */
+  card?: { path: string; bodyLineOffset: number };
 }
 
 export function Markdown({
@@ -281,13 +290,19 @@ export function Markdown({
   onNavigate,
   basePath,
   onJumpToQuote,
+  card,
 }: MarkdownProps) {
   prose = prose ?? false;
-  const { boxSlug } = useParams({ strict: false });
+  const boxSlug = useBoxSlug();
+  const cardPath = card?.path ?? null;
+  const bodyLineOffset = card?.bodyLineOffset ?? null;
   const { tree, mergedComponents } = useMemo(() => {
     const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
-    const { config, components: defaults } = buildRenderConfig(ctx);
+    const { config, components: defaults } = buildRenderConfig(ctx, cardPath);
     const ast = parseMarkdown(children);
+    // The collector's own numbering, so a rendered todo and the todo a write
+    // addresses cannot disagree about which one `line#2` is.
+    if (bodyLineOffset !== null) stampLocators(assignLocators(ast, bodyLineOffset));
     const t: RenderableTreeNode = transform(ast, config);
     // `components` is `Partial<...>`, so a plain object spread would carry
     // possibly-`undefined` values into the merged map; only copy overrides
@@ -297,7 +312,7 @@ export function Markdown({
       if (override !== undefined) merged[name] = override;
     }
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote]);
+  }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote, cardPath, bodyLineOffset]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents,

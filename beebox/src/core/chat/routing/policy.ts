@@ -16,6 +16,8 @@ export const routingCandidateSchema = z.object({
   landmark: z.object({ path: z.string(), label: z.string() }).optional(),
   lastActivity: z.string().optional(), recentContext: z.string().optional(),
   contextTruncated: z.boolean().optional(),
+  totalEntries: z.number().int().nonnegative().optional(),
+  lastMessageAt: z.string().datetime().optional(),
   rubric: z.array(z.object({ when: z.string(), avoid: z.string().optional(), examples: z.array(z.string()).optional() })).optional(),
 });
 export type RoutingCandidate = z.infer<typeof routingCandidateSchema>;

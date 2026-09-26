@@ -269,7 +269,7 @@ narrowing becomes visible flow control in ONE place, not a silently divergent
 adapter). Verify thread consumers (`<chat-response>` extraction,
 `resolveTurn`) are unaffected by the extra message types; the lifecycle
 doctest/scenario coverage must exercise a thread turn containing
-`stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
+`stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 still cites pre-move `chat-session-*.ts` filenames.
 
 The remaining extraction question (base class vs composition) is explicitly

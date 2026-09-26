@@ -1,6 +1,8 @@
 import { assign, fromCallback, fromPromise, setup } from "xstate";
 import { errorMessage } from "@shared/error-guards";
-import { trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc";
+import { getQueryKey } from "@trpc/react-query";
+import { fetchSharedStatus } from "../lib/trpc/shared-status";
 import { RequestError } from "../lib/errors";
 
 export type CodexStatus = Awaited<ReturnType<typeof trpcClient.admin.codexStatus.query>>;
@@ -19,17 +21,19 @@ type CodexAuthEvent =
   | { type: "REFRESH" }
   | { type: "POLL_RESULT"; status: CodexStatus };
 
-const fetchStatus = fromPromise(async () => trpcClient.admin.codexStatus.query());
+/** Shared with the admin overview's query of the same procedure. */
+const readStatus = () => fetchSharedStatus({ queryKey: getQueryKey(trpc.admin.codexStatus, undefined, "query"), queryFn: () => trpcClient.admin.codexStatus.query() });
+const fetchStatus = fromPromise(async () => readStatus());
 const startLogin = fromPromise(async () => trpcClient.admin.codexLogin.mutate());
 const cancelLogin = fromPromise(async () => trpcClient.admin.codexCancelLogin.mutate());
 const logout = fromPromise(async () => {
   const result = await trpcClient.admin.codexLogout.mutate();
   if (!result.success) throw new RequestError(result.error ?? "Logout failed");
-  return trpcClient.admin.codexStatus.query();
+  return readStatus();
 });
 const pollForLogin = fromCallback(({ sendBack }) => {
   const id = setInterval(() => {
-    trpcClient.admin.codexStatus.query()
+    readStatus()
       .then((status) => { sendBack({ type: "POLL_RESULT", status }); })
       .catch((error: unknown) => { console.debug("[codexAuth] status poll failed:", error); });
   }, 3000);

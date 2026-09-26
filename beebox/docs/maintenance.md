@@ -45,7 +45,8 @@ Periodic tasks that still wait for someone to remember them. Each needs its own
 
 | Task | Command | Cadence it wants |
 |------|---------|------------------|
-| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/knowledge-audits.md` |
+| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/testing/knowledge-audits.md` |
+| Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically otherwise. Guide: `docs/testing/session-critiques.md` |
 | Security overview regeneration | `/security-report` (skill) | At release boundaries, and when the staleness diff over the surface map is non-empty |
 | Doc / prompt refresh | `pnpm prompt-report`, `pnpm prompt-viewer`, `pnpm doc-graph` | The standing tension in `issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md` |
 | Feedback collection | `feedback-review/collect.ts` | `issues/docs-and-chores/2026-07-14-feedback-collection-cadence.md` — items rot before review |
@@ -63,7 +64,7 @@ Not cadence tasks — tools you run because of a change you just made.
 | Circular deps | `pnpm lint:circular` | Weekly through `schedules/supplemental-lint`; also after big refactors. `.madgerc` skips `import type`, so every line is a *value* cycle and means a module needs splitting. Currently zero — any output is news |
 | Security regression scan | `pnpm security:opengrep` (monorepo root) | Before releases, and when touching auth/subprocess/temp-file/prompt boundaries. Discipline and how to add a rule: `security/opengrep/README.md` |
 | Doc images | `pnpm generate:doc-images` | After editing architecture-diagram text or `.mmd` sources. Pipeline: `docs/architecture/CLAUDE.md` |
-| Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and rollout history: `docs/migrations.md` |
+| Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and rollout history: `docs/cards/migrations.md` |
 | Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off, when `bbx validate` shows ref errors that pre-date a migration. Dry-run by default; `--apply` to write |
 | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise |
 

@@ -412,7 +412,7 @@ agent-authored content. Skip-with-rationale per the skill.
    reactor batch. Doctests.
 7. **Notification** — episode latch + `notifyBoxholder`. Doctest with fake
    channels.
-8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
+8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
    notes; close the quota issue; cross-link from the index-lock issue's
    "distinguish lost-a-lock-race from failed" section.
 

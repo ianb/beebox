@@ -138,7 +138,7 @@ through the intended loading path.
   `knows_about` contract.
 - A never-run audit is unverified in both directions — the agent may fail it, or
   the audit may be broken. Running is part of authoring (see
-  `docs/knowledge-audits.md`).
+  `docs/testing/knowledge-audits.md`).
 
 This is the same test the rest of the box-context system trusts: a convention
 without an audit is a convention the agent may silently forget on the next

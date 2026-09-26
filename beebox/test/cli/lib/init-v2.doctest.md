@@ -146,7 +146,7 @@ for (const name of seededScheduleNames) {
 
 ```ts continue
 `count=${seededScheduleNames.length}; enabled=${enabledScheduleNames.join(",")}; disabled=${disabledScheduleNames.join(",")}`
-=> count=7; enabled=gc-procedure-runs,process-retrospective,refresh-maps; disabled=chat-review,check-calendar,check-drive,check-email
+=> count=8; enabled=gc-procedure-runs,process-retrospective,refresh-maps,todo-review; disabled=chat-review,check-calendar,check-drive,check-email
 ```
 
 The Drive seed names the connector by its registered name (`google-drive`; the

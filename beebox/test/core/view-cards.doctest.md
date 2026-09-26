@@ -43,6 +43,18 @@ result.cards[0].path
 result.cards[0].frontmatter.status
 => new
 
+result.cards[0].body
+=> Test memo content
+```
+
+`bodyLineOffset` counts the file lines before the body, from the same split
+the todo collector uses, so a todo a view renders through `Markdown` gets the
+collector's locator. The memo's frontmatter block is four lines:
+
+```ts continue
+result.cards[0].bodyLineOffset
+=> 4
+
 result.files.map((f) => f.path).join(", ")
 => _content/inbox/Test.attach/notes.txt
 

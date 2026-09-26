@@ -60,6 +60,7 @@ check-email.scheduled-script.card
 gc-procedure-runs.scheduled-script.card
 process-retrospective.scheduled-script.card
 refresh-maps.scheduled-script.card
+todo-review.scheduled-script.card
 ```
 
 The working tree is clean — everything is committed, nothing left untracked:
@@ -96,6 +97,7 @@ await listFiles(boxRoot, "_config/procedures")
 browser-task-drain.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
+todo-review.procedure.card
 trick-secret-runtime.procedure.card
 view-card-shape.procedure.card
 ```

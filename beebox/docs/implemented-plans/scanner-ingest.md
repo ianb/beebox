@@ -204,7 +204,7 @@ Tracks 1–3 live on prod.
 - **First implementation chunk:** a dry-run of `to-annex` against a clone of
   the prod estate box (restored from the local backup), verified with
   `annex/doctor.ts`, then the runbook for the real cutover written into
-  `docs/server-operations.md`.
+  `docs/server/operations.md`.
 
 ### Track 1 — Scan upload tokens (dedicated credential)
 

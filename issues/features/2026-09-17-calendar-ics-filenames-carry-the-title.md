@@ -57,7 +57,7 @@ old file and writes the new one, which is the path a genuine date change
 already uses.
 
 That contradicts the design rule stated in the same module and in
-`beebox/docs/calendar.md`: **no existing file is ever renamed, so no rename
+`beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
 migration is owed.** Changing the convention silently breaks that promise on
 the next pull of every box.
 
@@ -85,6 +85,6 @@ existing event opaque fixes almost nothing on an established box.
 - The disambiguator. A name that already carries a calendar-id hash must not
   gain a second one; the suffix test runs against the new stem, so re-check it
   against a file named under the old convention.
-- `beebox/docs/calendar.md` needs updating either way. Its Overview already
+- `beebox/docs/connectors/calendar.md` needs updating either way. Its Overview already
   claims "human-readable slugged filenames" and shows examples the code has
   never produced, which is how this was found.

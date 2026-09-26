@@ -4,7 +4,7 @@
  *
  *   node --import tsx beebox/scripts/sdk-steering-probe.ts
  *
- * The chat mid-turn steering design (see docs/chat-session-lifecycle.md) leans
+ * The chat mid-turn steering design (see docs/chat/sessions.md) leans
  * on CLI behavior that is observable but NOT a documented SDK contract:
  *
  *   1. A user message pushed onto the streaming input while a turn is running
@@ -158,7 +158,7 @@ for (const scenario of SCENARIOS) {
 }
 
 if (failed) {
-  console.error("\nSteering behavior changed under this SDK version. Do not ship the bump until docs/chat-session-lifecycle.md and the chat steering design are reconciled.");
+  console.error("\nSteering behavior changed under this SDK version. Do not ship the bump until docs/chat/sessions.md and the chat steering design are reconciled.");
   process.exit(1);
 }
 console.log("\nAll steering behaviors hold on this SDK version.");

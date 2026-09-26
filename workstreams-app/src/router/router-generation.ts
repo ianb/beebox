@@ -7,7 +7,6 @@
 // either — invariant #3 (swallow the execa rejection at the spawn site, before
 // any await) lives here and has a pointing comment at the code implementing it.
 
-import path from "node:path";
 import type { WriteStream } from "node:fs";
 import { boxEntryToArg } from "./box-entry.js";
 import type { WorktreeHandle } from "./router-lifecycle.js";
@@ -114,10 +113,10 @@ export async function spawnGeneration(
   });
   const fastifyOutput = captureOutput(fastify, logStream);
 
-  // pnpm workspace with `nodeLinker: hoisted` (see /pnpm-workspace.yaml) puts all binaries
-  // at the workspace root's node_modules/.bin — per-package node_modules/.bin
-  // dirs aren't populated. Resolve vite from the worktree's monorepo root.
-  const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");
+  // The frontend's own Vite (`wt.viteBin`), not the workspace root's hoisted
+  // `node_modules/.bin/vite`: the root one is whatever major another package
+  // pulled in (Vite 8 via wxt on 2026-09-25, against a config and plugin-react
+  // written for Vite 5), so dev and `pnpm build` ran different bundlers.
   // `--strictPort` because Vite's default is to walk to the NEXT port when the
   // requested one is taken — and the next port is, structurally, the hub's.
   // The three getPort() probes above run in parallel, so the OS hands back
@@ -127,7 +126,7 @@ export async function spawnGeneration(
   // cause 30 lines up its log (observed on `main`, 2026-08-18).
   // Failing loudly here is strictly better: same failure, correct attribution,
   // retryable through the router's existing failed-state path.
-  const vite = effects.spawn(viteBin, {
+  const vite = effects.spawn(wt.viteBin, {
     args: ["dev", "--port", String(frontendPort), "--strictPort"],
     options: {
       cwd: wt.frontendCwd,

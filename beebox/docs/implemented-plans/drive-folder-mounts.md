@@ -106,7 +106,7 @@ config."*).
   verified by grep of `src/`), `DriveSection.tsx` read-only header and its
   `bbx drive add` instruction, `drive.available` (spreadsheet list; not a
   folder picker and not used for mounting), `drive-config.ts` `folders`
-  after migration, `docs/google-drive.md:141-150` "Folder Mounts" section.
+  after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
 - Schema renderer registry: `frontend/src/file-type-registry.ts`
   `registerFileType`; `renderers/gsheet.tsx` and `renderers/extfile.tsx` are
   the shipped per-schema renderers a `gfolder` renderer copies.
@@ -435,7 +435,7 @@ are answerable from skill text alone.
 2. Track 2 CLI commands; then config→card conversion. Depends on 1.
 3. Track 3 router + settings + skill text + audits. Depends on 2.
 4. Track 4 renderers + `syncFolder` mutation. Depends on 3.
-5. Docs: rewrite `docs/google-drive.md` folder section; amend the
+5. Docs: rewrite `docs/connectors/drive.md` folder section; amend the
    2026-06-26 issue (done at plan time); close both issues at /finish.
 
 ## Rollout shape

@@ -75,7 +75,7 @@ while producing nothing stays invisible.
 | D — growth: drop level findings, watch-limit check | ~140 (about half deletions) | ~120 |
 | **Total** | **~670** | **~580** |
 
-Authored docs about 60 lines (`docs/connectors.md`, `docs/health-checks.md`).
+Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 No generated output. About 1,300 changed lines, under the 2,000-line BIG
 CHANGE bar.
 
@@ -124,7 +124,7 @@ only part of the cluster with no workaround today.
   replies on tracked threads hide the anchor incident. The plan therefore
   counts **new items** = `created` paths with no `.attach/` segment, that is,
   new top-level cards. This uses the card format's attachment-scope rule
-  (`docs/cards-as-markdown.md`), not per-connector knowledge. For Telegram
+  (`docs/cards/format.md`), not per-connector knowledge. For Telegram
   `created` holds new chats only (`src/connectors/telegram.ts:215`, *"if
   (result.newThread) created.push(...)"*), so Telegram will rarely qualify as
   a steady producer. That means no false alarms for Telegram, not a wrong
@@ -520,7 +520,7 @@ No new test tier.
 4. Track C: verdict doctest and function, then alert and scheduler hook, then
    health check, mutation and button.
 5. Docs: `docs/connectors.md` (activity record and verdict),
-   `docs/health-checks.md` (two new checks, growth change). File the two
+   `docs/server/health-checks.md` (two new checks, growth change). File the two
    follow-up issues.
 
 ## Rollout shape

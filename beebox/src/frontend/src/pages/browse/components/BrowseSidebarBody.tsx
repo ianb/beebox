@@ -15,6 +15,7 @@ import { ErrorText } from "../../../components/ui/ErrorText";
 import { Toggle } from "../../../components/ui/Toggle";
 import { BrowseSidebarList } from "./BrowseSidebarList";
 import { BrowseLandmarkHeader } from "./BrowseLandmarkHeader";
+import { DirectoryTodos } from "../../../components/todo/DirectoryTodos";
 import { useBrowseListingMode } from "../useBrowseListingMode";
 import type { RouterOutput } from "../../../lib/trpc";
 import type { ViewTarget } from "../../../lib/view-url";
@@ -54,6 +55,7 @@ export function BrowseSidebarBody(props: Props) {
             <Button size="sm" intent="secondary" onClick={onLandmarkRetry}>Try again</Button>
           </Stack>
         ) : null}
+        <DirectoryTodos dir={dirPath} cards={data.cards} />
         <Row gap="xs" align="center" justify="end" className="px-4 py-1.5 border-b border-warm-200">
           <Text as="span" size="xs" tone="muted">Compact</Text>
           <Toggle

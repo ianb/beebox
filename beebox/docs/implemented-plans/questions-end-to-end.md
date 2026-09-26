@@ -252,7 +252,7 @@ stray question cards (scan-import's attach-scope questions — Track E) into
 `box/questions/`; verify no existing select question violates the options
 refinement (the one-option select fixture in
 `test/schemas/schemas.doctest.md:156` gets updated alongside). Run per
-`docs/migrations.md` on test1 + prod boxes. The two live test1 retro
+`docs/cards/migrations.md` on test1 + prod boxes. The two live test1 retro
 questions also get their directives fixed: they instruct edits to the
 briefing's `<agent-needs-to-know>` element, a tag retired by the Markdoc
 migration (current vocabulary is `{% correction %}`, `src/schemas/
@@ -530,7 +530,7 @@ it now; the iOS app's push story will re-open surfacing as its own plan.
 - **Partial migration / transition state** — **ADDRESSED**: all new fields
   optional, old cards load unchanged during the window; the only breaking
   change (`answered-by` removal, select refinement) lands in the same commit
-  as its migration script; boxes migrate per `docs/migrations.md`. A
+  as its migration script; boxes migrate per `docs/cards/migrations.md`. A
   question created pre-migration and answered post-migration works — the
   answer path never touches the removed field.
 
@@ -615,7 +615,7 @@ Each chunk is a commit-sized unit with its tests; the plan ships as one unit
 - **Knowledge audits** land with Track E and are executed (status comment
   recorded in `knowledge-audits.yaml`) before completion.
 - **Migration**: scripted, run first on a scratch clone of test1, then
-  test1, then prod boxes per `docs/migrations.md`; `bbx validate` clean
+  test1, then prod boxes per `docs/cards/migrations.md`; `bbx validate` clean
   before and after. Small blast radius (a handful of question cards exist).
 - **User-story re-audit**: after implementation, re-run the user-story
   method scoped to questions (reader agents → adversarial verification →

@@ -7,7 +7,7 @@ description: Test what a real box agent learned from box-loaded guidance such as
 
 A pointer skill: what the harness is and when to reach for it. Test
 structure, recording results, and interpreting failures live in
-`beebox/docs/knowledge-audits.md`.
+`beebox/docs/testing/knowledge-audits.md`.
 
 ## What it is
 

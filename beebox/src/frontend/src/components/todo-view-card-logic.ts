@@ -188,6 +188,35 @@ export function progressOf(reduction: TodoReduction): { done: number; total: num
   return { done: reduction.done, total: reduction.open + reduction.done + reduction.parked };
 }
 
+/**
+ * "15 on your plate · 4 later" — the plate headline's two numbers, both from
+ * the reduction of a boxholder-scope query. `later` is `quiet`: open minus
+ * what's already on the plate. There is no `quiet` field on the reduction —
+ * it doesn't need one, since `open` and `onPlate` already say it.
+ */
+export function plateHeadline(reduction: TodoReduction): { onPlate: number; later: number } {
+  return { onPlate: reduction.onPlate, later: reduction.open - reduction.onPlate };
+}
+
+/**
+ * How many items an `all`-scope, `assigned`-filtered query actually matched —
+ * the third headline number, "K for the agent". A query's `reduction` counts
+ * every item `scope` admitted, not what `assigned` narrowed it to (`matches`
+ * decides display, not reduction — see `CollectionDef`), so the agent count
+ * has to be read off the matching items themselves.
+ */
+export function matchingItemCount(result: TodoResult): number {
+  let count = 0;
+  for (const group of result.groups) {
+    for (const row of group.rows) {
+      for (const item of row.items) {
+        if (item.matching) count++;
+      }
+    }
+  }
+  return count;
+}
+
 export interface DatedTodo {
   key: string;
   item: TodoRowItem;

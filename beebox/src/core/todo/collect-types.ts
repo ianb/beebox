@@ -12,29 +12,19 @@
  */
 
 import type { TodoPlateInput, TodoPlateState, TodoStatus } from "../../shared/todo-model.js";
+import type { TodoLocator } from "../../shared/todo-locators.js";
+import type { TodoSeeAlso } from "../../shared/todo-text.js";
 
 /**
- * Where a todo lives within its card: a body `{% todo %}` tag (line,
- * 1-indexed, in the FILE, not the body) or an entry in the frontmatter
- * `todos:` list (index).
- *
- * A line can hold more than one todo — `{% todo %}Appraise{% /todo %} — ask
- * Marisol {% todo %}Insure{% /todo %}` is two — so the line alone is not an
- * identity. `nth` (1-based, in document order on that line) separates them,
- * and is OMITTED for the first: `path:line` stays exactly what it has always
- * been for the todo a human means when they cite a line, and only the second
- * and later ones grow the `#2` suffix.
+ * Where a todo lives within its card. Defined in `shared/todo-locators.ts`
+ * (with the pass that assigns it, `assignLocators`) because the frontend
+ * render path needs the same type; re-exported here so every existing
+ * `collect-types.js` import keeps working.
  */
-export type TodoLocator =
-  | { kind: "body"; line: number; nth?: number }
-  | { kind: "frontmatter"; index: number };
+export type { TodoLocator };
 
-/** A `{% see-also %}` reference, from either capture form. */
-export interface TodoSeeAlso {
-  ref: string | undefined;
-  href: string | undefined;
-  note: string | undefined;
-}
+/** Defined beside the text flattening that builds it (`shared/todo-text.ts`); re-exported for existing imports. */
+export type { TodoSeeAlso };
 
 /**
  * One todo exactly as its card spells it — the output of the PURE extract
@@ -58,6 +48,8 @@ export interface TodoItem {
   created: string | undefined;
   due: string | undefined;
   start: string | undefined;
+  /** The todo-review's next-check date, or `"never"` (`docs/plans/todos-ui.md`, Track 7). Never an input to plate state. */
+  recheck: string | undefined;
   seeAlso: TodoSeeAlso[];
   /** Heading texts above the todo, outermost first. `[]` for a frontmatter todo, or a body todo written above the first heading. */
   sectionPath: string[];
@@ -125,6 +117,26 @@ export function formatTodoLocation(todo: Pick<CollectedTodo, "path" | "locator">
   if (locator.kind === "frontmatter") return `${path}#todos[${String(locator.index)}]`;
   const nth = locator.nth === undefined || locator.nth <= 1 ? "" : `#${String(locator.nth)}`;
   return `${path}:${String(locator.line)}${nth}`;
+}
+
+const BODY_LOCATION_RE = /^(.+):(\d+)(?:#(\d+))?$/;
+const FRONTMATTER_LOCATION_RE = /^(.+)#todos\[(\d+)]$/;
+
+/** The inverse of {@link formatTodoLocation}; `null` when `location` is in neither form. */
+export function parseTodoLocation(location: string): { path: string; locator: TodoLocator } | null {
+  const fm = FRONTMATTER_LOCATION_RE.exec(location);
+  if (fm !== null) {
+    const [, path, index] = fm;
+    if (path === undefined || index === undefined) return null;
+    return { path, locator: { kind: "frontmatter", index: Number(index) } };
+  }
+  const body = BODY_LOCATION_RE.exec(location);
+  if (body === null) return null;
+  const [, path, line, nth] = body;
+  if (path === undefined || line === undefined) return null;
+  const locator: TodoLocator =
+    nth === undefined || Number(nth) <= 1 ? { kind: "body", line: Number(line) } : { kind: "body", line: Number(line), nth: Number(nth) };
+  return { path, locator };
 }
 
 /** Body locators sort before frontmatter locators on the same card — an arbitrary but deterministic tie-break (the plan doesn't order the two kinds against each other). */

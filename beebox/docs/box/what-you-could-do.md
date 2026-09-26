@@ -10,9 +10,11 @@ or three things that fit what this person has to hand and what they came for,
 and say them in plain words. Nothing here is something to jump into: when the
 person shows interest in one, the next step is to talk about it — what they
 want out of it, what they already have, how they'd use it — and only then to
-build. Everything here works today. How each mechanism works is in the rest
-of these docs and in the agent guide; this file says what a person could do
-with it and why they might want to.
+build. Everything here is implemented today. The optional Apple Photos path
+still needs a real-library and launchd-permission check; its setup doc calls
+out the steps and current verification limit. How each mechanism works is in
+the rest of these docs and in the agent guide; this file says what a person
+could do with it and why they might want to.
 
 ## Photograph things, talk about them, and get a record
 
@@ -38,6 +40,10 @@ each page carries its OCR text and a description, so the stack becomes
 searchable. Both are first-class input expecting a reply, and both have their
 own card instructions in these docs (`card-upload-batch.md`,
 `card-capture-session.md`).
+
+For an ongoing stream from an iPhone album, scan-uploader can export new
+photos from an iCloud-synced album on the user's Mac; see [Apple Photos
+setup](phone-photos.md).
 
 **Photograph and talk at the same time.** Capture is the box's own input, and
 the one to show first. The person opens it, takes pictures, and talks while

@@ -41,7 +41,7 @@ const GENERATED_NO_SCAN = new Set(["beebox/docs/doc-graph.md", "beebox/docs/prom
 // Format: "<from> -> <target>". Keep each entry justified.
 const ALLOWED_BROKEN = new Set([
   // Describes the @MAP.md include syntax a box's context_dir provides.
-  "docs/knowledge-audits.md -> MAP.md",
+  "docs/testing/knowledge-audits.md -> MAP.md",
   // Frozen record quoting the broken-link example it was written about.
   "docs/implemented-plans/link-validation-fix.md -> /store/foo/bar.md",
 ]);

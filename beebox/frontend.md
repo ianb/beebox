@@ -110,7 +110,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
 - `<CancelButton>` — semantic shortcut for `<Button intent="secondary">Cancel</Button>`.
-- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger. Has `flash` for clipboard copies etc.
+- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
 
 **Inputs** (all in `ui/fields.tsx`)
 - `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled.
@@ -150,7 +150,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 
 **Overlays & Composite**
-- `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel.
+- `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel; `onOpen` makes the title open the file instead of previewing it.
 - `<Dropdown>` + `<MenuItem>` + `<MenuDivider>` — menu with click-outside, escape-to-close, auto-close on select. `<Dropdown>` takes a render-prop `trigger`. A `MenuItem` with `href` also accepts `download` (filename) and `target="_blank"` for file actions.
 - `<TabBar>` — generic tab group with active state.
 - `<ImageLightbox>` — fullscreen image overlay (usually accessed via `<Image lightbox>` rather than directly).

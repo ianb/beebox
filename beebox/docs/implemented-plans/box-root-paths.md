@@ -266,7 +266,7 @@ never `../`* — with document-relative mentioned only as a legacy form that
 still resolves. Sweep every exemplar to leading-`/` (landmark, nav, briefing
 `key-people` example, gdoc/gsheet/recipe instruction snippets, the
 capture-session example that omits its own required `attach/` prefix,
-`docs/cards-as-markdown.md`). Add the link rule to reactor/procedure prompt
+`docs/cards/format.md`). Add the link rule to reactor/procedure prompt
 surfaces, which currently have none.
 
 **Why.** Guidance is the lever that actually stops the recurring agent error;
@@ -457,7 +457,7 @@ one unit via /finish when all complete (no partial merge to main).
   test1 is part of G's verification (confirm a real box round-trips), running
   it on prod boxes is a post-ship operational step at the boxholder's
   discretion.
-- **Docs**: `docs/cards-as-markdown.md` ref section rewritten to the new
+- **Docs**: `docs/cards/format.md` ref section rewritten to the new
   rule (Track E); this plan moves to `docs/implemented-plans/` at /finish.
 
 ## Status (2026-07-30) — complete

@@ -97,6 +97,7 @@ function CardAccordionBody({
     type: card.type,
     frontmatter: card.frontmatter,
     body: card.body,
+    bodyLineOffset: card.bodyLineOffset,
   };
 
   // A frontmatter card always matches at least the Source/Card renderers.

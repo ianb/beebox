@@ -532,7 +532,7 @@ line read `runCollection`.
 
 `src/core/agent-guide/todos.ts` ("Querying", `:79`), the ambient-field text in
 `src/core/chat/session/prompts.ts:120`, the `todo-view` and `todo-review-job`
-schema instructions, `docs/cards-as-markdown.md:80-88`, and the two audits that
+schema instructions, `docs/cards/format.md:80-88`, and the two audits that
 name `bbx todos`. The guide gains three sentences: headings and nesting group
 todos, so write a todo under the heading it belongs to; a note after the
 closing tag travels with the todo; a link in a todo makes it appear on the
@@ -677,7 +677,7 @@ New agent-facing behaviour, so audits land run, in
   heading it sits under, and nesting).
 
 `summarize` is a schema-authoring concept; it goes in
-`docs/adding-schemas.md`, the box's own schema-authoring guide
+`docs/cards/schemas.md`, the box's own schema-authoring guide
 (`src/core/box/schemas-guide.ts` — the surface a box agent actually reads),
 and the schema-guide skill, with one audit:
 "How does a box-local card type control how it appears in lists?"
@@ -702,7 +702,7 @@ and the schema-guide skill, with one audit:
 
 1. **Track 1, chunk 1** — `summarize` on the schema, memo moved.
 2. Track 1 — image moved, `loader-registrations.ts` deleted, `detail` in
-   `FileEntry`, `summaryText`, public API and `docs/adding-schemas.md`.
+   `FileEntry`, `summaryText`, public API and `docs/cards/schemas.md`.
 3. **Track 2, chunk 1** — `extract.ts`: stack walk, nesting fix, `sectionPath`,
    `parent`.
 4. Track 2 — `annotation` and `refs`; derive split; `collectTodos` and

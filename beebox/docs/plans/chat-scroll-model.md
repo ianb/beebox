@@ -196,7 +196,7 @@ does not need to distinguish.
 
 Harness gaps to close in Track 1: the harness scroller must set
 `overflow-anchor: none` like the app (the prepend finding was compensated by
-Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
+Chrome's native anchoring, which the app disables); `docs/chat/scroll.md`
 must say `/fakestream` content vanishes at finalize in server-backed sessions
 and that `bin/browse eval --no-wait` is required mid-stream.
 
@@ -211,7 +211,7 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
    controller (it follows); that is the before-state.
 2. **Controller rewrite** — `useChatScroll` per the model, registered in the
    harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
-   `docs/chat-scroll-testing.md` rewritten to the new model.
+   `docs/chat/scroll.md` rewritten to the new model.
 3. **Wire into `MessageList`** — send anchors the user message; last-turn
    min-height; button semantics unchanged. `bin/browse` procedure run; iOS
    checklist run by the boxholder; `/scrolldebug` trace requested if anything
@@ -224,7 +224,7 @@ follow-up corrects intra-message image anchoring, composer resizing, and send
 spacer ownership. The harness passes 20/20 scenarios in normal and reduced
 motion; real Chromium probes cover sends, composer resizing, and delayed images.
 Authenticated iOS WKWebView simulator evidence covers sending and keyboard
-opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
+opening during a live reply. See [the current verification record](../chat/scroll.md).
 
 **Outstanding:** physical-iPhone momentum, rubber-band, keyboard transitions,
 and delayed-image checks remain unverified. The earlier issue was closed as

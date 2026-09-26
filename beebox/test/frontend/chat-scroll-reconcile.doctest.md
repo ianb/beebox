@@ -7,7 +7,7 @@ discrete user action — opening a thread, sending, pressing the button — plus
 geometric compensations for changes the reader did not cause. This function is
 the dispatcher for the compensations: given the facts of one ResizeObserver
 cycle it decides which one applies. The layout effects themselves still need the
-browser procedure in `docs/chat-scroll-testing.md` and the scenario table at
+browser procedure in `docs/chat/scroll.md` and the scenario table at
 `/dev/chat-scroll`, but the *decision* is deterministic and checked here.
 
 ```ts setup

@@ -37,7 +37,7 @@ Two tensions to resolve:
    content-including names (rename dir, or move the JSONLs), per box, on the
    server AND on any local machine with the same history. A husk's
    `session:`/`context-dir:` fields identify what maps where. One-time
-   migration script territory (`docs/migrations.md`).
+   migration script territory (`docs/cards/migrations.md`).
 2. **Failure visibility** — a schedule firing into an unresumable session
    loses the agent response with only a `hub-child.log` line
    (`[chat-session] Turn ended with is_error=true`). For an alarm/reminder

@@ -70,6 +70,10 @@ export async function runQueryForBox(
   }
 
   const params = TodoParamsSchema.safeParse({
+    // The agent's own surface: it must see every todo it always has,
+    // agent-assigned included, regardless of the boxholder-scope default
+    // (Track 1).
+    scope: "all",
     ...(options.status !== undefined && { status: options.status }),
     ...(options.assigned !== undefined && { assigned: options.assigned }),
     ...(options.onPlate === true && { onPlate: true }),

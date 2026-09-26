@@ -385,8 +385,9 @@ export function apiImageUrl(boxSlug: string, path: string): string {
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
-// crash in plain-Node test runners where `import.meta.env` is undefined.
-function viteBase(): string {
+// crash in plain Node (test runners, the `bbx view test` widget bundle) where
+// `import.meta.env` is undefined.
+export function viteBase(): string {
   try {
     // import.meta.env is Vite-typed (vite/client); the try/catch guards the
     // plain-Node case where the whole `env` object is undefined at runtime.

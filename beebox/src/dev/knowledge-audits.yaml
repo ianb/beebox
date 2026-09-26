@@ -16,7 +16,7 @@ tests:
     watch_for: "Names the YAML rubric, preserves authored rules, retains an existing chat, and distinguishes session continuity from landmark placement"
     fixture:
       CLAUDE.md: |
-        @node_modules/beebox/box-docs/quick-chat.md
+        @node_modules/beebox/box-docs/chat/quick-chat.md
     correct_contains:
       - "_config/chat-routing.yaml"
       - "keepEligible"
@@ -413,6 +413,9 @@ tests:
   # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
   # direct orientation questions below used no reads or searches. user-adds-item
   # also passed, but inspected the frontend to verify its exact UI instructions.
+  # Status (2026-09-24, Claude): on-demand path passed after the audit runner
+  # installed generated package docs into the test box; the agent read the real
+  # Photos doc and left token minting and local setup with the boxholder.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -435,6 +438,27 @@ tests:
       The agent should know that users interact through the web UI.
       The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
+
+  - id: iphone-photos-album-setup
+    prompt: "I'm thinking about ways to add photos to the box. Can new photos from an Apple Photos album on my iPhone come in automatically? How would I set that up? Can you do the setup for me, including the token?"
+    expected_level: knows_about
+    watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token and all Mac setup actions to the boxholder"
+    correct_contains_any: ["scan-uploader", "scan uploader"]
+    correct_matches:
+      - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
+      - '(?:boxholder|user).{0,80}(?:mint|create|generate).{0,40}token|(?:mint|create|generate).{0,40}token.{0,80}(?:Settings|boxholder|yourself)'
+      - 'you.{0,100}(?:install|configure|run|grant|approve)|(?:install|configure|run|grant|approve).{0,100}(?:you|your|boxholder)'
+    response_not_matches:
+      - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:mint|create|generate)\\b[^.]{0,60}token"
+      - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:install|configure|run|set (?:it |this |that )?up|do\\b[^.]{0,40}\\b(?:setup|configuration))\\b"
+    should_read:
+      - "node_modules/beebox/box-docs/README.md"
+      - "node_modules/beebox/box-docs/phone-photos.md"
+    tags: [intake, photos]
+    notes: >
+      Agent-guide awareness should route into the concise package doc, which
+      explains the Mac export setup and keeps token/local-machine actions with
+      the boxholder.
 
   - id: dont-tell-user-to-place-files
     prompt: "I have some documents I want to add to the box. Where should I put them?"
@@ -1568,6 +1592,30 @@ tests:
       when finished. Does NOT claim it must ask the boxholder first, which
       is the rule for the boxholder's own todos.
     correct_contains_any: ["dropped", "drop"]
+    tags: [todos, agent-work]
+
+  # docs/plans/todos-ui.md Track 7: the todo-review procedure's brief requires
+  # every item to end with a status change or a `recheck` date, and `recheck`
+  # is the one attribute the agent may write on the boxholder's todos. The
+  # agent guide todos section and the review brief's instructions carry it.
+  # Run 2026-09-25 on test1 (claude): PASS, correct on every watch_for point
+  # (recheck only, 1-90 days, never writes `never`, raises it). Read the
+  # todo-review procedure card first, so measured as knows_about-by-lookup;
+  # in a real run the brief is in context, which is the knows_directly case.
+  - id: todo-recheck
+    prompt: >
+      You are working the daily todo review. One item is the boxholder's todo,
+      past its due date, and you see no sign it was done. What do you change
+      on that todo, if anything, and what else do you do about it?
+    expected_level: knows_directly
+    watch_for: >
+      Sets a `recheck` date 1-90 days out on the todo (and nothing else on it:
+      not its status, due, or text), notes a short reason, and raises it with
+      the boxholder. Says `recheck` is the one attribute it may write on the
+      boxholder's todos, and does not write `recheck="never"` itself.
+      Failure: marks it done/dropped/parked, moves its due date, or leaves the
+      item with no recheck.
+    correct_contains: ["recheck"]
     tags: [todos, agent-work]
 
   - id: todo-annotation-vs-question
@@ -2846,7 +2894,7 @@ tests:
   # directly without reading the file.
   #
   # `context_dir` and `fixture` are the audit-runner fields that drive
-  # this — see docs/knowledge-audits.md.
+  # this — see docs/testing/knowledge-audits.md.
   #
   # Status (2026-05-10): landmark-subdir-claude-md-loads passes —
   # agent answered "ZK-4827-LANDMARK" with 0 file reads and 0
@@ -4499,6 +4547,33 @@ tests:
       should_read: it's a yes/no correctness check, and the agent may confirm
       the guarantee from views.md or the source — either is fine.)
     correct_contains_any: ["rewrites", "tracked", "bbx mv", "validate"]
+    tags: [views, cards]
+
+  # === Views: card text through Markdown ===
+  # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
+  # plan: the views/CLAUDE.md stub names `Markdown` and the rule, so the agent
+  # should not need views.md. The always-loaded agent guide does not name view
+  # APIs, so the stub loading (or not) decides the measured level.
+  # Run 2026-09-25 on test1 (claude): PASS on every watch_for point, but found
+  # it by reading box-docs/views.md (knows_about), not from the stub.
+  - id: view-markdown-export
+    prompt: >
+      I'm writing a box view that lists meeting-note cards with each card's
+      body text under its title. The bodies have Markdown and Markdoc tags like
+      {% todo %}. How should the view render the body? Explain only; do not
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Names `Markdown` from beebox/view-widgets with the card passed as `card`
+      (`<Markdown card={card}>{card.body}</Markdown>`, guarded because body is
+      optional), and says hand-rendering the body (`<p>{card.body}</p>`,
+      splitting it, stripping tags with a regex, or a Markdown library) is a
+      validation error; asks in _config/feedback/ when Markdown lacks something.
+      Failure: suggests marked/react-markdown, splitting on blank lines, or
+      stripping {% %} tags.
+    correct_contains: ["Markdown", "view-widgets"]
+    correct_matches:
+      - 'card=\{card\}'
     tags: [views, cards]
 
   # === Card themes ===

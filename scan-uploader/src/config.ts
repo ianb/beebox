@@ -19,6 +19,7 @@ export interface TargetConfig {
   readonly box: string;
   readonly tokenPath: string;
   readonly disposition: Disposition;
+  readonly photos?: { readonly album: string };
 }
 
 export interface UploaderConfig {
@@ -104,7 +105,15 @@ function validateTarget(
     label: `${label}.disposition`,
     platform,
   });
-  return { folder, serverUrl, box, tokenPath, disposition };
+  let photos: TargetConfig["photos"];
+  if (raw.photos !== undefined) {
+    if (!isRecord(raw.photos)) throw new ConfigError(configPath, `${label}.photos must be an object`);
+    photos = { album: requireString(configPath, { value: raw.photos.album, label: `${label}.photos.album` }) };
+    if (disposition !== "keep") {
+      throw new ConfigError(configPath, `${label}.photos requires disposition "keep"`);
+    }
+  }
+  return { folder, serverUrl, box, tokenPath, disposition, ...(photos === undefined ? {} : { photos }) };
 }
 
 function requireString(configPath: string, params: { value: unknown; label: string }): string {

@@ -486,8 +486,8 @@ reset does not exist and identify host CLI recovery as the only path.
 - Replace the “No MFA / password reset” residual with the narrower remaining
   gaps: no email self-service, no independent recovery notification, no MFA,
   and host CLI recovery for the owner.
-- Update `deploy/README.md`, `docs/docker-install.md`, and
-  `docs/developer-install.md` where they describe invite/password lifecycle.
+- Update `deploy/README.md`, `docs/install/docker.md`, and
+  `docs/install/developer.md` where they describe invite/password lifecycle.
 - State that the owner must verify the member's recovery request out of band.
   The application does not authenticate that conversation.
 - On completion, move the issue to `issues/closed/features/` and move this plan

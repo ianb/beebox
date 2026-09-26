@@ -7,23 +7,26 @@
  * filename (no fetch), `renderInline` emits a minimal block, `openCard` is a
  * no-op (there is no surface to navigate). `bbx view test` wraps the rendered
  * view in `NodeViewHostProvider` (see src/cli/commands/view.ts), and the view's
- * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef
+ * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef/Markdown
  * here via the package `exports` map.
  *
  * This file lives under the frontend tsconfig (it renders frontend components);
  * build-cli.mjs bundles it to dist/view-widgets/index.js with React external.
  */
 
-import { type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 // Relative (not `@shared/…`): this file is also the dist/view-widgets node
 // bundle entry, built with `packages: "external"`, which would leave the
 // aliased specifier unresolved at runtime. Relative paths bundle inline.
 import { cardTypeFromName } from "../../../../shared/card-name";
 import { ViewHostProvider, type ViewHost, type ResolvedRef } from "../../lib/view-host";
+import { BoxSlugProvider } from "../../lib/box-slug";
+import { LightboxProvider } from "../LightboxProvider";
 import { CardLink } from "./CardLink";
 import { CardRef } from "./CardRef";
+import { ViewMarkdown } from "./ViewMarkdown";
 
-export { CardLink, CardRef };
+export { CardLink, CardRef, ViewMarkdown as Markdown };
 
 /** Filename-derived title (mirrors core/file-summary titleFromFilename — kept
  *  local so the node bundle doesn't pull in backend-only modules). */
@@ -56,6 +59,19 @@ const NODE_HOST: ViewHost = {
   boxSlug: "",
 };
 
-export function NodeViewHostProvider({ children }: { children: ReactNode }) {
-  return <ViewHostProvider value={NODE_HOST}>{children}</ViewHostProvider>;
+/**
+ * Everything a view's widgets read from context in the app, supplied for a
+ * Node render: the view host, the box slug `Markdown` builds URLs with, and
+ * the lightbox its images register with. `boxSlug` defaults to "".
+ */
+export function NodeViewHostProvider({ boxSlug, children }: { boxSlug?: string; children: ReactNode }) {
+  const slug = boxSlug ?? "";
+  const host = useMemo(() => ({ ...NODE_HOST, boxSlug: slug }), [slug]);
+  return (
+    <ViewHostProvider value={host}>
+      <BoxSlugProvider boxSlug={slug}>
+        <LightboxProvider>{children}</LightboxProvider>
+      </BoxSlugProvider>
+    </ViewHostProvider>
+  );
 }

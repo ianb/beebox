@@ -27,7 +27,7 @@
  *    the derived one, since it was an explicit author override.
  *
  * Nothing here is silently dropped: every field outside this list produces a
- * warning (see `docs/migrations.md` — a warning is a prompt to extend the
+ * warning (see `docs/cards/migrations.md` — a warning is a prompt to extend the
  * mapping, not to accept the loss).
  */
 

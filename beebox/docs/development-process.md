@@ -17,12 +17,11 @@ strictness the code is held to: strict types, lint rules that are never weakened
 to make code pass, noisy output treated as a bug, the pre-commit hooks, and the
 rule that nothing learned on a real box reaches this repository unscrubbed.
 
-**[Testing](testing.md)** has the tiers, the doctest syntax, and the helpers.
-**[Testing what agents know and do](agent-testing.md)** covers what surrounds
-them: typed fakes for every external service, change-selected test runs, the
-hourly full suite, the smoke walk that boots a real box before a merge, weekly
-browser tours, and the two things that test agents rather than code, knowledge
-audits and the user-stories catalog.
+**[Testing](testing.md)** has the philosophy and one page per verification
+instrument: doctests with typed fakes for every external service, the smoke
+walk that boots a real box before a merge, browser tours, field tests, and
+the two that test agents rather than code, knowledge audits and session
+critiques.
 
 **[The development workflow](development-workflow.md)** covers how a piece of
 work moves: its own worktree, branch, and session, started from a briefing and

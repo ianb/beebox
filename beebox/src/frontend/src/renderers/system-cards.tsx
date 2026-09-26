@@ -6,8 +6,9 @@ import { LandmarksList } from "../components/landmarks/LandmarksList";
 import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { InventoryCardBody } from "../pages/inventory/InventoryPage";
 import { AdminCardBody } from "../pages/AdminPage";
-import { adminArrivalReceipt, clearAdminArrivalState, parseAdminCardState } from "../lib/admin-card-state";
+import { adminArrivalReceipt, adminTabViewState, clearAdminArrivalState, parseAdminCardState } from "../lib/admin-card-state";
 import { Text } from "../components/ui/Text";
+import type { AdminTab } from "../components/admin/admin-sections";
 import { useRouterState } from "@tanstack/react-router";
 import { legacyHistoryState } from "../components/history/history-card-state";
 import { HISTORY_QUERY_CODEC, resolveViewParams } from "@shared/named-views";
@@ -42,7 +43,8 @@ function AdminCard(props: RendererProps) {
   if (!parsed.ok) return <SystemCardBoundary type="admin" path={props.data.path}><Text tone="danger">{parsed.error}</Text></SystemCardBoundary>;
   const arrivalReceipt = adminArrivalReceipt(historyState.__TSR_index, parsed.arrival) ?? "empty";
   const consumeArrival = () => props.onViewStateChange?.(clearAdminArrivalState(props.viewState), "replace");
-  return <SystemCardBoundary type="admin" path={props.data.path}><AdminCardBody arrival={parsed.arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={consumeArrival} /></SystemCardBoundary>;
+  const changeTab = (tab: AdminTab) => props.onViewStateChange?.(adminTabViewState(props.viewState, tab), "replace");
+  return <SystemCardBoundary type="admin" path={props.data.path}><AdminCardBody arrival={parsed.arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={consumeArrival} tab={parsed.tab} onTabChange={changeTab} /></SystemCardBoundary>;
 }
 registerFileType({ type: "dashboard" }, { renderer: { name: "Dashboard", Component: DashboardCard, priority: 100 } });
 registerFileType({ type: "settings" }, { renderer: { name: "Settings", Component: SettingsCard, priority: 100 } });

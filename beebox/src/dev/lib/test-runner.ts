@@ -33,6 +33,7 @@ import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command
 import { runChecks } from "./audit-checks.js";
 import { generateAgentContextMirrors } from "../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../core/agent-instruction-files.js";
+import { ensureAuditPackageDocs, removeFixtures, writeFixtures } from "./audit-fixtures.js";
 
 export type { AuditTest, TestSuite };
 
@@ -108,6 +109,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const prompt = test.style
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
+  await ensureAuditPackageDocs(boxRoot, test);
 
   // Save git state so we can restore after the test
   const headBefore = execSync("git rev-parse HEAD", { cwd: boxRoot, encoding: "utf-8" }).trim();
@@ -172,31 +174,6 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     await removeFixtures(fixturePaths);
     execSync(`git reset --hard ${headBefore}`, { cwd: boxRoot, encoding: "utf-8" });
     execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
-  }
-}
-
-/**
- * Write fixture files declared by an audit's `fixture` field. Returns
- * the absolute paths written so `removeFixtures` can clean up.
- */
-async function writeFixtures(
-  boxRoot: string,
-  fixture: Record<string, string> | undefined,
-): Promise<string[]> {
-  if (!fixture) return [];
-  const written: string[] = [];
-  for (const [relPath, content] of Object.entries(fixture)) {
-    const absPath = path.join(boxRoot, relPath);
-    await fs.mkdir(path.dirname(absPath), { recursive: true });
-    await fs.writeFile(absPath, content, "utf-8");
-    written.push(absPath);
-  }
-  return written;
-}
-
-async function removeFixtures(paths: string[]): Promise<void> {
-  for (const p of paths) {
-    await fs.rm(p, { force: true });
   }
 }
 

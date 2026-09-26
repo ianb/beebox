@@ -79,6 +79,16 @@ await notifySweep([], { platform: "darwin" });
 => 0
 ```
 
+Newly exported Apple Photos items use the same notifier and stay silent when
+no files were exported:
+
+```ts
+const photosLog = await fakeBin({ case: "photos", name: "terminal-notifier", exitCode: 0 });
+await notifySweep([], { platform: "darwin", photosFound: [{ album: "Bee Box", count: 2 }] });
+(await logLines(photosLog))[0]
+=> -title Photos queued -message 2 photos from 'Bee Box' queued for upload -group org.beebox.scan-uploader.photos.Bee Box
+```
+
 ## An upload posts one banner naming the boxes
 
 ```

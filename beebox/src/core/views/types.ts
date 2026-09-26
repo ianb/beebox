@@ -96,6 +96,11 @@ export interface ViewCard {
   frontmatter?: Record<string, unknown>;
   /** Markdown body. */
   body?: string;
+  /**
+   * File lines before the body (the frontmatter block). `Markdown` takes it
+   * with `path` so a todo in the body knows its file line.
+   */
+  bodyLineOffset: number;
   /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
   attachments?: ViewFile[];
 }

@@ -1,5 +1,5 @@
 # Tailscale sidecar overlay — tailnet-only HTTPS access with zero open ports,
-# per docs/docker-install.md's "Tailscale-only (no open ports)" section
+# per docs/install/docker.md's "Tailscale-only (no open ports)" section
 # ("Docker container" topology). Load this ON TOP of compose.yaml, never
 # instead of it:
 #
@@ -10,7 +10,7 @@
 # identity (TS_AUTHKEY) and a Tailscale Serve config (tailscale-serve.json)
 # that terminates HTTPS on the tailnet and reverse-proxies to the box over
 # the compose network (http://box:3210). It does not touch the box's ports
-# or its own always-on auth wall — see docs/docker-install.md.
+# or its own always-on auth wall — see docs/install/docker.md.
 #
 # Follows Tailscale's official Docker sidecar guidance:
 # https://tailscale.com/kb/1282/docker

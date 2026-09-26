@@ -36,7 +36,7 @@ Landed on this branch and verified deterministically (full suite green):
   section) and the agent-facing generated guide; two knowledge audits
   (`procedure-what-gates`, `procedure-checklist-discipline`) verify recall and
   pass against test1. Authoring guidance for the whole class lives in
-  `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
+  `docs/cards/migrations.md` ("Writing an agent-applied (procedure) migration").
 - **Track 3A/3B** — `Migration` discriminated union + `bbx migrate` procedure
   dispatch + the "require a `validate.shells`+`abort` gate" guard
   (`src/core/migrations.ts`, `src/cli/commands/migrate.ts`).
@@ -90,7 +90,7 @@ Outstanding (not yet done):
 - `beebox/code-style.md` — max 2 positional params (named options), no
   `any`, custom error classes.
 - Densest precedents: the script-migration system (`bbx migrate` +
-  `migrations.jsonl`, May 2026 rollout `docs/migrations.md:125-138`) and the
+  `migrations.jsonl`, May 2026 rollout `docs/cards/migrations.md:125-138`) and the
   procedure engine. The new work should read as a join of the two, not a third
   thing.
 
@@ -300,7 +300,7 @@ Ordered by dependency, then surface size.
     (`bbx view check` green) makes it a safe no-op → then appends. Rollback is **no
     longer the script one-liner**: a procedure migration made several commits, so
     rollback = `git reset --hard <pre-migration-sha>` (covers all of them) +
-    remove the manifest line. Document this in `docs/migrations.md`.
+    remove the manifest line. Document this in `docs/cards/migrations.md`.
   - **Idempotency** = ledger (applied entries skipped) + the procedure precheck
     (*"`bbx view check` already green? skip"*), so a hand re-run is safe.
   - New boxes: seeded applied at init (`box.ts:62-84`), unchanged.
@@ -406,7 +406,7 @@ delete" an explicit obligation the agent attests to and the human verifies; (b)
 `bbx view check` renders against the widest card set + each candidate
 `params.path` (Track 1); (c) the per-migration commit + run-dir checklist +
 per-step `git-ref` go to human diff review during the operator-driven rollout
-(`docs/migrations.md:125-138`). Accepted residual: a v1 agent migration
+(`docs/cards/migrations.md:125-138`). Accepted residual: a v1 agent migration
 guarantees "renders + all items checked + a reviewable account," and rests on
 **agent honesty + human review** for "semantically identical." Hardening it (a
 real `validate.instructions` model judge) is the headline future item below.
@@ -443,7 +443,7 @@ real `validate.instructions` model judge) is the headline future item below.
 - **New rollback *tooling*.** Rollback stays manual but is no longer the script
   one-liner (procedures auto-commit several times): `git reset --hard
   <pre-migration-sha>` + remove the manifest line (documented in Track 3 /
-  `docs/migrations.md`). No automated rollback command is built.
+  `docs/cards/migrations.md`). No automated rollback command is built.
 - **Implementing `validate.instructions` (model judge) + `severity:review`
   retry.** These are unimplemented in the procedure engine today
   (`engine-phase.ts:91-111`). v1 does NOT build them and does NOT rely on them.
@@ -500,7 +500,7 @@ validate gate (e.g. `bbx view check`) is green. Default: one
 `knows_directly` audit in `beebox/src/dev/knowledge-audits.yaml`. This is a
 *procedure* concept (general), not migration-specific, so it lands with Track 2.
 The migration ledger + engine join is infrastructural (operators read
-`docs/migrations.md`) and needs no audit. Lands **run** (`pnpm knowledge-audit
+`docs/cards/migrations.md`) and needs no audit. Lands **run** (`pnpm knowledge-audit
 run --box <test-box> --filter procedure-checklist`) with status recorded before
 the plan completes.
 
@@ -517,7 +517,7 @@ the plan completes.
    procedure whose `validate` flips false→true.
 5. **Track 4** — the `view-card-shape` codemod (own `kind:"script"` entry), the
    procedure definition + checklist template, the two registry entries.
-6. Update `docs/migrations.md` (the new kind), `docs/procedure-implementation.md`
+6. Update `docs/cards/migrations.md` (the new kind), `docs/procedure-implementation.md`
    (checklists), and the migration-authoring rules.
 
 Dependencies: 1 ∥ (2 → 4-of-Track-3); (1, 2, 3B) → Track 4; Track 2 → audit.
@@ -541,7 +541,7 @@ Dependencies: 1 ∥ (2 → 4-of-Track-3); (1, 2, 3B) → Track 4; Track 2 → au
 - **Knowledge-audit entry** lands with Track 2 (the convention it tests).
 - **Migration approach.** The plan introduces the framework; the first data
   change (views) is applied by the procedure-backed migration it adds. Rollout
-  per box mirrors the script runbook (`docs/migrations.md:125-138`): back up,
+  per box mirrors the script runbook (`docs/cards/migrations.md:125-138`): back up,
   `bbx migrate --apply` (now also runs procedure kinds), review the per-migration
   commit + the run-dir checklist, commit. New boxes seed applied and do nothing;
   existing boxes with custom views get the agent pass in the controlled window,

@@ -33,6 +33,7 @@ import { geminiKeyCheck, modelRoutesCheck } from "./health-model-routes.js";
 import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
+import { unreviewedTodosCheck } from "./health-todos.js";
 import { staleIndexLockCheck } from "./health-git-lock.js";
 import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
 import { scanUploaderFreshnessCheck } from "./health-scan-uploaders.js";
@@ -223,6 +224,7 @@ export async function runHealthChecks(
   if (hostPackages !== null) checks.push(hostPackages);
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
+  checks.push(await unreviewedTodosCheck(boxRoot));
   const now = getBoxTime(boxRoot);
   // Needs the box's own deploy time to judge an uploader's build against (the
   // same `deploy-info.json` the version panel reads), and box time to catch a
@@ -342,7 +344,7 @@ export const healthRouter = router({
    * Served from a stale-while-revalidate snapshot (`health-snapshot.ts`) so the
    * dashboard's batch never waits on the deep probes. `{ fresh: true }` forces a
    * live run — that's the contract deploy runbooks use through the diag-key
-   * bypass (see docs/health-checks.md). `bbx health` and `/api/health` call
+   * bypass (see docs/server/health-checks.md). `bbx health` and `/api/health` call
    * `runHealthChecks` directly and are unaffected.
    */
   check: publicProcedure

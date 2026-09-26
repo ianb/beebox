@@ -2,10 +2,17 @@
  * The collection runner: five stages, in order, holding no state.
  *
  * 1. **Scope.** `here` and the glob decide which cards are read
- *    (`card-scope.ts` owns the containment guards).
+ *    (`card-scope.ts` owns the containment guards). A card is read with
+ *    bounded parallelism (`mapInBatches`, `count.ts`'s approach), then
+ *    skipped — no items, no issue — when `def.mayHaveItem` says its text
+ *    cannot hold one; a card that fails to READ is still an issue. This is
+ *    "something better than `**`": the scope is "cards whose text can hold
+ *    an item", declared by the collection, not by query syntax.
  * 2. **Extract.** Each card's text becomes items — pure, cacheable, no clock.
  * 3. **Derive.** The caller's `DeriveContext` is the only time-dependent
- *    input, and the only place it can enter.
+ *    input, and the only place it can enter. `def.inScope`, when the
+ *    collection declares it, runs immediately after — before reduction,
+ *    grouping, or the reference pass sees the item at all.
  * 4. **Reference scope.** Cards OUTSIDE the glob contribute just the items
  *    that point into `here`, plus those items' ancestors, marked
  *    `via: "reference"`. There is no reverse index, so this reads the box —
@@ -22,6 +29,7 @@ import * as path from "node:path";
 import { buildLoadContext } from "../load-context.js";
 import { summarizeCardText } from "../summarize-card.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { mapInBatches } from "../../lib/map-batched.js";
 import { listScopedCardPaths } from "./card-scope.js";
 import { defaultGlobFor, refMatchesHere } from "./here.js";
 import { buildGroups, type ScannedCard } from "./rows.js";
@@ -80,19 +88,30 @@ export async function runCollection<
 
   const scopeAbs = await listScopedCardPaths(boxRoot, resolved.glob);
   const scopeRel = new Set<string>();
-  for (const absPath of scopeAbs) {
-    const relPath = path.relative(boxRoot, absPath);
-    scopeRel.add(relPath);
-    const content = await readCard({ absPath, relPath, issues });
-    if (content === null) continue;
-    const scanned = scan({ def, ctx, deriveCtx, relPath, content });
+  // Reads are bounded-parallel (`count.ts`'s approach), but `mapInBatches`
+  // returns in input order, so the loop below stays a plain sequential walk —
+  // issues and rows land in the same deterministic order the old serial read
+  // produced.
+  const reads = await mapInBatches(scopeAbs, { size: READ_CONCURRENCY, map: (absPath) => readCard(boxRoot, absPath) });
+  for (const read of reads) {
+    scopeRel.add(read.relPath);
+    if (read.issue !== null) {
+      issues.push(read.issue);
+      continue;
+    }
+    // A card whose text cannot hold an item contributes nothing — no items,
+    // no issue. It is still readable (the branch above is what an unreadable
+    // card takes), so the visible-invalid guarantee only narrows to "a card
+    // that CAN hold an item is always reported if it fails to load or parse".
+    if (!def.mayHaveItem(read.content)) continue;
+    const scanned = scan({ def, ctx, deriveCtx, relPath: read.relPath, content: read.content, params: query.params });
     issues.push(...scanned.issues);
-    cards.push({ relPath, via: "scope", inScope: scanned.items, summary: scanned.summary });
+    cards.push({ relPath: read.relPath, via: "scope", inScope: scanned.items, summary: scanned.summary });
   }
 
   if (resolved.includeReferring) {
     cards.push(
-      ...(await scanReferring({ boxRoot, def, ctx, deriveCtx, here: resolved.here, scopeRel })),
+      ...(await scanReferring({ boxRoot, def, ctx, deriveCtx, here: resolved.here, scopeRel, params: query.params })),
     );
   }
 
@@ -118,16 +137,16 @@ function viaOrder(via: "scope" | "reference"): number {
   return via === "scope" ? 0 : 1;
 }
 
-async function readCard(input: {
-  absPath: string;
-  relPath: string;
-  issues: CollectionIssue[];
-}): Promise<string | null> {
+/** Cards read at once — high enough to saturate the filesystem, low enough to bound open handles (`count.ts`'s constant, restated: the two aren't allowed to import each other's internals). */
+const READ_CONCURRENCY = 64;
+
+/** One scope-pass card's read outcome: its text, or the issue an unreadable file contributes instead. */
+async function readCard(boxRoot: string, absPath: string): Promise<{ relPath: string; content: string; issue: null } | { relPath: string; content: null; issue: CollectionIssue }> {
+  const relPath = path.relative(boxRoot, absPath);
   try {
-    return await readFile(input.absPath, "utf8");
+    return { relPath, content: await readFile(absPath, "utf8"), issue: null };
   } catch (e) {
-    input.issues.push({ kind: "load", path: input.relPath, message: errorMessage(e) });
-    return null;
+    return { relPath, content: null, issue: { kind: "load", path: relPath, message: errorMessage(e) } };
   }
 }
 
@@ -137,11 +156,17 @@ function scan<Item extends CollectionItem, Derived extends CollectionItem, Param
   deriveCtx: DeriveContext;
   relPath: string;
   content: string;
+  params: Params;
 }): { items: Derived[]; issues: CollectionIssue[]; summary: () => ReturnType<typeof summarizeCardText> } {
-  const { def, ctx, deriveCtx, relPath, content } = input;
+  const { def, ctx, deriveCtx, relPath, content, params } = input;
   const extracted = def.extract({ relPath, content, ctx });
   const items = extracted.items
     .map((item) => def.derive(item, deriveCtx))
+    // Applied right after derive and before anything downstream sees the
+    // item — a card's reduction, its row, and the reference pass's own scope
+    // walk all read `items`, so an out-of-scope item excluded here can never
+    // resurface in a count or a row.
+    .filter((item) => def.inScope === undefined || def.inScope(item, params))
     .toSorted((a, b) => def.compareItems(a, b));
   return {
     items,
@@ -174,8 +199,9 @@ async function scanReferring<
   deriveCtx: DeriveContext;
   here: string;
   scopeRel: Set<string>;
+  params: Params;
 }): Promise<Array<ScannedCard<Derived>>> {
-  const { boxRoot, def, ctx, deriveCtx, here, scopeRel } = input;
+  const { boxRoot, def, ctx, deriveCtx, here, scopeRel, params } = input;
   if (here === "") return [];
 
   const out: Array<ScannedCard<Derived>> = [];
@@ -190,7 +216,7 @@ async function scanReferring<
       continue;
     }
     if (!def.mayHaveItem(content)) continue;
-    const scanned = scan({ def, ctx, deriveCtx, relPath, content });
+    const scanned = scan({ def, ctx, deriveCtx, relPath, content, params });
     const inScope = referringItems({ def, items: scanned.items, here });
     if (inScope.length === 0) continue;
     out.push({ relPath, via: "reference", inScope, summary: scanned.summary });

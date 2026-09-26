@@ -7,10 +7,22 @@ labels: [voice, ios, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder noticing the hint is missing on the phone
-next-action: discuss
 ---
 
-> **⏳ Awaiting manual testing** — the native hint surface landed in `f48ae9256`; exercise the live iOS composer on a simulator or device to confirm its placement, rotation, and accessibility hint. The native list remains local to `SpeechKeywords.swift`, and the HQ phrase is still not represented.
+> **Manual test failed (boxholder, 2026-09-24).** The native hint from `f48ae9256` shipped with three defects:
+>
+> 1. It overlaps the textarea. It could wrap, or sit above the textarea.
+> 2. It has no translucent background.
+> 3. It sometimes takes up space when the textarea is empty.
+>
+> The manual-testing gate was removed while the fix was pending; it is restored below for phone verification.
+
+> **⏳ Awaiting manual testing** — layout fix landed in `aa34a8cf9`. Confirm on a
+> real iPhone that the hint sits above the mic button at the right, stays clear
+> of editor text, remains legible, and rotates during live dictation without
+> reserving space when dictation is off. Only the boxholder clears this gate.
+
+Earlier status: the native hint surface landed in `f48ae9256`; exercise the live iOS composer on a simulator or device to confirm its placement, rotation, and accessibility hint. The native list remains local to `SpeechKeywords.swift`, and the HQ phrase is still not represented.
 
 ## What is resolved
 

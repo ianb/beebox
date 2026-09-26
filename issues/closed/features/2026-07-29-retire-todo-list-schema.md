@@ -16,8 +16,8 @@ migration (`scripts/migrate/todo-list-to-doc.ts` /
 `src/core/migrations.ts`) that converts every `*.todo-list.card` into a
 sibling `*.doc.card`, plus removal of the schema, its template, the frontend
 renderer (`TodoListView`), and `todosRouter.updateItem`. Run for real on
-test1 via `bbx migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
-entry). Agent guide, `docs/cards-as-markdown.md`, and `knowledge-audits.yaml`
+test1 via `bbx migrate --apply` (see `docs/cards/migrations.md`'s `todo-list-to-doc`
+entry). Agent guide, `docs/cards/format.md`, and `knowledge-audits.yaml`
 updated to match.
 
 The universal `{% todo %}` annotation (`src/schemas/todo-view.ts` +
@@ -35,7 +35,7 @@ This is that follow-up.
   `src/frontend/src/renderers/todo-list.tsx` (renderer) are the two source
   files.
 - **Not a code-only removal** — any real box may have existing
-  `*.todo-list.card` files on disk. Per `docs/migrations.md` (bbx-migration
+  `*.todo-list.card` files on disk. Per `docs/cards/migrations.md` (bbx-migration
   territory), retiring the schema needs either:
   - a scripted migration that converts each `todo-list` card's items into
     `{% todo %}`-annotated content in a suitable target card (there's no

@@ -1,8 +1,9 @@
 /**
  * Hook mode for `bbx validate --hook`: the PostToolUse entry point. Reads the
  * touched file path from a Claude Code hook payload on stdin, validates just
- * that file, and exits — errors AND warnings exit 2 so the agent sees feedback
- * (the hook is a nudge, not a gate; pre-commit blocks only on errors). Split out
+ * that file, and exits. Errors use exit 2 and stderr; warning-only results use
+ * PostToolUse JSON context on stdout with exit 0 so the edit stays successful.
+ * Pre-commit blocks only on errors. Split out
  * of validate.ts so the interactive command and the hook stay separate files.
  */
 
@@ -15,9 +16,10 @@ import {
   formatMarkdownResults,
   isLintableMarkdown,
 } from "./validate-markdown.js";
-import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/paths.js";
+import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile, isViewSourceFile } from "../../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
+import { lintViewMarkdown } from "../../core/views/markdown-check.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
@@ -28,6 +30,7 @@ import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 import { isBoxRootVocabularyName } from "../../lib/box-root-vocabulary.js";
+import { recordHookWarning } from "./validate-hook-warning-cache.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
@@ -111,21 +114,27 @@ export function parseHookFilePaths(parsed: unknown): string[] {
   return [...new Set(paths)];
 }
 
-async function readHookFilePaths(): Promise<string[]> {
+async function readHookInput(): Promise<{ paths: string[]; sessionId: string | null }> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
     if (Buffer.isBuffer(chunk)) chunks.push(chunk);
   }
   const raw = Buffer.concat(chunks).toString("utf-8").trim();
-  if (raw === "") return [];
+  if (raw === "") return { paths: [], sessionId: null };
   try {
     const parsed: unknown = JSON.parse(raw);
-    return parseHookFilePaths(parsed);
+    const sessionId = isRecord(parsed) ? parsed["session_id"] : null;
+    return {
+      paths: parseHookFilePaths(parsed),
+      sessionId: typeof sessionId === "string" && sessionId.length > 0 && sessionId.length <= 200
+        ? sessionId
+        : null,
+    };
   } catch (_e) {
     // stdin wasn't valid JSON: per this helper's contract the hook just exits 0
     // silently when there's no parseable payload, so the parse error is expected
     // and carries nothing actionable.
-    return [];
+    return { paths: [], sessionId: null };
   }
 }
 
@@ -136,7 +145,23 @@ export interface HookValidationResult {
 
 const CLEAN_HOOK_VALIDATION: HookValidationResult = { feedback: null, hasErrors: false };
 
-async function validateHookPathResult(fp: string): Promise<HookValidationResult> {
+/**
+ * A view or a helper under `views/`: compile-check views only; the Markdown
+ * check covers both (and the local files they import); ref warnings are for
+ * views.
+ */
+async function validateViewSource(fp: string): Promise<HookValidationResult> {
+  const err = isViewFile(fp) ? await lintViewFile(fp) : null;
+  if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
+  const refBoxRoot = await findBoxRoot(path.dirname(fp));
+  const markdownErr = await lintViewMarkdown(fp, { root: refBoxRoot ?? path.dirname(fp) });
+  if (markdownErr !== null) return { feedback: `View error for ${fp}:\n${markdownErr}`, hasErrors: true };
+  if (!isViewFile(fp)) return CLEAN_HOOK_VALIDATION;
+  const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
+  return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
+}
+
+async function validateHookPathResult(fp: string, sessionId: string | null): Promise<HookValidationResult> {
   if (!existsSync(fp)) return CLEAN_HOOK_VALIDATION;
   if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
     return {
@@ -151,15 +176,23 @@ async function validateHookPathResult(fp: string): Promise<HookValidationResult>
   }
   if (isAgentInstructionsFile(fp)) {
     const boxRoot = await requireBoxRoot(path.dirname(fp));
-    return { feedback: await lintClaudeMdFile(boxRoot, fp), hasErrors: false };
+    const warning = await lintClaudeMdFile(boxRoot, fp);
+    if (sessionId !== null) {
+      try {
+        // Character counts change on each edit, but the warning's advice is
+        // the same until the size tier changes.
+        const fingerprint = warning?.replace(/\d+ chars \(~\d+ KB\)/, "<size>") ?? null;
+        const shouldEmit = await recordHookWarning({
+          boxRoot, sessionId, filePath: fp, category: "claude-md-size", fingerprint,
+        });
+        if (!shouldEmit) return CLEAN_HOOK_VALIDATION;
+      } catch (_error) {
+        // A cache failure must never hide validation feedback or fail the edit.
+      }
+    }
+    return { feedback: warning, hasErrors: false };
   }
-  if (isViewFile(fp)) {
-    const err = await lintViewFile(fp);
-    if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
-    const refBoxRoot = await findBoxRoot(path.dirname(fp));
-    const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
-    return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
-  }
+  if (isViewSourceFile(fp)) return validateViewSource(fp);
   if (isLintableMarkdown(fp)) {
     const boxRoot = await requireBoxRoot(path.dirname(fp));
     if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
@@ -188,11 +221,11 @@ async function validateHookPathResult(fp: string): Promise<HookValidationResult>
 }
 
 /** Validate paths reported by a harness, preserving warnings versus errors. */
-export async function validateHookPathsResult(paths: string[]): Promise<HookValidationResult> {
+export async function validateHookPathsResult(paths: string[], sessionId?: string | null): Promise<HookValidationResult> {
   const feedback: string[] = [];
   let hasErrors = false;
   for (const fp of new Set(paths)) {
-    const result = await validateHookPathResult(fp);
+    const result = await validateHookPathResult(fp, sessionId ?? null);
     if (result.feedback !== null) {
       feedback.push(result.feedback);
       hasErrors ||= result.hasErrors;
@@ -201,22 +234,22 @@ export async function validateHookPathsResult(paths: string[]): Promise<HookVali
   return { feedback: feedback.length === 0 ? null : feedback.join("\n"), hasErrors };
 }
 
-/** Validate paths reported by a hook and return combined agent feedback. */
-async function validateHookPaths(paths: string[]): Promise<string | null> {
-  return (await validateHookPathsResult(paths)).feedback;
-}
-
 /**
  * Hook mode: read the touched file path from stdin, validate it, and exit.
- * Non-card paths exit 0 silently; errors AND warnings exit 2 so the agent
- * sees feedback. This always exits the process and never returns.
+ * Clean paths exit 0 silently, warning-only paths exit 0 with model-visible
+ * PostToolUse context, and errors exit 2 with stderr. This always exits.
  */
 export async function runHookMode(): Promise<never> {
-  const paths = await readHookFilePaths();
-  const feedback = await validateHookPaths(paths);
-  if (feedback !== null) {
+  const { paths, sessionId } = await readHookInput();
+  const { feedback, hasErrors } = await validateHookPathsResult(paths, sessionId);
+  if (feedback !== null && hasErrors) {
     process.stderr.write(`${feedback}\n`);
     process.exit(2);
+  }
+  if (feedback !== null) {
+    process.stdout.write(`${JSON.stringify({
+      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: feedback },
+    })}\n`);
   }
   process.exit(0);
 }

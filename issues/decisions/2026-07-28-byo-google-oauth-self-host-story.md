@@ -21,7 +21,7 @@ into that explicitly and smoothing it.
 - The redirect_uri derives from the operator's own `publicUrl` / domain.
 - The consent screen the user approves is **the operator's own app**, on the
   operator's domain.
-- `docs/google-setup.md` already walks an operator through consent screen +
+- `docs/connectors/google-auth.md` already walks an operator through consent screen +
   authorized redirect URIs + setting the env vars.
 
 So each self-hoster brings their own Google Cloud project + OAuth client + domain.
@@ -41,7 +41,7 @@ BYO-only; the alternative contradicts the project's privacy posture.
 
 ## If BYO-only, smooth it (the actual work)
 
-1. **Set expectations in `docs/google-setup.md`** — the "unverified app" warning
+1. **Set expectations in `docs/connectors/google-auth.md`** — the "unverified app" warning
    is *normal and expected* for your own personal app; click through Advanced →
    continue; you never need Google verification/CASA for personal/family use.
    Note publishing status (Production, unverified) and the 100-user cap being a

@@ -323,7 +323,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
       crashed,
     ]);
     // A v3 (one-root) box's slug is the basename of its own root directory
-    // (src/lib/box-slug.ts; docs/docker-install.md: `/data/box` → `/box/`).
+    // (src/lib/box-slug.ts; docs/install/docker.md: `/data/box` → `/box/`).
     const slug = path.basename(args.boxDir);
     const boxHealthUrl = `http://localhost:${String(args.port)}/${slug}/api/trpc/health.check`;
     // Auth is always on; the diag bearer key is the documented bypass for

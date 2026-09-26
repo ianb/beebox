@@ -69,11 +69,8 @@ async function readCardText(absPath: string): Promise<string | null> {
   }
 }
 
-/**
- * Number of open todos on the plate right now (`escalated` + `on-plate`)
- * across every card in the box.
- */
-export async function countOnPlateTodos(boxRoot: string): Promise<number> {
+/** Every boxholder todo the box holds, whatever its status — the shared gather both counts below read. */
+async function gatherBoxholderTodos(boxRoot: string): Promise<CollectedTodo[]> {
   const [absPaths, { ctx, plateCtx }] = await Promise.all([
     listScopedCardPaths(boxRoot, "**/*.card"),
     buildTodoScanContext(boxRoot),
@@ -94,5 +91,39 @@ export async function countOnPlateTodos(boxRoot: string): Promise<number> {
     for (const item of extracted.items) todos.push(deriveTodo(item, plateCtx));
   }
 
-  return todos.filter((t) => isBoxholderTodo(t) && (t.plateState === "escalated" || t.plateState === "on-plate")).length;
+  return todos.filter(isBoxholderTodo);
+}
+
+/** The two counts the nav badge needs: on-plate now, and how many of those are past due. */
+export interface PlateTodoCounts {
+  onPlate: number;
+  escalated: number;
+}
+
+/**
+ * Both plate counts in one pass over {@link gatherBoxholderTodos} — the same
+ * predicate `countOnPlateTodos` used to apply inline, so the dot the nav
+ * shows next to the badge can never disagree with the number inside it.
+ */
+export async function countPlateTodos(boxRoot: string): Promise<PlateTodoCounts> {
+  const todos = await gatherBoxholderTodos(boxRoot);
+  let onPlate = 0;
+  let escalated = 0;
+  for (const t of todos) {
+    if (t.plateState === "escalated") {
+      onPlate++;
+      escalated++;
+    } else if (t.plateState === "on-plate") {
+      onPlate++;
+    }
+  }
+  return { onPlate, escalated };
+}
+
+/**
+ * Number of open todos on the plate right now (`escalated` + `on-plate`)
+ * across every card in the box.
+ */
+export async function countOnPlateTodos(boxRoot: string): Promise<number> {
+  return (await countPlateTodos(boxRoot)).onPlate;
 }

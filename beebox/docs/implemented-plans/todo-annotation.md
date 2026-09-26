@@ -433,7 +433,7 @@ and the guide section.
 
 ### Track 6 — docs + knowledge audits
 
-`docs/cards-as-markdown.md` gains the tag reference; the issue file closes
+`docs/cards/format.md` gains the tag reference; the issue file closes
 pointing here; knowledge-audit entries land run (see Knowledge audits).
 
 ## Subplans

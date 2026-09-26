@@ -5,7 +5,9 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { trpcClient } from "../../lib/trpc";
+import { trpc, trpcClient } from "../../lib/trpc";
+import { getQueryKey } from "@trpc/react-query";
+import { fetchSharedStatus } from "../../lib/trpc/shared-status";
 
 export interface GoogleStatus {
   available: boolean;
@@ -47,7 +49,8 @@ export function useGoogleServices(): GoogleServicesState {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const data = await trpcClient.admin.googleStatus.query();
+      // Shared with the admin overview's query of the same procedure.
+      const data = await fetchSharedStatus({ queryKey: getQueryKey(trpc.admin.googleStatus, undefined, "query"), queryFn: () => trpcClient.admin.googleStatus.query() });
       setStatus(data);
       setError(null);
       return data;
@@ -99,7 +102,8 @@ export function useGoogleServices(): GoogleServicesState {
     const updated = { ...status.enabledServices, [service]: enabled };
     try {
       await trpcClient.admin.updateBoxConfig.mutate({ googleServices: updated });
-      setStatus({ ...status, enabledServices: updated });
+      // Re-read so the overview's cached copy changes with this section's.
+      await fetchStatus();
     } catch (err) {
       setError(errorMessage(err));
     } finally {

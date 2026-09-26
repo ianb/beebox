@@ -15,9 +15,13 @@ import { Text } from "../ui/Text";
 import { TextField } from "../ui/fields";
 import { ExternalLink } from "../ui/ExternalLink";
 import { FriendlyDate } from "../ui/FriendlyDate";
+import { AdminSectionCard } from "./AdminSectionCard";
 import { CustomHostnameAssignment } from "./CustomHostnameAssignment";
 
 type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
+
+const DESCRIPTION =
+  "These credentials stay on this host. A server-only grant lets this box provision its sites; the box agent cannot read the token.";
 
 export function CloudflarePublishConnectionsSection() {
   const { boxSlug } = useParams({ strict: false });
@@ -71,17 +75,11 @@ export function CloudflarePublishConnectionsSection() {
   }
 
   if (connections.isLoading) {
-    return <Card as="section" aria-label="Cloudflare publishing connections" shadow aria-busy><Hint>Loading Cloudflare connections…</Hint></Card>;
+    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><Hint>Loading Cloudflare connections…</Hint></AdminSectionCard>;
   }
 
   return (
-    <Card as="section" aria-labelledby="bbx-admin-cloudflare-publish-heading" shadow>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <Heading level={2}><span id="bbx-admin-cloudflare-publish-heading">Cloudflare publishing</span></Heading>
-          <Hint>These credentials stay on this host. A server-only grant lets this box provision its sites; the box agent cannot read the token.</Hint>
-        </Stack>
-
+    <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION}>
         {connections.error ? <div role="alert"><ErrorText>{connections.error.message}</ErrorText></div> : null}
         {actionError ? <div role="alert"><ErrorText>{actionError}</ErrorText></div> : null}
 
@@ -124,8 +122,7 @@ export function CloudflarePublishConnectionsSection() {
           ))}
         </Stack>
         <CustomHostnameAssignment />
-      </Stack>
-    </Card>
+    </AdminSectionCard>
   );
 }
 

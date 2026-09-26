@@ -1,7 +1,7 @@
 /**
  * Set or confirm a card's `contains` field — the write half of
  * `bbx contains update`. Mutates the card (splitCardContent + YAML, per
- * docs/adding-schemas.md § Mutating), then re-bases the staleness sidecar
+ * docs/cards/schemas.md § Mutating), then re-bases the staleness sidecar
  * at the card's live basis. Identical text is the acknowledgment path for
  * a stale flag, so it re-bases too.
  */

@@ -13,7 +13,7 @@ after every pin bump. On 2026-09-03 it failed on the first scenario:
 
     steer (mid-tool push → same-turn injection) ... FAIL — timed out before the steer answer arrived
     Steering behavior changed under this SDK version. Do not ship the bump until
-    docs/chat-session-lifecycle.md and the chat steering design are reconciled.
+    docs/chat/sessions.md and the chat steering design are reconciled.
 
 Three consecutive re-runs on the same pin (`0.3.258`) then passed cleanly. The
 scenario waits up to `SCENARIO_TIMEOUT_MS` (120s, line 53) for a live model

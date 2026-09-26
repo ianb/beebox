@@ -96,6 +96,18 @@ x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0]: {% todo %} `created` is required when `by="agent"`
 ```
 
+## `recheck` takes a date or `never`, nothing else
+
+```ts
+JSON.stringify(load("todos:\n  - text: Renew the permit\n    recheck: 2026-10-15\n  - text: Old idea\n    recheck: never\n")["todos"])
+=> [{"text":"Renew the permit","recheck":"2026-10-15"},{"text":"Old idea","recheck":"never"}]
+
+loadErr("todos:\n  - text: Bogus\n    recheck: later\n")
+=>
+x.memo-fixture.card: invalid memo-fixture frontmatter:
+  - todos[0]: {% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or "never": "later"
+```
+
 ## `by: agent` with `created` is valid
 
 ```ts

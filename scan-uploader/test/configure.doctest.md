@@ -397,6 +397,13 @@ looksLikeAFlag.message
 => --folder requires a value
 ```
 
+The album flag is parsed as one argument, including spaces:
+
+```ts
+parseConfigureArgs(["https://beebox.run/family", "--folder", "/photos", "--photos-album", "Bee Box"]).photosAlbum
+=> Bee Box
+```
+
 ## The hidden token prompt's exact wording
 
 The interactive TTY prompt itself isn't practical to doctest (it needs a

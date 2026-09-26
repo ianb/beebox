@@ -314,9 +314,7 @@ struct NativeComposerView: View {
                 )
                 .disabled(isSending)
 
-                textEntry
-
-                trailingControlWithKeywordHint
+                textEntryAndTrailingControlWithKeywordHint
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -325,22 +323,27 @@ struct NativeComposerView: View {
         }
     }
 
-    private var trailingControlWithKeywordHint: some View {
-        trailingControl
-            .overlay(alignment: .bottomTrailing) {
-                if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
-                    Text(currentKeywordHint)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.thinMaterial, in: Capsule())
-                        .fixedSize()
-                        .offset(y: -64)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
+    private var textEntryAndTrailingControlWithKeywordHint: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+                Text(currentKeywordHint)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
+            HStack(alignment: .bottom, spacing: 10) {
+                textEntry
+                trailingControl
+            }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
     }
 
     private var hasKeywordHintText: Bool {

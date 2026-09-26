@@ -17,9 +17,12 @@ import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
-import { Heading } from "../ui/Heading";
 import { Button } from "../ui/Button";
 import { errorMessage } from "@shared/error-guards";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION =
+  "Get a push notification on this device when the box needs you — health alerts and questions waiting for an answer.";
 
 // iOS Safari's non-standard `navigator.standalone` (whether the page is
 // running as an installed Home-Screen app) isn't in the DOM lib types.
@@ -131,14 +134,8 @@ export function NotificationsSection() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <Heading level={2}>Notifications</Heading>
-      <Stack gap="sm" className="mt-2">
-        <Hint>
-          Get a push notification on this device when the box needs you — health alerts and
-          questions waiting for an answer.
-        </Hint>
-
+    <AdminSectionCard id="notifications" description={DESCRIPTION}>
+      <Stack gap="sm">
         {support === null ? null : support.kind === "unsupported" ? (
           <Hint>
             This browser doesn&apos;t support web push notifications.
@@ -173,6 +170,6 @@ export function NotificationsSection() {
           </div>
         ) : null}
       </Stack>
-    </div>
+    </AdminSectionCard>
   );
 }

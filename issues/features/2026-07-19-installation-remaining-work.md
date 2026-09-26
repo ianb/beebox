@@ -13,15 +13,15 @@ section.
 
 ## Where things stand (done, verified by execution)
 
-- From-source developer install: `beebox/docs/developer-install.md`,
+- From-source developer install: `beebox/docs/install/developer.md`,
   verified end-to-end from a bare `debian:bookworm` by
   `beebox/docker/smoke-dev-install.sh` (~150s, re-runnable).
-- Local/VPS Docker install: `beebox/docker/` + `docs/docker-install.md`,
+- Local/VPS Docker install: `beebox/docker/` + `docs/install/docker.md`,
   verified through docker-in-docker (build → init → up → 200 → Caddy
   internal-TLS 200) by `beebox/docker/smoke-vps-install.sh` (~170s).
 - `pnpm run doctor` preflight (incl. the better-sqlite3 ABI-drift probe),
   Claude-auth run-path preflight, `.env.example`, agent-facing install guide
-  (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
+  (`docs/install/agent.md`). Node pin + `engine-strict` landed at 22, then
   deliberately bumped to 24 on main (`fae16368`) — the single-commit-upgrade
   mechanism working as designed.
 - Closed as implemented:
@@ -33,7 +33,7 @@ section.
 1. **Real ACME/Let's Encrypt issuance** — the Caddy `--profile public` path
    with a real domain, real DNS, public 80/443. Harness only proves internal
    TLS. One cheap-VPS afternoon.
-2. **Tailscale-only variant** — documented in `docs/docker-install.md`,
+2. **Tailscale-only variant** — documented in `docs/install/docker.md`,
    never exercised (needs a tailnet + auth key).
 3. **Interactive `claude auth login` inside `docker compose run`** — the
    URL + paste-code flow in a TTY-attached container; believed to work,
@@ -82,7 +82,7 @@ per item; nothing here is cleared by the agent.
 
 | # | Item | Agent-verified | Boxholder step | Status |
 |---|---|---|---|---|
-| 1 | ACME / Let's Encrypt | compose + Caddyfile path re-run via `smoke-vps-install.sh` (internal CA) | follow "Checklist: proving a fresh public deployment" in `docs/docker-install.md`; paste the `certificate obtained` line + two `curl -sI` first lines | **blocked on you** (~30 min, VPS + A record) |
+| 1 | ACME / Let's Encrypt | compose + Caddyfile path re-run via `smoke-vps-install.sh` (internal CA) | follow "Checklist: proving a fresh public deployment" in `docs/install/docker.md`; paste the `certificate obtained` line + two `curl -sI` first lines | **blocked on you** (~30 min, VPS + A record) |
 | 2 | Tailscale-only | sidecar overlay `docker/compose.tailscale.yaml` + `tailscale-serve.json` validate with `docker compose config` (key in a sidecar-only `tailscale.env`, never `.env` — the box reads that); host-daemon path unexercised | (a) sidecar: `cp docker/tailscale.env.example docker/tailscale.env`, set the key and `PUBLIC_URL`, run the overlay command in the doc, open `https://<hostname>.<tailnet>.ts.net/`; (b) host-daemon: `bbx serve` a scratch box, `bbx tailscale setup --target <port>`, then `bbx tailscale stop` | **blocked on you** (5 min + 2 min) |
 | 3 | `claude auth login` in-container | CLI in the image prints the sign-in URL and blocks on stdin for the page's code (probe, no real login); doc rewritten for the code step | `docker compose run --rm box claude auth login`, open the URL, paste the code; then `docker compose run --rm box claude auth status`. Separately: laptop `claude setup-token` → `.env` → `docker compose up -d` → `auth status` | **blocked on you** (3 min each) |
 | 4 | macOS/Homebrew | every brew formula / pip name in the doc resolves; `pnpm run doctor` passes on a maintained Mac | decide whether a factory-fresh Mac walkthrough is worth doing; doc now states the exact status | **decision** |

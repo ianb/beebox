@@ -327,6 +327,7 @@ export interface ScheduledScriptTemplateOptions {
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   budget?: string;
   lockGroup?: string;
+  timeout?: string;
   requires?: string[];
 }
 
@@ -355,6 +356,7 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.enabled === false) fields["enabled"] = false;
   if (options.budget !== undefined) fields["budget"] = options.budget;
   if (options.lockGroup !== undefined) fields["lock-group"] = options.lockGroup;
+  if (options.timeout !== undefined) fields["timeout"] = options.timeout;
   if (options.description !== undefined) fields["description"] = options.description;
   fields["runs"] = options.runs;
   if (options.source !== undefined || options.sourceRef !== undefined) {

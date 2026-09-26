@@ -99,8 +99,8 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
   holds `title`, `contains`, `contains-evidence`, `todos`, `symbol`; injected
   by `cardSchema()` at `:348-352` with schema-wins on a name clash. The
   docblock at `:89-90` names the two docs to update when a field is added:
-  `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`
-  (`docs/adding-schemas.md:72`: "Every schema automatically gets five optional
+  `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
+  (`docs/cards/schemas.md:72`: "Every schema automatically gets five optional
   frontmatter fields"). **Reuse**: `prominence` becomes the sixth.
 - **Landmark schema.** `src/schemas/landmark.ts:98-105` `LandmarkNavigation`
   (`label`, `symbol`, `links`, `expand`, `chat-app`); `:52-56` `LandmarkLink`
@@ -418,7 +418,7 @@ card"). Not used: `hidden` (279 hits in `src` for CSS and UI state),
 **First implementation chunk** (after the vocabulary gate in Implementation
 order). Add `Prominence` to `src/shared/` (the frontend reads it too), add it
 to `GLOBAL_CARD_FIELDS` and `InferCardFields`, admit it in `LandmarkObject`
-beside `symbol` (`landmark.ts:128-140`), update `docs/adding-schemas.md:72`
+beside `symbol` (`landmark.ts:128-140`), update `docs/cards/schemas.md:72`
 and the bbx-guide-schemas enumeration, extend `test/cards/` schema doctests
 (accepts the three values, rejects a fourth with a message naming them,
 absent parses as undefined) and `landmark-schema.doctest.md`
@@ -895,7 +895,7 @@ not a committed timing test) within the same order of magnitude.
 
 Migration: scripted, additive, one pass, registered in
 `src/core/migrations.ts` after `landmark-symbol`; the deploy sweep runs it
-(`docs/migrations.md`). No mid-way state exists because nothing is removed.
+(`docs/cards/migrations.md`). No mid-way state exists because nothing is removed.
 Stock template cards are not changed, so the template-version tracker is not
 involved.
 

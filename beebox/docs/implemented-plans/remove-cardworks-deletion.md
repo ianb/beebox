@@ -458,8 +458,8 @@ beebox/{src,scripts,test}` empty for `src` (migrators are stubbed here, so
 they're the last to clear) **and** the box-schema audit
 (`grep -rl cardworks ~/src/boxes/*/config/schemas/` + the server boxes) is
 clean. Doc updates: `CLAUDE.md:28` (the dormant-loader sentence),
-`CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
-`docs/migrations.md` (retire deleted-migrator references).
+`CLAUDE.md:87`/`docs/cards/schemas.md` (the cardworks bullet → `src/cards/`),
+`docs/cards/migrations.md` (retire deleted-migrator references).
 
 **First implementation chunk.** Delete package + wiring + stub migrators +
 `pnpm install` + `dist` rebuild, with a final clean

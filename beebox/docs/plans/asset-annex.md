@@ -485,7 +485,7 @@ So:
   cloned box gets configured.
 - **`runHealthChecks`** — checks 1 and 5 register at `error` severity,
   so they surface on the dashboard and fail `bbx health` (exit 1) for
-  the deploy runbooks (`docs/health-checks.md`) without touching
+  the deploy runbooks (`docs/server/health-checks.md`) without touching
   serving.
 
 This is a strictly better answer to the plan's original critical gap
@@ -758,7 +758,7 @@ this was invisible.
 
 `docs/asset-manifests.md` is rewritten as `docs/assets.md` describing
 the annex model; the manifest doc moves to `docs/implemented-plans/`
-since it accurately records a system that existed. `docs/migrations.md`
+since it accurately records a system that existed. `docs/cards/migrations.md`
 gets the Track B runbook. Knowledge audits below.
 
 ## Subplans

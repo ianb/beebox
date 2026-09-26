@@ -5,7 +5,7 @@
 # Executable approximation of the "clean-clone walkthrough on a machine without
 # the personal layout" rollout verification in
 # docs/plans/installation-story.md. Starts from a bare `debian:bookworm`
-# container (fresh every run, removed after) and follows docs/developer-install.md
+# container (fresh every run, removed after) and follows docs/install/developer.md
 # step by step, as a stranger with nothing preinstalled would:
 #
 #   apt prerequisites → Node 24 → corepack/pnpm → git lfs install → the Claude

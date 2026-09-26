@@ -56,7 +56,7 @@ Related, deliberately not addressed:
 - `src/core/markdoc/emit-tags.ts:104,136` — the `[→ ref]` downgrade
   serialization the agent imitates. It stays (markdown genuinely can't carry
   the chip UI); the fix is guidance, not the emitter.
-- `scripts/migrate/_harness.ts` + `docs/migrations.md` — migration runner and
+- `scripts/migrate/_harness.ts` + `docs/cards/migrations.md` — migration runner and
   template; `src/core/migrations.ts` `MIGRATIONS` registry (append-only).
 - `src/frontend/src/components/FileView.tsx:247` `RendererToggle` — the view
   tabs; labels come from each renderer's registered `name`

@@ -33,13 +33,38 @@ import {
   sleep,
 } from "./router-config.js";
 
+/** The frontend package has no `vite` binary of its own; `pnpm install` was
+ *  not run, or the frontend's dependency moved. */
+export class FrontendViteMissingError extends Error {
+  constructor(viteBin: string) {
+    super(`Frontend Vite binary not found at ${viteBin}; run pnpm install in that checkout`);
+    this.name = "FrontendViteMissingError";
+  }
+}
+
+/** The Vite the frontend's own scripts resolve (`pnpm build` there runs it).
+ *  With the hoisted linker, per-package `node_modules/.bin` still carries a
+ *  package's direct dependencies, so this is the declared major, whatever
+ *  else the workspace root hoists. */
+async function frontendViteBin(frontendCwd: string): Promise<string> {
+  const viteBin = path.join(frontendCwd, "node_modules", ".bin", "vite");
+  try {
+    await fs.access(viteBin);
+  } catch (_e) {
+    throw new FrontendViteMissingError(viteBin);
+  }
+  return viteBin;
+}
+
 export async function resolveWorktree(name: string): Promise<ResolvedWorktree | null> {
   if (name === "main") {
+    const frontendCwd = path.join(MAIN_ROOT, "beebox", "src", "frontend");
     return {
       name: "main",
       root: MAIN_ROOT,
       backendCwd: path.join(MAIN_ROOT, "beebox"),
-      frontendCwd: path.join(MAIN_ROOT, "beebox", "src", "frontend"),
+      frontendCwd,
+      viteBin: await frontendViteBin(frontendCwd),
       boxes: (await readBoxes(path.join(MAIN_ROOT, "beebox", ".env"))) ?? MAIN_BOX_DEFAULTS,
     };
   }
@@ -52,11 +77,13 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
   }
   const envPath = path.join(root, "beebox", ".env");
   const boxes = await readBoxes(envPath);
+  const frontendCwd = path.join(root, "beebox", "src", "frontend");
   return {
     name,
     root,
     backendCwd: path.join(root, "beebox"),
-    frontendCwd: path.join(root, "beebox", "src", "frontend"),
+    frontendCwd,
+    viteBin: await frontendViteBin(frontendCwd),
     boxes: boxes ?? [path.join(BOXES_ROOT, name, "test1")],
   };
 }

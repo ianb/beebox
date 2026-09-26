@@ -3,8 +3,7 @@
  *
  * Full wakeup flow:
  * 1. Run preprocessors on inbox items (transcription, etc.)
- * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark,
- *    run the todo-review sweep)
+ * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark)
  * 3. Run on-wakeup scheduled scripts
  * 4. Run connectors (pull external data, create jobs)
  *    4a. Clean up stale jobs whose refs all point at deleted files

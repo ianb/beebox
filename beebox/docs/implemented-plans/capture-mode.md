@@ -442,7 +442,7 @@ deleting the template leaves `config/procedures/
 process-captures.procedure.card` and any pending
 `config/schedules/process-captures.scheduled-script.card` trigger on
 every initialized box, now referencing deleted `bbx` commands (a
-wakeup-time failure). Migration (per `docs/migrations.md` runbook
+wakeup-time failure). Migration (per `docs/cards/migrations.md` runbook
 style): an explicit migration that removes both files when the
 procedure card's content hash matches an **enumerated list of shipped
 versions** carried in the migration itself — not the
@@ -659,7 +659,7 @@ The backbone already exists and is reused, not rebuilt:
 - **Migration:** scripted, hash-guarded deletion of the deployed
   procedure card + trigger (parked if modified); legacy inbox
   capture-sessions left for normal triage. Runs via the standard
-  migration runbook (`docs/migrations.md`) as part of the same
+  migration runbook (`docs/cards/migrations.md`) as part of the same
   release; gradual states don't exist — a box either has the old
   pipeline (commands still present) or the new one.
 - **Docs:** input-widget.md already updated; `/finish` moves this plan

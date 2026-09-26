@@ -64,7 +64,7 @@ anything worth reading:
 - **What is the output, exactly?** The boxholder says "an issue to review, then
   concrete rules". The rule end has three real forms here: a lint rule in the
   preset, a line in `code-style.md`, or a knowledge audit
-  ([`docs/knowledge-audits.md`](../../beebox/docs/knowledge-audits.md)) when the
+  ([`docs/knowledge-audits.md`](../../beebox/docs/testing/knowledge-audits.md)) when the
   thing to hold is agent recall rather than syntax. Choosing among them is part
   of the finding, and "no rule, just fix it" must stay a legal outcome.
 - **The research licence.** The boxholder explicitly wants this to research

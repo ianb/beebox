@@ -23,7 +23,7 @@
  *   connection — the supervisor's readiness probe (`waitForHttp`) treats ANY
  *   HTTP response as ready, so a child that listens but whose health handler
  *   is broken would otherwise pass. Deploy-only; not a monitor endpoint (it
- *   wakes a box). See `docs/health-checks.md`.
+ *   wakes a box). See `docs/server/health-checks.md`.
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";

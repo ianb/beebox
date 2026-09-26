@@ -70,7 +70,7 @@ evidently the norm, which is the thing to fix.
   a reserved prefix — `healthz`/`auth`/`webhook`/`api` — or two slugs resolving
   to one box, which the hub refuses because it would run two engines against
   one `events.db`). Failing *before* mutating anything beats failing after.
-- **Reconcile the docs.** `docs/adding-a-box.md` describes the generic shape
+- **Reconcile the docs.** `docs/server/boxes.md` describes the generic shape
   with `bbx-hub` as an example unit name; the real unit is `beebox-hub`.
   `deploy/README.md`'s "known gap" note should disappear rather than being
   updated, because the gap should stop existing.

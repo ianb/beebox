@@ -69,6 +69,17 @@ export interface CollectionDef<
   /** Cheap proof a card's text cannot hold an item, so the reference pass can skip it without a parse. */
   mayHaveItem(content: string): boolean;
   derive(item: Item, ctx: DeriveContext): Derived;
+  /**
+   * Whether a derived item counts at all for this query — applied right
+   * after `derive` and before reduction, grouping, or the reference pass's
+   * own scope. Undefined means every derived item is in scope. Distinct from
+   * `matches`: `matches` decides what a query DISPLAYS (a hidden item still
+   * counts in a reduction), while `inScope` decides what a query ever SEES.
+   * The todo collection uses it for `scope: "boxholder" | "all"` — an
+   * excluded agent follow-up must never reach a reduction, or a header could
+   * show a count containing an item the list never renders.
+   */
+  inScope?(item: Derived, params: Params): boolean;
   matches(item: Derived, params: Params): boolean;
   /** Box-relative paths this item points at, already resolved. */
   refsOf(item: Derived): string[];

@@ -41,6 +41,8 @@ import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { CardActions } from "./card-actions/CardActions";
 import { MissingCardState } from "./card-actions/MissingCardState";
 import { FileStaleNotice } from "./FileStaleNotice";
+import { CardTodos } from "./todo/CardTodos";
+import { TodoActionsProvider } from "./todo/TodoActionsProvider";
 import type { FileViewProps } from "./file-view-types";
 import type { ViewTarget } from "../lib/view-url";
 
@@ -164,6 +166,15 @@ function pendingFileViewLabel({ loading, followingMove }: { loading: boolean; fo
 
 /* ---------- main component ---------- */
 
+/**
+ * A card's todo summary sits above whichever renderer is active, core or box view; an embed has no chrome for it.
+ * The todos inside get their tick and "+ to chat" actions here too (an embed inherits its host's).
+ */
+function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mode"]; path: string; onAddSelection: FileViewProps["onAddSelection"] }, content: ReactNode): ReactNode {
+  if (mode === "embed" || !isCardPath(path)) return content;
+  return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
+}
+
 function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
   enabled: boolean; onCapture: (selection: { text: string; position: string }) => void;
   rendered: ReactNode; workspacePdf: boolean | undefined;
@@ -242,7 +253,8 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
       )}
     />
   );
-  const captured = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
+  const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
+  const captured = withCardTodos({ mode, path: data.path, onAddSelection }, selectable);
   // The marker rides with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,
   // and on its own page.

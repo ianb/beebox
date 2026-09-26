@@ -293,7 +293,7 @@ export async function makeHarness(options?: { devNoHub?: boolean }): Promise<Har
     })(),
     resolveWorktree: async (name): Promise<ResolvedWorktree | null> => {
       if (unknownNames.has(name)) return null;
-      return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, boxes: [] };
+      return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, viteBin: path.join(tmp, "frontend-vite"), boxes: [] };
     },
     resolveBoxEntries: async () => [],
     sourceToken: () => Promise.resolve(sourceToken.value),

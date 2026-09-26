@@ -183,3 +183,41 @@ they retain the previous full-inventory anchor and explicitly do not claim a
 fresh audit of unrelated historical changes. Native sheet visual review,
 physical-device review, and live box evaluation remain open, so this plan is
 partial rather than an assertion of calibrated routing quality.
+
+## Recent-context refinement (2026-09-24)
+
+The boxholder observed two identically named candidates with nearly equal
+probabilities and approved richer evidence, emphasizing: “The latest messages
+obviously matter the most by far. But overall conversation length or something
+too.” Recent semantic context remains primary; history size and message dates
+are supporting evidence, not a preference for long conversations regardless of
+fit.
+
+The smallest change is to improve the existing bounded catalog excerpt and add
+optional metadata. `src/core/chat/routing/catalog.ts:158` currently uses
+`candidate.recentContext = text.slice(-2000);`, which can remove the user request
+and its role when an assistant reply is long. Preserve labeled message excerpts
+through both budget passes, and retain recent user context during tool-heavy
+turns. Reuse the history loader's `total` as a transcript-entry count; do not
+mislabel it as user turns. Expose the latest available message timestamp and
+entry count below result labels. Old routing records remain readable without
+these optional fields.
+
+Budget: approximately 150 source and 100 test changed lines, plus this amendment
+and the current routing guide. No new persistence, full-history summary pass,
+candidate eligibility change, probability threshold, native UI, or automatic
+aborted-chat classification. Tests cover a long reply hiding the latest user
+request, shared-budget shortening, metadata, and older records. Browser evidence
+will cover duplicate titles with different metadata. Live ranking quality
+remains an evaluation task; deterministic tests verify the evidence supplied,
+not whether Jev will assign a particular probability.
+
+Implementation evidence: the selected suite passed 1,301 assertions across 108
+files. A phone-width browser check rendered duplicate-title synthetic results
+with different entry counts and message dates; it did not send a chat or invoke
+Jev. Cross-model review identified app-context wrappers consuming the user-text
+budget and gaps caused by skipping oversized older messages. The refinement
+uses the existing human-message classification and wrapper cleanup, stops the
+older-message window at a gap, and derives the displayed date from conversation
+text. Focused regressions cover these cases. No live ranking calibration or
+comparison of the boxholder's private sessions is claimed.

@@ -107,7 +107,7 @@ procedure with a ref. Saving without a choice is not possible. Update the
 rules-present copy.
 
 ### Track 6 — docs + tests
-`docs/gmail-setup.md` (the shorthand section currently describes it as legacy),
+`docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
 `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 `gmail-tracking.doctest.md` cover config parsing; add cases for missing
 `action`, a stray `action`, shorthand-with-procedure, and a missing config file.

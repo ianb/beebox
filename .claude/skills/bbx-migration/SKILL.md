@@ -9,7 +9,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 A migration is a **one-shot transform of card data already on disk** — renames,
 field strips, format flips, refactors. The full how-to (the `bbx migrate` runner,
 the per-box `config/migrations.jsonl` manifest, the harness, the migrator table)
-lives in **`beebox/docs/migrations.md`** — read it before writing one.
+lives in **`beebox/docs/cards/migrations.md`** — read it before writing one.
 This skill is the part the runbook can't enforce: deciding *whether* you need a
 migration, *which kind*, and not repeating the scars.
 
@@ -19,7 +19,7 @@ Schemas in `src/schemas/` evolve **freely** — *as long as old data still parse
 AND still means the right thing*. So:
 
 - **Additive / optional change** (a new optional field, a looser validation) →
-  **no migration.** Old cards load unchanged. See `docs/adding-schemas.md`.
+  **no migration.** Old cards load unchanged. See `docs/cards/schemas.md`.
 - **Old data would no longer load** (a now-required field, a renamed key the
   loader needs, a removed `type`) → **migration.**
 - **Old data still loads but now means the *wrong thing*** → **migration**, and
@@ -58,7 +58,7 @@ because the change is *unspecifiable*.
 
 ## Writing a script migration (the load-bearing rules)
 
-`docs/migrations.md` has the full template; these are the rules that bite if you
+`docs/cards/migrations.md` has the full template; these are the rules that bite if you
 skip them:
 
 - **Use the harness** (`scripts/migrate/_harness.ts`) — it does the file walk,

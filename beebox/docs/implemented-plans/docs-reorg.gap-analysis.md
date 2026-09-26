@@ -44,7 +44,7 @@ Data-loss / corruption tier:
    `docs/box-layout.md`.
 6. **Every card schema silently gets optional `title` and `contains`
    (`GLOBAL_CARD_FIELDS`).** `src/cards/schema.ts:63-77`; `contains` is the
-   prime retrieval field. `docs/adding-schemas.md` never mentions it and
+   prime retrieval field. `docs/cards/schemas.md` never mentions it and
    its example redeclares `title`, hiding the mechanism — new card types
    end up invisible to search.
 7. **`bypassPermissions` is hardcoded for every SDK-spawned box agent.**
@@ -115,7 +115,7 @@ answered — remain open questions in `docs-reorg.md`.
 9. **Two-and-a-half registration manifests** (`bbx boxes add` scheduler
    manifest vs `hub.json`, plus `bbx activity` reading boxes.json) read as
    one system in docs. Cross-reference or unify?
-10. `docs/composer-input-machine.md` leads with an unshipped 5-state
+10. `docs/chat/composer.md` leads with an unshipped 5-state
     design and buries the shipped 3-state reality — restructure?
 
 ## C. Documented but wrong / unfindable from point of need
@@ -135,7 +135,7 @@ answered — remain open questions in `docs-reorg.md`.
 5. **`src/hub/hub-server.ts:1-14` comment says the hub never lazy-spawns —
    contradicted by `resolveEndpoint()` and `supervisor.ts` `lazy: true`**
    (added 2026-07-04). Fix comment; give lazy-hub a sentence in
-   `docs/adding-a-box.md`.
+   `docs/server/boxes.md`.
 6. **`src/cli/commands/boxes.ts:1-8` says `bbx serve` reads boxes.json** —
    contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
    `docs/user-stories.md` asserts the old behavior as verified.
@@ -161,5 +161,5 @@ answered — remain open questions in `docs-reorg.md`.
 
 Verified-solid (no action): `lib/trpc.ts` self-docs,
 `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-`docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
+`docs/cards/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 the self-explaining `template-stock-hashes` doctest failure message.

@@ -79,7 +79,7 @@ depends on:
 
 **After changing scroll code, run the scenario table at `/dev/chat-scroll`**
 (`window.__scrollHarness.runAll()` via `bin/browse eval` — every scenario must
-PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
+PASS) **and the browser procedure in `docs/chat/scroll.md`**, and verify
 on a real iOS device for keyboard/momentum/rubber-band, which headless Chromium
 can't emulate.
 

@@ -208,6 +208,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
           ...(msg.message.stop_reason !== null
             ? { stop_reason: msg.message.stop_reason }
             : {}),
+          model: msg.message.model,
         },
       };
       result.uuid = msg.uuid;

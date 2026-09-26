@@ -8,7 +8,7 @@ priority: normal
 ---
 
 The deployed server has no first-class backup mechanism.
-`docs/server-operations.md` defers to "whatever backup mechanism is
+`docs/server/operations.md` defers to "whatever backup mechanism is
 currently configured for the server"; git-annexed assets are
 `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
 take a tar snapshot, scoped to that operation. A box's git remote (the

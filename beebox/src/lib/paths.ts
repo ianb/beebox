@@ -266,6 +266,16 @@ export function isViewFile(filePath: string): boolean {
 }
 
 /**
+ * Check if a path is box view source: a view (`isViewFile`) or a helper it may
+ * import, i.e. any `.ts`/`.tsx` under a `views/` directory (`views/lib/…`).
+ * The Markdown check (`core/views/markdown-check.ts`) runs on all of them; the
+ * compile check only on views.
+ */
+export function isViewSourceFile(filePath: string): boolean {
+  return /(^|\/)views\/.+\.tsx?$/.test(filePath);
+}
+
+/**
  * Cards under `_bookkeeping/trash/` are by definition orphaned/discarded and
  * routinely have broken refs (their attachments and related cards have been
  * deleted), so the *implicit* box-wide walks skip them — `bbx validate`'s

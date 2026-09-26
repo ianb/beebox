@@ -5,7 +5,7 @@
  * compensations for changes the reader did not cause; this function is the
  * dispatcher for the compensations, extracted so the precedence between them
  * is unit-checkable without a DOM (the layout itself still needs the browser
- * procedure in docs/chat-scroll-testing.md).
+ * procedure in docs/chat/scroll.md).
  *
  * There is no follow-the-bottom branch and no "was that scroll the user's"
  * question: content growth below the reader never scrolls. What is left is

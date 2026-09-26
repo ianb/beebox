@@ -105,7 +105,13 @@ export function MarkdownCardView({ data, onNavigate, mode }: RendererProps) {
 
       {body !== undefined && body.trim() !== "" ? (
         <div data-card-section="body">
-          <Markdown prose="block" onNavigate={onNavigate} basePath={data.path} components={components}>
+          <Markdown
+            prose="block"
+            onNavigate={onNavigate}
+            basePath={data.path}
+            components={components}
+            {...(data.bodyLineOffset === undefined ? {} : { card: { path: data.path, bodyLineOffset: data.bodyLineOffset } })}
+          >
             {body}
           </Markdown>
         </div>

@@ -65,7 +65,7 @@ cross-review finding 1; this constraint shapes Tracks A–C.)
 
 ## What already exists
 
-- **The documented-but-untested path.** `beebox/docs/docker-install.md:119`
+- **The documented-but-untested path.** `beebox/docs/install/docker.md:119`
   ("### Tailscale-only (no open ports)") tells the user to rebind compose from
   loopback to the tailnet IP and skip Caddy, with TLS as a one-line aside
   (`docker-install.md:131`: "Add TLS via Tailscale Serve if you want
@@ -405,7 +405,7 @@ member's every device joining the tailnet — a household decision, deferred
 (see NOT in scope).
 
 **Direction.** No new code beyond Track B; this track is running the tooling
-on the server plus a short runbook note in `docs/health-checks.md`'s style
+on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 for the systemd context. `bbx tailscale status` on the server reports both
 paths' states.
 
@@ -542,7 +542,7 @@ not prevention.
 
 Skip, with rationale: this plan introduces no box-agent-facing concepts — no
 tags, card shapes, or conventions a box agent must recall. The agent-facing
-surface is `docs/agent-install.md`'s existing "widening exposure is a real
+surface is `docs/install/agent.md`'s existing "widening exposure is a real
 decision" guidance (`agent-install.md:59`), which Track C updates to point at
 `bbx tailscale status`; installing agents read that doc in-context rather than
 recalling it, so no `knows_directly` entry applies.

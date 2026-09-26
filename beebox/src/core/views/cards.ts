@@ -15,7 +15,8 @@
 import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import { glob } from "glob";
-import { loadCardFile } from "../card-io.js";
+import { loadCardFromText } from "../card-io.js";
+import { splitCardContent } from "../../cards/index.js";
 import { buildLoadContext } from "../load-context.js";
 import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git.js";
 import { fileEtag } from "../../webapp/file-etag.js";
@@ -96,8 +97,11 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
   for (const relPath of cardPaths) {
     try {
       const absPath = path.join(boxRoot, relPath);
-      const loaded = await loadCardFile(absPath, ctx);
-      const viewCard = frontmatterViewCard(relPath, loaded.fields);
+      const content = await fs.readFile(absPath, "utf8");
+      const loaded = await loadCardFromText({ content, source: absPath, ctx });
+      // The same split `card.get` and the todo collector use, so a todo that
+      // a view renders through `Markdown` gets the collector's locator.
+      const viewCard = frontmatterViewCard(relPath, { fields: loaded.fields, bodyLineOffset: splitCardContent(content).lineOffset });
       const attachments = await listAttachments(boxRoot, relPath);
       if (attachments.length > 0) {
         viewCard.attachments = attachments;
@@ -130,7 +134,7 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
 }
 
 /** Phase-2 card → ViewCard: parsed fields in `frontmatter`, body split out. */
-function frontmatterViewCard(relPath: string, fields: Record<string, unknown>): ViewCard {
+function frontmatterViewCard(relPath: string, { fields, bodyLineOffset }: { fields: Record<string, unknown>; bodyLineOffset: number }): ViewCard {
   const frontmatter: Record<string, unknown> = {};
   let body: string | undefined;
   for (const [key, value] of Object.entries(fields)) {
@@ -147,6 +151,7 @@ function frontmatterViewCard(relPath: string, fields: Record<string, unknown>): 
     path: relPath,
     type: typeof type === "string" ? type : "",
     frontmatter,
+    bodyLineOffset,
   };
   if (body !== undefined) viewCard.body = body;
   return viewCard;

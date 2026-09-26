@@ -34,7 +34,7 @@ every comment is traceable back to its story.
   [29] reframed to "changes in the sync commit"; [38] kept (x-bbx-DELETE) minus
   the review-job mention.
 - **Bucket B — done.** 44 doc corrections + item [47] reframed to TTS-only +
-  `docs/calendar.md` updated ([46]).
+  `docs/connectors/calendar.md` updated ([46]).
 - **Bucket C — done.** All small fixes applied (see C section). Notable: [67]
   needed no change (tRPC `wsLink` already resumes via `tracked()`); [58] was the
   web wakeup trigger — removed (agent-managed now), story deleted; [92] resume
@@ -206,7 +206,7 @@ trade-off) ·
 [38] x-bbx-DELETE is immediate deletion + post-hoc log ·
 [41] callback timers are agent-controlled — reframe "As an agent" ·
 [42] backlog skip on first sync is automatic and fine ·
-[46] update `docs/calendar.md`: bidirectional sync *is* implemented, auto-sync
+[46] update `docs/connectors/calendar.md`: bidirectional sync *is* implemented, auto-sync
 off by default, push path untested ·
 [49] events are created by editing/agent-writing `.ics` files, no UI ·
 [50] / [53] Telegram webhook filtering is hardcoded to `message`/`edited_message`
@@ -233,7 +233,7 @@ are separate ·
 are D2).
 
 **Effort:** the whole bucket is ~1-2 hours of editing `user-stories/catalog/2026-06-26.md` plus a
-small `docs/calendar.md` update ([46]).
+small `docs/connectors/calendar.md` update ([46]).
 
 ---
 

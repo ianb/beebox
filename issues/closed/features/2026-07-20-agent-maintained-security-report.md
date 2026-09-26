@@ -50,7 +50,7 @@ it's already an honest posture doc (auth model, setup-token window, no MFA)
 and shows the right register.
 
 Fits existing infrastructure: knowledge-audits
-([docs](../../../beebox/docs/knowledge-audits.md)) and the doc-generation
+([docs](../../../beebox/docs/testing/knowledge-audits.md)) and the doc-generation
 tooling are precedents for committed-prompt → generated-artifact loops.
 
 **First run produces the launch security-overview.md** — gate 4 in

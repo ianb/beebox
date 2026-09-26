@@ -1,15 +1,17 @@
 /** Per-box native agent harness and model policy. */
 
 import { trpc } from "../../lib/trpc";
-import { Card } from "../ui/Card";
 import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
-import { Heading } from "../ui/Heading";
 import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
 import { AGENT_ENGINES } from "@shared/agent-models.js";
+import { AdminSectionCard } from "./AdminSectionCard";
+
+const DESCRIPTION =
+  "Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine keep using it; legacy chats default to Claude.";
 
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
@@ -49,9 +51,9 @@ export function AgentEngineSection() {
 
   if (config.isLoading) {
     return (
-      <Card as="section" aria-label="Agent engine" shadow aria-busy>
+      <AdminSectionCard id="agent-engine" description={DESCRIPTION} busy>
         <Hint>Loading agent engine…</Hint>
-      </Card>
+      </AdminSectionCard>
     );
   }
 
@@ -63,84 +65,72 @@ export function AgentEngineSection() {
   const model = config.data?.agentModel ?? null;
 
   return (
-    <Card as="section" aria-labelledby="agent-engine-heading" shadow>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <div id="agent-engine-heading">
-            <Heading level={2}>Agent engine and model</Heading>
-          </div>
-          <Hint>
-            Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine
-            keep using it; legacy chats default to Claude.
-          </Hint>
-        </Stack>
+    <AdminSectionCard id="agent-engine" description={DESCRIPTION}>
+      {config.data ? (
+        <>
+          <RadioGroup
+            label="Use for new agent work"
+            idPrefix="bbx-admin-agent-engine"
+            variant="cards"
+            value={engine}
+            options={ENGINE_OPTIONS}
+            disabled={update.isPending}
+            onChange={(agentEngine) => {
+              if (agentEngine !== "claude" && agentEngine !== "codex") return;
+              update.mutate({ agentEngine });
+            }}
+          />
+          <Stack gap="xs">
+            <Text size="sm" weight="semibold">Available engines</Text>
+            <Hint>
+              Which harnesses a new chat may choose. Turn off an engine this box has no
+              account for, so nobody starts a chat that cannot run.
+            </Hint>
+            {AGENT_ENGINES.map((candidate) => (
+              <CheckboxField
+                key={candidate}
+                id={`bbx-admin-engine-enabled-${candidate}`}
+                label={ENGINE_LABELS[candidate] ?? candidate}
+                checked={candidate === engine || config.data.engines[candidate] === true}
+                // The default engine cannot be turned off — a box whose default
+                // engine is unavailable cannot run at all.
+                disabled={candidate === engine || update.isPending}
+                helper={candidate === engine ? "The default engine is always available." : undefined}
+                onChange={(checked) => {
+                  update.mutate({ engines: { ...config.data.engines, [candidate]: checked } });
+                }}
+              />
+            ))}
+          </Stack>
+          <SelectField
+            id="bbx-admin-agent-model"
+            label="Default model"
+            helper="New chats and unpinned agent work — wakeups, procedures without an explicit model — use this model. A chat can still pick its own."
+            value={model ?? ""}
+            options={modelOptions(engine, { current: model, added: config.data.openrouterModels })}
+            disabled={update.isPending}
+            onChange={(agentModel) => { update.mutate({ agentModel: agentModel === "" ? null : agentModel }); }}
+          />
+        </>
+      ) : null}
 
-        {config.data ? (
-          <>
-            <RadioGroup
-              label="Use for new agent work"
-              idPrefix="bbx-admin-agent-engine"
-              variant="cards"
-              value={engine}
-              options={ENGINE_OPTIONS}
-              disabled={update.isPending}
-              onChange={(agentEngine) => {
-                if (agentEngine !== "claude" && agentEngine !== "codex") return;
-                update.mutate({ agentEngine });
-              }}
-            />
-            <Stack gap="xs">
-              <Text size="sm" weight="semibold">Available engines</Text>
-              <Hint>
-                Which harnesses a new chat may choose. Turn off an engine this box has no
-                account for, so nobody starts a chat that cannot run.
-              </Hint>
-              {AGENT_ENGINES.map((candidate) => (
-                <CheckboxField
-                  key={candidate}
-                  id={`bbx-admin-engine-enabled-${candidate}`}
-                  label={ENGINE_LABELS[candidate] ?? candidate}
-                  checked={candidate === engine || config.data.engines[candidate] === true}
-                  // The default engine cannot be turned off — a box whose default
-                  // engine is unavailable cannot run at all.
-                  disabled={candidate === engine || update.isPending}
-                  helper={candidate === engine ? "The default engine is always available." : undefined}
-                  onChange={(checked) => {
-                    update.mutate({ engines: { ...config.data.engines, [candidate]: checked } });
-                  }}
-                />
-              ))}
-            </Stack>
-            <SelectField
-              id="bbx-admin-agent-model"
-              label="Default model"
-              helper="New chats and unpinned agent work — wakeups, procedures without an explicit model — use this model. A chat can still pick its own."
-              value={model ?? ""}
-              options={modelOptions(engine, { current: model, added: config.data.openrouterModels })}
-              disabled={update.isPending}
-              onChange={(agentModel) => { update.mutate({ agentModel: agentModel === "" ? null : agentModel }); }}
-            />
-          </>
-        ) : null}
-
-        {update.isPending ? (
-          <div role="status"><Hint>Saving…</Hint></div>
-        ) : null}
-        {update.isSuccess ? (
-          <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>
-        ) : null}
-        {/* The server saves the config and commits it separately; a failed
-            commit was previously reported and then dropped on the floor here. */}
-        {update.data?.commitWarning ? (
-          <div role="alert"><ErrorText>{update.data.commitWarning}</ErrorText></div>
-        ) : null}
-        {config.error ? (
-          <div role="alert"><ErrorText>{config.error.message}</ErrorText></div>
-        ) : null}
-        {update.error ? (
-          <div role="alert"><ErrorText>{update.error.message}</ErrorText></div>
-        ) : null}
-      </Stack>
-    </Card>
+      {update.isPending ? (
+        <div role="status"><Hint>Saving…</Hint></div>
+      ) : null}
+      {update.isSuccess ? (
+        <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>
+      ) : null}
+      {/* The server saves the config and commits it separately; a failed
+          commit was previously reported and then dropped on the floor here. */}
+      {update.data?.commitWarning ? (
+        <div role="alert"><ErrorText>{update.data.commitWarning}</ErrorText></div>
+      ) : null}
+      {config.error ? (
+        <div role="alert"><ErrorText>{config.error.message}</ErrorText></div>
+      ) : null}
+      {update.error ? (
+        <div role="alert"><ErrorText>{update.error.message}</ErrorText></div>
+      ) : null}
+    </AdminSectionCard>
   );
 }

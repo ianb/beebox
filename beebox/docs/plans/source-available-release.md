@@ -65,7 +65,7 @@ new construction.
   by the `*.secret.json` convention enforced at `beebox/deploy/deploy.sh:26`
   and documented at `beebox/docs/box-layout.md:194`. No credential values
   are committed. This track needs verification, not construction.
-- **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
+- **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
   marks which commands are `box.example.com`-specific vs. generic. The author
   has already separated these mentally; the deploy track formalizes it.
 - **Fictional example roster — reuse.** `docs/example-names.md` and
@@ -175,7 +175,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   boxholder/`example-names` convention.
 - **Why.** `beebox/CLAUDE.md:103` requires generic shared text; these
   violate it: `test/schemas/personality-boxholder.doctest.md:20` (real name as
-  test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
+  test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
   name), `user-stories/catalog/2026-06-26.md` (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The
   `agent-doctest/LICENSE` + `agent-doctest/README.md` real-name uses are

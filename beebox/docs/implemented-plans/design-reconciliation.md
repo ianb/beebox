@@ -573,7 +573,7 @@ so the items above stay design-only.
    live in `src/cards/` (glossary.md:42).
 4. **Tailing phase / `bbx tail`.** implementation.md:179-194, :459,
    design.md:406 — no `bbx tail` exists; scheduling is `bbx tick` +
-   `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
+   `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 5. **`agents.json` subagent config and `claude --print` invocation.**
    implementation.md:585-631 — agent invocation is the Agent SDK
    (stack-decisions Decision 12); no `agents.json`.
@@ -598,7 +598,7 @@ so the items above stay design-only.
 14. **Trash.** design.md §2's trash-bin sketch is implemented (`bbx trash`,
     store/trash) — the rewritten section can simply cite it.
 15. **Scheduling section.** design.md §18 (RRULE schedule cards + "tailing
-    phase") — point at docs/scheduler.md and docs/chat-schedules.md.
+    phase") — point at docs/scheduler.md and docs/chat/schedules.md.
 16. **Meta-processes marked "future."** design.md §23 — behavior review /
     instruction distillation exists as the retro system (glossary.md:44);
     mark implemented and point.

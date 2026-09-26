@@ -10,16 +10,17 @@
 
 import { CardLink } from "./CardLink";
 import { CardRef } from "./CardRef";
+import { ViewMarkdown } from "./ViewMarkdown";
 
 export type { CardLinkProps } from "./CardLink";
 export type { CardRefProps } from "./CardRef";
 
 declare global {
   interface Window {
-    __bbxViewWidgets?: { CardLink: typeof CardLink; CardRef: typeof CardRef };
+    __bbxViewWidgets?: { CardLink: typeof CardLink; CardRef: typeof CardRef; Markdown: typeof ViewMarkdown };
   }
 }
 
 if (typeof window !== "undefined" && !window.__bbxViewWidgets) {
-  window.__bbxViewWidgets = { CardLink, CardRef };
+  window.__bbxViewWidgets = { CardLink, CardRef, Markdown: ViewMarkdown };
 }

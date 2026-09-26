@@ -47,8 +47,8 @@ removed.
 - `src/services/tailscale-target.ts` / `tailscale-status-running.ts` —
   `{open:true}` refusal branches stay (defensive against older/foreign
   servers).
-- Docs mentioning the opt-out: `docs/docker-install.md`,
-  `docs/agent-install.md`, implemented-plans (historical — leave those).
+- Docs mentioning the opt-out: `docs/install/docker.md`,
+  `docs/install/agent.md`, implemented-plans (historical — leave those).
 
 ## Prior art (external)
 

@@ -51,7 +51,7 @@ import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display
 import { isAttachRef } from "../shared/attach-path.js";
 import { parseRef, formatRefSuffix, isUrlRef } from "../shared/ref-path.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
-import { resolveRefExists } from "./ref-exists.js";
+import { brokenRefReason, resolveRefExists } from "./ref-exists.js";
 import {
   boxRelativeDoc,
   canonicalIssueMessage,
@@ -244,7 +244,7 @@ async function lintFrontmatterCard(input: {
         warnings.push({
           type: "reference",
           severity: "warning",
-          message: `Broken reference at ${refPath}: ${ref} does not exist${suffix}`,
+          message: `Broken reference at ${refPath}: ${ref} ${brokenRefReason({ ref, fromPath: path, boxRoot: options.boxRoot })}${suffix}`,
         });
       }
     } catch (e) {

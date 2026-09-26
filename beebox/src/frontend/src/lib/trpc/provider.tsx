@@ -1,19 +1,11 @@
 import { useEffect } from "react";
-import { QueryClient, QueryClientProvider, useIsFetching, useIsMutating } from "@tanstack/react-query";
+import { QueryClientProvider, useIsFetching, useIsMutating } from "@tanstack/react-query";
 // trpcClient is shared with the non-React callers ON PURPOSE — a second
 // client instance restarts tRPC's per-client op numbering and collides
 // with the first on the shared WebSocket ("Duplicate id N"). See the
 // comment on trpcClient in trpc.ts before "simplifying" this.
 import { trpc, trpcClient } from "./index.js";
-
-// `retry: false` is deliberate: a box that did not answer is retried by the
-// tRPC link (see `buildTrpcLink` in ./index.ts), which reaches every caller.
-// Retrying here as well would multiply the two schedules.
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 5000, retry: false },
-  },
-});
+import { queryClient } from "./query-client";
 
 // Page-readiness signal for headless browser automation (bin/browse / agents).
 // `<body data-bbx-loading="true|false">` reflects whether any React Query

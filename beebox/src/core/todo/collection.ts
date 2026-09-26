@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import {
+  isBoxholderTodo,
   parseIsoDate,
   resolveStartEpoch,
   TODO_STATUSES,
@@ -38,6 +39,16 @@ export const TodoParamsSchema = z.object({
   status: z.array(z.enum(TODO_STATUSES)).default(["open", "parked"]),
   assigned: z.string().optional(),
   onPlate: z.boolean().optional(),
+  /**
+   * `boxholder` (default) admits only the boxholder's todos
+   * (`isBoxholderTodo`) — an agent follow-up never reaches a reduction or a
+   * row. `all` admits every todo, agent-assigned included: `bbx query
+   * todos`/`bbx todos` (the agent's own surface), the review sweep, and the
+   * ambient line all pass it explicitly, since none of them may silently
+   * change what they see. Not an exact-match filter like `assigned` — "every
+   * assignment except agent" can't be spelled that way.
+   */
+  scope: z.enum(["boxholder", "all"]).default("boxholder"),
 });
 
 export type TodoParams = z.infer<typeof TodoParamsSchema>;
@@ -93,6 +104,17 @@ function isStirring(item: CollectedTodo, since: number | null): boolean {
 function deriveTodoItem(item: TodoItem, ctx: DeriveContext): DerivedTodo {
   const derived = deriveTodo(item, { now: ctx.now, timeZone: ctx.timeZone });
   return { ...derived, stirring: isStirring(derived, ctx.since) };
+}
+
+/**
+ * `scope`, applied before reduction or grouping ever see the item — see
+ * `CollectionDef.inScope`. `all` is the one escape hatch: the agent's own
+ * surfaces (`bbx query todos`, `bbx todos`), the review sweep, and the
+ * ambient line all pass it so an agent follow-up stays visible to the code
+ * that has to work it or count it, without inflating the boxholder's plate.
+ */
+function inScopeForTodoParams(item: DerivedTodo, params: TodoParams): boolean {
+  return params.scope === "all" || isBoxholderTodo(item);
 }
 
 function matchesParams(item: DerivedTodo, params: TodoParams): boolean {
@@ -191,6 +213,7 @@ export const todoCollection: CollectionDef<TodoItem, DerivedTodo, TodoParams, To
   extract: extractCardTodos,
   mayHaveItem: mayHaveTodo,
   derive: deriveTodoItem,
+  inScope: inScopeForTodoParams,
   matches: matchesParams,
   refsOf: (item) => item.refs,
   keyOf: formatTodoLocation,
