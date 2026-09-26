@@ -28,6 +28,8 @@ tests:
     tags: [quick-chat]
 
   # === Engine docs are searchable ===
+  # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
+  # narration-mode.md, 51k context.
   # Plan: docs/plans/doc-structure-box-guidance.md, Track 5. The search index
   # covers node_modules/beebox/box-docs/ as kind engine-doc, and the guide's
   # "Where the docs are" and "Searching the Box" sections say so.

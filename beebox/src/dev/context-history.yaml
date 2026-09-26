@@ -4775,6 +4775,14 @@ test1:
       peak: 55823
       added: 6812
       turns: 7
+  search-finds-engine-doc:
+    - date: 2026-09-26T19:02:05.121Z
+      boxCommit: ccfb113de903fa2a869348047c030013fb03dc58
+      repoCommit: 1990c473221b3cacdb3b6c087b7c30b8ba6a5687
+      initial: 50505
+      peak: 55489
+      added: 4984
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
