@@ -1,6 +1,6 @@
 ---
 title: "Review the source file layout, propose a layout with rules, enforce it with a check, and move the tree"
-workstream: unattached
+workstream: file-layout
 needs: [design]
 area: beebox
 labels: [file-layout]
@@ -101,6 +101,34 @@ developer decision on 2026-07-12).
 each file is one member of a closed kind, like `schemas/` under the
 developer's condition. The rules must state when a flat directory is valid.
 A file count alone cannot state that.
+
+## Status (2026-09-26)
+
+Steps 1 and 2 are written up in
+[the file-layout plan](../../beebox/docs/plans/file-layout.md): five
+principles, ten rules, and for each rule what a check can verify. Decisions
+recorded there that supersede the observations above:
+
+- The rules measure the import graph and registry membership, not filename
+  prefixes. Prefix clusters remain evidence of where a subsystem was
+  flattened.
+- A flat "set" directory is valid only when a declared registry imports
+  every child and members do not import each other's values. `schemas/`,
+  `cli/commands/`, and `trpc/routers/` all fail today.
+- Two side-effect registries exist (`connectors/index.ts`,
+  `renderers/index.ts`) and become explicit lists.
+- Every set is declared by its registry through one `defineRegistry`
+  helper; the check finds sets from those calls and needs no config,
+  allowlist, or ignore list.
+- No module is named `index`; re-export modules exist only as public
+  surfaces in `src/exports/`, whose registry is the `package.json` `exports`
+  map.
+- The minimum-two-children rule was dropped (boxholder, 2026-09-26).
+- Each package has one source root; tests mirror it directory-for-directory
+  and file-for-file, with containment, naming, and structure checks.
+
+Open questions for the boxholder are listed in the plan. Steps 3 and 4 each
+get their own plan.
 
 ## Constraints for the check
 
