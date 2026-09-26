@@ -8,13 +8,23 @@ Cloudflare enrollment or deployment has been performed as part of this work.
 
 ## What the first version supports
 
-Public pages and secret-link pages use one Cloudflare Worker and isolated
-workers.dev origin per publication. A box agent can prepare a site and refresh
-content while it remains inside the already-approved audience and destination.
-A signed-in member of the box approves first enablement and every audience or
-destination change in the Bee Box app. Disablement is also a member action in
-the app. The global administrator manages Cloudflare connections and grants;
-they do not need to approve each publication.
+Each box uses one Admin-configured hostname and one shared Worker for its
+managed static sites. Public sites use `/<slug>/`; secret-link sites use
+`/s/<pubId>/`. The owner configures the host and selects one granted Cloudflare
+connection before the first site exists. The agent prepares content and gives
+the boxholder a direct app link. A signed-in member approves first enablement
+and every audience or destination change; same-scope refreshes may publish
+immediately. Disablement is also a member action in the app. The global
+administrator manages Cloudflare connections and grants; they do not approve
+each publication.
+
+All pages on one box hostname share a browser origin, storage, and same-origin
+script access. The boxholder accepts mutual trust among pages published by
+that box. CORS does not isolate them; the feature adds no iframe or
+per-publication host boundary. Separate boxes use separate hostnames and
+Workers. Existing per-publication `workers.dev` and custom-host URLs continue
+to serve their existing publications. A legacy publication joins the shared
+host only after prepare and member approval records its route.
 
 Account-restricted managed tiers are currently blocked in the app. Although
 the Worker has Access JWT validation code, the per-host setup/readiness
@@ -24,50 +34,45 @@ Do not present managed account-restricted publishing as ready. Keep it as a
 follow-up requiring implementation and live browser verification. Legacy
 account-tier sites are a separate existing flow.
 
-The first live setup requires a browser for Cloudflare account enrollment and
-for member approval in Bee Box. The agent handles local preparation and CLI
-verification. No human-side `bbx` command is required.
+The first live setup requires a browser for Cloudflare account enrollment,
+Admin host assignment, and member approval in Bee Box. The agent handles local
+preparation and CLI verification. No human-side `bbx` command is required.
 
 ## Global administrator setup
 
 1. In the Cloudflare dashboard, open the account that should own publication
    Workers and R2 storage. If the account has never enabled R2, complete its
-   initial R2 product setup in the dashboard. If it has no workers.dev account
-   subdomain, configure one in the Cloudflare dashboard. Bee Box checks that
-   these prerequisites exist; its API path does not claim to create the
-   account subdomain or complete first-use enrollment.
+   initial R2 product setup in the dashboard. The shared publication Worker
+   keeps `workers.dev` and preview routes disabled; visitors use the box's
+   configured custom hostname.
 2. Create a **user Cloudflare API token** (not the separate S3-compatible R2
    Access Key ID and secret). Open
    [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens),
    choose **Create Token → Create Custom Token**, and add these **Account**
    permissions. For account resources, select only the Cloudflare account
    whose ID you entered above:
-   - **Account Settings: Read** — read account settings and the workers.dev
-     account subdomain.
    - **Workers R2 Storage: Edit** (called **Workers R2 Storage Write** in the
      API permission reference) — create/list buckets and read, write, list,
      and delete objects.
    - **Workers Scripts: Edit** (called **Workers Scripts Write** in the API
      permission reference) — upload Workers and read/update their settings.
 
-   The permissions must be account-scoped because Bee Box creates distinct buckets
-   and Workers for publications later. Cloudflare's
+   The permissions must be account-scoped because Bee Box creates one bucket
+   and shared Worker for each publishing box. Cloudflare's
    [token creation instructions](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
    explain custom tokens, resource scoping, and copying the secret. Copy the
    token value once. Do not paste an R2 S3 credential or a global API key into
    Bee Box.
 
-   For an optional custom hostname, the documented minimum guidance is the
-   existing **Account: Workers Scripts Edit**, plus **Zone: Zone Read** and
-   **Zone: Workers Routes Edit** scoped to the zone that owns the hostname.
-   Cloudflare's [Workers permissions guide](https://developers.cloudflare.com/workers/authorization/workers/)
-   describes Worker Editor plus Workers Routes Write for that zone, while the
-   [Attach Worker Domain API](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/)
-   lists Workers Scripts Write as an accepted permission. The documentation
-   labels do not establish successful least-privilege authorization for this
-   integration. If Cloudflare rejects the request, the owner must review and
-   adjust the token's permissions. Bee Box has not verified this with a live
-   token.
+   The exact least-privilege permissions for attaching a Worker to a custom
+   hostname have not been verified for this integration. Cloudflare's
+   [Workers permissions guide](https://developers.cloudflare.com/workers/authorization/workers/)
+   and [Attach Worker Domain API](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/)
+   use permission labels and scopes that do not establish a tested minimum
+   here. If Cloudflare rejects setup, the owner must review the provider error
+   and adjust the token's permissions. Bee Box has not verified this with a
+   live token; do not treat any specific Zone permission combination as
+   confirmed.
 
 3. In Bee Box, open **Admin → Cloudflare publishing**. Choose a short lowercase
    connection name for Bee Box, such as `makers`; it is just a local label and
@@ -83,79 +88,67 @@ verification. No human-side `bbx` command is required.
    grant: the box agent receives neither the token nor account-level Cloudflare
    credentials. The same account connection may be granted to multiple boxes;
    each box's publications remain bound to its server-derived Worker and R2
-   bucket. A global administrator can revoke a box grant or rotate/revoke the
+   bucket. Then, in Admin, select the granted connection and assign one exact
+   hostname to the box. This setup provisions or reuses that box and
+   connection's R2 bucket, deploys its shared Worker, and attaches the custom
+   hostname before any publication exists. Review existing DNS records and
+   Workers Routes before assignment. An exact provider read-back confirms the
+   mapping, not HTTPS readiness. A global administrator can revoke a box grant or rotate/revoke the
    token later. Removing the local grant or token does not take already-live
    sites offline. Disable sites while the credential still works if they must
    stop serving immediately.
 
-An existing publication remains pinned to its original Cloudflare account.
-Moving it requires creating a new publication with a new `pubId`, member
-enablement on the new account, and disabling the old publication; changing
-only the connection name is insufficient.
+The box's shared host uses one selected connection. Other connections already
+granted to that box remain usable for existing publications, but those sites
+stay on their existing URLs. Do not silently move them or change their
+connection.
 
-### Optional custom hostname
+### One shared hostname per box
 
-Custom hostnames are an authenticated global-owner operation on an existing
-prepared publication;
-they are not set by the agent in `publication.json` and there is no connection
-selector in the form. The server uses the publication's existing box/account
-binding. Use a hostname in a zone owned by that Cloudflare account.
+The authenticated Bee Box owner sets up one hostname for the current box in
+**Admin → Cloudflare publishing**, after granting a connection to the box and
+before any site is prepared. Select one of the box's granted connections and
+enter one exact hostname in a zone owned by that Cloudflare account. This
+creates or reuses the box and connection's R2 bucket, deploys the shared
+Worker, and attaches the hostname. All paths on that hostname route to this
+box's Worker. Bee Box does not route several boxes through one hostname. The
+box's hostname and connection cannot be changed in this version. The owner
+should review existing DNS records and Workers Routes before submitting;
+Cloudflare DNS and certificate changes begin at assignment. The API
+read-back confirms the Worker mapping but does not show that HTTPS is ready.
 
-1. As the authenticated Bee Box owner, open **Admin → Cloudflare publishing →
-   Assign a custom hostname**.
-2. Select an eligible prepared publication. Only disabled public or secret
-   sites with available Cloudflare state and no existing custom hostname are
-   eligible. Enter the exact hostname (for example, `www.example.org`) without
-   `https://` or a path.
-3. Read and acknowledge the warning before choosing **Assign hostname**.
-   Cloudflare starts DNS and certificate changes immediately, while the site
-   is still disabled. Assignment binds the hostname to the selected Worker and
-   cannot be detached or changed from Bee Box. Cloudflare-side detach does not
-   release Bee Box's permanent hostname reservation; there is no detach/remap
-   or reservation-release control in Bee Box v1.
-4. The server reads back the hostname, zone, and Worker binding. That confirms
-   the mapping, not certificate readiness. HTTPS may take time to become
-   reachable. A successful assignment creates a new destination candidate; a
-   signed-in member of this box must approve it in **Publications** before the
-   custom-host URL serves the site. The existing workers.dev URL remains an
-   alternate.
+If the assignment is pending or fails, the owner retries the same configured
+mapping from Admin or inspects Cloudflare. Do not choose another hostname,
+detach/delete a Worker, or claim that HTTPS is working until the host is
+actually reachable. Bee Box does not automatically delete or move existing
+Cloudflare resources.
 
-   If Cloudflare does not confirm the exact mapping, the hostname stays
-   reserved as **pending** and the publication stays disabled. Do not choose a
-   different hostname or ask a member to approve yet. The authenticated owner
-   can retry the same reserved hostname from this section; the server checks
-   for and adopts an already-completed exact mapping, or attaches it and reads
-   it back. If the state remains pending, inspect the Cloudflare domain
-   assignment before retrying. Bee Box checks for conflicting Worker Custom
-   Domain assignments, but does not inspect existing DNS records or Workers
-   Routes; review those separately before assigning a hostname.
+After the box host is set, the agent can prepare a site. The CLI reports its
+full public or secret URL and a direct `approval:` link. A signed-in member
+reviews the candidate in **Publications** before the route is enrolled on the
+shared hostname. Public paths require an explicit slug and use
+`/<slug>/`; secret-link paths use `/s/<pubId>/`. Do not share only a hostname
+for a secret publication.
 
-The custom hostname is immutable for that publication in Bee Box. A hostname
-reservation is also permanent: manually detaching the Cloudflare mapping does
-not release the hostname for another publication. Bee Box v1 has no recovery
-or reassignment path for a reserved hostname. Do not create a new publication
-expecting it to claim the same hostname; ask the administrator to inspect the
-Cloudflare mapping and use a different hostname for any new publication.
-
-After member approval, the agent can report the approved URL from
-`bbx pub status` or `bbx pub sites`; a signed-in member can also see it in
-**Publications**. Public pages use `/` (or their approved public slug); a
-secret-link page keeps its complete `/s/<pubId>/` path on the custom hostname.
-Do not share a hostname-only URL for a secret publication. Custom-host
-attachment, zone permissions, HTTPS readiness, and the full browser flow are
-not yet live-verified; do not treat the app's mapping read-back as evidence
-that HTTPS is ready.
+Existing per-publication `workers.dev` and custom-host URLs keep working. A
+same-connection publication reaches the shared hostname only after an explicit
+prepare and member approval. Sites pinned to other connections remain on
+their current URLs. New publications use only the shared Worker, whose
+`workers.dev` and preview URLs stay disabled. No live Cloudflare hostname or
+DNS change was performed during implementation; actual HTTPS, provider
+permissions, and browser behavior need separate live verification.
 
 ## Box agent and member workflow
 
 The agent owns files under `src/publications/<name>/`. It asks the server to
 prepare a named publication; the request cannot select another box, PubId,
 bucket, Worker, or credential. `bbx pub id` generates the stable CSPRNG PubId
-for a new `publication.json`. Before filling `connection`, the agent runs
-`bbx pub connections` and selects a name that is active and granted to the
-current box. If none is available, the agent asks the boxholder or admin for
-the grant; it never reads machine secrets or private server config. The
-box-managed CLI surface is:
+for a new `publication.json`. Before authoring, the agent runs
+`bbx pub connections` to discover granted connection names. It uses only the
+connection selected for this box in Admin; it never selects or changes the
+hostname itself. If Admin has not configured the box host, the agent asks the
+boxholder to do that in the app. It never reads machine secrets or private
+server config. The box-managed CLI surface is:
 
 ```sh
 bbx pub id
@@ -165,11 +158,11 @@ bbx pub status
 ```
 
 `bbx pub prepare <name>` builds a site project when configured, scans and
-uploads an immutable release, and reports the prepared/live state. A first
-publication remains disabled until a box member enables it in the Bee Box
-app. A same-audience/same-destination refresh of a live publication becomes
-active as soon as preparation succeeds. A changed audience or destination
-waits for a box member to approve it in the app. `bbx pub prepare` prints a
+uploads an immutable release, and reports the prepared/live state. A new
+publication remains disabled until a box member approves it in the Bee Box
+app. A same-audience/same-destination refresh of an enabled publication
+becomes active as soon as preparation succeeds. A changed audience or
+destination waits for a box member to approve it in the app. `bbx pub prepare` prints a
 `publication URL:` line with the complete destination and an `approval:` line
 with a direct link to that box's Publications page when `BBX_SERVER_URL` and
 `BBX_BOX_NAME` are configured; otherwise it tells you to use the app menu.
@@ -187,8 +180,8 @@ enable or mutate server-managed publications.
 
 For first enablement or a scope change, a signed-in member opens the direct
 Publications URL printed on the `approval:` line (or signs into this box and
-opens **Publications** from the profile menu), reviews the title, displayed origin,
-requested tier and recipients, file summary, and leak-scan findings, then
+opens **Publications** from the profile menu), reviews the title, displayed
+host and path, requested tier and recipients, file summary, and leak-scan findings, then
 chooses **Enable** or **Approve**. This is an ongoing permission for the agent to update content within
 that approved audience; it is not approval of every content snapshot. The app
 shows metadata and safe text summaries; it never runs the site's JavaScript on
@@ -221,22 +214,24 @@ anyone other than the intended boxholder; do not write them to shared notes,
 repository docs, logs, or a report. When the boxholder needs a secret-link
 URL, preserve and provide the complete path printed by the CLI.
 
-1. The administrator confirms the correct Cloudflare account, R2 is enabled,
-   and a workers.dev account subdomain exists. If an account prerequisite is
-   missing, stop at the dashboard and complete it before continuing.
-2. The administrator creates and saves the scoped general API token in the
-   Bee Box Admin form, grants it to the box, and confirms the app shows the
-   connection active. R2 writes and Worker deployment may still show
-   unverified until the agent's first successful operations.
+1. The administrator confirms the correct Cloudflare account and enables R2
+   if this is the account's first use. A workers.dev subdomain is not required
+   for the shared Worker; its `workers.dev` and preview routes are disabled.
+2. The administrator saves the scoped API token in the Bee Box Admin form
+   and grants the connection to the box. In Admin, the owner selects that
+   connection and assigns the box's exact hostname before any publication is
+   prepared. This provisions the shared Worker and bucket. R2 writes and Worker
+   deployment may still show unverified until setup succeeds.
 3. The agent creates one minimal static public test site with a unique title,
-   `index.html`, and a relative CSS asset; writes its definition with a fresh
-   `bbx pub id`; then runs `bbx pub prepare <name>`. The agent reports the
-   file/scan summary and waits for member action. It does not enable the site.
-4. The member reviews the candidate in **Publications** and enables it. The
-   app-displayed origin is the source of truth; do not construct a URL from
-   the PubId or guess the account subdomain.
-5. The agent checks that the stable page resolves to the release-qualified
-   page and that its relative stylesheet loads from that same release. For a
+   `index.html`, a relative CSS asset, and an explicit public slug; writes its
+   definition with a fresh `bbx pub id`; then runs `bbx pub prepare <name>`.
+   The agent gives the member the direct `approval:` link and waits. It does
+   not enable the site.
+4. The member reviews the candidate in **Publications** and enables it. Use
+   the app-displayed `https://<box-host>/<slug>/` URL; do not construct one
+   from the PubId.
+5. The agent checks that the public route serves the release-qualified page
+   and that its relative stylesheet loads under the same slug prefix. For a
    public page, use a request with no Bee Box or Cloudflare Access cookies:
 
    ```sh
@@ -247,9 +242,9 @@ URL, preserve and provide the complete path printed by the CLI.
    Expect the final page and asset to return 200 with the correct MIME type,
    `Content-Security-Policy`, `Cross-Origin-Resource-Policy: same-origin`,
    `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`.
-   For the stable entry path, confirm the redirect target includes the active
-   release id. Do not print or retain a secret-tier capability URL if the
-   smoke test uses one.
+   The redirect and asset path must remain beneath the approved publication
+   path. Do not print or retain a secret-tier capability URL if the smoke test
+   uses one. Same-origin headers do not isolate sites on this box host.
 
 6. The agent changes one harmless sentence and runs `bbx pub prepare <name>`
    again. Confirm the active release changes without a new member click and
@@ -286,7 +281,7 @@ rotate any remaining legacy credential separately.
 - [Cloudflare API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/)
 - [Find your Cloudflare account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/)
 - [Cloudflare Workers script upload permission](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/)
-- [Cloudflare Workers roles and permissions](https://developers.cloudflare.com/workers/authorization/workers/) — Worker Editor and zone-scoped Workers Routes Write for custom-domain changes.
+- [Cloudflare Workers roles and permissions](https://developers.cloudflare.com/workers/authorization/workers/) — documents Worker Editor and zone-scoped Workers Routes Write for custom-domain changes; Bee Box has not confirmed these as the integration's minimum permissions.
 - [Cloudflare Attach Worker Domain API](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/) — API request and accepted permission listing; live least-privilege behavior remains unverified here.
 - [Cloudflare R2 token types and permissions](https://developers.cloudflare.com/r2/api/tokens/) — the S3-compatible R2 credentials on this page are not the Cloudflare API bearer used by Bee Box.
 - [Cloudflare R2 setup](https://developers.cloudflare.com/r2/get-started/)
