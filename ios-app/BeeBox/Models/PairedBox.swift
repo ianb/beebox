@@ -73,6 +73,12 @@ struct PairedBox: Codable, Equatable, Identifiable {
         return components.url
     }
 
+    /// The box's slug: the last path component of `baseURL`, which the box
+    /// serves under `/<slug>/` (the APNs payload's `box`, contract §5.10).
+    var slug: String {
+        baseURL.lastPathComponent
+    }
+
     var apiURL: URL {
         baseURL.appendingPathComponent("api")
     }

@@ -115,7 +115,7 @@ final class PendingEmissionStore: ObservableObject {
     }
 
     func receiveBinding(_ publication: NativeComposerBinding, box: PairedBox) async {
-        guard publication.isValid, publication.boxSlug == box.baseURL.lastPathComponent,
+        guard publication.isValid, publication.boxSlug == box.slug,
               activeBoxID == box.id else { return }
         guard restored else { waitingBindings.append((publication, box)); return }
         if publication.kind == .selection {

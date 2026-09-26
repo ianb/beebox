@@ -245,21 +245,33 @@ struct RootView: View {
         )
     }
 
-    /// Open a tapped notification's target (contract §5.10) in the chat webview.
-    ///
-    /// The payload names no box, so a phone paired to several boxes opens the
-    /// target on the selected one; with one box there is no ambiguity.
+    /// Open a tapped notification's target (contract §5.10) in the chat webview,
+    /// on the paired box the payload's `box` slug names. A payload from an
+    /// older box, or one naming no paired box, opens on the selected box.
     private func openNotificationTap(_ tap: NotificationTap) {
-        guard let box = store.boxes.count == 1 ? store.boxes.first : store.selectedBox else {
+        let box: PairedBox
+        switch tap.pairedBox(in: store.boxes, selected: store.selectedBox) {
+        case .matched(let matched):
+            box = matched
+        case .ambiguous(let chosen, let matches):
+            box = chosen
+            BoxLog.info(
+                "notification tap box slug matches \(matches) paired boxes; opened on \(chosen.id == store.selectedBox?.id ? "selected" : "first") match",
+                category: .push,
+                targetBoxID: chosen.id
+            )
+        case .fallback(let fallback, let boxKeyPresent):
+            box = fallback
+            if boxKeyPresent || store.boxes.count > 1 {
+                BoxLog.info(
+                    "notification tap \(boxKeyPresent ? "box slug matches no paired box" : "payload names no box"); opened on \(store.boxes.count == 1 ? "only" : "selected") box boxes=\(store.boxes.count)",
+                    category: .push,
+                    targetBoxID: fallback.id
+                )
+            }
+        case .none:
             BoxLog.warn("notification tap with no paired box", category: .push)
             return
-        }
-        if store.boxes.count > 1 {
-            BoxLog.info(
-                "notification tap opened on selected box boxes=\(store.boxes.count)",
-                category: .push,
-                targetBoxID: box.id
-            )
         }
         guard let path = tap.boxPath else {
             BoxLog.warn(
@@ -303,7 +315,7 @@ struct RootView: View {
             composerCommandResults: composerCommandResults,
             onComposerBinding: { publication in
                 guard let publication else { pendingEmissionStore.invalidateBinding(); return }
-                guard publication.boxSlug == box.baseURL.lastPathComponent else { return }
+                guard publication.boxSlug == box.slug else { return }
                 if pendingEmissionStore.changesConversation(publication) {
                     narrationEnabled = false
                     hqDictationEnabled = false

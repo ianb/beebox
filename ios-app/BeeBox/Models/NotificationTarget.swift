@@ -134,15 +134,49 @@ enum NotificationTarget: Equatable {
 struct NotificationTap: Equatable {
     var target: String?
     var notificationID: String?
+    /// The sending box's slug; absent from a box older than the `box` key.
+    var box: String?
 
-    init(target: String?, notificationID: String?) {
+    init(target: String?, notificationID: String?, box: String? = nil) {
         self.target = target
         self.notificationID = notificationID
+        self.box = box
     }
 
     init(userInfo: [AnyHashable: Any]) {
         target = userInfo["target"] as? String
         notificationID = userInfo["notificationId"] as? String
+        box = (userInfo["box"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Which paired box a tap opens on, and why (the reason is logged).
+    enum BoxChoice: Equatable {
+        /// A paired box's slug (its `baseURL` last path component) is `box`.
+        case matched(PairedBox)
+        /// Several paired boxes share the slug (two hosts, or two dev
+        /// checkouts); the selected one if it is among them, else the first.
+        case ambiguous(PairedBox, matches: Int)
+        /// `box` is absent or names no paired box: the only box, or the
+        /// selected one when several are paired.
+        case fallback(PairedBox, boxKeyPresent: Bool)
+        case none
+    }
+
+    func pairedBox(in boxes: [PairedBox], selected: PairedBox?) -> BoxChoice {
+        if let box {
+            let matches = boxes.filter { $0.slug == box }
+            if matches.count == 1, let only = matches.first {
+                return .matched(only)
+            }
+            if let first = matches.first {
+                let chosen = matches.first { $0.id == selected?.id } ?? first
+                return .ambiguous(chosen, matches: matches.count)
+            }
+        }
+        guard let fallback = boxes.count == 1 ? boxes.first : selected else {
+            return .none
+        }
+        return .fallback(fallback, boxKeyPresent: box != nil)
     }
 
     /// The target's scheme alone, for logs: a target can carry a card path or

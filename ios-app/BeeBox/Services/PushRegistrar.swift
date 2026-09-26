@@ -3,25 +3,100 @@ import CryptoKit
 import Foundation
 import UserNotifications
 
-/// The APNs host this build's device token belongs to (contract §5.9). A debug
-/// build is signed with the development `aps-environment`, and its token sent
-/// to the production host is refused as `BadDeviceToken`, so the box cannot
-/// guess this: the build reports it.
+/// The APNs host this build's device token belongs to (contract §5.9). A token
+/// sent to the other host is refused as `BadDeviceToken` and the box then
+/// drops the registration, so the box cannot guess this: the app reports it.
 enum PushEnvironment: String, Codable, Equatable, Sendable {
     case sandbox
     case production
 
+    /// The `#if DEBUG` guess, used only when a provisioning profile is present
+    /// but cannot be read.
     static func forBuild(isDebug: Bool) -> PushEnvironment {
         isDebug ? .sandbox : .production
     }
 
-    static var current: PushEnvironment {
-        #if DEBUG
-        forBuild(isDebug: true)
-        #else
-        forBuild(isDebug: false)
-        #endif
+    /// `Entitlements` → `aps-environment` from an `embedded.mobileprovision`.
+    /// The profile is a CMS (PKCS #7) envelope whose signed content is an XML
+    /// plist stored as plain bytes, so the plist is cut out between `<?xml`
+    /// and `</plist>` and parsed; the signature is not checked (the system
+    /// already did when it installed the app). Nil when the plist is missing,
+    /// unparseable, or has no recognized `aps-environment`.
+    static func fromProvisioningProfile(_ profile: Data) -> PushEnvironment? {
+        guard
+            let start = profile.range(of: Data("<?xml".utf8)),
+            let end = profile.range(of: Data("</plist>".utf8), in: start.lowerBound..<profile.endIndex)
+        else {
+            return nil
+        }
+        let plistData = profile.subdata(in: start.lowerBound..<end.upperBound)
+        guard
+            let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+            let entitlements = plist["Entitlements"] as? [String: Any],
+            let aps = entitlements["aps-environment"] as? String
+        else {
+            return nil
+        }
+        switch aps {
+        case "development": return .sandbox
+        case "production": return .production
+        default: return nil
+        }
     }
+
+    /// Decide the environment from what the running app was signed with.
+    ///
+    /// - `isSimulator`: simulator tokens are sandbox tokens, and a simulator
+    ///   build carries no profile.
+    /// - `profile` nil (no `embedded.mobileprovision`): an App Store or
+    ///   TestFlight install, which Apple re-signs for `production`.
+    /// - A readable profile: its `aps-environment` (`development` → sandbox).
+    /// - An unreadable profile: the `#if DEBUG` guess.
+    static func resolve(isSimulator: Bool, profile: Data?, isDebug: Bool) -> PushEnvironmentResolution {
+        if isSimulator {
+            return PushEnvironmentResolution(environment: .sandbox, source: .simulator)
+        }
+        guard let profile else {
+            return PushEnvironmentResolution(environment: .production, source: .noProfile)
+        }
+        if let environment = fromProvisioningProfile(profile) {
+            return PushEnvironmentResolution(environment: environment, source: .profile)
+        }
+        return PushEnvironmentResolution(environment: forBuild(isDebug: isDebug), source: .buildFallback)
+    }
+
+    /// This install's environment, read once.
+    static let current: PushEnvironmentResolution = {
+        #if targetEnvironment(simulator)
+        let isSimulator = true
+        #else
+        let isSimulator = false
+        #endif
+        #if DEBUG
+        let isDebug = true
+        #else
+        let isDebug = false
+        #endif
+        let profile = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision").map {
+            // A profile that exists but cannot be read is unparseable, not absent.
+            (try? Data(contentsOf: $0)) ?? Data()
+        }
+        return resolve(isSimulator: isSimulator, profile: profile, isDebug: isDebug)
+    }()
+}
+
+/// Which environment a build reports, and what decided it (logged with the
+/// token so a wrong-host registration can be traced from the client log).
+struct PushEnvironmentResolution: Equatable, Sendable {
+    enum Source: String, Sendable {
+        case simulator
+        case profile
+        case noProfile = "no-profile"
+        case buildFallback = "build-fallback"
+    }
+
+    var environment: PushEnvironment
+    var source: Source
 }
 
 enum PushToken {
@@ -207,17 +282,19 @@ final class PushRegistrar: ObservableObject {
     private let transport: any PushTokenTransport
     private let authorizer: any NotificationAuthorizing
     let environment: PushEnvironment
+    private let environmentSource: PushEnvironmentResolution.Source
 
     init(
         ledger: PushRegistrationLedger = PushRegistrationLedger(),
         transport: any PushTokenTransport = URLSessionPushTokenTransport(),
         authorizer: any NotificationAuthorizing = SystemNotificationAuthorizer(),
-        environment: PushEnvironment = .current
+        environment: PushEnvironmentResolution = PushEnvironment.current
     ) {
         self.ledger = ledger
         self.transport = transport
         self.authorizer = authorizer
-        self.environment = environment
+        self.environment = environment.environment
+        environmentSource = environment.source
     }
 
     func attach(store: PairedBoxStore) {
@@ -235,7 +312,7 @@ final class PushRegistrar: ObservableObject {
         let changed = token != hex
         token = hex
         if changed {
-            BoxLog.info("apns token received env=\(environment.rawValue)", category: .push)
+            BoxLog.info("apns token received env=\(environment.rawValue) source=\(environmentSource.rawValue)", category: .push)
         }
         await syncRegistrations()
     }

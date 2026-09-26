@@ -16,11 +16,69 @@ final class PushNotificationTests: XCTestCase {
 
     // MARK: - Environment and token encoding
 
-    func testDebugBuildsRegisterAgainstTheSandboxHost() {
-        XCTAssertEqual(PushEnvironment.forBuild(isDebug: true), .sandbox)
-        XCTAssertEqual(PushEnvironment.forBuild(isDebug: false), .production)
-        // The test target builds Debug.
-        XCTAssertEqual(PushEnvironment.current, .sandbox)
+    /// A provisioning profile as the parser sees it: an XML plist inside CMS
+    /// bytes. Only the fields the parser reads; not a real profile.
+    private func profile(aps: String?) -> Data {
+        let entitlement = aps.map { "<key>aps-environment</key><string>\($0)</string>" } ?? ""
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Name</key><string>BeeBox Fixture</string>
+            <key>Entitlements</key>
+            <dict>
+                <key>application-identifier</key><string>TEAMID.app.beebox.ios</string>
+                \(entitlement)
+            </dict>
+        </dict>
+        </plist>
+        """
+        var data = Data([0x30, 0x80, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x07, 0x02, 0xa0, 0x80])
+        data.append(Data(plist.utf8))
+        data.append(Data([0x00, 0x00, 0xa0, 0x82, 0x0b, 0x3c, 0x30, 0x82]))
+        return data
+    }
+
+    func testProfileEntitlementDecidesTheEnvironment() {
+        XCTAssertEqual(PushEnvironment.fromProvisioningProfile(profile(aps: "development")), .sandbox)
+        XCTAssertEqual(PushEnvironment.fromProvisioningProfile(profile(aps: "production")), .production)
+        XCTAssertNil(PushEnvironment.fromProvisioningProfile(profile(aps: nil)))
+        XCTAssertNil(PushEnvironment.fromProvisioningProfile(profile(aps: "staging")))
+        XCTAssertNil(PushEnvironment.fromProvisioningProfile(Data([0x30, 0x80, 0x00])))
+    }
+
+    func testEnvironmentFollowsTheSigningNotTheBuildConfiguration() {
+        let development = profile(aps: "development")
+        let production = profile(aps: "production")
+        // A locally signed Release build carries the development profile.
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: false, profile: development, isDebug: false),
+            PushEnvironmentResolution(environment: .sandbox, source: .profile)
+        )
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: false, profile: production, isDebug: true),
+            PushEnvironmentResolution(environment: .production, source: .profile)
+        )
+        // App Store and TestFlight installs have no embedded profile.
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: false, profile: nil, isDebug: true),
+            PushEnvironmentResolution(environment: .production, source: .noProfile)
+        )
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: false, profile: Data(), isDebug: true),
+            PushEnvironmentResolution(environment: .sandbox, source: .buildFallback)
+        )
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: false, profile: Data(), isDebug: false),
+            PushEnvironmentResolution(environment: .production, source: .buildFallback)
+        )
+        XCTAssertEqual(
+            PushEnvironment.resolve(isSimulator: true, profile: nil, isDebug: false),
+            PushEnvironmentResolution(environment: .sandbox, source: .simulator)
+        )
+        // The tests run on a simulator.
+        XCTAssertEqual(PushEnvironment.current, PushEnvironmentResolution(environment: .sandbox, source: .simulator))
     }
 
     func testTokenIsLowercaseHexOfEveryByte() {
@@ -107,7 +165,7 @@ final class PushNotificationTests: XCTestCase {
             ledger: PushRegistrationLedger(defaults: makeDefaults()),
             transport: transport,
             authorizer: authorizer,
-            environment: .sandbox
+            environment: PushEnvironmentResolution(environment: .sandbox, source: .simulator)
         )
         let second = PairedBox(
             id: UUID(),
@@ -157,7 +215,7 @@ final class PushNotificationTests: XCTestCase {
             ledger: PushRegistrationLedger(defaults: makeDefaults()),
             transport: transport,
             authorizer: StubAuthorizer(permission: .allowed),
-            environment: .sandbox
+            environment: PushEnvironmentResolution(environment: .sandbox, source: .simulator)
         )
         await registrar.boxesDidChange([box])
         await registrar.tokenDidChange("abcd")
@@ -178,7 +236,7 @@ final class PushNotificationTests: XCTestCase {
             ledger: PushRegistrationLedger(defaults: makeDefaults()),
             transport: RecordingPushTransport(),
             authorizer: authorizer,
-            environment: .sandbox
+            environment: PushEnvironmentResolution(environment: .sandbox, source: .simulator)
         )
         await registrar.boxesDidChange([])
         XCTAssertEqual(authorizer.requests, 0, "no box, no prompt")
@@ -208,8 +266,49 @@ final class PushNotificationTests: XCTestCase {
             let tap = NotificationTap(userInfo: userInfo)
             XCTAssertEqual(tap.target, intent["target"] as? String, name)
             XCTAssertEqual(tap.notificationID, intent["id"] as? String, name)
+            XCTAssertEqual(tap.box, input["box"] as? String, name)
             XCTAssertNotNil(tap.boxPath, name)
         }
+    }
+
+    func testTapOpensOnThePairedBoxTheSlugNames() {
+        let kitchen = PairedBox(
+            id: UUID(),
+            label: "Kitchen",
+            baseURL: URL(string: "https://other.example.com/kitchen/")!,
+            sessionID: nil,
+            authToken: "k",
+            requiresDeviceUnlock: false
+        )
+        let devKitchen = PairedBox(
+            id: UUID(),
+            label: "Dev kitchen",
+            baseURL: URL(string: "http://127.0.0.1:3210/main/kitchen")!,
+            sessionID: nil,
+            authToken: "d",
+            requiresDeviceUnlock: false
+        )
+        let tap = { (slug: String?) in NotificationTap(target: "dashboard", notificationID: "n1", box: slug) }
+
+        XCTAssertEqual(kitchen.slug, "kitchen")
+        XCTAssertEqual(tap("kitchen").pairedBox(in: [box, kitchen], selected: box), .matched(kitchen))
+        XCTAssertEqual(tap("family").pairedBox(in: [box, kitchen], selected: kitchen), .matched(box))
+        XCTAssertEqual(
+            tap("attic").pairedBox(in: [box, kitchen], selected: kitchen),
+            .fallback(kitchen, boxKeyPresent: true)
+        )
+        XCTAssertEqual(tap(nil).pairedBox(in: [box, kitchen], selected: box), .fallback(box, boxKeyPresent: false))
+        XCTAssertEqual(tap("attic").pairedBox(in: [kitchen], selected: nil), .fallback(kitchen, boxKeyPresent: true))
+        XCTAssertEqual(
+            tap("kitchen").pairedBox(in: [box, kitchen, devKitchen], selected: devKitchen),
+            .ambiguous(devKitchen, matches: 2)
+        )
+        XCTAssertEqual(
+            tap("kitchen").pairedBox(in: [box, kitchen, devKitchen], selected: box),
+            .ambiguous(kitchen, matches: 2)
+        )
+        XCTAssertEqual(tap("kitchen").pairedBox(in: [], selected: nil), .none)
+        XCTAssertNil(NotificationTap(userInfo: ["target": "dashboard", "box": ""]).box)
     }
 
     func testOnlyLoudPresentsInTheForeground() {
