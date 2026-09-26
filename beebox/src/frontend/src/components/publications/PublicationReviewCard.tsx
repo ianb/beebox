@@ -63,6 +63,9 @@ export function PublicationReviewCard({
           <AudienceBlock title="Requested audience" value={candidate?.requestedScope ?? site.requested} />
           <AudienceBlock title="Approved audience" value={site.approved} />
         </Row>
+        {[candidate?.requestedScope ?? site.requested, site.approved].some((audience) => audience?.tier === "secret")
+          ? <Hint>Anyone with the link can view this without signing in. It is unlisted, not private to named people.</Hint>
+          : null}
 
         {candidate ? <CandidateDetails candidate={candidate} pubId={site.pubId} /> : <Text size="sm" tone="muted">No prepared update is waiting for review.</Text>}
         <PublicationActions site={site} candidate={candidate} pending={pending} migrateToSharedHost={migrateToSharedHost} onPrepare={onPrepare} onApprove={onApprove} onEnable={onEnable} onDisable={onDisable} />
@@ -130,8 +133,8 @@ function PublicationActions({ site, candidate, pending, migrateToSharedHost, onP
   const accessNeedsVerification = (requestedTier === "accounts" || requestedTier === "any-account") && site.connection.capabilities.accessLive !== "verified";
   const requiresApproval = candidate !== null && (
     !samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved }) ||
-    site.approved?.status === "disabled" ||
-    site.approved === null
+    site.approved === null ||
+    candidate.releaseId !== site.activeReleaseId
   );
   const enabled = site.approved?.status === "live";
   const disabled = site.approved?.status === "disabled";
@@ -161,16 +164,29 @@ function PublicationActionButtons({ site, candidate, pending, migrateToSharedHos
   onEnable: () => void;
   onDisable: () => void;
 }) {
+  if (!connectionAvailable) return null;
   const sameRequestedAudience = samePublicationAudience({ requested: site.requested, approved: site.approved });
+  const candidateMatchesApproved = candidate !== null && samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved });
+  const approvalLabel = candidate === null || site.approved === null
+    ? "Approve audience and publish"
+    : !samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved })
+      ? publicationAudienceChange(candidate.requestedScope, site.approved) ? "Approve audience and publish" : "Approve destination and publish"
+      : "Publish prepared update";
   const prepareLabel = enabled && migrateToSharedHost ? "Prepare update for review" : enabled && sameRequestedAudience ? "Publish latest files" : enabled ? "Prepare update for review" : "Prepare latest files";
   return (
     <Row gap="sm" wrap className="flex-col sm:flex-row">
-      <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending || !connectionAvailable} loading={pending} onClick={onPrepare}>{prepareLabel}</Button>
-      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{samePublicationAudience({ requested: candidate.requestedScope, approved: site.approved }) ? "Approve update and publish" : "Approve audience and publish"}</Button> : null}
-      {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending || !connectionAvailable} loading={pending} onClick={onDisable}>Disable site</Button> : null}
-      {disabled && !requiresApproval ? <Button id={`bbx-publication-enable-${site.pubId}`} intent="primary" disabled={pending || !connectionAvailable || accessNeedsVerification} loading={pending} onClick={onEnable}>Enable site</Button> : null}
+      <Button id={`bbx-publication-prepare-${site.pubId}`} intent="secondary" disabled={pending} loading={pending} onClick={onPrepare}>{prepareLabel}</Button>
+      {candidate && requiresApproval ? <Button id={`bbx-publication-approve-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pending} onClick={() => onApprove(candidate)}>{approvalLabel}</Button> : null}
+      {enabled ? <Button id={`bbx-publication-disable-${site.pubId}`} intent="destructive" disabled={pending} loading={pending} onClick={onDisable}>Disable site</Button> : null}
+      {disabled && (!candidate || candidateMatchesApproved) ? <Button id={`bbx-publication-enable-${site.pubId}`} intent="primary" disabled={pending || accessNeedsVerification} loading={pending} onClick={onEnable}>Enable site</Button> : null}
     </Row>
   );
+}
+
+function publicationAudienceChange(requested: AudienceSummary, approved: AudienceSummary): boolean {
+  if (requested.tier !== approved.tier) return true;
+  return requested.tier === "accounts" && approved.tier === "accounts"
+    && JSON.stringify([...(requested.allowedEmails ?? [])].toSorted()) !== JSON.stringify([...(approved.allowedEmails ?? [])].toSorted());
 }
 
 function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: string }) {
@@ -179,11 +195,9 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
   return (
     <Stack gap="sm">
       <Heading level={3}>Potential sensitive content</Heading>
-      <Text size="sm">Automated checks scan text files for credential-like strings, personal file paths, and unexpected email addresses. They also flag external URLs. Images and other binary files are not inspected.</Text>
       <Text size="xs" tone="muted">Prepared <FriendlyDate iso={candidate.preparedAt} /></Text>
-      <Text size="sm">Files: {candidate.preview.length} · findings: {candidate.scan.total} · binary files not inspected: {candidate.scan.skippedBinaries}</Text>
-      {candidate.scan.total > 0 ? <Badge tone="warning">Review the findings below before approving this audience.</Badge> : <Badge tone="success">No potential sensitive content detected in scanned text.</Badge>}
-      <Hint>This check can miss sensitive content; review the prepared files before publishing.</Hint>
+      {candidate.scan.total > 0 ? <Badge tone="warning">Review findings before approving.</Badge> : <Text size="sm">Scanned for known secrets: no matches</Text>}
+      {candidate.scan.skippedBinaries > 0 ? <Text size="xs" tone="muted">Some binary files were skipped.</Text> : null}
       <Stack gap="xs">
         {candidate.preview.map((file) => (
           <Row key={file.path} gap="sm" wrap>
@@ -193,7 +207,15 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
           </Row>
         ))}
       </Stack>
-      {selectedPath !== null ? <SelectedFilePreview path={selectedPath} pubId={pubId} candidate={candidate} /> : null}
+      {selectedPath !== null ? (
+        <Stack gap="xs">
+          <Row justify="between" align="center">
+            <Text size="sm" weight="medium">Text preview: <Text mono breakAll>{selectedPath}</Text></Text>
+            <Button size="sm" intent="ghost" onClick={() => setSelectedPath(null)}>Close preview</Button>
+          </Row>
+          <SelectedFilePreview path={selectedPath} pubId={pubId} candidate={candidate} />
+        </Stack>
+      ) : null}
       {candidate.scan.sample.map((finding) => (
         <Card key={finding.id} muted>
           <Stack gap="xs"><Row gap="sm" wrap><Badge tone="warning">{finding.kind}</Badge><Text mono size="xs">{finding.file}:{finding.line}</Text></Row><Text size="sm">{finding.detail}</Text><Text size="xs" tone="muted" breakAll>{finding.match}</Text></Stack>
