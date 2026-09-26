@@ -23,7 +23,8 @@ of this and none of the voice: web push shipped in July and has never
 delivered; the iPhone app, the main mobile surface, has no notification
 path; only system health code can notify at all. This plan gives the agent
 a small set of pieces (notify now, notify at a time, judge cheaply before
-running, watch a stream) and puts the policy in the briefing. The experience
+running, act on what changed since last time) and puts the policy in the
+briefing. The experience
 and rulings behind it are in
 [notifications-design-notes.md](notifications-design-notes.md).
 
@@ -63,18 +64,18 @@ no timed or conditional piece, and every alert stays as loud as it is today.
 | A. Vocabulary, bus-based delivery, presence, `bbx notify` | 450 | 250 | 40 |
 | B. APNs: server service, device registration, delivery | 400 | 250 | 60 |
 | C. APNs: iOS client | 300 Swift | 60 | 20 |
-| D. Timed and conditional: `notify:` on schedules, judge precheck with defer, watch cards | 620 | 400 | 80 |
+| D. Timed and conditional: `notify:` on schedules, change cursor, judge precheck with defer | 560 | 380 | 80 |
 | E. Sources: callouts, question sweep, health demotion and promotion | 250 | 200 | 20 |
 | F. Guidance: briefing section, agent guide, chat prompt, audits | 60 | 40 | 120 |
-| Total | 2,080 | 1,200 | 340 |
+| Total | 2,020 | 1,180 | 340 |
 
 Additions plus deletions, estimated; Track A includes about 250 lines of
 deletion (the `web-push` card, its connector, `bbx push test`). Authored
 docs are the last column; there is no generated output. **BIG CHANGE:**
-about 3,600 changed lines. The size comes from three channels that each
+about 3,500 changed lines. The size comes from three channels that each
 need a delivery path, plus the conditional pieces. What the fuller design
 buys over the smallest fix: the phone, which is the surface the boxholder
-uses; reminders and watches with no agent at fire time; cheap judgments
+uses; reminders and change-triggered checks with no agent at fire time; cheap judgments
 before agent runs; and demoted health alerts, without which the channel
 trains the person to ignore it. The boxholder approved the direction in
 discussion on 2026-09-26; approval of this size is requested with the plan.
@@ -86,7 +87,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   (`docs/implemented-plans/web-push-notifications.md`, Track C). Several
   notifications a day, each committed on write and deleted on delivery per
   channel, is git history that is all plumbing. This plan keeps in git what
-  is a rule or a run (a schedule card, a watch card, a procedure run card,
+  is a rule or a run (a schedule card, a procedure card, a procedure run card,
   the briefing) and puts each intent and delivery in a gitignored
   append-only log, `.beebox/notifications.jsonl`, shown in the app. The
   event bus (`src/core/event-bus.ts`) carries the live signal to an open
@@ -96,9 +97,12 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   with three values. The reminder is a scheduled-script card with a
   `notify:` field, not a command and not a card type. The judge is a field
   on an existing procedure precheck, and its "not yet" is the scheduler's
-  existing `deferred` outcome (`src/core/schedule/state.ts:39-45`). The
-  watch is the one new card type, because a per-item cursor over a stream
-  has no home in an existing card.
+  existing `deferred` outcome (`src/core/schedule/state.ts:39-45`). "What
+  changed since my last run" is a field in schedule state and a command,
+  not a card type: an earlier draft had a `watch` card with its own cursor,
+  and the boxholder's direction (2026-09-26, "passing in the git log since
+  the last call is an excellent way to do this kind of check") put the
+  cursor on the schedule instead. This plan adds no card type.
 - **`bbx` is the box agent's surface** (`beebox/CLAUDE.md`). `bbx notify` is
   added because delivery is code the agent must call. `bbx remind` is not
   added: the reminder is a card the agent writes, with a worked example in
@@ -111,8 +115,8 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   decides, and it is a mechanical fact: a requested schedule did not run.
 - **Nothing retries forever** (boxholder preference). APNs 410 and 400
   BadDeviceToken prune the token at once, matching web push's 404/410 rule
-  (`docs/implemented-plans/web-push-notifications.md`, Track B). A watch has
-  an `until`. A delivery is attempted once, at emit time; the outcome is
+  (`docs/implemented-plans/web-push-notifications.md`, Track B). A schedule
+  that waits on a judge has an `until`. A delivery is attempted once, at emit time; the outcome is
   logged and a failure becomes a health check. No retry queue.
 - **Resilient and never silent** (`docs/engineering-principles.md:49`). An
   intent with no channel at all returns with no trace today
@@ -120,7 +124,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   and every delivery outcome and raises a health check when nothing could
   send. Health checks are computed on request by `runHealthChecks`
   (`src/webapp/trpc/routers/health.ts:153`); the new checks read the log,
-  the watch state, and the schedule state. There is no entry store.
+  the Jev budget, and the schedule state. There is no entry store.
 - **Scope anchored to the incident** (boxholder preference). Unread state on
   chat replies and quiet hours are deferred by the boxholder's ruling
   (2026-09-26): device Do Not Disturb covers quiet hours; unread is filed for
@@ -159,7 +163,7 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   **Reuse:** the bus carries the live `notification` event to open apps;
   it is not the record. The turn-end hook where `<schedule>` tags are
   parsed (`src/webapp/routes/chat.ts:125-138`) is where callouts are
-  parsed. A watch cannot read new cards from the bus and reads git instead
+  parsed. "What changed" cannot be read from the bus and is read from git
   (Track D).
 - **Output-card delivery helper.** `src/connectors/output-cards.ts:57`
   `deliverPendingOutputCards`: `null` deletes the card (`:91-92`), a
@@ -268,8 +272,13 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   target can go stale when a later cycle moves the card. Accepted for v1.
 - **Connector health.** `src/core/schedule/connector-activity-alert.ts:40`
   already tracks a failing or quiet connector per episode. **Reuse:** the
-  promotion rule for watches reads it.
-- **Searched and not found:** `bbx remind`, `bbx notify`, any watch card, any
+  promotion rule reads it for a `requested-by` schedule with `requires`.
+- **Script environment.** The tick builds each script's env
+  (`src/cli/commands/tick-helpers.ts:275`), and procedure shells get the
+  box env plus `CHECK_SKIP` (`src/core/procedure/shell.ts:51`). `getHead`
+  and `getDiff` exist (`src/lib/git.ts:557`, `:455`). **Extend:** the
+  cursor variables ride the same path (Track D).
+- **Searched and not found:** `bbx remind`, `bbx notify`, `bbx changes`, any
   unread concept outside Gmail, any `UIBackgroundModes`, any notification
   mention in the iOS plans, any toast component.
 
@@ -370,12 +379,14 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   try again next time" (`src/core/schedule/state.ts:39-45`). A judge below
   threshold records it, with the probability. NOT a failure and NOT a
   success: `once` does not fire on it.
-- **Watch.** A criterion the box tests against new cards: `under` (path
-  prefix), `criteria` (natural-language yes/no), `threshold`, `then`
-  (`notify` fields or `run` command), `once`, `until`, `enabled`,
-  `requires.connectors` (the same field scheduled scripts have). New card
-  type `watch` in `_config/watches/` (Track D). In git, as the rule. Its
-  cursor lives in `.beebox/watches.json`.
+- **Change cursor.** `lastCommit` in a schedule's state: the box HEAD when
+  that schedule last ran. Per schedule, transient, never in git. Exposed
+  to the script as `BBX_SINCE_COMMIT`. NOT a global cursor: two schedules
+  over the same path each see their own "since".
+- **Change set.** The card paths added or modified under a glob between a
+  commit and HEAD, as `bbx changes` prints them. A tree diff, so a card
+  moved during the window appears once at its final path. NOT an event
+  stream.
 - **Callout.** The existing chat tag for content the person must read
   (`src/core/chat/session/prompts.ts:155`). Gains an optional `loudness`
   attribute (Track E).
@@ -584,20 +595,27 @@ the existing test target. Verified in the simulator up to the registration
 call; the simulator has no APNs token, so the post is exercised with a fake
 token behind a `DEBUG` launch argument.
 
-### Track D. Timed and conditional: `notify:` on schedules, judge precheck with defer, watch cards
+### Track D. Timed and conditional: `notify:` on schedules, the change cursor, judge precheck with defer
 
 **What.** A reminder is a scheduled-script card whose action is a
-notification; a procedure precheck can ask Jev a yes/no question and defer
-until it says yes; a `watch` card tests a criterion against each new card
-under a path.
+notification. A schedule remembers the commit it last saw, so a procedure
+can ask "what changed since my last run" and skip everything, including
+Jev, when nothing did. A procedure precheck can ask Jev a yes/no question
+over that change set, per item or as a batch, and defer until it says yes.
+"Tell me when the school emails" and "tell me when the quote is in the
+folder" are both this one pattern.
 
 **Why this needs to change.** A reminder today is a chat timer that runs an
 agent, lands only in the chat, and dies past 25 days. A scheduled procedure
 that checks a condition runs an agent every time, which is what makes many
 small proactive tasks too expensive
 (`issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md`). The
-boxholder asked for a defer state: "runs regularly until the judge says it
-fires."
+boxholder asked for a defer state ("runs regularly until the judge says it
+fires"), for the check to cost nothing when nothing happened ("shouldn't
+even call Jev if there's no activity"), and for "the git log since the last
+call" to be a supported and suggested pattern. An earlier draft had a
+separate `watch` card with its own cursor; the cursor belongs on the
+schedule, where every scheduled thing can use it.
 
 **Direction.**
 
@@ -627,77 +645,130 @@ fires."
   Firing is the scheduler tick; no agent runs. Tapping opens a new chat
   with the reminder and its context as the banner. `bbx remind` is not
   added.
+- **The change cursor.** Schedule state (`src/core/schedule/state.ts:45`)
+  gains `lastCommit: string | null`, set to `getHead(boxRoot)`
+  (`src/lib/git.ts:557`) at the end of every run whose precheck evaluated
+  (success, failure, or a judge that said no). The tick puts the previous
+  value in the script's environment as `BBX_SINCE_COMMIT` and the current
+  head as `BBX_HEAD_COMMIT` (`src/cli/commands/tick-helpers.ts:275`, beside
+  the existing env). A procedure started by the tick passes both through
+  to its shells (`src/core/procedure/shell.ts:51` already adds
+  `CHECK_SKIP`). On the first run `BBX_SINCE_COMMIT` is empty and "since"
+  means "nothing": a schedule is about the future.
+- **`bbx changes`.** `bbx changes [--since <commit>] [--match <glob>]...
+  [--kind added|modified|any] [--or-skip] [--log]` prints one box-relative
+  card path per line that was added (default) or modified under the
+  matching globs between `--since` (default `$BBX_SINCE_COMMIT`) and HEAD,
+  from a tree diff (`getDiff`, `src/lib/git.ts:455`, with `--diff-filter`).
+  A tree diff sees a card triage moved during the window at its final
+  path, once (`src/core/triage/routing.ts:74`). `--or-skip` exits
+  `CHECK_SKIP_CODE` (75, `src/core/procedure/shell.ts:12`) when the list is
+  empty, so a precheck built on it skips with no Jev call. `--log` prints
+  the commit subjects in the window instead of paths, for a batch judge
+  over "what happened". `--match` is a path glob, which is how a card type
+  is named (`**/*.email.card`); a field-level filter is a shell pipe after
+  it. With an empty `--since` it prints nothing and exits 75 under
+  `--or-skip`.
 - **`jev.judge`.** `src/services/jev.ts`: `judge({ state, question }):
   Promise<{ probability, model }>` for the Noul type, same request path;
-  fake support via `createFakeJev({ noul: (question) => number })`.
+  fake support via `createFakeJev({ noul: (question, state) => number })`.
 - **Judge precheck and defer.** `ProcedurePrecheck` (`src/schemas/procedure.ts:36`)
-  gains `judge?: { question: string, threshold: number.default(0.8) }`; the
-  state is the precheck's `shells` stdout, the only form in this plan.
-  `runPrecheck` (`src/core/procedure/engine-step.ts:133`) calls `jev.judge`
-  after `executePhaseShells`; below threshold is a skip, and the run card's
+  gains `judge?: { question: string, threshold: number.default(0.8), per:
+  enum("batch", "item").default("batch") }`. `runPrecheck`
+  (`src/core/procedure/engine-step.ts:133`) calls the judge after
+  `executePhaseShells` when the shells did not skip. `batch`: one call with
+  the shells' stdout as state. `item`: stdout is card paths, one per line;
+  one call per card with the card text (truncated to a fixed byte budget)
+  as state; the step passes when any item clears the threshold, and the
+  passing paths are exported to the run phase as `BBX_JUDGED_ITEMS`
+  (newline-separated) and `BBX_JUDGED_ITEM` (the first). The run card's
   `RunStepPrecheck` (`src/schemas/procedure-run.ts:15`) gains `judge: {
-  probability, threshold, model }` so the run shows why. A procedure whose
-  every step skipped by judge exits with a new `DEFERRED_EXIT_CODE`, which
-  `bbx tick` records as the existing `deferred` outcome
-  (`src/core/schedule/state.ts:45`) with the probability in the log, so
-  `bbx health` shows `waiting: judge 0.31`, not `failing`. `once` deletes
-  the card only after a run recorded `success` (`tick-helpers.ts:184` reads
-  the recorded result, not the exit code). So `cron` plus `once: true` plus
-  a judge precheck is "run regularly until it fires, then stop". The engine
-  receives `JevService` through the same injection the chat router uses
-  (`src/webapp/trpc/routers/quick-chat.ts:68`).
-- **Watch card.** `src/schemas/watch.ts`: `cardSchema("watch", { fields: {
-  under, criteria, threshold: number.default(0.8), then: { notify?: { title,
-  body?, loudness? }, run?: string }, once: boolean.default(true), until?,
-  enabled: boolean.default(true), requires?: { connectors }, description? }
-  })` in `_config/watches/`. Exactly one of `then.notify` and `then.run`.
-  `requires.connectors` names the connector that feeds `under`, so a
-  failing grant is reported instead of a watch that waits forever (the
-  walkthrough's W2). It is the judge pattern
-  specialized to a stream: one judgment per new item instead of one per
-  run.
-- `src/core/watch/evaluate.ts`: `evaluateWatches(boxRoot, { jev, now })`.
-  Cursor file `.beebox/watches.json` `{ [watchName]: { commit, fired:
-  string[] } }`. New items are `git diff --name-only --diff-filter=A
-  <cursor>..HEAD -- <under>` (`src/lib/git.ts` wraps git). A product cut:
-  new cards only; edits and calendar changes are polls or scheduled
-  procedures (NOT in scope). With no cursor, the cursor starts at HEAD: a
-  watch is about the future. The read-evaluate-write runs under
-  `withFileLock` (`src/lib/file-lock.ts:464-482`) on `.beebox/watches.lock`
-  with a short wait; the loser catches the lock error and skips the pass,
-  because finalize and the wakeup connector loop both reach `syncConnector`
-  (`src/cli/commands/finalize.ts:82`, `src/cli/commands/wakeup-connectors.ts:121`).
-  For each item, `jev.judge({ state: card text truncated to a fixed byte
-  budget, question: criteria })`; at or above threshold fires `then`.
-  `notify` fills the target with `card:<item>` and substitutes `$item`;
-  `run` executes with `WATCH_ITEM=<path>` through `execWithTimeout`. `once`
-  sets `enabled: false` and commits with the item path in the message, so
-  the fire is in git. Past `until`, the same with `expired-at`. Called once
-  per finalize beside the question sweep (`src/cli/commands/finalize.ts:35`).
-  Finalize runs after the reactor's jobs phase
-  (`src/core/reactor/engine.ts:2-14`), so triage has already moved the
-  cards it will move this cycle (`src/core/triage/routing.ts:74`) and the
-  diff sees each card at its post-triage path.
-- Budget: a per-box daily cap of Jev evaluations (default 500) in
-  `.beebox/watches.json`. Over the cap, evaluation stops, the cursor does
-  not advance, and a health entry says `watch backlog: N items waiting`.
-  Nothing is dropped.
+  per, threshold, model, results: [{ item?, probability }] }` so the run
+  shows why. A procedure whose every step skipped, by shells or by judge,
+  exits with a new `DEFERRED_EXIT_CODE`, which `bbx tick` records as the
+  existing `deferred` outcome (`src/core/schedule/state.ts:45`), so
+  `bbx health` shows `waiting`, not `failing`. `once` deletes the card only
+  after a run recorded `success` (`tick-helpers.ts:184` reads the recorded
+  result, not the exit code). The engine receives `JevService` through the
+  same injection the chat router uses (`src/webapp/trpc/routers/quick-chat.ts:68`).
+- **Jev budget.** A per-box daily cap of judge calls (default 500) in
+  `.beebox/jev-budget.json`. Over the cap, a judge precheck defers without
+  calling and the run card says `budget`; the tick does not advance
+  `lastCommit` for that run, so the items are judged next time. A health
+  check says how many runs deferred for budget. Nothing is dropped.
+- **The two worked examples** in the procedure schema instructions and the
+  agent guide, both with `once: true` so the schedule ends when it fires:
+
+  Stream, one judgment per new item:
+
+  ```yaml
+  # _config/schedules/watch-field-trip.scheduled-script.card
+  on-wakeup: true
+  not-before: 20m
+  once: true
+  until: 2026-11-01
+  requested-by: boxholder
+  requires: { connectors: [gmail] }
+  description: Tell me when the school emails about the field trip
+  runs: bbx procedure run watch-field-trip
+  ```
+  ```yaml
+  # _config/procedures/watch-field-trip.procedure.card
+  name: watch-field-trip
+  steps:
+    - id: look
+      precheck:
+        shells:
+          - bbx changes --match '_content/inbox/**/*.email.card' --or-skip
+        judge:
+          per: item
+          question: "This is an email from the school about the spring field trip: dates, permission form, or payment."
+      run:
+        shells:
+          - bbx notify --loudness loud --target "card:$BBX_JUDGED_ITEM" "School field trip email arrived"
+  ```
+
+  Snapshot, one judgment over the state, and no call when nothing moved:
+
+  ```yaml
+  # _config/procedures/watch-contractor-quote.procedure.card
+  name: watch-contractor-quote
+  steps:
+    - id: look
+      precheck:
+        shells:
+          - bbx changes --match 'drive/Quotes/**' --kind any --or-skip
+          - bbx cat drive/Quotes/*.card
+        judge:
+          question: "Is there a quote from the kitchen contractor here?"
+      run:
+        shells:
+          - bbx notify --loudness loud --target card:drive/Quotes "The contractor's quote is in"
+  ```
+
+  Both cost nothing on a wakeup with no matching change, one or a few Jev
+  calls when there is, and one agent-free notification when it fires.
+  `on-wakeup: true` makes the check run when connectors have just synced.
 
 **Vocabulary lock-ins.** `notify:` and `requested-by` on scheduled scripts;
-`judge` as the precheck field and the service method; `DEFERRED_EXIT_CODE`;
-`watch` card fields; `$item` and `WATCH_ITEM`.
+`lastCommit` in schedule state; `BBX_SINCE_COMMIT`, `BBX_HEAD_COMMIT`,
+`BBX_JUDGED_ITEMS`, `BBX_JUDGED_ITEM`; `bbx changes` and its flags; `judge`
+with `per` as the precheck field and the service method;
+`DEFERRED_EXIT_CODE`.
 
 **First implementation chunk.** `jev.judge` with a doctest against the fake;
 the `notify:` field and its tick path with a doctest (an `at` card fires a
 notification and deletes itself; a `notify` plus `runs` card fails
-validation with the message). Second chunk: the judge precheck, deferred
-exit, and `once` semantics with a procedure doctest (a cron card with a
-judge at 0.3 records `deferred` twice and survives; at 0.9 it runs, records
-`success`, and is deleted). Third chunk: the watch schema and evaluator
-with a filesystem doctest (three commits add three cards, fake Jev answers
-0.9 for one, the watch fires once, disables itself with a commit, cursor
-advances; the cap stops evaluation with a health entry and resumes).
-
+validation with the message). Second chunk: `lastCommit`, the env
+variables, and `bbx changes` with a filesystem doctest over a temporary
+repo (three commits add three cards, one moved by a rename; `--match`
+selects; `--or-skip` exits 75 on empty; the first run sees nothing). Third
+chunk: the judge precheck with `per`, the deferred exit, `once` semantics,
+and the budget, with a procedure doctest (an `on-wakeup` card with no
+changes defers with zero Jev calls; with one matching card and a fake Jev
+at 0.9 it runs, exports the item, records `success`, and is deleted; at
+0.3 it records `deferred` and survives; over budget it defers without a
+call and keeps the cursor).
 ### Track E. Sources: callouts, question sweep, health demotion and promotion
 
 **What.** Change what each existing source sends, and add the chat callout as
@@ -734,9 +805,10 @@ reach the person only when the agent marks them.
   `src/core/schedule/engine-wait.ts` for engine quota), a skipped card with
   `requested-by: boxholder` sends `loud` once per episode: "Your reminder
   could not run: Google needs reconnecting", target `dashboard`. The
-  episode latch reuses `schedule-state.ts`. A watch gets the same rule
-  twice: when a connector in its `requires` is in a failing episode
-  (`connector-activity-alert.ts:40`) and when the Jev key is missing.
+  episode latch reuses `schedule-state.ts`. Two more triggers for the same
+  rule: a `requested-by` schedule whose `requires` connector is in a failing
+  episode (`connector-activity-alert.ts:40`) even though the script itself
+  could run, and a judge that cannot run because the Jev key is missing.
 - Capture failure: the capture pipeline's terminal failure (the
   `capture-status` event, `src/core/event-bus-schemas.ts:206`) sends
   `quiet` with target `chat:<sessionId>` when presence is zero. Success
@@ -767,15 +839,18 @@ and the boxholder ruled the judgment lives in briefings.
   the default and propose adding the section at the next retro.
 - Agent guide: a "Reaching the boxholder" section in
   `src/core/agent-guide/commands.ts`: `bbx notify`, loudness, targets, the
-  reminder card, the watch card, the judge precheck, "the briefing owns
+  reminder card, the change cursor and `bbx changes`, the judge precheck,
+  "check what changed before you judge, and judge before you run an
+  agent", "the briefing owns
   when", and "run `bbx notify --check` before promising a reminder or a
-  watch; if nothing can reach the person, say so instead of promising". Chat prompt (`src/core/chat/session/prompts.ts:163`): `<schedule>`
+  change-triggered check; if nothing can reach the person, say so instead
+  of promising". Chat prompt (`src/core/chat/session/prompts.ts:163`): `<schedule>`
   is for coming back to this conversation within hours; a schedule card
   with `notify:` is for anything that must reach the person later or
   elsewhere; `<callout loudness>` is how to make an outcome reach them when
   they have left.
-- Schema instructions on scheduled-script (`notify:`), `watch`, and the
-  `judge` precheck carry two worked examples each, showing both forms.
+- Schema instructions on scheduled-script (`notify:`) and on the procedure
+  `judge` precheck carry the worked examples from Track D.
 - `docs/notifications.md` reference doc: the vocabulary, the pieces, the
   channel table, what is in git and what is transient, the ops steps, the
   verification walk.
@@ -788,7 +863,7 @@ section, with the knowledge audits below written and run.
 ## Could this be simpler?
 
 The simplest version that works: keep the July card path, add an `apns` card
-and `bbx notify`, and skip judges and watches. Reminders work through
+and `bbx notify`, and skip the cursor and judges. Reminders work through
 `runs: bbx notify ...` on a schedule card.
 
 What the fuller plan buys:
@@ -806,9 +881,12 @@ What the fuller plan buys:
   procedure runs an agent every time, which is the cost that keeps small
   proactive tasks from existing. The defer outcome already exists; the
   change is to record it from a judge and to make `once` respect it.
-- **The watch card** (Track D): the same judge pattern over a stream. It is
-  the only new card type and the last chunk built; if the judge precheck
-  proves enough in practice, it can be dropped before it ships.
+- **The change cursor and `bbx changes`** (Track D): without them a
+  scheduled check either calls Jev every run over a growing pile or keeps
+  its own cursor in shell, which is the same thing written badly in every
+  procedure. One field in schedule state and one command make "nothing
+  happened, do nothing" the default cost. This replaced a separate `watch`
+  card type: same behavior, no new card.
 
 Dropped because the simple version does not fail without them: unread
 state, target-level presence, quiet hours in the dispatcher, a notification
@@ -844,13 +922,14 @@ is fixed by Apple's API and the contract rule.
 | Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next tick | Clear |
 | Judge below threshold forever on a `cron` card | Track D doctest | recorded `deferred` each run; health shows `waiting: judge p`; `until` ends it | Clear |
 | Judge exit code taken as failure by an older tick | none needed: same package | `DEFERRED_EXIT_CODE` is added to the tick that reads it in the same change | Clear |
-| Watch cursor lost (`.beebox/` wiped) | Track D doctest | cursor resets to HEAD; items between are never evaluated; health entry `watch cursor reset` | Clear |
-| Two evaluators race the watch cursor | Track D doctest | `withFileLock`; the loser skips the pass | Clear |
-| Watch over the daily cap | Track D doctest | stop, keep cursor, health entry, resume next day | Clear |
-| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | evaluation stops for the pass, cursor kept, health entry after two consecutive passes; a judge precheck records `deferred` | Clear |
-| Jev key missing | Track D doctest | watches and judges skip with a health entry; a `requested-by` card promotes (Track E) | Clear |
-| Watch `then.run` command fails | Track D doctest | logged, cursor advances past the item, watch stays enabled, health entry | Clear |
-| Same card matches two watches | Track D doctest | each fires; `tag` is the watch name so the phone collapses only within a watch | Clear |
+| Schedule state lost (`.beebox/` wiped) | Track D doctest | `lastCommit` null; the next run sees nothing and sets it; cards added meanwhile are never judged; health check `schedule cursors reset` | Clear |
+| Two ticks run the same schedule | existing schedule lock (`tick-helpers.ts:250`) | serialized | Clear |
+| Judge over the daily budget | Track D doctest | defer without a call, cursor not advanced, health check | Clear |
+| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | the run records `deferred` with the error, cursor not advanced; health check after two consecutive | Clear |
+| Jev key missing | Track D doctest | judge defers with a health check; a `requested-by` card promotes (Track E) | Clear |
+| `bbx changes` with a bad `--since` (commit gone after a history rewrite) | Track D doctest | error, precheck fails, run recorded `failure` with the message | Clear |
+| Run phase fails after the judge passed | existing procedure failure path | `failure` recorded; cursor advanced; the item is not re-judged; the failure is on the health page | Clear |
+| Same card judged by two schedules | Track D doctest | each fires; `tag` is the schedule name so the phone collapses only within one | Clear |
 | Callout turn completes, presence flips during delivery | Track E doctest | notification still sent; seen twice at worst | Clear |
 | Promotion rule fires for a system-scheduled script | Track E doctest | only `requested-by: boxholder` promotes | Clear |
 | `chat:new` opened after the log trimmed the intent | Track A route doctest | chat opens without the banner and logs the id | Clear |
@@ -872,14 +951,14 @@ bounded to the heartbeat staleness.
 - **Two agents touching the same card.** ADDRESSED: no card is written per
   delivery; the log is append-only from three processes (server, scheduler,
   `bbx`), one line per write, and JSONL appends of under 4 KB are atomic on
-  the filesystems in use; the watch cursor file is written only by
-  `evaluateWatches` under `withFileLock` (Track D). A watch or schedule card edited by an agent
-  while evaluation runs is read once per pass.
-- **Hand-edit drift.** ADDRESSED: watch and schedule cards are
+  the filesystems in use; the change cursor is written by the tick under
+  the existing per-schedule lock (Track D). A schedule or procedure card
+  edited by an agent while a run is in progress is read once per run.
+- **Hand-edit drift.** ADDRESSED: schedule and procedure cards are
   schema-validated on load; `threshold` outside 0..1, a `then` with both or
   neither form, and a schedule with both `notify` and `runs` fail with a
   message naming the rule.
-- **Fabricated free-form value.** ADDRESSED for criteria: a watch criterion is
+- **Fabricated free-form value.** ADDRESSED for criteria: a judge question is
   free text by design and is tested by Jev, not trusted. A `$item` in a
   notify body is substituted by code. A reminder title is a YAML string, not
   a shell argument. For notification bodies from agents: the briefing asks
@@ -911,9 +990,12 @@ bounded to the heartbeat staleness.
   `disable_notification` for `quiet`.
 - **Rich notifications**: actions, images, reply from the notification.
   Deferred until the plain path is verified on a device.
-- **Watch triggers other than new cards under a path.** Card edits, calendar
-  changes, and time-of-day conditions are polls or scheduled procedures with
-  a judge (the design notes, S3).
+- **A `watch` card type.** Considered and folded into the change cursor plus
+  the judge precheck; two cards (schedule and procedure) per watch is the
+  authoring cost, and the schema instructions carry the pair as one example.
+- **Field-level matching in `bbx changes`.** `--match` is a path glob; a
+  filter on frontmatter is a shell pipe after it, until a second caller
+  wants more.
 - **Judge over anything but the precheck's shell output.** A judge over a
   card ref or a run phase's output waits for a second caller.
 - **Jev for triage routing and quick capture.** Its own issue
@@ -935,9 +1017,10 @@ bounded to the heartbeat staleness.
    tune after the device test.
 3. **Default loudness for `bbx notify` and `notify:`.** `quiet` for the
    command, `loud` for a `requested-by: boxholder` schedule. Lean as stated.
-4. **Whether the watch card ships in this plan.** Lean: yes, as the last
-   chunk, dropped if the judge precheck covers the boxholder's first real
-   watch.
+4. **Whether `lastCommit` should advance on a run that failed.** Lean: yes;
+   a failing run is on the health page, and re-judging the same items on
+   every retry would multiply Jev calls for a bug the person has to fix
+   anyway.
 5. **Whether `dot` badge should be a count.** Not without unread state; the
    badge is 1 and clears on foreground. Revisit with the unread issue.
 
@@ -953,15 +1036,16 @@ New agent-facing concepts, each with a `knows_directly` entry in
 - `remind-vs-schedule`: "The person asks to be reminded next Tuesday to call
   the vet. In chat, what do you do?" Expects a schedule card with `notify:`
   and `requested-by: boxholder`, not `<schedule>` and not a shell `runs`.
-- `watch-setup`: "The person says: tell me when the school emails about the
-  field trip." Expects a watch card, or a cron procedure with a judge
-  precheck, with a stated reason for the choice.
+- `changes-since`: "The person says: tell me when the school emails about
+  the field trip." Expects an `on-wakeup` schedule running a procedure whose
+  precheck is `bbx changes --match ... --or-skip` and a per-item judge, with
+  `once` and `requires: { connectors: [gmail] }`.
 - `judge-precheck`: "A daily procedure should only run an agent when today's
   calendar has an event needing preparation. How do you keep it cheap, and
   how does it stop once it has fired?" Expects a `judge` precheck over a
   `shells` output and `once: true`.
 - `health-silence`: "Gmail sync has been failing for two days. Do you notify
-  the person?" Expects no, unless a requested reminder or watch is blocked.
+  the person?" Expects no, unless a requested schedule is blocked.
 
 ## What will hold this after it ships
 
@@ -969,11 +1053,12 @@ New agent-facing concepts, each with a `knows_directly` entry in
   dispatcher with the log and the service fakes, the
   APNs payload builder (pure), the `notify:` tick path, the judge precheck
   and `deferred` outcome through the procedure engine with a fake Jev, the
-  watch evaluator with a real temporary git repo, the promotion rule at the
+  `bbx changes` over a real temporary git repo, the promotion rule at the
   skip site. Cost: ordinary; the fakes exist for push, Telegram, and Jev,
   and the plan adds one for APNs in the same shape.
 - **Route doctests** for the push-token route and `bbx notify --channel`.
-- **Schema doctests** for scheduled-script (`notify` versus `runs`), `watch`,
+- **Schema doctests** for scheduled-script (`notify` versus `runs`), the
+  procedure `judge` field,
   and the question `urgency` field.
 - **The mobile contract fixture** for the new route, checked by the existing
   tripwire.
@@ -998,8 +1083,8 @@ New agent-facing concepts, each with a `knows_directly` entry in
 3. **Track C**: entitlement, delegate, registrar, presentation, tap handling,
    badge clearing. Simulator-verified; device test with the boxholder.
 4. **Track D** chunk 1: `jev.judge`, `notify:` on schedule cards and its tick
-   path. Chunk 2: judge precheck, deferred exit, `once` semantics. Chunk 3:
-   the watch schema and evaluator.
+   path. Chunk 2: `lastCommit`, the env variables, `bbx changes`. Chunk 3:
+   judge precheck with `per`, deferred exit, `once` semantics, budget.
 5. **Track E** chunk 1: loudness on existing callers, question `urgency`.
    Chunk 2: callouts on `chat-complete`, health entries, promotion rule,
    capture failure.
@@ -1008,8 +1093,8 @@ New agent-facing concepts, each with a `knows_directly` entry in
 7. **End-to-end**: `BBX_PUSH_FAKE=1` and the APNs fake through every source;
    then desktop web push with real VAPID keys; then the boxholder's device
    walk: pair, register, `bbx notify --loudness loud`, tap, land; a schedule
-   card with `at` two minutes out; a cron procedure with a judge; a watch
-   over a test mail. The ops steps (VAPID keys, APNs key, Apple capability)
+   card with `at` two minutes out; the field-trip pair over a test mail;
+   the quote pair over a mounted folder. The ops steps (VAPID keys, APNs key, Apple capability)
    are the boxholder's.
 
 Tracks A and D have no dependency on each other beyond `notifyBoxholder`'s
@@ -1025,7 +1110,8 @@ depends on A; F is written last so it describes what shipped.
 - **Knowledge audits** land with Track F, run against the test box.
 - **Migration.** None on disk: no `web-push` card exists; no active pairings
   or subscriptions exist; the device record field is optional; `runs` on
-  existing schedule cards stays valid; watch is a new type. The briefing
+  existing schedule cards stays valid; `lastCommit` is a new optional
+  state field. The briefing
   section reaches new boxes through the template; existing boxes get the
   default from the agent guide until the section is written (Track F).
   Adding it to the boxholder's own boxes is a step in the verification walk.

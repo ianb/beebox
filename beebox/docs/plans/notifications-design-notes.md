@@ -512,3 +512,14 @@ dropped before shipping.
   v1 and written down.
 - Health "entries" are computed checks over these files, not a store.
 - An in-app banner component is new work; no toast exists today.
+
+### Addendum, later on 2026-09-26: the watch card is gone
+
+The boxholder: a check like "is the quote in the folder" should not even
+call Jev when nothing happened, and "the git log since the last call" is
+the pattern to support and suggest. That is the watch card's cursor, moved
+onto the schedule where every scheduled thing can use it. W2 and W9 become
+one pattern: a schedule card (`on-wakeup` or `cron`, `once`, `requires`)
+running a procedure whose precheck is `bbx changes --match <glob> --or-skip`
+followed by a judge, per item for a stream or over the state for a
+snapshot. No new card type. The plan's Track D has both worked examples.
