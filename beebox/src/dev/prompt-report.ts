@@ -5,7 +5,11 @@
  *
  * Usage:
  *   pnpm prompt-report
- *   pnpm prompt-report --output docs/prompts.md
+ *   pnpm prompt-report --output <path>
+ *
+ * The default output is `src/dev/reports/prompt-report.md`, a gitignored
+ * generated file. `docs/prompts.md` is the hand-written parent page for the
+ * prompt-surface docs and must not be overwritten.
  */
 
 import * as fs from "node:fs/promises";
@@ -118,8 +122,8 @@ if (outputPath) {
   await fs.writeFile(resolved, markdown);
   console.log(`Wrote ${entries.length} prompts to ${resolved}`);
 } else {
-  // Default: write to docs/prompts.md
-  const defaultPath = path.join(PACKAGE_ROOT, "docs", "prompts.md");
+  const defaultPath = path.join(PACKAGE_ROOT, "src", "dev", "reports", "prompt-report.md");
+  await fs.mkdir(path.dirname(defaultPath), { recursive: true });
   await fs.writeFile(defaultPath, markdown);
-  console.log(`Wrote ${entries.length} prompts to docs/prompts.md`);
+  console.log(`Wrote ${entries.length} prompts to src/dev/reports/prompt-report.md`);
 }
