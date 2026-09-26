@@ -112,6 +112,12 @@ describe("shared-host routes", () => {
     expect((await request("/hello/")).status).toBe(404);
   });
 
+  it("rejects reserved infrastructure roots as public slugs", async () => {
+    for (const root of ["s", "p", "a", "__release"]) {
+      expect((await request(`/${root}/`)).status).toBe(404);
+    }
+  });
+
   it("serves secret content only below its PubId path and keeps release redirects prefixed", async () => {
     const releaseId = await seedSecret();
     const page = await request(`/s/${SECRET_PUB_ID}/`);

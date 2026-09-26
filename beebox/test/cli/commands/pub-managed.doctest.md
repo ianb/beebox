@@ -113,13 +113,13 @@ publicationSiteLines([site({
 => true
 
 publicationSiteLines([site({
-  hostname: null,
   approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
   sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-})])[0].includes("serving audience public at /notes/; active")
+})])[0].includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
 => true
 
 publicationSiteLines([site({
+  hostname: null,
   approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
   sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
 })])[0].includes("legacy workers.dev URL")

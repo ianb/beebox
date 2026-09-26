@@ -1,6 +1,6 @@
 /** Shared-host routing through an approved per-publication route marker. */
 
-import { releaseIdSchema, sharedRouteMarkerSchema } from "../../src/publish/manifest-edge";
+import { releaseIdSchema, sharedPublicSlugSchema, sharedRouteMarkerSchema } from "../../src/publish/manifest-edge";
 import { decodeSegment } from "./asset-path";
 import type { WorkerDeps } from "./deps";
 import type { Env } from "./env";
@@ -133,7 +133,7 @@ function parseSharedPath(pathname: string): SharedRoute | null {
     if (pubId === null || !PUB_ID_RE.test(pubId)) return null;
     return { kind: "secret", pubId, basePath: `/s/${pubId}/`, assetSegments: withDirectoryIndex(raw.slice(2), pathname.endsWith("/")) };
   }
-  if (!/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/.test(first)) return null;
+  if (!sharedPublicSlugSchema.safeParse(first).success) return null;
   return {
     kind: "public",
     slug: first,

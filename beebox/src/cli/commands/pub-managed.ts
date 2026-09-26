@@ -53,8 +53,8 @@ function candidateDestination(site: PublicationSite): string | null {
 
 function legacyWorkersDestination(site: PublicationSite): string | null {
   const approved = site.approved;
-  if (site.hostname === null || approved === null || approved.sharedHost !== undefined || approved.customHostname === undefined) return null;
-  const { customHostname: _customHostname, ...legacyScope } = approved;
+  if (site.hostname === null || approved === null || (approved.customHostname === undefined && approved.sharedHost === undefined)) return null;
+  const { customHostname: _customHostname, sharedHost: _sharedHost, ...legacyScope } = approved;
   return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: legacyScope });
 }
 
