@@ -203,7 +203,8 @@ issue, "Constraints for the check").
   subject (`core/chat/`, `core/capture/`, `components/chat/`). Named by a
   singular noun. Partitioned on one axis.
 - **Scope of the rules**: modules (files the import graph sees: `.ts`,
-  `.tsx`) and test files. Data files (fixtures, `.card`, `.html`, `.svg`,
+  `.tsx`, and the `.js`/`.mjs` loader shims `code-style.md` permits, such
+  as `scripts/build-pub-worker.mjs`) and test files. Data files (fixtures, `.card`, `.html`, `.svg`,
   worklets, assets) are opaque to the rules and take the shape their consumer
   requires; test data lives under `test/fixtures/`.
 - **Set directory**: a directory whose children are interchangeable
@@ -378,21 +379,42 @@ registry is an explicit import list (see *Prior art* for why not discovery,
 self-registration, or generation). It may hold the set's loader logic; it
 holds no member.
 
-One helper, `src/lib/registry.ts`, is the only way a set is built:
+One generic helper, `src/lib/registry.ts`, is the only way a set is built.
+The contract is its type parameter and is always written out, never
+inferred: with inference a list of mismatched members widens to a union and
+nothing fails.
 
 ```ts
-export const cardSchemas = defineRegistry({
-  directory: "./schemas",          // string literal; the check reads it
-  entry: "schema",                 // entry module name for directory members
-  key: (schema) => schema.name,    // or "filename"
-  ordered: false,                  // true where list order is semantics
+export function defineRegistry<M>(spec: {
+  directory: string;                     // literal; the check reads it
+  entry?: string;                        // entry module for directory members
+  key: ((member: M) => string) | "member-name";
+  ordered: boolean;                      // true where list order is semantics
+  members: ReadonlyArray<M>;
+}): Registry<M>;                         // frozen ReadonlyMap<string, M> + list
+
+export const cardSchemas = defineRegistry<CardSchema>({
+  directory: "./schemas",
+  entry: "schema",
+  key: (schema) => schema.name,
+  ordered: true,   // registry.ts:86: order drives the CARD_TYPES catalogue
   members: [MemoSchema, RecipeSchema, /* ... */],
+});
+export const VERB_COMMANDS = defineRegistry<Command>({
+  directory: "./commands",
+  entry: "command",
+  key: (command) => command.name(),
+  ordered: false,
+  members: [initCommand, migrateCommand, /* ... */],
 });
 ```
 
-`defineRegistry` returns a frozen, keyed `ReadonlyMap` and throws
-`DuplicateRegistryKeyError` at construction. Its type parameter is the
-contract, so a listed value of the wrong type fails typecheck.
+`key: "member-name"` needs no member access: the key is the file's basename
+for a file member and the directory's name for a directory member, and the
+check verifies the derived key is unique. The helper throws `DuplicateRegistryKeyError` at
+construction. A listed value that is not an `M` fails typecheck. Where a set
+has an independent key union, the registry wraps `satisfies Record<Union, M>`
+around `members` as `code-style.md` already prescribes for dispatch tables.
 
 How each property is verified:
 
@@ -401,9 +423,12 @@ How each property is verified:
   literal, lists `<dir>/<name>.ts(x)` and `<dir>/<name>/<entry>.ts(x)`, and
   collects the file's import specifiers that resolve into `<dir>`. The two
   sets must be equal: a file without an import is an unregistered member; an
-  import without a file is a stale entry. An import that is not placed in
-  `members` is caught by the existing unused-import lint
-  (`personal-vibe-check/preset.ts`, `no-unused-vars`).
+  import without a file is a stale entry. The check also maps every element
+  of `members` back to its import declaration and requires that it resolve
+  into `<dir>`, so a value of the right type imported from elsewhere cannot
+  be listed. An import that is not placed in `members` is caught by the
+  existing unused-import lint (`personal-vibe-check/preset.ts`,
+  `no-unused-vars`).
 - *Key uniqueness (runtime).* `defineRegistry` throws on a duplicate key.
   Every test that imports the registry, and the server at startup, exercises
   it. `test/lib/registry.doctest.md` covers the helper; a set's own test
@@ -453,18 +478,26 @@ directory" (a name that says nothing and hides that four of them exceed the
 file limit). The directory's principal module is named by what it does; if it
 cannot be named, the directory's axis is unclear and that is the finding.
 
-The four public specifiers are the one place a re-export module belongs,
-because there its job is to define what is public rather than to blur it.
-`src/exports/` already holds two of them (`schema.ts`, `server.ts`);
-`src/cards/index.ts` (`beebox/cards`) and
-`src/frontend/src/components/view-widgets/index.tsx` (`beebox/view-widgets`)
-move there. `src/exports/` is then a set whose registry is the `package.json`
-`exports` map: every file in the directory is a specifier's target and every
-specifier targets a file there. Rule 1's completeness check reads the map
-instead of a `defineRegistry` call.
+A public surface is the one place a re-export module belongs, because there
+its job is to define what is public rather than to blur it. Each package
+keeps its surfaces in its own `src/exports/`: the backend already holds
+`schema.ts` and `server.ts` there, `src/cards/index.ts` (`beebox/cards`)
+moves there, and the frontend package's surface
+`src/frontend/src/components/view-widgets/node-entry.tsx`
+(`beebox/view-widgets`) moves to `src/frontend/src/exports/view-widgets.tsx`.
+The registry of public surfaces is the build's entry table
+(`scripts/build-cli.ts:52-54` and `:112-118` bundle each specifier from one
+source entry to its `dist/` target), and `package.json` `exports` is the
+consumer-facing map over the same targets. The check verifies the three
+agree: every module specifier in `exports` has a build entry, every build
+entry's source is a file in a package's `src/exports/`, and every file there
+is a build entry's source. `./tsconfig.base.json` is a data export, outside
+the rules' scope. The `types` conditions keep pointing at the checked-in
+`.d.ts` beside the source (`src/exports/view-widgets.d.ts`,
+`build-cli.ts:126-129`).
 *Measure:* basename is never `index`; a module containing only re-exports
-lives in `src/exports/`; `exports` map ↔ `src/exports/` listing.
-*Mechanical:* all three. *Examples:* `core/box/index.ts` (415 lines) splits
+lives in a `src/exports/`; `exports` map ↔ build entry table ↔ `src/exports/`
+listings. *Mechanical:* all three. *Examples:* `core/box/index.ts` (415 lines) splits
 by what it does (`init`, `validate`, `open`, ...). `schemas/index.ts` is
 deleted per the barrel ban; importers name the schema module.
 `renderers/index.ts` goes with the side-effect registry it fronts.
@@ -495,12 +528,18 @@ directory containing all their users, so a helper used across areas lives in
 needs an allowlist: every child is a mirror, a behaviour group, or support
 placed by rule 3.
 
-Two consequences make the rule exception-free and are decided in the move
-plan: `beebox/scripts/` is a second source root today (mirrored at
-`test/scripts/`) and folds into `src/` so there is one root; and
-`src/frontend/` is a nested package with its own `package.json`, so its tests
-mirror its own `src/` under `src/frontend/test/` rather than
-`beebox/test/frontend/`.
+Three consequences make the rule exception-free and are decided in the
+move plan. `beebox/scripts/` is a second source root today (mirrored at
+`test/scripts/`) and folds into `src/`. `beebox/user-stories/` is a third
+(`package.json:57` typechecks it, `eslint.config.ts:56` lists it as a root):
+its journeys are product-level tests and go to the `test/user-stories/`
+behaviour group, its pipeline is dev tooling and goes under `src/`, its
+catalog is documentation. `src/frontend/` is a nested package with its own
+`package.json`, so its tests mirror its own `src/` under `src/frontend/test/`
+rather than `beebox/test/frontend/`; tap's include (`.taprc:28-30` lists only
+`test/**` today), the frontend package's lint globs
+(`src/frontend/package.json:13`), and knip's frontend workspace globs gain
+that directory in the move plan.
 
 Full paths under the rule:
 
@@ -519,7 +558,7 @@ Full paths under the rule:
 | helper used across areas | `beebox/test/helpers/isolate-user-home.ts` |
 
 *Measure:* three checks. Containment: every `src/` import of a test (doctest
-fences or `.test.ts` imports; `.taprc:28-30` includes both) resolves inside
+fences or `.test.ts` imports; both forms run under tap) resolves inside
 the test's mirrored directory or its descendants, or in `lib/`, `shared/`, or
 a `test/` support module placed by rule 3. Naming: `X.doctest.md` or
 `X.<facet>.doctest.md` in mirror `D` requires `X.ts`, `X.tsx`, or `X/` in
@@ -685,9 +724,9 @@ the rule or dropping it).
   `src/frontend/test/`. The alternative keeps `beebox/test/frontend/` and
   treats `src/frontend/src/` as the mirrored root, an exception to "one
   source root per package". Recommendation: `src/frontend/test/`.
-- **Fold `scripts/` into `src/`.** Required for rule 8 to have one root.
-  Where under `src/` (`src/scripts/` or into `src/dev/`) is a move-plan
-  decision.
+- **Fold `scripts/` and `user-stories/pipeline/` into `src/`.** Required
+  for rule 8 to have one root. Where under `src/` (`src/scripts/` or
+  `src/dev/`) is a move-plan decision.
 
 ## Knowledge audits
 
