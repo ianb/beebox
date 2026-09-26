@@ -53,14 +53,14 @@ function candidateDestination(site: PublicationSite): string | null {
 
 function legacyWorkersDestination(site: PublicationSite): string | null {
   const approved = site.approved;
-  if (site.hostname === null || approved === null || (approved.customHostname === undefined && approved.sharedHost === undefined)) return null;
-  const { customHostname: _customHostname, sharedHost: _sharedHost, ...legacyScope } = approved;
+  if (site.hostname === null || approved === null || approved.sharedHost !== undefined || approved.customHostname === undefined) return null;
+  const { customHostname: _customHostname, ...legacyScope } = approved;
   return publicationDestinationUrl({ hostname: site.hostname, pubId: site.pubId, scope: legacyScope });
 }
 
-function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[] } | null): string {
+function audienceLabel(scope: { tier: string; slug?: string; allowedEmails?: string[]; sharedHost?: { path: string } } | null): string {
   if (scope === null) return "unknown audience";
-  if (scope.tier === "public") return `public${scope.slug ? ` at /p/${scope.slug}/` : ""}`;
+  if (scope.tier === "public") return `public${scope.sharedHost?.path ? ` at ${scope.sharedHost.path}` : scope.slug ? ` at /${scope.slug}/` : ""}`;
   if (scope.tier === "accounts") return `accounts (${scope.allowedEmails?.length ?? 0} allowed)`;
   return scope.tier;
 }

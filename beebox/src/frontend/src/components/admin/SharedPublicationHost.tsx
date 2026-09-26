@@ -63,12 +63,12 @@ export function SharedPublicationHost() {
         <form onSubmit={submit}>
           <Stack gap="sm">
             <SelectField id="bbx-admin-publish-shared-connection" label="Cloudflare connection" value={connectionName || availableConnections[0] || ""} onChange={setConnectionName} options={availableConnections.map((name) => ({ value: name, label: name }))} required />
-            <TextField id="bbx-admin-publish-shared-hostname" label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} pattern="(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}" helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
+            <TextField id="bbx-admin-publish-shared-hostname" label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
             <Button id="bbx-admin-publish-shared-setup" type="submit" intent="primary" loading={configure.isPending} loadingLabel="Setting up…">Configure shared host</Button>
           </Stack>
         </form>
       )}
-      {sharedHost?.status === "pending" ? <Button id="bbx-admin-publish-shared-retry" intent="secondary" loading={configure.isPending} onClick={configureHost}>Retry shared-host setup</Button> : null}
+      {sharedHost ? <Button id="bbx-admin-publish-shared-retry" intent="secondary" loading={configure.isPending} onClick={configureHost}>{sharedHost.status === "attached" ? "Check and repair shared-host setup" : "Retry shared-host setup"}</Button> : null}
       {legacyHosts.length > 0 ? (
         <Stack gap="xs">
           <Heading level={3}>Existing per-publication hostnames</Heading>
@@ -87,7 +87,7 @@ export function SharedPublicationHostSummary({ host }: { host: SharedHost }) {
       <Text size="sm">Destination: <Text mono breakAll>https://{host.hostname}/</Text></Text>
       <Text size="sm">Connection: {host.connectionName} · state: {host.status}</Text>
       {host.status === "attached"
-        ? <Text size="sm" tone="muted">The hostname is attached. New publications can request paths beneath it.</Text>
+        ? <Text size="sm" tone="muted">The hostname is attached. New publications can request paths beneath it. Use the check and repair action if a Worker update or route needs recovery.</Text>
         : <Hint>Setup is incomplete. Retry to finish attaching this reserved hostname; the hostname and connection cannot be changed here.</Hint>}
     </Stack>
   );

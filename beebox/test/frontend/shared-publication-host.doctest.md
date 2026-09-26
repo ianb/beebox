@@ -27,5 +27,6 @@ pendingHost.includes("https://publish.example.org/")
 
 attachedHost.includes("state: attached")
   && attachedHost.includes("New publications can request paths beneath it")
+  && attachedHost.includes("check and repair action")
 => true
 ```

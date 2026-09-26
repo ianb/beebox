@@ -61,6 +61,9 @@ publicationSiteLines([site({ remoteStatus: { status: "unavailable", reason: "clo
 publicationSiteLines([site({ pending: { ...candidate, requestedScope: candidate.requestedScope } })])[0].includes(`prepared ${releaseId.slice(0, 12)}`)
 => true
 
+publicationSiteLines([site({ approved: { tier: "public", status: "live", slug: "hello", expiresAt: null } })])[0].includes("serving audience public at /hello/")
+=> true
+
 const pendingSecret = { kind: "site" as const, hostHandle: "notes-host", tier: "secret" as const, expiresAt: null };
 const transitioned = publicationSiteLines([site({ pending: { ...candidate, requestedScope: pendingSecret } })])[0];
 JSON.stringify({ servingAudience: transitioned.includes("serving audience public"), preparedAudience: transitioned.includes("prepared audience secret"), oldUrl: transitioned.includes("https://notes.example.workers.dev/p/notes/"), candidateUrl: transitioned.includes("https://notes.example.workers.dev/s/abcdefghijklmnopqrstuvwxyz/") })
@@ -110,10 +113,17 @@ publicationSiteLines([site({
 => true
 
 publicationSiteLines([site({
+  hostname: null,
   approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
   sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
-})])[0].includes("publication: https://publish.example.org/notes/; legacy workers.dev URL: https://notes.example.workers.dev/p/notes/")
+})])[0].includes("serving audience public at /notes/; active")
 => true
+
+publicationSiteLines([site({
+  approved: { tier: "public", status: "live", slug: "notes", expiresAt: null, sharedHost: { hostname: "publish.example.org", hostHandle: "box-handle", path: "/notes/" } },
+  sharedRoute: { hostname: "publish.example.org", path: "/notes/" },
+})])[0].includes("legacy workers.dev URL")
+=> false
 
 publicationApprovalUrl("https://boxes.example", "family")
 => https://boxes.example/family/publications
