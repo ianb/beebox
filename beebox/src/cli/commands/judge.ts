@@ -27,7 +27,8 @@ import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { JudgmentSchema, judgmentQuestions, type JudgmentFields } from "../../schemas/judgment.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
-import { MEMORY_ENV, writeDeferMarker, type DeferReason } from "../../core/schedule/memory.js";
+import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
+import type { DeferReason } from "../../core/schedule/defer-reason.js";
 import { checkConditions, ConditionError, parseChoiceFlag, parseDecideFlag, parseMinFlag, passes, type Condition } from "../../core/judgment/decide.js";
 import { resolveSituation, SituationRefError } from "../../core/judgment/situation.js";
 import { reserveJevCalls } from "../../core/judgment/budget.js";
@@ -162,6 +163,10 @@ async function runJudgeChecked(run: JudgeRun): Promise<number> {
     for (const { request } of inputs) console.log(serializeJudgeRequest(request));
     return 0;
   }
+  if (inputs.length === 0) {
+    // Nothing to judge (an upstream `bbx changes --or-skip` found nothing): no call, no key needed.
+    return options.orSkip === true ? defer("no-pass", { env, detail: "no state on stdin" }) : 0;
+  }
   let jev = run.jev;
   let fake = false;
   if (jev === undefined) {
@@ -170,7 +175,7 @@ async function runJudgeChecked(run: JudgeRun): Promise<number> {
     if (service.kind === "unconfigured") return defer("unconfigured", { env, detail: "the box has no OpenRouter key granted" });
     ({ jev, fake } = service);
   }
-  if (inputs.length > 0 && !(await reserveJevCalls(boxRoot, { calls: inputs.length, now: getBoxTime(boxRoot) }))) {
+  if (!(await reserveJevCalls(boxRoot, { calls: inputs.length, now: getBoxTime(boxRoot) }))) {
     return defer("budget", { env, detail: `${String(inputs.length)} call(s) would pass the box's daily Jev cap` });
   }
   const judged = await judgeAll({ ...run, jev, fake, card: card.path, inputs, conditions });

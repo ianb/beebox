@@ -16,7 +16,8 @@
 import { performance } from "node:perf_hooks";
 import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
 import type { ScheduleNotify } from "../../schemas/scheduled-script-fields.js";
-import { CommandError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
+import { CommandError, CommandFailedError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
+import { CHECK_SKIP_CODE } from "../procedure/shell.js";
 import { scheduleCardForTask } from "./parked-templates.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { notificationReached, notifyBoxholder, type NotificationInput } from "../notify-boxholder.js";
@@ -24,7 +25,8 @@ import { parseTarget } from "../notification/target.js";
 import type { Loudness } from "../notification/intent.js";
 import { DEFAULT_RUN_WINDOW_MS, recordOutcome, saveScriptState, type ScriptState } from "./state.js";
 import { classifyScheduleFailure, type ScheduleOutcomeResult } from "./engine-wait.js";
-import { finishRunMemory, prepareRunMemory } from "./memory.js";
+import { finishRunMemory, prepareRunMemory, readDeferMarker, type RunMemory } from "./memory.js";
+import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
 
 class ScheduledNotificationUndeliveredError extends Error {
   constructor(detail: string) {
@@ -98,7 +100,27 @@ export function fallbackTiming(err: unknown): ExecTiming {
 
 export type RecordedRun =
   | { result: "success"; durationMs: number }
-  | { result: ScheduleOutcomeResult; error: string; durationMs: number };
+  | { result: ScheduleOutcomeResult; error: string; durationMs: number; deferReason?: DeferReason | undefined };
+
+/**
+ * Classify a failed run. A command that exited 75 (`CHECK_SKIP_CODE`) after
+ * writing a defer marker deferred on purpose: `deferred`, with the marker's
+ * reason. Exit 75 alone is not evidence (any command may exit 75, and the
+ * scheduler's `deferred` needs evidence), so without a marker it goes to the
+ * ordinary classification, where it is a failure.
+ */
+async function classifyRun(
+  args: { boxRoot: string; runStartedAt: Date; error: unknown; memory: RunMemory | null },
+): Promise<{ result: ScheduleOutcomeResult; error: string; deferReason?: DeferReason | undefined }> {
+  const { boxRoot, runStartedAt, error, memory } = args;
+  if (memory !== null && error instanceof CommandFailedError && error.exitCode === CHECK_SKIP_CODE) {
+    const deferReason = await readDeferMarker(memory.deferFilePath);
+    if (deferReason !== null) {
+      return { result: "deferred", error: `${deferReason}: ${DEFER_REASON_TEXT[deferReason]}`, deferReason };
+    }
+  }
+  return classifyScheduleFailure({ boxRoot, runStartedAt, error });
+}
 
 /**
  * Run the action with schedule memory, classify a failure (deferred,
@@ -121,11 +143,12 @@ export async function runAndRecord(
       run = { result: "success", durationMs: timing.durationMs };
     } catch (err) {
       timing = fallbackTiming(err);
-      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt, error: err });
+      const outcome = await classifyRun({ boxRoot, runStartedAt, error: err, memory });
       run = { ...outcome, durationMs: timing.durationMs };
     }
     const error = run.result === "success" ? null : run.error;
-    recordOutcome(state, { result: run.result, error, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
+    const deferReason = run.result === "success" ? null : run.deferReason;
+    recordOutcome(state, { result: run.result, error, deferReason, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
     if (memory !== null) await finishRunMemory(boxRoot, { memory, state, scriptName });
     await saveScriptState({ boxRoot, scriptName, state });
     return run;

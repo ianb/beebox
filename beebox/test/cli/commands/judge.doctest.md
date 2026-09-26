@@ -329,7 +329,9 @@ exit 2
 ```
 
 Jev failing, or answering badly, defers with `jev-unavailable`; with no service
-and no OpenRouter key the box is `unconfigured`. Both exit 75 whether or not
+and no OpenRouter key the box is `unconfigured`. (Each run gets a fresh defer
+file from the tick, and the first marker written wins, so the file is removed
+between the two here.) Both exit 75 whether or not
 `--or-skip` was given, so a schedule keeps its items for the next run.
 
 ```ts continue
@@ -344,6 +346,7 @@ exit 75
 await fs.readFile(BBX_DEFER_FILE, "utf-8")
 => {"reason":"jev-unavailable"}
 
+await fs.rm(BBX_DEFER_FILE);
 await judge(box, trip, { dryRun: false }, { stdin: CARDS, env: { BBX_DEFER_FILE }, service: undefined })
 => stderr: bbx judge: warning: «*»
 stderr: bbx judge: deferred (unconfigured): the box has no OpenRouter key granted

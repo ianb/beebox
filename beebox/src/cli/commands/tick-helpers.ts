@@ -26,7 +26,7 @@ import type {
 } from "../../core/schedule/state.js";
 import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
 import { loadRunningProcedures } from "../../core/schedule/running-procedures.js";
-import { handleCreateAfterSuccess } from "./tick-utils.js";
+import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -182,27 +182,7 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
 
   await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
 
-  // Handle once: delete the card after success — but only if the script
-  // didn't recreate the file during execution (e.g. archive re-triggering)
-  if (parsed.once) {
-    let shouldDelete = true;
-    try {
-      const postStat = await fs.stat(cardPath);
-      if (postStat.mtimeMs > preRunMtimeMs) {
-        // File was recreated/modified during execution — leave it for next tick
-        shouldDelete = false;
-        if (!options.quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
-      }
-    } catch (_e) {
-      // File already gone — nothing to delete; the stat failure carries
-      // no actionable info since the desired end state (no file) holds.
-      shouldDelete = false;
-    }
-    if (shouldDelete) {
-      await fs.unlink(cardPath);
-      if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
-    }
-  }
+  if (parsed.once) await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: options.quiet === true });
 
   // Commit housekeeping changes (once deletion, createAfterSuccess files).
   // stageAll sweeps the WHOLE tree, so re-check for active chats right
@@ -270,15 +250,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
 
   if (!options.quiet) console.log(`Running ${scriptName}...`);
   // Snapshot mtime before execution so we can detect if the script recreated itself
-  let preRunMtimeMs = 0;
-  try {
-    const stat = await fs.stat(cardPath);
-    preRunMtimeMs = stat.mtimeMs;
-  } catch (_e) {
-    // File may have been deleted between readdir and here; preRunMtimeMs
-    // stays 0 so the post-run recreation check simply treats any later
-    // mtime as a recreation. No actionable error info here.
-  }
+  const preRunMtimeMs = await cardMtimeMs(cardPath);
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
   // This script's own span, not the tick's — the deferred classification must
   // not attribute an unavailability detected by an EARLIER script in this
@@ -290,6 +262,12 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
       boxRoot, parsed, scriptName, triggeredBy: "schedule", stdio: options.quiet ? "ignore" : "inherit",
       state, now, runStartedAt: scriptStartedAt,
     });
+    if (run.result !== "success" && run.deferReason !== undefined) {
+      // The pipeline deferred on purpose (a defer marker): nothing to do this
+      // time. Not an error; the tick log shows it as skipped, with the reason.
+      if (!options.quiet) console.log(`  ${scheduleOutcomeLine(run)}`);
+      return { name: scriptName, status: "skipped", command, durationMs: run.durationMs, error: run.error };
+    }
     if (run.result !== "success") {
       if (!options.quiet) console.error(`  ${scheduleOutcomeLine(run)}`);
       return outcomeResult({ scriptName, command, outcome: run });

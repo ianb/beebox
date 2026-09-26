@@ -33,7 +33,14 @@ JSON.stringify([ok, gone, failed])
 apns.describe()
 =>
 FakeApns: 1 sent
-  sandbox aa11 → {"aps":{"badge":1}}
+  sandbox token#a9e6f360 → {"aps":{"badge":1}}
+```
+
+The description never shows a token, only its short hash:
+
+```ts continue
+apns.describe().includes("aa11")
+=> false
 ```
 
 ## Which library failures mean "prune the token"

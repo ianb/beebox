@@ -158,9 +158,9 @@ await box.cleanup();
 
 `success` advances, and so does a deferral whose items were seen (`no-change`,
 `no-pass`). A failure, an inconclusive run, and a deferral for budget, an
-unavailable judge, or missing configuration hold it. (The tick records
-`deferred` from an exit-75 marker in a later chunk; today `deferred` comes only
-from engine unavailability, and a marker is read when one exists.)
+unavailable judge, or missing configuration hold it. The tick records the
+reason from an exit-75 marker (`test/cli/commands/tick-defer.doctest.md`); a
+`deferred` with no reason (an engine outage) holds it too.
 
 ```ts
 [

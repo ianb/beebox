@@ -57,8 +57,9 @@ function describeStatus(task: TaskHealth): string {
       return `failing ×${task.consecutiveFailures}`;
     case "overdue":
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
-    case "ok":
     case "waiting":
+      return task.deferReason === undefined ? "waiting" : `waiting: ${task.deferReason}`;
+    case "ok":
     case "inconclusive":
     case "blocked":
     case "invalid":

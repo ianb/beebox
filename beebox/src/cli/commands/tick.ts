@@ -39,7 +39,8 @@ export interface TickOptions {
 export interface ScriptResult {
   name: string;
   /** "inconclusive": the script's work completed but its check reached no
-   *  verdict. Separate from "error" so a non-answer is never counted as one. */
+   *  verdict. Separate from "error" so a non-answer is never counted as one.
+   *  "skipped" is also a run that deferred with a marker (`error` says why). */
   status: "ran" | "skipped" | "error" | "inconclusive";
   command?: string;
   durationMs?: number;
@@ -138,6 +139,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     scripts.push(result);
     if (result.status === "ran") ranCount++;
     else if (result.status === "inconclusive") inconclusiveCount++;
+    else if (result.status === "skipped") skipCount++;
     else errorCount++;
   }
 

@@ -16,6 +16,7 @@ import {
 } from "../../lib/file-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxDir } from "../../lib/paths.js";
+import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -58,6 +59,8 @@ export interface ScriptState {
   lastCommit: string | null;
   /** Schedule memory: the value the last run left for the next (`BBX_CARRY_IN`), at most 4 KB. */
   carry: string | null;
+  /** Why the last run deferred, from its defer marker; null unless `lastResult` is a marker deferral. */
+  lastDeferReason: DeferReason | null;
   recentRuns?: RunRecord[];
 }
 
@@ -79,6 +82,7 @@ const ScriptStatePartialSchema = z
     runCount: z.number(),
     lastCommit: z.string().nullable(),
     carry: z.string().nullable(),
+    lastDeferReason: z.enum(DEFER_REASONS).nullable(),
     recentRuns: z.array(RunRecordSchema).optional(),
   })
   .partial();
@@ -96,6 +100,7 @@ const EMPTY_STATE: ScriptState = {
   runCount: 0,
   lastCommit: null,
   carry: null,
+  lastDeferReason: null,
 };
 
 /** Fill in health fields missing from state files written before they
@@ -119,6 +124,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
     runCount: raw.runCount ?? EMPTY_STATE.runCount,
     lastCommit: raw.lastCommit ?? EMPTY_STATE.lastCommit,
     carry: raw.carry ?? EMPTY_STATE.carry,
+    lastDeferReason: raw.lastDeferReason ?? EMPTY_STATE.lastDeferReason,
     ...(raw.recentRuns !== undefined ? { recentRuns: raw.recentRuns } : {}),
   };
   if (raw.lastSuccess === undefined && state.lastResult === "success") {
@@ -204,6 +210,8 @@ export function recordRun(
 
 export interface RecordOutcomeOptions {
   result: NonNullable<ScriptState["lastResult"]>;
+  /** The defer marker's reason, for a `deferred` run that wrote one. */
+  deferReason?: DeferReason | null | undefined;
   error: string | null;
   durationMs: number;
   sleepAffected: boolean;
@@ -221,6 +229,7 @@ export function recordOutcome(state: ScriptState, opts: RecordOutcomeOptions): v
   const { result, error, durationMs, sleepAffected, windowMs, now } = opts;
   state.lastRun = now.toISOString();
   state.lastResult = result;
+  state.lastDeferReason = result === "deferred" ? (opts.deferReason ?? null) : null;
   state.lastError = error;
   state.lastDurationMs = durationMs;
   state.runCount++;

@@ -13,6 +13,7 @@
  * See docs/plans/notifications.md (Track B).
  */
 
+import { createHash } from "node:crypto";
 import { Notification, Provider } from "@parse/node-apn";
 import { isRecord } from "../lib/is-record.js";
 
@@ -151,6 +152,11 @@ export interface FakeApnsService extends ApnsService {
   describe(): string;
 }
 
+/** The first 8 hex digits of a token's SHA-256: enough to tell devices apart, useless as a token. */
+function tokenFingerprint(token: string): string {
+  return createHash("sha256").update(token).digest("hex").slice(0, 8);
+}
+
 export function createFakeApns(opts?: FakeApnsOptions): FakeApnsService {
   const gone = new Set(opts?.goneTokens);
   const fail = new Set(opts?.failTokens);
@@ -174,7 +180,8 @@ export function createFakeApns(opts?: FakeApnsOptions): FakeApnsService {
       if (fake.sent.length === 0) return "FakeApns: nothing sent";
       return [
         `FakeApns: ${fake.sent.length} sent`,
-        ...fake.sent.map((s) => `  ${s.environment} ${s.token} → ${JSON.stringify(s.payload)}`),
+        // Never a token, fakes included: its short hash tells sends apart.
+        ...fake.sent.map((s) => `  ${s.environment} token#${tokenFingerprint(s.token)} → ${JSON.stringify(s.payload)}`),
       ].join("\n");
     },
   };

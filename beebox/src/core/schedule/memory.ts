@@ -22,6 +22,7 @@ import { z } from "zod";
 import { getHead, hasCommits } from "../../lib/git.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { saveScriptState, type ScriptState } from "./state.js";
+import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
 
 /** The five environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
 export const MEMORY_ENV = {
@@ -31,10 +32,6 @@ export const MEMORY_ENV = {
   carryOut: "BBX_CARRY_OUT",
   deferFile: "BBX_DEFER_FILE",
 } as const;
-
-/** Why a run deferred, as its marker file says. */
-export const DEFER_REASONS = ["no-change", "no-pass", "budget", "jev-unavailable", "unconfigured"] as const;
-export type DeferReason = (typeof DEFER_REASONS)[number];
 
 const DeferMarkerSchema = z.object({ reason: z.enum(DEFER_REASONS) });
 
@@ -100,9 +97,18 @@ function truncateUtf8(text: string, maxBytes: number): string {
   return bytes.subarray(0, end).toString("utf-8");
 }
 
-/** Write the marker a skipping command leaves before exiting 75. */
+/**
+ * Write the marker a skipping command leaves before exiting 75. The first
+ * marker of a run wins: in `bbx changes --or-skip | bbx judge --or-skip`, the
+ * judge sees empty stdin because nothing changed, and `no-change` is the
+ * reason the run should record.
+ */
 export async function writeDeferMarker(filePath: string, reason: DeferReason): Promise<void> {
-  await fs.writeFile(filePath, `${JSON.stringify({ reason })}\n`);
+  try {
+    await fs.writeFile(filePath, `${JSON.stringify({ reason })}\n`, { flag: "wx" });
+  } catch (e) {
+    if (errnoCode(e) !== "EEXIST") throw e;
+  }
 }
 
 /** The reason in a run's defer marker, or null when it wrote none (or an unreadable one, with a warning). */
@@ -144,8 +150,8 @@ export function cursorAdvances(result: NonNullable<ScriptState["lastResult"]>, r
 
 /**
  * After a run: take the carry the run wrote (truncated to 4 KB with a warning
- * line), and advance the cursor when the outcome says so. Mutates `state`; the
- * caller saves it.
+ * line), and advance the cursor when the recorded outcome (and its defer
+ * reason) says so. Mutates `state`; the caller saves it.
  */
 export async function finishRunMemory(
   boxRoot: string,
@@ -163,8 +169,7 @@ export async function finishRunMemory(
   }
   const result = state.lastResult;
   if (result === null) return;
-  const reason = await readDeferMarker(memory.deferFilePath);
-  if (cursorAdvances(result, reason) && (await hasCommits(boxRoot))) {
+  if (cursorAdvances(result, state.lastDeferReason) && (await hasCommits(boxRoot))) {
     state.lastCommit = await getHead(boxRoot);
   }
 }

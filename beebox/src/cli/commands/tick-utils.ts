@@ -36,6 +36,7 @@ import {
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
 import { getBoxTime } from "../../lib/time.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 
 /**
  * Run all on-wakeup scheduled scripts that are due.
@@ -117,6 +118,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     }
 
     console.log(`  Running ${scriptName}...`);
+    const preRunMtimeMs = await cardMtimeMs(cardPath);
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     // This script's own span, not the pass's — the deferred classification
     // must not attribute an unavailability detected by an EARLIER script in
@@ -130,6 +132,16 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       if (run.result === "success") {
         ranCount++;
         await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+        if (parsed.once && (await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: false }))) {
+          // Only the card's own path: the wakeup must not sweep other work into this commit.
+          await stageAndCommitPaths(boxRoot, {
+            paths: [path.relative(boxRoot, cardPath)],
+            message: `Wakeup: remove one-shot ${scriptName}`,
+            trailers: { "Triggered-By": "bbx wakeup" },
+          });
+        }
+      } else if (run.deferReason !== undefined) {
+        console.log(`  ${scheduleOutcomeLine(run)}`);
       } else {
         console.error(`  ${scheduleOutcomeLine(run)}`);
       }
@@ -147,6 +159,44 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
   }
 
   return ranCount;
+}
+
+/** A card's mtime before its run, so `deleteOnceCard` can tell a card the run rewrote; 0 when it is gone. */
+export async function cardMtimeMs(cardPath: string): Promise<number> {
+  try {
+    return (await fs.stat(cardPath)).mtimeMs;
+  } catch (_e) {
+    // Deleted between readdir and here: 0 makes any later mtime read as a
+    // recreation, which is the safe direction (keep the card).
+    return 0;
+  }
+}
+
+/**
+ * `once`: delete the card after a run recorded `success` (never after a
+ * deferral or failure) — unless the run recreated or rewrote it (e.g. archive
+ * re-triggering), which leaves it for the next run. Shared by `bbx tick` and
+ * `bbx wakeup`'s on-wakeup pass. Returns whether the card was deleted.
+ */
+export async function deleteOnceCard(
+  cardPath: string,
+  opts: { file: string; preRunMtimeMs: number; quiet: boolean },
+): Promise<boolean> {
+  const { file, preRunMtimeMs, quiet } = opts;
+  try {
+    const postStat = await fs.stat(cardPath);
+    if (postStat.mtimeMs > preRunMtimeMs) {
+      if (!quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
+      return false;
+    }
+  } catch (_e) {
+    // Already gone: the desired end state holds, and the stat failure carries
+    // nothing actionable.
+    return false;
+  }
+  await fs.unlink(cardPath);
+  if (!quiet) console.log(`  Deleted one-shot script: ${file}`);
+  return true;
 }
 
 /**
