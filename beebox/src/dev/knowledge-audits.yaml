@@ -30,7 +30,7 @@ tests:
   # === Engine docs are searchable ===
   # Status (2026-09-26, Claude): 1/1 passed on test1; ran `bbx search`, read
   # narration-mode.md, 51k context.
-  # Plan: docs/plans/doc-structure-box-guidance.md, Track 5. The search index
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 5. The search index
   # covers node_modules/beebox/box-docs/ as kind engine-doc, and the guide's
   # "Where the docs are" and "Searching the Box" sections say so.
   - id: search-finds-engine-doc
@@ -1268,7 +1268,7 @@ tests:
 
   # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
   # read box-docs/tricks.md, then confirmed in trick.ts; 50k context.
-  # Plan: docs/plans/doc-structure-box-guidance.md, Track 2. How the engine
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 2. How the engine
   # runs and commits a trick lives in box-docs/tricks.md; the tricks skill and
   # src/tricks/scripts/CLAUDE.md point there.
   - id: tricks-auto-commit
@@ -4397,7 +4397,7 @@ tests:
   # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
   # read src/views/CLAUDE.md, then box-docs/views.md; 51k context. The agent
   # noticed views.md marked rendersCardTypes optional; the table now says Yes.
-  # Plan: docs/plans/doc-structure-box-guidance.md, Track 2. The view API
+  # Plan: docs/implemented-plans/doc-structure-box-guidance.md, Track 2. The view API
   # lives in box-docs/views.md alone; src/views/CLAUDE.md and the views skill
   # point there and no longer carry an export list.
   - id: views-api-home

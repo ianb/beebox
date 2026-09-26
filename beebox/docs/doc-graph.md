@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T21:19:44Z
+Generated: 2026-09-26T21:30:45Z
 Total documents: 445
 
 ## Issues
@@ -22,6 +22,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-lifecycle-clarity.md** — "Make current documentation and historical records distinguishable" (125 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-box-guidance.md** — "Box guidance: one delivery class per surface, one home per fact" (820 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-cards.md** — "Documentation structured like code: cards" (159 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · shipped history · implemented
@@ -61,7 +62,6 @@ These documents are not referenced by any other document.
 - **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
 - **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
-- **docs/plans/doc-structure-box-guidance.md** — "Box guidance: one delivery class per surface, one home per fact" (820 lines) · proposal · draft
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
@@ -151,6 +151,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:107 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/delivered-user-message-codec.md:23 (mention) — - Project testing convention. `CLAUDE.md:11-17` says: *"Tests are doctests (`.doctest.md`) in `test/`"* and *"Run tests
 - docs/implemented-plans/design-reconciliation.md:88 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
+- docs/implemented-plans/doc-structure-box-guidance.md:13 (mention) — the generated agent guide, the box `CLAUDE.md` family, path rules, managed
 - docs/implemented-plans/doc-structure-chat.md:71 (mention) — | `chat-scroll-testing.md` intro, harness, real-app procedure, images matrix, trace format, device checklist, the three
 - docs/implemented-plans/doc-structure.md:198 (mention) — always-loaded file (`CLAUDE.md`, the agent guide) must carry, or a
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
@@ -213,7 +214,6 @@ Referenced by:
 - docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/container-first.md:79 (mention) — - `CLAUDE.md`, Time discipline: *"Long-running timeouts must count only awake
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
-- docs/plans/doc-structure-box-guidance.md:13 (mention) — the generated agent guide, the box `CLAUDE.md` family, path rules, managed
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/file-layout.md:506 (mention) — **Rule 7: a directory with a `CLAUDE.md` states its axis in the first
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
@@ -427,6 +427,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:109 (mention) — - `beebox/code-style.md` → **"No default parameters"**, **"Max 2 positional
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:66 (mention) — - `code-style.md` "When to Result vs throw": callers here genuinely branch on
 - docs/implemented-plans/delivered-user-message-codec.md:24 (mention) — - Mechanical exhaustiveness convention. `code-style.md:57-59` requires exhaustive switches and identifies `Record<Union,
+- docs/implemented-plans/doc-structure-box-guidance.md:102 (mention) — - **Nothing retries forever / fail closed** (`code-style.md`, Defensiveness):
 - docs/implemented-plans/doc-structure-development.md:27 (mention) — rule whose home is `code-style.md` or the engineering principles, it now says
 - docs/implemented-plans/expose-dev-router.md:35 (mention) — - `code-style.md` — no default params, max-2-positional, no `any`, blessed cast
 - docs/implemented-plans/extfile-card.md:48 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params
@@ -482,7 +483,6 @@ Referenced by:
 - docs/plans/box-commentary-surface.md:98 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
 - docs/plans/chat-photo-batch-upload.md:55 (link) — - [`code-style.md`](../../code-style.md) — no default parameters, max 2
 - docs/plans/chat-session-delete.md:75 (mention) — - **`code-style.md`:** exceptions carry causal detail for infrastructure
-- docs/plans/doc-structure-box-guidance.md:102 (mention) — - **Nothing retries forever / fail closed** (`code-style.md`, Defensiveness):
 - docs/plans/document-comments.md:78 (mention) — - `beebox/code-style.md` — the mechanical rules (max 2 positional
 - docs/plans/email-tracking.md:43 (mention) — - `beebox/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, and no s
 - docs/plans/file-layout.md:28 (mention) — `code-style.md` and apply it when a file is next touched. That changes nothing
@@ -726,7 +726,7 @@ Title: "Box guidance" | 138 lines | current reference
 Referenced by:
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
 - docs/guides.md:33 (link) — | Box guidance: the instruction files a box agent reads, and who writes each | [box-guidance](box-guidance.md) |
-- docs/plans/doc-structure-box-guidance.md:644 (mention) — 4. **Where `docs/box-guidance.md` sits in the developer docs.** Lean: a new
+- docs/implemented-plans/doc-structure-box-guidance.md:644 (mention) — 4. **Where `docs/box-guidance.md` sits in the developer docs.** Lean: a new
 - docs/prompts/logging.md:131 (link) — nothing to enable. [Box guidance](../box-guidance.md) says which files carry
 
 References:
@@ -756,6 +756,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:40 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
 - docs/implemented-plans/design-reconciliation.md:594 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
+- docs/implemented-plans/doc-structure-box-guidance.md:169 (mention) — engine owns. `docs/box-layout.md:65-68` draws `CLAUDE.md`, `.claude/`,
 - docs/implemented-plans/doc-structure-cards.md:85 (mention) — `box-layout.md` (its own subject), `docs/box/` card docs (box-facing),
 - docs/implemented-plans/docs-reorg.gap-analysis.md:44 (mention) — `docs/box-layout.md`.
 - docs/implemented-plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
@@ -769,7 +770,6 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/doc-structure-box-guidance.md:169 (mention) — engine owns. `docs/box-layout.md:65-68` draws `CLAUDE.md`, `.claude/`,
 - docs/plans/file-layout.md:734 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
 - docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-cleanup-evaluation.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
@@ -865,6 +865,7 @@ Referenced by:
 - docs/guides.md:14 (link) — | Connectors: the framework, Google auth, Calendar, Gmail, Drive, Telegram | [connectors](connectors.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
+- docs/implemented-plans/doc-structure-box-guidance.md:300 (mention) — | calendar | skill, `connector-calendar.md` rule, `_config/calendar.guide.card` (tracked), compiled `calendar-guide.md`,
 - docs/implemented-plans/doc-structure-connectors.md:51 (mention) — | connectors.md inventory | Drive card types: `sheet` | `gsheet`, `gdoc` (handlers), `gfolder`, `glink` |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:24 (mention) — `docs/connectors.md`. The strongest "confidently wrong, silent data
 - docs/implemented-plans/docs-reorg.md:96 (mention) — 2. `connectors.md` — Google Calendar row says service-injection "Not yet
@@ -872,7 +873,6 @@ Referenced by:
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
-- docs/plans/doc-structure-box-guidance.md:300 (mention) — | calendar | skill, `connector-calendar.md` rule, `_config/calendar.guide.card` (tracked), compiled `calendar-guide.md`,
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/prompts/lenses.md:66 (link) — convention: [freshness metadata](../connectors.md#freshness-metadata).
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
@@ -1507,6 +1507,7 @@ Referenced by:
 - docs/README.md:26 (mention) — Each entry in the directory's `README.md` disposition table says what
 - docs/guides.md:4 (link) — them; walk in from the parent. [Documentation organization](README.md) says
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
+- docs/implemented-plans/doc-structure-box-guidance.md:11 (link) — [organizing principles](../README.md#organizing-principles) to the engine's
 - docs/implemented-plans/doc-structure-cards.md:9 (link) — Fifth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
 - docs/implemented-plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
@@ -1518,7 +1519,6 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/doc-structure-box-guidance.md:11 (link) — [organizing principles](../README.md#organizing-principles) to the engine's
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:53 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -2021,7 +2021,7 @@ Title: "Quotes and provenance" | 167 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:118 (link) — [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
-- docs/plans/doc-structure-box-guidance.md:440 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
+- docs/implemented-plans/doc-structure-box-guidance.md:440 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
 
 References:
 - → docs/plans/narration-mode.md (mention)
@@ -2058,7 +2058,7 @@ Title: "Todos" | 88 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:120 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
-- docs/plans/doc-structure-box-guidance.md:441 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
+- docs/implemented-plans/doc-structure-box-guidance.md:441 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
 
 #### docs/box/tricks.md
 
@@ -2066,7 +2066,7 @@ Title: "Tricks" | 122 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:110 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
-- docs/plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
+- docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
 
 #### docs/box/what-you-could-do.md
 
@@ -3721,6 +3721,31 @@ References:
 - → docs/README.md (mention)
 - → docs/plans/README.md (mention)
 - → ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
+
+#### docs/implemented-plans/doc-structure-box-guidance.md **[ORPHAN]**
+
+Title: "Box guidance: one delivery class per surface, one home per fact" | 820 lines | shipped history | implemented
+
+References:
+- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (frontmatter)
+- → docs/README.md (link)
+- → CLAUDE.md (mention)
+- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (link)
+- → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
+- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
+- → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)
+- → ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md (link)
+- → ../issues/docs-and-chores/2026-05-21-docs-generated-map.md (link)
+- → code-style.md (mention)
+- → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
+- → docs/box-layout.md (mention)
+- → docs/connectors.md (mention)
+- → docs/box/tricks.md (mention)
+- → docs/box/provenance.md (mention)
+- → docs/box/todos.md (mention)
+- → docs/server/operations.md (mention)
+- → docs/box-guidance.md (mention)
+- → docs/plans/narration-mode.md (mention)
 
 #### docs/implemented-plans/doc-structure-cards.md **[ORPHAN]**
 
@@ -6239,31 +6264,6 @@ Title: "Display-form path guard" | 116 lines | proposal | draft
 
 No references in or out.
 
-#### docs/plans/doc-structure-box-guidance.md **[ORPHAN]**
-
-Title: "Box guidance: one delivery class per surface, one home per fact" | 820 lines | proposal | draft
-
-References:
-- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (frontmatter)
-- → docs/README.md (link)
-- → CLAUDE.md (mention)
-- → ../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (link)
-- → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
-- → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)
-- → ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md (link)
-- → ../issues/docs-and-chores/2026-05-21-docs-generated-map.md (link)
-- → code-style.md (mention)
-- → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
-- → docs/box-layout.md (mention)
-- → docs/connectors.md (mention)
-- → docs/box/tricks.md (mention)
-- → docs/box/provenance.md (mention)
-- → docs/box/todos.md (mention)
-- → docs/server/operations.md (mention)
-- → docs/box-guidance.md (mention)
-- → docs/plans/narration-mode.md (mention)
-
 #### docs/plans/document-comments.md
 
 Title: "Document comments" | 945 lines | proposal | active
@@ -6649,7 +6649,7 @@ Title: "Narration Mode — Design" | 469 lines | proposal | active
 Referenced by:
 - docs/box/provenance.md:61 (mention) — See `node_modules/beebox/box-docs/narration-mode.md`.
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
-- docs/plans/doc-structure-box-guidance.md:775 (mention) — | narration mode | 5 | `narration-mode.md` | none |
+- docs/implemented-plans/doc-structure-box-guidance.md:775 (mention) — | narration mode | 5 | `narration-mode.md` | none |
 - docs/reports/activities-retrospective-2026-05-14.md:47 (mention) — The original design docs ([activities-design-2026-04-19.md](activities-design-2026-04-19.md), and references in `narrati
 - docs/reports/plan-directory-migration-history-2026-09-13.md:27 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
 - user-stories/catalog/2026-06-26.md:1578 (mention) — The design doc (narration-mode.md line 240) explicitly states: "The chat has a `...` menu where settings live; the expli
@@ -6698,9 +6698,9 @@ References:
 Title: "Prompt Surface Cleanup — Evaluation" | 994 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/doc-structure-box-guidance.md:105 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/job-xml-purge.subplan.md:31 (mention) — (`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
-- docs/plans/doc-structure-box-guidance.md:105 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/prompts/review.md:63 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
@@ -7515,9 +7515,9 @@ Referenced by:
 - deploy/README.md:23 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
 - docs/implemented-plans/box-migration.subplan.md:163 (mention) — **Server mechanics** (`docs/server/operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:494 (mention) — rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
+- docs/implemented-plans/doc-structure-box-guidance.md:568 (mention) — > `docs/server/operations.md` to check parks after the deploy that carries
 - docs/implemented-plans/doc-structure-install-server.md:84 (mention) — | `deploy/README.md` prod-ssh, Production app diagnostics; `server-operations.md` Connecting, Writing scripts, Nightly u
 - docs/implemented-plans/scanner-ingest.md:207 (mention) — `docs/server/operations.md`.
-- docs/plans/doc-structure-box-guidance.md:568 (mention) — > `docs/server/operations.md` to check parks after the deploy that carries
 - docs/plans/migration-reliability.md:759 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
 - docs/reports/git-annex-conversion-2026-08-01.md:13 (link) — > [`../server/operations.md`](../server/operations.md) for current operations,
 - docs/server.md:18 (link) — | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the

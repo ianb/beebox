@@ -1,6 +1,6 @@
 ---
 title: "Box guidance: one delivery class per surface, one home per fact"
-status: draft
+status: implemented
 workstream: doc-structure
 issues:
   - ../../../issues/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md

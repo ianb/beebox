@@ -1,6 +1,6 @@
 # Every `box-docs/<name>.md` pointer names a doc the package ships
 
-Plan: `docs/plans/doc-structure-box-guidance.md`, Track 2. A nested guide, a
+Plan: `docs/implemented-plans/doc-structure-box-guidance.md`, Track 2. A nested guide, a
 managed skill, and the agent guide send an agent to an engine doc by path,
 `node_modules/beebox/box-docs/<name>.md` (written in source as
 `${BOX_PACKAGE_DOCS}/<name>.md`). A pointer to a file the package does not

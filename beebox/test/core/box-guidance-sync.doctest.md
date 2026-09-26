@@ -1,6 +1,6 @@
 # Every guidance surface comes from one registry and one walk
 
-Plan: `docs/plans/doc-structure-box-guidance.md`, Track 1. `GUIDANCE_SURFACES`
+Plan: `docs/implemented-plans/doc-structure-box-guidance.md`, Track 1. `GUIDANCE_SURFACES`
 (`src/core/box/guidance-surfaces.ts`) lists every file a box agent reads as
 guidance. `syncBoxGuidance` walks it, and both `initBox` and the
 `generateDocs` template sync call the walk, so a surface cannot be installed
