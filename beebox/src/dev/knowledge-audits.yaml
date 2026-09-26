@@ -741,7 +741,7 @@ tests:
     expected_level: discoverable
     # Status (2026-09-26, doc-structure): keywords updated — schemas live in
     # src/schemas/ and authoring is in box-docs/schemas.md; the old
-    # `_config/schemas` / `bbx init` answer is retired.
+    # `_config/schemas` / `bbx init` answer is retired. Rerun: pass (1 read).
     watch_for: "Names src/schemas/ + cardSchema()/Zod; reading src/schemas/CLAUDE.md and following it to box-docs/schemas.md is the intended path"
     correct_contains_any: ["src/schemas", "cardSchema"]
     tags: [schemas, extension]
@@ -1818,7 +1818,7 @@ tests:
     cards_contain: ["{% todo", "2026-12-15"]
     # Date rolled 2026-08-15 -> 2026-12-15 (2026-09-26): the audit's date had
     # passed, so the agent asked which year instead of setting due. Roll it
-    # again when it goes stale.
+    # again when it goes stale. Rerun after the roll: pass (6 reads).
     max_turns: 15
     tags: [todos, application]
     notes: >
@@ -3581,8 +3581,9 @@ tests:
   # voicing an opinion, describing how they see something) are wrapped in
   # a Markdoc `{% quote %}` tag to preserve their authentic voice as
   # distinct from the agent's paraphrase. Verbatim content only inside
-  # the tag; functional asks ("remind me at 4pm") need no tag. The agent
-  # guide's `quotesSection` (loaded via CLAUDE.md) carries the rules.
+  # the tag; functional asks ("remind me at 4pm") need no tag. THE_LAW_OF_QUOTING
+  # in the always-loaded guide carries the rules; the mechanics are in
+  # box-docs/provenance.md (since 2026-09-26; `quotesSection` is gone).
   #
   # Status (2026-09-26): all 5 quote-* pass on test1 after the quote and
   # {% source %} mechanics moved to box-docs/provenance.md (doc-structure
@@ -3866,8 +3867,9 @@ tests:
   # version of Ian's."
   #
   # Why this shape: the guidance is split across two docs that only
-  # cross-link one way. `quotesSection` (always loaded via CLAUDE.md)
-  # teaches `{% quote %}` and points forward to narration-mode.md;
+  # cross-link one way. THE_LAW_OF_QUOTING (always loaded; the mechanics
+  # moved to box-docs/provenance.md on 2026-09-26, and `quotesSection` is
+  # gone) teaches `{% quote %}` and points forward to narration-mode.md;
   # narration-mode-doc.ts:39 ("use the user's wording … don't paraphrase")
   # never names `{% quote %}`. An agent that consults only the narration
   # doc on capture could preserve wording in plain prose without ever
@@ -3890,7 +3892,7 @@ tests:
   # in `{% quote %}` ("...the spark, not the slog" landed inside the tag),
   # and replied with a bare `<ack kind="created">` — textbook narration
   # behavior. So under clean conditions the split guidance is sufficient:
-  # the always-loaded `quotesSection` carried the agent even though
+  # the always-loaded quote guidance (then `quotesSection`, now the law) carried the agent even though
   # narration-mode-doc.ts never names `{% quote %}`. The doc seam was NOT
   # exercised into a failure here, so per "let the test decide" the
   # narration doc is left unchanged. The long-session confound above is
@@ -4015,6 +4017,8 @@ tests:
     correct_contains_any: ["{% source", "source ref", "source tag"]
     tags: [source, cards, markdown, provenance]
 
+  # Status (2026-09-26): prompt renamed `as` -> `usage` (the attribute was
+  # renamed); rerun: pass, read provenance.md.
   - id: source-as-is-free-form
     prompt: >
       The user's name appears in a captured email header. I'm pulling it
@@ -6018,7 +6022,8 @@ tests:
       key as something that lives inside the box tree.
     correct_contains_any: ["machine-level", "bbx secrets", "grant", "admin page", "boxholder"]
     # Naming the retired file as retired is fine; instructing to write it is
-    # the failure (2026-09-26: the substring gate failed a correct answer).
+    # the failure (2026-09-26: the substring gate failed a correct answer;
+    # rerun with the regex gate: pass).
     response_not_matches: ['(?:write|edit|create|put|save|add)[^.\n]{0,80}\.secret\.json']
     tags: [secrets]
 
