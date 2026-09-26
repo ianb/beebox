@@ -58,38 +58,21 @@ Add conventions this box's tricks share (naming, shared helpers in \`lib/\`,
 what each trick is for) here.
 `;
 
+/**
+ * The views guide. The view API (exports, props, widgets, testing) lives in the
+ * generated package doc `views.md` (`generateViewsDoc`); this guide holds the
+ * attach-to-a-card-type rule, the pointer, and the box's own conventions.
+ */
 const VIEWS_CLAUDE_MD = `# Views Directory
 
-This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
+This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\`; there is no card-less standalone view.
 
 **IMPORTANT: Read \`${BOX_PACKAGE_DOCS}/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
-## Quick Reference
+## This box's views
 
-Each view must export:
-- \`name\` (string) — display name
-- \`description\` (string) — what the view shows
-- \`dependencies\` (string[]) — glob patterns for cards that affect rendering
-- \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
-- \`rendersCardTypes\` (string[]) — the card type(s) this view renders
-- \`default\` function component receiving \`{ cards, navigate, boxSlug, params, viewHistory }\` (\`params.path\` is the card being rendered; \`viewHistory\` explicitly preserves JSON-safe navigation state)
-
-React is provided automatically — do not import it.
-
-To link or embed another card, import \`CardLink\`/\`CardRef\` from
-\`beebox/view-widgets\` (point at cards with \`cardRef="/_content/…"\`, not a
-hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
-
-To show a card's text, render its body with \`Markdown\` from
-\`beebox/view-widgets\`: \`{card.body ? <Markdown card={card}>{card.body}</Markdown> : null}\`.
-Any other rendering of card text (\`<p>{card.body}</p>\`, splitting the body,
-a Markdown library) is a validation error; if \`Markdown\` lacks something the
-view needs, say so in \`_config/feedback/\`.
-
-After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
-the real cards, renders once, prints the output or a source-mapped error).
-
-Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
+Add conventions this box's views share (layout, shared components, which card
+types have views) here.
 `;
 
 export const PUBLICATIONS_CLAUDE_MD = `# Publication Sites

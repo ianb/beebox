@@ -4316,6 +4316,23 @@ tests:
     correct_contains: ["bbx view test"]
     tags: [views]
 
+  # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
+  # read src/views/CLAUDE.md, then box-docs/views.md; 51k context. The agent
+  # noticed views.md marked rendersCardTypes optional; the table now says Yes.
+  # Plan: docs/plans/doc-structure-box-guidance.md, Track 2. The view API
+  # lives in box-docs/views.md alone; src/views/CLAUDE.md and the views skill
+  # point there and no longer carry an export list.
+  - id: views-api-home
+    prompt: >
+      I'm about to write my first view file. Which exports does the file need,
+      and what props does the default component receive? Do not write anything.
+    expected_level: knows_about
+    watch_for: "Opens box-docs/views.md and lists name, description, dependencies, modes, rendersCardTypes, and the default component, with its props (cards, navigate, boxSlug, params, viewHistory)."
+    should_read_any:
+      - "box-docs/views.md"
+    correct_contains: ["rendersCardTypes", "dependencies", "viewHistory"]
+    tags: [views, engine-docs]
+
   # Status (2026-09-04): 2/2 pass. views-bounded-image read the generated views
   # reference and used imageUrl(width 480, format auto) plus fileUrl for the
   # original (4 reads, 2 searches). Its initial answer used an unbounded DPR;

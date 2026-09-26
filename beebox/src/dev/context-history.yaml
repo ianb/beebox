@@ -4791,6 +4791,14 @@ test1:
       peak: 57216
       added: 6840
       turns: 8
+  views-api-home:
+    - date: 2026-09-26T19:16:33.095Z
+      boxCommit: bc8dd5fe80dba620b5374057b237afddfb778185
+      repoCommit: 8433c30076adfb75a26682e988e8953f6c10d03e
+      initial: 50529
+      peak: 64934
+      added: 14405
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

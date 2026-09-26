@@ -70,7 +70,7 @@ const metadataAndPropsSection = `## Metadata Exports
 | \`description\` | string | Yes | What this view shows |
 | \`dependencies\` | string[] | Yes | Glob patterns for files that affect rendering |
 | \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, or both |
-| \`rendersCardTypes\` | string[] | No | Card types this view renders — see below |
+| \`rendersCardTypes\` | string[] | Yes | Card types this view renders — see below |
 
 ### Rendering a card type
 

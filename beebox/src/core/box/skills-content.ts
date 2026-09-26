@@ -465,7 +465,7 @@ description: Give a card type a custom interface — a React component that rend
 
 Views are React (\`.tsx\`) components that render box data in the browser. **Read \`${BOX_PACKAGE_DOCS}/views.md\` before creating or modifying one** — it carries the full API, including cached \`imageUrl\` variants for image displays, the view-host context, and how to test a view.
 
-A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
+A view always gives a **card type** a custom interface; there is no card-less standalone view.
 
 When the user says a view "looks wrong" and the source doesn't tell you why — a broken layout, a visual glitch, something rendering unexpectedly — run \`bbx chat screenshot\` to see what's actually on their screen right now instead of guessing from the code. It asks the user's browser, so it may come back declined or unavailable; reach for it when appearance is genuinely the question, not by reflex. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
 `;

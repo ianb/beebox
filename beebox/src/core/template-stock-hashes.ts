@@ -67,7 +67,7 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "views-guide-v2": {
-    current: "3590c68aa6ba2ade37d00699a0bec3af0b54d50cd414b7e90da9761042fe7141",
+    current: "0a5c2061f3d50523062dfd0cffd734fa83704ebffcbb4dbd717a9ce195c5bc38",
     superseded: [
       "f6be48fb86eed3b36edbb335f3ead34e97c58b6bb172cdfe1458b0a3ddfc8472",
       "e8f5e99502aa1da29e07f9e5c68bbe3c1ac3c6dba216fc27c5463f8f0272d772",
@@ -75,6 +75,7 @@ export const TEMPLATE_STOCK_HASHES = {
       "f1237111213cdea6c45fbed5ecda10d7108b1221d234bf596e5fc68deee326bf",
       "d5a4f8b633f555f7898bed7632f02e6c9c75a76c35fe6fa4fb775c7039c26fc8",
       "2bfad7f343fa6818ab65f7d577aeba427cae1f78dcf6b96f449e5b18ff7a7e3b",
+      "3590c68aa6ba2ade37d00699a0bec3af0b54d50cd414b7e90da9761042fe7141",
     ],
   },
 } satisfies Record<string, TemplateStockEntry>;
