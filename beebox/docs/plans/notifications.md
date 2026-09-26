@@ -107,9 +107,11 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   (`docs/implemented-plans/web-push-notifications.md`, Track B). A watch has
   an `until`.
 - **Resilient and never silent** (`docs/engineering-principles.md:49`). A
-  notification with no reachable channel is written and stamped `failed`
-  today (`src/connectors/output-cards.ts:95-103`). This plan keeps that and
-  adds the health page entry so a failed delivery is seen in the app.
+  channel card that fails delivery is stamped `failed` and kept
+  (`src/connectors/output-cards.ts:95-103`), but an intent with no channel
+  at all returns with no card and no trace today
+  (`src/core/notify-boxholder.ts:107-109`). This plan keeps the failed card
+  and adds a health entry for the no-channel case.
 - **Scope anchored to the incident** (boxholder preference). Unread state on
   chat replies and quiet hours are deferred by the boxholder's ruling
   (2026-09-26): device Do Not Disturb covers quiet hours; unread is filed for
@@ -126,8 +128,9 @@ in discussion on 2026-09-26; approval of this size is requested with the plan.
   input)` with `NotifyInput { title, body, url, severity?, tag?, name?,
   deliver?, ... }` (`:45-60`). Writes a web-push card when a device is
   subscribed and a telegram card when `healthAlerts.telegramChat` is set.
-  **Reuse and extend:** it becomes the single writer of the `notification`
-  card and gains `loudness` and `target`.
+  **Reuse and extend:** it stays the single writer of channel cards, takes a
+  `NotificationIntent` with `loudness` and `target`, and decides which cards
+  to write from presence (Track A).
 - **Callers, all system code:** `src/core/question-alert.ts:104`
   (`severity: "alert"`), `src/core/question-aging.ts:214` (`severity:
   "info"`), `src/core/schedule/health-alert.ts:84`,
@@ -580,8 +583,10 @@ is what makes many small proactive tasks too expensive
   `.beebox/watches.lock`, because finalize and the wakeup connector loop
   both reach `syncConnector` (`src/cli/commands/finalize.ts:82`,
   `src/cli/commands/wakeup-connectors.ts:121`) and neither holds the box
-  maintenance lock (review finding 4). A second evaluator that finds the
-  lock held skips the pass; the next pass catches up from the cursor. For each item, `jev.judge({ state: card text truncated to a
+  maintenance lock (review finding 4). `withFileLock` retries until
+  `waitMs` (`src/lib/file-lock.ts:464-482`); the evaluator passes a short
+  wait and catches the lock-held error to skip the pass; the next pass
+  catches up from the cursor. For each item, `jev.judge({ state: card text truncated to a
   fixed byte budget, question: criteria })`; probability at or above
   `threshold` fires `then`. `notify` fills the target with `card:<item>` and
   substitutes `$item` in title and body; `run` executes the command with
@@ -653,9 +658,11 @@ reach the person only when the agent marks them.
   question blocks something with a date; the sweep sends `quiet` for those.
   Nudge (`src/core/question-aging.ts:214`): `quiet`.
 - Health alerts: `health-alert.ts`, `connector-activity-alert.ts`,
-  `google-auth-alert.ts`, `engine-unavailability-apply.ts` send `dot` with
-  target `dashboard`; their text is already in the health snapshot or is
-  added to it.
+  `google-auth-alert.ts`, `engine-unavailability-apply.ts` stop calling
+  `notifyBoxholder`. Each becomes a health entry in the snapshot the
+  dashboard already renders (`HealthWarnings.tsx:40`), with the same
+  once-per-episode latch. No badge, no push: the boxholder's ruling is that
+  health reaches the person only through the promotion rule below.
 - Promotion: at the scheduler's skip site
   (`src/cli/commands/tick-helpers.ts:142-144`) and the engine-wait skip
   (`src/core/schedule/engine-wait.ts`), a skipped card whose description or
