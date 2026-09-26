@@ -86,6 +86,20 @@ Transient state (sync cursors, mappings) lives in
 `_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`,
 machine-owned and gitignored.
 
+## Freshness metadata
+
+A convention for any file that caches an external source of truth, applied
+wherever a cache is designed.
+
+Any file that's a cache of an external source of truth (Gmail/Calendar/Drive snapshots, web fetches, synthesized briefings) should carry freshness metadata, but only where staleness would cause confidently-wrong output. Recipe categories: don't bother. Calendar snapshots: definitely.
+
+Two timestamps, not one: `last_sync` (when we last checked) and `data_through` (cutoff of the actual data). They diverge when a check found nothing new — without both, "May 11" is ambiguous between "stopped checking" and "checked, nothing new." Sidecar `<file>.sync.json` is usually cleaner than an inline header (no diff noise in the human-readable file).
+
+Hardest case: synthesized caches. A briefing built from 30 cards has `data_through = min(inputs.data_through)`, not its own generation timestamp. If the pipeline doesn't propagate this, the briefing looks fresh while resting on stale inputs — this is where silent-stale bugs actually live.
+
+When and how an agent tells the user about staleness is a
+[prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
+
 ## Service injection
 
 Connectors that call external APIs accept an optional service parameter:

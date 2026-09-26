@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-25T19:57:04Z
-Total documents: 429
+Generated: 2026-09-26T17:09:41Z
+Total documents: 437
 
 ## Issues
 
@@ -25,7 +25,10 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-cards.md** — "Documentation structured like code: cards" (159 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-chat.md** — "Documentation structured like code: the chat cluster" (179 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-connectors.md** — "Documentation structured like code: connectors" (164 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-development.md** — "Documentation structured like code: how development happens" (154 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
+- **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (113 lines) · shipped history · implemented
@@ -62,6 +65,7 @@ These documents are not referenced by any other document.
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
+- **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
@@ -72,6 +76,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **test/manual/README.md** — "Manual tests" (44 lines)
 - **user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
@@ -112,7 +117,6 @@ Referenced by:
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
 - docs/README.md:71 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
-- docs/agent-coding.md:12 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
 - docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
 - docs/box/publishing.md:19 (mention) — ├── CLAUDE.md
 - docs/cards/migrations.md:482 (mention) — merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
@@ -120,6 +124,8 @@ Referenced by:
 - docs/cards/validation.md:32 (mention) — A box `CLAUDE.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:25 (mention) — prompts), don't build it. Small additions — a `CLAUDE.md` file with custom
 - docs/design/identity.md:5 (mention) — and operating system built on Claude Code" (CLAUDE.md) is the identity;
+- docs/development/agent-coding.md:12 (mention) — The instructions those agents read are checked into the repository. `CLAUDE.md`
+- docs/development/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/glossary.md:31 (mention) — **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "u
 - docs/implemented-plans/agent-browsing-owner.md:192 (mention) — the plan's outcome invisible (`CLAUDE.md`: infrastructure isn't done until
 - docs/implemented-plans/app-wide-csp.md:223 (mention) — `mode`. Lives in `src/lib/` per CLAUDE.md ("Cross-cutting helpers").
@@ -195,7 +201,6 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:38 (mention) — - `CLAUDE.md:107-110`: read before writing, prefer doctests, and retain raw
 - docs/implemented-plans/websocket-chat-transport.md:236 (mention) — and it reuses the framework we're already deep in (CLAUDE.md's "tRPC by
 - docs/implemented-plans/workstreams.md:751 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
-- docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
 - docs/plans/agent-docs.md:87 (mention) — add over my own CLAUDE.md and scripts, is it a framework or a product, how
 - docs/plans/asset-offbox-storage.md:363 (mention) — remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
@@ -221,8 +226,8 @@ Referenced by:
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/plans/workstream-exhibits.md:118 (mention) — - Root `CLAUDE.md`: worktree URLs use the short name; never restart the shared
 - docs/plans/worktree-control-surface.md:635 (mention) — box CLAUDE.md, the generated agent guide, and schema instructions. Everything in
-- docs/prompt-logging.md:3 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
-- docs/prompt-surface-review.md:19 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
+- docs/prompts/logging.md:7 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
+- docs/prompts/review.md:23 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:63 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/activities-design-2026-04-19.md:50 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/reports/activities-retrospective-2026-05-14.md:25 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
@@ -384,8 +389,8 @@ Title: "Code Style" | 118 lines
 Referenced by:
 - CLAUDE.md:53 (link) — - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent f
 - CLAUDE.md:69 (at-include) — @code-style.md
-- docs/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
-- docs/agent-coding.md:32 (link) — behind each of these live in [code-style.md](../code-style.md).
+- docs/development/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
+- docs/development/agent-coding.md:32 (link) — behind each of these live in [code-style.md](../../code-style.md).
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:90 (mention) — - `beebox/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/agent-field-tests.md:43 (mention) — - `beebox/code-style.md` — mechanical rules for all new code.
@@ -418,6 +423,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:109 (mention) — - `beebox/code-style.md` → **"No default parameters"**, **"Max 2 positional
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:66 (mention) — - `code-style.md` "When to Result vs throw": callers here genuinely branch on
 - docs/implemented-plans/delivered-user-message-codec.md:24 (mention) — - Mechanical exhaustiveness convention. `code-style.md:57-59` requires exhaustive switches and identifies `Record<Union,
+- docs/implemented-plans/doc-structure-development.md:27 (mention) — rule whose home is `code-style.md` or the engineering principles, it now says
 - docs/implemented-plans/expose-dev-router.md:35 (mention) — - `code-style.md` — no default params, max-2-positional, no `any`, blessed cast
 - docs/implemented-plans/extfile-card.md:48 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params
 - docs/implemented-plans/figure-card-type.md:81 (mention) — - **`beebox/code-style.md`** — *"No default parameters"*, *"Max 2 positional
@@ -502,14 +508,14 @@ Referenced by:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:29 (mention) — mechanical rules — its own words, *"`code-style.md` says how to write a line,
 - ../issues/code-quality/2026-09-14-what-can-we-remove-sweep.md:39 (mention) — - **`code-style.md`'s defensiveness rules** and principle 6 already say what
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
 - → docs/engineering-principles.md (link)
 - → frontend.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → CLAUDE.md (mention)
 
 #### frontend.md
@@ -519,7 +525,7 @@ Title: "Frontend Conventions" | 204 lines
 Referenced by:
 - CLAUDE.md:40 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
-- docs/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
+- docs/development/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
 - docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:30 (mention) — - `beebox/frontend.md:34` — *"Reach for a primitive from
 - docs/implemented-plans/chat-header-chips.md:68 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
@@ -548,7 +554,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/features/2026-08-10-card-view-context-menu-and-missing-card-state.md:96 (mention) — - Read `frontend.md` before building — `restrict-component-classes` applies, and
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -625,7 +631,7 @@ Title: "Deploy" | 28 lines
 
 Referenced by:
 - deploy/CLAUDE.md:5 (mention) — — so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
-- docs/guides.md:47 (link) — | Deploy scripts (directory map) | [deploy/README.md](../deploy/README.md) |
+- docs/guides.md:49 (link) — | Deploy scripts, directory map | [deploy/README](../deploy/README.md) |
 - docs/implemented-plans/box-host-packages.md:54 (mention) — `deploy/README.md` note): ~120 lines. No generated output. Well under the
 - docs/implemented-plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/deploy-maintenance-page.md:83 (mention) — (`deploy/hetzner/setup-server.sh:368-397`). `deploy/README.md:147-148`:
@@ -643,7 +649,7 @@ Referenced by:
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:279 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:296 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - user-stories/catalog/2026-08-21.md:4615 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../CLAUDE.md:57 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -685,7 +691,7 @@ Title: "Adding API Endpoints" | 244 lines | current reference
 
 Referenced by:
 - CLAUDE.md:39 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc
-- docs/guides.md:35 (link) — | Adding API endpoints | [docs/adding-api-endpoints.md](adding-api-endpoints.md) |
+- docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:163 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:148 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
 - docs/plans/ios-native-capture-mode.md:30 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
@@ -695,69 +701,15 @@ Referenced by:
 - ../research/claude-elixir-phoenix/authoring-craft.md:28 (mention) — > checklist in docs/adding-api-endpoints.md.
 
 References:
-- → docs/image-transforms.md (link)
+- → docs/media/image-transforms.md (link)
 - → docs/secrets.md (mention)
-
-#### docs/agent-coding.md
-
-Title: "Agent coding, and the checks around it" | 51 lines | current reference
-
-Referenced by:
-- docs/development-process.md:14 (link) — **[Agent coding, and the checks around it](agent-coding.md)** covers where those
-- docs/development-workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
-- docs/guides.md:19 (link) — | Agent coding, and the checks around it | [docs/agent-coding.md](agent-coding.md) |
-- docs/technologies.md:4 (mention) — coding and the checks around it](agent-coding.md), [the development
-
-References:
-- → docs/development-process.md (link)
-- → docs/development-workflow.md (link)
-- → docs/testing.md (link)
-- → docs/technologies.md (link)
-- → CLAUDE.md (mention)
-- → code-style.md (mention)
-- → frontend.md (mention)
-- → code-style.md (link)
-
-#### docs/assets.md
-
-Title: "Assets" | 234 lines | current reference
-
-Referenced by:
-- docs/cards.md:20 (link) — - Media that cards attach: [assets](assets.md).
-- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
-- docs/guides.md:33 (link) — | Assets (git-annex) | [docs/assets.md](assets.md) |
-- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
-- docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../assets.md).
-- docs/implemented-plans/attach-directories-superseded.md:14 (link) — > [`assets.md`](../assets.md).
-- docs/implemented-plans/bulk-file-upload.md:14 (link) — > upload design is live. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/courseware-phase1.md:12 (link) — > unaffected. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../assets.md).
-- docs/implemented-plans/scanner-ingest.md:14 (link) — > [`assets.md`](../assets.md).
-- docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
-- docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../assets.md).
-- docs/plans/asset-offbox-storage.md:15 (link) — > [`../assets.md`](../assets.md).
-- docs/plans/capture-fast-landing.md:14 (link) — > Current model: [`../assets.md`](../assets.md).
-- docs/plans/container-first-pass2.review.md:91 (mention) — `docs/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
-- docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
-- docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/assets.md:6-21`
-- docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../assets.md).
-- docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/assets.md`) and "artifact" (collides
-- docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../assets.md).
-- docs/server/operations.md:208 (link) — [`assets.md`](../assets.md). Periodic operational checks belong in
-- ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/assets.md` records "3,655 manifests removed", the old
-- ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/assets.md` — no install or deploy doc says to install it.
-- ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
-
-References:
-- → docs/reports/git-annex-conversion-2026-08-01.md (link)
-- → docs/plans/asset-offbox-storage.md (link)
 
 #### docs/attribution.md
 
 Title: "Third-party assets and their attribution" | 32 lines | current reference
 
 Referenced by:
-- docs/guides.md:67 (link) — | Third-party asset attribution | [docs/attribution.md](attribution.md) |
+- docs/guides.md:53 (link) — | Third-party asset attribution | [attribution](attribution.md) |
 - frontend.md:64 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
 
 #### docs/box-layout.md
@@ -770,12 +722,12 @@ Referenced by:
 - docs/cards.md:17 (link) — - Where cards live on disk: [box layout](box-layout.md).
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
 - docs/glossary.md:28 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the
-- docs/guides.md:50 (link) — | Box layout reference | [docs/box-layout.md](box-layout.md) |
-- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
+- docs/guides.md:32 (link) — | Box layout: the on-disk shape of a box | [box-layout](box-layout.md) |
+- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/attach-directories-superseded.md:174 (mention) — - `docs/box-layout.md`
 - docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
-- docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+- docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/boxes-as-packages-v2.md:40 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
 - docs/implemented-plans/design-reconciliation.md:594 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
@@ -825,6 +777,7 @@ References:
 Title: "Cards" | 21 lines | current reference
 
 Referenced by:
+- docs/guides.md:13 (link) — | Cards: format, schemas, validation, migrations | [cards](cards.md) |
 - docs/implemented-plans/doc-structure-cards.md:57 (mention) — | (new) | `cards.md`: what a card is; members; owned elsewhere (box layout, the box-facing card docs, the schemas agent
 
 References:
@@ -833,13 +786,14 @@ References:
 - → docs/cards/validation.md (link)
 - → docs/cards/migrations.md (link)
 - → docs/box-layout.md (link)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 
 #### docs/chat.md
 
 Title: "Chat" | 24 lines | current reference
 
 Referenced by:
+- docs/guides.md:15 (link) — | Chat: sessions, history, schedules, review, quick chat, composer, scroll | [chat](chat.md) |
 - docs/implemented-plans/doc-structure-chat.md:12 (mention) — `docs/chat.md`, one file per member, with the dated investigation material
 
 References:
@@ -862,7 +816,7 @@ Title: "Client Debug Log" | 107 lines | current reference
 Referenced by:
 - CLAUDE.md:57 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
 - docs/box-layout.md:226 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
-- docs/guides.md:52 (link) — | Client debug log | [docs/client-debug-log.md](client-debug-log.md) |
+- docs/guides.md:42 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:552 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:170 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
@@ -875,11 +829,11 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 128 lines | current reference
+Title: "Connectors" | 142 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
-- docs/guides.md:36 (link) — | Connectors | [docs/connectors.md](connectors.md) |
+- docs/guides.md:14 (link) — | Connectors: the framework, Google auth, Calendar, Gmail, Drive, Telegram | [connectors](connectors.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 - docs/implemented-plans/doc-structure-connectors.md:51 (mention) — | connectors.md inventory | Drive card types: `sheet` | `gsheet`, `gdoc` (handlers), `gfolder`, `glink` |
@@ -890,6 +844,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
+- docs/prompts/lenses.md:66 (link) — convention: [freshness metadata](../connectors.md#freshness-metadata).
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
@@ -905,6 +860,7 @@ References:
 - → docs/connectors/gmail.md (link)
 - → docs/connectors/drive.md (link)
 - → docs/server/health-checks.md (link)
+- → docs/prompts/lenses.md (link)
 - → src/services/CLAUDE.md (mention)
 - → docs/triage.md (mention)
 
@@ -913,13 +869,13 @@ References:
 Title: "Content-Security-Policy" | 98 lines | current reference
 
 Referenced by:
-- docs/guides.md:57 (link) — | Content-Security-Policy | [docs/content-security-policy.md](content-security-policy.md) |
+- docs/guides.md:44 (link) — | Content-Security-Policy | [content-security-policy](content-security-policy.md) |
 - docs/implemented-plans/app-wide-csp.md:444 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/implemented-plans/webapp-production-mode.md:74 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:256 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:272 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -931,48 +887,31 @@ References:
 Title: "Data Source Tagging Convention" | 89 lines | current reference
 
 Referenced by:
+- docs/guides.md:43 (link) — | Data-source tagging in the UI | [data-source-tagging](data-source-tagging.md) |
 - docs/plans/document-comments.md:380 (mention) — structured identifier"* (`beebox/docs/data-source-tagging.md:28`), and
 - docs/plans/general-browser.md:100 (mention) — | `data-bbx-source` provenance tagging | `beebox/src/frontend/src/lib/source-tag.ts:7`, `beebox/docs/data-source-tagging
 - frontend.md:16 (mention) — UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` att
 - ../issues/features/2026-07-08-selection-provenance-canonical-anchors.md:11 (mention) — `docs/data-source-tagging.md`) and text-selection capture (`SelectionCapture.tsx` +
 - ../research/hoversource-review.md:13 (mention) — - **`data-bbx-source`** (`src/frontend/src/lib/source-tag.ts`, `docs/data-source-tagging.md`) tags rendered elements wit
 
-#### docs/development-process.md
+#### docs/development.md
 
-Title: "How development happens here" | 36 lines | current reference
+Title: "How development happens here" | 43 lines | current reference
 
 Referenced by:
-- docs/agent-coding.md:3 (link) — Part of [how development happens here](development-process.md). See also
-- docs/development-workflow.md:3 (link) — Part of [how development happens here](development-process.md). See also
-- docs/guides.md:18 (link) — | How development happens (overview) | [docs/development-process.md](development-process.md) |
-- docs/implemented-plans/doc-structure.md:75 (mention) — Trade-off accepted: the public narrative series (`development-process.md`
-- docs/technologies.md:3 (link) — Part of [how development happens here](development-process.md). See also [agent
+- docs/development/agent-coding.md:3 (link) — Part of [how development happens here](../development.md). See also
+- docs/development/technologies.md:3 (link) — Part of [how development happens here](../development.md). See also [agent
+- docs/development/workflow.md:3 (link) — Part of [how development happens here](../development.md). See also
+- docs/guides.md:18 (link) — | How development happens: agent coding, workflow, technologies, maintenance | [development](development.md) |
+- docs/implemented-plans/doc-structure-development.md:61 (mention) — | `development-process.md` | `development.md`, the parent, with a members table |
 
 References:
 - → ../CONTRIBUTING.md (link)
-- → docs/agent-coding.md (link)
+- → docs/development/agent-coding.md (link)
 - → docs/testing.md (link)
-- → docs/development-workflow.md (link)
-- → docs/technologies.md (link)
-
-#### docs/development-workflow.md
-
-Title: "The development workflow" | 100 lines | current reference
-
-Referenced by:
-- docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
-- docs/development-process.md:26 (link) — **[The development workflow](development-workflow.md)** covers how a piece of
-- docs/guides.md:20 (link) — | Development workflow (workstreams, issues, plans, schedules, exhibits) | [docs/development-workflow.md](development-wo
-- docs/implemented-plans/doc-structure.md:597 (mention) — | 9 | Full-suite cadence and branch | yes | 10 | agent-testing.md#Testability | 3: partial in development-workflow.md#Re
-- docs/technologies.md:5 (mention) — workflow](development-workflow.md), and [testing](testing.md).
-- docs/testing.md:27 (link) — ([recurring work](development-workflow.md#recurring-work)), bisected to the
-
-References:
-- → docs/development-process.md (link)
-- → docs/agent-coding.md (link)
-- → docs/testing.md (link)
-- → docs/technologies.md (mention)
-- → docs/plans/README.md (link)
+- → docs/development/workflow.md (link)
+- → docs/development/technologies.md (link)
+- → docs/development/maintenance.md (link)
 
 #### docs/doc-graph.md
 
@@ -986,7 +925,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/agent-docs.md:71 (mention) — `doc-graph.md` mentions `private-issues`. `box-docs/` has two benign hits
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
+- src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/development/
 - user-stories/catalog/2026-08-21.md:8708 (mention) — **Code check** — beebox/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.md and
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 
@@ -997,7 +936,7 @@ Title: "Engineering Principles" | 175 lines | current reference
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
-- docs/guides.md:14 (link) — | Engineering principles | [docs/engineering-principles.md](engineering-principles.md) |
+- docs/guides.md:29 (link) — | Engineering principles | [engineering-principles](engineering-principles.md) |
 - docs/implemented-plans/agent-browsing-owner.md:29 (mention) — - `docs/engineering-principles.md` #8 *One way to do each thing* — identity is
 - docs/implemented-plans/agent-field-tests.md:37 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below;
 - docs/implemented-plans/annex-at-init.md:169 (mention) — **Principle 4 — resilient AND never silent** (`docs/engineering-principles.md:49`):
@@ -1026,6 +965,7 @@ Referenced by:
 - docs/implemented-plans/connector-sync-isolation.md:25 (mention) — - `docs/engineering-principles.md`: principle 1 (types are structure),
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:62 (mention) — - `docs/engineering-principles.md` #1 (types are structure), #2
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
+- docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:57 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
@@ -1098,6 +1038,7 @@ Referenced by:
 - docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
+- docs/plans/publish-custom-domain-admin.md:27 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/publish-sites-admin.md:36 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
@@ -1130,6 +1071,7 @@ References:
 Title: "Event Bus" | 145 lines | current reference
 
 Referenced by:
+- docs/guides.md:36 (link) — | Event bus | [event-bus](event-bus.md) |
 - docs/implemented-plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/reports/plan-directory-migration-history-2026-09-13.md:36 (mention) — `event-bus.md`, `photo-storage-investigation.md`. Left in place
 
@@ -1139,7 +1081,7 @@ Title: "Example names" | 53 lines | current reference
 
 Referenced by:
 - CLAUDE.md:59 (link) — - Keep shared source, prompts, schemas, rules, and docs generic. Use “the user” or “the boxholder”; personal names belon
-- docs/guides.md:69 (link) — | Example names for docs/tests | [docs/example-names.md](example-names.md) |
+- docs/guides.md:52 (link) — | Example names for docs and tests | [example-names](example-names.md) |
 - docs/implemented-plans/agent-field-tests.md:332 (mention) — - `persona.md` — who the operator is (drawn from `docs/example-names.md`,
 - docs/implemented-plans/card-prominence.md:629 (mention) — from `docs/example-names.md` (a plan card marked primary beside unmarked
 - docs/implemented-plans/todo-annotation.md:57 (mention) — hardcode personal names" (examples below use the `docs/example-names.md`
@@ -1153,7 +1095,7 @@ Title: "Glossary" | 92 lines | current reference
 
 Referenced by:
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
-- docs/guides.md:68 (link) — | Glossary | [docs/glossary.md](glossary.md) |
+- docs/guides.md:51 (link) — | Glossary | [glossary](glossary.md) |
 - docs/implemented-plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:146 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/implemented-plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -1178,7 +1120,7 @@ References:
 - → docs/chat/schedules.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/cards/format.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/design/processing.md (mention)
@@ -1193,7 +1135,7 @@ References:
 
 #### docs/guides.md
 
-Title: "Guide index" | 70 lines | current reference
+Title: "Guide index" | 58 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1204,89 +1146,52 @@ Referenced by:
 References:
 - → docs/README.md (link)
 - → docs/install.md (link)
-- → docs/install/developer.md (link)
-- → docs/install/docker.md (link)
-- → docs/install/agent.md (link)
+- → docs/testing.md (link)
+- → docs/cards.md (link)
+- → docs/connectors.md (link)
+- → docs/chat.md (link)
+- → docs/media.md (link)
+- → docs/prompts.md (link)
+- → docs/development.md (link)
+- → docs/server.md (link)
+- → docs/design/README.md (link)
+- → docs/plans/README.md (link)
 - → docs/engineering-principles.md (link)
 - → docs/module-map.md (link)
-- → docs/design/README.md (link)
-- → docs/cards/format.md (link)
-- → docs/cards/schemas.md (link)
-- → docs/development-process.md (link)
-- → docs/agent-coding.md (link)
-- → docs/development-workflow.md (link)
-- → docs/technologies.md (link)
-- → docs/testing.md (link)
-- → docs/testing/field-testing.md (link)
-- → docs/testing/tours.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
-- → docs/implemented-plans/cards-as-markdown-rfc.md (link)
-- → docs/cards/migrations.md (link)
-- → docs/mobile-contract.md (link)
-- → docs/image-orientation.md (link)
-- → docs/mobile-parity.md (link)
-- → docs/assets.md (link)
-- → docs/cards/validation.md (link)
 - → docs/adding-api-endpoints.md (link)
-- → docs/connectors.md (link)
+- → docs/box-layout.md (link)
 - → docs/secrets.md (link)
 - → docs/procedure-implementation.md (link)
 - → docs/scheduler.md (link)
-- → docs/server/health-checks.md (link)
-- → docs/chat/schedules.md (link)
-- → docs/prompt-logging.md (link)
-- → docs/prompt-surface-review.md (link)
-- → docs/prompt-audits.md (link)
+- → docs/event-bus.md (link)
 - → docs/triage.md (link)
 - → docs/questions.md (link)
-- → docs/server.md (link)
-- → deploy/README.md (link)
-- → docs/server/operations.md (link)
-- → docs/server/boxes.md (link)
-- → docs/box-layout.md (link)
 - → docs/landmarks.md (link)
-- → docs/client-debug-log.md (link)
-- → docs/chat/quick-chat.md (link)
-- → docs/chat/sessions.md (link)
 - → docs/model-policy.md (link)
-- → docs/chat/review.md (link)
+- → docs/publishing.md (link)
+- → docs/client-debug-log.md (link)
+- → docs/data-source-tagging.md (link)
 - → docs/content-security-policy.md (link)
-- → docs/maintenance.md (link)
-- → docs/testing/knowledge-audits.md (link)
-- → docs/connectors/calendar.md (link)
-- → docs/plans/pdf-intake-design.md (link)
-- → docs/plans/source-editor.md (link)
-- → docs/plans/interface-as-cards.md (link)
-- → ../research/openclaw-hermes/README.md (link)
-- → docs/attribution.md (link)
+- → docs/security-overview.md (link)
+- → docs/security-report.md (link)
+- → docs/mobile-contract.md (link)
+- → docs/mobile-parity.md (link)
+- → docs/scan-upload-contract.md (link)
+- → deploy/README.md (link)
+- → ../agent-doctest/docs/syntax.md (link)
 - → docs/glossary.md (link)
 - → docs/example-names.md (link)
-
-#### docs/image-orientation.md
-
-Title: "Image orientation contract" | 50 lines | current reference
-
-Referenced by:
-- docs/guides.md:31 (link) — | Image orientation (EXIF) contract | [docs/image-orientation.md](image-orientation.md) |
-- docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/image-orientation.md`)
-- ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/image-orientation.md`.
-
-References:
-- → ../beebox/test/shared/image-orientation.doctest.md (link)
-
-#### docs/image-transforms.md
-
-Title: "On-demand image transforms" | 33 lines | current reference
-
-Referenced by:
-- docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](image-transforms.md))
+- → docs/attribution.md (link)
+- → docs/name-history.md (link)
+- → docs/todo-security.md (link)
+- → ../research/CLAUDE.md (link)
 
 #### docs/install.md
 
 Title: "Installing beebox" | 29 lines | current reference
 
 Referenced by:
-- docs/guides.md:10 (link) — | Installing beebox (which path for whom) | [docs/install.md](install.md) |
+- docs/guides.md:11 (link) — | Installing beebox: Docker, from source, with an agent | [install](install.md) |
 - docs/implemented-plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
 - ../issues/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
 
@@ -1304,7 +1209,7 @@ Title: "Landmarks" | 235 lines | current reference
 Referenced by:
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
 - docs/glossary.md:78 (mention) — **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing de
-- docs/guides.md:51 (link) — | Landmarks (navigation surface) | [docs/landmarks.md](landmarks.md) |
+- docs/guides.md:39 (link) — | Landmarks: the navigation surface | [landmarks](landmarks.md) |
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/card-prominence.md:67 (mention) — row (`docs/landmarks.md`: "Parse warnings — a row naming any
 - docs/implemented-plans/clerk-webpage-capture.md:268 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
@@ -1329,47 +1234,20 @@ References:
 - → docs/triage.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 
-#### docs/maintenance.md
+#### docs/media.md
 
-Title: "Code Maintenance" | 86 lines | current reference
+Title: "Media" | 19 lines | current reference
 
 Referenced by:
-- code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
-- docs/README.md:120 (link) — ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:515 (link) — - [Maintenance](../maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic tools.
-- docs/guides.md:58 (link) — | Periodic maintenance | [docs/maintenance.md](maintenance.md) |
-- docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
-- docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
-- docs/implemented-plans/doc-structure.md:180 (mention) — - Periodic checks appear in `testing.md` "Periodic Checks", `maintenance.md`,
-- docs/implemented-plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
-- docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
-- docs/implemented-plans/scheduled-workstreams.md:253 (mention) — **Why this needs to change.** Today the catalog (`docs/maintenance.md`
-- docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
-- docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
-- docs/testing/knowledge-audits.md:19 (link) — [maintenance](../maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.
-- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
-- user-stories/catalog/2026-08-21.md:8797 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/maintenance.md`
-- ../.claude/skills/security-report/SKILL.md:96 (mention) — or suspected drift. This is also tracked in `beebox/docs/maintenance.md`.
-- ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `beebox/docs/maintenance.md`.
-- ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
-- ../issues/closed/code-quality/2026-08-25-oxlint-circular-no-cadence.md:20 (mention) — What remains is the smaller half. `beebox/docs/maintenance.md` lists two
-- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
-- ../issues/closed/exploration/2026-07-25-opengrep-self-cve-scanner.md:11 (mention) — > Closed 2026-09-05 (`fixed?` confirmed): `security/opengrep/`, `pnpm security:opengrep`, and the `docs/maintenance.md`
-- ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/maintenance.md`
-- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
-- ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:17 (mention) — `beebox/docs/maintenance.md` with a cadence, or a scheduled routine):
-- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:64 (mention) — `docs/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
+- docs/guides.md:16 (link) — | Media: assets, image orientation, image transforms | [media](media.md) |
+- docs/implemented-plans/doc-structure-media.md:45 (mention) — | (new) | `media.md`: what media is in a box; members; owned elsewhere (attach scopes in the card format, phone photos i
 
 References:
-- → CLAUDE.md (mention)
-- → docs/implemented-plans/scheduled-workstreams.md (mention)
-- → docs/testing/knowledge-audits.md (mention)
-- → docs/testing/session-critiques.md (mention)
-- → docs/scheduled/csp-violation-review.md (mention)
-- → docs/architecture/CLAUDE.md (mention)
-- → docs/cards/migrations.md (mention)
-- → docs/implemented-plans/mobile-parity-sync.md (mention)
+- → docs/media/assets.md (link)
+- → docs/media/image-orientation.md (link)
+- → docs/media/image-transforms.md (link)
+- → docs/cards/format.md (link)
+- → docs/box/phone-photos.md (link)
 
 #### docs/mobile-contract.md
 
@@ -1379,7 +1257,7 @@ Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/chat.md:21 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
-- docs/guides.md:30 (link) — | Cross-platform mobile contract (iOS/Android ↔ box) | [docs/mobile-contract.md](mobile-contract.md) |
+- docs/guides.md:46 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
 - docs/implemented-plans/doc-structure.md:234 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
@@ -1391,7 +1269,7 @@ Referenced by:
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
-- docs/implemented-plans/secret-entry-guidance.md:532 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
+- docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
@@ -1457,7 +1335,7 @@ References:
 Title: "Mobile parity matrix" | 45 lines | current reference
 
 Referenced by:
-- docs/guides.md:32 (link) — | Mobile parity matrix (iOS vs Android capabilities) | [docs/mobile-parity.md](mobile-parity.md) |
+- docs/guides.md:47 (link) — | Mobile parity: iOS versus Android | [mobile-parity](mobile-parity.md) |
 - docs/implemented-plans/bulk-file-upload.md:320 (mention) — `docs/mobile-parity.md` row (also correct its stale "≤4 photos" cell — the
 - docs/implemented-plans/ios-per-box-device-lock.md:260 (mention) — **Direction.** Add **Per-box local device lock** to `docs/mobile-parity.md` as
 - docs/implemented-plans/mobile-parity-sync.md:95 (mention) — ### 3. `docs/mobile-parity.md` — the parity matrix (to build)
@@ -1482,7 +1360,8 @@ Title: "Which model a box thinks with" | 182 lines | current reference
 Referenced by:
 - docs/box-layout.md:206 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/chat.md:20 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
-- docs/guides.md:55 (link) — | Which model a box thinks with | [docs/model-policy.md](model-policy.md) |
+- docs/guides.md:40 (link) — | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
+- docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
 - docs/mobile-contract.md:917 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
@@ -1499,9 +1378,10 @@ Title: "Module map: where shared code lives" | 59 lines | current reference
 
 Referenced by:
 - CLAUDE.md:38 (link) — - Generic dependency-light helpers: `src/lib/`; browser/server shared code: `src/shared/`; CLI-domain helpers: `src/cli/
-- docs/guides.md:15 (link) — | Module map (lib/shared/types boundary) | [docs/module-map.md](module-map.md) |
+- docs/guides.md:30 (link) — | Module map: the shared-code directory boundary | [module-map](module-map.md) |
 - docs/implemented-plans/box-root-paths.md:176 (mention) — hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
+- docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:141 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:57 (mention) — encapsulating low-level mechanics** — `docs/module-map.md` and the
@@ -1513,6 +1393,7 @@ Title: "Name history" | 38 lines | history
 
 Referenced by:
 - docs/README.md:13 (link) — to park a proposal or a finished plan. The deliberate exception is [name history](name-history.md),
+- docs/guides.md:54 (link) — | Name history | [name-history](name-history.md) |
 - ../issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md:26 (mention) — to the `.bbx-*` prefix; the former names are in `docs/name-history.md`. The
 - ../issues/docs-and-chores/2026-08-30-bee-box-external-cutover-checklist.md:14 (link) — order. The [name history](../../beebox/docs/name-history.md) owns the mapping
 
@@ -1523,7 +1404,7 @@ Title: "Procedures" | 262 lines | current reference
 Referenced by:
 - CLAUDE.md:49 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
 - docs/glossary.md:58 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/pr
-- docs/guides.md:38 (link) — | Procedures | [docs/procedure-implementation.md](procedure-implementation.md) |
+- docs/guides.md:34 (link) — | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 - docs/implemented-plans/agent-applied-migrations.md:35 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/browser-task-card.md:496 (mention) — (`beebox/docs/procedure-implementation.md:214-222`), so a run that stops
 - docs/implemented-plans/docs-reorg.md:89 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -1537,66 +1418,22 @@ Referenced by:
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
 - ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:48 (mention) — (`docs/procedure-implementation.md:176`); restoring is the procedure's
 
-#### docs/prompt-audits.md
+#### docs/prompts.md
 
-Title: "Prompt Audits" | 203 lines | current reference
-
-Referenced by:
-- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt
-- docs/implemented-plans/doc-structure.md:619 (mention) — after: `prompt-audits.md` for "audit results" (Q2), `scheduled/` for the
-- docs/implemented-plans/docs-reorg.md:103 (mention) — `browse`); `prompt-audits.md` → nonexistent `tone-design.md`;
-- docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
-- docs/prompt-audits.md:174 (mention) — **Useful: what-changed closers.** One or two sentences naming what changed and where: "Added the pre-tool-brevity audit
-- docs/prompt-surface-review.md:3 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
-- ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#park-ignored-proactive-
-- ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
-- ../issues/exploration/2026-05-19-universal-confidence-rubric.md:15 (link) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
-- ../issues/features/2026-05-19-agent-loop-hooks.md:19 (link) — - **Link enforcement** (*Link, don't name* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#link-dont-name) audi
-- ../issues/features/2026-05-19-spark-mode.md:15 (link) — - Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/promp
-
-References:
-- → docs/prompt-surface-review.md (link)
-- → ../.claude/memory/tone-design.md (link)
-- → docs/prompt-audits.md (mention)
-
-#### docs/prompt-logging.md
-
-Title: "Prompt Logging for Agent Invocations" | 210 lines | current reference
+Title: "The prompt surface" | 24 lines | current reference
 
 Referenced by:
-- docs/guides.md:42 (link) — | Capturing full agent-invocation API traffic | [docs/prompt-logging.md](prompt-logging.md) |
-- docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompt-logging.md` says so.
-- docs/implemented-plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
-- docs/plans/agent-docs.md:70 (mention) — example; `prompt-logging.md` shows `/Users/...` as a redaction example;
-- user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
-
-References:
-- → CLAUDE.md (mention)
-
-#### docs/prompt-surface-review.md
-
-Title: "Reviewing the prompt surface" | 64 lines | current reference
-
-Referenced by:
-- docs/guides.md:43 (link) — | Prompt-surface review workflow | [docs/prompt-surface-review.md](prompt-surface-review.md) (lens catalog: [docs/prompt
-- docs/prompt-audits.md:3 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
-- src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
-- ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompt-surface-review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
-- ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
-- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
-- ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
-
-References:
-- → docs/prompt-audits.md (link)
-- → CLAUDE.md (mention)
-- → docs/plans/prompt-surface-cleanup-evaluation.md (link)
+- docs/guides.md:17 (link) — | The prompt surface: review, lenses, logging | [prompts](prompts.md) |
+- docs/implemented-plans/doc-structure-prompts.md:57 (mention) — | (new) | `prompts.md`: what the prompt surface is (the generated sources); members; owned elsewhere |
+- docs/plans/cli-restructure.md:30 (mention) — - **`bbx init-rules` standalone removed.** File moved from `src/cli/commands/init-rules.ts` to `src/core/init-rules.ts`
+- user-stories/catalog/2026-08-21.md:8565 (mention) — **Code check** — beebox/package.json defines "prompt-report": "tsx src/dev/prompt-report.ts"; the script parses --output
 
 #### docs/publishing.md
 
-Title: "Operating Cloudflare site publishing" | 207 lines | current reference
+Title: "Operating Cloudflare site publishing" | 294 lines | current reference
 
 Referenced by:
+- docs/guides.md:41 (link) — | Publishing: the managed static-site publisher, operator side | [publishing](publishing.md) |
 - docs/plans/publish-pages.md:264 (mention) — 9. **Docs + audits run** — reference doc (`docs/publishing.md`) distilled from this plan, box-agent guidance, knowledge
 - ../issues/features/2026-07-19-publish-pages-resume.md:72 (mention) — 4. **Docs + knowledge audits** (plan step 9): `docs/publishing.md`, box-agent guidance,
 
@@ -1608,7 +1445,7 @@ References:
 Title: "Questions" | 340 lines | current reference
 
 Referenced by:
-- docs/guides.md:45 (link) — | Questions subsystem current reference | [docs/questions.md](questions.md) |
+- docs/guides.md:38 (link) — | Questions: the question subsystem | [questions](questions.md) |
 - docs/implemented-plans/doc-structure.md:546 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/implemented-plans/questions-end-to-end.md:465 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/implemented-plans/todo-annotation.md:65 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
@@ -1633,12 +1470,15 @@ Title: "docs/ — map and naming conventions" | 146 lines | current reference
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/README.md:26 (mention) — Each entry in the directory's `README.md` disposition table says what
-- docs/guides.md:5 (link) — for operating instructions. [Documentation organization](README.md) describes
+- docs/guides.md:4 (link) — them; walk in from the parent. [Documentation organization](README.md) says
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/doc-structure-cards.md:9 (link) — Fifth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-chat.md:9 (link) — Second cluster under the [organizing principles](../README.md#organizing-principles)
 - docs/implemented-plans/doc-structure-connectors.md:9 (link) — Fourth cluster under the [organizing principles](../README.md#organizing-principles).
+- docs/implemented-plans/doc-structure-development.md:9 (link) — Seventh cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure-install-server.md:9 (link) — Third cluster under the [organizing principles](../README.md#organizing-principles).
+- docs/implemented-plans/doc-structure-media.md:9 (link) — Eighth cluster under the [organizing principles](../README.md#organizing-principles):
+- docs/implemented-plans/doc-structure-prompts.md:9 (link) — Sixth cluster under the [organizing principles](../README.md#organizing-principles):
 - docs/implemented-plans/doc-structure.md:44 (mention) — | 1. Principles in `docs/README.md` | 0 | ~120 |
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
@@ -1659,13 +1499,14 @@ References:
 - → docs/box/interface-cards.md (link)
 - → docs/doc-graph.md (mention)
 - → CLAUDE.md (mention)
-- → docs/maintenance.md (link)
+- → docs/development/maintenance.md (link)
 
 #### docs/scan-upload-contract.md
 
 Title: "Scan Upload Wire Contract" | 263 lines | current reference
 
 Referenced by:
+- docs/guides.md:48 (link) — | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
 - docs/implemented-plans/annex-at-init.md:222 (mention) — `docs/scan-upload-contract.md:71-78`). Track 2 is making the CLI agree with two
 - docs/implemented-plans/scan-uploader-pairing.md:54 (mention) — (`docs/scan-upload-contract.md`); the installation-story plan's
 - docs/implemented-plans/scan-uploader-version-drift.md:42 (mention) — Docs reported separately: `docs/scan-upload-contract.md` (the version's
@@ -1690,7 +1531,7 @@ Referenced by:
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
 - docs/design/processing.md:21 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
 - docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
-- docs/guides.md:39 (link) — | Scheduler daemon (`bbx tick`) | [docs/scheduler.md](scheduler.md) |
+- docs/guides.md:35 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 - docs/implemented-plans/chat-review.md:707 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
@@ -1712,7 +1553,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 551 lines | current reference
+Title: "Secrets: the machine-level store" | 553 lines | current reference
 
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1720,8 +1561,10 @@ Referenced by:
 - docs/box-layout.md:207 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/connectors/telegram.md:41 (mention) — (`docs/secrets.md`); there is no config file to create or edit by hand, and
-- docs/guides.md:37 (link) — | Secrets (machine-level store, grants, `bbx secrets`) | [docs/secrets.md](secrets.md) |
+- docs/development/technologies.md:31 (link) — documented in [secrets.md](../secrets.md).
+- docs/guides.md:33 (link) — | Secrets: the machine-level store and grants | [secrets](secrets.md) |
 - docs/implemented-plans/doc-structure-connectors.md:86 (mention) — `secrets.md` (the store is its own subject), `src/connectors/CLAUDE.md`,
+- docs/implemented-plans/doc-structure-development.md:137 (mention) — | 4 | over budget | 19 | secrets.md#Secret names, a second statement of the OpenRouter-only backend in the store's vocab
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
@@ -1729,11 +1572,10 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:51 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:177 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:193 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:45 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/technologies.md:31 (link) — documented in [secrets.md](secrets.md).
 - docs/testing/doctests.md:135 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -1743,15 +1585,16 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 260 lines | current reference
+Title: "Security overview" | 277 lines | current reference
 
 Referenced by:
 - README.md:90 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
+- docs/guides.md:45 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:39 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:25 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:40 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -1779,16 +1622,17 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 504 lines | current reference
+Title: "Security report — structured version" | 522 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:92 (link) — and recent conversation text. See [security report §3](../security-report.md#3-data-egress).
+- docs/guides.md:45 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/agent-browsing-owner.md:186 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/security-overview.md:28 (link) — [`security-report.md`](security-report.md).
+- docs/security-overview.md:38 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
@@ -1832,7 +1676,7 @@ Title: "The production server" | 27 lines | current reference
 Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - deploy/README.md:10 (link) — under [`../docs/server.md`](../docs/server.md); this file is a map of the
-- docs/guides.md:46 (link) — | The production server (provisioning, configuration, deploying, boxes, operations) | [docs/server.md](server.md) |
+- docs/guides.md:19 (link) — | The production server: provisioning, configuration, deploying, boxes, operations, health checks | [server](server.md)
 - docs/implemented-plans/doc-structure-install-server.md:79 (mention) — | (new) | `server.md`: one operator's pipeline, not the install path; members; owned elsewhere |
 - docs/install.md:26 (link) — [server](server.md).
 
@@ -1850,24 +1694,6 @@ References:
 - → docs/connectors/google-auth.md (link)
 - → docs/security-overview.md (link)
 
-#### docs/technologies.md
-
-Title: "Technologies and AI services" | 44 lines | current reference
-
-Referenced by:
-- docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
-- docs/development-process.md:34 (link) — **[Technologies and AI services](technologies.md)** names the stack and the
-- docs/development-workflow.md:5 (mention) — services](technologies.md).
-- docs/guides.md:21 (link) — | Technologies and AI services | [docs/technologies.md](technologies.md) |
-- docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
-
-References:
-- → docs/development-process.md (link)
-- → docs/agent-coding.md (mention)
-- → docs/testing.md (link)
-- → docs/development-workflow.md (mention)
-- → docs/secrets.md (link)
-
 #### docs/testing.md
 
 Title: "Testing" | 57 lines | current reference
@@ -1875,11 +1701,12 @@ Title: "Testing" | 57 lines | current reference
 Referenced by:
 - CLAUDE.md:17 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
-- docs/agent-coding.md:4 (link) — [the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technolog
-- docs/development-process.md:20 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
-- docs/development-workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
+- docs/development.md:17 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
+- docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
+- docs/development/technologies.md:5 (link) — workflow](workflow.md), and [testing](../testing.md).
+- docs/development/workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
-- docs/guides.md:22 (link) — | Testing philosophy | [docs/testing.md](testing.md) |
+- docs/guides.md:12 (link) — | Testing: the verification instruments | [testing](testing.md) |
 - docs/implemented-plans/agent-applied-migrations.md:88 (mention) — - `beebox/docs/testing.md` — tests-first as a design tool; the machine
 - docs/implemented-plans/agent-field-tests.md:100 (mention) — (`docs/testing.md:271`) and session critiques (`docs/testing.md:409`) both
 - docs/implemented-plans/annex-at-init.md:633 (mention) — **Tests first, per `docs/testing.md`.** Each chunk above names its doctest
@@ -1933,7 +1760,6 @@ Referenced by:
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:517 (mention) — Tests named while designing, per `docs/testing.md`:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
-- docs/technologies.md:5 (link) — workflow](development-workflow.md), and [testing](testing.md).
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:9 (mention) — the full tier catalog live in `beebox/docs/testing.md` — read the
 - ../.claude/skills/bbx-plan/TEMPLATE.md:169 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
@@ -1946,7 +1772,7 @@ Referenced by:
 - ../research/external-skills-harvest.md:289 (mention) — - [x] **X1 — reconcile bbx-plan's test posture with `docs/testing.md`. DONE →
 
 References:
-- → docs/development-workflow.md (link)
+- → docs/development/workflow.md (link)
 - → docs/testing/doctests.md (link)
 - → docs/testing/tap-tests.md (link)
 - → docs/testing/knowledge-audits.md (link)
@@ -1963,6 +1789,7 @@ References:
 Title: "Security TODOs (dissolved)" | 31 lines | current reference
 
 Referenced by:
+- docs/guides.md:55 (link) — | Security TODOs, dissolved into the report and the issue queue | [todo-security](todo-security.md) |
 - docs/implemented-plans/docs-reorg.md:77 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - docs/implemented-plans/local-password-auth.md:537 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
 - docs/plans/invite-links-and-password-change.md:353 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
@@ -1992,13 +1819,13 @@ Title: "Triage" | 89 lines | current reference
 
 Referenced by:
 - docs/box-layout.md:155 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
-- docs/connectors.md:125 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:139 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:30 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
 - docs/design/teaching.md:22 (link) — rules at the destination ([`../triage.md`](../triage.md)).
 - docs/design/trust.md:38 (link) — ([`../triage.md`](../triage.md)).
-- docs/guides.md:44 (link) — | Triage pipeline current guide | [docs/triage.md](triage.md) |
+- docs/guides.md:37 (link) — | Triage: the intake pipeline | [triage](triage.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/implemented-plans/mvp-implementation-guide.md:18 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
@@ -2051,7 +1878,7 @@ Title: "Architecture Docs" | 59 lines | current reference
 
 Referenced by:
 - docs/design/README.md:5 (link) — narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
-- docs/maintenance.md:66 (mention) — | Doc images | `pnpm generate:doc-images` | After editing architecture-diagram text or `.mmd` sources. Pipeline: `docs/a
+- docs/development/maintenance.md:66 (mention) — | Doc images | `pnpm generate:doc-images` | After editing architecture-diagram text or `.mmd` sources. Pipeline: `docs/a
 - src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:
@@ -2147,10 +1974,12 @@ Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current re
 
 Referenced by:
 - docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
+- docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
+- docs/media.md:18 (link) — - Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).
 
 #### docs/box/publishing.md
 
-Title: "Publishing a site from this box" | 569 lines | current reference
+Title: "Publishing a site from this box" | 628 lines | current reference
 
 Referenced by:
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
@@ -2164,6 +1993,7 @@ Title: "Quick chat routing rules" | 45 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:57 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- ../issues/features/2026-09-25-quick-drop-entry-points.md:19 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
 
 #### docs/box/what-you-could-do.md
 
@@ -2173,6 +2003,7 @@ Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:26 (mention) — `what-you-could-do.md`). `landmark-curation.md` lives at `beebox/docs/`
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:79 (mention) — > `beebox/docs/box/what-you-could-do.md`, written for box agents (not the
+- ../issues/features/2026-09-25-agent-maintained-ideas-page.md:35 (mention) — `beebox/docs/box/what-you-could-do.md` (shipped as a package doc) holds
 
 References:
 - → docs/box/phone-photos.md (mention)
@@ -2191,7 +2022,6 @@ Referenced by:
 - docs/cards/schemas.md:80 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:93 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
-- docs/guides.md:17 (link) — | Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked ex
 - docs/implemented-plans/box-root-paths.md:269 (mention) — `docs/cards/format.md`). Add the link rule to reactor/procedure prompt
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > The living format reference is `docs/cards/format.md`.
 - docs/implemented-plans/connector-silence.md:127 (mention) — (`docs/cards/format.md`), not per-connector knowledge. For Telegram
@@ -2199,6 +2029,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards/format.md` gains the tag reference; the issue file closes
 - docs/implemented-plans/todo-collection.md:535 (mention) — schema instructions, `docs/cards/format.md:80-88`, and the two audits that
+- docs/media.md:17 (link) — - Where a card's media lives and how a ref names it: [card format](cards/format.md#attachments).
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/reports/stack-decisions-2026-09-04.md:20 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -2224,7 +2055,7 @@ Referenced by:
 - README.md:98 (link) — - [`docs/cards/migrations.md`](docs/cards/migrations.md) — the data-migration runbook
 - docs/cards.md:13 (link) — | [Migrations](cards/migrations.md) | Changing cards already on disk: applying, the admission gate, writing a migrator,
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../cards/migrations.md)), not silent
-- docs/guides.md:29 (link) — | Box migration runbook | [docs/cards/migrations.md](cards/migrations.md) |
+- docs/development/maintenance.md:67 (mention) — | Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and
 - docs/implemented-plans/agent-applied-migrations.md:39 (mention) — `docs/cards/migrations.md` ("Writing an agent-applied (procedure) migration").
 - docs/implemented-plans/box-migration.subplan.md:54 (mention) — - **`docs/cards/migrations.md`** — the established migration framework: `bbx migrate`
 - docs/implemented-plans/boxes-as-packages-v2.md:67 (mention) — | `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/cards/m
@@ -2246,7 +2077,6 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:330 (mention) — it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` + `docs/cards/migrations.md` — migration runner and
 - docs/install/docker.md:91 (link) — [`migrations.md`](../cards/migrations.md).
-- docs/maintenance.md:67 (mention) — | Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and
 - docs/plans/agent-docs.md:381 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
 - docs/plans/asset-annex.md:761 (mention) — since it accurately records a system that existed. `docs/cards/migrations.md`
 - docs/plans/asset-offbox-storage.md:577 (mention) — nothing in `docs/cards/migrations.md`. The only state change is Track A2
@@ -2278,7 +2108,7 @@ References:
 - → docs/cards/format.md (link)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (link)
 - → docs/cards/schemas.md (link)
-- → docs/maintenance.md (link)
+- → docs/development/maintenance.md (link)
 
 #### docs/cards/schemas.md
 
@@ -2291,7 +2121,6 @@ Referenced by:
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
 - docs/cards/migrations.md:514 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
-- docs/guides.md:17 (link) — | Card examples | [docs/cards/format.md](cards/format.md) (format), [docs/cards/schemas.md](cards/schemas.md) (worked ex
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
@@ -2324,7 +2153,6 @@ Referenced by:
 - CLAUDE.md:29 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
 - docs/cards.md:12 (link) — | [Validation](cards/validation.md) | How `bbx validate` reaches agents and commits: the hooks and the canonical ref rew
 - docs/cards/format.md:144 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
-- docs/guides.md:34 (link) — | Card validation hooks | [docs/cards/validation.md](cards/validation.md) |
 - docs/implemented-plans/doc-structure-cards.md:60 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:318 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
 - docs/testing.md:42 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
@@ -2370,7 +2198,6 @@ Title: "Quick chat" | 121 lines | current reference
 
 Referenced by:
 - docs/chat.md:14 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
-- docs/guides.md:53 (link) — | Quick chat routing and rubric | [docs/chat/quick-chat.md](chat/quick-chat.md) |
 
 References:
 - → docs/box/quick-chat.md (link)
@@ -2382,8 +2209,6 @@ Title: "Chat review" | 172 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Review](chat/review.md) | The nightly pass that writes a title, `contains`, and `contains-evidence` to each session's
-- docs/guides.md:56 (link) — | Chat review (nightly titles + summaries) | [docs/chat/review.md](chat/review.md) |
-- docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-review.md` | `chat/review.md` | |
 - ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../beebox/docs/chat/review.md): its journal is keyed by
 - ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../beebox/docs/chat/review.md) keeps two pieces of state
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat/review.md`.
@@ -2402,7 +2227,6 @@ Referenced by:
 - docs/design/README.md:32 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:22 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
-- docs/guides.md:41 (link) — | Agent-set chat timers (`<schedule>` tag) | [docs/chat/schedules.md](chat/schedules.md) |
 - docs/implemented-plans/design-reconciliation.md:576 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:67 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:245 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
@@ -2443,7 +2267,6 @@ Title: "Chat sessions" | 99 lines | current reference
 Referenced by:
 - docs/chat.md:10 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
 - docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
-- docs/guides.md:54 (link) — | Chat session lifecycle | [docs/chat/sessions.md](chat/sessions.md) |
 - docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat/sessions.md` protocol doc for the
 - docs/implemented-plans/doc-structure-chat.md:65 (mention) — | `chat-session-lifecycle.md` "Phases", "The contract", "Shared code" | `chat/sessions.md` | |
@@ -2468,7 +2291,6 @@ Referenced by:
 - docs/connectors/google-auth.md:103 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:31 (link) — [`../calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../connectors/calendar.md).
-- docs/guides.md:61 (link) — | Calendar integration | [docs/connectors/calendar.md](connectors/calendar.md) |
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
 - docs/implemented-plans/mvp-implementation-guide.md:692 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
@@ -2641,7 +2463,7 @@ References:
 Title: "docs/design/ — engineering rationale" | 42 lines | design rationale
 
 Referenced by:
-- docs/guides.md:16 (link) — | Design rationale | [docs/design/README.md](design/README.md) |
+- docs/guides.md:20 (link) — | Design rationale, one small file per topic | [design](design/README.md) |
 - docs/implemented-plans/mvp-implementation-guide.md:10 (mention) — > that postdate it; current design rationale is `../design/README.md`. Known
 - docs/reports/stack-decisions-2026-09-04.md:3 (link) — > Historical. Frozen as of 2026-09-04 and moved out of the live reference area: it records why the stack was chosen, not
 
@@ -2705,6 +2527,109 @@ References:
 - → docs/design/durability-and-provenance.md (mention)
 - → docs/triage.md (link)
 - → docs/glossary.md (mention)
+
+### docs/development/
+
+#### docs/development/agent-coding.md
+
+Title: "Agent coding, and the checks around it" | 50 lines | current reference
+
+Referenced by:
+- docs/development.md:11 (link) — **[Agent coding, and the checks around it](development/agent-coding.md)** covers where those
+- docs/development/technologies.md:4 (mention) — coding and the checks around it](agent-coding.md), [the development
+- docs/development/workflow.md:4 (link) — [agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
+- docs/implemented-plans/doc-structure-development.md:55 (mention) — | Lint suppression rule | agent-coding.md, engineering-principles.md #11, code-style.md | three homes; the narrative pag
+
+References:
+- → docs/development.md (link)
+- → docs/development/workflow.md (link)
+- → docs/testing.md (link)
+- → docs/development/technologies.md (link)
+- → CLAUDE.md (mention)
+- → code-style.md (mention)
+- → frontend.md (mention)
+- → code-style.md (link)
+
+#### docs/development/maintenance.md
+
+Title: "Code Maintenance" | 86 lines | current reference
+
+Referenced by:
+- code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
+- docs/README.md:120 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
+- docs/cards/migrations.md:515 (link) — - [Maintenance](../development/maintenance.md), where `bbx migrate` and `clean-broken-refs.ts` sit among the periodic to
+- docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
+- docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
+- docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
+- docs/implemented-plans/doc-structure-install-server.md:112 (mention) — `maintenance.md` (dev-repo code maintenance), `scheduler.md` (the tick
+- docs/implemented-plans/doc-structure.md:180 (mention) — - Periodic checks appear in `testing.md` "Periodic Checks", `maintenance.md`,
+- docs/implemented-plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/development/maintenance.md).
+- docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/development/maintenance.md`
+- docs/implemented-plans/scheduled-workstreams.md:253 (mention) — **Why this needs to change.** Today the catalog (`docs/development/maintenance.md`
+- docs/plans/agent-docs.md:384 (mention) — `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
+- docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XM
+- docs/testing/knowledge-audits.md:19 (link) — [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun
+- src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/d
+- user-stories/catalog/2026-08-21.md:8797 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/development/maintenance.md`
+- ../.claude/skills/security-report/SKILL.md:96 (mention) — or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
+- ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `beebox/docs/development/maintenance.md`.
+- ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/development/maintenance.md` says
+- ../issues/closed/code-quality/2026-08-25-oxlint-circular-no-cadence.md:20 (mention) — What remains is the smaller half. `beebox/docs/development/maintenance.md` lists two
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
+- ../issues/closed/exploration/2026-07-25-opengrep-self-cve-scanner.md:11 (mention) — > Closed 2026-09-05 (`fixed?` confirmed): `security/opengrep/`, `pnpm security:opengrep`, and the `docs/development/main
+- ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/development/maintenance.md`
+- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/development/maintenance.md` has the details). Every fragment has
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:17 (mention) — `beebox/docs/development/maintenance.md` with a cadence, or a scheduled routine):
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:64 (mention) — `docs/development/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
+
+References:
+- → CLAUDE.md (mention)
+- → docs/development/workflow.md (link)
+- → docs/implemented-plans/scheduled-workstreams.md (mention)
+- → docs/testing/knowledge-audits.md (mention)
+- → docs/testing/session-critiques.md (mention)
+- → docs/scheduled/csp-violation-review.md (mention)
+- → docs/architecture/CLAUDE.md (mention)
+- → docs/cards/migrations.md (mention)
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
+
+#### docs/development/technologies.md
+
+Title: "Technologies and AI services" | 44 lines | current reference
+
+Referenced by:
+- docs/development.md:31 (link) — **[Technologies and AI services](development/technologies.md)** names the stack and the
+- docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
+- docs/development/workflow.md:5 (mention) — services](technologies.md).
+- docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
+- docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+
+References:
+- → docs/development.md (link)
+- → docs/development/agent-coding.md (mention)
+- → docs/testing.md (link)
+- → docs/development/workflow.md (mention)
+- → docs/secrets.md (link)
+
+#### docs/development/workflow.md
+
+Title: "The development workflow" | 104 lines | current reference
+
+Referenced by:
+- docs/development.md:23 (link) — **[The development workflow](development/workflow.md)** covers how a piece of
+- docs/development/agent-coding.md:4 (link) — [the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
+- docs/development/maintenance.md:32 (link) — [recurring work](workflow.md#recurring-work).
+- docs/development/technologies.md:5 (mention) — workflow](workflow.md), and [testing](../testing.md).
+- docs/implemented-plans/doc-structure-development.md:63 (mention) — | `development-workflow.md` | `development/workflow.md` |
+- docs/testing.md:27 (link) — ([recurring work](development/workflow.md#recurring-work)), bisected to the
+
+References:
+- → docs/development.md (link)
+- → docs/development/agent-coding.md (link)
+- → docs/testing.md (link)
+- → docs/development/technologies.md (mention)
+- → docs/plans/README.md (link)
 
 ### docs/implemented-plans/
 
@@ -2790,7 +2715,7 @@ References:
 - → ../issues/closed/bugs/2026-09-14-card-submission-asset-bytes-silently-unstaged.md (frontmatter)
 - → ../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md (frontmatter)
 - → code-style.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -2873,7 +2798,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:24 (mention) — on paper: `docs/implemented-plans/asset-manifests.md` opens with **"Status:
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/plans/asset-annex.md (link)
 - → ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md (link)
 
@@ -2886,7 +2811,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (mention)
 
@@ -2930,7 +2855,7 @@ References:
 - → docs/plans/narration-mode.md (mention)
 - → docs/triage.md (mention)
 - → README.md (mention)
-- → docs/prompt-logging.md (mention)
+- → docs/prompts/logging.md (mention)
 - → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/box-git-lock.md
@@ -2962,7 +2887,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:277 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:294 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3014,7 +2939,7 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → src/dev/CLAUDE.md (mention)
 
 #### docs/implemented-plans/box-root-paths.md
@@ -3134,7 +3059,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/capture-mode.md (mention)
@@ -3284,7 +3209,6 @@ Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
 - docs/cards/migrations.md:513 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:93 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
-- docs/guides.md:28 (link) — | Card format design history (RFC) | [docs/implemented-plans/cards-as-markdown-rfc.md](implemented-plans/cards-as-markdo
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/reports/stack-decisions-2026-09-04.md:806 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
@@ -3605,7 +3529,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:51 (mention) — `courseware-phase1.md` ("built and on `main`"), `web-page-commentary.md`
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
@@ -3666,7 +3590,7 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/design/trust.md (mention)
 
 #### docs/implemented-plans/design-reconciliation.md
@@ -3750,7 +3674,6 @@ References:
 - → docs/chat/history.md (mention)
 - → docs/chat/schedules.md (mention)
 - → docs/implemented-plans/chat-review.md (mention)
-- → docs/chat/review.md (mention)
 - → docs/chat/composer.md (mention)
 - → docs/chat/scroll.md (mention)
 - → CLAUDE.md (mention)
@@ -3773,6 +3696,22 @@ References:
 - → docs/secrets.md (mention)
 - → docs/server/configuration.md (mention)
 - → docs/server/boxes.md (mention)
+
+#### docs/implemented-plans/doc-structure-development.md **[ORPHAN]**
+
+Title: "Documentation structured like code: how development happens" | 154 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → code-style.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/module-map.md (mention)
+- → docs/development/maintenance.md (mention)
+- → docs/development/agent-coding.md (mention)
+- → docs/development.md (mention)
+- → docs/development/workflow.md (mention)
+- → docs/development/technologies.md (mention)
+- → docs/secrets.md (mention)
 
 #### docs/implemented-plans/doc-structure-install-server.md **[ORPHAN]**
 
@@ -3798,11 +3737,34 @@ References:
 - → docs/server/boxes.md (mention)
 - → docs/server/operations.md (mention)
 - → docs/testing.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → docs/scheduler.md (mention)
 - → deploy/CLAUDE.md (mention)
-- → docs/technologies.md (mention)
+- → docs/development/technologies.md (mention)
 - → docs/security-report.md (mention)
+
+#### docs/implemented-plans/doc-structure-media.md **[ORPHAN]**
+
+Title: "Documentation structured like code: media" | 130 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → docs/media.md (mention)
+- → docs/media/assets.md (mention)
+- → docs/media/image-orientation.md (mention)
+- → docs/media/image-transforms.md (mention)
+- → docs/box/phone-photos.md (mention)
+
+#### docs/implemented-plans/doc-structure-prompts.md **[ORPHAN]**
+
+Title: "Documentation structured like code: the prompt surface" | 163 lines | shipped history | implemented
+
+References:
+- → docs/README.md (link)
+- → docs/prompts.md (mention)
+- → docs/prompts/lenses.md (mention)
+- → docs/prompts/logging.md (mention)
+- → docs/model-policy.md (mention)
 
 #### docs/implemented-plans/doc-structure.md
 
@@ -3824,12 +3786,11 @@ References:
 - → docs/doc-graph.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/implemented-plans/docs-reorg.md (link)
-- → docs/development-process.md (mention)
 - → README.md (mention)
 - → docs/testing.md (mention)
 - → docs/testing/tours.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → CLAUDE.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/testing/doctests.md (mention)
@@ -3841,8 +3802,6 @@ References:
 - → docs/reports/knowledge-taxonomy-catalog-2026-02-23.md (mention)
 - → docs/guides.md (mention)
 - → docs/questions.md (mention)
-- → docs/development-workflow.md (mention)
-- → docs/prompt-audits.md (mention)
 - → docs/implemented-plans/chat-review.md (mention)
 
 #### docs/implemented-plans/docs-reorg.gap-analysis.md
@@ -3907,13 +3866,11 @@ References:
 - → docs/procedure-implementation.md (mention)
 - → docs/glossary.md (mention)
 - → docs/connectors.md (mention)
-- → docs/prompt-audits.md (mention)
 - → docs/reports/knowledge-audit-rerun-2026-07-03.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 - → deploy/README.md (mention)
 - → docs/adding-api-endpoints.md (mention)
-- → docs/prompt-logging.md (mention)
 - → docs/scheduler.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/implemented-plans/link-validation-fix.md (mention)
@@ -3932,7 +3889,7 @@ References:
 - → docs/event-bus.md (mention)
 - → docs/README.md (mention)
 - → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 
 #### docs/implemented-plans/drive-folder-mounts.md
 
@@ -4336,8 +4293,8 @@ References:
 Title: "Mobile parity & contract-sync discipline" | 292 lines | shipped history | implemented
 
 Referenced by:
+- docs/development/maintenance.md:69 (mention) — | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile wo
 - docs/implemented-plans/ios-per-box-device-lock.md:43 (mention) — (`docs/implemented-plans/mobile-parity-sync.md:115-134`). This feature changes
-- docs/maintenance.md:69 (mention) — | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile wo
 - docs/mobile-contract.md:14 (mention) — contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
 - docs/mobile-parity.md:4 (mention) — Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
 - docs/plans/android-companion-app.md:574 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
@@ -4347,7 +4304,7 @@ References:
 - → CLAUDE.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/mobile-parity.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 
 #### docs/implemented-plans/mobile-token-handshake.md
 
@@ -4988,7 +4945,7 @@ Referenced by:
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/plans/pdf-intake-design.md (mention)
@@ -5032,7 +4989,7 @@ References:
 Title: "Scheduled workstreams" | 731 lines | shipped history | implemented
 
 Referenced by:
-- docs/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
+- docs/development/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
 - ../bin/docs/schedules.md:79 (mention) — Background: `beebox/docs/implemented-plans/scheduled-workstreams.md`.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
@@ -5044,7 +5001,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
@@ -5065,7 +5022,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:193 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:193 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:209 (mention) — level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 - user-stories/catalog/2026-08-21.md:9044 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -5102,7 +5059,7 @@ References:
 
 #### docs/implemented-plans/secret-entry-guidance.md
 
-Title: "Secret entry that explains itself" | 542 lines | shipped history | implemented
+Title: "Secret entry that explains itself" | 543 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:19 (mention) — > `beebox/docs/implemented-plans/secret-entry-guidance.md`.
@@ -5481,6 +5438,7 @@ Title: "Web Push notifications" | 514 lines | shipped history | implemented
 Referenced by:
 - docs/implemented-plans/web-push-notifications.review-codex.md:2 (mention) — title: "Codex review — web-push-notifications.md"
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:6 (frontmatter) — design: ../../beebox/docs/implemented-plans/web-push-notifications.md
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:22 (mention) — (plan: `beebox/docs/implemented-plans/web-push-notifications.md`), but prod has no
 
 References:
 - → docs/box-layout.md (mention)
@@ -5604,7 +5562,6 @@ References:
 Title: "Installing beebox with an AI agent" | 103 lines | current reference
 
 Referenced by:
-- docs/guides.md:13 (link) — | Agent-driven install (for a user's AI assistant) | [docs/install/agent.md](install/agent.md) |
 - docs/implemented-plans/doc-structure-install-server.md:78 (mention) — | `agent-install.md` | `install/agent.md` |
 - docs/implemented-plans/local-password-auth.md:534 (mention) — `docs/install/agent.md` gain the first-run account step;
 - docs/implemented-plans/remove-open-mode.md:51 (mention) — `docs/install/agent.md`, implemented-plans (historical — leave those).
@@ -5628,7 +5585,6 @@ Title: "Developer install (from source)" | 178 lines | current reference
 
 Referenced by:
 - docker/README.md:18 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/install/developer.md` from a fresh `de
-- docs/guides.md:11 (link) — | Developer install (from source) | [docs/install/developer.md](install/developer.md) |
 - docs/implemented-plans/doc-structure-install-server.md:76 (mention) — | `developer-install.md` | `install/developer.md` |
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
 - docs/install.md:10 (link) — | From source | Hacking on the engine itself. | [Developer](install/developer.md) |
@@ -5652,7 +5608,6 @@ Referenced by:
 - deploy/CLAUDE.md:4 (mention) — is not the install path — that is the container flow in `docs/install/docker.md`
 - deploy/README.md:5 (link) — > [`../docs/install/docker.md`](../docs/install/docker.md).
 - docker/README.md:5 (link) — [`../docs/install/docker.md`](../docs/install/docker.md); this file is a map
-- docs/guides.md:12 (link) — | Docker install (local + VPS) | [docs/install/docker.md](install/docker.md) |
 - docs/implemented-plans/doc-structure-install-server.md:77 (mention) — | `docker-install.md` | `install/docker.md` |
 - docs/implemented-plans/local-password-auth.md:533 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
 - docs/implemented-plans/remove-open-mode.md:50 (mention) — - Docs mentioning the opt-out: `docs/install/docker.md`,
@@ -5679,6 +5634,65 @@ References:
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 - → docs/implemented-plans/expose-dev-router.md (mention)
 
+### docs/media/
+
+#### docs/media/assets.md
+
+Title: "Assets" | 236 lines | current reference
+
+Referenced by:
+- docs/cards.md:20 (link) — - Media that cards attach: [assets](media/assets.md).
+- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
+- docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
+- docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../media/assets.md).
+- docs/implemented-plans/attach-directories-superseded.md:14 (link) — > [`assets.md`](../media/assets.md).
+- docs/implemented-plans/bulk-file-upload.md:14 (link) — > upload design is live. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/courseware-phase1.md:12 (link) — > unaffected. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/design-md-retired-sections.md:12 (link) — > their contents held by git-annex. Current model: [`assets.md`](../media/assets.md).
+- docs/implemented-plans/doc-structure-media.md:46 (mention) — | `assets.md` | `media/assets.md` |
+- docs/implemented-plans/scanner-ingest.md:14 (link) — > [`assets.md`](../media/assets.md).
+- docs/media.md:11 (link) — | [Assets](media/assets.md) | git-annex: the model, the extension allowlist, absent content, configuration, commands, fa
+- docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
+- docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/asset-offbox-storage.md:15 (link) — > [`../assets.md`](../media/assets.md).
+- docs/plans/capture-fast-landing.md:14 (link) — > Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/container-first-pass2.review.md:91 (mention) — `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
+- docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
+- docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
+- docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/workstream-exhibits.md:62 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
+- docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
+- docs/server/operations.md:208 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
+- ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/media/assets.md` records "3,655 manifests removed", the old
+- ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/media/assets.md` — no install or deploy doc says to install it.
+- ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/media/assets.md`); only migrations
+
+References:
+- → docs/reports/git-annex-conversion-2026-08-01.md (link)
+- → docs/plans/asset-offbox-storage.md (link)
+
+#### docs/media/image-orientation.md
+
+Title: "Image orientation" | 55 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/doc-structure-media.md:47 (mention) — | `image-orientation.md` | `media/image-orientation.md` |
+- docs/media.md:12 (link) — | [Image orientation](media/image-orientation.md) | The invariant that an image at rest is upright with no EXIF orientat
+- docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
+- ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/media/image-orientation.md`.
+
+References:
+- → ../beebox/test/shared/image-orientation.doctest.md (link)
+
+#### docs/media/image-transforms.md
+
+Title: "Image transforms" | 45 lines | current reference
+
+Referenced by:
+- docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](media/image-transforms.md))
+- docs/implemented-plans/doc-structure-media.md:48 (mention) — | `image-transforms.md` | `media/image-transforms.md`, with headings (its facts sat above any heading) |
+- docs/media.md:13 (link) — | [Image transforms](media/image-transforms.md) | `/api/images/*`: the parameters, the errors, the cache, and the helper
+
 ### docs/plans/
 
 #### docs/plans/agent-docs.md
@@ -5696,7 +5710,6 @@ References:
 - → docs/triage.md (mention)
 - → docs/plans/README.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/prompt-logging.md (mention)
 - → docs/doc-graph.md (mention)
 - → ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md (link)
 - → CLAUDE.md (mention)
@@ -5719,10 +5732,10 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/cards/migrations.md (mention)
 - → docs/server/health-checks.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/testing.md (mention)
 - → docs/testing/tours.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → docs/security-report.md (mention)
 - → code-style.md (mention)
 - → frontend.md (mention)
@@ -5780,14 +5793,14 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md:13 (mention) — `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/plans/asset-offbox-storage.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/scheduler.md (mention)
-- → docs/image-orientation.md (mention)
+- → docs/media/image-orientation.md (mention)
 - → docs/cards/migrations.md (mention)
 - → docs/testing.md (mention)
 - → docs/plans/README.md (mention)
@@ -5797,12 +5810,12 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 597 lines | proposal | active
 
 Referenced by:
-- docs/assets.md:230 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/media/assets.md:232 (link) — [`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:52 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 - ../issues/closed/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:38 (mention) — Historical mentions in `docs/plans/asset-offbox-storage.md`,
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/plans/asset-annex.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -5824,7 +5837,7 @@ Referenced by:
 References:
 - → code-style.md (mention)
 - → docs/implemented-plans/selection-commentary.md (mention)
-- → docs/prompt-audits.md (mention)
+- → docs/prompts/lenses.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/plans/box-glm-provider.md
@@ -5852,7 +5865,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-04-tmp-capture-glob-swallows-child-cards.md:36 (mention) — from `beebox/docs/plans/capture-fast-landing.md`, which makes the
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/mobile-contract.md (mention)
 
 #### docs/plans/change-based-test-selection.md
@@ -6045,9 +6058,10 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/capture-mode.md (mention)
+- → docs/prompts.md (mention)
 - → docs/triage.md (mention)
 - → docs/server/boxes.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 
 #### docs/plans/codex-session-startup-auth.md **[ORPHAN]**
 
@@ -6101,7 +6115,7 @@ References:
 Title: "Plan Engineering Review 2 — container-first" | 534 lines | plan review
 
 References:
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/engineering-principles.md (mention)
 
 #### docs/plans/container-first.md
@@ -6125,7 +6139,7 @@ References:
 - → docs/plans/installation-story.md (mention)
 - → CLAUDE.md (mention)
 - → deploy/README.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/plans/README.md (mention)
 - → docs/install/docker.md (mention)
 - → docs/install/agent.md (mention)
@@ -6138,7 +6152,7 @@ Title: "Plan Engineering Review — container-first" | 802 lines | plan review
 
 References:
 - → docs/plans/container-first.md (mention)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/plans/installation-story.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -6266,7 +6280,6 @@ Referenced by:
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/interface-as-cards-background.md:5 (link) — below describe earlier discussions; the current [implementation plan](../plans/interface-as-cards.md)
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
-- docs/guides.md:64 (link) — | Interface-as-cards design | [docs/plans/interface-as-cards.md](plans/interface-as-cards.md) |
 - docs/implemented-plans/card-themes.md:18 (link) — [interface as cards](../plans/interface-as-cards.md),
 - docs/implemented-plans/design-reconciliation.md:26 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/implemented-plans/docs-reorg.md:41 (mention) — files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
@@ -6541,7 +6554,6 @@ References:
 Title: "PDF Intake" | 222 lines | proposal | partial
 
 Referenced by:
-- docs/guides.md:62 (link) — | PDF intake partial design history | [docs/plans/pdf-intake-design.md](plans/pdf-intake-design.md) |
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/scanner-ingest.md:50 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
 - docs/implemented-plans/user-story-audit-followups.md:61 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
@@ -6550,7 +6562,7 @@ Referenced by:
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:21 (link) — [pdf-intake-design](../../beebox/docs/plans/pdf-intake-design.md), as
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/scan-upload-contract.md (link)
 - → docs/glossary.md (link)
 - → docs/implemented-plans/asset-manifests.md (link)
@@ -6562,7 +6574,7 @@ Title: "Prompt Surface Cleanup — Evaluation" | 994 lines | proposal | active
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/job-xml-purge.subplan.md:31 (mention) — (`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
-- docs/prompt-surface-review.md:56 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](plans/prompt-surface-cleanup-evaluation.md) is the worked exampl
+- docs/prompts/review.md:63 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
 - → CLAUDE.md (mention)
@@ -6644,6 +6656,25 @@ References:
 - → docs/plans/public-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
 
+#### docs/plans/publish-custom-domain-admin.md
+
+Title: "Assign a custom hostname to a prepared publication in Admin" | 156 lines | proposal | partial
+
+Referenced by:
+- docs/plans/publish-custom-domain-admin.review.md:3 (mention) — Independent Fable review of `publish-custom-domain-admin.md`, followed by source verification and adjudication. The user
+- docs/plans/publish-sites-admin.md:247 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
+
+References:
+- → docs/plans/publish-sites-admin.md (mention)
+- → docs/engineering-principles.md (mention)
+
+#### docs/plans/publish-custom-domain-admin.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — custom hostname assignment" | 91 lines | plan review
+
+References:
+- → docs/plans/publish-custom-domain-admin.md (mention)
+
 #### docs/plans/publish-pages.md
 
 Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 281 lines | proposal | active
@@ -6679,7 +6710,8 @@ References:
 Title: "Static site publishing with admin setup and human approval" | 292 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:496 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/plans/publish-custom-domain-admin.md:11 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
+- docs/security-report.md:514 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 
 References:
 - → ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
@@ -6692,6 +6724,7 @@ References:
 - → frontend.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)
+- → docs/plans/publish-custom-domain-admin.md (link)
 
 #### docs/plans/publish-sites-admin.review.md **[ORPHAN]**
 
@@ -6706,7 +6739,8 @@ Title: "docs/plans/ — proposals and in-flight plans" | 79 lines | current refe
 
 Referenced by:
 - docs/README.md:19 (link) — status line. See [plan conventions](plans/README.md) for required fields.
-- docs/development-workflow.md:82 (link) — are in [plans/README.md](plans/README.md).
+- docs/development/workflow.md:86 (link) — are in [plans/README.md](../plans/README.md).
+- docs/guides.md:23 (link) — | Plans, implemented plans, unimplemented plans, reports | [plans](plans/README.md), `implemented-plans/`, `unimplemente
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/workstreams.md:706 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
@@ -6851,7 +6885,6 @@ References:
 Title: "Source Editor Plan" | 150 lines | proposal | active
 
 Referenced by:
-- docs/guides.md:63 (link) — | Source editor proposal (unimplemented) | [docs/plans/source-editor.md](plans/source-editor.md) |
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/reports/plan-directory-migration-history-2026-09-13.md:21 (mention) — `source-editor.md` (unimplemented proposal). The intake → triage → handle
 
@@ -6941,7 +6974,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md (frontmatter)
-- → docs/assets.md (mention)
+- → docs/media/assets.md (mention)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → docs/plans/workstreams-app.md (mention)
@@ -6981,6 +7014,58 @@ References:
 - → ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md (link)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
+
+### docs/prompts/
+
+#### docs/prompts/lenses.md
+
+Title: "Prompt lenses" | 214 lines | current reference
+
+Referenced by:
+- docs/connectors.md:101 (link) — [prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
+- docs/implemented-plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
+- docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
+- docs/prompts/review.md:7 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
+- ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#park-ignored-proactive
+- ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
+- ../issues/exploration/2026-05-19-universal-confidence-rubric.md:15 (link) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
+- ../issues/features/2026-05-19-agent-loop-hooks.md:19 (link) — - **Link enforcement** (*Link, don't name* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#link-dont-name) aud
+- ../issues/features/2026-05-19-spark-mode.md:15 (link) — - Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/promp
+
+References:
+- → docs/prompts/review.md (link)
+- → ../.claude/memory/tone-design.md (link)
+- → docs/connectors.md (link)
+
+#### docs/prompts/logging.md
+
+Title: "Prompt logging" | 213 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompts/logging.md` says so.
+- docs/implemented-plans/doc-structure-prompts.md:60 (mention) — | `prompt-logging.md` | `prompts/logging.md`; DOCID markers become a top-level heading |
+- user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompts/logging.md` provides detailed guidance on using the feature, confirming t
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/prompts/review.md
+
+Title: "Prompt surface review" | 71 lines | current reference
+
+Referenced by:
+- docs/prompts/lenses.md:7 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
+- src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
+- ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompts/review.md`; this skill routes a single
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:54 (mention) — `docs/prompts/review.md` before writing more than a couple of
+- ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompts/review.md` — the workflow for reasoning about
+- ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
+- ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
+
+References:
+- → docs/prompts/lenses.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/prompt-surface-cleanup-evaluation.md (link)
 
 ### docs/reports/
 
@@ -7044,11 +7129,11 @@ References:
 Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
 
 Referenced by:
-- docs/assets.md:8 (link) — [2026-08-01 conversion report](reports/git-annex-conversion-2026-08-01.md).
+- docs/media/assets.md:10 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
 - docs/server/operations.md:211 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
 
 References:
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/server/operations.md (link)
 - → docs/server/health-checks.md (link)
 - → ../issues/closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md (link)
@@ -7059,7 +7144,7 @@ Title: "Knowledge-audit full rerun — 2026-07-03" | 465 lines | dated report
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:113 (mention) — `knowledge-audit-rerun-2026-07-03.md` (orphaned), `user-stories.md`
-- docs/testing/knowledge-audits.md:19 (mention) — [maintenance](../maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.
+- docs/testing/knowledge-audits.md:19 (mention) — [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun
 
 References:
 - → docs/triage.md (mention)
@@ -7170,8 +7255,8 @@ Title: "Scheduled routine: CSP violation review" | 95 lines | current reference
 
 Referenced by:
 - docs/content-security-policy.md:94 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
+- docs/development/maintenance.md:53 (mention) — | CSP violation review | runbook: `docs/scheduled/csp-violation-review.md` | An agent analyzes new violations and *propo
 - docs/implemented-plans/docs-reorg.md:194 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
-- docs/maintenance.md:53 (mention) — | CSP violation review | runbook: `docs/scheduled/csp-violation-review.md` | An agent analyzes new violations and *propo
 - docs/scheduled/csp-violation-review.md:11 (mention) — `beebox/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:37 (mention) — - **CSP violation review** (`beebox/docs/scheduled/csp-violation-review.md`)
@@ -7190,7 +7275,6 @@ Title: "Boxes on the server" | 289 lines | current reference
 Referenced by:
 - README.md:97 (link) — - [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
 - deploy/README.md:22 (link) — | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
-- docs/guides.md:49 (link) — | Adding a box | [docs/server/boxes.md](server/boxes.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:493 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
 - docs/implemented-plans/doc-structure-connectors.md:127 (mention) — | 2 | yes | 13 | server/boxes.md#Connector secrets (the carve-out sentence) | 2; the home, google-setup.md#5, has no hea
 - docs/implemented-plans/doc-structure-install-server.md:83 (mention) — | `adding-a-box.md` (rest); `deploy/README.md` add-box.sh, Adding connector secrets | `server/boxes.md` |
@@ -7253,7 +7337,6 @@ Title: "Health Checks" | 297 lines | current reference
 Referenced by:
 - docs/cards/schemas.md:204 (link) — [`health-checks.md`](../server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
 - docs/connectors.md:75 (link) — [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
-- docs/guides.md:40 (link) — | Deployed-server health-check runbooks | [docs/server/health-checks.md](server/health-checks.md) |
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
@@ -7288,7 +7371,6 @@ Title: "Server operations" | 213 lines | current reference
 
 Referenced by:
 - deploy/README.md:23 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
-- docs/guides.md:48 (link) — | Server operations | [docs/server/operations.md](server/operations.md) |
 - docs/implemented-plans/box-migration.subplan.md:163 (mention) — **Server mechanics** (`docs/server/operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:494 (mention) — rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/implemented-plans/doc-structure-install-server.md:84 (mention) — | `deploy/README.md` prod-ssh, Production app diagnostics; `server-operations.md` Connecting, Writing scripts, Nightly u
@@ -7308,7 +7390,7 @@ References:
 - → docs/server/boxes.md (link)
 - → docs/server/health-checks.md (link)
 - → docs/client-debug-log.md (link)
-- → docs/assets.md (link)
+- → docs/media/assets.md (link)
 - → docs/reports/git-annex-conversion-2026-08-01.md (link)
 
 #### docs/server/provisioning.md
@@ -7361,7 +7443,6 @@ References:
 Title: "Field tests" | 55 lines | current reference
 
 Referenced by:
-- docs/guides.md:23 (link) — | Field tests (current runbook) | [docs/testing/field-testing.md](testing/field-testing.md) |
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 - docs/implemented-plans/doc-structure.md:307 (mention) — field-testing.md       is it discoverable end to end through the real UI?
 - docs/testing.md:41 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
@@ -7374,13 +7455,12 @@ References:
 Title: "Knowledge audits" | 206 lines | current reference
 
 Referenced by:
+- docs/development/maintenance.md:48 (mention) — | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/tes
 - docs/engineering-principles.md:174 (link) — ([`docs/knowledge-audits.md`](testing/knowledge-audits.md)).
-- docs/guides.md:59 (link) — | Knowledge audits | [docs/testing/knowledge-audits.md](testing/knowledge-audits.md) |
 - docs/implemented-plans/bbx-agent-surface.md:573 (mention) — `docs/knowledge-audits.md` exists to catch. Two `knows_directly` entries in
 - docs/implemented-plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/implemented-plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/implemented-plans/workstreams.md:1238 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
-- docs/maintenance.md:48 (mention) — | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/tes
 - docs/plans/document-comments.md:839 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
@@ -7403,7 +7483,7 @@ Referenced by:
 
 References:
 - → CLAUDE.md (mention)
-- → docs/maintenance.md (link)
+- → docs/development/maintenance.md (link)
 - → docs/reports/knowledge-audit-rerun-2026-07-03.md (mention)
 - → README.md (mention)
 - → MAP.md (at-include) **[BROKEN]**
@@ -7413,8 +7493,8 @@ References:
 Title: "Session critiques" | 59 lines | current reference
 
 Referenced by:
+- docs/development/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
 - docs/implemented-plans/doc-structure.md:302 (mention) — session-critiques.md   did the tools serve the agent in a real session?
-- docs/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
 - docs/testing.md:37 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
 
 #### docs/testing/smoke.md
@@ -7439,7 +7519,6 @@ Referenced by:
 Title: "Tours" | 166 lines | current reference
 
 Referenced by:
-- docs/guides.md:24 (link) — | Tours (browser walks for UI/a11y review) | [docs/testing/tours.md](testing/tours.md) |
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
 - docs/implemented-plans/card-themes.md:564 (link) — exhibit. Check contrast independently because [tours](../testing/tours.md) documents that
 - docs/implemented-plans/doc-structure.md:100 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
@@ -7677,13 +7756,21 @@ Referenced by:
 
 References:
 - → docs/testing/knowledge-audits.md (mention)
-- → docs/maintenance.md (mention)
-- → docs/prompt-surface-review.md (mention)
+- → docs/development/maintenance.md (mention)
+- → docs/prompts/review.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/README.md (mention)
 - → docs/architecture/CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 14 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 
@@ -7735,7 +7822,7 @@ Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:41 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/CLAUDE.md). Connectors live in `src/conn
-- docs/connectors.md:107 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
+- docs/connectors.md:121 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/CLAUDE.md`).
 - docs/implemented-plans/capture-mode.md:621 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image
@@ -7818,7 +7905,7 @@ References:
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/landmarks.md (mention)
 - → docs/cards/schemas.md (mention)
-- → docs/prompt-logging.md (mention)
+- → docs/prompts/logging.md (mention)
 - → docs/implemented-plans/websocket-chat-transport.md (mention)
 - → CLAUDE.md (mention)
 - → docs/plans/narration-mode.md (mention)
@@ -7865,8 +7952,9 @@ References:
 - → path.md (at-include) **[BROKEN]**
 - → docs/plans/publish-pages.md (mention)
 - → docs/box-layout.md (mention)
+- → docs/prompts.md (mention)
 - → docs/doc-graph.md (mention)
-- → docs/maintenance.md (mention)
+- → docs/development/maintenance.md (mention)
 - → docs/implemented-plans/secret-custody.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/cards/schemas.md (mention)

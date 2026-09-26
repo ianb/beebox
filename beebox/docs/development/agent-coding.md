@@ -1,7 +1,7 @@
 # Agent coding, and the checks around it
 
-Part of [how development happens here](development-process.md). See also
-[the development workflow](development-workflow.md), [testing](testing.md), and [technologies and AI services](technologies.md).
+Part of [how development happens here](../development.md). See also
+[the development workflow](workflow.md), [testing](../testing.md), and [technologies and AI services](technologies.md).
 
 ## Agent coding
 
@@ -29,11 +29,10 @@ The dial is up by default. The tsconfig is strict and `any` is banned, as is
 bare `catch {}`. A broken invariant gets a hard failure rather than a fallback.
 `as` assertions are treated like Rust's `unsafe` and are lint-banned. Defense
 concentrates at real boundaries; interior code trusts its types. The rules
-behind each of these live in [code-style.md](../code-style.md).
+behind each of these live in [code-style.md](../../code-style.md).
 
-Lint rules are never weakened to make code pass. The one sanctioned suppression
-is a single `// eslint-disable-next-line <rule> -- <justification>` for a true,
-narrow false positive.
+Lint rules are never weakened to make code pass; the one sanctioned suppression
+form is defined under [lint rule suppression](../../code-style.md#lint-rule-suppression).
 
 Noisy output is treated as a bug. Warnings, deprecations, and ignored-build
 lists cost agent context every time they appear, so the cause gets fixed rather

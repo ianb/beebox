@@ -110,7 +110,7 @@ sources:
   — codex #9 caught that `gdoc` is body-less and points at an attach file
   (`gdoc.tsx:39`). `gdoc` is still the precedent for the *idea* of a card
   standing in for external content, just not for the schema shape (Track C).
-- **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
+- **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
   *"links in card schemas always use `ref="..."` for the target, not
   href/path/url"*). `ref` is the box-relative, `bbx mv`-tracked form. External
   URLs are deliberately the *other* attribute, `href` — untracked by `bbx mv`,
@@ -307,7 +307,7 @@ default is an authoring convenience the agent stamps, not a render-time lookup.
   An untracked/web resource carries only the hash. On view, the renderer
   compares the anchor's **content hash** to the target's current hash; mismatch
   ⇒ flag "may be stale" (the `data_through` freshness shape from
-  `docs/prompt-audits.md` §"Cache freshness"). Re-anchoring is **not** in this
+  `docs/prompts/lenses.md` §"Cache freshness"). Re-anchoring is **not** in this
   track.
 - `placement` — carried verbatim from `<user-selection>` when present
   (`selection-serialize.ts:71`); per-anchor (never inherited). On a durable

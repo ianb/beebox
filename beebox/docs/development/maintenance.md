@@ -28,8 +28,8 @@ second copy of it. `bin/schedules logs <name>` reads a run's output;
 `bin/schedules install` registers the tick, once per machine, from the main
 checkout.
 
-The four enrolled today are the SDK release monitor, the Docling currency watch,
-the weekly manual test suite, and the weekly knip sweep.
+The current jobs and their cadences are listed under
+[recurring work](workflow.md#recurring-work).
 
 **Writing one:** the `bbx-authoring-schedules` skill — when a task should be a
 schedule at all, what a `run` script owes (exit 0 in silence, hand off only when

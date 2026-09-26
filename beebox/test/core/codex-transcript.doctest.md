@@ -112,11 +112,19 @@ normalizeCodexSdkToolItem({
 
 SDK threads are created by `codex exec`. The history app-server defaults to
 interactive sources, so listing must opt into both SDK and legacy execution
-sources and permit its JSONL metadata repair scan.
+sources. A listing reads the thread index alone; only a repair listing
+permits the JSONL metadata scan, which reads every session on the host.
 
 ```ts
-JSON.stringify(codexHistoryListParams(["/boxes/example"], "next"))
-=> {"cursor":"next","limit":100,"sortKey":"updated_at","sortDirection":"desc","cwd":["/boxes/example"],"sourceKinds":["cli","vscode","exec","appServer"],"useStateDbOnly":false}
+JSON.stringify(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: "next", repair: false }))
+=> {"cursor":"next","limit":100,"sortKey":"updated_at","sortDirection":"desc","cwd":["/boxes/example"],"sourceKinds":["cli","vscode","exec","appServer"],"useStateDbOnly":true}
+```
+
+A repair listing is the same request with the scan allowed:
+
+```ts
+JSON.stringify(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: null, repair: true })).includes('"useStateDbOnly":false')
+=> true
 ```
 
 User identity carried by beebox's message wrapper is normalized just as

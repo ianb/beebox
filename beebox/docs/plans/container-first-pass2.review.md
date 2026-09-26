@@ -88,7 +88,7 @@ Re-verified only where the revision now leans on it.
   (`Created-By: migration-sweep`); `src/core/box/index.ts:236` (`node_modules/`),
   `:246` (`_config/connectors/*.secret.*`), `:255-256` (`.beebox/`,
   `_content/docs/generated/`); `docs-refresh.ts:7-9`; `status.ts:37-42`;
-  `docs/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
+  `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
   `package.ts:122-137` / `:198-214`; `scripts/release.ts:84`;
   `auth-preflight.ts:40-41`. The first pass's five imprecise references are
   corrected.
@@ -111,7 +111,7 @@ Immich, Nextcloud AIO, Ghost-CLI #699, `CODEX_HOME`.
 
 ## Stated preferences this plan trades against
 
-Unchanged in substance; the revision adds `docs/assets.md` (annex, not LFS) and
+Unchanged in substance; the revision adds `docs/media/assets.md` (annex, not LFS) and
 the `entrypoint.sh:100-103` / `:107-110` policies, both correctly quoted. One
 preference is newly *strained* rather than traded: the sweep's dirty-box rule
 (`migration-sweep.ts:16`) is now bypassed by a `--no-verify` commit, which is a
@@ -385,7 +385,7 @@ not a hook) but not what `git annex pre-commit` itself does, and not the
 missing-binary guard, and cites nothing for either.
 **Why it matters:** The checkpoint commit is the one commit in the plan that
 writes the user's unreviewed working tree into their history, and asset boxes
-are the norm (`docs/assets.md`: twelve boxes migrated to annex).
+are the norm (`docs/media/assets.md`: twelve boxes migrated to annex).
 **Suggested action:** Determine what `git annex pre-commit .` does to a
 checkpoint (`annex.thin=false`, unlocked files) and either run it explicitly
 before the `--no-verify` commit or cite why skipping it is safe. Track F

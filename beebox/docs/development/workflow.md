@@ -1,7 +1,7 @@
 # The development workflow
 
-Part of [how development happens here](development-process.md). See also
-[agent coding and the checks around it](agent-coding.md), [testing](testing.md), and [technologies and AI
+Part of [how development happens here](../development.md). See also
+[agent coding and the checks around it](agent-coding.md), [testing](../testing.md), and [technologies and AI
 services](technologies.md).
 
 ## Workstreams
@@ -19,6 +19,8 @@ subagent so the merge and test churn stays out of the chat.
 reviews the changed lines, reconciles the plan, closes the issues the work
 resolved, and merges with `bin/land`. It cannot ask questions mid-run, so it
 merges only on a clean path and otherwise stops and says what needs deciding.
+
+### Commit provenance
 
 Commits carry provenance. Hooks stamp `Workstream:` and, when exactly one plan
 matches, `Plan:`. An `Issue:` trailer is added by hand and must name a real
@@ -53,9 +55,11 @@ One launchd tick drives all of them, and due-ness comes from persisted state, so
 a laptop that slept catches up once. Each run's report is a durable alert
 record, and a run ending with no report is itself a failure.
 
-The current jobs: `deferred-issues` and `full-suite` hourly on `main`; `box-convergence`,
-`docling-update`, and `sdk-update` daily; `cross-box-leak-scan`, `knip-sweep`,
-`manual-tests`, `smoke-review`, `supplemental-lint`, and `tour-check` weekly.
+`bin/schedules list` is the catalog. The jobs, by cadence: hourly on `main`,
+`box-convergence`, `deferred-issues`, and `full-suite`; daily, `alert-filing`,
+`docling-update`, and `sdk-update`; weekly, `agent-docs-refresh`,
+`cross-box-leak-scan`, `knip-sweep`, `manual-tests`, `smoke-review`,
+`supplemental-lint`, and `tour-check`.
 
 ## Document comments
 
@@ -79,7 +83,7 @@ partial, unmet, or unverifiable. A fully met plan moves to
 `docs/implemented-plans/`, a partial one stays put with its prose corrected, and
 an abandoned one moves to `docs/unimplemented-plans/`. Reference documentation
 stays flat in `docs/` and describes the system as it works now. The conventions
-are in [plans/README.md](plans/README.md).
+are in [plans/README.md](../plans/README.md).
 
 ## Exhibits
 

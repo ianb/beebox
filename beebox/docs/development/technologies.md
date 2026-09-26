@@ -1,8 +1,8 @@
 # Technologies and AI services
 
-Part of [how development happens here](development-process.md). See also [agent
+Part of [how development happens here](../development.md). See also [agent
 coding and the checks around it](agent-coding.md), [the development
-workflow](development-workflow.md), and [testing](testing.md).
+workflow](workflow.md), and [testing](../testing.md).
 
 ## Specific technologies
 
@@ -28,7 +28,7 @@ at view time.
 Beyond the coding agent, these are the only services box data leaves for, and
 each is configured by the person running the box. Keys live in a machine-level
 secrets store; a box gets access only when granted. The store and its grants are
-documented in [secrets.md](secrets.md).
+documented in [secrets.md](../secrets.md).
 
 Transcription has four backends: OpenAI Whisper, Mistral's Voxtral, Deepgram,
 and Microsoft's diarized service, the last reachable only through OpenRouter.

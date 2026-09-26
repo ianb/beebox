@@ -1,4 +1,8 @@
-# Prompt Logging for Agent Invocations
+# Prompt logging
+
+Capturing the full API traffic of an agent run, and confirming which generated docs reached it.
+
+## What it is
 
 When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic — including system prompts, CLAUDE.md content, and all context that Claude Code sends to the API.
 
@@ -7,7 +11,7 @@ This is useful for:
 - Debugging agent behavior by seeing exactly what context it received
 - Auditing what files and instructions were included in the system prompt
 
-## Enabling Prompt Logging
+## Enabling it
 
 Set `BBX_LOG_PROMPTS=1` before running any agent command:
 
@@ -23,7 +27,7 @@ bbx reactor
 
 Logs are written to `.beebox/logs/<session-id>.log` (gitignored).
 
-## How It Works
+## How it works
 
 When `BBX_LOG_PROMPTS=1` is set, each agent invocation:
 
@@ -34,7 +38,7 @@ When `BBX_LOG_PROMPTS=1` is set, each agent invocation:
 
 The proxy is transparent — it forwards all requests to `api.anthropic.com` unchanged and logs what passes through.
 
-## Reading Logs
+## Reading logs
 
 Each log file has a header with the session ID and timestamp, followed by the full API traffic.
 
@@ -53,7 +57,6 @@ In the system prompt you'll see blocks like:
 Contents of /path/to/boxes/test1/CLAUDE.md (project instructions):
 
 @.beebox/agent-guide.md
-
 
 Contents of /path/to/boxes/test1/.beebox/agent-guide.md (project instructions):
 
@@ -99,7 +102,27 @@ grep -c "Handling Questions" .beebox/logs/<session-id>.log
 grep "open-tab" .beebox/logs/<session-id>.log
 ```
 
-### DOCID markers for quick verification
+### Find the latest log
+
+```bash
+# Most recent log file
+ls -t .beebox/logs/*.log | head -1
+
+# View the system prompt from the latest run
+LATEST=$(ls -t .beebox/logs/*.log | head -1)
+sed -n '/📋 System Reminder/,/👤/p' "$LATEST"
+```
+
+### View the user prompt
+
+The user prompt appears after the `👤` marker at the end of the system prompt section:
+
+```bash
+# Show what the agent was asked to do
+grep "^👤" .beebox/logs/<session-id>.log
+```
+
+## DOCID markers
 
 Enable DOCID markers to embed unique identifiers in every generated doc:
 
@@ -131,27 +154,7 @@ Available markers:
 - `DOCID:.beebox/agent-guide.md` — the always-loaded agent guide (@-included in CLAUDE.md)
 - `DOCID:_content/docs/generated/intake-guide.md`, `DOCID:_content/docs/generated/card-<type>.md` (for box-local schemas), etc. — compiled from the box's own content
 
-### Find the latest log
-
-```bash
-# Most recent log file
-ls -t .beebox/logs/*.log | head -1
-
-# View the system prompt from the latest run
-LATEST=$(ls -t .beebox/logs/*.log | head -1)
-sed -n '/📋 System Reminder/,/👤/p' "$LATEST"
-```
-
-### View the user prompt
-
-The user prompt appears after the `👤` marker at the end of the system prompt section:
-
-```bash
-# Show what the agent was asked to do
-grep "^👤" .beebox/logs/<session-id>.log
-```
-
-## Session JSONL Files
+## Session JSONL files
 
 Claude Code also writes session transcripts to `~/.claude/projects/<encoded-path>/<session-id>.jsonl`. These contain the conversation messages (user prompts, assistant responses, tool calls) but NOT the system prompt.
 
@@ -177,7 +180,7 @@ jq -r 'select(.type == "assistant") | .message.content[] | select(.type == "tool
 jq -r 'select(.type == "assistant") | .message.usage' ~/.claude/projects/.../<session-id>.jsonl
 ```
 
-## Correlating Sessions
+## Correlating sessions
 
 Each agent invocation gets a unique session ID (UUID). This ID appears in:
 - The log filename: `.beebox/logs/<session-id>.log`
@@ -199,7 +202,7 @@ find ~/.claude -name "$SESSION.jsonl" -exec jq '.' {} \;
 git log --all --grep="Session: $SESSION"
 ```
 
-## Performance Note
+## Performance
 
 The logging proxy adds minimal latency (~1-2ms per request). The main cost is disk space for the log files, which can be large for multi-turn agent sessions. Clean up old logs with:
 
