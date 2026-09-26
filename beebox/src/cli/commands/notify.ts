@@ -23,7 +23,7 @@ import * as fs from "node:fs/promises";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../core/notify-boxholder.js";
+import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../core/notify-boxholder.js";
 import { describeRoute, notifyRoute, onServer, type NotifyRoute } from "./notify-route.js";
 import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } from "../../core/notification/intent.js";
 import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../core/notification/target.js";
@@ -156,11 +156,6 @@ function describe(delivery: Delivery): string {
   return `${delivery.channel} ${delivery.status}${delivery.detail === undefined ? "" : ` (${delivery.detail})`}`;
 }
 
-/** Reached: a channel sent it, or the person is in the app, which shows it. */
-function reached(result: NotifyResult): boolean {
-  return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
-}
-
 async function check(boxRoot: string, opts: { route: NotifyRoute; services: NotifyServices | undefined }): Promise<number> {
   const { route, services } = opts;
   const can =
@@ -207,7 +202,7 @@ async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun 
       channel,
     });
     const line = `${result.id}: ${result.deliveries.map(describe).join(", ") || "no channel tried"}`;
-    if (reached(result)) {
+    if (notificationReached(result)) {
       console.log(line);
     } else {
       console.error(`Not delivered: ${line}`);

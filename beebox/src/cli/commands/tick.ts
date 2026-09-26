@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import {
+  describeScheduleAction,
   parseScheduledScript,
   ScheduledScriptSchema,
 } from "../../schemas/scheduled-script.js";
@@ -126,9 +127,10 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     if (options.dryRun) {
-      if (!options.quiet) console.log(`Would run: ${scriptName} → ${parsed.runs}`);
+      const command = describeScheduleAction(parsed.action);
+      if (!options.quiet) console.log(`Would run: ${scriptName} → ${command}`);
       ranCount++;
-      scripts.push({ name: scriptName, status: "ran", command: parsed.runs });
+      scripts.push({ name: scriptName, status: "ran", command });
       continue;
     }
 

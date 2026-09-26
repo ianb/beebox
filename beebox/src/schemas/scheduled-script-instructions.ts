@@ -1,0 +1,55 @@
+/**
+ * The `instructions` prose for scheduled-script cards (agent-facing prompt
+ * surface). Split out of scheduled-script.tsx to keep that file under the
+ * line limit.
+ */
+
+export const SCHEDULED_SCRIPT_INSTRUCTIONS = `# Scheduled Script Cards
+
+Scheduled scripts define a command to run, or a notification to send, on a schedule. They live in \`_config/schedules/\`.
+
+## Schedule Types (mutually exclusive)
+- **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)
+- **at**: ISO datetime for a one-shot future execution
+- **rrule**: iCalendar RRULE for complex recurrence patterns
+
+## Frontmatter Fields
+- **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.
+- **on-wakeup**: If \`true\`, also run opportunistically during \`bbx wakeup\`, subject to not-before.
+- **once**: If \`true\`, the card is deleted after successful execution.
+- **until**: ISO datetime after which this schedule expires.
+- **enabled**: Set to \`false\` to disable without deleting. This is per-box state, not part of the shipped definition — a disabled schedule still receives upstream definition updates (new cron/runs/description) while staying disabled.
+- **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
+- **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
+- **timeout**: Max runtime for a single run, as a duration string (e.g. \`25m\`). Counts only awake time (machine sleep doesn't eat the budget). Default: \`10m\`. The run is killed when it exceeds this.
+- **runs**: The command to execute. Runs with cwd set to box root. A card has exactly one of \`runs\` and \`notify\`.
+- **notify**: Send the boxholder a notification instead of running a command: \`{title, body?, loudness?, target?, context?}\`. No agent and no shell run; the tick sends it. \`loudness\` is \`dot\`, \`quiet\`, or \`loud\` (default \`loud\` with \`requested-by: boxholder\`, else \`quiet\`). \`target\` is where a tap lands (default \`chat:new\`). \`context\` is a card path added to the body as a last line \`Context: <path>\`.
+- **requested-by**: \`boxholder\` when the boxholder asked for this schedule (a reminder asked for in chat). Leave it out for schedules the box set up itself.
+- **description**: Human-readable summary of what this schedule does.
+- **source**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
+- **create-after-success**: Optional array of \`{path, args?}\` entries. Create a card at \`path\` after successful execution; \`args\` are template arguments. Skipped if the target file already exists.
+- **requires**: Optional \`{connectors: [name, ...]}\`. The schedule won't run if any required connector isn't configured for this box.
+
+## Guidelines
+- Set reasonable not-before values to prevent hammering external services.
+- Use on-wakeup for things that should happen whenever the agent is active.
+- For one-shot future tasks, combine \`at\` with \`once: true\`.
+
+## Example: a reminder
+
+A reminder is a scheduled-script card with \`at\`, \`once: true\`, and \`notify:\`:
+
+\`\`\`yaml
+# _config/schedules/remind-pepper-vet.scheduled-script.card
+at: 2026-10-02T08:30
+once: true
+requested-by: boxholder
+description: Reminder asked for in chat on 2026-09-26
+notify:
+  title: Call the vet about Pepper's shots
+  loudness: loud
+  target: chat:new
+  context: _content/pets/pepper-shots.todo.card
+\`\`\`
+
+The scheduler sends it at that time and then deletes the card. Tapping it opens a new chat with the reminder and its context.`;

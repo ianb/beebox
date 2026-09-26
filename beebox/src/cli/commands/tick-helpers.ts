@@ -6,6 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
+  describeScheduleAction,
   isDue,
   isWithinBudget,
 } from "../../schemas/scheduled-script.js";
@@ -24,10 +25,9 @@ import type {
   loadScriptState,
   loadRunningScripts,
 } from "../../core/schedule/state.js";
-import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
+import { runScheduleAction } from "../../core/schedule/run-action.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
-import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
@@ -270,16 +270,8 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
   // tick to this script's unrelated failure.
   const scriptStartedAt = getBoxTime(boxRoot);
   try {
-    // Tooling profile: scheduled `runs:` commands are box tooling (mostly
-    // `bbx wakeup`, which syncs the connectors).
-    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "schedule",
-    });
-    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-      cwd: boxRoot,
-      stdio: options.quiet ? "ignore" : "inherit",
-      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-      env: scriptEnv,
+    const { durationMs, sleepAffected } = await runScheduleAction({
+      boxRoot, parsed, scriptName, triggeredBy: "schedule", stdio: options.quiet ? "ignore" : "inherit",
     });
 
     recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
@@ -287,7 +279,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
 
     await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
 
-    return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
+    return { name: scriptName, status: "ran", command: describeScheduleAction(parsed.action), durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
     const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
@@ -301,7 +293,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return {
       name: scriptName,
       status: outcome.result === "inconclusive" ? "inconclusive" : "error",
-      command: parsed.runs,
+      command: describeScheduleAction(parsed.action),
       durationMs,
       error: outcome.error,
     };

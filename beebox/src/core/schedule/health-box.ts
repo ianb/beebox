@@ -120,7 +120,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
         name, parsed, state, now, cardMtime, missingConnectors,
         engineWaitReason: engineWait ?? undefined,
       });
-      tasks.push(withParkedUpdates(task, { runs: parsed.runs, parked }));
+      tasks.push(withParkedUpdates(task, { runs: parsed.action.kind === "runs" ? parsed.action.command : undefined, parked }));
     } catch (err) {
       // A card that doesn't parse has no `runs` to read, but its own card may
       // still be the thing with a parked update — that is a likely cause.

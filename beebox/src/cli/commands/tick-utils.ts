@@ -25,17 +25,12 @@ import {
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
-import {
-  execWithTimeout,
-  CommandError,
-  SCRIPT_TIMEOUT,
-  type ExecTiming,
-} from "../../lib/exec-with-timeout.js";
+import { CommandError, type ExecTiming } from "../../lib/exec-with-timeout.js";
+import { runScheduleAction } from "../../core/schedule/run-action.js";
 import { parseCardName, getBoxDir } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
-import { buildToolingScriptEnv } from "../../core/script-env.js";
 import {
   boxEngineUnavailability,
   classifyScheduleFailure,
@@ -137,16 +132,8 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     // this pass to this script's unrelated failure.
     const scriptStartedAt = getBoxTime(boxRoot);
     try {
-      // Tooling profile: on-wakeup `runs:` commands are box tooling (mostly
-      // `bbx` invocations that sync connectors).
-      const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "wakeup",
-      });
-      const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-        cwd: boxRoot,
-        stdio: "inherit",
-        timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-        env: scriptEnv,
+      const { durationMs, sleepAffected } = await runScheduleAction({
+        boxRoot, parsed, scriptName, triggeredBy: "wakeup", stdio: "inherit",
       });
 
       recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });

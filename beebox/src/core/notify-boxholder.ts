@@ -57,6 +57,11 @@ export interface NotifyResult {
   deliveries: Delivery[];
 }
 
+/** Reached: a channel sent it, or the person is in the app, which shows it. */
+export function notificationReached(result: NotifyResult): boolean {
+  return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
+}
+
 /** A yes or no for each channel. */
 export interface ChannelFlags {
   apns: boolean;

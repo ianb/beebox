@@ -9,9 +9,8 @@ import {
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../../core/schedule/state.js";
-import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
+import { runScheduleAction } from "../../../core/schedule/run-action.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { buildToolingScriptEnv } from "../../../core/script-env.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import { classifyScheduleFailure } from "../../../core/schedule/engine-wait.js";
 
@@ -90,15 +89,8 @@ export async function runScheduledScript(
   });
 
   try {
-    // Tooling profile: same scheduled scripts as the `bbx tick` path.
-    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "webapp-trigger",
-    });
-    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-      cwd: boxRoot,
-      stdio: "ignore",
-      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-      env: scriptEnv,
+    const { durationMs, sleepAffected } = await runScheduleAction({
+      boxRoot, parsed, scriptName: name, triggeredBy: "webapp-trigger", stdio: "ignore",
     });
 
     recordOutcome(state, {
