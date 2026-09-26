@@ -90,11 +90,14 @@ says so in its `description` field instead, and a symlink has no marker.
 A generator's return value is its manifest. The rule and skill generators
 remove a file that carries the marker naming its own path and is not in the
 manifest, so a retired rule or skill does not linger. A file without the
-marker, such as a boxholder's own rule or skill, is left alone. The rule
-generator also removes any `card-<type>.md` or `connector-<name>.md` it did
-not write, since those names were engine-owned before the marker. Codex rule
-renders prune by their `beebox-rule-` name, and a `.agents/skills/<skill>`
-symlink goes when its target is gone.
+marker, such as a boxholder's own rule or skill, is left alone, with one
+exception: the name families the engine has always owned. Any
+`card-<type>.md`, `connector-<name>.md`, or `exposition-<course>.md` rule and
+any `.agents/skills/beebox-rule-*` directory the current run did not write is
+removed whether or not it carries the marker, because those names were engine
+output before the marker existed and a box must not shadow a generated rule
+under the same name. A boxholder's own rule takes a name outside those
+families. A `.agents/skills/<skill>` symlink goes when its target is gone.
 
 The sync commit (`commitTemplateSyncChanges`) sweeps the paths
 `isTemplateManagedPath` accepts: every git-tracked `tracked` or `generated`

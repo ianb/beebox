@@ -199,7 +199,7 @@ JSON.stringify(await documentedRows()) === JSON.stringify(registryRows)
 => true
 ```
 
-## Generators prune their marked orphans and leave unmarked files alone
+## Generators prune marked orphans and engine-owned name families; other unmarked files survive
 
 Plant, beside the managed files: a marked rule from a retired family, a marked
 retired skill, a marked file a managed skill no longer ships, a boxholder's
