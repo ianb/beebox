@@ -77,19 +77,70 @@ const preparedMarkup = renderToStaticMarkup(React.createElement(PublicationRevie
 }));
 ```
 
-Prepared review keeps its useful summary and file list, with no active or
+Prepared review keeps the file list and inspection actions, with no active or
 candidate content hashes exposed in the primary view.
 
 ```ts
 preparedMarkup.includes("Potential sensitive content")
-  && preparedMarkup.includes("Files: 1 · findings: 0 · binary files not inspected: 0")
-  && preparedMarkup.includes("No potential sensitive content detected in scanned text.")
+  && preparedMarkup.includes("Scanned for known secrets: no matches")
+  && !preparedMarkup.includes("Files:")
+  && !preparedMarkup.includes("Automated checks scan")
+  && (preparedMarkup.match(/Anyone with the link can view this without signing in/g) ?? []).length === 1
+  && preparedMarkup.includes("Anyone with the link can view this without signing in. It is unlisted, not private to named people.")
   && preparedMarkup.includes("release/very-long-generated-filename-that-should-wrap-on-mobile.html")
   && preparedMarkup.includes("Prepare a new candidate here")
   && preparedMarkup.includes("Prepare update for review")
+  && preparedMarkup.includes("Publish prepared update")
   && preparedMarkup.includes("/s/pub-reference-1/")
   && !preparedMarkup.includes("a".repeat(64))
   && !preparedMarkup.includes("b".repeat(64))
   && !preparedMarkup.includes("c".repeat(64))
+=> true
+```
+
+An unchanged scope and active release needs no repeated approval. A disabled
+site keeps the enable action for that existing approved release.
+
+```ts setup
+const alreadyApprovedSite = {
+  ...preparedSite,
+  approved: { tier: "secret", status: "disabled", expiresAt: null },
+  activeReleaseId: "b".repeat(64),
+  pending: { ...preparedSite.pending, releaseId: "b".repeat(64), requestedScope: { ...preparedSite.pending.requestedScope } },
+};
+const alreadyApprovedMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
+  site: alreadyApprovedSite as Publication,
+  sharedHost: null,
+  pending: false,
+  onPrepare: () => undefined,
+  onApprove: () => undefined,
+  onEnable: () => undefined,
+  onDisable: () => undefined,
+}));
+const destinationChangeMarkup = renderToStaticMarkup(React.createElement(PublicationReviewCard, {
+  site: {
+    ...preparedSite,
+    pending: {
+      ...preparedSite.pending,
+      requestedScope: {
+        ...preparedSite.pending.requestedScope,
+        sharedHost: { hostname: "publish.example.com", hostHandle: "host", path: "/s/pub-reference-1/" },
+      },
+    },
+  } as Publication,
+  sharedHost: { hostname: "publish.example.com", connectionName: "publishing", status: "attached" },
+  pending: false,
+  onPrepare: () => undefined,
+  onApprove: () => undefined,
+  onEnable: () => undefined,
+  onDisable: () => undefined,
+}));
+```
+
+```ts
+alreadyApprovedMarkup.includes("Enable site")
+  && !alreadyApprovedMarkup.includes("Approve audience and publish")
+  && !alreadyApprovedMarkup.includes("Publish prepared update")
+  && destinationChangeMarkup.includes("Approve destination and publish")
 => true
 ```
