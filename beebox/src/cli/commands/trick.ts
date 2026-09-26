@@ -21,6 +21,7 @@ import { buildScriptEnv } from "../../core/script-env.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
 import { readTrickSecrets, resolveTrickSecret } from "../lib/trick-secrets.js";
+import { BOX_PACKAGE_DOCS } from "../../core/docs-gen/shared.js";
 
 const require = createRequire(import.meta.url);
 
@@ -186,7 +187,7 @@ export const trickCommand = new Command("trick")
         console.log("No tricks found.");
         console.log("");
         console.log(`Create one at ${relScriptsDir}/<name>/index.ts`);
-        console.log(`See ${relScriptsDir}/CLAUDE.md for details.`);
+        console.log(`See ${BOX_PACKAGE_DOCS}/tricks.md for details.`);
         return;
       }
 

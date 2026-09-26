@@ -42,6 +42,7 @@ import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { withDocId } from "./docs-gen/shared.js";
 
 /**
  * Resolve `bin/bbx` to embed in a box's git hooks. Embedding an absolute path
@@ -105,6 +106,11 @@ const POST_COMMIT_PATH = ".git/hooks/post-commit";
 // only fires when an agent actually opens the file (Claude Code's `paths:`
 // frontmatter — the same mechanism the generated card rules use).
 const IGNORE_RULE_PATH = ".claude/rules/bbx-validate-ignore.md";
+/**
+ * The rule's path before the CLI rename. `generateRules` prunes only
+ * `card-*`/`connector-*`, so a box carried both files until this prune.
+ */
+const RETIRED_IGNORE_RULE_PATH = ".claude/rules/cb-validate-ignore.md";
 
 /**
  * `paths:` frontmatter is resolved by Claude Code relative to the project
@@ -366,7 +372,15 @@ async function installIgnoreScaffold(boxRoot: string): Promise<string[]> {
     changed.push(path.relative(boxRoot, seedAbs));
   }
 
-  const ruleBody = ignoreRuleBody();
+  const retiredAbs = path.join(boxRoot, RETIRED_IGNORE_RULE_PATH);
+  try {
+    await fs.rm(retiredAbs);
+    changed.push(RETIRED_IGNORE_RULE_PATH);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
+  }
+
+  const ruleBody = withDocId({ relativePath: IGNORE_RULE_PATH, content: ignoreRuleBody() });
   const ruleAbs = path.join(boxRoot, IGNORE_RULE_PATH);
   let ruleExisting: string | null = null;
   try {

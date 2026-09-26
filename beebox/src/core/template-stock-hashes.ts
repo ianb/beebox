@@ -38,13 +38,13 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "publications-guide-v1": {
-    current: "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
+    current: "05eb76019f668aa2d613aa248faf4687d51ce9e56cd060787a9d35c5a90de372",
     superseded: [
-
+      "78255aba6d2484c7ccdd0e1b91982d9c53376da52da2021755aa13b779a098ca",
     ],
   },
   "schemas-guide-v2": {
-    current: "d0021bd9506ab4255818d9246019471a5ef0ca7627a8f6a1544305bf8033ae37",
+    current: "d597ae37034efae913366d3afbf5561785dbc633445df8832ff8cb9e588c855f",
     superseded: [
       "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
       "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
@@ -52,10 +52,11 @@ export const TEMPLATE_STOCK_HASHES = {
       "8cef3e54d557d88bc5916e92861159bea1d41e505a4ba6b660ae429358369f0f",
       "1290649a5abe4684c99ebd86386e152cd2cb3af411b0fb33d86673736dea972c",
       "238a9263cfa2194a6c06a44e8155e0b7a65042e883fb97880cb10592b5c3b4ff",
+      "d0021bd9506ab4255818d9246019471a5ef0ca7627a8f6a1544305bf8033ae37",
     ],
   },
   "tricks-guide-v2": {
-    current: "6028707b9584cd03ed9c6290d9d0dcfca4cc84de292bec100963712492a6926d",
+    current: "1f9b7ba407d06512cf07a956ca3f29371dc734beb81a8ab110b8707dceead0a2",
     superseded: [
       "137dce417fdadb44e12aaf9c8eb1378bf9dad35491b7f0d5ab0eed92c5c6a52a",
       "7c4e400f08d7ce0f4c524183b39c8e93a96d57ffa0b6794f4c04adce58f5b30f",
@@ -63,10 +64,11 @@ export const TEMPLATE_STOCK_HASHES = {
       "661f67ec143797b2201db7c0386f1a684dd74dc5a219480f9793d748408554e9",
       "7302df58560d8a727a8c3d1feedca9e8d6b1bb6533a6a2d558eae4ce895244b0",
       "26f9d95120144fe955ce38f444bbc1b41f7a28472b4f6c7aa2e1fdf62599f58f",
+      "6028707b9584cd03ed9c6290d9d0dcfca4cc84de292bec100963712492a6926d",
     ],
   },
   "views-guide-v2": {
-    current: "3590c68aa6ba2ade37d00699a0bec3af0b54d50cd414b7e90da9761042fe7141",
+    current: "0a5c2061f3d50523062dfd0cffd734fa83704ebffcbb4dbd717a9ce195c5bc38",
     superseded: [
       "f6be48fb86eed3b36edbb335f3ead34e97c58b6bb172cdfe1458b0a3ddfc8472",
       "e8f5e99502aa1da29e07f9e5c68bbe3c1ac3c6dba216fc27c5463f8f0272d772",
@@ -74,6 +76,7 @@ export const TEMPLATE_STOCK_HASHES = {
       "f1237111213cdea6c45fbed5ecda10d7108b1221d234bf596e5fc68deee326bf",
       "d5a4f8b633f555f7898bed7632f02e6c9c75a76c35fe6fa4fb775c7039c26fc8",
       "2bfad7f343fa6818ab65f7d577aeba427cae1f78dcf6b96f449e5b18ff7a7e3b",
+      "3590c68aa6ba2ade37d00699a0bec3af0b54d50cd414b7e90da9761042fe7141",
     ],
   },
 } satisfies Record<string, TemplateStockEntry>;

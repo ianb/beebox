@@ -1,5 +1,5 @@
 /**
- * bbx search - Full-text search over the box's cards.
+ * bbx search - Full-text search over the box's cards and the engine's reference docs.
  *
  * Thin wrapper around the core search command. With --json, the structured
  * envelope ({results, total, truncated, hint, warnings, stale}) prints
@@ -25,7 +25,7 @@ interface SearchCliOptions {
 }
 
 export const searchCommand = new Command("search")
-  .description("Full-text search over the box's cards")
+  .description("Full-text search over the box's cards and the engine's reference docs")
   .argument("<query>", "Search terms")
   .option("--kind <type...>", "Restrict to one or more card types")
   .option("--path <prefix>", "Restrict to a box-relative path prefix")
