@@ -1,6 +1,6 @@
 ---
 title: "Assign a custom hostname to a prepared publication in Admin"
-status: draft
+status: partial
 workstream: publish-pages
 issues: []
 ---
@@ -11,6 +11,8 @@ When a prepared site is disabled, a global admin can attach one exact hostname f
 **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in `beebox/docs/plans/publish-sites-admin.md` without closing its separate Access, submissions, or knowledge-audit follow-ups.
 
 **Approved scope (2026-09-25):** The boxholder approved the combined discovery and custom-domain work with an estimated 1,750–2,450 authored changed lines. This is an estimate, not a hard stop; implementation should stay near the low end and report material scope growth before expanding it.
+
+**Implementation status (2026-09-25):** Admin assignment, immutable hostname reservation, Cloudflare zone and Worker-domain preflight/attach/read-back, member destination approval, custom and workers.dev URLs, retry guards, and fake-backed coverage are implemented. The implementation has not been verified against a real Cloudflare account; DNS records, Workers Routes, certificate readiness, and browser-populated UI behavior remain live-verification gaps. Bee Box still has no hostname detach, release, or reassignment flow.
 
 ## Smallest fix and budget
 
