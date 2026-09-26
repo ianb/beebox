@@ -16,13 +16,8 @@ import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
 import { UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
-import {
-  installFeedbackGuide,
-  installPublicationsGuidance,
-  installSchemasGuide,
-  installTricksFiles,
-  installViewsGuide,
-} from "./templates.js";
+import { installTricksPackageJson } from "./templates.js";
+import { syncBoxGuidance } from "./guidance-sync.js";
 import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
 import { migrateBoxState } from "../../lib/state-migration.js";
@@ -203,16 +198,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 
   await writeBoxGitignore(resolvedRoot);
 
-  // Install tricks types.d.ts and CLAUDE.md if missing
-  await installTricksFiles(resolvedRoot);
+  // Code scaffold, seeded once: the tricks package.json.
+  await installTricksPackageJson(resolvedRoot);
 
-  // Install schemas guide CLAUDE.md if missing
-  await installSchemasGuide(resolvedRoot);
-
-  // Install views CLAUDE.md if missing
-  await installViewsGuide(resolvedRoot);
-  await installPublicationsGuidance(resolvedRoot);
-  await installFeedbackGuide(resolvedRoot);
+  // Guidance: the same registry walk the generateDocs template sync runs,
+  // minus the generators, which `bbx init` reaches through generateDocs.
+  await syncBoxGuidance(resolvedRoot, { generators: false });
 
   // Initialize git repo (only on fresh init) — don't commit yet;
   // the init command installs more files (schedules, procedures, etc.)

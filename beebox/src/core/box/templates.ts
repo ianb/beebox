@@ -1,20 +1,17 @@
 /**
- * Static scaffold files installed into a box on init.
+ * Template bodies for the box's tracked guidance, and the tricks code scaffold.
  *
- * These are the box-local guide/scaffold documents whose content is a large
- * embedded string (tricks scaffolding, the schemas authoring guide, the views
- * authoring guide). The tricks and views installers are "create if missing"
- * no-ops on re-run; the schemas guide goes through the template tracker
- * (refresh-if-unmodified, park-if-edited) so its frontmatter-first rewrite
- * reaches boxes that still carry the old XML-only version. Either way, `bbx
- * init` can run repeatedly without clobbering user edits.
+ * The nested CLAUDE.md guides and the briefing seed live in
+ * `MANAGED_STOCK_TEMPLATES`, the content source for the registry's tracked
+ * rows (`guidance-surfaces.ts`); `syncBoxGuidance` installs them through the
+ * template tracker. The tricks `package.json` is code, not guidance, so
+ * `initBox` seeds it once and never refreshes it.
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { installTemplateFile } from "../install-template-file.js";
-import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
+import type { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { boxCodePaths, getBoxShape } from "../../lib/box-shape.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { SCHEMAS_CLAUDE_MD_V2 } from "./schemas-guide.js";
@@ -179,7 +176,7 @@ until a signed-in member of this box enables it in the app; audience or
 destination changes need fresh member approval.
 `;
 
-const PUBLICATIONS_NOTES = `# Publication Notes
+export const PUBLICATIONS_NOTES = `# Publication Notes
 
 Private, box-owned notes for authoring the sites in this directory. These notes
 are never part of a published release. Keep the headings and add only durable
@@ -219,15 +216,10 @@ These observations go from the agent to Bee Box developers.
 \`.feedback.card\` is the boxholder's response to something the box surfaced.
 `;
 
-/**
- * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
- * exist. A box's tricks live at `boxRoot/src/tricks/` (`boxCodePaths`
- * resolves it).
- */
 /** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
  *  expected, silent "scaffold it" case — the error itself carries no
  *  actionable info). */
-async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
+export async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
   try {
     await fs.access(filePath);
   } catch (_e) {
@@ -236,21 +228,13 @@ async function writeFileIfMissing(filePath: string, content: string): Promise<vo
   }
 }
 
-export async function installTricksFiles(boxRoot: string): Promise<void> {
+/**
+ * Seed the tricks `package.json` if it is missing. A box's tricks live at
+ * `boxRoot/src/tricks/` (`boxCodePaths` resolves it).
+ */
+export async function installTricksPackageJson(boxRoot: string): Promise<void> {
   const shape = await getBoxShape(boxRoot);
-  const tricksDir = boxCodePaths(shape).tricksDir;
-
-  await writeFileIfMissing(path.join(tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
-
-  // The CLAUDE.md guide goes through the template tracker like the
-  // schemas/views guides, so `bbx upgrade` can roll out future guide changes
-  // without clobbering a customized copy.
-  await installTemplateFile({
-    boxRoot,
-    relPath: "src/tricks/scripts/CLAUDE.md",
-    templateContent: TRICKS_CLAUDE_MD_V2,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"].superseded,
-  });
+  await writeFileIfMissing(path.join(boxCodePaths(shape).tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
 }
 
 /**
@@ -263,74 +247,19 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
  */
 export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   name: keyof typeof TEMPLATE_STOCK_HASHES;
-  relPath: string;
   content: string;
 }> = [
-  // Under `src/` at the (one) box root. Separate ledger entries so a future
-  // divergence in any one guide never has to be threaded through a shared
-  // entry.
-  { name: "schemas-guide-v2", relPath: "src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
-  { name: "views-guide-v2", relPath: "src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
-  { name: "publications-guide-v1", relPath: "src/publications/CLAUDE.md", content: PUBLICATIONS_CLAUDE_MD },
-  { name: "agent-feedback-guide", relPath: "_config/feedback/CLAUDE.md", content: FEEDBACK_CLAUDE_MD },
-  { name: "tricks-guide-v2", relPath: "src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
-  // The root briefing seed. Unlike the guides it lives under `_content/`
-  // (it's a card template, `createBriefingTemplate`), but it has the same
+  // Each guide's box path is its row in GUIDANCE_SURFACES. Separate ledger
+  // entries so a future divergence in any one guide never has to be threaded
+  // through a shared entry.
+  { name: "schemas-guide-v2", content: SCHEMAS_CLAUDE_MD_V2 },
+  { name: "views-guide-v2", content: VIEWS_CLAUDE_MD },
+  { name: "publications-guide-v1", content: PUBLICATIONS_CLAUDE_MD },
+  { name: "agent-feedback-guide", content: FEEDBACK_CLAUDE_MD },
+  { name: "tricks-guide-v2", content: TRICKS_CLAUDE_MD_V2 },
+  // The root briefing seed, installed by `installBriefing`. Unlike the guides
+  // it is a card template (`createBriefingTemplate`), but it has the same
   // rollout problem: when the stock openers change, a box still carrying the
   // untouched previous seed must take the update rather than park it.
-  { name: "briefing-seed", relPath: "_content/briefing.briefing.card", content: createBriefingTemplate() },
+  { name: "briefing-seed", content: createBriefingTemplate() },
 ];
-
-/**
- * Install (or refresh) the box-local schemas guide.
- *
- * Goes through the template tracker: refreshed when unmodified, parked under
- * `_config/_template-updates/` when the boxholder has customized it (prior
- * stock hashes come from the ledger so a box on any shipped version overwrites
- * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
- * a fresh `bbx engine init` is what lets `bbx upgrade` (Track E) roll out guide
- * updates later without clobbering a customized copy.
- */
-export async function installSchemasGuide(boxRoot: string): Promise<void> {
-  await installTemplateFile({
-    boxRoot,
-    relPath: "src/schemas/CLAUDE.md",
-    templateContent: SCHEMAS_CLAUDE_MD_V2,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"].superseded,
-  });
-}
-
-/**
- * Install (or refresh) the box-local views guide. Same template-tracker path as
- * `installSchemasGuide` above; the guide's text needs no path substitution
- * (it never names its own directory).
- */
-export async function installViewsGuide(boxRoot: string): Promise<void> {
-  await installTemplateFile({
-    boxRoot,
-    relPath: "src/views/CLAUDE.md",
-    templateContent: VIEWS_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
-  });
-}
-
-/** Install lazy publications guidance and preserve the box's shared notes. */
-export async function installPublicationsGuidance(boxRoot: string): Promise<void> {
-  await installTemplateFile({
-    boxRoot,
-    relPath: "src/publications/CLAUDE.md",
-    templateContent: PUBLICATIONS_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["publications-guide-v1"].superseded,
-  });
-  await writeFileIfMissing(path.join(boxRoot, "src", "publications", "NOTES.md"), PUBLICATIONS_NOTES);
-}
-
-/** Install or refresh the local guide for agent-authored feedback cards. */
-export async function installFeedbackGuide(boxRoot: string): Promise<void> {
-  await installTemplateFile({
-    boxRoot,
-    relPath: "_config/feedback/CLAUDE.md",
-    templateContent: FEEDBACK_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["agent-feedback-guide"].superseded,
-  });
-}

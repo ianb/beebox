@@ -42,6 +42,7 @@ import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { withDocId } from "./docs-gen/shared.js";
 
 /**
  * Resolve `bin/bbx` to embed in a box's git hooks. Embedding an absolute path
@@ -379,7 +380,7 @@ async function installIgnoreScaffold(boxRoot: string): Promise<string[]> {
     if (errnoCode(e) !== "ENOENT") throw e;
   }
 
-  const ruleBody = ignoreRuleBody();
+  const ruleBody = withDocId({ relativePath: IGNORE_RULE_PATH, content: ignoreRuleBody() });
   const ruleAbs = path.join(boxRoot, IGNORE_RULE_PATH);
   let ruleExisting: string | null = null;
   try {
