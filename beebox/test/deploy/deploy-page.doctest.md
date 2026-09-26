@@ -28,12 +28,27 @@ text(3 * minute, 228).detail
 => The update started at 9:41 PM, 3 minutes ago. Updates usually take about 4 minutes. This page reloads when the site is back.
 ```
 
+The elapsed time counts in seconds while the update could still be running
+normally. The estimate rounds up to the next whole minute, so 162 seconds is
+"about 3 minutes".
+
+```ts
+text(2 * minute + 14_000, 162).detail
+=> The update started at 9:41 PM, 2 minutes 14 seconds ago. Updates usually take about 3 minutes. This page reloads when the site is back.
+
+text(61_000, 181).detail
+=> The update started at 9:41 PM, 1 minute 1 second ago. Updates usually take about 4 minutes. This page reloads when the site is back.
+
+text(45_000, 162).detail
+=> The update started at 9:41 PM, 45 seconds ago. Updates usually take about 3 minutes. This page reloads when the site is back.
+```
+
 With no recorded window yet, the estimate is vague instead of invented. A
 viewer whose clock runs behind the server's never sees a negative time.
 
 ```ts
 text(-2 * minute, null).detail
-=> The update started at 9:41 PM, less than a minute ago. Updates usually take a few minutes. This page reloads when the site is back.
+=> The update started at 9:41 PM, just now. Updates usually take a few minutes. This page reloads when the site is back.
 ```
 
 Past ten minutes the page says the update is late.
@@ -101,7 +116,7 @@ const sandbox = {
 };
 runInNewContext(scripts[1]![2]!, sandbox);
 await new Promise((resolve) => setTimeout(resolve, 0));
-JSON.stringify([nodes["bbx-headline"]!.textContent, nodes["bbx-detail"]!.textContent.includes("3 minutes ago"), reloads])
+JSON.stringify([nodes["bbx-headline"]!.textContent, nodes["bbx-detail"]!.textContent.includes("3 minutes"), reloads])
 => ["This site is updating",true,0]
 
 deployHeader = false;

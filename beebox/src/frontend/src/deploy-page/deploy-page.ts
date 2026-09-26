@@ -12,6 +12,8 @@
 import { deployPageText } from "@shared/deploy-page-text";
 
 const POLL_MS = 15_000;
+/** The elapsed time shows seconds, so it re-renders between polls. */
+const RENDER_MS = 1000;
 
 interface DeployData {
   startedMs: number;
@@ -64,6 +66,7 @@ function start(): void {
   render();
   void poll();
   setInterval(() => void poll(), POLL_MS);
+  setInterval(render, RENDER_MS);
 }
 
 start();

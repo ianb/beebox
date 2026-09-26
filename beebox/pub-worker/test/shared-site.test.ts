@@ -45,7 +45,7 @@ async function makeRelease(files: Record<string, string>) {
 }
 
 async function seed(status: ManifestStatus = "live") {
-  const files = { "index.html": HTML, "assets/site.css": CSS, "assets/site.json": JSON_CONTENT };
+  const files = { "index.html": HTML, "docs/index.html": "<h1>Docs</h1>", "assets/site.css": CSS, "assets/site.json": JSON_CONTENT };
   const activeRelease = await makeRelease(files);
   const manifest: SiteEdgeManifest = siteEdgeManifestSchema.parse({
     kind: "site", hostHandle: SITE_HANDLE, tier: "public", slug: "hello", status,
@@ -53,6 +53,7 @@ async function seed(status: ManifestStatus = "live") {
   });
   await env.PUB_STORE.put(`pubs/${PUB_ID}/manifest.json`, JSON.stringify(manifest));
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/index.html`, HTML);
+  await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/docs/index.html`, "<h1>Docs</h1>");
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/assets/site.css`, CSS);
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/assets/site.json`, JSON_CONTENT);
   await env.PUB_STORE.put(`slugs/hello`, PUB_ID);
@@ -89,20 +90,47 @@ beforeEach(async () => {
 });
 
 describe("shared-host routes", () => {
-  it("serves only the approved public route and preserves its path in release redirects", async () => {
+  it("serves active assets at approved stable public paths and rejects release-qualified URLs", async () => {
     const releaseId = await seed();
     const page = await request("/hello/");
-    expect(page.status).toBe(302);
-    expect(page.headers.get("Location")).toBe(`https://${HOSTNAME}/hello/__release/${releaseId}/index.html`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toBe(HTML);
+    expect(page.headers.get("Cache-Control")).toBe("no-store");
     expect(page.headers.get("Access-Control-Allow-Origin")).toBeNull();
     expect(page.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
-    const asset = await request(`/hello/__release/${releaseId}/assets/site.css`);
+    const head = await request("/hello/", sharedEnv(), HOSTNAME, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    const rootWithoutSlash = await request("/hello?source=typed");
+    expect(rootWithoutSlash.status).toBe(308);
+    expect(rootWithoutSlash.headers.get("Location")).toBe(`https://${HOSTNAME}/hello/?source=typed`);
+    const asset = await request("/hello/assets/site.css");
     expect(asset.status).toBe(200);
     expect(await asset.text()).toBe(CSS);
-    const json = await request(`/hello/__release/${releaseId}/assets/site.json`);
+    const json = await request("/hello/assets/site.json");
     expect(json.status).toBe(200);
     expect(json.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
     expect(await json.text()).toBe(JSON_CONTENT);
+    expect((await request(`/hello/__release/${releaseId}/index.html`)).status).toBe(404);
+    expect((await request(`/hello/%5F%5Frelease/${releaseId}/index.html`)).status).toBe(404);
+
+    const updatedFiles = { "index.html": "<h1>updated shared route</h1>", "docs/index.html": "<h1>Updated docs</h1>", "assets/site.css": "body { color: blue }" };
+    const updated = await makeRelease(updatedFiles);
+    for (const [path, body] of Object.entries(updatedFiles)) {
+      await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${updated.id}/${path}`, body);
+    }
+    const stored = await env.PUB_STORE.get(`pubs/${PUB_ID}/manifest.json`);
+    expect(stored).not.toBeNull();
+    if (stored === null) return;
+    const manifest = siteEdgeManifestSchema.parse(JSON.parse(await stored.text()));
+    expect(manifest.kind).toBe("site");
+    if (manifest.kind !== "site") return;
+    await env.PUB_STORE.put(`pubs/${PUB_ID}/manifest.json`, JSON.stringify({ ...manifest, activeRelease: updated }));
+    expect(await (await request("/hello/?view=latest")).text()).toBe(updatedFiles["index.html"]);
+    expect(await (await request("/hello/assets/site.css")).text()).toBe(updatedFiles["assets/site.css"]);
+    const nestedWithoutSlash = await request("/hello/docs");
+    expect(nestedWithoutSlash.status).toBe(308);
+    expect(nestedWithoutSlash.headers.get("Location")).toBe(`https://${HOSTNAME}/hello/docs/`);
   });
 
   it("does not list routes or serve a route before its marker is approved", async () => {
@@ -118,18 +146,20 @@ describe("shared-host routes", () => {
     }
   });
 
-  it("serves secret content only below its PubId path and keeps release redirects prefixed", async () => {
+  it("serves secret content only below its PubId path and rejects release-qualified URLs", async () => {
     const releaseId = await seedSecret();
     const page = await request(`/s/${SECRET_PUB_ID}/`);
-    expect(page.status).toBe(302);
-    expect(page.headers.get("Location")).toBe(`https://${HOSTNAME}/s/${SECRET_PUB_ID}/__release/${releaseId}/index.html`);
-    const asset = await request(`/s/${SECRET_PUB_ID}/__release/${releaseId}/assets/site.css`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toBe(HTML);
+    const asset = await request(`/s/${SECRET_PUB_ID}/assets/site.css`);
     expect(asset.status).toBe(200);
     expect(await asset.text()).toBe(CSS);
-    const json = await request(`/s/${SECRET_PUB_ID}/__release/${releaseId}/assets/site.json`);
+    const json = await request(`/s/${SECRET_PUB_ID}/assets/site.json`);
     expect(json.status).toBe(200);
     expect(json.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
     expect(await json.text()).toBe(JSON_CONTENT);
+    expect((await request(`/s/${SECRET_PUB_ID}/__release/${releaseId}/index.html`)).status).toBe(404);
+    expect((await request(`/s/${SECRET_PUB_ID}/%5F%5Frelease/${releaseId}/index.html`)).status).toBe(404);
     expect((await request(`/s/${"j".repeat(26)}/`)).status).toBe(404);
   });
 

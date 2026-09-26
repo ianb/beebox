@@ -90,9 +90,10 @@ does not need a `package.json`, lockfile, install, or build. The publisher
 copies the finished folder, scans it, and stages it for server-side upload.
 
 Use ordinary relative paths such as `./styles.css`, `./assets/logo.svg`, and
-`./details/`. These stay within the publication's release when its entry page
-is refreshed. A directory URL works only when that directory contains a
-published `index.html`; there is no SPA catch-all. Each public site has its own
+`./details/`. Each page and asset request resolves to the active release at
+request time, so publishing an update can change what a later request returns.
+A directory URL works only when that directory contains a published
+`index.html`; there is no SPA catch-all. Each public site has its own
 explicit slug and URL at `https://<box-host>/<slug>/`; secret sites use
 `https://<box-host>/s/<pubId>/`. The `/s`, `/p`, `/a`, and Worker-owned
 `/__*` paths are reserved. Builds should use relative URLs or their explicit

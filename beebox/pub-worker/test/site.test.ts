@@ -80,26 +80,40 @@ async function readSecretManifest(): Promise<Extract<SiteEdgeManifest, { tier: "
 }
 
 beforeEach(async () => {
-  const current = await release({ "index.html": NEW_HTML, "about.html": "<h1>About</h1>", "site.css": CSS });
+  const currentFiles = { "index.html": NEW_HTML, "about.html": "<h1>About</h1>", "docs/index.html": "<h1>Docs</h1>", "site.css": CSS };
+  const current = await release(currentFiles);
   const previous = await release({ "index.html": OLD_HTML, "site.css": CSS });
   await seed(
     secretManifest({
       activeRelease: current,
       previousRelease: { ...previous, expiresAt: new Date(NOW + 5 * 60_000).toISOString() },
     }),
-    { [current.id]: { "index.html": NEW_HTML, "about.html": "<h1>About</h1>", "site.css": CSS }, [previous.id]: { "index.html": OLD_HTML, "site.css": CSS } },
+    { [current.id]: currentFiles, [previous.id]: { "index.html": OLD_HTML, "site.css": CSS } },
   );
 });
 
 describe("pinned site Worker", () => {
-  it("keeps secret entry paths secret and redirects the stable document to its release", async () => {
+  it("serves the active release at stable secret paths and rejects release-qualified URLs", async () => {
     const res = await request(`/s/${SITE_ID}/about.html`);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("Location")).toBe(`https://published.example.com/s/${SITE_ID}/__release/${(await activeId())}/about.html`);
-    expect(res.headers.get("Location")).not.toContain(HOST_HANDLE);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("<h1>About</h1>");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
     expect(res.headers.get("Content-Security-Policy")).toContain("connect-src 'self'");
+    expect((await request(`/s/${SITE_ID}/__release/${await activeId()}/about.html`)).status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/%5F%5Frelease/${await activeId()}/about.html`)).status).toBe(404);
+    expect(await (await request(`/s/${SITE_ID}/docs/`)).text()).toBe("<h1>Docs</h1>");
+    const rootWithoutSlash = await request(`/s/${SITE_ID}?view=current`);
+    expect(rootWithoutSlash.status).toBe(308);
+    expect(rootWithoutSlash.headers.get("Location")).toBe(`https://published.example.com/s/${SITE_ID}/?view=current`);
+    const nestedWithoutSlash = await request(`/s/${SITE_ID}/docs`);
+    expect(nestedWithoutSlash.status).toBe(308);
+    expect(nestedWithoutSlash.headers.get("Location")).toBe(`https://published.example.com/s/${SITE_ID}/docs/`);
+    expect((await request(`/s/${SITE_ID}/about.html`)).status).toBe(200);
+    const head = await request(`/s/${SITE_ID}/?version=latest`, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
   });
 
   it("does not reveal a secret PubId from the host root", async () => {
@@ -108,31 +122,33 @@ describe("pinned site Worker", () => {
     expect(res.headers.get("Location")).toBeNull();
   });
 
-  it("serves only manifest-listed files under an active release", async () => {
+  it("serves only manifest-listed files from the active release", async () => {
     const releaseId = await activeId();
     await env.PUB_STORE.put(`pubs/${SITE_ID}/releases/${releaseId}/not-listed.js`, "private sentinel");
-    const listed = await request(`/s/${SITE_ID}/__release/${releaseId}/site.css`);
+    const listed = await request(`/s/${SITE_ID}/site.css`);
     expect(listed.status).toBe(200);
     expect(await listed.text()).toBe(CSS);
     expect(listed.headers.get("Content-Type")).toBe("text/css; charset=utf-8");
     expect(listed.headers.get("Content-Length")).toBe(String(CSS.length));
-    const unlisted = await request(`/s/${SITE_ID}/__release/${releaseId}/not-listed.js`);
+    const unlisted = await request(`/s/${SITE_ID}/not-listed.js`);
     expect(unlisted.status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/__release/${releaseId}/site.css`)).status).toBe(404);
   });
 
-  it("keeps an old document's relative assets on its previous immutable release for at most ten minutes", async () => {
+  it("serves the newest active release from the same stable page and asset URLs", async () => {
     const manifest = await readSecretManifest();
     const oldId = manifest.previousRelease!.id;
-    const oldDoc = await request(`/s/${SITE_ID}/__release/${oldId}/index.html`);
-    expect(oldDoc.status).toBe(200);
-    expect(await oldDoc.text()).toBe(OLD_HTML);
-
-    const expired = { ...manifest, previousRelease: { ...manifest.previousRelease!, expiresAt: new Date(NOW).toISOString() } };
-    await env.PUB_STORE.put(`pubs/${SITE_ID}/manifest.json`, JSON.stringify(expired));
-    const staleDocument = await request(`/s/${SITE_ID}/__release/${oldId}/index.html`);
-    expect(staleDocument.status).toBe(302);
-    expect(staleDocument.headers.get("Location")).toContain(`/s/${SITE_ID}/__release/${manifest.activeRelease.id}/index.html`);
-    expect((await request(`/s/${SITE_ID}/__release/${oldId}/site.css`)).status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/`)).status).toBe(200);
+    expect(await (await request(`/s/${SITE_ID}/`)).text()).toBe(NEW_HTML);
+    const nextFiles = { "index.html": OLD_HTML, "site.css": "main { color: blue }" };
+    const nextRelease = await release(nextFiles);
+    await env.PUB_STORE.put(`pubs/${SITE_ID}/releases/${nextRelease.id}/index.html`, nextFiles["index.html"]!);
+    await env.PUB_STORE.put(`pubs/${SITE_ID}/releases/${nextRelease.id}/site.css`, nextFiles["site.css"]!);
+    await env.PUB_STORE.put(`pubs/${SITE_ID}/manifest.json`, JSON.stringify({ ...manifest, activeRelease: nextRelease }));
+    expect(await (await request(`/s/${SITE_ID}/`)).text()).toBe(OLD_HTML);
+    expect(await (await request(`/s/${SITE_ID}/site.css`)).text()).toBe(nextFiles["site.css"]);
+    expect((await request(`/s/${SITE_ID}/__release/${oldId}/index.html`)).status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/missing.css`)).status).toBe(404);
   });
 
   it("gates every URL while disabled and permits reenablement by the serving authority", async () => {
@@ -140,10 +156,10 @@ describe("pinned site Worker", () => {
     const disabled = { ...manifest, status: "disabled" as const };
     await env.PUB_STORE.put(`pubs/${SITE_ID}/manifest.json`, JSON.stringify(disabled));
     expect((await request("/")).status).toBe(410);
-    expect((await request(`/s/${SITE_ID}/__release/${manifest.activeRelease.id}/index.html`)).status).toBe(410);
+    expect((await request(`/s/${SITE_ID}/`)).status).toBe(410);
 
     await env.PUB_STORE.put(`pubs/${SITE_ID}/manifest.json`, JSON.stringify({ ...disabled, status: "live" }));
-    expect((await request(`/s/${SITE_ID}/__release/${manifest.activeRelease.id}/index.html`)).status).toBe(200);
+    expect((await request(`/s/${SITE_ID}/`)).status).toBe(200);
   });
 
   it("fails closed for wrong host handles, mismatched PubIds, and incomplete pinned bindings", async () => {
@@ -179,14 +195,14 @@ describe("pinned site Worker", () => {
     };
     await seed(manifest, { [activeRelease.id]: files });
 
-    for (const path of ["/s/ordinary.html", "/a/ordinary.html"]) {
+    for (const [path, expected] of [["/s/ordinary.html", "public s path"], ["/a/ordinary.html", "public a path"]] as const) {
       const res = await request(path);
-      expect(res.status).toBe(302);
-      expect(res.headers.get("Location")).toContain(`/__release/${activeRelease.id}/`);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(expected);
     }
     const alias = await request("/p/my-site/");
-    expect(alias.status).toBe(302);
-    expect(alias.headers.get("Location")).toContain(`/__release/${activeRelease.id}/index.html`);
+    expect(alias.status).toBe(200);
+    expect(await alias.text()).toBe(NEW_HTML);
     expect((await request("/p/another-site/")).status).toBe(404);
   });
 
