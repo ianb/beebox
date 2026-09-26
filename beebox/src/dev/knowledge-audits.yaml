@@ -1248,12 +1248,17 @@ tests:
     watch_for: "Traces actual flow (connector → wakeup → inbox) rather than hypothetical"
     tags: [connectors]
 
+  # Status (2026-09-26): rewritten for bbx notify (the web-push card and its
+  # finalize path are gone); passes, 2 reads.
   - id: outbound-notifications
     prompt: "How would outbound notifications work?"
-    expected_level: knows_about
-    watch_for: "Mentions bbx finalize and finds notification connector"
-    correct_contains: ["finalize"]
-    tags: [connectors]
+    expected_level: knows_directly
+    watch_for: >
+      Names bbx notify with loudness and target, the notify: schedule card for
+      a time, and bbx changes / bbx judge for a watch. The web-push card and
+      its finalize path are gone (docs/plans/notifications.md, Track A).
+    correct_contains: ["bbx notify", "loudness"]
+    tags: [connectors, notifications]
 
   # === Scheduled Tasks ===
   #
@@ -6280,3 +6285,103 @@ tests:
       - '(?:cannot|can.t|no)[\s\S]{0,100}(?:detach|remap)|(?:detach|remap)[\s\S]{0,100}(?:not available|not supported|manual|Cloudflare)'
       - '(?:pending|unconfirmed)[\s\S]{0,180}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)[\s\S]{0,120}(?:retry|again)|(?:retry|again)[\s\S]{0,160}(?:same|exact|reserved)[\s\S]{0,120}(?:hostname|host)'
     tags: [publish-sites]
+
+  # === Reaching the boxholder (docs/plans/notifications.md, Track F) ===
+  # The policy is the root briefing's "Reaching me" section; the mechanics are
+  # the agent guide's REACHING_THE_BOXHOLDER section.
+  # Status (2026-09-26, Claude, worktree test box): 5/5 pass.
+  # - notify-loudness: 0 reads; bbx notify --loudness quiet --target
+  #   chat:<sessionId>, quoting the briefing section.
+  # - remind-vs-schedule: first run declined to set the reminder because
+  #   `bbx notify --check` found no channel, which is the guidance working.
+  #   Run it with BBX_NOTIFY_FAKE=1 (and, on a worktree box, BBX_HOOK_BIN set
+  #   to the worktree's bin/bbx, or the box hook validates with main's engine
+  #   and rejects `notify:`). Then: an `at` + `once` + `requested-by` +
+  #   `notify:` card, committed, with an <ack>; no <schedule>.
+  # - changes-since: all eleven pieces (on-wakeup, once, gmail, procedure,
+  #   pass-output, changes | judge --echo, judgment card, notify); read the
+  #   schema docs for detail.
+  # - judge-gate: gated with an empty `bbx calendar today` (exit $CHECK_SKIP)
+  #   before `bbx judge --or-skip`, and once: true. The plan expected `bbx
+  #   changes`; today's calendar is not a change set, so the check accepts
+  #   any cheap skip before the judge.
+  # - health-silence: no; dashboard; the scheduler's own loud notice for a
+  #   blocked requested schedule.
+  # notify-loudness and health-silence also pass on a written briefing with
+  # no "Reaching me" section: both applied the guide's default, and
+  # health-silence proposed adding the section.
+
+  - id: notify-loudness
+    prompt: >
+      The person is away. A capture they sent from their phone could not be
+      read. How do you tell them, and how loud? Do not change any files.
+    expected_level: knows_directly
+    watch_for: >
+      Runs (or proposes) bbx notify with --loudness quiet and a chat target
+      (chat:<sessionId> of the capture's chat), citing the briefing's
+      "Reaching me" section as what sets the loudness. FAILS on loud, on a
+      dot, or on waiting for them to open the app.
+    correct_contains: ["bbx notify", "quiet"]
+    correct_matches: ["chat:", "reaching me|briefing"]
+    tags: [notifications]
+
+  - id: remind-vs-schedule
+    prompt: >
+      <chat-app narration="off" prose="on" time="2026-09-26T15:00:00Z"/>
+      <typed user="boxholder">Remind me next Tuesday to call the vet.</typed>
+    chat_mode: true
+    max_turns: 15
+    expected_level: knows_directly
+    watch_for: >
+      Writes a scheduled-script card under _config/schedules/ with at:
+      (Tuesday 2026-09-29), once: true, requested-by: boxholder, and a notify:
+      block. FAILS on a <schedule> tag, or a runs: that shells out to bbx
+      notify.
+    cards_contain: ["notify:", "requested-by: boxholder", "once: true"]
+    response_not_contains: ["<schedule "]
+    tags: [notifications, chat]
+
+  - id: changes-since
+    prompt: >
+      The person says: tell me when the school emails about the field trip.
+      Describe exactly the cards you would write, with their full
+      frontmatter. Do not create them.
+    expected_level: knows_directly
+    watch_for: >
+      An on-wakeup schedule card with once: true and requires: { connectors:
+      [gmail] } whose runs: is bbx procedure run <name>; a procedure whose
+      precheck (pass-output: true) pipes bbx changes --or-skip into bbx judge
+      <judgment card> --or-skip --echo, and whose run is an agent step ending
+      with bbx notify; a judgment card.
+    correct_contains: ["on-wakeup", "once: true", "gmail", "bbx procedure run", "pass-output", "bbx changes", "--or-skip", "bbx judge", "--echo", "judgment.card", "bbx notify"]
+    tags: [notifications, schedules]
+
+  - id: judge-gate
+    prompt: >
+      A daily procedure should only run an agent when today's calendar has an
+      event needing preparation. How do you keep it cheap, and how does it
+      stop once it has fired?
+    expected_level: knows_directly
+    watch_for: >
+      Puts bbx changes --or-skip before bbx judge --or-skip in the precheck,
+      so a day with nothing new makes no Jev call and runs no agent; once:
+      true deletes the card only after a run that got through, since a
+      deferred run is not a success.
+    correct_contains: ["--or-skip", "bbx judge", "once: true"]
+    # A cheap shell gate before the judge: `bbx changes --or-skip` for new
+    # cards, or a skip on an empty `bbx calendar today`, which is the fitting
+    # test for "today's calendar".
+    correct_matches: ["(bbx changes|CHECK_SKIP|exit 75)[\\s\\S]*bbx judge"]
+    tags: [notifications, schedules]
+
+  - id: health-silence
+    prompt: >
+      Gmail sync has been failing for two days. Do you notify the person?
+    expected_level: knows_directly
+    watch_for: >
+      No: health stays on the dashboard. The exception is a schedule the
+      person asked for (requested-by: boxholder) that the failure blocks, and
+      the scheduler sends that notice itself. FAILS if it runs bbx notify.
+    correct_matches: ["\\bno\\b|don.t|do not|not notify", "dashboard|health"]
+    response_not_contains: ["bbx notify \""]
+    tags: [notifications]
