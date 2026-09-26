@@ -1,14 +1,16 @@
 {
   "input": {
     "intent": { "id": "nLoud1", "title": "Pick up Sam at 3", "body": "Reminder you asked for this morning.", "target": "chat:new", "loudness": "loud", "source": "fixture" },
-    "bundleId": "app.beebox.ios"
+    "bundleId": "app.beebox.ios",
+    "box": "home"
   },
   "expected": {
     "payload": {
       "aps": { "alert": { "title": "Pick up Sam at 3", "body": "Reminder you asked for this morning." }, "interruption-level": "active", "badge": 1, "sound": "default" },
       "target": "chat:new",
       "loudness": "loud",
-      "notificationId": "nLoud1"
+      "notificationId": "nLoud1",
+      "box": "home"
     },
     "headers": { "apns-push-type": "alert", "apns-topic": "app.beebox.ios" }
   }

@@ -1168,14 +1168,15 @@ See §1.3 (full request/response/errors).
 - **Body by loudness:**
   | loudness | body |
   |---|---|
-  | `dot` | `{ aps: { badge: 1 }, target, notificationId }` |
-  | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId }` |
-  | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId }` |
+  | `dot` | `{ aps: { badge: 1 }, target, notificationId, box }` |
+  | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId, box }` |
+  | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId, box }` |
 - **Custom keys the client reads:** `target` is the notification target string
   (`chat:<sessionId>`, `chat:new`, `card:<path>`, `question:<path>`, `admin:<section>`,
   `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it renders to.
   `notificationId` is the log id; `chat:new` carries it so the chat page can show the
-  notification. `loudness` is absent for `dot`.
+  notification. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
+  directory's name, `src/lib/box-slug.ts` · `boxSlug`, the same slug as the box URL prefix).
 - **What iOS does with them.** In the foreground (`willPresent`), `loud` presents banner, sound,
   and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
   webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
@@ -1183,8 +1184,11 @@ See §1.3 (full request/response/errors).
   `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
   nothing new and logs a warning. On every foreground the app clears the badge and removes
   delivered `dot` notifications.
-- **Box identity.** The payload does not name the box. A phone paired to one box opens the target
-  there; a phone paired to several opens it on the selected box, which can be the wrong one (§9).
+- **Box identity.** The payload names the box in `box`. The Swift reader does not read `box` yet;
+  it adopts it in a follow-up commit (Track C of `docs/plans/notifications.md`), matching it against
+  the paired box's `baseURL` last path component. Until then a phone paired to one box opens the
+  target there, and a phone paired to several opens it on the selected box, which can be the wrong
+  one (§9).
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1261,7 +1265,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `batch`? then `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | P4 | `POST /api/pairing/push-token` | native→box | req `{token,environment:sandbox\|production}`; res `204` | `Services/PushRegistrar.swift` · `PushRegistrar.syncRegistrations`, `PushTokenRequest`; `BeeBoxAppDelegate.swift` · `didRegisterForRemoteNotificationsWithDeviceToken` | `routes/pairing.ts` · `PushTokenBody`; `core/mobile/pairing.ts` · `registerDevicePush` | LOUD server / SILENT (no push) |
-| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | `Services/NotificationCenterDelegate.swift` · `NotificationCenterDelegate`; `Models/NotificationTarget.swift` · `NotificationTarget`, `NotificationLoudness` | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
+| N1 | APNs payload | box→APNs→native | `{aps,target,loudness?,notificationId,box}`; headers `apns-push-type: alert`, `apns-topic`, `apns-collapse-id?` | `Services/NotificationCenterDelegate.swift` · `NotificationCenterDelegate`; `Models/NotificationTarget.swift` · `NotificationTarget`, `NotificationLoudness` | `core/notification/apns-payload.ts` · `buildApnsRequest` | SILENT |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
@@ -1334,7 +1338,7 @@ without the other is a contract break.
 - **APNs registration** `{token,environment}`, `environment` closed to `sandbox|production` —
   `Services/PushRegistrar.swift` · `PushTokenRequest`, `PushEnvironment` ↔ `routes/pairing.ts` ·
   `PushTokenBody`. **APNs payload keys** `target`, `loudness` (`quiet|loud`, absent for `dot`),
-  `notificationId` beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
+  `notificationId`, `box` (the box slug; the Swift side reads it in a follow-up) beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
   `NotificationTap` ↔ `core/notification/apns-payload.ts` · `buildApnsRequest`.
 - **Notification target rules** — `Models/NotificationTarget.swift` · `NotificationTarget` ↔
   `core/notification/target.ts` · `parseTarget`, `targetUrl`: the six schemes, the 1000-character
@@ -1443,9 +1447,9 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
   `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
   remaining piece.
-- **APNs payload names no box (OPEN).** §5.10's payload carries a target but not the box, so a
-  phone paired to several boxes opens a tap on its selected box. Adding the box slug to the payload
-  (and matching it against `baseURL`'s last path component) closes this.
+- **APNs payload names no box (OPEN, box half done).** §5.10's payload now carries `box`, the
+  box slug. The iOS half remains: match it against `baseURL`'s last path component, so a phone
+  paired to several boxes stops opening a tap on its selected box.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending

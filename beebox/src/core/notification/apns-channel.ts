@@ -21,6 +21,7 @@ import {
 } from "../../services/apns.js";
 import { pruneDevicePush, type DevicePushRegistration } from "../mobile/pairing.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { boxSlug } from "../../lib/box-slug.js";
 import { formatTarget } from "./target.js";
 import { buildApnsRequest } from "./apns-payload.js";
 import { FAKE_DETAIL, notifyFakeMode } from "./fake-mode.js";
@@ -116,7 +117,7 @@ export async function sendApns(opts: {
   } else {
     return { channel: "apns", status: "skipped", detail: "unconfigured" };
   }
-  const request = buildApnsRequest(intent, { bundleId: config?.bundleId ?? PLACEHOLDER_BUNDLE_ID });
+  const request = buildApnsRequest(intent, { bundleId: config?.bundleId ?? PLACEHOLDER_BUNDLE_ID, box: await boxSlug(boxRoot) });
   const outcomes: Outcome[] = [];
   try {
     for (const device of devices) {

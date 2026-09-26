@@ -1,8 +1,9 @@
 /**
  * The APNs request for one notification intent: the JSON body and the
  * headers. Pure. The custom keys beside `aps` (`target`, `loudness`,
- * `notificationId`) are read by the iOS client, so they are contract
- * (docs/mobile-contract.md §5.10).
+ * `notificationId`, `box`) are read by the iOS client, so they are contract
+ * (docs/mobile-contract.md §5.10). `box` is the sending box's slug, so a phone
+ * paired to several boxes opens the target on the right one.
  *
  * - `dot`: a badge only. No alert and no sound, so no banner.
  * - `quiet`: a banner at interruption level `passive` (no sound, no wake).
@@ -46,12 +47,13 @@ function collapseId(tag: string): string {
   return createHash("sha256").update(tag).digest("hex");
 }
 
-export function buildApnsRequest(intent: NotificationIntent, opts: { bundleId: string }): ApnsRequestParts {
+export function buildApnsRequest(intent: NotificationIntent, opts: { bundleId: string; box: string }): ApnsRequestParts {
   const target = formatTarget(intent.target);
+  const { box } = opts;
   const payload: Record<string, unknown> =
     intent.loudness === "dot"
-      ? { aps: aps(intent), target, notificationId: intent.id }
-      : { aps: aps(intent), target, loudness: intent.loudness, notificationId: intent.id };
+      ? { aps: aps(intent), target, notificationId: intent.id, box }
+      : { aps: aps(intent), target, loudness: intent.loudness, notificationId: intent.id, box };
   const headers: ApnsHeaders = {
     "apns-push-type": "alert",
     "apns-topic": opts.bundleId,

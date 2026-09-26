@@ -281,8 +281,8 @@ function validatePushToken(fx) {
 
 // ── apns-payload: the box's APNs body and headers, which the iOS client reads (contract §5.10) ──
 function validateApnsPayload(fx) {
-  const { intent, bundleId } = fx.input;
-  const got = buildApnsRequest({ ...intent, target: parseTarget(intent.target) }, { bundleId });
+  const { intent, bundleId, box } = fx.input;
+  const got = buildApnsRequest({ ...intent, target: parseTarget(intent.target) }, { bundleId, box });
   return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 

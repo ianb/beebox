@@ -100,7 +100,14 @@ await logged(box)
 => apns sent
 
 JSON.stringify(apns.sent[1]?.payload)
-=> {"aps":{"badge":1},"target":"chat:new","notificationId":"«*»"}
+=> {"aps":{"badge":1},"target":"chat:new","notificationId":"«*»","box":"«*»"}
+```
+
+The payload names the sending box by its slug, the box directory's name:
+
+```ts continue
+apns.sent[1]?.payload.box === (await import("node:path")).basename(box.root)
+=> true
 ```
 
 ```ts cleanup
