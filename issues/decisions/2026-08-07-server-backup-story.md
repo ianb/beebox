@@ -10,7 +10,7 @@ priority: normal
 The deployed server has no first-class backup mechanism.
 `docs/server/operations.md` defers to "whatever backup mechanism is
 currently configured for the server"; git-annexed assets are
-`numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
+`numcopies: 1` with no annex remote (`docs/media/assets.md`); only migrations
 take a tar snapshot, scoped to that operation. A box's git remote (the
 one `bbx wakeup` pushes to) is operator-chosen and optional — boxes
 without one have exactly one copy of their history, and annexed media

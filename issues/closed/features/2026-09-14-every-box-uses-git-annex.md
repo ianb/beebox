@@ -38,7 +38,7 @@ The work, as scoped by the decision:
   at the one moment the user can act on it. git-annex becomes a hard install
   dependency, and grepping every `.md`/`.sh`/`Dockerfile` finds it mentioned
   only in tests, `bin/lib/worktree-create.sh:354,367`, and a failure-mode table
-  in `docs/assets.md` — no install or deploy doc says to install it.
+  in `docs/media/assets.md` — no install or deploy doc says to install it.
 - Asset writers assert instead of accommodating. Four write asset bytes into
   attach scopes and stage them; on a manifest box the stock ignore block means
   scan-import/pdf-extract/Gmail fail at `git add`, and card submissions lose the

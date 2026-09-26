@@ -11,7 +11,7 @@ issues: []
 > so the manifest-on-disk boundary, the corrupt-manifest handling, and the
 > `docs/asset-manifests.md` reference below all describe code that is gone. The
 > batch now stages its blobs and git-annex records their hashes. The rest of the
-> upload design is live. Current model: [`assets.md`](../assets.md).
+> upload design is live. Current model: [`assets.md`](../media/assets.md).
 
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the

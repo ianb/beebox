@@ -12,7 +12,7 @@ issues: []
 > `asset-manifest-scan.ts`, and every writer of `manifest.json` are deleted, and
 > git-annex records content hashes itself. The off-box *question* is still open;
 > the manifest-as-inventory design answering it is not available. Current model:
-> [`../assets.md`](../assets.md).
+> [`../assets.md`](../media/assets.md).
 
 **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
 here was implemented.

@@ -160,7 +160,7 @@
   description: "The background daemon that wakes boxes on a schedule."
 
 
-- source: beebox/docs/assets.md
+- source: beebox/docs/media/assets.md
   publish: contracts/assets.md
   description: "How media stays tracked by git without its bytes (git-annex)."
 
@@ -314,11 +314,11 @@
   publish: dev/composer.md
   description: "The chat composer: its coordination machine and a map of its rendered states."
 
-- source: beebox/docs/image-orientation.md
+- source: beebox/docs/media/image-orientation.md
   publish: dev/image-orientation.md
   description: "The EXIF orientation contract."
 
-- source: beebox/docs/image-transforms.md
+- source: beebox/docs/media/image-transforms.md
   publish: dev/image-transforms.md
   description: "Image transform operations."
 
