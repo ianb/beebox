@@ -3,6 +3,8 @@
 How photos, scans, audio, and video stay tracked by git without their bytes
 living in git's object database.
 
+## What it is
+
 **Status: implemented.** The current asset model and commands are documented
 below. Dated local and production conversion evidence is preserved in the
 [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).

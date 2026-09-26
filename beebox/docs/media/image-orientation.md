@@ -1,4 +1,9 @@
-# Image orientation contract
+# Image orientation
+
+The contract that an image at rest in a box is upright, and every ingress
+path measured against it.
+
+## What it is
 
 Photos carry an EXIF **orientation** tag (values 1–8: rotations and mirrors) so a
 camera can store sensor-native pixels and let the viewer rotate them. That only

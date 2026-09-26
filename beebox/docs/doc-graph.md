@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-26T16:23:08Z
+Generated: 2026-09-26T16:23:25Z
 Total documents: 436
 
 ## Issues
@@ -5649,7 +5649,7 @@ References:
 
 #### docs/media/assets.md
 
-Title: "Assets" | 234 lines | current reference
+Title: "Assets" | 236 lines | current reference
 
 Referenced by:
 - docs/cards.md:20 (link) — - Media that cards attach: [assets](media/assets.md).
@@ -5685,7 +5685,7 @@ References:
 
 #### docs/media/image-orientation.md
 
-Title: "Image orientation contract" | 50 lines | current reference
+Title: "Image orientation" | 55 lines | current reference
 
 Referenced by:
 - docs/guides.md:31 (link) — | Image orientation (EXIF) contract | [docs/media/image-orientation.md](media/image-orientation.md) |
@@ -5699,7 +5699,7 @@ References:
 
 #### docs/media/image-transforms.md
 
-Title: "On-demand image transforms" | 33 lines | current reference
+Title: "Image transforms" | 45 lines | current reference
 
 Referenced by:
 - docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](media/image-transforms.md))
@@ -5823,7 +5823,7 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 597 lines | proposal | active
 
 Referenced by:
-- docs/media/assets.md:230 (link) — [`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
+- docs/media/assets.md:232 (link) — [`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:52 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 - ../issues/closed/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:38 (mention) — Historical mentions in `docs/plans/asset-offbox-storage.md`,
 
@@ -7159,7 +7159,7 @@ References:
 Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
 
 Referenced by:
-- docs/media/assets.md:8 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
+- docs/media/assets.md:10 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
 - docs/server/operations.md:211 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
 
 References:
