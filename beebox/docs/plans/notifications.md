@@ -279,10 +279,22 @@ discussion on 2026-09-26; approval of this size is requested with the plan.
   already tracks a failing or quiet connector per episode. **Reuse:** the
   promotion rule reads it for a `requested-by` schedule with `requires`.
 - **Script environment.** The tick builds each script's env
-  (`src/cli/commands/tick-helpers.ts:275`), and procedure shells get the
-  box env plus `CHECK_SKIP` (`src/core/procedure/shell.ts:51`). `getHead`
-  and `getDiff` exist (`src/lib/git.ts:557`, `:455`). **Extend:** the
-  cursor variables ride the same path (Track D).
+  (`src/cli/commands/tick-helpers.ts:275`), and procedure shells rebuild
+  theirs through `buildScriptEnv` (`src/core/procedure/shell.ts:51`),
+  which inherits only allowlisted variables
+  (`src/core/script-env-allowlist.ts:59`). `getHead` exists
+  (`src/lib/git.ts:557`); `getDiff` (`:455`) wraps only the working-tree
+  diff, not a commit range. **Extend:** the new variables are added to the
+  allowlist, and a `getRangeDiff` helper is new (Track D).
+- **Skip sites.** `evaluateSkip` in the tick returns a reason and the loop
+  moves on without recording anything in schedule state
+  (`src/cli/commands/tick.ts:119-125`); the latch fields model only
+  `failing | overdue | invalid` (`src/core/schedule/state.ts:52-55`).
+  **Extend:** a skip episode is recorded so the promotion rule can latch
+  (Track E).
+- **No `bbx cat`.** Searched `src/cli/commands`; no command prints a card by
+  path. `bbx changes --cat` (Track D) prints the changed cards with a path
+  header, which is what a judge and an agent need.
 - **Searched and not found:** `bbx remind`, `bbx notify`, `bbx changes`, any
   unread concept outside Gmail, any `UIBackgroundModes`, any notification
   mention in the iOS plans, any toast component.
@@ -426,8 +438,15 @@ per delivery are git history that is all plumbing (boxholder decision).
   log lines, and one new bus event `notification` (the intent plus `url`)
   in `src/core/event-bus-schemas.ts:84` for open apps.
 - `src/core/notification/log.ts`: `appendIntent`, `appendDelivery`,
-  `readRecent(boxRoot, { days })`, `getIntent(boxRoot, id)`, trim at
-  finalize. Read by a `notifications` tRPC router (`recent`, `get`).
+  `readRecent(boxRoot, { days })`, `getIntent(boxRoot, id)`. The write
+  protocol, since three processes append (server, scheduler daemon, `bbx`):
+  one `O_APPEND` write per line, under 4 KB, which the filesystems in use
+  deliver atomically; the file is never rewritten in place. Rotation, not
+  trimming: at finalize, when the file is older than 30 days or over 8 MB,
+  it is renamed to `notifications.1.jsonl` (replacing the previous one) and
+  a new file starts; a writer holding the old descriptor lands its line in
+  the rotated file, which readers also read. Read by a `notifications` tRPC
+  router (`recent`, `get`).
 - `src/core/notification/target.ts`: `parseTarget(s): Target` and
   `targetUrl(target, boxSlug): string` (root-relative, the shape
   `question-alert.ts:100` builds today). `chat:new` renders to
@@ -447,11 +466,13 @@ per delivery are git history that is all plumbing (boxholder decision).
   process reads it and treats a timestamp older than 90 seconds as zero.
 - `src/core/notification/channels.ts`: `channelsToTry({ intent, audience,
   presence }): Channel[]`, pure. `loud`: every channel with an audience.
-  `quiet` and `dot`: every channel with an audience unless `activeWeb > 0`,
-  then none (`dot` reaches `apns` only). Presence suppresses everything but
-  `loud`; a walkthrough showed an always-sent `dot` badges the phone on
-  every reply while the person is at the desktop. Channels not tried get a
-  `skipped` delivery with `present` or `no-audience`.
+  `quiet`: every channel with an audience unless `activeWeb > 0`, then
+  none: the in-app banner shows it. `dot`: `apns` only, always. A `dot`
+  has no banner and no unread mark (deferred), so suppressing it while a
+  person is active on some unrelated tab would lose it entirely; a badge
+  that clears on foreground is the cheaper error, and the boxholder
+  accepted the clearing rule. Channels not tried get a `skipped` delivery
+  with `present` or `no-audience`.
 - `src/core/notify-boxholder.ts`: `notifyBoxholder(boxRoot, intent, {
   services?, now? })` appends the intent, emits the bus event, calls each
   chosen channel's `send` once in process, and appends each delivery. No
@@ -459,10 +480,12 @@ per delivery are git history that is all plumbing (boxholder decision).
   Callers are the scheduler daemon (in process, `scheduler.ts:250`), the
   server (callouts), and `bbx` (agents); all three already build services
   the same way the health alert does with `deliver: true` today.
-- `src/core/notification/health.ts`: two checks added to `runHealthChecks`
+- `src/core/notification/health.ts`: three checks added to `runHealthChecks`
   (`src/webapp/trpc/routers/health.ts:153`): "notifications that could not
   be delivered in the last 24 hours" and "notifications with no channel",
-  both read from the log with the titles.
+  both read from the log with the titles, and "notification log not
+  writable", which probes by opening the file for append, so an unwritable
+  log is reported by a check that does not depend on the log.
 - `src/cli/commands/notify.ts`: `bbx notify <title> [--body <text> |
   --body-file <path> | stdin] --target <t> [--loudness dot|quiet|loud]
   [--tag] [--channel <name>] [--check] [--targets-from-stdin]`.
@@ -667,24 +690,33 @@ then a `judge` precheck field; both are replaced by commands.
   exists. The tick exposes them to the script's environment
   (`src/cli/commands/tick-helpers.ts:275`, beside the existing env) as
   `BBX_SINCE_COMMIT`, `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and a writable file
-  path `BBX_CARRY_OUT`; after the run the tick reads that file into
-  `carry`. A procedure started by the tick passes them to its shells
-  (`src/core/procedure/shell.ts:51` already adds `CHECK_SKIP`). On a
-  schedule's first run the since variables are empty: a schedule is about
-  the future.
+  path `BBX_CARRY_OUT`, plus `BBX_DEFER_FILE` (below); after the run the
+  tick reads the carry file into `carry`. The five names are added to the
+  script env allowlist (`src/core/script-env-allowlist.ts:59`), which is
+  the only way they reach a procedure's shells
+  (`src/core/procedure/shell.ts:51` rebuilds the env through it). Before a
+  schedule's first run the tick sets `lastCommit` to the current HEAD and
+  saves state, so `BBX_SINCE_COMMIT` is never empty inside a schedule and
+  the first run sees no changes: a schedule is about the future.
 - **`bbx changes`.** New command; the env variables are its defaults, not
   its contract: `bbx changes [--since <commit>] [--match <glob>]... [--kind
   added|modified|any] [--log] [--or-skip]` prints one box-relative card
   path per line changed under the matching globs between `--since`
-  (default `$BBX_SINCE_COMMIT`) and HEAD, from a tree diff (`getDiff`,
-  `src/lib/git.ts:455`, with `--diff-filter`), so a card triage moved
-  during the window appears once at its final path
-  (`src/core/triage/routing.ts:74`). `--log` prints the commit subjects in
-  the window instead. `--or-skip` exits `CHECK_SKIP_CODE` (75,
-  `src/core/procedure/shell.ts:12`) on an empty result. With no `--since`
-  and no env it exits 2 with "no since: pass --since or run from a
-  schedule", never a guess. Usable from chat, a procedure, or a schedule.
-  Flags only; no JSON argument, the surface is small.
+  (default `$BBX_SINCE_COMMIT`) and HEAD, from a commit-range tree diff
+  (a new `getRangeDiff(boxRoot, { from, to, filter })` in `src/lib/git.ts`;
+  the existing `getDiff` at `:455` covers only the working tree), so a
+  card triage moved during the window appears once at its final path
+  (`src/core/triage/routing.ts:74`). `--cat` prints each listed card in
+  full after a `=== <path>` header line instead of the bare path, so a
+  judge and an agent downstream keep the path with the text; `--cat --all`
+  prints every card matching the globs, not only the changed ones, for a
+  snapshot judge that still wants to skip when nothing moved. `--log`
+  prints the commit subjects in the window instead. `--or-skip` writes
+  `{ reason: "no-change" }` to `$BBX_DEFER_FILE` when set and exits
+  `CHECK_SKIP_CODE` (75, `src/core/procedure/shell.ts:12`) on an empty
+  result. With no `--since` and no env (ad hoc use outside a schedule) it
+  exits 2 with "no since: pass --since or run from a schedule", never a
+  guess. Flags only; no JSON argument, the surface is small.
 - **The judgment card.** `src/schemas/judgment.ts`: `cardSchema("judgment",
   { fields: { questions: record(name, { type: enum(noul, choice, score),
   criteria }), situation?: ref, model? }, body })`, where `criteria` takes
@@ -725,18 +757,33 @@ then a `judge` precheck field; both are replaced by commands.
   is not served by OpenRouter (trial, 2026-09-26). Every question carries
   `instructions`; the API rejects one without. Every call and its answers go to
   `.beebox/jev-debug.log` (state truncated), the learning record.
-- **Deferred at the tick.** `bbx tick` treats exit 75 from `runs` as the
-  existing `deferred` outcome (`src/core/schedule/state.ts:45`), the way
-  the procedure runner treats a precheck skip, so `bbx health` shows
-  `waiting`, not `failing`, and `once` deletes the card only after a run
-  recorded `success` (`tick-helpers.ts:184` reads the recorded result).
-  `cron` or `on-wakeup`, plus `once`, plus a pipeline that skips, is "run
-  until it fires, then stop".
+- **Deferred at the tick, with evidence.** Exit 75 alone is not enough:
+  any command may exit 75 (`EX_TEMPFAIL`), and the scheduler's existing
+  `deferred` needs evidence, not a code (`src/core/schedule/engine-wait.ts`
+  requires engine-unavailability evidence). The tick gives each run a fresh
+  `BBX_DEFER_FILE` path; `bbx changes --or-skip` and `bbx judge --or-skip`
+  write `{ reason }` to it (`no-change`, `no-pass`, `budget`,
+  `jev-unavailable`, `unconfigured`) before exiting 75. The tick records
+  `deferred` with that reason in state (`lastDeferReason`) only when the
+  file exists; exit 75 without it is a `failure`. `bbx health` shows
+  `waiting: <reason>`. `once` deletes the card only after a run recorded
+  `success` (`tick-helpers.ts:184` reads the recorded result). A procedure
+  precheck that skips exits its `bbx procedure run` with 75 and the marker
+  its inner command wrote, so the same rule covers both shapes. `cron` or
+  `on-wakeup`, plus `once`, plus a pipeline that defers, is "run until it
+  fires, then stop".
+- **When `lastCommit` advances.** Settled, not an open question: `success`
+  advances; `failure` advances (a failing run is on the health page, and
+  re-judging the same items on every retry multiplies Jev calls for a bug
+  the person has to fix); `deferred` with `no-change` or `no-pass`
+  advances (the items were seen); `deferred` with `budget`,
+  `jev-unavailable`, or `unconfigured` keeps the cursor, so the items are
+  judged next time. The tick reads the reason from the marker file.
 - **Jev budget.** A per-box daily cap of Jev calls (default 500) in
   `.beebox/jev-budget.json`, enforced in `bbx judge`: over the cap it
-  exits 75 with `budget` on stderr, and the tick does not advance
-  `lastCommit` for a run that ended that way, so the items are judged next
-  time. A health check says how many runs deferred for budget.
+  writes `budget` to the defer file and exits 75; the cursor rule above
+  keeps the items for next time. A health check says how many runs
+  deferred for budget.
 - **Schedule versus procedure.** A schedule card holds when, `once`,
   `until`, `requires`, `requested-by`, the memory, and `runs:`. When the
   notification text is fixed, `runs:` is a one-line pipeline. In the common
@@ -776,18 +823,18 @@ then a `judge` precheck field; both are replaced by commands.
         pass-output: true
         shells:
           - |
-            bbx changes --match '_content/inbox/**/*.email.card' --or-skip \
-              | xargs bbx cat \
+            bbx changes --match '_content/inbox/**/*.email.card' --cat --or-skip \
               | bbx judge _config/judgments/field-trip.judgment.card --min trip=0.8 --or-skip --echo
       run:
         agents:
           - model: efficient
             prompt: |
-              The emails below arrived since the last check, and a judge
-              says at least one is the school writing about the spring field
-              trip. Find it, and tell the boxholder what matters (dates,
-              form, payment, deadline) in one or two sentences with
-              `bbx notify --loudness loud --target card:<the email> --body-file -`.
+              The emails below arrived since the last check, each after a
+              `=== <path>` line, and a judge says at least one is the
+              school writing about the spring field trip. Find it, and tell
+              the boxholder what matters (dates, form, payment, deadline)
+              in one or two sentences with
+              `bbx notify --loudness loud --target card:<that path> --body-file -`.
               If none of them is really about the trip, do nothing.
   ```
   ```yaml
@@ -820,8 +867,7 @@ then a `judge` precheck field; both are replaced by commands.
   requested-by: boxholder
   requires: { connectors: [google-drive] }
   runs: >
-    bbx changes --match 'drive/Quotes/**' --kind any --or-skip
-    && bbx cat drive/Quotes/*.card
+    bbx changes --match 'drive/Quotes/**' --kind any --cat --all --or-skip
     | bbx judge _config/judgments/contractor-quote.judgment.card --min quote=0.8 --or-skip
     && bbx notify --loudness loud --target card:drive/Quotes "The contractor's quote is in"
   ```
@@ -833,10 +879,11 @@ then a `judge` precheck field; both are replaced by commands.
   notification across runs when `once` is not set.
 
 **Vocabulary lock-ins.** `notify:` and `requested-by` on scheduled scripts;
-`lastCommit` and `carry` in schedule state; `BBX_SINCE_COMMIT`,
-`BBX_SINCE_TIME`, `BBX_CARRY_IN`, `BBX_CARRY_OUT`; `bbx changes` and `bbx
-judge` and their flags; the `judgment` card and its `questions` shape;
-exit 75 as deferred at the tick.
+`lastCommit`, `carry`, and `lastDeferReason` in schedule state;
+`BBX_SINCE_COMMIT`, `BBX_SINCE_TIME`, `BBX_CARRY_IN`, `BBX_CARRY_OUT`,
+`BBX_DEFER_FILE`; the defer reasons; `bbx changes` and `bbx judge` and
+their flags; the `judgment` card and its `questions` shape; exit 75 plus
+the marker as deferred at the tick.
 
 **First implementation chunk.** `jev.judge` for the three question types
 with a doctest against the fake; the `notify:` field and its tick path with
@@ -844,13 +891,17 @@ a doctest (an `at` card fires a notification and deletes itself; a `notify`
 plus `runs` card fails validation with the message). Second chunk: the
 memory fields, the env variables, the carry file, and `bbx changes` with a
 filesystem doctest over a temporary repo (three commits add three cards,
-one moved by a rename; `--match` selects; `--or-skip` exits 75 on empty;
-no since exits 2; the first run sees nothing; a carry written is read back
-next run). Third chunk: the `judgment` schema and `bbx judge` with a
+one moved by a rename; `--match` selects; `--cat` headers each card;
+`--or-skip` writes the marker and exits 75 on empty; no since outside a
+schedule exits 2; the first run sees nothing because `lastCommit` was
+initialized; a carry written is read back next run; a procedure's shells
+see the variables). Third chunk: the `judgment` schema and `bbx judge` with a
 doctest (per-line cards, `--min`, `--select`, `--decide`, `--dry-run`
-output, `--replay`, budget exit); then exit 75 as `deferred` at the tick
-with a doctest (a pipeline that skips records `deferred` and survives
-`once`; one that passes records `success` and is deleted).
+output, `--replay`, budget exit with the marker); then the tick's deferred
+rule with a doctest (a pipeline that defers with a marker records
+`deferred` with its reason and survives `once`; exit 75 with no marker
+records `failure`; the cursor advances or holds per reason; one that
+passes records `success` and is deleted).
 
 ### Track E. Sources: callouts, question sweep, health demotion and promotion
 
@@ -883,12 +934,16 @@ reach the person only when the agent marks them.
   `notifyBoxholder`. Each becomes a health entry in the snapshot the
   dashboard already renders (`HealthWarnings.tsx:40`), with the same
   once-per-episode latch. No badge, no push.
-- Promotion: at the scheduler's skip sites
-  (`src/cli/commands/tick-helpers.ts:142-144` for missing connectors,
-  `src/core/schedule/engine-wait.ts` for engine quota), a skipped card with
-  `requested-by: boxholder` sends `loud` once per episode: "Your reminder
-  could not run: Google needs reconnecting", target `dashboard`. The
-  episode latch reuses `schedule-state.ts`. Two more triggers for the same
+- Promotion: the tick's skip path (`src/cli/commands/tick.ts:119-125`)
+  records nothing today. It gains a saved `skipped: { reason, since }` in
+  schedule state, set when `evaluateSkip` returns a reason (missing
+  connectors, `tick-helpers.ts:142-144`; engine quota, `engine-wait.ts`)
+  and cleared on any run. For a card with `requested-by: boxholder`, the
+  first tick that sets `skipped` for a new `since` sends `loud` ("Your
+  reminder could not run: Google needs reconnecting", target `dashboard`)
+  and stamps `alertedFor: "skipped:<reason>"` beside the existing latch
+  values (`state.ts:52-55`); later ticks with the same `since` send
+  nothing; a run clears both. Two more triggers for the same
   rule: a `requested-by` schedule whose `requires` connector is in a failing
   episode (`connector-activity-alert.ts:40`) even though the script itself
   could run, and a judge that cannot run because the Jev key is missing.
@@ -1018,7 +1073,8 @@ is fixed by Apple's API and the contract rule.
 | Intent with no channel to try (no audience, no presence) | Track A doctest | today: silent return (`src/core/notify-boxholder.ts:107-109`); plan: health entry naming the title | Clear |
 | One channel fails, another sends | Track A doctest | per-channel log lines; the failure is a health check for 24 hours | Clear |
 | Process dies between send and log append | none: window is one write | the person got the notification; the log lacks the line; Admin shows the intent without a delivery | Silent, accepted: no user-visible harm |
-| Log unwritable | Track A doctest | `notifyBoxholder` still sends; logs an error | Clear (console error) |
+| Log unwritable | Track A doctest | `notifyBoxholder` still sends and logs an error; the append-probe health check reports it without reading the log | Clear |
+| Rotation races an appender | Track A doctest | rename is atomic; a line written through the old descriptor lands in the rotated file, which readers also read | Clear |
 | Bus DB unreadable | existing bus `unknown` sentinel (`src/core/event-bus.ts:24-31`) | the live event is skipped; delivery unaffected | Clear |
 | Agent promises a reminder with no channel | Track F audit; `--check` route doctest | `bbx notify --check` exits 1; the guide says check first | Clear |
 | Card target moved by triage after the send | none | tap lands on the missing-card page | Silent, accepted for v1: no stable card id exists |
@@ -1032,12 +1088,13 @@ is fixed by Apple's API and the contract rule.
 | Permission denied on the phone | Track C manual | shell shows the denied state with a Settings link | Clear |
 | Schedule card with both `notify` and `runs`, or neither | Track D schema doctest | refinement message names the rule | Clear |
 | Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next tick | Clear |
-| Judge exit code taken as failure by an older tick | none needed: same package | `DEFERRED_EXIT_CODE` is added to the tick that reads it in the same change | Clear |
+| A command exits 75 for its own reasons (`EX_TEMPFAIL`) | Track D doctest | no marker file, so recorded `failure`, not `deferred` | Clear |
+| A skipped `dot` while the person is on another tab | none needed | `dot` is never suppressed by presence | Clear |
 | Schedule state lost (`.beebox/` wiped) | Track D doctest | `lastCommit` null; the next run sees nothing and sets it; cards added meanwhile are never judged; health check `schedule cursors reset` | Clear |
 | Two ticks run the same schedule | existing schedule lock (`tick-helpers.ts:250`) | serialized | Clear |
-| `bbx judge` over the daily budget | Track D doctest | exits 75 with `budget`; cursor not advanced; health check | Clear |
-| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | `bbx judge` exits 75 with the error; the run records `deferred`, cursor not advanced; health check after two consecutive | Clear |
-| Jev key missing | Track D doctest | `bbx judge` exits 75 with `unconfigured`; health check; a `requested-by` card promotes (Track E) | Clear |
+| `bbx judge` over the daily budget | Track D doctest | marker `budget`, exit 75; cursor held; health check | Clear |
+| Jev unreachable or invalid response | existing `JevError` (`src/services/jev.ts:19`); Track D doctest | marker `jev-unavailable`, exit 75; `deferred`, cursor held; health check after two consecutive | Clear |
+| Jev key missing | Track D doctest | marker `unconfigured`, exit 75; health check; a `requested-by` card promotes (Track E) | Clear |
 | `bbx changes` with a bad `--since` (commit gone after a history rewrite) | Track D doctest | error, precheck fails, run recorded `failure` with the message | Clear |
 | `bbx notify` fails after the judge passed | Track D doctest | pipeline exits 1; `failure` recorded; cursor advanced; the item is not re-judged; the failure is on the health page | Clear |
 | Judgment card invalid (a `noul` with `options`) | schema doctest | `bbx judge` exits 2 with the refinement message; run recorded `failure` | Clear |
@@ -1046,6 +1103,7 @@ is fixed by Apple's API and the contract rule.
 | Same card judged by two schedules | Track D doctest | each fires; `tag` is the schedule name so the phone collapses only within one | Clear |
 | Callout turn completes, presence flips during delivery | Track E doctest | notification still sent; seen twice at worst | Clear |
 | Promotion rule fires for a system-scheduled script | Track E doctest | only `requested-by: boxholder` promotes | Clear |
+| Promotion repeats every tick | Track E doctest | `alertedFor: skipped:<reason>` latched on the episode's `since` | Clear |
 | `chat:new` opened after the log trimmed the intent | Track A route doctest | chat opens without the banner and logs the id | Clear |
 
 No critical gap. The presence window is the one accepted silent behavior,
@@ -1132,13 +1190,9 @@ bounded to the heartbeat staleness.
    tune after the device test.
 3. **Default loudness for `bbx notify` and `notify:`.** `quiet` for the
    command, `loud` for a `requested-by: boxholder` schedule. Lean as stated.
-4. **Whether `lastCommit` should advance on a run that failed.** Lean: yes;
-   a failing run is on the health page, and re-judging the same items on
-   every retry would multiply Jev calls for a bug the person has to fix
-   anyway.
-5. **Whether `dot` badge should be a count.** Not without unread state; the
+4. **Whether `dot` badge should be a count.** Not without unread state; the
    badge is 1 and clears on foreground. Revisit with the unread issue.
-6. **The `--decide` JSON shape.** Lean: an object of `{ name: { min?, max?,
+5. **The `--decide` JSON shape.** Lean: an object of `{ name: { min?, max?,
    is? } }` combined with AND; anything else is `jq`. Settled in Track D's
    third chunk, not before.
 
@@ -1203,9 +1257,10 @@ New agent-facing concepts, each with a `knows_directly` entry in
 3. **Track C**: entitlement, delegate, registrar, presentation, tap handling,
    badge clearing. Simulator-verified; device test with the boxholder.
 4. **Track D** chunk 1: `jev.judge`, `notify:` on schedule cards and its tick
-   path. Chunk 2: schedule memory, the env variables, the carry file, `bbx
-   changes`. Chunk 3: the `judgment` card, `bbx judge`, exit 75 as
-   deferred, `once` semantics, budget.
+   path. Chunk 2: schedule memory, the env variables and allowlist, the
+   carry and defer files, `getRangeDiff`, `bbx changes`. Chunk 3: the
+   `judgment` card, `bbx judge`, the tick's deferred rule and cursor rule,
+   `once` semantics, budget.
 5. **Track E** chunk 1: loudness on existing callers, question `urgency`.
    Chunk 2: callouts at turn end, health entries, promotion rule,
    capture failure.
