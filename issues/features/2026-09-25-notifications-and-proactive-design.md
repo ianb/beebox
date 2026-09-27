@@ -10,8 +10,8 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-25
 ---
 
-> **⏳ Awaiting manual testing** — Tracks A–F landed on `main` (merge commit
-> reported at land time). Automated coverage: doctests, `pnpm test:changed`,
+> **⏳ Awaiting manual testing** — Tracks A–F landed on `main` in `0352baad8`.
+> Automated coverage: doctests, `pnpm test:changed`,
 > 11 rounds of cross-model review, a `BBX_NOTIFY_FAKE=1` / `BBX_JEV_FAKE=1`
 > end-to-end walk on a scratch test-box clone, and 347 XCTests green on the
 > iOS simulator with device registration verified against the test box.
