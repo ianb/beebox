@@ -2973,6 +2973,10 @@ tests:
   # landmark-link-attribute to specify "hand-listed" since templates
   # use template-ref. Both new/refined audits pass.
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone after one check fix, 2 reads, 1 searches, 39k ctx. The first run was
+  # right but said "keep coming back" in plain words (SPEAKING), which no listed
+  # word matched; "coming back", "going back", and "jump" now count.
   - id: landmarks-purpose
     prompt: "What is the Landmarks page in this box for?"
     expected_level: knows_directly
@@ -2980,9 +2984,11 @@ tests:
       Describes landmarks as a quick-jump surface for the spots the user
       actually returns to — a user-navigation overlay on the directory
       tree. NOT a directory listing, NOT a creation tool, NOT a TOC.
-    correct_contains_any: ["return", "navigate", "user", "quick"]
+    correct_contains_any: ["return", "navigate", "user", "quick", "coming back", "going back", "jump"]
     tags: [landmarks, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone, 1 reads, 0 searches, 39k ctx.
   - id: landmarks-vs-directories
     prompt: "Why have landmarks if the box already has a directory tree?"
     expected_level: knows_directly
@@ -2994,6 +3000,8 @@ tests:
     correct_contains_any: ["mental model", "user", "boxholder", "perspective", "navigate", "you"]
     tags: [landmarks, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx.
   - id: landmarks-recurrence-signal
     prompt: "I have asked you about my recipes three times this week already. Should you do something?"
     expected_level: knows_about
@@ -3011,6 +3019,10 @@ tests:
       that dev-repo doc isn't in the box; curation knowledge is now in the
       always-on agent guide and the agent answers correctly directly.)
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone after one check fix, 1 reads, 0 searches, 39k ctx. Same plain-words
+  # miss as landmarks-purpose; "coming back", "going back", and "keep asking"
+  # now count.
   - id: landmarks-criteria
     prompt: "What makes a directory worth turning into a landmark?"
     expected_level: knows_about
@@ -3018,9 +3030,11 @@ tests:
       Answers in user-perspective terms — recurrence in conversation, places
       the user returns to, navigational asks rather than search. Does NOT cite
       size, volume, or technical importance as criteria.
-    correct_contains_any: ["recurrence", "return", "user", "navigate"]
+    correct_contains_any: ["recurrence", "return", "user", "navigate", "coming back", "going back", "keep asking"]
     tags: [landmarks, curation]
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx.
   - id: landmarks-not-everywhere
     prompt: "Should every directory under store/ get its own landmark?"
     expected_level: knows_about
@@ -3031,6 +3045,9 @@ tests:
     correct_contains_any: ["no", "few", "short"]
     tags: [landmarks, curation]
 
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone, 3 reads, 3 searches, 39k ctx. should_read now names the bare
+  # filename, which the runner accepts on a symlinked package.
   - id: landmarks-dont-create-quietly
     prompt: "I keep asking about the household budget folder. Set up a landmark for it."
     expected_level: knows_about
@@ -3039,7 +3056,7 @@ tests:
       create the landmark since the user explicitly asked, but should
       NOT proceed without confirming the symbol/label or hand-waving
       the curated links. Reads node_modules/beebox/box-docs/card-landmark.md before writing.
-    should_read: ["node_modules/beebox/box-docs/card-landmark.md"]
+    should_read: ["card-landmark.md"]
     tags: [landmarks, curation]
     notes: >
       Even with explicit user direction, creation is editorial work —
@@ -6313,12 +6330,16 @@ tests:
   # gave the right answer (a background landmark in logs/) but failed the
   # `bbx rm` blocklist by naming deletion as the approach to avoid; that
   # blocklist entry is dropped, watch_for still covers deletion.
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone at knows_about, 2 reads, 1 searches, 39k ctx (read card-landmark.md
+  # and prominence.md).
   - id: prominence-housekeeping-directory
     prompt: >
       _content/projects/deck/logs/ holds fifty generated log cards that
       clutter the deck project's listing. How do you keep them out of the way
       without deleting them?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["card-landmark.md", "prominence.md", "landmark-curation.md"]
     watch_for: >
       A landmark in logs/ carrying `prominence: background` (or `background`
       on the cards); explains they stay readable and addressable. FAILS on
@@ -6334,17 +6355,38 @@ tests:
   # prominence.md ("forty recipes: mark nothing, give the directory an entry
   # point") it said marking one recipe primary would misuse the field. The
   # doc and this audit's expectation disagree; a question for the boxholder.
+  # Rewritten 2026-09-26 (doc-structure Track 3, LANDMARKS): the prompt now
+  # states the premise the answer depends on, forty recipes with none singled
+  # out, which prominence.md settles as no mark on the recipes and an entry
+  # point for the directory. The old prompt ("the bread recipe") expected
+  # `primary` without saying the bread was special. A weekly-bread premise
+  # (the case docs/implemented-plans/card-prominence.md:631 marks primary) was
+  # tried first: the agent read prominence.md's "forty recipes: mark nothing"
+  # and chose a `links:` entry with a label, and passed only because it wrote
+  # the word "primary" while rejecting it. Re-leveled to knows_about: the
+  # derivation moved off the guide (ledger row landmarks.derived-links) to the
+  # landmark card's doc.
+  # Status (2026-09-26, doc-structure Track 3, LANDMARKS): pass on the test1
+  # clone with the forty-recipes premise, 1 reads, 0 searches, 40k ctx: no links
+  # entries and no primary marks. It proposed an `expand` query over the recipes
+  # rather than an entry-point card, which card-landmark.md allows; the entry-
+  # point phrase matched in its reasoning.
   - id: prominence-vs-links
     prompt: >
-      The boxholder wants the bread recipe to show up under the Recipes
-      landmark. Do you edit the landmark's links list?
-    expected_level: knows_directly
+      _content/recipes/ holds forty recipe cards, none used more than the
+      others, and a Recipes landmark. The boxholder wants the recipes easy to
+      reach from that landmark. Do you add them to the landmark's links list?
+      Say what you would do, and do not change any files.
+    expected_level: knows_about
     watch_for: >
-      No — marks _content/recipes/Bread.recipe.card `prominence: primary` and
-      says the landmark derives its list; `links:` is for a card outside the
-      directory, a contextual label, or a fixed order. FAILS if the first
-      move is adding a `links:` entry.
-    correct_contains: ["primary"]
+      No `links:` entries for the recipes, and no `primary` on them: the
+      landmark derives its list from marked cards, and when everything in the
+      directory is the thing you mark nothing and give the directory an
+      `entry-point` card (a recipe index or gallery). `links:` is for a card
+      outside the directory, a contextual label, or a fixed order. FAILS on
+      listing the recipes in `links:` or marking them `primary`.
+    should_read_any: ["card-landmark.md", "prominence.md", "landmark-curation.md"]
+    correct_contains_any: ["entry-point", "entry point"]
     tags: [prominence, navigation]
 
   # === Agent guide Track 3: rows moved out of ABOUT_CARDS ===

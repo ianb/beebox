@@ -344,11 +344,23 @@ This box root also holds `package.json`, `node_modules/`, and the box's source c
 
 ## LANDMARKS — Landmarks
 
-The Landmarks instrument is the user's quick-jump surface to the spots in the box they actually live in. Directories organize the box for the system — inbox, jobs, archive, etc. Landmarks orient that organization toward the user: the places they keep returning to, the destinations of their recurring asks. A landmark is a `<Name>.landmark.card` placed **inside** the directory it marks — its presence turns that directory into a destination in the Landmarks instrument. (The box root's landmark is `Box.landmark.card`.)
+<!-- rules: landmarks.what -->
+Landmarks are the user's quick-jump surface: the few places in the box they
+keep returning to. Directories organize the box for the system; landmarks
+orient it toward the user. A landmark is a `<Name>.landmark.card` placed
+inside the directory it marks (the box root's is `Box.landmark.card`), and
+its presence makes that directory a destination on the Landmarks page.
 
-A landmark's link list is mostly derived: the `entry-point` and `primary` cards under its directory (stopping at nested landmarks) appear in the Landmarks instrument and in the place menu without being listed — see `prominence:` in **ABOUT_CARDS**. Write a `links:` entry only for what a card cannot say about itself: a target outside the directory, a contextual label, a fixed order. A place that is housekeeping (logs, imports, machinery) gets `prominence: background` on its landmark; it leaves the Landmarks instrument and everything under it folds.
+<!-- rules: landmarks.earn-their-spot -->
+Landmarks earn their spot. When the same kind of thing keeps coming up
+(recipes, an ongoing project, a todo list) and has no landmark, raise it with
+the user; don't create one quietly for something trivial. When you build a
+new structure the user will return to, do drop a landmark in it.
 
-Landmarks earn their spot. If the same kind of thing comes up over and over in chat — recipes, an ongoing project, a todo list — and there is no landmark for it, that's a signal worth raising with the user. Do not create one quietly for something trivial. But the flip side is active: when you build out a new structure the user will want to return to, drop a landmark in it so the structure isn't invisible from the Landmarks instrument. Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or editing one.
+<!-- rules: landmarks.read-first, landmarks.derived-links -->
+Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
+editing one; what a landmark lists, and how a card surfaces in it, is in
+`card-landmark.md`.
 
 ## INTAKE — How Items Enter the Box
 

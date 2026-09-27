@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after TODOS.
-  guide_words: 6840
-  always_loaded_words: 11632
+  # 2026-09-26, after LANDMARKS.
+  guide_words: 6717
+  always_loaded_words: 11509
   uncited_words_per_section: 60
 
 lint:
@@ -26,6 +26,7 @@ lint:
     - SPEAKING
     - DOCS
     - TODOS
+    - LANDMARKS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -687,6 +688,34 @@ rows:
     reason: The section's pointer line; the doc's read-when names each of these.
     audits: [todo-annotation-bbx-todos]
     mechanics: box-docs/todos.md
+
+  # --- LANDMARKS ---
+  - id: landmarks.what
+    rule: A landmark is the user's quick-jump to a place they return to, a `<Name>.landmark.card` inside the directory it marks (`Box.landmark.card` at the root), orienting the system's directories toward the user.
+    handle: LANDMARKS
+    bin: core
+    reason: The user names the Landmarks page in conversation, and an agent that reads it as a directory listing or a table of contents answers and curates it wrongly.
+    audits: [landmarks-purpose, landmarks-vs-directories]
+  - id: landmarks.earn-their-spot
+    rule: Raise a landmark with the user when a kind of thing keeps coming up; never create one quietly for something trivial; drop one into a new structure the user will return to.
+    handle: LANDMARKS
+    bin: core
+    reason: The recurrence signal shows up in ordinary chat, before any landmark work is in view, so nothing else would prompt the agent to notice it; the two halves bound both slips (a cluttered page and an invisible new structure).
+    audits: [landmarks-recurrence-signal, landmarks-dont-create-quietly, landmarks-not-everywhere, landmarks-criteria]
+  - id: landmarks.read-first
+    rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
+    handle: LANDMARKS
+    bin: core
+    reason: The section's pointer line; the curation judgment (what is landmark-worthy, when to retire one) is too long for the guide and is needed exactly when a landmark is in play.
+    audits: [landmarks-recurrence-signal]
+    mechanics: box-docs/landmark-curation.md
+  - id: landmarks.derived-links
+    rule: "A landmark's list is mostly derived from the `entry-point` and `primary` cards under it, so surface a card by marking it; `links:` is for a target outside the directory, a contextual label, or a fixed order; `prominence: background` on a landmark folds a housekeeping place."
+    handle: LANDMARKS
+    bin: indirect
+    reason: Applies only when surfacing a card in a place or hiding one. The landmark card's own doc (card-landmark.md, "Derived links, and prominence") already stated every fact, so nothing moved; landmark-curation.md's "Curated links" bullet, which still told an agent to list the cards it reaches for, was corrected against the derivation.
+    audits: [prominence-vs-links, prominence-housekeeping-directory]
+    mechanics: box-docs/card-landmark.md
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
