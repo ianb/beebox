@@ -93,6 +93,16 @@ if echo "$staged" | grep -q '\.md$'; then
   run_in beebox pnpm doc-check
 fi
 
+# Source file layout (beebox/docs/plans/file-layout.md): every package root
+# must stay at zero findings. Runs before the docs-only exit because a
+# doctest is a `.md` file. The whole repo scans in a few seconds; there is no
+# changed-files mode, since a change in one directory can create a finding in
+# another. Also runs on deletions: removing a file can leave a registry stale.
+layout_staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMRD)"
+if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|\.doctest\.md$|(^|/)package\.json$'; then
+  run_in beebox pnpm --silent layout-check
+fi
+
 # Docs-only commits need nothing further — typecheck/lint add nothing.
 if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
   exit 0
