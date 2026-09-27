@@ -5,8 +5,8 @@ plus the side-effect-registration check that backs rule 4's "nothing else
 constructs the list". `beebox/docs/plans/file-layout.md`.
 
 ```ts setup
-import { setsRule } from "../../../../../src/dev/layout/check/rules/sets.js";
-import { layout, summary } from "./fixture.js";
+import { setsRule } from "../../../../../../src/dev/layout/check/rules/sets/rule.js";
+import { layout, summary } from "../fixture.js";
 ```
 
 ## No registries, no findings
@@ -180,6 +180,11 @@ set-members pkg/src/verbs/migrate
 
 ## Record-form keys that do not match their member name (file member and directory member)
 
+The key equals the member name converted from kebab-case to camelCase:
+`quick-chat.ts` is correctly keyed `quickChat`, so it carries no finding.
+`cards.ts` (a file member) and `legacy/handler.ts` (a directory member, via
+`entry: "handler"`) are keyed wrong.
+
 ```ts
 const exportsLayout = layout({
   files: {
@@ -191,20 +196,27 @@ const exportsLayout = layout({
         form: "record",
         members: [
           { source: "src/exports/schema.ts", key: "schema" },
+          { source: "src/exports/quick-chat.ts", key: "quickChat" },
           { source: "src/exports/cards.ts", key: "wrongkey" },
           { source: "src/exports/legacy/handler.ts", key: "old" },
         ],
       },
     },
     "src/exports/schema.ts": {},
+    "src/exports/quick-chat.ts": {},
     "src/exports/cards.ts": {},
     "src/exports/legacy/handler.ts": {},
   },
 });
-summary(setsRule.check(exportsLayout))
+const exportsFindings = setsRule.check(exportsLayout);
+summary(exportsFindings)
 =>
 registry pkg/src/exports.ts
 registry pkg/src/exports.ts
+
+JSON.stringify(exportsFindings.map((f) => f.message))
+=>
+["record key \"old\" does not match expected key \"legacy\" for member \"legacy\" (pkg/src/exports/legacy/handler.ts); rename the key or the member to match","record key \"wrongkey\" does not match expected key \"cards\" for member \"cards\" (pkg/src/exports/cards.ts); rename the key or the member to match"]
 ```
 
 ## A value import between two members, and a member importing its own registry

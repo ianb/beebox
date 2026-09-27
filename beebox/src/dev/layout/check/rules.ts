@@ -5,12 +5,13 @@
 import { defineRegistry } from "../../../lib/registry.js";
 import type { LayoutRule } from "../model.js";
 import { namesRule } from "./rules/names.js";
-import { setsRule } from "./rules/sets.js";
+import { setsRule } from "./rules/sets/rule.js";
 import { testsRule } from "./rules/tests.js";
 import { unitsRule } from "./rules/units.js";
 
 export const layoutRules = defineRegistry<LayoutRule>({
   directory: "./rules",
+  entry: "rule",
   ordered: false,
   members: { names: namesRule, sets: setsRule, tests: testsRule, units: unitsRule },
 });

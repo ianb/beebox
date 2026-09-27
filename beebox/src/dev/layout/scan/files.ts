@@ -10,14 +10,27 @@ const execFileAsync = promisify(execFile);
 
 export type FileKind = "declaration" | "test" | "module" | "data";
 
-const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
+const TYPESCRIPT_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
+const PLAIN_JS_EXTENSIONS = [".js", ".mjs", ".cjs"];
 const TEST_SUFFIXES = [".doctest.md", ".test.ts", ".tour.ts"];
 
-/** `.d.ts` -> declaration; doctest/test/tour -> test; a module extension -> module; else data. */
-export function classifyFile(path: string): FileKind {
+/** A TypeScript source file, `.d.ts` excluded. */
+function isTypeScriptFile(path: string): boolean {
+  return !path.endsWith(".d.ts") && TYPESCRIPT_EXTENSIONS.some((ext) => path.endsWith(ext));
+}
+
+/**
+ * `.d.ts` -> declaration; doctest/test/tour -> test; a TypeScript extension ->
+ * module; a plain `.js`/`.mjs`/`.cjs` -> module only when `isSourceRoot` says
+ * the file sits in `src/` or a source root (a top-level directory holding
+ * TypeScript); such a file elsewhere is a static asset (data), e.g. the
+ * frontend's `public/sw.js`.
+ */
+export function classifyFile(path: string, isSourceRoot: boolean): FileKind {
   if (path.endsWith(".d.ts")) return "declaration";
   if (TEST_SUFFIXES.some((suffix) => path.endsWith(suffix))) return "test";
-  if (MODULE_EXTENSIONS.some((ext) => path.endsWith(ext))) return "module";
+  if (isTypeScriptFile(path)) return "module";
+  if (PLAIN_JS_EXTENSIONS.some((ext) => path.endsWith(ext))) return isSourceRoot ? "module" : "data";
   return "data";
 }
 
@@ -60,19 +73,24 @@ function ancestorsOf(params: { path: string; packageRoot: string }): string[] {
 
 const RESERVED_TOP_DIRS = new Set(["src", "test", "node_modules", "dist"]);
 
-/** Top-level package directories other than src/test/node_modules/dist/dot-dirs holding at least one module. */
+/**
+ * Top-level package directories other than src/test/node_modules/dist/dot-dirs
+ * holding at least one TypeScript file. Presence is decided by TypeScript
+ * alone, not by `classifyFile` (which needs this result to classify plain
+ * JavaScript in the first place).
+ */
 function findExtraSourceRoots(params: { packageRoot: string; files: string[] }): string[] {
-  const withModule = new Set<string>();
+  const withTypeScript = new Set<string>();
   for (const path of params.files) {
-    if (classifyFile(path) !== "module") continue;
+    if (!isTypeScriptFile(path)) continue;
     const rest = path.slice(params.packageRoot.length + 1);
     const slash = rest.indexOf("/");
     if (slash === -1) continue;
     const top = rest.slice(0, slash);
     if (RESERVED_TOP_DIRS.has(top) || top.startsWith(".")) continue;
-    withModule.add(`${params.packageRoot}/${top}`);
+    withTypeScript.add(`${params.packageRoot}/${top}`);
   }
-  return [...withModule].toSorted();
+  return [...withTypeScript].toSorted();
 }
 
 export interface ScannedFiles {

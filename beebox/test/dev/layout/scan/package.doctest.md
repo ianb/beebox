@@ -30,6 +30,7 @@ await write(
   `import { build } from "esbuild";\nimport { join } from "node:path";\nconst root = join(import.meta.dirname, "..");\nconst distDir = join(root, "dist");\nawait build({\n  entryPoints: [join(root, "src/a.ts")],\n  outfile: join(distDir, "main.js"),\n});\n`,
 );
 await write("pkg/src/b.ts", "export const b = 1;\n");
+await write("pkg/public/sw.js", "self.addEventListener('install', () => {});\n");
 await write("pkg/src/lib/registry.ts", "export function defineRegistry(spec: unknown): unknown { return spec; }\n");
 await write(
   "pkg/src/a.ts",
@@ -51,6 +52,17 @@ layout.files.get("pkg/src/a.ts")?.kind
 
 layout.files.get("pkg/test/x.doctest.md")?.kind
 => test
+```
+
+`scripts/` holds TypeScript and is an extra source root; `public/` holds
+none, so it is not, and its plain `.js` file is a static asset, not a module.
+
+```ts
+JSON.stringify(layout.extraSourceRoots)
+=> ["pkg/scripts"]
+
+layout.files.get("pkg/public/sw.js")?.kind
+=> data
 ```
 
 ## Value imports resolve; a registry declaration is read with its member's source

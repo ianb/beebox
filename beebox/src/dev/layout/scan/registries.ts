@@ -116,6 +116,33 @@ function memberOf(params: {
   return { expression, source: bound === undefined ? null : bound, key: params.key };
 }
 
+/** The initializer of a top-level `const <name> = ...` declaration in `sourceFile`, else null. */
+function constInitializerOf(sourceFile: ts.SourceFile, name: string): ts.Expression | null {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    if ((statement.declarationList.flags & ts.NodeFlags.Const) === 0) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (ts.isIdentifier(declaration.name) && declaration.name.text === name && declaration.initializer !== undefined) {
+        return declaration.initializer;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Unwraps `expression`; when the result is an identifier bound by a same-file
+ * `const` whose (also unwrapped) initializer is a literal, follows to that
+ * literal so it reads exactly as if written inline. Any other identifier, or
+ * one with no such `const`, is returned as-is (a scan finding follows).
+ */
+function resolveMembersExpression(params: { expression: ts.Expression; sourceFile: ts.SourceFile }): ts.Expression {
+  const unwrapped = unwrapArgument(params.expression);
+  if (!ts.isIdentifier(unwrapped)) return unwrapped;
+  const initializer = constInitializerOf(params.sourceFile, unwrapped.text);
+  return initializer === null ? unwrapped : unwrapArgument(initializer);
+}
+
 interface MembersResult {
   form: "list" | "record";
   members: RegistryMember[];
@@ -198,10 +225,12 @@ export function extractRegistries(params: {
     });
 
     const membersExpr = propertyOf(object, "members");
+    const resolvedMembersExpr =
+      membersExpr === null ? null : resolveMembersExpression({ expression: membersExpr, sourceFile: params.sourceFile });
     const membersResult =
-      membersExpr === null
+      resolvedMembersExpr === null
         ? null
-        : readMembers({ expression: membersExpr, sourceFile: params.sourceFile, importSources });
+        : readMembers({ expression: resolvedMembersExpr, sourceFile: params.sourceFile, importSources });
     if (membersResult === null) {
       findings.push({
         rule: "scan",

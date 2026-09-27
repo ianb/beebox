@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { invariant } from "../../../lib/invariant.js";
+import { isWithin } from "../graph.js";
 import type { Finding, ImportEdge, LayoutFile, ModuleFile, PackageLayout, TestFile } from "../model.js";
 import { classifyFile, listPackageFiles } from "./files.js";
 import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "./imports.js";
@@ -184,9 +185,11 @@ export async function scanPackage(params: { repoRoot: string; packageRoot: strin
   const aliases = loadAliases(params);
   const files = new Map<string, LayoutFile>();
   const scanFindings: Finding[] = [];
+  const sourceRoots = [`${params.packageRoot}/src`, ...listed.extraSourceRoots];
 
   for (const path of listed.files) {
-    const kind = classifyFile(path);
+    const isSourceRoot = sourceRoots.some((root) => isWithin(path, root));
+    const kind = classifyFile(path, isSourceRoot);
     if (kind === "declaration" || kind === "data") {
       files.set(path, { kind, path });
     } else if (kind === "test") {

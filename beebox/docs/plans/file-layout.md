@@ -202,6 +202,11 @@ issue, "Constraints for the check").
 - **Subject directory**: a directory whose children are the parts of one
   subject (`core/chat/`, `core/capture/`, `components/chat/`). Named by a
   singular noun. Partitioned on one axis.
+- **Source root**: `<package>/src`, plus any other top-level directory of
+  the package that holds TypeScript. Plain JavaScript outside a source root
+  is a static asset served or copied verbatim (the frontend's `public/sw.js`):
+  the TypeScript-only policy makes JavaScript logic a shim, not a second
+  source tree.
 - **Scope of the rules**: modules (files the import graph sees: `.ts`,
   `.tsx`, and the `.js`/`.mjs` loader shims `code-style.md` permits, such
   as `scripts/build-pub-worker.mjs`) and test files. Data files (fixtures, `.card`, `.html`, `.svg`,
@@ -370,6 +375,12 @@ those three become subdirectories. `cli/commands/validate-markdown.ts`
 (imported by three verbs) is the seam that shows `validate` is a subsystem,
 not a verb with helpers.
 
+Set infrastructure (a helper two or more members share) leaves the set
+directory for the set's parent (rule 1). When several such helpers share a
+subject, they form a subject directory beside the set named for that subject
+(`src/google/` for the Google auth, token, and OAuth helpers the Gmail, Drive,
+and Calendar connectors share), rather than loose files in the parent.
+
 **Rule 4: a set's registry lives in the set's parent, named for the set,
 and declares the set with `defineRegistry`.**
 The registry is `<parent>/<set>.ts` beside `<parent>/<set>/`:
@@ -441,6 +452,13 @@ How each property is verified:
   in the registry module); no side-effect registration API exists after the
   move (`registerConnector` and `registerFileType` are deleted, their callers
   replaced by list entries).
+- *Record keys.* A record registry's literal key equals its member's name
+  in identifier form: `quick-chat.ts` is keyed `quickChat`, so framework
+  composition calls that need identifier keys (tRPC's `router({...})`) take
+  the same record. `members` may be an identifier bound to an object literal
+  in the same file; the check reads that literal. The registry then passes
+  the one object to both `defineRegistry` and the framework call, so there
+  is still one list.
 - *Order.* With `ordered: true` the list's order is the semantics
   (`MIGRATIONS`) and the check does nothing further. With `ordered: false`
   the helper sorts by key, so a reorder in the file is not a behaviour change.
@@ -470,6 +488,14 @@ moves it out before units are computed. *Examples:* `cli/commands/wakeup.ts` + `
 `delete-storage`, `delete-log`, `delete-husks`, `deletion-state`,
 `stop-for-deletion` → `session/delete/`. `connectors/drive-*` ×25 →
 `connectors/drive/` (and inside it, further units).
+
+**Component units.** A React component with helpers is a unit directory
+named for the component, and the files inside are named by role: the entry
+is `view.tsx` (a hook `hook.ts`, a state machine `machine.ts`, a context
+`context.tsx`), so `AppNav/view.tsx`, never `AppNav/AppNav.tsx`. The
+directory carries the PascalCase name; `code-style.md`'s rule that a
+component file matches its component name applies to single-file
+components.
 
 **Rule 6: no module is named `index`; re-export modules exist only as
 public surfaces in `src/exports/`.**

@@ -107,6 +107,53 @@ registriesOf(source8, [edge({ specifier: "../lib/registry.js", names: ["r"], tar
 => pkg/src/ns
 ```
 
+## `members` bound by a same-file `const` to a literal is read as if inline
+
+```ts
+const source10 = `${registryImportLine}import { Verb } from "./verb.js";\nconst commandList = [Verb];\nexport const commands = defineRegistry<Verb>({\n  directory: "./commands",\n  ordered: false,\n  members: commandList,\n});\n`;
+const result10 = registriesOf(source10, [
+  registryEdge,
+  edge({ specifier: "./verb.js", names: ["Verb"], target: "pkg/src/verb.ts" }),
+]);
+JSON.stringify(result10.registries)
+=> [{"directory":"pkg/src/commands","entry":null,"ordered":false,"form":"list","members":[{"expression":"Verb","source":"pkg/src/verb.ts","key":null}],"line":4}]
+
+result10.findings.length
+=> 0
+```
+
+A record-form `const`, and one wrapped in `satisfies`/`as const`, resolve the
+same way.
+
+```ts
+const source11 = `${registryImportLine}import { SchemaMod } from "./schema.js";\nconst surfaceMap = {\n  schema: SchemaMod,\n} satisfies Record<string, unknown>;\ndefineRegistry({\n  directory: "./exports",\n  ordered: false,\n  members: surfaceMap,\n});\n`;
+const result11 = registriesOf(source11, [
+  registryEdge,
+  edge({ specifier: "./schema.js", names: ["SchemaMod"], target: "pkg/src/exports/schema.ts" }),
+]);
+JSON.stringify(result11.registries[0]?.members)
+=> [{"expression":"SchemaMod","source":"pkg/src/exports/schema.ts","key":"schema"}]
+
+const source12 = `${registryImportLine}import { Verb } from "./verb.js";\nconst commandList = [Verb] as const;\ndefineRegistry<Verb>({\n  directory: "./commands",\n  ordered: false,\n  members: commandList,\n});\n`;
+registriesOf(source12, [
+  registryEdge,
+  edge({ specifier: "./verb.js", names: ["Verb"], target: "pkg/src/verb.ts" }),
+]).registries[0]?.members[0]?.expression
+=> Verb
+```
+
+## `members` bound to a non-`const`, or to a non-literal, stays a scan finding
+
+```ts
+const source13 = `${registryImportLine}let commandList = [];\ndefineRegistry({\n  directory: "./x",\n  ordered: false,\n  members: commandList,\n});\n`;
+registriesOf(source13, [registryEdge]).findings[0]?.message
+=> defineRegistry members is not an array or object literal
+
+const source14 = `${registryImportLine}const commandList = computeList();\ndefineRegistry({\n  directory: "./x",\n  ordered: false,\n  members: commandList,\n});\n`;
+registriesOf(source14, [registryEdge]).findings[0]?.message
+=> defineRegistry members is not an array or object literal
+```
+
 ## A same-named function imported from elsewhere is not recognized
 
 ```ts

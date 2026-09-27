@@ -13,10 +13,8 @@
  * another (a new importer makes a parent's helper movable), and the whole
  * repo scans in a few seconds.
  */
-import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { dirOf } from "../graph.js";
+import { dirname, resolve } from "node:path";
+import { defaultRoots } from "../default-roots.js";
 import type { Finding } from "../model.js";
 import { scanPackage } from "../scan/package.js";
 import { renderFindings, renderSummary } from "./report.js";
@@ -61,19 +59,6 @@ function parseArgs(argv: string[]): Args {
 
 const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "../../../../..");
 
-function git(args: string[]): string[] {
-  const out = execFileSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" });
-  return out.split("\0").filter((s) => s.length > 0);
-}
-
-function defaultRoots(): string[] {
-  return git(["ls-files", "-z", "--", "package.json", "*/package.json"])
-    .map((p) => dirOf(p))
-    .filter((root) => root !== "" && !root.includes("node_modules"))
-    .filter((root) => existsSync(join(REPO_ROOT, root, "src")))
-    .toSorted();
-}
-
 async function checkRoot(root: string): Promise<Finding[]> {
   const layout = await scanPackage({ repoRoot: REPO_ROOT, packageRoot: root });
   const findings: Finding[] = [...layout.scanFindings];
@@ -83,7 +68,7 @@ async function checkRoot(root: string): Promise<Finding[]> {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const roots = args.roots.length > 0 ? args.roots : defaultRoots();
+  const roots = args.roots.length > 0 ? args.roots : defaultRoots(REPO_ROOT);
   let total = 0;
   for (const root of roots) {
     const findings = await checkRoot(root);
