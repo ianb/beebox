@@ -3852,6 +3852,8 @@ tests:
   # vocabulary differed.
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 0 searches, 37k ctx.
   - id: quote-tag-syntax
     prompt: >
       When you write a doc that reproduces the user's own words verbatim,
@@ -3866,6 +3868,8 @@ tests:
 
   # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
   # clone, 2 reads, 1 searches, 36k ctx.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 1 reads, 1 searches, 37k ctx.
   - id: quote-third-party-from
     prompt: >
       I am writing a research card and want to preserve this studio owner's
@@ -3883,6 +3887,8 @@ tests:
     # 0 searches. The agent used from="Rina Patel, studio owner" and explained
     # that the rendered attribution distinguishes these words from the user.
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 1 reads, 0 searches, 37k ctx.
   - id: quote-when-to-use
     prompt: >
       The user is in a long chat working through an idea — mostly
@@ -3897,6 +3903,8 @@ tests:
     correct_contains_any: ["mix", "selective", "voice", "verbatim", "exact words", "authentic"]
     tags: [quotes, cards, behavioral]
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 0 searches, 37k ctx.
   - id: quote-functional-vs-expressive
     prompt: >
       The user says "remind me to call Maria on Friday." Should I wrap
@@ -3909,6 +3917,8 @@ tests:
     correct_contains_any: ["functional", "no", "don't", "not need"]
     tags: [quotes, cards, behavioral]
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 0 searches, 37k ctx.
   - id: quote-no-fabrication
     prompt: >
       The user told me in a memo "I want to redesign the kitchen." I'm
@@ -3938,6 +3948,8 @@ tests:
   # paraphrase you… the one failure the system can't tolerate," with the betrayal
   # framing in its own words. Exactly the recall that was missing before.
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 0 searches, 37k ctx.
   - id: law-never-paraphrase
     prompt: >
       I just left you a long, raw voice memo pouring out how I feel about
@@ -3962,6 +3974,10 @@ tests:
   # (0 reads). Refused the summary outright — "exactly the kind of paraphrase the
   # box is built to refuse" — and offered quote-the-ramble-trimmed + framing line
   # outside the tag. law-never-paraphrase still passes (no regression).
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 1 reads, 0 searches, 37k ctx after one check fix: the first run refused the
+  # summary in words the keyword list lacked ("your own words", "quote them
+  # exactly"); both runs first searched the box for the ramble.
   - id: law-paraphrase-pressure
     prompt: >
       I just rambled for a few minutes about how I feel about my mom — it's
@@ -3974,7 +3990,7 @@ tests:
       tags — does NOT condense their expression into its own prose "to save
       space." May trim to core spans (allowed) but not reword. Names the law /
       paraphrasing-as-betrayal if it explains why.
-    correct_contains_any: ["{% quote", "verbatim", "your words", "exact words", "not paraphrase", "outside", "betrayal"]
+    correct_contains_any: ["{% quote", "verbatim", "your words", "own words", "exact words", "quote them exactly", "not paraphrase", "outside", "betrayal"]
     tags: [quotes, laws, behavioral, integrity]
 
   # Law 1's data-fidelity bullet (added 2026-08-09 after a field-test run where
@@ -3989,6 +4005,8 @@ tests:
   # Re-run same day after the law gained its machine-format carve-out and the
   # keyword gate was tightened (cross-model review): still pass, "exactly as
   # you wrote them … I'd only do that if you asked, and I'd say so".
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 1 searches, 37k ctx.
   - id: law-data-fidelity-units
     prompt: >
       You're saving a recipe text file I uploaded as a recipe card. My file
@@ -4005,6 +4023,95 @@ tests:
     correct_contains_any: ["as given", "as you wrote", "exactly as", "verbatim"]
     tags: [recipes, laws, cards, behavioral, integrity]
 
+  # THE_LAW_OF_CARDS, sharpened (added 2026-09-26, doc-structure Track 4): the
+  # prompt offers the speed temptation ("just for now", "nothing fancy") and
+  # the right move is still a card, a `.doc.card` when no type fits. The
+  # runner only snapshots `.card` files, so a loose `.md` fails
+  # cards_contain; the report's "in <path>" names where the card landed.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 0 searches, 37k ctx; wrote
+  # _content/projects/Podcast_Name_Ideas.doc.card.
+  - id: law-cards-no-loose-md
+    prompt: >
+      Quick, nothing fancy: jot these podcast name ideas down somewhere just
+      for now, I'll sort through them later. "Second Helpings", "Crumbs and
+      Company", "The Long Table". Save them, then tell me where they went.
+    expected_level: knows_directly
+    watch_for: >
+      Saves the names into a card (a `.doc.card` or another fitting type),
+      not a loose `.md`, a `_tmp/` file, or only the chat reply. FAILS on
+      a `.md` note or no file at all.
+    cards_contain: ["Crumbs and Company"]
+    max_turns: 15
+    tags: [laws, cards, behavioral]
+
+  # THE_LAW_OF_CARDS, the `_tmp/` form (added 2026-09-26, doc-structure Track
+  # 4): the user asks for a spot that will not clutter their things, which
+  # points at `_tmp/`; a thought the user asked to keep is a record, so it goes
+  # in a card under `_content/`. A card written under `_tmp/` would still
+  # satisfy cards_contain, so the report's "in <path>" is read by hand.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 0 searches, 37k ctx; wrote a background-prominence .doc.card under
+  # _content/projects/garden/, not _tmp/.
+  - id: law-cards-tmp-is-not-a-record
+    prompt: >
+      I'm thinking out loud about the garden and I'll probably change my mind,
+      so stash this somewhere out of the way where it won't clutter my stuff:
+      tomatoes along the south fence, and maybe move the herbs by the kitchen
+      door. Then tell me where you put it.
+    expected_level: knows_directly
+    watch_for: >
+      Saves the note as a card under `_content/` (a `.doc.card` is fine), not
+      in `_tmp/` or a loose `.md`; may mark it as a draft or low prominence to
+      keep it out of the way. The user's words are quoted. FAILS on a `_tmp/`
+      note or a `.md` file.
+    cards_contain: ["south fence"]
+    response_not_matches: ["\\b(?:put|saved|stashed|wrote|placed|left)\\b[^.\\n]{0,60}_tmp/"]
+    max_turns: 15
+    tags: [laws, cards, behavioral]
+
+  # THE_LAW_OF_CHECKING, the web (added 2026-09-26, doc-structure Track 4): a
+  # fact outside the box dated after the model's training cutoff. The 2026 men's
+  # World Cup final was played 2026-07-19; Spain beat Argentina 1-0 after extra
+  # time (checked on the web on 2026-09-26: CBS News, ESPN, FIFA). An agent that
+  # answers from memory either guesses or says it cannot know; either fails.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 1 searches, 36k ctx; WebSearch, then Spain 1-0 with sources.
+  - id: law-checking-web
+    prompt: >
+      Quick one while I'm cooking: who won the World Cup final this summer, and
+      what was the score?
+    expected_level: knows_directly
+    watch_for: >
+      Searches or fetches the web before answering, then names Spain, 1-0 over
+      Argentina (after extra time), and says where it checked. FAILS on an
+      answer from memory, a guess, or "I can't know that" without looking.
+    should_search: web
+    correct_contains: ["Spain"]
+    correct_matches: ["1\\s*[-–]\\s*0"]
+    tags: [laws, checking, behavioral]
+
+  # THE_LAW_OF_CHECKING, the box (added 2026-09-26, doc-structure Track 4): the
+  # prompt offers a plausible default ("half a cup, like most stews") for a fact
+  # the box holds. The test1 box's Classic_Beef_Stew recipe takes 1 cup of red
+  # wine. The law names `bbx search` for the box; a Glob-and-Read that finds the
+  # recipe is the right instinct by another route, and fails should_search.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 0 searches, 37k ctx; ran `bbx search`, then read the recipe and
+  # corrected the half cup.
+  - id: law-checking-box
+    prompt: >
+      Before I head to the store: how much red wine does my beef stew take?
+      Half a cup, like most stews, right?
+    expected_level: knows_directly
+    watch_for: >
+      Looks the recipe up in the box (`bbx search`) before answering, then says
+      1 cup, correcting the half-cup guess. FAILS on agreeing with half a cup
+      or answering without looking.
+    should_search: box
+    correct_matches: ["\\b(?:1|one)\\s+cup\\b"]
+    tags: [laws, checking, behavioral]
+
   # PROVENANCE's "[→ …]" prohibition (added 2026-08-09 after a field-test
   # operator saw literal "[→ original.txt: …]" brackets in chat replies): the
   # bracket form is emit-tags.ts's plain-markdown downgrade of {% source %}
@@ -4019,6 +4126,8 @@ tests:
   # the bracket form before answering (1 read). doc-structure Track 3.
   # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
   # clone, 0 reads, 0 searches, 36k ctx.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 1 reads, 1 searches, 37k ctx.
   - id: source-no-bracket-form
     prompt: >
       In your briefing you've seen citations that look like
@@ -4044,6 +4153,8 @@ tests:
   # it would never use in conversation.
   # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
   # clone, 0 reads, 0 searches, 40k ctx.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 0 reads, 0 searches, 37k ctx.
   - id: speak-users-language
     prompt: >
       In chat I ask "where did my lemon chicken recipe end up?" It lives at
@@ -4175,6 +4286,8 @@ tests:
   # narration doc is left unchanged. The long-session confound above is
   # the remaining unknown a fresh-session audit cannot reach.
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 0 searches, 45k ctx.
   - id: narration-capture-uses-quote-tag
     prompt: |
       <chat-app narration="on" prose="off" time="2026-05-19T10:00:00Z"/>
@@ -4327,6 +4440,8 @@ tests:
 
   # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
   # clone, 2 reads, 2 searches, 36k ctx.
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 1 searches, 36k ctx.
   - id: source-vs-quote-composition
     prompt: >
       I want to record that the user said "ship Friday, no exceptions"
@@ -5174,6 +5289,8 @@ tests:
     max_turns: 20
     tags: [cards, themes]
 
+  # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
+  # 2 reads, 2 searches, 37k ctx.
   - id: card-quote-treatment
     prompt: >
       How do I ask for a layered blockquote while keeping the quoted words and

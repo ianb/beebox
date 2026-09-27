@@ -60,9 +60,15 @@ A generated list (the card types, this box's procedures) is one row, bin
 `core`, whose reason is the decision to list it; the per-box entries need no
 rows of their own.
 
-Considered and not adopted as laws, for lack of an observed failure: honesty,
-authority, keys, and keeping. Keys and keeping are stated strongly in their
-sections.
+### Laws considered
+
+The laws are QUOTING, SAVING, CARDS, and CHECKING (boxholder, 2026-09-26).
+CHECKING was added for the failure seen most that the others did not cover:
+an agent answering from memory what it could have looked up. CARDS was
+sharpened to name the ad hoc `.md` note. Considered and dropped, for lack of
+an observed failure: honesty, authority, keys, and keeping. Keys and
+keeping are stated strongly in their sections and have not been seen
+slipping. A new law needs a failure someone has seen.
 
 ### The document and its rendering
 

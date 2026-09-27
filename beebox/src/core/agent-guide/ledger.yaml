@@ -8,9 +8,11 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after PERSONALITY.
-  guide_words: 5201
-  always_loaded_words: 9993
+  # 2026-09-26, after THE_LAWS: raised by 168 words for THE_LAW_OF_CHECKING
+  # (new, by the boxholder's decision) and the sharpened THE_LAW_OF_CARDS; the
+  # clone already measured 22 words over the previous ceiling.
+  guide_words: 5391
+  always_loaded_words: 10183
   uncited_words_per_section: 60
 
 lint:
@@ -58,9 +60,14 @@ registry:
     referrers:
       - THE_LAW_OF_CARDS
   - handle: THE_LAW_OF_CARDS
-    governs: saving means writing a card, not loose files or summaries
+    governs: saving means writing a card, never an ad hoc file or a summary; prose goes in a `.doc.card`
     referrers:
       - ABOUT_CARDS
+  - handle: THE_LAW_OF_CHECKING
+    governs: a fact that can be looked up (in the box, the engine docs, or on the web) is checked before it is answered
+    referrers:
+      - DOCS
+      - SEARCHING
   - handle: DOCS
     governs: where the package reference docs and this box's compiled docs are
     referrers:
@@ -203,8 +210,8 @@ rows:
   - id: laws.quoting-citation
     rule: A citation wraps `{% quote %}` in `{% source %}`, and the mechanics of both tags are in PROVENANCE.
     handle: THE_LAW_OF_QUOTING
-    bin: law
-    reason: The law's worked example and its pointer to the mechanics; the law says that you must, PROVENANCE says how.
+    bin: core
+    reason: Not a law by the ordered test, since a quote without its source still keeps the user's words verbatim and the system tolerates it. Core, not indirect, since every capture from a memo, thread, or file quotes words that came from somewhere, and this example is the one place the guide shows the two tags nested. The text stays in the law, which the boxholder kept as it is (2026-09-26).
     audits: [source-vs-quote-composition]
     mechanics: box-docs/provenance.md
   - id: laws.quoting-third-party
@@ -224,8 +231,28 @@ rows:
     handle: THE_LAW_OF_CARDS
     bin: law
     reason: Cards are the unit the box types, validates, versions, and searches; content saved any other way is invisible to all of that.
-    audits: [narration-capture-uses-quote-tag]
+    audits: [narration-capture-uses-quote-tag, law-cards-no-loose-md, law-cards-tmp-is-not-a-record]
     mechanics: ABOUT_CARDS
+  - id: laws.cards-no-ad-hoc-files
+    rule: A loose `.md`, a `_tmp/` note, or a scratch file is never a record; when no type fits, prose goes in a `.doc.card`.
+    handle: THE_LAW_OF_CARDS
+    bin: law
+    reason: The boxholder sharpened the law (2026-09-26) because an ad hoc `.md` or scratch note is the form the failure takes, and such a file has no type, no `contains:`, and no validation. The temptation (speed) is named, as in the other laws.
+    audits: [law-cards-no-loose-md, law-cards-tmp-is-not-a-record]
+    mechanics: ABOUT_CARDS
+  - id: laws.checking
+    rule: When an answer depends on a fact you can look up, look it up before answering (the box with `bbx search`, the engine docs for how Bee Box works), say where you checked, and say so when you could not.
+    handle: THE_LAW_OF_CHECKING
+    bin: law
+    reason: The boxholder added the law (2026-09-26) for the failure the other laws did not cover and that has been seen most, an agent answering from memory what it could have checked; a confident wrong answer becomes part of a record that is supposed to be true.
+    audits: [law-checking-box]
+    mechanics: SEARCHING
+  - id: laws.checking-web
+    rule: A fact outside the box (a date, a price, a current version, a recent event) is checked on the web before it is answered.
+    handle: THE_LAW_OF_CHECKING
+    bin: law
+    reason: The same observed failure for facts outside the box, where the model's training cutoff makes memory stale by construction (boxholder decision, 2026-09-26). Box agents have WebSearch and WebFetch; the Claude chat and reactor runs leave the SDK's tool set at its default.
+    audits: [law-checking-web]
 
   # --- ABOUT_CARDS ---
   - id: about-cards.shape

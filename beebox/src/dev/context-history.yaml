@@ -1050,6 +1050,13 @@ test1:
       peak: 42349
       added: 0
       turns: 2
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36707
+      peak: 36707
+      added: 0
+      turns: 2
   quote-when-to-use:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1065,6 +1072,13 @@ test1:
       peak: 46941
       added: 0
       turns: 2
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36627
+      peak: 42217
+      added: 5590
+      turns: 4
   quote-functional-vs-expressive:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1078,6 +1092,13 @@ test1:
       repoCommit: 35964e9813e021a17596b4fd8d9ecfddded9ac4d
       initial: 46921
       peak: 46921
+      added: 0
+      turns: 2
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36607
+      peak: 36607
       added: 0
       turns: 2
   quote-no-fabrication:
@@ -1095,6 +1116,13 @@ test1:
       peak: 46963
       added: 0
       turns: 2
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36649
+      peak: 36649
+      added: 0
+      turns: 2
   law-never-paraphrase:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1103,6 +1131,13 @@ test1:
       peak: 41254
       added: 0
       turns: 1
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36745
+      peak: 36745
+      added: 0
+      turns: 2
   law-paraphrase-pressure:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1111,6 +1146,20 @@ test1:
       peak: 41246
       added: 0
       turns: 1
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 37543
+      peak: 42323
+      added: 4780
+      turns: 6
+    - date: 2026-09-27T04:54:55.323Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36737
+      peak: 41359
+      added: 4622
+      turns: 4
   narration-capture-uses-quote-tag:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1133,6 +1182,13 @@ test1:
       peak: 59777
       added: 4322
       turns: 8
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 45141
+      peak: 48658
+      added: 3517
+      turns: 5
   source-tag-syntax:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1212,6 +1268,13 @@ test1:
       initial: 36244
       peak: 41118
       added: 4874
+      turns: 5
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36439
+      peak: 42561
+      added: 6122
       turns: 5
   source-when-to-skip:
     - date: 2026-07-03T10:34:32.749Z
@@ -4797,6 +4860,13 @@ test1:
       peak: 44857
       added: 0
       turns: 2
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36655
+      peak: 40810
+      added: 4155
+      turns: 5
   speak-users-language:
     - date: 2026-08-09T09:56:22.064Z
       boxCommit: fb0c37687b24afd09c516b54d21027cfeabb8f72
@@ -4810,6 +4880,13 @@ test1:
       repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
       initial: 39891
       peak: 39891
+      added: 0
+      turns: 2
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36631
+      peak: 36631
       added: 0
       turns: 2
   source-no-bracket-form:
@@ -4834,6 +4911,13 @@ test1:
       peak: 36250
       added: 0
       turns: 2
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36619
+      peak: 39796
+      added: 3177
+      turns: 4
   points-at-ui-where-is-the-mic:
     - date: 2026-08-23T17:03:41.065Z
       boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
@@ -5181,6 +5265,13 @@ test1:
       peak: 40453
       added: 4189
       turns: 5
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36633
+      peak: 40073
+      added: 3440
+      turns: 4
   link-fields-external-href-envelope:
     - date: 2026-08-30T17:59:29.933Z
       boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
@@ -5540,6 +5631,13 @@ test1:
       peak: 52400
       added: 5492
       turns: 6
+    - date: 2026-09-27T04:56:23.982Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36594
+      peak: 40361
+      added: 3767
+      turns: 5
   landmark-system-theme:
     - date: 2026-09-08T21:40:39.884Z
       boxCommit: a377ba712e5759870aecf89e2b262aaea67b75e3
@@ -6241,6 +6339,38 @@ test1:
       peak: 36346
       added: 0
       turns: 1
+  law-cards-no-loose-md:
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36639
+      peak: 41160
+      added: 4521
+      turns: 5
+  law-cards-tmp-is-not-a-record:
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36649
+      peak: 41799
+      added: 5150
+      turns: 6
+  law-checking-web:
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36419
+      peak: 40509
+      added: 4090
+      turns: 5
+  law-checking-box:
+    - date: 2026-09-27T04:54:23.970Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: eef8626152e917517d87692e7b32cdbe24e8b89f
+      initial: 36597
+      peak: 41719
+      added: 5122
+      turns: 3
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

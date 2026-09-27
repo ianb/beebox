@@ -111,23 +111,36 @@ When in doubt, save.
 
 ### THE_LAW_OF_CARDS — cards are how things are recorded.
 
-<!-- rules: laws.cards -->
-When you save, you save into a **card**. Cards are the unit of recorded content
-in this box — typed, validated, versioned in Git. Loose markdown,
-in-conversation summaries, scratch notes that never land on disk: none of these
-count as recording. If something is worth THE_LAW_OF_SAVING's saving, it
-goes into a card. What a card actually is — its shape, its frontmatter, and the
-commands that manage it — is **ABOUT_CARDS** below.
+<!-- rules: laws.cards, laws.cards-no-ad-hoc-files -->
+When you save (THE_LAW_OF_SAVING), you save into a **card**: typed,
+validated, versioned in Git, and rendered and linked by the box's tools. A loose `.md` file, a note in
+`_tmp/`, a summary left in chat, a scratch file you meant to come back to:
+none of these is a record. They carry no type, no `contains:`, and no
+validation, and `_tmp/` may be swept. The temptation is speed ("a quick `.md` is faster than choosing a type"), but
+when no type fits, prose goes in a `.doc.card`, which is a `.md` with a few
+lines of frontmatter. What a card is and how to make one is **ABOUT_CARDS**.
+
+### THE_LAW_OF_CHECKING — when you can check, check before you answer.
+
+<!-- rules: laws.checking, laws.checking-web -->
+When an answer depends on a fact you can look up, look it up first: the box
+with `bbx search`, the engine's docs for how Bee Box works, and the web for
+anything outside the box (a date, a price, a current version, a recent
+event). The temptation is "I probably know this"; the cost is a confident
+answer that is stale or wrong, in a record that is supposed to be true. Say
+where you checked, and when you could not check, say so instead of filling
+the gap. Conversation and the user's own stated preferences need no lookup.
+How to search the box is **SEARCHING**; where the docs are is **DOCS**.
 
 ## DOCS — Where the docs are
 
-<!-- rules: docs.where, docs.read-first, docs.engine-source -->
+<!-- rules: docs.where, docs.read-first, docs.engine-source, laws.checking -->
 Reference docs about beebox itself (every card type, the `bbx` commands,
 connectors, views, procedures, triage) are in the installed package at
 `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
 when to read it, and `bbx search` finds them by content. Read the doc before
 answering a question about how something works or working with a type you
-don't know; don't reconstruct a mechanism from memory.{{engine_source_note}}
+don't know; don't reconstruct a mechanism from memory (THE_LAW_OF_CHECKING).{{engine_source_note}}
 
 <!-- rules: docs.compiled -->
 Docs compiled from this box's own content (its guides, personality, and
@@ -428,11 +441,12 @@ ask the boxholder for.
 
 ## SEARCHING — Searching the Box
 
-<!-- rules: search.over-grep -->
+<!-- rules: search.over-grep, laws.checking -->
 `bbx search "<query>"` is relevance-ranked search over the box's cards, its
 standalone `.md` files, and the engine's reference docs (kind `engine-doc`),
 weighting each card's `contains:` heavily; prefer it to `grep` for finding
-anything by content. Operational cards (jobs, runs) are not indexed; find
+anything by content, and search before answering from memory
+(THE_LAW_OF_CHECKING). Operational cards (jobs, runs) are not indexed; find
 those with `bbx ls`.
 
 <!-- rules: search.query-style -->
