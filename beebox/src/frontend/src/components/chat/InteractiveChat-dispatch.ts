@@ -26,6 +26,7 @@ import { localTime, formatTimePassed, joinTranscript, type VoiceSegmentMeta } fr
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../lib/view-url";
+import { clearOpenedNotification, getOpenedNotification } from "../notifications/opened-notification-store";
 
 export function useEmissionDispatch(opts: {
   pool: ConversationControllerPool;
@@ -61,10 +62,12 @@ export function useEmissionDispatch(opts: {
     if (last !== undefined) {
       timePassed = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
     }
+    const notificationOpened = getOpenedNotification() ?? undefined;
     return {
       localTime: localTime(),
       zoomedView: activeView ? `view:${serializeViewUrl(activeView.target)}` : null,
       timePassed,
+      ...(notificationOpened === undefined ? {} : { notificationOpened }),
     };
   }, [activeView, messages]);
 
@@ -78,7 +81,9 @@ export function useEmissionDispatch(opts: {
   // so iOS can keep its draft pending until the backend accepts the send.
   const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
     pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
-    emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness, onSent,
+    emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness,
+    // A `chat:new` notification rides along with the first message only.
+    onSent: () => { clearOpenedNotification(); onSent(); },
   });
   const dispatchEmission = useCallback((emission: Emission): Promise<Receipt> => {
     void refreshLocationIfStale(boxSlug);

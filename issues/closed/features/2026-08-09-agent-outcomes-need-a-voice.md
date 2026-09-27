@@ -1,13 +1,19 @@
 ---
 title: "Agent outcomes don't announce themselves — \"the conscience and not the voice\""
-workstream: integration-tests
+workstream: notifications
 area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, dentist-email + whats-needed items
 labels: [soft-launch, field-test-findings, ui-sensibility]
-needs: [design]
 priority: normal
+resolution: implemented
 ---
+
+Closed by `712d973d7` and `52cb00fc0` (notifications, Track E):
+`<callout loudness=...>` gives an agent turn-end outcome a graded voice
+(quiet/normal/loud), and `bbx notify --target card:<path>` lets it point at
+a specific thread. See
+[docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
 
 When [situation] the box agent finishes real work — files an email, creates
 a decision record, answers get submitted, an event gets created — I want to
@@ -31,7 +37,7 @@ front of me." So the direction is proven; the gap is outcome-shaped events
 (question answered → follow-up ran → say what happened, ideally in the
 chat thread that asked; reactor work completed → surface a digest line).
 
-Related: [first-run-experience](2026-07-20-first-run-experience.md) (the
+Related: [first-run-experience](../../features/2026-07-20-first-run-experience.md) (the
 surrounding discoverability tension). Design questions: which outcomes rate
 an unprompted chat message vs a badge vs nothing; and whether the answered
 question's follow-up job should post its result into the asking session's

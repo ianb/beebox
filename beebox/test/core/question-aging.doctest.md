@@ -22,6 +22,8 @@ import {
 import { getSystemState } from "../../src/core/state.js";
 import { generateContext } from "../../src/webapp/context.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
+import { createFakePush } from "../../src/services/push.js";
+import { readRecent } from "../../src/core/notification/log.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-qaging-${process.pid}-${Date.now()}`);
@@ -80,17 +82,23 @@ JSON.stringify(before)
 => {"nudged":[],"expired":[]}
 ```
 
-At the 7-day mark it nudges exactly once, and a web-push card is written:
+At the 7-day mark it nudges exactly once. The nudge is `quiet`, pushed to the
+subscribed device, targets the question, and is in the notification log:
 
 ```ts continue
 setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS));
-const nudgedResult = await ageQuestions(box.root);
+const push = createFakePush();
+const nudgedResult = await ageQuestions(box.root, { push });
 JSON.stringify(nudgedResult)
 => {"nudged":["_bookkeeping/questions/Color.question.card"],"expired":[]}
 
-const cards = (await fs.readdir(path.join(box.root, "_bookkeeping/output"))).filter((f) => f.endsWith(".web-push.card"));
-cards.length
-=> 1
+push.describe()
+=> FakePush: 1 sent
+  https://push.example/qaging → ⏰ Reminder: a question is waiting: What color?
+
+const [logged] = await readRecent(box.root, { days: 1 });
+JSON.stringify([logged.intent.target, logged.intent.loudness, logged.deliveries.find((d) => d.channel === "web-push").status])
+=> ["question:_bookkeeping/questions/Color.question.card","quiet","sent"]
 ```
 
 A second sweep at the same age (or later, still under expiry) does not

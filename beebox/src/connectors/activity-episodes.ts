@@ -1,6 +1,6 @@
 /**
  * Reading and dismissing connector episodes for the dashboard. The scheduler
- * alert (`core/schedule/connector-activity-alert.ts`) is the only writer of new
+ * episode pass (`core/schedule/connector-activity-alert.ts`) is the only writer of new
  * episodes; this module reports them and records the boxholder's "this is
  * expected".
  */

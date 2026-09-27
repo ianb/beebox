@@ -68,7 +68,7 @@ function firstOperand(tail: string): string | null {
 }
 
 /** The box-relative card path for a scheduled task. */
-function scheduleCardForTask(name: string): string {
+export function scheduleCardForTask(name: string): string {
   return `${BOX_DIRS.schedules}/${name}.scheduled-script.card`;
 }
 

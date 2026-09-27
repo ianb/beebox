@@ -96,6 +96,18 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_LOG_PROMPTS", // src/core/agent/run.ts -- prompt-logging debug flag.
   "TSX_TSCONFIG_PATH", // set by src/cli/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
 
+  // --- Schedule memory (src/core/schedule/memory.ts): set by the tick on a
+  //     scheduled `runs:` command, and listed here so a `bbx procedure run` it
+  //     starts passes them to the procedure's shells, which rebuild their env
+  //     through this list (src/core/procedure/shell.ts). Cursors and temp
+  //     paths, not credentials. ---
+  "BBX_SINCE_COMMIT", // the box HEAD at the schedule's previous run; `bbx changes`' default --since.
+  "BBX_SINCE_TIME", // the previous run's time.
+  "BBX_CARRY_IN", // the value the previous run carried forward.
+  "BBX_CARRY_OUT", // a temp file path the run writes the next carry to.
+  "BBX_DEFER_FILE", // a temp file path `--or-skip` writes its defer reason to.
+  "BBX_SCHEDULE_NAME", // the schedule card's stem; `bbx notify`'s source is `schedule:<name>`.
+
   // --- Test/scenario harness (src/scenario/runner.ts sets these on process.env
   //     precisely so its spawned `bbx wakeup`/`bbx finalize` children inherit them) ---
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
@@ -103,7 +115,9 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
   "BBX_STRICT_FETCH", // src/cli/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
   "BBX_AUTH_SCRYPT_N", // src/webapp/local-users-scrypt.ts -- test-only work-factor override.
-  "BBX_PUSH_FAKE", // src/core/send-push.ts -- push test harness.
+  "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- every notification channel through its fake.
+  "BBX_JEV_FAKE", // src/core/judgment/service.ts -- `bbx judge` answers through a fixed fake (1 yes, 0 no).
+  "BBX_PUSH_FAKE", // src/core/notification/fake-mode.ts -- the old name of BBX_NOTIFY_FAKE, read for one release.
   "BBX_PUSH_STORE_DIR", // src/core/push-subscriptions.ts -- push-store path override for tests.
 ];
 

@@ -26,10 +26,6 @@ import type { EngineProvider, EngineUnavailability } from "./engine-unavailabili
 export interface StoredEngineUnavailability extends EngineUnavailability {
   /** ISO. When the current episode of continuous unavailability began. */
   episodeStartedAt: string;
-  /** ISO. When the operator was notified for this episode; null = not yet. */
-  notifiedAt: string | null;
-  /** The `retryAt` the operator was told; drives re-notify on moved goalposts. */
-  notifiedRetryAt: string | null;
 }
 
 const StoredSchema = z.object({
@@ -40,8 +36,6 @@ const StoredSchema = z.object({
   detectedAt: z.string(),
   message: z.string(),
   episodeStartedAt: z.string(),
-  notifiedAt: z.string().nullable(),
-  notifiedRetryAt: z.string().nullable(),
 });
 
 const FileSchema = z.object({
@@ -103,26 +97,16 @@ export async function liveEngineUnavailability(options: {
  * the run that re-detects exhaustion necessarily starts after the old record
  * expired. */
 const EPISODE_GRACE_MS = 30 * 60 * 1000;
-/** Re-notify only when a parsed reset moves later than what the operator was
- * told by at least this much. */
-const RENOTIFY_ADVANCE_MS = 60 * 60 * 1000;
-
-export interface RecordedEngineUnavailability {
-  stored: StoredEngineUnavailability;
-  /** True when the caller should notify the operator (new episode, or the
-   * provider moved a parsed reset materially later than last announced).
-   * The caller confirms with {@link markEngineUnavailabilityNotified}. */
-  shouldNotify: boolean;
-}
 
 /**
  * Record a freshly recognized unavailability, extending the current episode
  * when one is live (or just expired, within a grace window) so fallback holds
- * through one long outage stay a single episode.
+ * through one long outage stay a single episode. The episode is a health
+ * check (`engine-quota`); it never notifies on its own.
  */
 export async function recordEngineUnavailability(
   unavailability: EngineUnavailability,
-): Promise<RecordedEngineUnavailability> {
+): Promise<StoredEngineUnavailability> {
   const file = await loadFile();
   const previous = file[unavailability.provider];
   const detectedMs = new Date(unavailability.detectedAt).getTime();
@@ -132,33 +116,7 @@ export async function recordEngineUnavailability(
   const stored: StoredEngineUnavailability = {
     ...unavailability,
     episodeStartedAt: extendsEpisode ? previous.episodeStartedAt : unavailability.detectedAt,
-    notifiedAt: extendsEpisode ? previous.notifiedAt : null,
-    notifiedRetryAt: extendsEpisode ? previous.notifiedRetryAt : null,
   };
-  const movedLater =
-    stored.notifiedRetryAt !== null &&
-    unavailability.retryAtSource === "parsed" &&
-    new Date(unavailability.retryAt).getTime() >
-      new Date(stored.notifiedRetryAt).getTime() + RENOTIFY_ADVANCE_MS;
-  const shouldNotify = stored.notifiedAt === null || movedLater;
   await saveFile({ ...file, [unavailability.provider]: stored });
-  return { stored, shouldNotify };
-}
-
-/** Latch the episode as notified so it is announced once, not once per run. */
-export async function markEngineUnavailabilityNotified(options: {
-  provider: EngineProvider;
-  now: Date;
-}): Promise<void> {
-  const file = await loadFile();
-  const record = file[options.provider];
-  if (record === undefined) return;
-  await saveFile({
-    ...file,
-    [options.provider]: {
-      ...record,
-      notifiedAt: options.now.toISOString(),
-      notifiedRetryAt: record.retryAt,
-    },
-  });
+  return stored;
 }

@@ -15,6 +15,8 @@ import { runCommand, createCliContext } from "../../core/commands/index.js";
 import { procedureOutcome } from "../../core/commands/procedure.js";
 import type { CommandResult } from "../../core/command-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
+import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import {
   INCONCLUSIVE_EXIT_CODE,
   formatInconclusiveLine,
@@ -36,6 +38,20 @@ async function exitWithProcedureError(message: string | undefined): Promise<neve
 }
 
 /**
+ * Every step's precheck skipped: exit `CHECK_SKIP_CODE` (75), so a scheduled
+ * `runs: bbx procedure run <name>` defers as a pipeline would. The defer marker
+ * an inner `bbx changes --or-skip` or `bbx judge --or-skip` wrote names the
+ * reason and wins; with none, nothing needed doing and the run records
+ * `no-change`. See
+ * docs/implemented-plans/notifications.md (Track D, "Deferred at the tick, with evidence").
+ */
+async function exitSkipped(): Promise<never> {
+  const deferFile = process.env[MEMORY_ENV.deferFile];
+  if (deferFile !== undefined && deferFile !== "") await writeDeferMarker(deferFile, "no-change");
+  process.exit(CHECK_SKIP_CODE);
+}
+
+/**
  * Terminal handling for a run whose work succeeded. An unjudged run gets its
  * own exit code — not 0, because a reader who gated on success would be told
  * the review passed when nothing checked it; not 1, because the work did not
@@ -47,6 +63,7 @@ async function exitWithProcedureError(message: string | undefined): Promise<neve
  */
 async function finishRun(result: CommandResult): Promise<void> {
   const outcome = procedureOutcome(result);
+  if (outcome?.status === "skipped") await exitSkipped();
   if (outcome === null || outcome.status !== "inconclusive") return;
   for (const item of outcome.inconclusive) {
     await writeStderr(

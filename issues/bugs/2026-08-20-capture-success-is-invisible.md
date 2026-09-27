@@ -146,7 +146,7 @@ defect in the sibling issue. Both halves are the same two files.
 Not addressed, deliberately: **reaching a user who has left the chat.** That is
 a notification-channel question, not a chip question, and folding it in would
 have added a delivery path to a UI change. Filed separately as
-[capture confirmation does not reach a user who left the chat](../features/2026-08-21-capture-confirmation-misses-a-user-who-left.md).
+[capture confirmation does not reach a user who left the chat](../closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md).
 
 One gap remains by design: a capture that delivers *before* its pending row has
 ever been rendered (delivery beating the first query round-trip) still has no

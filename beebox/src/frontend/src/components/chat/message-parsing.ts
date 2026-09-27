@@ -53,6 +53,7 @@ export function stripUserDisplayTags(
     .replace(/<\/speech>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
+    .replace(/<notification-opened[\S\s]*?<\/notification-opened>/gi, "")
     .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "")
     // A declared token takes its surrounding spaces with it: both neighbors
     // present collapse to one ("see [file1] here" → "see here"), otherwise

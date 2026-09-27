@@ -1,13 +1,21 @@
 ---
 title: "A capture's confirmation only exists in the chat, which the user has usually already left"
-workstream: capture-chip-states
+workstream: notifications
 area: beebox
 labels: [capture, chat, notifications]
 filed-by: agent
 discovered-by: Ian
 discovered-in: capture-chip-states — split out of the capture-success issue while fixing it
 priority: normal
+resolution: implemented
 ---
+
+Closed by `52cb00fc0` (notifications, Track E):
+`core/capture/failure-notice.ts` sends a quiet notice when a capture fails
+and nobody is present to see the chat's own report, per the boxholder's
+ruling that a success stays silent (the expected case) and only a failure
+is worth reaching an absent user for. See
+[docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
 
 Capture is often the last thing a user does before putting the phone away.
 Preparation then takes about a minute. Everything that reports the outcome —
@@ -16,7 +24,7 @@ the chat transcript, which by then nobody is looking at.
 
 So the surface that says "this landed" is exactly the surface the user has
 left. The chip work
-([capture success is invisible](../bugs/2026-08-20-capture-success-is-invisible.md))
+([capture success is invisible](../../bugs/2026-08-20-capture-success-is-invisible.md))
 made the in-chat report honest and complete; it did not, and could not, move it
 somewhere the absent user will see.
 

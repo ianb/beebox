@@ -69,8 +69,8 @@ const reset = new Date(NOW.getTime() + 6 * 60 * 60 * 1000);
 await recordEngineUnavailability(claudeQuota({ detectedAt: NOW, retryAt: reset }));
 
 const skip = await evaluateSkip(makeCtx());
-skip !== null && skip.includes("waiting on claude quota until")
-=> true
+`${skip?.cause?.reason} | ${skip?.line.includes("waiting on claude quota until")}`
+=> engine-quota | true
 
 await evaluateSkip(makeCtx({ options: { force: true } }))
 => null

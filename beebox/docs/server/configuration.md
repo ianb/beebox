@@ -33,6 +33,12 @@ BBX_VAPID_PRIVATE_KEY=...
 # VAPID contact (optional — defaults to PUBLIC_URL). A mailto: or https: URI.
 BBX_VAPID_SUBJECT=mailto:you@example.com
 
+# APNs (optional — enables push to the paired iPhone app). See below.
+BBX_APNS_KEY_PATH=/home/beebox/.apns/AuthKey_ABC123DEFG.p8
+BBX_APNS_KEY_ID=ABC123DEFG
+BBX_APNS_TEAM_ID=...
+BBX_APNS_BUNDLE_ID=...
+
 # Optional — Google sign-in for the fleet login surface. Login runs before any
 # box exists, so this pair cannot come from a per-box grant; a box's own Google
 # connectors read the store instead.
@@ -48,19 +54,46 @@ After editing `.env`, restart services: `systemctl restart beebox-hub beebox-sch
 
 ### Web Push (VAPID) keys
 
-Push notifications need a single server-wide VAPID keypair (not per-box). The setup
-script does **not** seed these — add them as an explicit step:
+Push notifications need a single server-wide VAPID keypair (not per-box).
+`deploy/deploy.sh` generates one on the first deploy that finds none in
+`/home/beebox/.env` and appends it there, before the restart; it never
+regenerates (a new keypair invalidates every browser subscription). To set the
+keys by hand instead, or on a server the deploy script does not manage:
 
 1. Generate once: `npx web-push generate-vapid-keys`
 2. Add `BBX_VAPID_PUBLIC_KEY` and `BBX_VAPID_PRIVATE_KEY` to `/home/beebox/.env`
    (private key stays server-only; it's excluded from the deploy rsync).
-3. Restart **both** services so the server (serves the public key) and the
-   scheduler/finalize (sends pushes) pick them up:
-   `systemctl restart beebox-hub beebox-scheduler`
+3. Restart **both** services so both senders pick them up:
+   `systemctl restart beebox-hub beebox-scheduler`. The box server serves the
+   public key and sends (callouts, and `bbx notify` from a box agent, which goes
+   through it); the scheduler daemon sends reminders and alerts. Every delivery
+   attempt is logged to the box's `.beebox/notifications.jsonl`; see
+   [notifications](../notifications.md).
 
 Subscriptions are stored server-side at `~/.local/share/beebox/push-subscriptions.json`
 (gitignored, never committed). Boxholders enable push per-device from a box's Admin
 page; on iOS the app must first be added to the Home Screen.
+
+### APNs (iPhone push) key
+
+Push to the iPhone app needs one server-wide APNs token key (not per-box). The setup
+script does **not** seed it — add it as an explicit step:
+
+1. In the Apple Developer account, create a key with the Apple Push Notifications
+   service enabled and download its `.p8` file (Apple offers the download once). Note
+   its Key ID and the account's Team ID.
+2. Copy the file to the server outside the deploy tree, readable only by the service
+   user: `install -m 600 -o beebox AuthKey_<KEYID>.p8 /home/beebox/.apns/`.
+3. Add `BBX_APNS_KEY_PATH` (that file), `BBX_APNS_KEY_ID`, `BBX_APNS_TEAM_ID`, and
+   `BBX_APNS_BUNDLE_ID` (the iOS app's bundle id) to `/home/beebox/.env`.
+4. Restart **both** services, since the server (callouts) and the scheduler
+   (reminders, alerts) both send: `systemctl restart beebox-hub beebox-scheduler`.
+
+One key serves both APNs hosts; each phone reports whether its build is `sandbox` or
+`production` when it registers, and the server sends to that host. With any of the four
+unset, the `apns` channel is skipped as `unconfigured` and the Admin Notifications
+section says so. Phones register themselves when the app opens; registered phones and
+their environment are listed under Admin → Notifications → Phones.
 
 ## Service-user logins (Claude Code and Codex)
 

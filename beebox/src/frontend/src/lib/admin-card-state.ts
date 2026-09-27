@@ -1,6 +1,6 @@
 import { isRecord } from "@shared/is-record";
 import type { ViewState } from "@shared/view-state";
-import { adminTabForSection, isAdminTab, type AdminTab } from "../components/admin/admin-sections";
+import { adminTabForSection, isAdminSectionId, isAdminTab, type AdminSectionId, type AdminTab } from "../components/admin/admin-sections";
 
 export interface AdminArrivalState {
   google?: "connected" | "error";
@@ -9,22 +9,27 @@ export interface AdminArrivalState {
 }
 
 export type AdminCardStateResult =
-  | { ok: true; arrival: AdminArrivalState; tab: AdminTab | null }
+  | { ok: true; arrival: AdminArrivalState; tab: AdminTab | null; section: AdminSectionId | null }
   | { ok: false; error: string };
 
-/** The card's view state: an arrival notice from an OAuth return, plus the open tab. */
+/**
+ * The card's view state: an arrival notice from an OAuth return, the open
+ * tab, and a section to land on (a notification's `admin:<section>` target).
+ */
 export function parseAdminCardState(value: ViewState | null | undefined): AdminCardStateResult {
-  if (value === null || value === undefined) return { ok: true, arrival: {}, tab: null };
+  if (value === null || value === undefined) return { ok: true, arrival: {}, tab: null, section: null };
   if (!isRecord(value)) return invalidAdminState();
   const google = value["google"];
   const message = value["message"];
   const reconnect = value["reconnect"];
   const tab = value["tab"];
+  const section = value["section"];
   if (!(google === undefined || google === "connected" || google === "error")
     || !(message === undefined || typeof message === "string")
     || !(reconnect === undefined || reconnect === "google")
-    || !(tab === undefined || isAdminTab(tab))) return invalidAdminState();
-  return { ok: true, arrival: { ...(google ? { google } : {}), ...(message === undefined ? {} : { message }), ...(reconnect ? { reconnect } : {}) }, tab: tab ?? null };
+    || !(tab === undefined || isAdminTab(tab))
+    || !(section === undefined || isAdminSectionId(section))) return invalidAdminState();
+  return { ok: true, arrival: { ...(google ? { google } : {}), ...(message === undefined ? {} : { message }), ...(reconnect ? { reconnect } : {}) }, tab: tab ?? null, section: section ?? null };
 }
 
 /** The same state with a different tab open; arrival keys are untouched. */

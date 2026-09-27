@@ -57,7 +57,7 @@ export function procedureOutcome(result: CommandResult): ProcedureOutcome | null
   const data = result.data;
   if (!isRecord(data)) return null;
   const status = data["status"];
-  if (status !== "completed" && status !== "inconclusive") return null;
+  if (status !== "completed" && status !== "inconclusive" && status !== "skipped") return null;
   const procedure = data["procedure"];
   if (typeof procedure !== "string") return null;
   const raw = data["inconclusive"];

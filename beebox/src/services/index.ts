@@ -22,6 +22,7 @@ import type { GwsRunner } from "../connectors/gmail-gws.js";
 import type { FetchLike } from "../core/secrets/probe-registry.js";
 import type { CloudflarePublishTokenVerifier } from "./cloudflare-publish-token-verifier.js";
 import type { ManagedPublicationRuntime } from "./managed-publication-runtime.js";
+import type { NotifyServices } from "../core/notify-boxholder.js";
 
 // ─── Services container ──────────────────────────────────────────────────────
 
@@ -57,4 +58,10 @@ export interface Services {
    * responses so nothing leaves the machine.
    */
   openrouterFetch?: FetchLike | undefined;
+  /**
+   * The channel services `notifications.send` and `notifications.channels`
+   * hand `notifyBoxholder`. Production leaves it unset and each channel is
+   * built from the server's own keys and config; a test injects fakes.
+   */
+  notify?: NotifyServices | undefined;
 }

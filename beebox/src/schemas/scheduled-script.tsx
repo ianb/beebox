@@ -14,7 +14,8 @@ import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { parseDuration, parseBudget } from "./scheduled-script-duration.js";
-import { DatetimeField, CronField, RruleField } from "./scheduled-script-fields.js";
+import { DatetimeField, CronField, RruleField, NotifyField, type ScheduleNotify } from "./scheduled-script-fields.js";
+import { SCHEDULED_SCRIPT_INSTRUCTIONS } from "./scheduled-script-instructions.js";
 
 const { rrulestr } = rrulePkg;
 
@@ -58,39 +59,14 @@ export const ScheduledScriptSchema = cardSchema("scheduled-script", {
     "lock-group": z.string().optional(),
     timeout: z.string().optional(),
     description: z.string().optional(),
-    runs: z.string(),
+    runs: z.string().optional(),
+    notify: NotifyField.optional(),
+    "requested-by": z.literal("boxholder").optional(),
     source: SourceField.optional(),
     "create-after-success": z.array(CreateAfterSuccessEntry).optional(),
     requires: RequiresField.optional(),
   },
-  instructions: `# Scheduled Script Cards
-
-Scheduled scripts define commands to run on a schedule. They live in \`_config/schedules/\`.
-
-## Schedule Types (mutually exclusive)
-- **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)
-- **at**: ISO datetime for a one-shot future execution
-- **rrule**: iCalendar RRULE for complex recurrence patterns
-
-## Frontmatter Fields
-- **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.
-- **on-wakeup**: If \`true\`, also run opportunistically during \`bbx wakeup\`, subject to not-before.
-- **once**: If \`true\`, the card is deleted after successful execution.
-- **until**: ISO datetime after which this schedule expires.
-- **enabled**: Set to \`false\` to disable without deleting. This is per-box state, not part of the shipped definition — a disabled schedule still receives upstream definition updates (new cron/runs/description) while staying disabled.
-- **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
-- **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
-- **timeout**: Max runtime for a single run, as a duration string (e.g. \`25m\`). Counts only awake time (machine sleep doesn't eat the budget). Default: \`10m\`. The run is killed when it exceeds this.
-- **runs**: The command to execute (required). Runs with cwd set to box root.
-- **description**: Human-readable summary of what this schedule does.
-- **source**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
-- **create-after-success**: Optional array of \`{path, args?}\` entries. Create a card at \`path\` after successful execution; \`args\` are template arguments. Skipped if the target file already exists.
-- **requires**: Optional \`{connectors: [name, ...]}\`. The schedule won't run if any required connector isn't configured for this box.
-
-## Guidelines
-- Set reasonable not-before values to prevent hammering external services.
-- Use on-wakeup for things that should happen whenever the agent is active.
-- For one-shot future tasks, combine \`at\` with \`once: true\`.`,
+  instructions: SCHEDULED_SCRIPT_INSTRUCTIONS,
   // `enabled` is per-box state, not part of the shipped definition: a box turns
   // a schedule on or off for itself. Declaring it box-owned means a box that
   // only toggled `enabled` still receives upstream definition updates (new
@@ -99,6 +75,13 @@ Scheduled scripts define commands to run on a schedule. They live in \`_config/s
   // (retimed cron, changed runs) still parks for review.
   templateMerge: { boxOwnedFields: ["enabled"] },
   superRefine: (fields, ctx) => {
+    if ((fields.runs === undefined) === (fields.notify === undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [fields.runs === undefined ? "runs" : "notify"],
+        message: "a scheduled script needs exactly one of runs (a command) and notify (a notification)",
+      });
+    }
     const present: Array<"cron" | "at" | "rrule"> = [];
     if (fields.cron !== undefined) present.push("cron");
     if (fields.at !== undefined) present.push("at");
@@ -125,6 +108,11 @@ export type ScheduledScriptFields = InferCardFields<typeof ScheduledScriptSchema
 // Parsed scheduled script (computed/normalized)
 // ============================================
 
+/** What a schedule does when it fires: run a command, or send a notification. */
+export type ScheduleAction =
+  | { kind: "runs"; command: string }
+  | { kind: "notify"; notify: ScheduleNotify };
+
 export interface ScheduleRequirements {
   connectors: string[];
 }
@@ -138,7 +126,9 @@ export interface ParsedScheduledScript {
   onWakeup: boolean;
   once: boolean;
   enabled: boolean;
-  runs: string;
+  action: ScheduleAction;
+  /** `boxholder` when the boxholder asked for this schedule. */
+  requestedBy: "boxholder" | undefined;
   description: string | undefined;
   source: { ref?: string; text?: string } | undefined;
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
@@ -157,6 +147,24 @@ function normalizeSource(src: ScheduledScriptFields["source"]): { ref?: string; 
   return out;
 }
 
+class ScheduleActionMissingError extends Error {
+  constructor() {
+    super("scheduled script has neither runs nor notify; the schema's refinement should have refused it");
+    this.name = "ScheduleActionMissingError";
+  }
+}
+
+function scheduleAction(fields: ScheduledScriptFields): ScheduleAction {
+  if (fields.runs !== undefined) return { kind: "runs", command: fields.runs };
+  if (fields.notify !== undefined) return { kind: "notify", notify: fields.notify };
+  throw new ScheduleActionMissingError();
+}
+
+/** One line for lists and logs: the command, or `notify: <title>`. */
+export function describeScheduleAction(action: ScheduleAction): string {
+  return action.kind === "runs" ? action.command : `notify: ${action.notify.title}`;
+}
+
 /**
  * Parse a scheduled-script fields object into a typed structure.
  */
@@ -170,7 +178,8 @@ export function parseScheduledScript(fields: ScheduledScriptFields): ParsedSched
     onWakeup: fields["on-wakeup"] === true,
     once: fields.once === true,
     enabled: fields.enabled !== false,
-    runs: fields.runs,
+    action: scheduleAction(fields),
+    requestedBy: fields["requested-by"],
     description: fields.description,
     source: normalizeSource(fields.source),
     createAfterSuccess: (fields["create-after-success"] ?? []).map((e) => ({

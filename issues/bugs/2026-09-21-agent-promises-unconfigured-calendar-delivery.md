@@ -30,3 +30,15 @@ Keep generic possible uses distinct from capabilities available here now.
 This one run verifies an output reliability failure, not a deterministic
 prompt cause. No product or prompt fix was attempted. The meal itself,
 external accounts, notifications and future delivery were not tested.
+
+## 2026-09-26 (notifications workstream)
+
+Partly addressed, not closed. The notifications work added `bbx notify
+--check` and an agent-guide rule — *"Before you promise a reminder or a
+watch, run `bbx notify --check`. If nothing can reach the person, say so
+instead of promising."*
+(`beebox/src/core/agent-guide/reaching.ts`) — that covers the
+notify/remind promise class generically. It does not check Calendar/Google
+OAuth availability specifically, so the calendar-delivery promise this issue
+reports is not directly covered; that needs its own check at the point an
+agent offers calendar delivery.

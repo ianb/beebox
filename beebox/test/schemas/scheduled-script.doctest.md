@@ -177,6 +177,61 @@ ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "2026-09-
 => true
 ```
 
+## Schema: exactly one of `runs` and `notify`
+
+A reminder carries `notify:` in place of `runs:`. A card with both, or with
+neither, fails validation with a message that names the rule.
+
+```ts
+const issues = (fields) => {
+  const parsed = ScheduledScriptSchema.frontmatterSchema.safeParse({ type: "scheduled-script", ...fields });
+  return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
+};
+issues({ at: "2026-10-02T08:30", notify: { title: "Call the vet" } })
+=> valid
+
+issues({ at: "2026-10-02T08:30", runs: "echo hi", notify: { title: "Call the vet" } })
+=> notify: a scheduled script needs exactly one of runs (a command) and notify (a notification)
+
+issues({ at: "2026-10-02T08:30" })
+=> runs: a scheduled script needs exactly one of runs (a command) and notify (a notification)
+```
+
+`notify` fields are checked where they are written: the target parses as a
+notification target, the context is a card path inside the box, the loudness
+is one of the three, `requested-by` is only `boxholder`, and an unknown key is
+refused rather than ignored.
+
+```ts continue
+issues({ at: "2026-10-02T08:30", notify: { title: "x", target: "https://example.com" } })
+=> notify.target: Invalid notification target "https://example.com": unknown scheme "https". Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+
+issues({ at: "2026-10-02T08:30", notify: { title: "x", context: "../outside.todo.card" } })
+=> notify.context: must be a card path inside the box (e.g. _content/pets/pepper-shots.todo.card)
+
+issues({ at: "2026-10-02T08:30", notify: { title: "x", loudness: "shout" } }).startsWith("notify.loudness:")
+=> true
+
+issues({ at: "2026-10-02T08:30", notify: { title: " " } })
+=> notify.title: a notification needs a title
+
+issues({ at: "2026-10-02T08:30", notify: { title: "x", sound: "chime" } }).startsWith("notify: ")
+=> true
+
+issues({ at: "2026-10-02T08:30", notify: { title: "x" }, "requested-by": "agent" }).startsWith("requested-by:")
+=> true
+```
+
+`parseScheduledScript` turns the pair into one `action`:
+
+```ts continue
+JSON.stringify(parseScheduledScript({ type: "scheduled-script", at: "2026-10-02T08:30", "requested-by": "boxholder", notify: { title: "Call the vet" } }).action)
+=> {"kind":"notify","notify":{"title":"Call the vet"}}
+
+JSON.stringify(parseScheduledScript({ type: "scheduled-script", runs: "echo hi" }).action)
+=> {"kind":"runs","command":"echo hi"}
+```
+
 ## isDue
 
 Determines if a scheduled script should run based on its schedule type (cron, at, rrule), enabled state, until deadline, and not-before debouncing.

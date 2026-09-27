@@ -82,3 +82,39 @@ export async function getRangeDiff(
     return "";
   }
 }
+
+/**
+ * Paths changed between two commits (`bbx changes`): a tree diff (`git diff --name-only
+ * --diff-filter=<filter> <from> <to>`), not the history between them, so a
+ * file added and then moved inside the window appears once, as added at its
+ * final path. Rename detection is on regardless of the user's config, so a
+ * file that only moved is `R`, not an add. Paths are repository-relative,
+ * which for a box is box-relative. Unlike the helpers above, an unknown
+ * commit throws: a cursor that no longer resolves is an error, never "nothing
+ * changed".
+ */
+export async function getRangeChangedPaths(
+  boxRoot: string,
+  { from, to, filter }: { from: string; to: string; filter: string }
+): Promise<string[]> {
+  const out = await simpleGit(boxRoot).raw([
+    "diff", "--name-only", "-z", "--find-renames", "--no-ext-diff",
+    `--diff-filter=${filter}`, from, to, "--",
+  ]);
+  return out.split("\0").filter((p) => p !== "");
+}
+
+/** Commit subjects in `from..to`, oldest first. An unknown commit throws. */
+export async function getRangeSubjects(
+  boxRoot: string,
+  { from, to }: { from: string; to: string }
+): Promise<string[]> {
+  const out = await simpleGit(boxRoot).raw(["log", "--reverse", "--format=%s", `${from}..${to}`, "--"]);
+  return out.split("\n").filter((line) => line !== "");
+}
+
+/** Every file in the tree at `rev`, repository-relative. */
+export async function getTreeFiles(boxRoot: string, { rev }: { rev: string }): Promise<string[]> {
+  const out = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "-z", rev]);
+  return out.split("\0").filter((p) => p !== "");
+}

@@ -1,14 +1,40 @@
 ---
 title: "Notifications and proactive work are half built and do not work: design what reaches the person, and how"
-workstream: unattached
+workstream: notifications
 area: beebox
-needs: [design]
+needs: [manual-testing]
 priority: important
 labels: [notifications, proactive]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-25
 ---
+
+> **⏳ Awaiting manual testing** — Tracks A–F landed on `main` (merge commit
+> reported at land time). Automated coverage: doctests, `pnpm test:changed`,
+> 11 rounds of cross-model review, a `BBX_NOTIFY_FAKE=1` / `BBX_JEV_FAKE=1`
+> end-to-end walk on a scratch test-box clone, and 347 XCTests green on the
+> iOS simulator with device registration verified against the test box.
+> **Not** exercised: real APNs delivery to a physical iPhone, tap-to-target
+> from a cold launch, and badge clearing on a real device. Only the boxholder
+> can clear this.
+
+## Manual testing
+
+Follow [docs/notifications.md, "Verification
+walk"](../../beebox/docs/notifications.md#verification-walk) on a real
+iPhone. Before the walk, on the production server (`/home/beebox/.env`):
+
+- Set `BBX_APNS_KEY_PATH` (the `.p8` key file), `BBX_APNS_KEY_ID`,
+  `BBX_APNS_TEAM_ID`, and `BBX_APNS_BUNDLE_ID`.
+- Confirm the app target has the Push Notifications capability enabled in
+  Xcode.
+- Install a Debug build on the boxholder's phone.
+- VAPID keys no longer need a manual step — `deploy/deploy.sh` seeds them
+  when the server env has none.
+
+Expected: a reminder/watch notification lands on the phone, tapping it opens
+the right card, and the badge clears on open.
 
 The boxholder: notifications and proactive behavior are "like halfway done and
 doesn't really work." Many of the things people want from an assistant depend
@@ -35,7 +61,7 @@ way to reach the person, the box can only respond; it cannot follow up.
 Plumbing is only half of it. The harder half is policy.
 
 - **What deserves an interruption.** Agent outcomes
-  ([agent outcomes need a voice](2026-08-09-agent-outcomes-need-a-voice.md):
+  ([agent outcomes need a voice](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md):
   "it has the conscience and not the voice"), finished captures, schedule and
   procedure results, due or overdue todos, questions waiting on the person,
   and watch-and-alert results. Each is a push notification, a badge, a
@@ -55,7 +81,7 @@ Plumbing is only half of it. The harder half is policy.
 
 ## Related issues
 
-- [Capture confirmation misses a user who left](2026-08-21-capture-confirmation-misses-a-user-who-left.md)
+- [Capture confirmation misses a user who left](../closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md)
 - [Capture success is invisible](../bugs/2026-08-20-capture-success-is-invisible.md)
 - [Agent-maintained ideas page](2026-09-25-agent-maintained-ideas-page.md): many of its ideas depend on this.
 - [Quick drop entry points](2026-09-25-quick-drop-entry-points.md): a notification action is one candidate entry point.

@@ -1,5 +1,16 @@
 /** Typed routing judgments through OpenRouter's Decisions API. */
 import { isRecord } from "../lib/is-record.js";
+import { JevError, JEV_MODEL, JEV_PROVIDER, postDecisions, probability } from "./jev-wire.js";
+import {
+  answerToWire,
+  parseJudgeResponse,
+  serializeJudgeRequest,
+  uncertainAnswer,
+  type JudgeAnswer,
+  type JudgeInput,
+  type JudgeQuestion,
+  type JudgeResult,
+} from "./jev-judge.js";
 
 export interface JevDecisionInput {
   state: unknown;
@@ -14,25 +25,8 @@ export interface JevDecision {
 
 export interface JevService {
   decide(input: JevDecisionInput): Promise<JevDecision>;
-}
-
-export class JevError extends Error {
-  constructor(
-    detail: string,
-    public readonly code: "request" | "response",
-  ) {
-    super(`Jev ${code} error: ${detail}`);
-    this.name = "JevError";
-  }
-}
-
-function probability(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    value >= 0 &&
-    value <= 1
-  );
+  /** Several named Noul, Choice, and Score questions over one state, in one call. */
+  judge(input: JudgeInput): Promise<JudgeResult>;
 }
 
 /** Reject incomplete distributions: omitted candidates must never silently disappear. */
@@ -89,12 +83,8 @@ export function parseJevResponse(
 /** Exact wire representation, also used to budget routing evidence. */
 export function serializeJevRequest({ state, criteria }: JevDecisionInput): string {
   return JSON.stringify({
-    model: "typesafe/jev-1.13",
-    provider: {
-      only: ["TypeSafe"],
-      allow_fallbacks: false,
-      data_collection: "deny",
-    },
+    model: JEV_MODEL,
+    provider: JEV_PROVIDER,
     state,
     questions: {
       destination: {
@@ -118,39 +108,12 @@ export function serializeJevRequest({ state, criteria }: JevDecisionInput): stri
 export function createJevService({ apiKey }: { apiKey: string }): JevService {
   return {
     async decide({ state, criteria }) {
-      const requestBody = serializeJevRequest({ state, criteria });
-      if (requestBody.length > 80_000) {
-        const detail = `request exceeded 80000 characters (${String(requestBody.length)})`;
-        throw new JevError(detail, "request");
-      }
-      let response: Response;
-      try {
-        response = await fetch("https://openrouter.ai/api/alpha/decisions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          signal: AbortSignal.timeout(30_000),
-          body: requestBody,
-        });
-      } catch (_error) {
-        // Never retain fetch errors: they may contain headers or captured text.
-        const detail = `request failed within the ${String(30_000)}ms timeout`;
-        throw new JevError(detail, "request");
-      }
-      if (!response.ok) {
-        const detail = `HTTP ${String(response.status)}`;
-        throw new JevError(detail, "request");
-      }
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch (_error) {
-        const detail = `HTTP ${String(response.status)} response was not JSON`;
-        throw new JevError(detail, "response");
-      }
+      const body = await postDecisions(apiKey, serializeJevRequest({ state, criteria }));
       return parseJevResponse(body, Object.keys(criteria));
+    },
+    async judge(input) {
+      const body = await postDecisions(apiKey, serializeJudgeRequest(input));
+      return parseJudgeResponse(body, input.questions);
     },
   };
 }
@@ -158,10 +121,13 @@ export function createJevService({ apiKey }: { apiKey: string }): JevService {
 export interface FakeJevOptions {
   result?: JevDecision;
   error?: JevError;
+  /** Scripted `judge` answers per question; unscripted judgments get {@link uncertainAnswer}. */
+  answers?: (name: string, ctx: { question: JudgeQuestion; state: unknown }) => JudgeAnswer;
 }
 
 export interface FakeJevService extends JevService {
   calls: JevDecisionInput[];
+  judgeCalls: JudgeInput[];
   describe(): string;
 }
 
@@ -170,6 +136,7 @@ export function createFakeJev(opts?: FakeJevOptions): FakeJevService {
   const options = opts ?? {};
   const fake: FakeJevService = {
     calls: [],
+    judgeCalls: [],
     async decide(input) {
       fake.calls.push(structuredClone(input));
       if (options.error) throw options.error;
@@ -183,12 +150,29 @@ export function createFakeJev(opts?: FakeJevOptions): FakeJevService {
         confidence: 0,
       };
     },
+    async judge(input) {
+      fake.judgeCalls.push(structuredClone(input));
+      if (options.error) throw options.error;
+      const script = options.answers ?? ((_name, { question }) => uncertainAnswer(question));
+      // Through the real parser, so a scripted answer the service would reject fails here too.
+      const answers = Object.fromEntries(
+        Object.entries(input.questions).map(([name, question]) => [
+          name,
+          answerToWire(script(name, { question, state: input.state })),
+        ]),
+      );
+      return parseJudgeResponse({ model: "fake-jev", answers }, input.questions);
+    },
     describe() {
       return [
         `calls: ${String(fake.calls.length)}`,
         ...fake.calls.map(
           (call, index) =>
             `[${String(index)}] ${Object.keys(call.criteria).join(" | ")}`,
+        ),
+        ...fake.judgeCalls.map(
+          (call, index) =>
+            `judge[${String(index)}] ${Object.entries(call.questions).map(([name, q]) => `${name}:${q.type}`).join(" ")}`,
         ),
       ].join("\n");
     },

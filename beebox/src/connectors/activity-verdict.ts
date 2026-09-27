@@ -143,7 +143,7 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-/** One line for the boxholder, used by both the notification and the dashboard. */
+/** One line for the boxholder, used by the dashboard check and the schedule promotion. */
 export function describeVerdict(connector: string, verdict: ConnectorVerdict): string | null {
   switch (verdict.kind) {
     case "healthy":

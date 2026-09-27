@@ -16,6 +16,7 @@ import {
 } from "./engine-types.js";
 import { updateStepInRunCard } from "./engine-run-card.js";
 import { executePhaseShells } from "./engine-phase.js";
+import { CHECK_SKIP_CODE } from "./shell.js";
 import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
 import type { RunShellFailure } from "./engine-run-execute.js";
 import { formatInconclusiveValidateError } from "../../shared/inconclusive.js";
@@ -140,7 +141,7 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
   const precheckResult = await executePhaseShells(boxRoot, step.precheck);
 
   if (precheckResult.skipped) {
-    ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || "precheck exit $CHECK_SKIP"}`));
+    ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || `precheck exit ${String(CHECK_SKIP_CODE)}`}`));
     // Card update only, no commit — if every step skips, the whole run dir
     // is removed at completion; if a later step does work, the skip history
     // rides along in that step's "Start procedure" commit.

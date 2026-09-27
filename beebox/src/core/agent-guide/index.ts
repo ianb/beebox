@@ -16,6 +16,7 @@ import type { BoxShape } from "../../lib/box-shape.js";
 
 import { directoryLayoutSection, howItemsEnterSection, boxCodeLocationSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
+import { reachingSection } from "./reaching.js";
 import { proceduresSection, guidesSection } from "./extensibility.js";
 import { externalToolsSection } from "./chat.js";
 import {
@@ -96,6 +97,7 @@ This guide is for every agent working in this box — chat, background jobs, and
     howItemsEnterSection(),
     // How to act
     keyCommandsSection(),
+    reachingSection(),
     searchSection(),
     proceduresSection(procedures),
     guidesSection(guides),

@@ -11,6 +11,8 @@
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
+import { LOUDNESS, targetStringSchema } from "../core/notification/intent.js";
+import { resolveRefPath } from "../shared/ref-path.js";
 
 const { rrulestr } = rrulePkg;
 
@@ -49,3 +51,19 @@ export const RruleField = z.string().refine(
   },
   { message: "invalid RRULE" }
 );
+
+/** A card path inside the box, resolved like every other ref (fails closed on `..`). */
+const ContextRefField = z.string().refine(
+  (value) => resolveRefPath({ fromPath: undefined, ref: value, kind: "card" }) !== null,
+  { message: "must be a card path inside the box (e.g. _content/pets/pepper-shots.todo.card)" }
+);
+
+/** `notify:` on a scheduled script: the notification the tick sends in place of running a command. */
+export const NotifyField = z.strictObject({
+  title: z.string().regex(/\S/, { message: "a notification needs a title" }),
+  body: z.string().optional(),
+  loudness: z.enum(LOUDNESS).optional(),
+  target: targetStringSchema.optional(),
+  context: ContextRefField.optional(),
+});
+export type ScheduleNotify = z.infer<typeof NotifyField>;

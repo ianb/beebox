@@ -67,9 +67,12 @@ import { triageCommand } from "./commands/triage.js";
 import { handleCommand } from "./commands/handle.js";
 import { extfileCommand } from "./commands/extfile.js";
 import { locationCommand } from "./commands/location.js";
-import { pushCommand } from "./commands/push.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
+import { notifyCommand } from "./commands/notify.js";
+import { changesCommand } from "./commands/changes.js";
+import { judgeCommand } from "./commands/judge.js";
+import { pairingCommand } from "./commands/pairing.js";
 import { todoReviewCommand } from "./commands/todo-review.js";
 import { queryCommand } from "./commands/query.js";
 import { connectorCommand } from "./commands/connector.js";
@@ -133,9 +136,12 @@ const ALL: readonly Command[] = [
   handleCommand,
   extfileCommand,
   locationCommand,
-  pushCommand,
   tailscaleCommand,
   todosCommand,
+  notifyCommand,
+  changesCommand,
+  judgeCommand,
+  pairingCommand,
   todoReviewCommand,
   queryCommand,
   connectorCommand,

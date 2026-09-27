@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import {
+  describeScheduleAction,
   parseScheduledScript,
   ScheduledScriptSchema,
 } from "../../schemas/scheduled-script.js";
@@ -22,6 +23,7 @@ import {
   executeScript,
 } from "./tick-helpers.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 
 export interface TickOptions {
   dryRun?: boolean;
@@ -38,7 +40,8 @@ export interface TickOptions {
 export interface ScriptResult {
   name: string;
   /** "inconclusive": the script's work completed but its check reached no
-   *  verdict. Separate from "error" so a non-answer is never counted as one. */
+   *  verdict. Separate from "error" so a non-answer is never counted as one.
+   *  "skipped" is also a run that deferred with a marker (`error` says why). */
   status: "ran" | "skipped" | "error" | "inconclusive";
   command?: string;
   durationMs?: number;
@@ -117,25 +120,32 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     const state = await loadScriptState(boxRoot, scriptName);
-    const skipReason = await evaluateSkip({ boxRoot, parsed, scriptName, state, now, running, options });
-    if (skipReason !== null) {
-      if (skipReason) console.log(skipReason);
+    const skip = await evaluateSkip({ boxRoot, parsed, scriptName, state, now, running, options });
+    // The promotion rule (a requested schedule that cannot run says so once).
+    const promotion = { boxRoot, scriptName, parsed, state, now };
+    if (skip !== null) {
+      if (skip.line) console.log(skip.line);
+      if (skip.cause !== undefined && !options.dryRun) await noteTickSkip(promotion, skip.cause);
       skipCount++;
       scripts.push({ name: scriptName, status: "skipped" });
       continue;
     }
 
     if (options.dryRun) {
-      if (!options.quiet) console.log(`Would run: ${scriptName} → ${parsed.runs}`);
+      const command = describeScheduleAction(parsed.action);
+      if (!options.quiet) console.log(`Would run: ${scriptName} → ${command}`);
       ranCount++;
-      scripts.push({ name: scriptName, status: "ran", command: parsed.runs });
+      scripts.push({ name: scriptName, status: "ran", command });
       continue;
     }
 
+    await checkRequiredConnectors(promotion);
     const result = await executeScript({ boxRoot, parsed, scriptName, cardPath, file, state, now, options });
+    await promoteDeferredRun(promotion);
     scripts.push(result);
     if (result.status === "ran") ranCount++;
     else if (result.status === "inconclusive") inconclusiveCount++;
+    else if (result.status === "skipped") skipCount++;
     else errorCount++;
   }
 

@@ -1,30 +1,25 @@
-# Proactive schedule-health alerts
+# Schedule-health episodes and the `scheduled-tasks` check
 
-`checkHealthAndAlert` is run by the scheduler daemon after each box's
-tick. It needs a reachable channel (`healthAlerts.telegramChat` and/or a
-subscribed push device), fans out one aggregated alert per batch of
-newly-unhealthy tasks via notifyBoxholder, flushes it immediately, and
-latches each task so the same unhealthy episode never alerts twice. A
-successful run clears the latch (via `recordOutcome`), re-arming alerts
-for a relapse.
+A scheduled task that keeps failing, is overdue, or cannot parse is a health
+entry on the dashboard: the `scheduled-tasks` check. It never notifies on its
+own (docs/implemented-plans/notifications.md, Track E).
+
+`recordScheduleEpisodes` runs from the scheduler daemon after each box's tick.
+It stamps each newly unhealthy task's latch, so the scheduler log records the
+episode once, and a successful run clears the latch (via `recordOutcome`), so a
+relapse is a new episode.
 
 ```ts setup
-import * as os from "node:os";
-import * as path from "node:path";
-import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createFakeTelegram } from "../../src/services/telegram.js";
-import { checkHealthAndAlert } from "../../src/core/schedule/health-alert.js";
+import { recordScheduleEpisodes } from "../../src/core/schedule/health-alert.js";
+import { loadScheduleHealth } from "../../src/core/schedule/health-box.js";
+import { engineQuotaChecks, scheduledTasksCheck } from "../../src/webapp/trpc/routers/health-schedules.js";
+import { readRecent } from "../../src/core/notification/log.js";
 import {
   loadScriptState,
   saveScriptState,
   recordOutcome,
 } from "../../src/core/schedule/state.js";
-
-// Isolate the server-level push store so the push channel is deterministically
-// absent (telegram-only) in this test.
-const pushStoreDir = path.join(os.tmpdir(), `bbx-push-health-${process.pid}-${Date.now()}`);
-process.env.BBX_PUSH_STORE_DIR = pushStoreDir;
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 
@@ -47,66 +42,46 @@ runs: bbx wakeup --connector notes
 }
 ```
 
-## No opt-in, no alert
+## A failing task is a dashboard check, and nothing is sent
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedFailingTask(box);
 box.commitAll("seed");
 
-await checkHealthAndAlert(box.root, { now: NOW, tg: createFakeTelegram({ username: "bot" }) })
-=> null
+const check = scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW);
+`${check.name} | ${check.ok} | ${check.message}`
+=> scheduled-tasks | false | Scheduled tasks need attention: sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported
+
+JSON.stringify(await recordScheduleEpisodes(box.root, { now: NOW }))
+=> {"tasks":["sync-notes"]}
+
+(await readRecent(box.root, { days: 1, now: NOW })).length
+=> 0
 ```
 
-```ts cleanup
-await box.cleanup();
-```
-
-## Opted in: one aggregated alert, delivered immediately, then latched
-
-```ts
-const box = await makeTmpBox({ git: true });
-await seedFailingTask(box);
-await box.seed("_config/box.json", JSON.stringify({
-  healthAlerts: { telegramChat: "777" },
-}));
-await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({
-  botToken: "fake:token", webhookSecret: "s",
-}));
-box.commitAll("seed");
-
-const tg = createFakeTelegram({ username: "bot" });
-JSON.stringify(await checkHealthAndAlert(box.root, { now: NOW, tg }))
-=> {"alerted":["sync-notes"],"delivered":true}
-
-tg.sent[0].chatId
-=> 777
-
-tg.sent[0].text
-=> ⚠️ Scheduled-task health «*»
-- sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported
-«blankline»
-Run `bbx health` in the box for details.
-```
-
-The task is latched, so the next daemon cycle stays quiet:
+The task is latched, so the next daemon cycle records nothing new:
 
 ```ts continue
 const state = await loadScriptState(box.root, "sync-notes");
 print(`alertedFor: ${state.alertedFor}`);
-print(`again: ${await checkHealthAndAlert(box.root, { now: NOW, tg })}`);
+print(`again: ${await recordScheduleEpisodes(box.root, { now: NOW })}`);
 =>
 alertedFor: failing
 again: null
 ```
 
-A successful run clears the latch; a relapse alerts again:
+A successful run clears the latch and the check; a relapse is a new episode:
 
 ```ts continue
 recordOutcome(state, {
   result: "success", error: null, durationMs: 100, sleepAffected: false,
   windowMs: 86_400_000, now: new Date("2026-06-09T13:00:00Z"),
 });
+await saveScriptState({ boxRoot: box.root, scriptName: "sync-notes", state });
+scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW).ok
+=> true
+
 recordOutcome(state, {
   result: "failure", error: "boom", durationMs: 100, sleepAffected: false,
   windowMs: 86_400_000, now: new Date("2026-06-09T14:00:00Z"),
@@ -117,15 +92,56 @@ recordOutcome(state, {
 });
 await saveScriptState({ boxRoot: box.root, scriptName: "sync-notes", state });
 
-const again = await checkHealthAndAlert(box.root, { now: new Date("2026-06-09T15:05:00Z"), tg });
-JSON.stringify(again.alerted)
-=> ["sync-notes"]
-
-tg.sent.length
-=> 2
+JSON.stringify(await recordScheduleEpisodes(box.root, { now: new Date("2026-06-09T15:05:00Z") }))
+=> {"tasks":["sync-notes"]}
 ```
 
 ```ts cleanup
 await box.cleanup();
-await fs.rm(pushStoreDir, { recursive: true, force: true });
+```
+
+## A stale scheduler is a warning, whatever the tasks say
+
+The daemon ran here and stopped: no task can fail or run late in a way the
+check would see, so the heartbeat itself is the finding.
+
+```ts
+const health = {
+  tasks: [],
+  scheduler: { status: "stale", lastTickAt: "2026-06-09T09:00:00.000Z", ageMs: 3 * 3_600_000 },
+  engineWait: null,
+};
+const stale = scheduledTasksCheck(health, NOW);
+`${stale.ok} | ${stale.severity} | ${stale.message}`
+=> false | warning | The scheduler is not running: last heartbeat 2026-06-09T09:00:00.000Z (3h ago)
+
+scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:00.000Z", ageMs: 60_000 } }, NOW).ok
+=> true
+```
+
+With no heartbeat ever (a dev box, where no daemon runs), the check passes and
+says so, rather than claiming tasks are running:
+
+```ts continue
+const never = scheduledTasksCheck({ ...health, scheduler: { status: "never", lastTickAt: null, ageMs: null } }, NOW);
+`${never.ok} | ${never.message}`
+=> true | The scheduler has never run on this box
+```
+
+## Engine quota is a check too
+
+An engine out of usage quota used to notify; it is now the `engine-quota`
+check, present only while the episode is live.
+
+```ts
+const live = {
+  provider: "claude", reason: "quota-exhausted", retryAt: "2026-06-09T18:00:00Z", retryAtSource: "parsed",
+  detectedAt: "2026-06-09T10:00:00Z", message: "limit", episodeStartedAt: "2026-06-09T09:00:00Z",
+};
+const [quota] = engineQuotaChecks(live, NOW);
+`${quota.name} | ${quota.ok} | ${quota.message.includes("(for 3h so far)")}`
+=> engine-quota | false | true
+
+engineQuotaChecks(null, NOW).length
+=> 0
 ```
