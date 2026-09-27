@@ -10,7 +10,7 @@ import type {
   ConfidenceLevelSchema,
   BeliefSourceSchema,
   ExperimentStatusSchema,
-} from "./schemas/guide/schema.js";
+} from "./guide-fields.js";
 
 // `VOICE_MODELS`/`VoiceModel` live in `shared/voice-models.ts` (extracted so
 // the frontend speech-parsing helpers can import the runtime array without

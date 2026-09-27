@@ -3,7 +3,7 @@
  * by rule, then path. `summary` mode counts findings per rule and per
  * top-level directory instead, for a whole-tree report.
  */
-import type { Finding, RuleId } from "../model.js";
+import type { Finding, RuleId } from "../../model.js";
 
 function groupBy<K, V>(items: V[], key: (item: V) => K): Map<K, V[]> {
   const groups = new Map<K, V[]>();

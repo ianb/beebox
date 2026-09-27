@@ -10,37 +10,27 @@
 
 import { z } from "zod";
 import { cardSchema, type CardSchema } from "../../cards/index.js";
+import {
+  ConfidenceLevelSchema,
+  type ConfidenceLevel,
+  BeliefSourceSchema,
+  type BeliefSource,
+  ExperimentStatusSchema,
+  type ExperimentStatus,
+} from "../../guide-fields.js";
+
+export {
+  ConfidenceLevelSchema,
+  type ConfidenceLevel,
+  BeliefSourceSchema,
+  type BeliefSource,
+  ExperimentStatusSchema,
+  type ExperimentStatus,
+} from "../../guide-fields.js";
 
 // ============================================
 // Shared enums
 // ============================================
-
-export const ConfidenceLevelSchema = z.enum([
-  "confirmed",
-  "high",
-  "medium",
-  "low",
-  "hypothesis",
-]);
-export type ConfidenceLevel = z.infer<typeof ConfidenceLevelSchema>;
-
-export const BeliefSourceSchema = z.enum([
-  "user-stated",
-  "feedback",
-  "inferred",
-  "default",
-]);
-export type BeliefSource = z.infer<typeof BeliefSourceSchema>;
-
-export const ExperimentStatusSchema = z.enum([
-  "proposed",
-  "active",
-  "successful",
-  "unsuccessful",
-  "mixed",
-  "inconclusive",
-]);
-export type ExperimentStatus = z.infer<typeof ExperimentStatusSchema>;
 
 const ReactionSentimentSchema = z.enum([
   "positive",

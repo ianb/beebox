@@ -16,7 +16,7 @@ import {
   ConfidenceLevelSchema,
   BeliefSourceSchema,
   ExperimentStatusSchema,
-} from "../guide/schema.js";
+} from "../../guide-fields.js";
 import {
   appendBoxholder,
   appendContext,

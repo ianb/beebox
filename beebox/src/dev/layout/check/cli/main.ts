@@ -14,11 +14,11 @@
  * repo scans in a few seconds.
  */
 import { dirname, resolve } from "node:path";
-import { defaultRoots } from "../default-roots.js";
-import type { Finding } from "../model.js";
-import { scanPackage } from "../scan/package/scan.js";
+import { defaultRoots } from "../../default-roots.js";
+import type { Finding } from "../../model.js";
+import { scanPackage } from "../../scan/package/scan.js";
 import { renderFindings, renderSummary } from "./report.js";
-import { layoutRules } from "./rules.js";
+import { layoutRules } from "../rules.js";
 
 class MissingRootValueError extends Error {
   constructor() {
@@ -57,7 +57,7 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "../../../../..");
+const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "../../../../../..");
 
 async function checkRoot(root: string): Promise<Finding[]> {
   const layout = await scanPackage({ repoRoot: REPO_ROOT, packageRoot: root });
