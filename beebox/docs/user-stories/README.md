@@ -11,23 +11,28 @@ previous one. If you change this pipeline, keep that property or the document be
 
 ## Layout
 
+Split three ways by what generates each part, not held in one `user-stories/` tree:
+
 ```
-user-stories/
-  README.md          this file
-  pipeline/          the workflows and tools that produce a catalog
-                     *.workflow.ts is the source; `pnpm build:workflows` emits
-                     the .mjs the Workflow tool runs into dist/workflows/
+src/scripts/user-stories/   the workflows and tools that produce a catalog
+                            *.workflow.ts is the source; `pnpm build:workflows` emits
+                            the .mjs the Workflow tool runs into dist/workflows/
+test/user-stories/
+  journeys/                 one person, one goal — see journeys/README.md
+docs/user-stories/
+  README.md                this file
   catalog/
-    2026-08-21.md    the readable catalog
-    2026-08-21.jsonl one capability per line, with the evidence behind
-                     its verdict — what the markdown is rendered from
-    2026-08-21.meta.json  run-level facts (counts, in-app page reports)
-    2026-06-26.md    the superseded predecessor, kept for its item
-                     numbering (a follow-up plan indexes into it)
-  work/              gitignored. A run's ~400 intermediate files.
-                     Disposable: `freeze.ts` collapses what matters into
-                     catalog/, and `render.ts` prefers that, so a
-                     committed catalog re-renders from the repo alone.
+    2026-08-21.md           the readable catalog
+    2026-08-21.jsonl        one capability per line, with the evidence behind
+                            its verdict — what the markdown is rendered from
+    2026-08-21.meta.json    run-level facts (counts, in-app page reports)
+    2026-06-26.md           the superseded predecessor, kept for its item
+                            numbering (a follow-up plan indexes into it)
+beebox/user-stories/work/   gitignored (repo root, not under src/). A run's
+                            ~400 intermediate files. Disposable: `freeze.ts`
+                            collapses what matters into docs/user-stories/catalog/,
+                            and `render.ts` prefers that, so a committed catalog
+                            re-renders from the repo alone.
 ```
 
 **On the two committed formats.** The `.jsonl` is the data; the `.md` is the artifact people read
@@ -59,7 +64,7 @@ is why the validator refuses to continue on one.
 
 ## The stages
 
-Each stage writes JSON under `scratch/user-stories/` (gitignored) and returns only a compact index,
+Each stage writes JSON under `beebox/user-stories/work/` (gitignored) and returns only a compact index,
 so 650 stories' worth of prose never enters the orchestrator's context.
 
 | # | Stage | Agents | Writes |
@@ -145,8 +150,8 @@ pnpm --dir beebox build:workflows
 
 **The `.mjs` a `Workflow({scriptPath: …})` call names is generated and gitignored — build it
 first or the call will not find it.** The workflows are written and typechecked as
-`pipeline/*.workflow.ts`, against the runtime's globals in `pipeline/workflow-globals.d.ts`, and
-`pipeline/build-workflows.ts` transpiles each one to the `.mjs` beside it. Only the TypeScript is
+`src/scripts/user-stories/*.workflow.ts`, against the runtime's globals in `src/scripts/user-stories/workflow-globals.d.ts`, and
+`src/scripts/user-stories/build-workflows.ts` transpiles each one to the `.mjs` beside it. Only the TypeScript is
 committed. (The runnable form has to be plain JavaScript: the tool parses the script itself, and
 gives it no filesystem and no imports — which is also why each workflow is one self-contained
 file rather than sharing code with its neighbours.)
