@@ -415,7 +415,7 @@ subplan: it can start only after this plan has fixed the row form.
 | Pressure audits for THE_LAW_OF_CHECKING pass because the model happens to know the answer | audit prompts use facts dated after the model's cutoff and assert a WebSearch or WebFetch tool call | none | clear |
 | QUESTIONS rewritten from a misread of the code | the existing question audits plus a read-against-code Codex review of that commit | none | clear |
 | The ledger and `SECTION` diverge | Track 1 doctest | none | clear |
-| A box's own schemas, guides, procedures, or personality render content the fixture never showed, outside any span or over budget | Track 2 doctest runs on two fixtures: a bare box and one with a box-local schema, a guide card, a procedure, and a personality card; generated content sits inside its section's list span by construction | budget asserted on the bare fixture, reported for the rich one and for the clone box | clear on the fixtures; a real box's overage shows only in the `agent-context` number |
+| A box's own schemas, guides, procedures, or personality render content the fixture never showed, pushing a section over its allowance or the guide over budget | Track 2 linter runs on two fixtures: a bare box and one with a box-local schema, a guide card, a procedure, and a personality card; generated content is cited through its placeholder's annotation by construction | budget asserted on the bare fixture, reported for the rich one and for the clone box | clear on the fixtures; a real box's overage shows only in the `agent-context` number |
 
 > **Critical gap:** none unresolved. The fifth row is the residual risk: a
 > behavior no audit covers can regress unseen. The mitigation is the rule
