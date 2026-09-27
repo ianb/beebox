@@ -18,7 +18,7 @@ component rendered twice on one page is invisible here and obvious there.
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import ts from "typescript";
-import { PACKAGE_ROOT } from "../../../../lib/package-root.js";
+import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 
 const FRONTEND_SRC = join(PACKAGE_ROOT, "src/frontend/src");
 const PLAN = join(PACKAGE_ROOT, "docs/plans/agent-points-at-ui.md");

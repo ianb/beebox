@@ -12,7 +12,7 @@ import {
   toError,
   errorMessage,
   NonError,
-} from "../../../shared/error-guards.js";
+} from "../../src/shared/error-guards.js";
 ```
 
 ## toError
