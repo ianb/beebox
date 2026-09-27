@@ -18,8 +18,11 @@ pipeline markers: `Procedure:` and `Step:` (a `bbx procedure` run and the step
 within it), `Run-By:` (a trick run, as `trick/<name>`), `Phase:` (which stage
 of a pipeline), `Session:` (the agent session),
 and `Commit-Source:` / `Fallback:` (a system fallback commit rather than the
-agent's own). You don't need these memorized — read them off the log, and filter
-by one when you want a slice:
+agent's own). Older boxes carry `Workflow:` where `Procedure:` is written now;
+the browse history view groups these into two filter axes, the connector that
+touched the content (the `-By` keys) and what triggered the commit
+(`Triggered-By`, `Procedure`, `Workflow`, `Run-By`). You don't need these
+memorized — read them off the log, and filter by one when you want a slice:
 
 - `git log --oneline -20` — recent activity overview
 - `git log --all --grep='Phase: brief'` — every brief-creation commit

@@ -789,8 +789,8 @@ rows:
   - id: landmarks.read-first
     rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
     handle: LANDMARKS
-    bin: core
-    reason: The section's pointer line; the curation judgment (what is landmark-worthy, when to retire one) is too long for the guide and is needed exactly when a landmark is in play.
+    bin: indirect
+    reason: It applies only when suggesting or editing a landmark, so the doc is the home and the guide keeps this one pointer sentence (Codex review of part B; the text was already a pointer).
     audits: [landmarks-recurrence-signal]
     mechanics: box-docs/landmark-curation.md
   - id: landmarks.derived-links
