@@ -114,25 +114,42 @@ export default [
     // full — the six generic-Error throws these files used to carry were fixed, not
     // exempted (boxholder decision, 2026-08-24).
     //
-    // `@typescript-eslint/no-misused-promises` is off for the same files for an
-    // unrelated reason: every workflow ends in a literal top-level `return`
-    // (see workflow-globals.d.ts — the runtime wraps the body in an async
-    // function, so TS's grammar error TS1108 is silenced with `@ts-expect-error`
-    // on that one line). That return statement has no enclosing function in the
-    // AST, and the rule's `checkReturnStatement` unconditionally dereferences
-    // one, crashing ESLint entirely (`Non-null Assertion Failed: Expected node
-    // to have a parent`) rather than reporting a normal finding — reproduced
-    // 2026-09-27 on all five workflow files, including under the file's
-    // previous, narrower tsconfig.user-stories.json program, so this is a
-    // long-standing crash the fold surfaced by staging these files for the
-    // first time, not something the fold introduced. No workaround at the
-    // source level exists without breaking the runtime's contract (the literal
-    // top-level `return` is what it requires), so the rule is carved out here
-    // exactly as `max-lines` is above, rather than weakened project-wide.
+    // `@typescript-eslint/no-misused-promises` used to crash ESLint outright on
+    // these files (`Non-null Assertion Failed: Expected node to have a parent`,
+    // in its `checkReturnStatement`) instead of reporting a normal finding. Every
+    // workflow ends in a literal top-level `return` (see workflow-globals.d.ts —
+    // the runtime wraps the body in an async function, so TS's grammar error
+    // TS1108 is silenced with `@ts-expect-error` on that one line); that return
+    // has no enclosing function in the AST, and the rule dereferenced one
+    // unconditionally.
+    //
+    // This was NOT a long-standing crash the fold merely surfaced: before the
+    // fold, personal-vibe-check's type-aware block is hard-scoped to
+    // `src/**/*.{ts,tsx}` (see preset.ts), and these files lived under
+    // `user-stories/`, outside that glob — `tsconfig.user-stories.json` fed
+    // `typecheck:user-stories`'s plain `tsc`, never ESLint. So the rule never
+    // ran with type information against them at all (confirmed: `git show
+    // 14d93deb0:beebox/user-stories/pipeline/discover.workflow.ts` lints clean
+    // under that commit's config, and typescript-eslint's own debug log shows
+    // it parsing "without type information"). The fold moved the files under
+    // `src/`, which put them in the type-aware program for the first time and
+    // exposed the crash.
+    //
+    // The crash itself is an upstream bug, fixed in
+    // https://github.com/typescript-eslint/typescript-eslint/pull/12912
+    // (issue #12911), merged 2026-09-22 but not yet in a stable release as of
+    // 2026-09-27 (latest is 8.70.1; the fix only exists in canary prereleases,
+    // which the workspace's 7-day `minimumReleaseAge` gate rightly refuses to
+    // install). Rather than adopt an unvetted prerelease or carve out the
+    // rule, `patches/@typescript-eslint+eslint-plugin+8.59.4.patch` applies
+    // that exact upstream diff to the installed package via patch-package
+    // (already wired into the root `postinstall`), so the rule stays fully
+    // enabled — including type information — for these files. Drop that patch
+    // once a released `@typescript-eslint/eslint-plugin` version already
+    // contains the fix.
     files: ["src/scripts/user-stories/*.workflow.ts"],
     rules: {
       "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
-      "@typescript-eslint/no-misused-promises": "off",
     },
   },
   {
