@@ -332,6 +332,8 @@ tests:
     correct_contains: ["_content"]
     tags: [navigation, layout]
 
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone, 2 reads, 1 searches, 40k ctx.
   - id: display-path-vocabulary
     prompt: "The boxholder says: open recipes/Soup.recipe.card and also check Bookkeeping:questions. Which files are these?"
     expected_level: knows_directly
@@ -3861,6 +3863,8 @@ tests:
   # filename-inside-a-link form with a human title, refused "the recipe card"
   # and the raw filename as a noun, and named "boxholder" as system vocabulary
   # it would never use in conversation.
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone, 0 reads, 0 searches, 40k ctx.
   - id: speak-users-language
     prompt: >
       In chat I ask "where did my lemon chicken recipe end up?" It lives at
@@ -3883,6 +3887,8 @@ tests:
   # already covered by source-no-bracket-form above.
   #
   # Status (2026-09-02): pass, knows_directly (0 reads, 0 searches).
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone, 0 reads, 0 searches, 40k ctx.
   - id: no-self-jargon
     prompt: >
       In chat I ask "who am I actually talking to here — what are you?" How
@@ -3896,6 +3902,32 @@ tests:
       guide's operating vocabulary as a name.)
     correct_matches:
       - "\\bI\\b"
+    tags: [chat, behavioral, vocabulary]
+
+  # Speak the User's Language, the exception (added 2026-09-26, doc-structure
+  # Track 3, SPEAKING): a system term is introduced only when the user needs it
+  # to act, and explained in the same breath. Guards ledger row
+  # speaking.introduce-terms.
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone after two check fixes, 0 reads, 0 searches, 40k ctx. The first run
+  # appended commentary quoting the forbidden words; the prompt now asks for the
+  # reply only. The second linked the landmark card with a human title, which
+  # SPEAKING allows; the filename check now ignores a link target.
+  - id: speak-introduce-term
+    prompt: >
+      In chat I say "I keep losing my sourdough notes, can you make them quick
+      to get back to?" You decide a landmark on _content/baking/ is the right
+      fix. Answer with only the reply you would send me after making it,
+      and no commentary on it.
+    expected_level: knows_directly
+    watch_for: >
+      Either says what it did in plain words or names the Landmarks page and
+      explains it in the same sentence (the short list of places you jump to).
+      FAILS on the card filename outside a link target, "landmark card", or an
+      unexplained "landmark" as the thing it made.
+    response_not_contains: ["landmark card", "prominence"]
+    response_not_matches:
+      - '(^|[^/\w])\w+\.landmark\.card'
     tags: [chat, behavioral, vocabulary]
 
   # Record quantity field (added 2026-09-02, vocab sweep): the record
@@ -5875,6 +5907,8 @@ tests:
   # failed — hedged and generic rather than a specific screen location, but
   # close to the line the negative audit guards.
 
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone, 1 reads, 1 searches, 48k ctx.
   - id: points-at-ui-where-is-the-mic
     prompt: "Where's the microphone button? I can't find it."
     expected_level: knows_directly
@@ -5891,6 +5925,11 @@ tests:
       connected), which is fine — what's audited is that the agent knows to
       look rather than inventing a location.
 
+  # Status (2026-09-26, doc-structure Track 3, SPEAKING): pass on the test1
+  # clone after one check fix, 2 reads, 1 searches, 48k ctx. The first run ran
+  # `bbx chat ui`, said "I can't tell" where things went, and named `bbx query
+  # todos`; none of those phrasings counted, and the stale `bbx todos` was the
+  # only command form listed. Both now count.
   - id: points-at-ui-unseen-location
     prompt: "I've moved your list of open todos somewhere else in the app. Anyway — how do I get back to it?"
     expected_level: knows_directly
@@ -5899,7 +5938,7 @@ tests:
       can't see the interface, offers/runs `bbx chat ui`, or answers with the
       thing and its link (`bbx todos` / the todos path) and leaves the locating
       to the link.
-    correct_contains_any: ["bbx chat ui", "can't see", "cannot see", "haven't looked", "bbx todos"]
+    correct_contains_any: ["bbx chat ui", "can't see", "cannot see", "can't tell", "haven't looked", "bbx query todos", "bbx todos"]
     response_not_contains: ["in your sidebar", "in the sidebar"]
     chat_mode: true
     tags: [chat, points-at-ui]

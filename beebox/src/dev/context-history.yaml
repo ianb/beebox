@@ -4490,6 +4490,13 @@ test1:
       peak: 44749
       added: 0
       turns: 2
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39891
+      peak: 39891
+      added: 0
+      turns: 2
   source-no-bracket-form:
     - date: 2026-08-09T13:04:32.634Z
       boxCommit: fb0c37687b24afd09c516b54d21027cfeabb8f72
@@ -4520,6 +4527,13 @@ test1:
       peak: 53710
       added: 1271
       turns: 9
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 48215
+      peak: 51383
+      added: 3168
+      turns: 6
   points-at-ui-unseen-location:
     - date: 2026-08-23T17:03:41.065Z
       boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
@@ -4534,6 +4548,20 @@ test1:
       initial: 52415
       peak: 52956
       added: 541
+      turns: 6
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 48232
+      peak: 52840
+      added: 4608
+      turns: 6
+    - date: 2026-09-27T02:42:17.373Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 48232
+      peak: 51497
+      added: 3265
       turns: 6
   points-at-ui-control-link:
     - date: 2026-08-23T17:03:41.065Z
@@ -4848,6 +4876,13 @@ test1:
       peak: 40841
       added: 0
       turns: 2
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39643
+      peak: 39643
+      added: 0
+      turns: 2
   record-quantity-field:
     - date: 2026-09-02T19:32:59.201Z
       boxCommit: 8a488c951173b704888eb2986beb35148dab3a59
@@ -4909,6 +4944,13 @@ test1:
       initial: 41865
       peak: 43490
       added: 1625
+      turns: 5
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39805
+      peak: 44648
+      added: 4843
       turns: 5
   gmail-tracked-subset:
     - date: 2026-09-05T21:17:40.072Z
@@ -5647,6 +5689,28 @@ test1:
       peak: 35743
       added: 13175
       turns: 5
+  speak-introduce-term:
+    - date: 2026-09-27T02:36:58.795Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39829
+      peak: 39829
+      added: 0
+      turns: 2
+    - date: 2026-09-27T02:42:17.373Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39899
+      peak: 39899
+      added: 0
+      turns: 2
+    - date: 2026-09-27T02:42:38.214Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 5ebcddda6eec96f0a751cd17e70bc554b1f34525
+      initial: 39899
+      peak: 39899
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

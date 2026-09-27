@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after BOX_CODE.
-  guide_words: 7092
-  always_loaded_words: 11884
+  # 2026-09-26, after SPEAKING.
+  guide_words: 6911
+  always_loaded_words: 11703
   uncited_words_per_section: 60
 
 lint:
@@ -23,6 +23,7 @@ lint:
     - INTAKE
     - DIRECTORY_LAYOUT
     - BOX_CODE
+    - SPEAKING
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -592,6 +593,38 @@ rows:
     reason: Applies only when writing a schema or view. Moved to schemas.md, and narrowed on the way, since tricks.md has tricks install their own packages, so "box code may only import" was wrong for tricks.
     audits: [box-packageify-schemas-location]
     mechanics: box-docs/schemas.md
+
+  # --- SPEAKING ---
+  - id: speaking.their-words
+    rule: Call the user's things what they call them; the guide's vocabulary (card, ref, landmark, triage, the boxholder) is for operating the system, not for conversation, and a filename is never the noun of a sentence.
+    handle: SPEAKING
+    bin: core
+    reason: Every reply and every user-facing card is shaped by it, and the field-test persona that prompted the section collected "recipe card" and raw filenames as jargon it could not parse.
+    audits: [speak-users-language]
+  - id: speaking.you-and-i
+    rule: Address the user as "you" and speak as "I"; "the boxholder" and "the agent" are the guide's words about them and you, never names used in conversation.
+    handle: SPEAKING
+    bin: core
+    reason: The guide itself calls both parties by system names, so an agent that copies its vocabulary talks about the user in the third person and about itself as "the agent".
+    audits: [speak-users-language, no-self-jargon]
+  - id: speaking.introduce-terms
+    rule: Introduce a system term only when the user needs it to act, and explain it in the same breath.
+    handle: SPEAKING
+    bin: core
+    reason: The exception to the plain-words rule; without it an agent either hides a term the user must use or drops it unexplained. The "your state" sentence (never "the agent working on it") folded into speaking.you-and-i.
+    audits: [speak-introduce-term]
+  - id: speaking.display-paths
+    rule: A path said to the user is a link with a human title or, when it must be spoken, the display form (a `_content` path bare, any other area as `Area:path`); refs in cards, tool calls, and `bbx` arguments take the canonical `/_content/…` form.
+    handle: SPEAKING
+    bin: core
+    reason: The boxholder sees and types display forms, so an agent must read both directions; cut to two sentences, since a leaked display form is refused with an error that names the canonical form.
+    audits: [display-path-vocabulary, speak-users-language]
+  - id: speaking.dont-guess-screen
+    rule: Do not tell the user where something is on screen unless you have looked (`bbx chat ui` in chat); say what the thing is and link it.
+    handle: SPEAKING
+    bin: core
+    reason: A real user journey (2026-08-23) was sent to a sidebar that did not exist; the agent cannot see the interface and the reflex is to guess.
+    audits: [points-at-ui-unseen-location, points-at-ui-where-is-the-mic]
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
