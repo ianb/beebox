@@ -15,11 +15,11 @@ interface RegistryBindings {
 }
 
 function isRegistryModuleTarget(target: string): boolean {
-  return /(^|\/)src\/lib\/registry\.ts$/.test(target);
+  return /(^|\/)src\/shared\/registry\.ts$/.test(target);
 }
 
 function isRegistryModuleSpecifier(specifier: string): boolean {
-  return /(^|\/)lib\/registry(\.js)?$/.test(specifier);
+  return /(^|\/)shared\/registry(\.js)?$/.test(specifier);
 }
 
 function targetOfSpecifier(imports: ImportEdge[], specifier: string): string | null {
@@ -28,7 +28,7 @@ function targetOfSpecifier(imports: ImportEdge[], specifier: string): string | n
 }
 
 /**
- * Finds every import of the package's `src/lib/registry.ts` (by resolved
+ * Finds every import of the package's `src/shared/registry.ts` (by resolved
  * target, falling back to the specifier text when unresolved) and collects
  * the local names a call could be written through: a named or renamed
  * `defineRegistry` binding, and a namespace binding for `ns.defineRegistry(...)`.

@@ -104,6 +104,78 @@ check(surfaces).find((f) => f.path === "pkg/src/exports/orphan.ts")?.message
 
 Each message in full, above.
 
+## A surface source can live in a nested package's own `src/exports/`
+
+`beebox`'s `./view-widgets` is built from a module inside its nested
+`frontend` package. Rule 6 holds that module to `frontend`'s OWN
+`src/exports/`, not `pkg`'s: it already lives there, so there is no
+finding, even though it sits outside `pkg/src/exports`.
+
+```ts
+const nestedSource = layout({
+  files: {
+    "src/frontend/src/exports/view-widgets.tsx": {},
+  },
+  nestedPackages: ["src/frontend"],
+  publicSurfaces: [
+    { specifier: "./view-widgets", target: "dist/view-widgets.js", source: "src/frontend/src/exports/view-widgets.tsx" },
+  ],
+});
+summary(check(nestedSource)) === ""
+=> true
+```
+
+A source outside that nested package's `src/exports/` is still flagged,
+naming the nested package's export directory as the destination.
+
+```ts
+const nestedMisplaced = layout({
+  files: {
+    "src/frontend/src/widgets.tsx": {},
+  },
+  nestedPackages: ["src/frontend"],
+  publicSurfaces: [
+    { specifier: "./view-widgets", target: "dist/view-widgets.js", source: "src/frontend/src/widgets.tsx" },
+  ],
+});
+check(nestedMisplaced)[0]?.message
+=> public surface ./view-widgets is built from pkg/src/frontend/src/widgets.tsx; move it to pkg/src/frontend/src/exports/
+```
+
+## A module in `src/exports/` can be named by an enclosing package's surface
+
+`frontend`'s own `view-widgets.tsx` (scanned as `pkg` here, standing in for
+the nested package) declares no surface of its own, but `enclosingSurfaces`
+carries the outer package's `./view-widgets`, sourced from this same file:
+that satisfies finding 4, so the module is not flagged as an orphan.
+
+```ts
+const enclosingNamed = layout({
+  files: {
+    "src/exports/view-widgets.tsx": {},
+  },
+  enclosingSurfaces: [
+    { specifier: "./view-widgets", target: "../dist/view-widgets.js", source: "src/exports/view-widgets.tsx" },
+  ],
+});
+summary(check(enclosingNamed)) === ""
+=> true
+```
+
+## A data file in `src/exports/` is out of scope for public-surface membership
+
+```ts
+const dataInExports = layout({
+  files: {
+    "src/exports/schema.ts": {},
+    "src/exports/tsconfig.json": "data",
+  },
+  publicSurfaces: [{ specifier: "./schema", target: "dist/schema.js", source: "src/exports/schema.ts" }],
+});
+summary(check(dataInExports)) === ""
+=> true
+```
+
 ## A file name never repeats its directory's name
 
 Equal (`router/router.ts`) and prefixed (`router/router-core.ts`) both

@@ -59,7 +59,12 @@ summary(testsRule.check(clean3)) === ""
 => true
 ```
 
-## Clean: a type-only import into a nested package
+## Clean: a test importing a nested-package module for setup, naming its own subject
+
+`agent.doctest.md` names `agent.ts`, its own mirror's module — that is all
+test-naming asks. It also imports a nested package's module as a value, for
+setup; a test may import anything it needs, so that import does not make it
+misplaced.
 
 ```ts
 const clean4 = layout({
@@ -75,7 +80,7 @@ clean4Test.imports.push({
   specifier: "../../../frontend/src/lib/x.js",
   target: "pkg/src/frontend/src/lib/x.ts",
   external: false,
-  typeOnly: true,
+  typeOnly: false,
   names: [],
   dynamic: false,
 });
@@ -126,52 +131,6 @@ outsideRootFindings.length
 
 outsideRootFindings[0].message
 => tests live under pkg/test, mirroring the source path
-```
-
-## Finding: `test-placement` — a test importing a nested package's code
-
-```ts
-const nested = layout({
-  files: {
-    "src/core/x.ts": {},
-    "src/frontend/src/lib/docling.ts": {},
-    "test/core/x.doctest.md": { test: ["src/frontend/src/lib/docling.ts"] },
-  },
-  nestedPackages: ["src/frontend"],
-});
-const nestedFindings = testsRule.check(nested);
-nestedFindings.length
-=> 1
-
-nestedFindings[0].message
-=> tests pkg/src/frontend code; it belongs in pkg/src/frontend/test
-```
-
-## Finding: `test-placement` — a test importing code outside the package
-
-The fixture can only address paths under `pkg/`, so this builds a layout and
-then edits the returned model directly to give the test an import target
-(`bin/foo.ts`) outside the package root entirely, without adding the outside
-file to `files`. As in a real scan, the rule classifies it by path.
-
-```ts
-const outsidePkg = layout({
-  files: {
-    "src/core/x.ts": {},
-    "test/core/x.doctest.md": { test: [] },
-  },
-});
-const outsideTest = outsidePkg.files.get("pkg/test/core/x.doctest.md");
-if (outsideTest === undefined || outsideTest.kind !== "test") throw new Error("expected test file");
-outsideTest.imports = [
-  { specifier: "../../../bin/foo.js", target: "bin/foo.ts", external: false, typeOnly: false, names: [], dynamic: false },
-];
-const outsidePkgFindings = testsRule.check(outsidePkg);
-outsidePkgFindings.length
-=> 1
-
-outsidePkgFindings[0].message
-=> tests bin/foo.ts, which is outside this package; it belongs in that package's test root
 ```
 
 ## Finding: `test-naming` — a flattened prefix name
@@ -235,12 +194,13 @@ testsRule.check(scenarioTour).length
 => 0
 ```
 
-## Findings: nested-package import from a non-mirror directory with no source counterpart
+## Finding: a non-mirror group named after a nested package
 
 `test/frontend` has no source counterpart (`src/frontend` is a nested
-package, excluded from this layout), so structurally it is a scenario group.
-The test's value import reaches into the nested package, so it belongs in
-that package's own test root.
+package, excluded from this layout): a group named after a nested package
+or a second source root is not a scenario group, since it mirrors code
+that has, or will have, its own test tree. This is decided by the group's
+name alone, not by what the test inside it imports.
 
 ```ts
 const nestedNonMirror = layout({
@@ -251,20 +211,13 @@ const nestedNonMirror = layout({
 });
 const nestedNonMirrorFindings = testsRule.check(nestedNonMirror);
 summary(nestedNonMirrorFindings)
-=>
-test-placement pkg/test/frontend/lib/x.doctest.md
-test-structure pkg/test/frontend/lib/x.doctest.md
+=> test-structure pkg/test/frontend/lib/x.doctest.md
+
+nestedNonMirrorFindings[0]?.message
+=> pkg/test/frontend mirrors the nested package pkg/src/frontend; its tests belong in pkg/src/frontend/test
 ```
 
-A group named after a nested package or a second source root is not a
-scenario group: it mirrors code that has, or will have, its own test tree.
-
-```ts continue
-nestedNonMirrorFindings.map((f) => f.message).join("\n")
-=>
-pkg/test/frontend mirrors the nested package pkg/src/frontend; its tests belong in pkg/src/frontend/test
-tests pkg/src/frontend code; it belongs in pkg/src/frontend/test
-
+```ts
 const extraRootGroup = layout({
   files: {
     "scripts/migrate/file.ts": {},

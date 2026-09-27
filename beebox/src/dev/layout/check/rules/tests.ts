@@ -9,8 +9,6 @@
 import { baseOf, dirOf, isWithin, stemOf, tests, commonDir } from "../../graph.js";
 import type { Finding, LayoutRule, PackageLayout } from "../../model.js";
 
-const MODULE_TARGET = /\.(?:ts|tsx|mts|cts|js|mjs|cjs)$/;
-
 /** The source directory a test directory mirrors, whether or not it exists. */
 function mirrorOf(layout: PackageLayout, dir: string): string {
   if (dir === layout.testRoot) return layout.sourceRoot;
@@ -49,7 +47,15 @@ function sourceRootFindings(layout: PackageLayout): Finding[] {
   }));
 }
 
-/** Rule 8 test-placement: a test names what it tests by import target, not containment. */
+/**
+ * Rule 8 test-placement: a test lives under the test root. Where a test
+ * belongs is decided by the subject it NAMES (test-naming), not by what it
+ * imports for setup — a test may freely import another package's code, or a
+ * nested package's code, without becoming misplaced itself; a test named
+ * for a module that isn't in its own package's mirror, or a scenario group
+ * named after a nested package or second source root, is already caught by
+ * test-naming and test-structure.
+ */
 function placementFindings(layout: PackageLayout): Finding[] {
   const findings: Finding[] = [];
   for (const test of tests(layout)) {
@@ -59,29 +65,6 @@ function placementFindings(layout: PackageLayout): Finding[] {
         path: test.path,
         message: `tests live under ${layout.testRoot}, mirroring the source path`,
       });
-      continue;
-    }
-    const seen = new Set<string>();
-    for (const edge of test.imports) {
-      if (edge.external || edge.typeOnly || edge.target === null || seen.has(edge.target)) continue;
-      const target = edge.target;
-      seen.add(target);
-      const nestedPackage = layout.nestedPackages.find((np) => isWithin(target, np));
-      if (nestedPackage !== undefined) {
-        findings.push({
-          rule: "test-placement",
-          path: test.path,
-          message: `tests ${nestedPackage} code; it belongs in ${nestedPackage}/test`,
-        });
-        continue;
-      }
-      if (!isWithin(target, layout.root) && MODULE_TARGET.test(target)) {
-        findings.push({
-          rule: "test-placement",
-          path: test.path,
-          message: `tests ${target}, which is outside this package; it belongs in that package's test root`,
-        });
-      }
     }
   }
   return findings;

@@ -2,7 +2,7 @@
  * The layout rules, one member per file in `./rules`. Each is a pure function
  * of a scanned `PackageLayout`; the check runs every member in key order.
  */
-import { defineRegistry } from "../../../lib/registry.js";
+import { defineRegistry } from "../../../shared/registry.js";
 import type { LayoutRule } from "../model.js";
 import { namesRule } from "./rules/names.js";
 import { setsRule } from "./rules/sets/rule.js";

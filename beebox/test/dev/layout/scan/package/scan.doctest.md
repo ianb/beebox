@@ -31,10 +31,10 @@ await write(
 );
 await write("pkg/src/b.ts", "export const b = 1;\n");
 await write("pkg/public/sw.js", "self.addEventListener('install', () => {});\n");
-await write("pkg/src/lib/registry.ts", "export function defineRegistry(spec: unknown): unknown { return spec; }\n");
+await write("pkg/src/shared/registry.ts", "export function defineRegistry(spec: unknown): unknown { return spec; }\n");
 await write(
   "pkg/src/a.ts",
-  `import { b } from "./b.js";\nimport { missing } from "./missing.js";\nimport { defineRegistry } from "./lib/registry.js";\n\nexport const registry = defineRegistry<number>({\n  directory: "./commands",\n  ordered: false,\n  members: [b],\n});\n\nexport const a = 1;\n`,
+  `import { b } from "./b.js";\nimport { missing } from "./missing.js";\nimport { defineRegistry } from "./shared/registry.js";\n\nexport const registry = defineRegistry<number>({\n  directory: "./commands",\n  ordered: false,\n  members: [b],\n});\n\nexport const a = 1;\n`,
 );
 await write(
   "pkg/test/x.doctest.md",

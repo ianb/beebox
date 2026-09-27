@@ -299,6 +299,64 @@ summary(unitsRule.check(testLayout))
 => unit-directory pkg/src/priv/core.ts
 ```
 
+## A registry-declaring module is always its directory's entry
+
+`reg.ts` declares `src/mod/schemas` as a set. Its only importer is
+`user.ts`, a sibling in the same directory — ordinarily that would make
+`reg.ts` a helper reachable only from `user.ts`, sweeping it into
+`user.ts`'s unit-directory finding alongside `user-helper.ts`. But rule 4
+already fixes `reg.ts`'s location (the parent of the set it declares), so
+declaring a registry makes it an entry regardless of who imports it: the
+finding below names only `user-helper.ts`, not `reg.ts`.
+
+```ts
+const registryEntryLayout = layout({
+  files: {
+    "src/mod/user.ts": { imports: ["src/mod/reg.ts", "src/mod/user-helper.ts"] },
+    "src/mod/user-helper.ts": { imports: [] },
+    "src/mod/reg.ts": {
+      registry: {
+        directory: "src/mod/schemas",
+        entry: "schema",
+        members: [{ source: null }],
+      },
+    },
+    "src/entry5.ts": { imports: ["src/mod/user.ts"] },
+  },
+});
+const registryEntryFindings = unitsRule.check(registryEntryLayout);
+summary(registryEntryFindings)
+=> unit-directory pkg/src/mod/user.ts
+
+registryEntryFindings[0]?.message
+=> user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix
+```
+
+## A registry-declaring module is never shared-infrastructure
+
+`registry.ts` declares `src/area/schemas` as a set. Its only importer,
+`consumer.ts`, sits under the strict subdirectory `src/area/child`, which
+would ordinarily make `registry.ts` shared-infrastructure that belongs
+there (as `util.ts` does above). Rule 4 already fixes where a
+registry-declaring module lives, so it is exempt.
+
+```ts
+const registryFixedLayout = layout({
+  files: {
+    "src/area/registry.ts": {
+      registry: {
+        directory: "src/area/schemas",
+        entry: "schema",
+        members: [{ source: null }],
+      },
+    },
+    "src/area/child/consumer.ts": { imports: ["src/area/registry.ts"] },
+  },
+});
+summary(unitsRule.check(registryFixedLayout)) === ""
+=> true
+```
+
 ## `extraSourceRoots` directories are in scope the same as `src/`
 
 `scripts/` is an extra source root (e.g. `beebox/scripts/` before it folds

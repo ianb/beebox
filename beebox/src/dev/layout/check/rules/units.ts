@@ -193,6 +193,10 @@ function sharedInfrastructureFindings(spec: SharedInfrastructureSpec): Finding[]
   const { dir, siblings, importersByTarget, setDirs } = spec;
   const findings: Finding[] = [];
   for (const sibling of siblings) {
+    // A module that declares a registry has its location fixed by rule 4
+    // (it must sit at the set directory's parent), so it is never a
+    // shared-infrastructure move candidate.
+    if (sibling.registries.length > 0) continue;
     const importers = importersByTarget.get(sibling.path) ?? new Set<string>();
     if (importers.size === 0) continue;
     const target = sharedTarget({ dir, importers, setDirs });
@@ -212,7 +216,11 @@ function checkDirectory(ctx: UnitsContext, dir: string): Finding[] {
   const siblingPaths = new Set(siblings.map((sibling) => sibling.path));
   const entries = new Set(
     siblings
-      .filter((sibling) => isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()))
+      .filter(
+        (sibling) =>
+          sibling.registries.length > 0 ||
+          isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()),
+      )
       .map((sibling) => sibling.path),
   );
   const adjacency = buildAdjacency(siblings, siblingPaths);

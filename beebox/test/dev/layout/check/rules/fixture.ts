@@ -36,6 +36,7 @@ export interface FixtureSpec {
   extraSourceRoots?: string[];
   nestedPackages?: string[];
   publicSurfaces?: Array<{ specifier: string; target: string; source: string | null }>;
+  enclosingSurfaces?: Array<{ specifier: string; target: string; source: string | null }>;
 }
 
 const abs = (p: string): string => `${ROOT}/${p}`;
@@ -86,11 +87,13 @@ export function layout(spec: FixtureSpec): PackageLayout {
       });
     }
   }
-  const publicSurfaces: PublicSurface[] = (spec.publicSurfaces ?? []).map((s) => ({
+  const toSurface = (s: { specifier: string; target: string; source: string | null }): PublicSurface => ({
     specifier: s.specifier,
     target: abs(s.target),
     source: s.source === null ? null : abs(s.source),
-  }));
+  });
+  const publicSurfaces: PublicSurface[] = (spec.publicSurfaces ?? []).map(toSurface);
+  const enclosingSurfaces: PublicSurface[] = (spec.enclosingSurfaces ?? []).map(toSurface);
   return {
     root: ROOT,
     sourceRoot: `${ROOT}/src`,
@@ -100,6 +103,7 @@ export function layout(spec: FixtureSpec): PackageLayout {
     files,
     directories,
     publicSurfaces,
+    enclosingSurfaces,
     scanFindings: [],
   };
 }

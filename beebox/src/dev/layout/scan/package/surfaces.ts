@@ -8,6 +8,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import type { PublicSurface } from "../../model.js";
 import { isRecord } from "../../../../lib/is-record.js";
+import { dirOf } from "../../graph.js";
 import { isRepoFile, resolveRepoRelative } from "../resolve.js";
 
 function literalPathFromJoinOrString(expression: ts.Expression): string | null {
@@ -132,4 +133,34 @@ export function scanPublicSurfaces(params: { repoRoot: string; packageRoot: stri
     surfaces.push({ specifier, target, source });
   }
   return surfaces;
+}
+
+/**
+ * Every ancestor directory of `packageRoot`, from its parent up through the
+ * repo root (`""`), that itself directly contains a `package.json` — the
+ * chain of enclosing packages a nested package (`beebox/src/frontend`)
+ * sits under (`beebox`, then the repo root).
+ */
+function ancestorPackageRoots(params: { repoRoot: string; packageRoot: string }): string[] {
+  const roots: string[] = [];
+  let dir = dirOf(params.packageRoot);
+  for (;;) {
+    if (isRepoFile(join(params.repoRoot, dir, "package.json"))) roots.push(dir);
+    if (dir === "") break;
+    dir = dirOf(dir);
+  }
+  return roots;
+}
+
+/**
+ * Public surfaces declared by every package enclosing `packageRoot`, read
+ * the same way as `scanPublicSurfaces`. A nested package's own module can be
+ * the source an enclosing package's `package.json` `exports` builds from
+ * (`beebox`'s `./view-widgets`, built from a file in
+ * `beebox/src/frontend/src/exports/`).
+ */
+export function scanEnclosingSurfaces(params: { repoRoot: string; packageRoot: string }): PublicSurface[] {
+  return ancestorPackageRoots(params).flatMap((packageRoot) =>
+    scanPublicSurfaces({ repoRoot: params.repoRoot, packageRoot }),
+  );
 }

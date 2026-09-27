@@ -17,23 +17,19 @@ import "../themes/interface.css";
 import { withBase } from "../api";
 import { invariant } from "@shared/invariant";
 import { installUiScanHook } from "../lib/ui-scan/window-hook";
+import { installRenderers } from "../renderers.js";
 
 /**
- * Wires up both file-type dispatch tables `file-type-registry.ts` backs: the
- * renderer registry (`renderers.ts`) and the built-in file-type list UI
- * (`file-types/builtins.ts`). Imported dynamically, not statically: this
- * pulls in all 31 renderer modules' full component graphs, plus
- * `file-types/builtins.ts`'s Vite-only `@schemas/*.list-entry` alias import
- * (see its header) — neither resolves outside Vite, so a static import here
- * would break every doctest that reaches `file-type-registry.ts`'s
- * lightweight dispatch functions via the plain tsx/root-tsconfig runtime.
- * Lives inline in this entry (the app's only caller) rather than as its own
- * module in `src/frontend/src/`, which would make it `renderers.ts`'s sole
- * sibling importer and misclassify the registry as a private two-file unit
- * (rule 5) when rule 4 requires it stay at `src/frontend/src/renderers.ts`.
+ * Wires up the built-in file-type list UI (`file-types/builtins.ts`).
+ * Imported dynamically, not statically: `file-types/builtins.tsx` has a
+ * Vite-only `@schemas/*.list-entry` alias import (see its header) that does
+ * not resolve outside Vite, so a static import here would break any doctest
+ * that reaches this module. `installRenderers` (`renderers.ts`) has no such
+ * alias and is imported statically above; the layout check no longer
+ * misclassifies a registry-declaring module as a private two-file unit
+ * just because one entry imports it alone, so this split is safe.
  */
 async function bootstrapFileTypeRegistrations(): Promise<void> {
-  const { installRenderers } = await import("../renderers.js");
   installRenderers();
   const { registerBuiltinFileTypes } = await import("../file-types/builtins.js");
   registerBuiltinFileTypes();

@@ -3,7 +3,7 @@
 `extractRegistries` reads every `defineRegistry` call out of a parsed source
 file. Member sources come from the caller's already-resolved import edges.
 A call is only recognized when its callee resolves through an import of the
-package's `src/lib/registry.ts`: a local (possibly renamed) binding of
+package's `src/shared/registry.ts`: a local (possibly renamed) binding of
 `defineRegistry`, or `<namespace>.defineRegistry(...)`. A same-named
 identifier bound to any other module is not a registry call.
 
@@ -21,8 +21,8 @@ function registriesOf(source: string, imports: ImportEdge[] = []) {
   return extractRegistries({ sourceFile, filePath: "pkg/src/mod.ts", imports });
 }
 
-const registryImportLine = `import { defineRegistry } from "../lib/registry.js";\n`;
-const registryEdge = edge({ specifier: "../lib/registry.js", names: ["defineRegistry"], target: "pkg/src/lib/registry.ts" });
+const registryImportLine = `import { defineRegistry } from "../shared/registry.js";\n`;
+const registryEdge = edge({ specifier: "../shared/registry.js", names: ["defineRegistry"], target: "pkg/src/shared/registry.ts" });
 ```
 
 ## A list form, an identifier member resolved to its import, ordered true
@@ -94,16 +94,16 @@ registriesOf(source6, [registryEdge]).registries[0]?.directory
 ## A renamed import is recognized by its imported name, not its local text
 
 ```ts
-const source7 = `import { defineRegistry as reg } from "../lib/registry.js";\nreg({\n  directory: "./renamed",\n  ordered: false,\n  members: [],\n});\n`;
-registriesOf(source7, [edge({ specifier: "../lib/registry.js", names: ["reg"], target: "pkg/src/lib/registry.ts" })]).registries[0]?.directory
+const source7 = `import { defineRegistry as reg } from "../shared/registry.js";\nreg({\n  directory: "./renamed",\n  ordered: false,\n  members: [],\n});\n`;
+registriesOf(source7, [edge({ specifier: "../shared/registry.js", names: ["reg"], target: "pkg/src/shared/registry.ts" })]).registries[0]?.directory
 => pkg/src/renamed
 ```
 
 ## A namespace import is recognized via `<namespace>.defineRegistry(...)`
 
 ```ts
-const source8 = `import * as r from "../lib/registry.js";\nr.defineRegistry({\n  directory: "./ns",\n  ordered: false,\n  members: [],\n});\n`;
-registriesOf(source8, [edge({ specifier: "../lib/registry.js", names: ["r"], target: "pkg/src/lib/registry.ts" })]).registries[0]?.directory
+const source8 = `import * as r from "../shared/registry.js";\nr.defineRegistry({\n  directory: "./ns",\n  ordered: false,\n  members: [],\n});\n`;
+registriesOf(source8, [edge({ specifier: "../shared/registry.js", names: ["r"], target: "pkg/src/shared/registry.ts" })]).registries[0]?.directory
 => pkg/src/ns
 ```
 

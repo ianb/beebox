@@ -130,6 +130,13 @@ export interface PackageLayout {
   /** Every scanned directory, including roots. */
   directories: Set<string>;
   publicSurfaces: PublicSurface[];
+  /**
+   * Surfaces declared by an enclosing package's `package.json` (walking up
+   * from `root` to the repo root). A module in `root`'s own
+   * `<sourceRoot>/exports` may be the source of one of these instead of one
+   * of `publicSurfaces` (a nested package's export built by its parent).
+   */
+  enclosingSurfaces: PublicSurface[];
   /** Problems the scanner hit (unresolved import, doctest that will not generate). */
   scanFindings: Finding[];
 }

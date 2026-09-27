@@ -10,7 +10,7 @@ defaults to `never`), which a doctest cannot express — verified by hand with
 `pnpm exec tsc --noEmit -p tsconfig.json` in `beebox/`.
 
 ```ts setup
-import { defineRegistry } from "../../src/lib/registry.js";
+import { defineRegistry } from "../../src/shared/registry.js";
 
 interface Verb { name(): string; }
 const verb = (name: string): Verb => ({ name: () => name });

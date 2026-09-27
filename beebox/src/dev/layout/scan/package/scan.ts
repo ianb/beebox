@@ -16,7 +16,7 @@ import { classifyFile, listPackageFiles } from "./files.js";
 import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "../imports.js";
 import { extractRegistries } from "./registries.js";
 import { type Aliases, loadAliases, resolveImport } from "../resolve.js";
-import { scanPublicSurfaces } from "./surfaces.js";
+import { scanEnclosingSurfaces, scanPublicSurfaces } from "./surfaces.js";
 
 // Loaded via a dynamic import behind a non-literal specifier, not a static
 // `import ... from "agent-doctest/hooks"`: that file's own relative imports
@@ -208,6 +208,7 @@ export async function scanPackage(params: { repoRoot: string; packageRoot: strin
     files,
     directories: listed.directories,
     publicSurfaces: scanPublicSurfaces(params),
+    enclosingSurfaces: scanEnclosingSurfaces(params),
     scanFindings: scanFindings.toSorted(compareFindings),
   };
 }

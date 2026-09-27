@@ -6,7 +6,7 @@
  * (barrel); each renderer module now exports a data value instead of
  * registering itself at import.
  */
-import { defineRegistry } from "./lib/registry.js";
+import { defineRegistry } from "@shared/registry.js";
 import { registerFileType, type RendererEntry } from "./file-type-registry.js";
 import { sourceRenderer } from "./renderers/builtins.js";
 import { markdownCardRenderer } from "./renderers/markdown-card.js";

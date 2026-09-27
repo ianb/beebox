@@ -7,7 +7,7 @@ source file) that produces each target.
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { scanPublicSurfaces } from "../../../../../src/dev/layout/scan/package/surfaces.js";
+import { scanEnclosingSurfaces, scanPublicSurfaces } from "../../../../../src/dev/layout/scan/package/surfaces.js";
 
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-surfaces-"));
 async function write(rel: string, content: string) {
@@ -87,6 +87,33 @@ JSON.stringify(surfaces.find((s) => s.specifier === "./tsconfig.base.json"))
 ```ts
 scanPublicSurfaces({ repoRoot, packageRoot: "pkg/nope" }).length
 => 0
+```
+
+## `scanEnclosingSurfaces` walks up to every enclosing `package.json`
+
+A nested package (`pkg/nested`) has no `exports` of its own; its enclosing
+chain is `pkg`, then the repo root. `pkg` declares `./cards`, built from a
+module inside the nested package itself — the same shape as `beebox`'s
+`./view-widgets`, sourced from a file inside `beebox/src/frontend/`. The
+repo root also declares its own export.
+
+```ts
+await write("pkg/nested/package.json", JSON.stringify({ name: "nested" }));
+await write("package.json", JSON.stringify({ exports: { "./root-thing": "./dist/root-thing.js" } }));
+
+const enclosing = scanEnclosingSurfaces({ repoRoot, packageRoot: "pkg/nested" });
+JSON.stringify(enclosing.map((s) => s.specifier))
+=> ["./cards","./schema","./server","./widgets","./other","./tsconfig.base.json","./root-thing"]
+
+enclosing.find((s) => s.specifier === "./cards")?.source
+=> pkg/src/cards/index.ts
+```
+
+Scanning `pkg` itself only walks to the repo root.
+
+```ts
+JSON.stringify(scanEnclosingSurfaces({ repoRoot, packageRoot: "pkg" }).map((s) => s.specifier))
+=> ["./root-thing"]
 ```
 
 ```ts cleanup
