@@ -110,6 +110,8 @@ checkedIn
   "src/core/views/types.ts",
   "src/core/chat/card-activity.ts",
   "src/shared/card-activity-kinds.ts",
+  "src/core/agent-guide/ledger.yaml",
+  "src/core/agent-guide/guide.md",
   "tsconfig.json",
   "tsconfig.base.json"
 ]
