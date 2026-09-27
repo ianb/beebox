@@ -501,7 +501,17 @@ entry in `bbx-commands.md`.
 
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 
-`{% quote %}` holds a person's exact words: the user's with no attributes, a third party's with `from="…"` naming them (THE_LAW_OF_QUOTING). `{% source %}` wraps content derived from another card, file, or page (a summary, an inference, an extracted name): `ref` names the card or file it came from (`href` for an external URL), and `usage` says how you derived it. Before writing either tag beyond that basic form, read `node_modules/beebox/box-docs/provenance.md`: it covers `usage` wording, composing the two tags, anchoring a span, `retrieved` dates for web pages, when to skip the tag, and why you never write the `[→ …]` form you see in compiled context.
+<!-- rules: provenance.two-tags -->
+`{% quote %}` holds a person's exact words: the user's with no attributes, a
+third party's with `from="…"` naming them (THE_LAW_OF_QUOTING). `{% source %}`
+wraps content derived from another card, file, or page (a summary, an
+inference, an extracted name): `ref` names the card or file it came from
+(`href` for an external URL), and `usage` says how you derived it.
+
+<!-- rules: provenance.no-bracket-form, provenance.mechanics -->
+Never write the `[→ …]` form you see in compiled context; it is how a source
+tag renders, not a syntax. Before writing either tag beyond the basic form
+above, read `node_modules/beebox/box-docs/provenance.md`.
 
 ## HISTORY — Git History
 

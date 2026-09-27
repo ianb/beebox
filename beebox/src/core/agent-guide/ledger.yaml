@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after CARD_TYPES.
-  guide_words: 5214
-  always_loaded_words: 10006
+  # 2026-09-26, after PROVENANCE.
+  guide_words: 5201
+  always_loaded_words: 9993
   uncited_words_per_section: 60
 
 lint:
@@ -35,6 +35,7 @@ lint:
     - HISTORY
     - RECORDING
     - CARD_TYPES
+    - PROVENANCE
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -886,6 +887,27 @@ rows:
     reason: The pointer at the moment of the decision; `_config/schemas/` was the old home and is still the guess, and a schema left there is silently ignored.
     audits: [create-new-card-type, box-packageify-schemas-location]
     mechanics: box-docs/schemas.md
+
+  # --- PROVENANCE ---
+  - id: provenance.two-tags
+    rule: "`{% quote %}` holds a person's exact words (`from=\"…\"` for a third party); `{% source %}` wraps derived content, with `ref` (or `href`) naming where it came from and `usage` saying how it was derived."
+    handle: PROVENANCE
+    bin: core
+    reason: THE_LAW_OF_QUOTING requires the tags on every turn that records the user or derives from a card, and the basic form of each is shorter than a pointer to it.
+    audits: [source-tag-syntax, source-vs-quote-composition, quote-third-party-from]
+  - id: provenance.no-bracket-form
+    rule: Never write the `[→ …]` form seen in compiled context; it is rendered output, not syntax.
+    handle: PROVENANCE
+    bin: core
+    reason: The agent sees the bracket form in its own context on every turn that loads a compiled doc, and copying it is the natural slip; it renders as literal brackets.
+    audits: [source-no-bracket-form]
+  - id: provenance.mechanics
+    rule: "`usage` wording, composing the tags, anchoring a span, `retrieved` dates, and when to skip the tag are in box-docs/provenance.md; read it before writing a tag beyond the basic form."
+    handle: PROVENANCE
+    bin: core
+    reason: The section's pointer line. The list of what the doc covers went, since the doc's read-when names it; the audits for each part expect a read of the doc.
+    audits: [source-external-retrieved-date, source-when-to-skip, source-anchor-span-not-quote, source-as-is-free-form]
+    mechanics: box-docs/provenance.md
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

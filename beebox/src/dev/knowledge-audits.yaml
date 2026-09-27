@@ -3864,6 +3864,8 @@ tests:
     correct_contains_any: ["{% quote"]
     tags: [quotes, cards, markdown]
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 2 reads, 1 searches, 36k ctx.
   - id: quote-third-party-from
     prompt: >
       I am writing a research card and want to preserve this studio owner's
@@ -4015,6 +4017,8 @@ tests:
   # Status (2026-09-26): pass, knows_directly held by the guide's PROVENANCE
   # pointer, which still names the rule; the agent grepped provenance.md for
   # the bracket form before answering (1 read). doc-structure Track 3.
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 0 reads, 0 searches, 36k ctx.
   - id: source-no-bracket-form
     prompt: >
       In your briefing you've seen citations that look like
@@ -4228,6 +4232,8 @@ tests:
   # knows_directly with 0 file reads and 0 searches. The agent used
   # href= with retrieved="2026-08-29" in date-only ISO form.
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: source-external-retrieved-date
     prompt: >
       I am recording a fact from a studio's public website in a research card.
@@ -4286,6 +4292,8 @@ tests:
       - "-\\s+ref:\\s+/[^\\n]+\\n\\s+(?:note|usage|why|relation):"
     tags: [source, cards, views, provenance, link-fields]
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: source-tag-syntax
     prompt: >
       I'm writing a doc that summarizes a voice memo. How do I mark the
@@ -4300,6 +4308,8 @@ tests:
 
   # Status (2026-09-26): prompt renamed `as` -> `usage` (the attribute was
   # renamed); rerun: pass, read provenance.md.
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: source-as-is-free-form
     prompt: >
       The user's name appears in a captured email header. I'm pulling it
@@ -4315,6 +4325,8 @@ tests:
     correct_contains_any: ["free-form", "natural language", "not an enum", "no enum", "honest", "describe"]
     tags: [source, behavioral, provenance]
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 2 reads, 2 searches, 36k ctx.
   - id: source-vs-quote-composition
     prompt: >
       I want to record that the user said "ship Friday, no exceptions"
@@ -4329,6 +4341,8 @@ tests:
     correct_contains_any: ["{% source", "{% quote", "compose", "wrap", "nest", "both"]
     tags: [source, quotes, cards, provenance]
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: source-when-to-skip
     prompt: >
       I'm writing a doc and most of it is my own framing and
@@ -4345,6 +4359,8 @@ tests:
     correct_contains_any: ["no", "own framing", "connective", "default", "unwrapped", "exception"]
     tags: [source, behavioral, provenance]
 
+  # Status (2026-09-26, doc-structure Track 3, PROVENANCE): pass on the test1
+  # clone, 1 reads, 1 searches, 36k ctx.
   - id: source-anchor-span-not-quote
     prompt: >
       I'm writing a commentary card and want to anchor my remark to a specific
