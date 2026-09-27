@@ -148,9 +148,8 @@ not what belongs where.
   do), `handle` (the placemarker of the section that carries it, or the
   surface it moved to), `bin` (`law` | `core` | `indirect` | `delete`), `reason` (why that bin, one or two sentences), `audits`
   (ids in `knowledge-audits.yaml`), `mechanics` (where the how-to lives:
-  a package doc, a rule, a skill), `source` (the template file and
-  function). A row is the unit of decision; the guide text is its
-  rendering.
+  a package doc, a rule, a skill). A row is the unit of decision: what must
+  be said and why. How it is said is the document's business.
 - **Bin**: the row's tier, decided by an ordered test so one row fits
   exactly one bin. Ask in order and stop at the first yes: (1) would the
   system be unable to tolerate an agent breaking this? `law`. (2) Would an
@@ -166,17 +165,30 @@ not what belongs where.
   once registered; a rename is a ledger change with a reason and a sweep of
   referrers. Exists: `SECTION` in `sections.ts`, which the registry
   generates or is checked against.
-- **Annotation**: `<!-- rule: <id> -->` on the line before the paragraph
-  that renders a row, in the template string. Stripped by the renderer;
-  kept by `--annotated`.
-- **Skeleton**: the fixed order inside a section: one line saying what the
-  handle governs, the rules (each a row), one line saying where the
-  mechanics live.
+- **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+  authored as one piece. Generated parts (the card-type list, this box's
+  procedures and guides, the directory layout, the personality section) are
+  placeholders like `{{card_types}}`. It opens with a comment block that
+  tells an editing agent the rules: cite rows, keep the budget, add a row
+  before adding a rule, and the ordered bin test in short. The prose moves
+  here out of the seventeen TypeScript template files.
+- **Annotation**: `<!-- rules: <id>, <id> -->` before a paragraph, list, or
+  example, naming every row that passage carries. Many to many: one passage
+  may carry several rows, and a row may be cited by several passages where
+  restating it is what good writing wants. Stripped by the renderer, which
+  fills placeholders and strips comments in one pass; kept by
+  `--annotated`.
+- **Skeleton**: the shape a section tends toward, not a template: one line
+  saying what the handle governs, the rules, one line saying where the
+  mechanics live. Prose that does double duty is preferred over one
+  paragraph per row.
 - **Budget**: two numbers in the ledger's header, guide words and
   always-loaded words, that the build test asserts.
 - **Spec**: `docs/agent-guide.md`, the developer doc: decision rules for
   binning, the skeleton, how to add a row, and a pointer at the ledger and
-  the registry. The ledger holds the data; the spec holds the judgment.
+  the registry. The ledger holds the data; the spec and the document's
+  header comment hold the judgment, and the linter holds what a machine can
+  check.
 
 No new card types or shared-vocabulary tags.
 
@@ -210,13 +222,12 @@ rows:
     reason: every card an agent writes has it; search and listings depend on it.
     audits: [contains-one-sentence, contains-not-a-list]
     mechanics: box-docs/card-doc.md
-    source: cards.ts#aboutCardsSection
 ```
 
 Every current section gets a handle; the eleven that lack one take the
 obvious ALL_CAPS form (KEY_COMMANDS, SEARCHING, DIRECTORY_LAYOUT, ...).
-`SECTION` in `sections.ts` becomes derived from the registry, or a doctest
-asserts the two lists are equal.
+`SECTION` in `sections.ts` becomes derived from the document's headings
+and checked against the registry, so a handle exists in exactly one place.
 
 **Budget numbers.** 6,000 guide words and 11,000 always-loaded are the
 plan's proposal, from a first read that puts core at 4,000 to 5,000 words
@@ -230,44 +241,51 @@ budget header at today's numbers (so the test passes before any rewrite),
 the spec doc, and a doctest that parses the ledger and checks every
 `audits:` id exists in `knowledge-audits.yaml`.
 
-### Track 2: annotations, stripping, and the build test
+### Track 2: the document, the renderer, and the linter
 
-**What.** Templates carry `<!-- rule: <id> -->` before each paragraph. The
-renderer strips them; `pnpm agent-context guide --annotated --box <box>`
-prints them. A doctest renders the guide from a fixture box and asserts:
-every `core` and `law` row is annotated in the render, every annotation
-names a row, every paragraph is annotated (an unaccounted paragraph fails),
-no annotation leaks into the stripped render, the render's word count is
-under `budget.guide_words`, and `agent-context`'s always-loaded total is
-under `budget.always_loaded_words`.
+**What.** The guide's prose moves from the section functions into
+`guide.md`, annotated. The renderer reads it, fills placeholders, and strips
+comments in one pass; `pnpm agent-context guide --annotated --box <box>`
+prints the annotated form. A linter, run as a doctest and from
+`pnpm lint:guide`, asserts: every cited id is a ledger row; every `core` and
+`law` row is cited at least once; uncited words per section stay under an
+allowance (a number in the ledger header, proposed 60) so framing and
+transitions are free but a new uncited paragraph is not; no comment leaks
+into the stripped render; the DOCID line survives; the render is under
+`budget.guide_words` and `agent-context`'s always-loaded total under
+`budget.always_loaded_words`.
 
 **Why.** The ledger is only a source of truth if something fails when the
-guide diverges from it. The unannotated-paragraph check is the regrowth
-stop: a new paragraph needs a row, and a row needs a reason.
+document diverges from it. No mechanical rule can prove that every sentence
+is connected to a row without deconstructing the document into one
+paragraph per row, which is the failure mode of generated prose (boxholder,
+2026-09-26). So the linter checks what a machine can (ids exist, rows are
+covered, uncited text is bounded, the budget holds) and the document's
+header comment tells the editing agent the rest: cite what you write, add
+the row before the rule, and keep prose that serves several rows at once.
 
-**Direction.** Annotation form is an HTML comment; a leaked one is
-harmless, and the doctest asserts none leak (boxholder lean, 2026-09-26).
-The block model is span-based, not paragraph-based, because sections are
-template literals with interpolated, per-box content
-(`cards.ts:29-35,137-169` builds card examples; `cards.ts:216-246` groups
-card types from the schemas; `extensibility.ts:14-42` lists this box's
-procedures and guides): an annotation `<!-- rule: <id> -->` opens a span
-that runs to the next annotation or heading, and the check is that every
-non-blank, non-heading line of the render lies inside a span. A generated
-list is one span opened by `<!-- rule: <section>.list -->` in the section
-function around the interpolation, so per-box variation inside it is
-covered without per-box rows. A heading's one-line intro is a span of its
-own (`<section>.intro`). The stripper removes only `<!-- rule: ... -->`
-comments and runs before `withDocId` (`src/core/docs-gen/index.ts:400-403`
-wraps the render), so the DOCID marker is untouched; the doctest asserts
-the DOCID line survives.
+**Direction.** An annotation is `<!-- rules: a, b -->` on the line before
+the passage it describes and covers that passage up to the next blank line
+(so a list or a fenced example is one passage). Generated content today
+lives in section functions (`cards.ts:29-35,137-169` builds card examples;
+`cards.ts:216-246` groups card types from the schemas;
+`extensibility.ts:14-42` lists this box's procedures and guides); each
+becomes a placeholder whose filler stays in TypeScript, and the placeholder
+line carries its own annotation (`<!-- rules: card-types.list -->`), so
+per-box variation inside it is covered without per-box rows and counts as
+cited text. The renderer strips only `<!-- rules: ... -->` and the header
+comment, and runs before `withDocId` (`src/core/docs-gen/index.ts:400-403`
+wraps the render), so the DOCID marker is untouched. Uncited words are
+counted per section on the rendered text with the placeholders filled from
+the bare fixture.
 
-**First chunk.** Stripping plus the leak check, with the laws annotated as
-the first section; the coverage checks land per section as Track 3 bins
-them, so the test grows with the rewrite rather than failing wholesale on
-day one.
+**First chunk.** Move the prose into `guide.md` verbatim (section-hash
+check: zero bodies changed), placeholders for the generated parts, the
+one-pass renderer, the leak and DOCID checks, and the header comment. The
+coverage and allowance checks enable per section as Track 3 bins them, so
+the linter grows with the rewrite rather than failing wholesale on day one.
 
-### Track 3: bin every paragraph
+### Track 3: bin every passage
 
 **What.** A row for each of the guide's roughly 180 blocks, binned by the
 ordered test, with the reason. Then the moves: `indirect` rows go to their
@@ -358,9 +376,9 @@ paragraph by paragraph by the next features, which is how 3,355 words
 became 11,435.
 
 **The middle version:** Tracks 1 and 2 with the ledger holding rows only
-for moved and deleted blocks, the registry, the span check, and the budget;
-no rewrite of the core, no law changes, no QUESTIONS work. That stops
-regrowth (a new block needs a span and a row) and records every removal,
+for moved and deleted blocks, the registry, the linter, and the budget;
+no rewrite of the core, no law changes, no QUESTIONS work. That bounds
+regrowth (uncited text is capped per section) and records every removal,
 at about a third of the cost.
 
 **What the fuller plan buys over the middle.** With rows only for what
@@ -391,7 +409,7 @@ subplan: it can start only after this plan has fixed the row form.
 |---|---|---|---|
 | A moved rule stops being followed (the agent does not read the doc it now points at) | the row's `audits:`, re-leveled to `knows_about` | revert that section's commit | clear |
 | The annotation strip misses a comment and it reaches a box | Track 2 leak check | none needed | clear |
-| A new paragraph lands without a row | Track 2 unannotated-paragraph check | none needed | clear |
+| A new paragraph lands without a row | Track 2 uncited-words allowance per section; the header comment tells the editor to cite | an agent review at landing is the real check (boxholder, 2026-09-26: no mechanical rule proves every sentence is connected) | clear past the allowance; silent under it |
 | A handle is renamed and a referrer keeps the old name | registry `referrers:` plus a grep in the doctest for each handle in the chat prompt and the section templates | none | clear |
 | The budget is met by moving too much, and the agent errs on ordinary turns | the whole audit suite on the clone box after each track; the name-only walks | revert | clear only if an audit covers the errant behavior |
 | Pressure audits for THE_LAW_OF_CHECKING pass because the model happens to know the answer | audit prompts use facts dated after the model's cutoff and assert a WebSearch or WebFetch tool call | none | clear |
@@ -413,11 +431,13 @@ subplan: it can start only after this plan has fixed the row form.
   `test/core/box-docs-pointers.doctest.md` from phase two, extended to the
   ledger's `mechanics:` field.
 - **Two writers** (a feature branch adds a guide paragraph while this plan
-  rewrites the section): GAP during the plan's life; the unannotated
-  paragraph check on `main` after Track 2 lands turns the collision into a
-  test failure at their landing, which is the right place.
+  rewrites the section): GAP during the plan's life; the uncited-words
+  allowance on `main` after Track 2 lands turns a sizeable collision into a
+  test failure at their landing, which is the right place; a small one is
+  caught by the review the header comment asks for.
 - **Hand-edit drift**: the guide is generated per box; not applicable.
-- **Validation error UX**: the doctest failure message names the paragraph
+- **Validation error UX**: the linter's failure message names the section,
+  the uncited word count against the allowance, or the paragraph
   and the missing row id; ADDRESSED in Track 2's design.
 - **Partial state**: between tracks the ledger covers some sections and the
   coverage check is enabled per section, so a half-done state is a passing
@@ -486,7 +506,8 @@ subplan: it can start only after this plan has fixed the row form.
   the fixture tier `agent-guide-*.doctest.md` already uses.
 - The Track 1 doctest: ledger parses, audits exist, registry equals `SECTION`.
 - The audits themselves, weekly by the existing schedule.
-- The spec doc's procedure, which the unannotated-paragraph check enforces.
+- The spec doc's procedure and the document's header comment, which the
+  linter backs up with the allowance and the coverage checks.
 - The weekly review line added to `docs/box-guidance.md` in phase two, which
   now also asks whether any new ledger row's reason holds.
 
@@ -508,9 +529,10 @@ when the boxholder says so.
 
 ## Codex plan review (2026-09-26)
 
-Eleven findings, all adopted: the annotation model became span-based with
-generated lists as single spans and the stripper scoped to `rule:` comments
-before `withDocId`; the bins became an ordered four-way test; the web-tool
+Eleven findings, all adopted: the annotation model was reworked (first to
+spans; then, after the boxholder's read, to a hand-written document with
+many-to-many `rules:` annotations, a one-pass renderer, and a linter with
+an uncited-words allowance in place of a per-paragraph gate); the bins became an ordered four-way test; the web-tool
 capture claim now distinguishes the Claude runner, the Codex runner, and
 the missing `should_search` assertion; the QUESTIONS premise was corrected
 from "stale" to "current mechanics, two omissions, one indirect block"; the
