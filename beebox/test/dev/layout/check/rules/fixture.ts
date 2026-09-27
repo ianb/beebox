@@ -84,6 +84,7 @@ export function layout(spec: FixtureSpec): PackageLayout {
         reexportOnly: value.reexportOnly ?? false,
         topLevelCalls: value.topLevelCalls ?? [],
         relativePathLiterals: value.relativePathLiterals ?? [],
+        buildEntries: [],
       });
     }
   }

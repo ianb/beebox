@@ -24,9 +24,11 @@ const noDirectCreateNew = {
     "Don't call registry.createNew() directly — resolve a ChatTargetSpec through resolveChatTarget() (core/chat/session/target.ts) so one place decides who creates the chat.",
 };
 // A card type's LIST COMPONENT lives beside its schema:
-// `src/schemas/<type>.list-entry.tsx` (boxholder decision, 2026-09-20 — "I
-// want each component to live alongside the rest of the schema"). It is
-// frontend code in a backend tree, so it gets fenced three ways here:
+// `src/schemas/<type>/list-entry.tsx` (boxholder decision, 2026-09-20 — "I
+// want each component to live alongside the rest of the schema"; a directory
+// member, like the rest of a card type's files, not a flat
+// `<type>.list-entry.tsx`). It is frontend code in a backend tree, so it gets
+// fenced three ways here:
 //
 //  1. It is linted with the REACT profile, not the backend one (the block
 //     below re-runs the preset with `react: true`, scoped to this glob).
@@ -39,8 +41,8 @@ const noDirectCreateNew = {
 // `src/frontend/vite.config.ts` aliases `@schemas/*.list-entry` — and only
 // that spelling — so `file-types/builtins.tsx` can import it by the type-only
 // alias without opening the alias for anything else.
-const LIST_ENTRY_GLOB = "src/schemas/**/*.list-entry.tsx";
-const LIST_ENTRY_IMPORT_PATTERNS = ["**/*.list-entry", "**/*.list-entry.js", "**/*.list-entry.tsx"];
+const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
+const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
 
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/

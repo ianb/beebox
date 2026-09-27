@@ -1,14 +1,25 @@
 /**
  * Public surfaces: `package.json` `exports` mapped to the build entry (or
- * source file) that produces each target, read from `<pkg>/scripts/*.ts`'s
- * esbuild `build({...})` calls.
+ * source file) that produces each target. A build entry is any module in the
+ * package (or an enclosing package, walked the same way `scanEnclosingSurfaces`
+ * always has) that calls esbuild's `build({ entryPoints: [...], outfile: ... })`
+ * with a literal path. `ModuleFile.buildEntries` (`scan.ts`) extracts this fact
+ * once, during the module's normal parse, so scanning the current package's
+ * own surfaces reuses `PackageLayout.files` rather than re-walking the disk;
+ * an enclosing package has no such `PackageLayout` already in hand, so
+ * `collectBuildEntries` below gives it its own lightweight walk — a plain
+ * recursive directory listing (no git, so it works the same whether or not
+ * the enclosing package sits in the same repo checkout the caller does),
+ * parsing each candidate module once with the same `parseSourceFile` the
+ * main scan uses.
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import type { PublicSurface } from "../../model.js";
+import type { LayoutFile, PublicSurface } from "../../model.js";
 import { isRecord } from "../../../../lib/is-record.js";
 import { dirOf } from "../../graph.js";
+import { parseSourceFile } from "../imports.js";
 import { isRepoFile, resolveRepoRelative } from "../resolve.js";
 
 function literalPathFromJoinOrString(expression: ts.Expression): string | null {
@@ -65,18 +76,66 @@ function entryOutfileFromCall(call: ts.CallExpression): { entry: string; outfile
   return entry === null || outfile === null ? null : { entry, outfile };
 }
 
-/** outfile (relative to `<pkg>/dist`) -> entry (relative to the package root). */
-function loadBuildEntries(params: { repoRoot: string; packageRoot: string }): Map<string, string> {
-  const scriptsDir = join(params.repoRoot, params.packageRoot, "scripts");
+/** Every esbuild `build({...})` call in `sourceFile` with literal `entryPoints`/`outfile`. */
+export function buildEntriesOf(sourceFile: ts.SourceFile): Array<{ entry: string; outfile: string }> {
+  const out: Array<{ entry: string; outfile: string }> = [];
+  for (const call of findBuildCalls(sourceFile)) {
+    const found = entryOutfileFromCall(call);
+    if (found !== null) out.push(found);
+  }
+  return out;
+}
+
+/** outfile (relative to `<pkg>/dist`) -> entry (relative to the package root), aggregated across a package's already-scanned modules. */
+export function buildEntriesFromFiles(files: ReadonlyMap<string, LayoutFile>): Map<string, string> {
   const entries = new Map<string, string>();
-  if (!existsSync(scriptsDir)) return entries;
-  for (const dirent of readdirSync(scriptsDir, { withFileTypes: true })) {
-    if (!dirent.isFile() || !dirent.name.endsWith(".ts")) continue;
-    const filePath = join(scriptsDir, dirent.name);
-    const sourceFile = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
-    for (const call of findBuildCalls(sourceFile)) {
-      const found = entryOutfileFromCall(call);
-      if (found !== null && !entries.has(found.outfile)) entries.set(found.outfile, found.entry);
+  for (const file of files.values()) {
+    if (file.kind !== "module") continue;
+    for (const { entry, outfile } of file.buildEntries) {
+      if (!entries.has(outfile)) entries.set(outfile, entry);
+    }
+  }
+  return entries;
+}
+
+const EXCLUDED_DIR_NAMES = new Set(["node_modules", "dist", "test"]);
+
+/** TypeScript module files under `packageRoot`, nested packages and dot-dirs excluded. */
+function listCandidateModules(params: { repoRoot: string; packageRoot: string }): string[] {
+  const out: string[] = [];
+  const walk = (relDir: string): void => {
+    const absDir = join(params.repoRoot, relDir);
+    if (!existsSync(absDir)) return;
+    for (const dirent of readdirSync(absDir, { withFileTypes: true })) {
+      const relPath = relDir === "" ? dirent.name : `${relDir}/${dirent.name}`;
+      if (dirent.isDirectory()) {
+        if (dirent.name.startsWith(".") || EXCLUDED_DIR_NAMES.has(dirent.name)) continue;
+        // A directory with its own `package.json` is a nested package (except
+        // `packageRoot` itself); its files belong to that package's own scan.
+        if (relPath !== params.packageRoot && existsSync(join(params.repoRoot, relPath, "package.json"))) continue;
+        walk(relPath);
+      } else if (dirent.isFile() && /\.tsx?$/u.test(dirent.name) && !dirent.name.endsWith(".d.ts")) {
+        out.push(relPath);
+      }
+    }
+  };
+  walk(params.packageRoot);
+  return out;
+}
+
+/**
+ * The same aggregation as `buildEntriesFromFiles`, for a package that has no
+ * `PackageLayout` already in hand (an enclosing package `scanEnclosingSurfaces`
+ * is walking up to): list its candidate modules once, parse each once with
+ * the same `parseSourceFile` the main scan uses.
+ */
+function collectBuildEntries(params: { repoRoot: string; packageRoot: string }): Map<string, string> {
+  const entries = new Map<string, string>();
+  for (const path of listCandidateModules(params)) {
+    const sourceText = readFileSync(join(params.repoRoot, path), "utf8");
+    const sourceFile = parseSourceFile({ fileName: path, sourceText });
+    for (const { entry, outfile } of buildEntriesOf(sourceFile)) {
+      if (!entries.has(outfile)) entries.set(outfile, entry);
     }
   }
   return entries;
@@ -116,20 +175,28 @@ function sourceFor(params: {
   return params.target.endsWith(".js") ? null : params.target;
 }
 
-export function scanPublicSurfaces(params: { repoRoot: string; packageRoot: string }): PublicSurface[] {
+export function scanPublicSurfaces(params: {
+  repoRoot: string;
+  packageRoot: string;
+  buildEntries: Map<string, string>;
+}): PublicSurface[] {
   const packageJsonPath = join(params.repoRoot, params.packageRoot, "package.json");
   if (!existsSync(packageJsonPath)) return [];
   const parsed: unknown = JSON.parse(readFileSync(packageJsonPath, "utf8"));
   const exportsRaw = isRecord(parsed) ? parsed["exports"] : undefined;
   if (!isRecord(exportsRaw)) return [];
 
-  const buildEntries = loadBuildEntries(params);
   const surfaces: PublicSurface[] = [];
   for (const [specifier, value] of Object.entries(exportsRaw)) {
     const chosen = chooseExportTarget(value);
     if (chosen === null) continue;
     const target = resolveRepoRelative({ fromDir: params.packageRoot, relative: chosen });
-    const source = sourceFor({ target, packageRoot: params.packageRoot, repoRoot: params.repoRoot, buildEntries });
+    const source = sourceFor({
+      target,
+      packageRoot: params.packageRoot,
+      repoRoot: params.repoRoot,
+      buildEntries: params.buildEntries,
+    });
     surfaces.push({ specifier, target, source });
   }
   return surfaces;
@@ -160,7 +227,8 @@ function ancestorPackageRoots(params: { repoRoot: string; packageRoot: string })
  * `beebox/src/frontend/src/exports/`).
  */
 export function scanEnclosingSurfaces(params: { repoRoot: string; packageRoot: string }): PublicSurface[] {
-  return ancestorPackageRoots(params).flatMap((packageRoot) =>
-    scanPublicSurfaces({ repoRoot: params.repoRoot, packageRoot }),
-  );
+  return ancestorPackageRoots(params).flatMap((packageRoot) => {
+    const buildEntries = collectBuildEntries({ repoRoot: params.repoRoot, packageRoot });
+    return scanPublicSurfaces({ repoRoot: params.repoRoot, packageRoot, buildEntries });
+  });
 }

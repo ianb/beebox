@@ -4,10 +4,16 @@
 source file) that produces each target.
 
 ```ts setup
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { scanEnclosingSurfaces, scanPublicSurfaces } from "../../../../../src/dev/layout/scan/package/surfaces.js";
+import {
+  buildEntriesFromFiles,
+  buildEntriesOf,
+  scanEnclosingSurfaces,
+  scanPublicSurfaces,
+} from "../../../../../src/dev/layout/scan/package/surfaces.js";
+import { parseSourceFile } from "../../../../../src/dev/layout/scan/imports.js";
 
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-surfaces-"));
 async function write(rel: string, content: string) {
@@ -29,19 +35,38 @@ await write(
     },
   }),
 );
+// The build entry lives in an ordinary `src/` module, not a `scripts/`
+// directory — the scanner finds a `build({...})` call in any module of the
+// package, the same way `beebox/src/scripts/build-cli/build.ts` (not
+// `beebox/scripts/`) builds the `./view-widgets` surface.
+const buildScriptPath = "pkg/src/build-cli/build.ts";
 await write(
-  "pkg/scripts/build.ts",
-  `import { build } from "esbuild";\nimport { join } from "node:path";\nconst root = join(import.meta.dirname, "..");\nconst distDir = join(root, "dist");\nawait build({\n  entryPoints: [join(root, "src/cards/index.ts")],\n  outfile: join(distDir, "cards", "index.js"),\n});\n`,
+  buildScriptPath,
+  `import { build } from "esbuild";\nimport { join } from "node:path";\nconst root = join(import.meta.dirname, "../..");\nconst distDir = join(root, "dist");\nawait build({\n  entryPoints: [join(root, "src/cards/index.ts")],\n  outfile: join(distDir, "cards", "index.js"),\n});\n`,
 );
 await write("pkg/src/cards/index.ts", "export {};\n");
 await write("pkg/src/exports/schema.ts", "export {};\n");
 await write("pkg/tsconfig.base.json", "{}\n");
 
-const surfaces = scanPublicSurfaces({ repoRoot, packageRoot: "pkg" });
+// A real scan feeds `scanPublicSurfaces` its already-parsed
+// `ModuleFile.buildEntries` (via `buildEntriesFromFiles`) instead of
+// re-reading any file here; this doctest, without a full `PackageLayout`,
+// parses just the one module it wrote and builds the same shape by hand.
+const buildScriptText = await readFile(join(repoRoot, buildScriptPath), "utf8");
+const buildScriptSource = parseSourceFile({ fileName: buildScriptPath, sourceText: buildScriptText });
+const files = new Map([
+  [
+    buildScriptPath,
+    { kind: "module", path: buildScriptPath, buildEntries: buildEntriesOf(buildScriptSource) },
+  ],
+]);
+const buildEntries = buildEntriesFromFiles(files);
+
+const surfaces = scanPublicSurfaces({ repoRoot, packageRoot: "pkg", buildEntries });
 ```
 
-A build entry (`build({ entryPoints, outfile })` in `scripts/*.ts`) gives the
-source for its target.
+A build entry (`build({ entryPoints, outfile })` in any module of the
+package, not only `scripts/*.ts`) gives the source for its target.
 
 ```ts
 JSON.stringify(surfaces.find((s) => s.specifier === "./cards"))
@@ -85,7 +110,7 @@ JSON.stringify(surfaces.find((s) => s.specifier === "./tsconfig.base.json"))
 ## No `package.json`
 
 ```ts
-scanPublicSurfaces({ repoRoot, packageRoot: "pkg/nope" }).length
+scanPublicSurfaces({ repoRoot, packageRoot: "pkg/nope", buildEntries: new Map() }).length
 => 0
 ```
 
@@ -95,7 +120,10 @@ A nested package (`pkg/nested`) has no `exports` of its own; its enclosing
 chain is `pkg`, then the repo root. `pkg` declares `./cards`, built from a
 module inside the nested package itself — the same shape as `beebox`'s
 `./view-widgets`, sourced from a file inside `beebox/src/frontend/`. The
-repo root also declares its own export.
+repo root also declares its own export. `scanEnclosingSurfaces` has no
+already-parsed `PackageLayout` for `pkg` or the repo root, so it finds this
+build entry itself — a plain recursive walk of each ancestor package, not
+just its `scripts/` directory.
 
 ```ts
 await write("pkg/nested/package.json", JSON.stringify({ name: "nested" }));

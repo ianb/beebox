@@ -56,6 +56,14 @@ export interface ModuleFile {
   topLevelCalls: string[];
   /** String literals that are not import specifiers and begin with `./` or `../`. */
   relativePathLiterals: string[];
+  /**
+   * Every esbuild `build({ entryPoints: [...], outfile: ... })` call found in
+   * this module, with both a literal string or `join(...)` of literals. A
+   * package's build entries can live in any of its modules, not only a
+   * `scripts/` directory — `surfaces.ts` aggregates these across a
+   * `PackageLayout`'s files to resolve `package.json` `exports` to source.
+   */
+  buildEntries: Array<{ entry: string; outfile: string }>;
 }
 
 export interface TestFile {

@@ -16,7 +16,7 @@ import { classifyFile, listPackageFiles } from "./files.js";
 import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "../imports.js";
 import { extractRegistries } from "./registries.js";
 import { type Aliases, loadAliases, resolveImport } from "../resolve.js";
-import { scanEnclosingSurfaces, scanPublicSurfaces } from "./surfaces.js";
+import { buildEntriesFromFiles, buildEntriesOf, scanEnclosingSurfaces, scanPublicSurfaces } from "./surfaces.js";
 
 // Loaded via a dynamic import behind a non-literal specifier, not a static
 // `import ... from "agent-doctest/hooks"`: that file's own relative imports
@@ -102,6 +102,7 @@ function buildModuleFile(params: {
     reexportOnly: facts.reexportOnly,
     topLevelCalls: facts.topLevelCalls,
     relativePathLiterals: facts.relativePathLiterals,
+    buildEntries: buildEntriesOf(sourceFile),
   };
 }
 
@@ -199,6 +200,7 @@ export async function scanPackage(params: { repoRoot: string; packageRoot: strin
     }
   }
 
+  const buildEntries = buildEntriesFromFiles(files);
   return {
     root: params.packageRoot,
     sourceRoot: `${params.packageRoot}/src`,
@@ -207,7 +209,7 @@ export async function scanPackage(params: { repoRoot: string; packageRoot: strin
     nestedPackages: listed.nestedPackages,
     files,
     directories: listed.directories,
-    publicSurfaces: scanPublicSurfaces(params),
+    publicSurfaces: scanPublicSurfaces({ ...params, buildEntries }),
     enclosingSurfaces: scanEnclosingSurfaces(params),
     scanFindings: scanFindings.toSorted(compareFindings),
   };
