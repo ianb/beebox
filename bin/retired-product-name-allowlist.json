@@ -300,7 +300,7 @@
     "reason": "Router fixtures cover legacy marker and state discovery without mutation."
   },
   {
-    "path": "workstreams-app/test/router/router-config.test.ts",
+    "path": "workstreams-app/test/router/server/config.test.ts",
     "occurrenceClass": "kebab-name",
     "expectedCount": 3,
     "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory."

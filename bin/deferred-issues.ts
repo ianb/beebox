@@ -6,7 +6,7 @@ import { execa } from "execa";
 
 import {
   ISSUE_CATEGORIES, parseFrontmatter, type IssueCategory,
-} from "../workstreams-app/src/server/issue-domain.js";
+} from "../workstreams-app/src/server/main/issue-domain.js";
 import {
   buildBasenameLookup,
   repairFrontmatterPaths,

@@ -7,7 +7,7 @@
   "description": "Worktree-aware browser CLI for this monorepo. Wraps agent-browser with URL translation, screenshot metadata, and a typed sub-package for the upstream CLI surface. Access point: bin/browse at the monorepo root.",
   "scripts": {
     "cli": "tsx src/cli.ts",
-    "verify-help": "tsx packages/agent-browser-typed/scripts/verify-help.ts",
+    "verify-help": "tsx packages/agent-browser-typed/src/scripts/verify-help.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

@@ -1,5 +1,5 @@
 /**
- * Cloudflare Access gate shared by the serve path (`index.ts`, for `/a/` tiers)
+ * Cloudflare Access gate shared by the serve path (`worker.ts`, for `/a/` tiers)
  * and the submit endpoint (`submit.ts`, for account-tier submitters). Wraps the
  * low-level `verifyAccessAssertion` (`access.ts`) with the Worker's fail-closed
  * policy and returns either the verified email or the exact response to return

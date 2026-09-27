@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { PopupApp } from "../../ui/popup-app.js";
+import { PopupApp } from "../../ui/popup-app/app.js";
 import { invariant } from "../../domain/invariant.js";
 import "../../styles/global.css";
 

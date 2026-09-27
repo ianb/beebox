@@ -31,9 +31,9 @@ import {
   latestTransferForBox,
   openTabOrganizer,
   shareTabs,
-} from "../platform/tab-transfer-actions.js";
+} from "../platform/tab-transfer-actions/actions.js";
 import { clearTabTransfer } from "../platform/tab-transfer-storage.js";
-import { tabArrangementAction } from "../platform/tab-arrangement-executor.js";
+import { tabArrangementAction } from "../platform/tab-arrangement-executor/executor.js";
 
 class NoActiveBoxError extends Error {
   constructor() {

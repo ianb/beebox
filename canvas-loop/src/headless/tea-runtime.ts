@@ -1,6 +1,6 @@
 import { SketchUsageError, UnhandledMsgError } from "./errors.js";
-import { FrameRecorder, patchConsole } from "./recorder.js";
-import type { RunResult } from "./recorder.js";
+import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import { bucketTeaByFrame } from "./tea-events.js";
 import type { TeaScriptEvent } from "./tea-events.js";

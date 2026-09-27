@@ -2,7 +2,7 @@
  * Build-time only: the revision `build.ts` stamps into the bundle.
  *
  * Deliberately its own module rather than part of `build-stamp.ts` or of
- * `build.ts`. It must not be reachable from `cli.ts` — it shells out to `git`,
+ * `build.ts`. It must not be reachable from `cli/main.ts` — it shells out to `git`,
  * which does not exist on the machines the bundle is copied to — and keeping it
  * here means nothing in the runtime graph can import it by accident. `build.ts`
  * is its only caller.

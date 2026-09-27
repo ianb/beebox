@@ -14,8 +14,8 @@ neighbour is a neighbour by construction and the ranking is deterministic.
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createIssueRelatedService } from "../src/server/issue-related-service.js";
-import { ROUTER_CAPABILITY_HEADER, buildApp } from "../src/server/app.js";
+import { createIssueRelatedService } from "../src/server/main/issue-related-service.js";
+import { ROUTER_CAPABILITY_HEADER, buildApp } from "../src/server/main/app.js";
 import { EMBEDDING_DIMENSIONS } from "../../beebox/src/services/openai-embeddings.js";
 
 function axis(index: number) {

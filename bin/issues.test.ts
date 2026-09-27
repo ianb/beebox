@@ -18,10 +18,10 @@ import { createFakeEmbeddings } from "../beebox/src/services/openai-embeddings.j
 import {
   deriveDate, deriveDiscoveredInWorkstream, emptyFilters, filterIssues, groupIssues,
   loadIssueEntries, normalizeWorkstreamName,
-} from "../workstreams-app/src/server/issue-search-model.js";
-import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/issue-index.js";
-import { issueDocument } from "../workstreams-app/src/server/issue-index-documents.js";
-import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
+} from "../workstreams-app/src/server/main/issue-search-model.js";
+import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/main/issue-index.js";
+import { issueDocument } from "../workstreams-app/src/server/main/issue-index-documents.js";
+import { runSearch } from "../workstreams-app/src/server/main/issue-index-query.js";
 import { byPath, makeRepo } from "./issues-test-fixtures.js";
 
 // ─── Derivation ──────────────────────────────────────────────────────────────
