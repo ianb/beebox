@@ -18,7 +18,7 @@
 // `/favicon.*`) lives at the bare root, not under a worktree.
 
 import { assertNever } from "../../../../beebox/src/lib/invariant.js";
-import { isScanUploadSubpath } from "../../../../beebox/src/hub/scan-gate.js";
+import { isScanUploadSubpath } from "../../../../beebox/src/hub/server/scan-gate.js";
 import { isPairingRedeemUrl } from "../../../../beebox/src/webapp/routes/pairing.js";
 
 /**

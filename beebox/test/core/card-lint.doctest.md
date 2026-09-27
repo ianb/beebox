@@ -11,7 +11,7 @@ import {
   cardSchema,
   formatLintResults,
   type CardSchema,
-} from "../../src/cards/index.js";
+} from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { lintCardsDispatch } from "../../src/core/card-lint.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";

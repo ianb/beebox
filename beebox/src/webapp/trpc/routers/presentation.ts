@@ -13,7 +13,7 @@ import { resolveSystemTheme } from "../../../core/system-theme.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { updateBoxSystemTheme } from "../../box-config-write.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
-import { splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";

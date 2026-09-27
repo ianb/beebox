@@ -16,7 +16,7 @@
  * a silent skip.
  */
 
-import { splitCardContent } from "../../cards/index.js";
+import { splitCardContent } from "../../exports/cards.js";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "../card-io.js";
 import { TodosFieldSchema } from "../../shared/todo-model.js";
 import { errorMessage } from "../../lib/error-guards.js";

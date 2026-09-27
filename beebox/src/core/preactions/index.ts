@@ -13,7 +13,7 @@
  */
 
 import { writeFile } from "node:fs/promises";
-import { renderFrontmatterBlock } from "../../cards/index.js";
+import { renderFrontmatterBlock } from "../../exports/cards.js";
 import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 import { loadCardFile } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";

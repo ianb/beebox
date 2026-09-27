@@ -18,7 +18,7 @@
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, splitCardContent, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, splitCardContent, type CardSchema } from "../exports/cards.js";
 
 /**
  * `new` (written by preparation, not yet delivered) → `delivered` (the

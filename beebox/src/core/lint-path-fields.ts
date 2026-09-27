@@ -18,7 +18,7 @@
  * every other broken ref (a stale path must not block a commit).
  */
 
-import type { LintIssue } from "../cards/index.js";
+import type { LintIssue } from "../exports/cards.js";
 import { brokenRefReason, resolveRefExists } from "./ref-exists.js";
 import { isRecord } from "./card-io.js";
 

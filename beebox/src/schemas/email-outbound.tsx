@@ -32,7 +32,7 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 export const EmailOutboundSchema = cardSchema("email-outbound", {
   brief: "An outgoing email draft",

@@ -17,7 +17,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../exports/cards.js";
 import { isRecord } from "../../card-io.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { contentHash } from "../../../lib/content-hash.js";

@@ -27,7 +27,7 @@
  */
 
 import { z } from "zod";
-import type { SyncSkipped } from "../../connectors/index.js";
+import type { SyncSkipped } from "../../connectors.js";
 
 /** Set by a supervising caller that intends to parse the outcome line. */
 export const WAKEUP_OUTCOME_ENV = "BBX_WAKEUP_OUTCOME";

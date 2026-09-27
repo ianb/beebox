@@ -8,7 +8,7 @@ render→write→scan→decision logic with a recording stub — no real git rep
 needed.
 
 ```ts setup
-import { draftPublication } from "../../src/publish/draft.js";
+import { draftPublication } from "../../src/publish/draft/core.js";
 import { publicationManifestSchema } from "../../src/publish/manifest.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

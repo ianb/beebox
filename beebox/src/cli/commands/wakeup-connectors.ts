@@ -7,22 +7,17 @@
  * sequence of steps rather than carrying the connector loop inline.
  */
 
-import { createGmailConnector } from "../../connectors/gmail.js";
-import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
-import { createTelegramConnector } from "../../connectors/telegram.js";
-import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
-import { createPublishSubmissionsConnector } from "../../connectors/publish-submissions.js";
 import {
-  ConnectorFatalError,
-  getAllConnectors,
+  connectorFactories,
   type Connector,
   type ConnectorProcedureTrigger,
-} from "../../connectors/index.js";
+} from "../../connectors.js";
+import { ConnectorFatalError } from "../../connector.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
 import { createCliContext } from "../../core/commands/index.js";
 import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
-import { syncConnector } from "../../connectors/activity.js";
+import { syncConnector } from "../../connector-activity/core.js";
 
 /**
  * Run the configured connectors and report results.
@@ -62,12 +57,7 @@ export async function runConnectors(
 }> {
   let connectors = options.connectors;
   if (connectors === undefined) {
-    createGmailConnector(boxRoot);
-    createGoogleCalendarConnector(boxRoot);
-    createTelegramConnector(boxRoot);
-    createGoogleDriveConnector(boxRoot);
-    createPublishSubmissionsConnector(boxRoot);
-    connectors = getAllConnectors();
+    connectors = connectorFactories.list.map((factory) => factory(boxRoot));
   }
 
   if (connectors.length === 0) {

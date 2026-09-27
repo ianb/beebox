@@ -17,7 +17,7 @@ import {
   codexSdkUsage,
   createCodexSdkSession,
   type CodexSdkSessionFactory,
-} from "../../services/codex-sdk-session.js";
+} from "../../services/codex-sdk-session/core.js";
 import { emitObservedActivity, renderCodexCommand, type CodexObservedActivity } from "./codex-run-activity.js";
 import { normalizeCodexSdkToolItem } from "../../services/codex-tool-activity.js";
 

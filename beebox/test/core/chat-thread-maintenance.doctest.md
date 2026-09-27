@@ -3,7 +3,7 @@
 ```ts setup
 import { ChatSessionPool } from "../../src/core/chat/session/pool.js";
 import { ChatThreadSession, chatThreadsAreIdle, quiesceChatThreads } from "../../src/core/chat/session/thread.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { acquireBoxWork, closeBoxMaintenance } from "../../src/lib/box-maintenance.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { waitForRuns } from "../helpers/chat-session-spawner-helpers.js";

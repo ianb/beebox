@@ -11,7 +11,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const RecordStatusSchema = z.enum(["draft", "reviewed", "archived"]);
 export type RecordStatus = z.infer<typeof RecordStatusSchema>;

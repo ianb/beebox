@@ -22,8 +22,8 @@ The suite shares the developer's uv cache (`test/helpers/isolate-user-home.ts`),
 so a warmed environment stays warm under the isolated test HOME.
 
 ```ts setup
-import { createDoclingService, doclingArgs } from "../../../src/services/docling.js";
-import { DOCLING_VERSION } from "../../../src/services/docling-version.js";
+import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
+import { DOCLING_VERSION } from "../../../src/services/docling/version.js";
 import { textPdf } from "../../helpers/pdf-fixtures.js";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

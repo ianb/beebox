@@ -53,7 +53,7 @@ import {
 import { createCardSchemaMap } from "../../schemas.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
-import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
+import { createOrAppendIntakeJob } from "../../job-cards/intake-utils.js";
 import { resolveScanPages, bundleResolvedPages } from "./scan-import-helpers.js";
 import { type ScanVisionService } from "../../services/scan-vision.js";
 import {

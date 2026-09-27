@@ -7,7 +7,7 @@
  * vocabulary mirrors the retrospective's, see `src/core/retro/observations.ts`).
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { IsoDuration } from "../shared/iso-duration.js";
 import { z } from "zod";
 import { QuestionLearning, type QuestionLearningFields } from "../question-fields.js";

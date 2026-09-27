@@ -7,7 +7,7 @@
  * response or acknowledgment.
  */
 
-import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 export const ChatJobSchema = cardSchema("chat-job", {

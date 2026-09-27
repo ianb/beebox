@@ -8,7 +8,7 @@
  */
 
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../cards/index.js";
+import { splitCardContent } from "../../exports/cards.js";
 import {
   GuideObject,
   type GuideFields,

@@ -8,7 +8,7 @@
  * scaffolding, which was duplicated verbatim.
  */
 
-import type { ChatBackendRun } from "../../../services/claude-chat.js";
+import type { ChatBackendRun } from "../../../services/claude-chat/core.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
 

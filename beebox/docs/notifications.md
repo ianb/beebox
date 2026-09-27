@@ -178,7 +178,7 @@ never promotes.
 
 The VAPID keypair and the APNs key are server-wide `.env` entries; the steps
 are in [server configuration](server/configuration.md#web-push-vapid-keys). The
-hub passes both sets of variables to every box server (`src/hub/child-env.ts`).
+hub passes both sets of variables to every box server (`src/hub/supervisor/child-env.ts`).
 The iOS app target needs the Push Notifications capability in Xcode; a Debug
 build registers for the APNs sandbox and a Release build for production
 ([mobile contract §5.9](mobile-contract.md)).

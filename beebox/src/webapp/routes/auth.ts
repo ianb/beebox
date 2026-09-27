@@ -28,7 +28,7 @@ import {
 import { canAccessBox } from "../box-access.js";
 import { readBasePrefix } from "../base-prefix.js";
 import type { BoxSpec } from "../server.js";
-import { getLoginGoogleClientCreds } from "../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../google/auth.js";
 import { registerAuthRoutes } from "./auth-google.js";
 import { listUsers } from "../local-users.js";
 import { AuthStoreUnavailableError } from "../local-users-errors.js";

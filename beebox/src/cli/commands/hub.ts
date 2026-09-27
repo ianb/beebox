@@ -16,17 +16,17 @@ import {
   HubConfigError,
   DEFAULT_HUB_PORT,
   DEFAULT_HUB_HOST,
-} from "../../hub/hub-config.js";
+} from "../../hub/config.js";
 import {
   planAddBoxToHubConfig,
   applyAddBoxPlan,
   describeAddBoxPlan,
   HubConfigEditError,
-} from "../../hub/hub-config-edit.js";
-import { Supervisor } from "../../hub/supervisor.js";
+} from "../../hub/config-edit.js";
+import { Supervisor } from "../../hub/supervisor/core.js";
 import { requireBoxRoot } from "../../lib/box-shape.js";
-import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
-import { hubVerdict } from "../../hub/hub-health.js";
+import { createHubServer, type HubHealth } from "../../hub/server/core.js";
+import { hubVerdict } from "../../hub/health.js";
 import { getRootDiskHealth } from "../../hub/disk-health.js";
 import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import { getPublicUrl } from "../../lib/public-url.js";

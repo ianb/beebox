@@ -6,7 +6,7 @@
  * on success or stamps it with an error on failure.
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 const TelegramMessageStatus = z.enum(["pending", "sent", "failed"]);

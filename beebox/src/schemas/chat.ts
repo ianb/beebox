@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, body, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, body, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { sdkSessionIdSchema } from "../core/chat/session/session-id.js";
 import { AGENT_ENGINES, type AgentEngine } from "../shared/agent-models.js";
 

@@ -174,7 +174,7 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
   // Fastify's router (find-my-way) always prefers a static route over a
   // wildcard regardless of registration order, so `/auth/google-services
   // /callback` still reaches its handler even in hub mode: the hub proxies
-  // that one path straight through to this box (see `src/hub/hub-server.ts`)
+  // that one path straight through to this box (see `src/hub/server/core.ts`)
   // because it's the box's own connector setup, not login.
   if (isHubMode()) {
     server.all("/auth/*", async (_request, reply) => {

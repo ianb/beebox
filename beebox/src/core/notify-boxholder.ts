@@ -10,7 +10,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
+import { loadTelegramConfig } from "../connectors/telegram/helpers.js";
 import { createFakeTelegram, createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import type { ApnsService } from "../services/apns.js";

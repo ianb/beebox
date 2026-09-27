@@ -10,7 +10,7 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external/ref.js";
 import { rootsForBox } from "./external/roots.js";

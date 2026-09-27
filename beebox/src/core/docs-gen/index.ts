@@ -22,7 +22,7 @@ import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../schemas.js";
-import type { CardSchema } from "../../cards/index.js";
+import type { CardSchema } from "../../exports/cards.js";
 import { generateAgentGuide } from "../agent-guide/index.js";
 import {
   installProcedures,

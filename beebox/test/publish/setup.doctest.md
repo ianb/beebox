@@ -14,11 +14,11 @@ committed `pub-worker/wrangler.jsonc` (the single source of truth), and the
 version stamp is the real hash of the committed Worker source.
 
 ```ts setup
-import { setupPublishing } from "../../src/publish/setup.js";
+import { setupPublishing } from "../../src/publish/setup/core.js";
 import { readPublishSecret } from "../../src/publish/connector-secret.js";
-import { readPublishConfig, writePublishConfig } from "../../src/publish/publish-config.js";
+import { readPublishConfig, writePublishConfig } from "../../src/publish/config.js";
 import { localPubWorkerVersion } from "../../src/publish/pub-worker-meta.js";
-import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning.js";
+import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import { createFakeAccessClient } from "../../src/services/cloudflare-access.js";
 import { createFakeTokensClient } from "../../src/services/cloudflare-tokens.js";
 import { createFakeWrangler } from "../../src/services/wrangler.js";

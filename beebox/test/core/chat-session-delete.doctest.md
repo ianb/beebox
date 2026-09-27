@@ -13,7 +13,7 @@ import { appendHistory, getMostActive, loadHistory, setMostActive } from "../../
 import { emptyReviewState, emptySessionState, loadReviewState, saveReviewState } from "../../src/core/chat/review/state.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
 import { ChatScheduleManager } from "../../src/core/chat/schedules.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 async function missing(target: string): Promise<boolean> {

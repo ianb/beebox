@@ -7,7 +7,7 @@
 import { once } from "node:events";
 import type { ChatSession, ChatSessionOptions } from "../../src/core/chat/session/index.js";
 import { invariant } from "../../src/lib/invariant.js";
-import type { FakeChatBackend } from "../../src/services/claude-chat.js";
+import type { FakeChatBackend } from "../../src/services/claude-chat/core.js";
 
 class WaitForRunsTimeoutError extends Error {
   constructor({ count, got, timeoutMs }: { count: number; got: number; timeoutMs: number }) {

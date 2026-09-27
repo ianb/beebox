@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import { glob } from "glob";
 import { loadCardFromText } from "../card-io.js";
-import { splitCardContent } from "../../cards/index.js";
+import { splitCardContent } from "../../exports/cards.js";
 import { buildLoadContext } from "../load-context.js";
 import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git/core.js";
 import { fileEtag } from "../../webapp/file-etag.js";

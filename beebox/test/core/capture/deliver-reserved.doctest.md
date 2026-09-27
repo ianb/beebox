@@ -11,7 +11,7 @@ existed to prevent.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt } from "../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, setMostActive } from "../../../src/core/chat/session/history.js";
 import { resolveCaptureDeliveryTarget } from "../../../src/core/capture/deliver.js";

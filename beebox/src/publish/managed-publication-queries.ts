@@ -4,10 +4,10 @@ import path from "node:path";
 import { sharedPublicSlugSchema, type SiteEdgeManifest } from "./manifest-edge.js";
 import { bundleContentType } from "./lifecycle.js";
 import { staticBearer } from "../services/cloudflare-bearer.js";
-import type { ManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
-import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
-import type { PublicationCandidate } from "./managed-publications.js";
-import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications.js";
+import type { ManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
+import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime/core.js";
+import type { PublicationCandidate } from "./managed-publications/core.js";
+import { publicationError, readCandidate, readSharedRouteMarker, readSiteManifest, storeFor } from "./managed-publications/core.js";
 import { hasPublicationReferenceCard } from "./publication-reference-card.js";
 import { publicationCardPath } from "../shared/publication-card.js";
 

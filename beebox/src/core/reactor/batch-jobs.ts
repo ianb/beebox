@@ -14,7 +14,7 @@ import {
 import { fenceForPrompt } from "../../lib/prompt-fence.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { parseCardText, CardIOError } from "../card-io.js";
-import { collectInlineRefs } from "../../cards/index.js";
+import { collectInlineRefs } from "../../exports/cards.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent/index.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import { computeTodoAmbientLine } from "../todo/ambient-summary.js";

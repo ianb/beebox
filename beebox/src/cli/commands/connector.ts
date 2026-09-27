@@ -14,17 +14,17 @@ import { requireBoxRoot } from "../../lib/paths/core.js";
 import {
   resolveGmailService,
   resolveGoogleAuth,
-} from "../../connectors/google-access.js";
-import { trackGmailThread, type TrackGmailThreadResult } from "../../connectors/gmail-track.js";
-import type { GoogleGmailService } from "../../services/google-gmail.js";
+} from "../../google/access.js";
+import { trackGmailThread, type TrackGmailThreadResult } from "../../connectors/gmail/track.js";
+import type { GoogleGmailService } from "../../services/google-gmail/core.js";
 import type { GoogleAuthService } from "../../services/google-auth.js";
-import { loadTransientState } from "../../connectors/transient-state.js";
-import { parseGmailTransientState } from "../../connectors/gmail-state.js";
+import { loadTransientState } from "../../transient-state.js";
+import { parseGmailTransientState } from "../../connectors/gmail/state.js";
 import {
   runReadOnlyGws,
   UnsafeGwsCommandError,
   type GwsRunResult,
-} from "../../connectors/gmail-gws.js";
+} from "../../connectors/gmail/gws.js";
 import {
   CredentialGapError,
   dispatchCredentialed,

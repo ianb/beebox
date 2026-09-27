@@ -9,11 +9,11 @@ security-relevant misconfig lands in `problems` (the CLI exits nonzero on
 any). All against the FAKE client and a stubbed probe — no network.
 
 ```ts setup
-import { draftPublication } from "../../src/publish/draft.js";
+import { draftPublication } from "../../src/publish/draft/core.js";
 import { localPubWorkerVersion } from "../../src/publish/pub-worker-meta.js";
-import { writePublishConfig } from "../../src/publish/publish-config.js";
+import { writePublishConfig } from "../../src/publish/config.js";
 import { statusPublishing } from "../../src/publish/status.js";
-import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning.js";
+import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const ACCESS_VALUES = { accessTeamDomain: "https://myteam.cloudflareaccess.com", accessAud: "aud-tag" };

@@ -10,12 +10,12 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { type Connector } from "../../connectors/index.js";
+import { type Connector } from "../../connectors.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../lib/git/core.js";
-import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
+import { createOrAppendIntakeJob } from "../../job-cards/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
 import { resolveBoxRelativeRef, realpathContained } from "../../lib/box-containment.js";

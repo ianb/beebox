@@ -42,16 +42,17 @@ await rename(join(tmpDir, "cli.mjs"), join(distDir, "cli.mjs"));
 await rm(tmpDir, { recursive: true, force: true });
 
 // Also build the public card-primitive layer (the `beebox/cards` export)
-// to a single bundled dist/cards/index.js. Box-local schema files import this
-// specifier; it must be plain JS with no TS-source `.js` re-exports, because
-// the CLI loads box schemas with Node's native type-stripping (under the
-// dist/cli.mjs bundle) which does NOT remap `./schema.js` → `schema.ts`.
+// to a single bundled dist/exports/cards.js. Box-local schema files import
+// this specifier; it must be plain JS with no TS-source `.js` re-exports,
+// because the CLI loads box schemas with Node's native type-stripping (under
+// the dist/cli.mjs bundle) which does NOT remap `./schema.js` → `schema.ts`.
 // Bundling collapses src/cards/{schema,frontmatter,lint-format,errors}.ts into
 // one file, so there are no internal `.js` specifiers to resolve; zod/yaml stay
-// external (resolved from node_modules at runtime).
+// external (resolved from node_modules at runtime). Outfile matches the tsc
+// tree's emit path (dist/exports/cards.js), same pattern as schema/server below.
 await build({
-  entryPoints: [join(root, "src/cards/index.ts")],
-  outfile: join(distDir, "cards", "index.js"),
+  entryPoints: [join(root, "src/exports/cards.ts")],
+  outfile: join(distDir, "exports", "cards.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -65,7 +66,7 @@ await build({
 // z and yaml helpers re-exported so a box's only dependency is beebox.
 // zod/yaml stay external (resolved from beebox's node_modules at runtime).
 // Outfile matches the tsc tree's emit path (dist/exports/schema.js) so the
-// export map target is valid after EITHER build — same pattern as cards/.
+// export map target is valid after EITHER build — same pattern as cards above.
 await build({
   entryPoints: [join(root, "src/exports/schema.ts")],
   outfile: join(distDir, "exports", "schema.js"),

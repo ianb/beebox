@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import { pubIdSchema } from "../../../publish/manifest.js";
 import { getOwnerEmail } from "../../auth.js";
-import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime.js";
+import { defaultManagedPublicationRuntime } from "../../../services/managed-publication-runtime/core.js";
 import {
   prepareManagedPublication,
-} from "../../../publish/managed-publications.js";
+} from "../../../publish/managed-publications/core.js";
 import {
   approveManagedPublication,
   disableManagedPublication,

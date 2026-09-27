@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, type InferCardFields, type LintIssue } from "../cards/index.js";
+import { cardSchema, type InferCardFields, type LintIssue } from "../exports/cards.js";
 
 /**
  * Cross-field validation for extfile cards that Zod can't express: `href` must

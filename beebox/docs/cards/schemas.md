@@ -25,7 +25,7 @@ Adding a frontmatter schema touches 4 files, plus creates 1 new one.
 `src/schemas/<name>.ts` (use `.tsx` only if you need JSX somewhere; templates emit YAML strings now, not JSX).
 
 ```ts
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type CardSchema } from "../exports/cards.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -93,7 +93,7 @@ structure — put it in a **`validate` hook on the schema**, *not* in a branch o
 defines the type, and card-lint dispatches it generically.
 
 ```ts
-import { cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+import { cardSchema, type CardSchema, type LintIssue } from "../exports/cards.js";
 
 function myThingErrors(fields: Record<string, unknown>): LintIssue[] {
   const errors: LintIssue[] = [];
@@ -312,7 +312,7 @@ registerFileType({ type: "my-thing" }, {
 When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
 
 ```ts
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 const content = await fs.readFile(absPath, "utf-8");

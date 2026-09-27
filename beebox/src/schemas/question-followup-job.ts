@@ -6,7 +6,7 @@
  * question declared one — records the durable learning the answer teaches.
  */
 
-import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { QuestionLearning, type QuestionLearningFields } from "../question-fields.js";
 import { z } from "zod";
 

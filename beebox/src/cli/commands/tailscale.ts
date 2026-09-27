@@ -23,8 +23,8 @@ import {
   runTailscaleSetup,
   runTailscaleStop,
   type SetupIo,
-} from "../../services/tailscale-setup.js";
-import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status.js";
+} from "../../services/tailscale-setup/core.js";
+import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status/core.js";
 import { ambiguousTarget, type TailscaleReport } from "../../services/tailscale-report.js";
 
 /** The `--target` help shared by all three subcommands: optional, auto-detected

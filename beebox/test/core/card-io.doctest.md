@@ -10,7 +10,7 @@ import {
   cardSchema,
   body,
   type CardSchema,
-} from "../../src/cards/index.js";
+} from "../../src/exports/cards.js";
 import {
   parseCardText,
   serializeCardText,

@@ -15,7 +15,7 @@ Manual: spawns the `claude` SDK process, costs API calls, takes
 
 ```ts setup
 import { ChatSession } from "../../src/core/chat/session/index.js";
-import { createChatBackend } from "../../src/services/claude-chat.js";
+import { createChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 async function plainPrompt(): Promise<string> { return "Reply tersely."; }

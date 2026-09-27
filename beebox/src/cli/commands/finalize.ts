@@ -9,17 +9,16 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { createGmailConnector } from "../../connectors/gmail.js";
-import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
-import { createTelegramConnector } from "../../connectors/telegram.js";
-import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
+import { createGmailConnector } from "../../connectors/gmail/connector.js";
+import { createGoogleCalendarConnector } from "../../connectors/google-calendar/connector.js";
+import { createTelegramConnector } from "../../connectors/telegram/connector.js";
+import { createGoogleDriveConnector } from "../../connectors/google-drive/connector.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
 import { rotateIfNeeded } from "../../core/notification/log.js";
 import { getBoxTime } from "../../lib/time.js";
-import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { syncConnector } from "../../connectors/activity.js";
+import { syncConnector } from "../../connector-activity/core.js";
 import type { TelegramService } from "../../services/telegram.js";
 import type { PushService } from "../../services/push.js";
 
@@ -66,12 +65,12 @@ export const finalizeCommand = new Command("finalize")
     }
 
     // Initialize connectors
-    createGmailConnector(boxRoot);
-    createGoogleCalendarConnector(boxRoot);
-    createTelegramConnector(boxRoot);
-    createGoogleDriveConnector(boxRoot);
-
-    const connectors = getAllConnectors();
+    const connectors = [
+      createGmailConnector(boxRoot),
+      createGoogleCalendarConnector(boxRoot),
+      createTelegramConnector(boxRoot),
+      createGoogleDriveConnector(boxRoot),
+    ];
 
     if (connectors.length === 0) {
       console.log("  No connectors configured.");

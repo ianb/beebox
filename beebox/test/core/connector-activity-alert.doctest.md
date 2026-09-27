@@ -11,7 +11,7 @@ it. Nothing is sent: health never notifies on its own
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { readRecent } from "../../src/core/notification/log.js";
-import { syncConnector, addDays, loadConnectorActivity } from "../../src/connectors/activity.js";
+import { syncConnector, addDays, loadConnectorActivity } from "../../src/connector-activity/core.js";
 import { updateConnectorEpisodes } from "../../src/core/schedule/connector-activity-alert.js";
 import { connectorActivityHealthChecks } from "../../src/webapp/trpc/routers/health-connectors.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";

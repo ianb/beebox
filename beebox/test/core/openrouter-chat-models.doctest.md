@@ -237,7 +237,7 @@ closed, and nothing further is sent to OpenRouter.
 
 ```ts
 const { ChatSession } = await import("../../src/core/chat/session/index.js");
-const { createFakeChatBackend } = await import("../../src/services/claude-chat.js");
+const { createFakeChatBackend } = await import("../../src/services/claude-chat/core.js");
 const { tick } = await import("../helpers/chat-session-spawner-helpers.js");
 const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
 

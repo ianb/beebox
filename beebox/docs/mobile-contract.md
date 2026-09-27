@@ -101,7 +101,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   | native caller | `ios-app/BeeBox/Storage/PairedBoxStore.swift` — `PairedBoxStore.redeemPairing(baseURL:pairingToken:)`, types `PairingRedeemRequest`/`PairingRedeemResponse` |
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/redeem`, `RedeemBody` |
   | box device store | `src/core/mobile/pairing.ts` — `MobileDevice { id,label,tokenHash,createdAt,createdBy,lastUsedAt?,revokedAt?,apns? }` (`createdBy` is the pairer, and null only for devices paired before it was recorded — see §1.4), `writeDeviceStore` (`<boxRoot>/.beebox/mobile-devices.secret.json`, mode `0o600`) |
-  | hub wall allowance | `src/hub/hub-server.ts` — `isMobilePairingRedeem` |
+  | hub wall allowance | `src/hub/server/core.ts` — `isMobilePairingRedeem` |
   | box-scope allowance | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` |
 - **Drift:** LOUD server-side (401/400); SILENT on iOS (maps to `false`, no toast).
 - **Benign field drift:** iOS ignores `boxSlug`, `label`, `deviceId`, `deviceLabel`. A platform may
@@ -1221,8 +1221,8 @@ query-param-driven — there is **no user-agent gating** anywhere.
 
 | anchor | branch | effect |
 |---|---|---|
-| `src/hub/hub-server.ts` — `hasMobileAuthAttempt` | `Bearer ` present OR `?mobileToken=` present (**presence only**) | bypasses the hub auth wall (HTTP catch-all + WS upgrade); box re-verifies — **S1** |
-| `src/hub/hub-server.ts` — `listMobileAuthorizedBoxes` | real `verifyMobileBearer`/`verifyMobileToken` | `/api/boxes` returns the mobile-authorized box list |
+| `src/hub/server/core.ts` — `hasMobileAuthAttempt` | `Bearer ` present OR `?mobileToken=` present (**presence only**) | bypasses the hub auth wall (HTTP catch-all + WS upgrade); box re-verifies — **S1** |
+| `src/hub/server/core.ts` — `listMobileAuthorizedBoxes` | real `verifyMobileBearer`/`verifyMobileToken` | `/api/boxes` returns the mobile-authorized box list |
 | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` | `POST` + redeem URL | box auth hook lets redeem through |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | `verifyMobileBearer` OR `verifyMobileToken(?mobileToken=)` | passes box auth preHandler |
 | `src/webapp/server-box-scope.ts` — `createContext` | `mobileBearerOk`/`mobileTokenOk` | `authed:true`; **`user` stays null, `isOwner:false`** (§2.3) |

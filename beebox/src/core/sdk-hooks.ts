@@ -10,7 +10,7 @@ import type {
   HookCallbackMatcher,
   HookJSONOutput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { formatLintResults } from "../cards/index.js";
+import { formatLintResults } from "../exports/cards.js";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";

@@ -10,7 +10,7 @@ commit stubs, so no real git repo or Cloudflare account is needed. Drafts are
 created with `draftPublication` (which writes the bundle + manifest to disk).
 
 ```ts setup
-import { draftPublication } from "../../src/publish/draft.js";
+import { draftPublication } from "../../src/publish/draft/core.js";
 import { goPublication } from "../../src/publish/go.js";
 import { listPublications, revokePublication } from "../../src/publish/lifecycle.js";
 import { createFakePublishStore } from "../../src/services/publish-remote-store.js";

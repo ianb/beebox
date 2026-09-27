@@ -11,11 +11,11 @@
 # 29 failures / 365 runs, 10 derived flakes — the suite's worst file.
 test/field-test/run.doctest.md
 # 14 / 363, 4 flakes: same field-test harness, same real-clock waits.
-test/field-test/lifecycle.doctest.md
+test/field-test/run.lifecycle.doctest.md
 # 10 / 361, 8 of them unimplicated — fs watch latency, not the code under test.
 test/core/box/file-watcher.doctest.md
 # 10 / 363, 7 unimplicated: boots a hub and waits on real ports.
-test/hub/hub-e2e.doctest.md
+test/hub.e2e.doctest.md
 # 5 / 189, all 5 unimplicated — contends for a real git lock with its neighbours.
 test/lib/git-lock.doctest.md
 # its waitForSessionState helper polls with no deadline, so any server-side finalize failure presents as a whole-file SIGALRM timeout instead of a readable assertion failure (cost: three 10-30min triage runs on 2026-09-05 to find a one-line stale fixture path). If it times out again, suspect the batch never sealing and read the server stderr in the tap output before rerunning.

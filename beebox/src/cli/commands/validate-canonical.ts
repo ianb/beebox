@@ -8,7 +8,7 @@
  * `core/canonicalize-refs.ts`; this module is only CLI surface.
  */
 
-import { countNonCanonicalRefs, type LintSummary } from "../../cards/index.js";
+import { countNonCanonicalRefs, type LintSummary } from "../../exports/cards.js";
 import { formatCanonicalSummary } from "../../core/canonical-refs.js";
 import { canonicalizeBox, formatCanonicalizeReport } from "../../core/canonicalize-refs.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";

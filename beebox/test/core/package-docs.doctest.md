@@ -11,7 +11,7 @@ Design: `docs/plans/box-docs-in-package.md`.
 ```ts setup
 import { mkdtemp, mkdir, readFile, readdir, chmod, rm, writeFile } from "node:fs/promises";
 import { writeBoxCardDocs } from "../../src/core/docs-gen/box-docs.js";
-import { cardSchema } from "../../src/cards/index.js";
+import { cardSchema } from "../../src/exports/cards.js";
 import { z } from "zod";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

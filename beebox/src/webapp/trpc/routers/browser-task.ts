@@ -13,7 +13,7 @@ import { Document, isMap, parseDocument } from "yaml";
 import { router, ownerProcedure, publicProcedure } from "../trpc.js";
 import { listBrowserTasks } from "../../../core/browser-task/list.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../exports/cards.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { withCardLock } from "../../../lib/card-lock.js";

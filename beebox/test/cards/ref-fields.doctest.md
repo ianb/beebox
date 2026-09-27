@@ -9,7 +9,7 @@ inline — the pre-distinction behaviour.
 
 ```ts setup
 import { z } from "zod";
-import { cardSchema, cardRef, opaqueContentRef, collectInlineRefs } from "../../src/cards/index.js";
+import { cardSchema, cardRef, opaqueContentRef, collectInlineRefs } from "../../src/exports/cards.js";
 ```
 
 ## cardRef is collected; opaqueContentRef is skipped

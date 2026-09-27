@@ -154,7 +154,7 @@ test("a 5xx is transient", async (t) => {
 });
 
 test("the hub's box-closed 503 carries the box's own sentence to the device", async (t) => {
-  // beebox/src/hub/box-unavailable.ts: `error` is a code, `message` the sentence.
+  // beebox/src/hub/server/box-unavailable.ts: `error` is a code, `message` the sentence.
   const port = await boxReplying(t, {
     status: 503,
     body: JSON.stringify({ error: "box_closed", reason: "migration", message: "Box test1 is closed for migration (pid 42, since 2026-09-16T22:37:00Z); it reopens when that process finishes or exits" }),

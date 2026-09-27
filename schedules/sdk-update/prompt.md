@@ -55,7 +55,7 @@ all.
    - **RUNTIME** — beebox's current imports and use of
      `@anthropic-ai/claude-agent-sdk`, especially `beebox/src/core/sdk-hooks.ts`,
      `beebox/src/core/agent/`, `beebox/src/core/chat/session/`,
-     `beebox/src/services/claude-chat.ts`, and
+     `beebox/src/services/claude-chat/core.ts`, and
      `beebox/src/services/scan-vision-claude.ts`. Search for other
      imports too.
    - **HARNESS** — what a Claude Code change does to the workflow this repo is

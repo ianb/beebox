@@ -19,12 +19,12 @@ import { type CommandContext, type CommandResult } from "../command-runner.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createPdfTemplate, type PdfTemplateOptions } from "../../schemas/pdf.js";
-import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
+import { createOrAppendIntakeJob } from "../../job-cards/intake-utils.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
-import { createDoclingService, type DoclingService } from "../../services/docling.js";
+import { createDoclingService, type DoclingService } from "../../services/docling/core.js";
 import { extractPdf } from "./pdf-extract.js";
 import { probePdf, type PdfProbe } from "./pdf-probe.js";
-import type { DoclingOcr } from "../../services/docling.js";
+import type { DoclingOcr } from "../../services/docling/core.js";
 import { createSessionLayout } from "./scan-import-session.js";
 import { assertAnnexBox } from "../annex/assert-annex-box.js";
 

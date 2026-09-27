@@ -19,7 +19,7 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
    restarted) twice, and two children end up running for one box slot.
 
 ```ts setup
-import { buildChildEnv, Supervisor } from "../../src/hub/supervisor.js";
+import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";

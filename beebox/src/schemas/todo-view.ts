@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { TODO_STATUSES } from "../shared/todo-model.js";
 
 export const TodoViewSchema = cardSchema("todo-view", {

@@ -24,8 +24,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFieldBox } from "../../src/field-test/run-box.js";
 import { loadFieldScenario } from "../../src/field-test/scenario.js";
-import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run-seed.js";
-import { baselineGmailSync, injectEmail } from "../../src/field-test/pre-actions.js";
+import { seedFieldBox, scenarioNeedsGmail } from "../../src/field-test/run/seed.js";
+import { baselineGmailSync, injectEmail } from "../../src/field-test/run/pre-actions.js";
 import { loadFakeGmailState } from "../../src/field-test/fake-gmail-state.js";
 import { fileExists } from "../../src/lib/file-exists.js";
 

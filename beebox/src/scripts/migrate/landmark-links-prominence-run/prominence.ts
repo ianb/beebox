@@ -52,7 +52,7 @@ import { typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { Prominence, type ProminenceLevel } from "../../../shared/prominence.js";
-import type { CardSchema } from "../../../cards/index.js";
+import type { CardSchema } from "../../../exports/cards.js";
 
 export interface MarkedEntry {
   landmark: string;

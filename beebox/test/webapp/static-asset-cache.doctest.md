@@ -5,7 +5,7 @@ change bytes and are safe to cache for a year. `index.html`, `sw.js`, the
 manifest, and `icons/` are NOT hashed — a long cache on `sw.js` in particular
 would strand a browser on a dead service worker — so the policy is scoped to a
 separate `/assets/` mount. Both the hub's fleet-wide root mount
-(`src/hub/hub-server.ts`) and the standalone box server (`src/webapp/server.ts`)
+(`src/hub/server/core.ts`) and the standalone box server (`src/webapp/server.ts`)
 register that mount with `HASHED_ASSET_CACHE_OPTIONS`; this exercises the same
 wiring on a bare Fastify instance over a fake `dist/` tree.
 

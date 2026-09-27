@@ -20,7 +20,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { assertNever } from "../../lib/invariant.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { tierValues, type Tier } from "../../publish/manifest.js";
-import { draftPublication, type FilePreview } from "../../publish/draft.js";
+import { draftPublication, type FilePreview } from "../../publish/draft/core.js";
 import type { LeakScanResult } from "../../publish/leak-scan.js";
 import {
   listPublications,

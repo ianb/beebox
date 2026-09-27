@@ -21,7 +21,7 @@ import {
 } from "../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
-import { checkMissingConnectors } from "../../connectors/requirements.js";
+import { checkMissingConnectors } from "../../requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";

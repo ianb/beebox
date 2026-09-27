@@ -20,7 +20,7 @@ photos.
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { execa } from "execa";
-import { createFakeDocling } from "../../../src/services/docling.js";
+import { createFakeDocling } from "../../../src/services/docling/core.js";
 import { runPdfMode } from "../../../src/core/commands/scan-import-pdf.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";

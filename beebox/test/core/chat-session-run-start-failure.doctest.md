@@ -13,7 +13,7 @@ to `idle`, and rethrows so the caller can report the failure.
 
 ```ts setup
 import { ChatSession } from "../../src/core/chat/session/index.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick } from "../helpers/chat-session-spawner-helpers.js";
 ```

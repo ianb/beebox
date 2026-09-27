@@ -29,7 +29,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, opaqueContentRef, type InferCardFields } from "../cards/index.js";
+import { cardSchema, opaqueContentRef, type InferCardFields } from "../exports/cards.js";
 
 export const EmailMessageSchema = cardSchema("email-message", {
   brief: "One received email's metadata",

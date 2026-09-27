@@ -26,7 +26,7 @@ import { attachDirFor } from "../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { parseCardText } from "../card-io.js";
-import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../cards/index.js";
+import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../exports/cards.js";
 import { assertAnnexBox } from "../annex/assert-annex-box.js";
 
 export interface AcceptSubmissionInput {

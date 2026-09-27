@@ -9,7 +9,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../../cards/index.js";
+import { cardSchema, type CardSchema } from "../../exports/cards.js";
 import {
   ConfidenceLevelSchema,
   type ConfidenceLevel,

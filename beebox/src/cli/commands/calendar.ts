@@ -24,13 +24,13 @@ import {
   loadCalendarConfig,
   saveCalendarConfig,
   type AvailableCalendarState,
-} from "../../connectors/calendar-config.js";
-import { resolveCalendarService } from "../../connectors/google-access.js";
+} from "../../connectors/google-calendar/config.js";
+import { resolveCalendarService } from "../../google/access.js";
 import {
   loadCalendarState,
   CalendarStateCorruptError,
-} from "../../connectors/google-calendar-state.js";
-import type { GoogleCalendarService } from "../../services/google-calendar.js";
+} from "../../connectors/google-calendar/state.js";
+import type { GoogleCalendarService } from "../../services/google-calendar/core.js";
 import {
   CredentialGapError,
   dispatchCredentialed,
@@ -42,8 +42,8 @@ import {
   filterByDateRange,
   formatEvent,
   parseTimespan,
-} from "../../connectors/calendar-utils.js";
-import { vtimezoneBlock } from "../../connectors/google-calendar-ics.js";
+} from "../../connectors/google-calendar/utils.js";
+import { vtimezoneBlock } from "../../connectors/google-calendar/ics.js";
 import { loadBoxTimezone } from "../../core/box/config.js";
 
 /** The Calendar client for an in-process run; the two gates throw as one refusal. */

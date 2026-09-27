@@ -6,8 +6,8 @@ import {
   loadCalendarConfig,
   saveCalendarConfig,
   type CalendarConfig,
-} from "../../../connectors/calendar-config.js";
-import { resolveCalendarService } from "../../../connectors/google-access.js";
+} from "../../../connectors/google-calendar/config.js";
+import { resolveCalendarService } from "../../../google/access.js";
 import { googleService } from "../google-service.js";
 import { BOX_DIRS } from "../../../lib/paths/core.js";
 import * as path from "node:path";

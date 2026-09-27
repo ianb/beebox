@@ -136,7 +136,7 @@ export interface BoxListing {
 /**
  * Build the box list visible to the requesting user (auth-filtered) in the
  * `/api/boxes` response shape. Exported so the hub's own `/api/boxes`
- * (`src/hub/hub-server.ts`) returns the identical shape from the identical
+ * (`src/hub/server/core.ts`) returns the identical shape from the identical
  * filter, instead of a second copy that could drift.
  */
 export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<BoxListing[]> {

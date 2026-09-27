@@ -24,7 +24,7 @@
  *   its stop/park close straight through `ready`/`streaming` → `idle`.
  */
 
-import type { ChatBackendRun } from "../../../services/claude-chat.js";
+import type { ChatBackendRun } from "../../../services/claude-chat/core.js";
 import { invariant } from "../../../lib/invariant.js";
 
 export type ChatRunPhase = "idle" | "starting" | "ready" | "streaming" | "stopping";

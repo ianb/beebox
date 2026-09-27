@@ -22,7 +22,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appRouter } from "../../src/webapp/trpc/router.js";
-import { loadTelegramConfig, telegramSecretName } from "../../src/connectors/telegram-helpers.js";
+import { loadTelegramConfig, telegramSecretName } from "../../src/connectors/telegram/helpers.js";
 import { listSecrets } from "../../src/core/secrets/lifecycle.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { boxSlug } from "../../src/lib/box-slug.js";

@@ -10,7 +10,7 @@ import {
   runConnectors,
   wakeupExitCodeForConnectorErrors,
 } from "../../src/cli/commands/wakeup-connectors.js";
-import type { Connector } from "../../src/connectors/index.js";
+import type { Connector } from "../../src/connectors.js";
 
 function connector(
   name: string,

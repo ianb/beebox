@@ -13,7 +13,7 @@ fails to compile here until this decides how it resumes.
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import {
   createStagingSession,

@@ -23,7 +23,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseFrontmatterObject } from "../../cards/index.js";
+import { parseFrontmatterObject } from "../../exports/cards.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import {

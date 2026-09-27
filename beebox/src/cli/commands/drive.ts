@@ -25,12 +25,9 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { spawnProfile } from "../../lib/spawn-profile.js";
 
-// Ensure handlers are registered
-import "../../connectors/drive-handler-sheets.js";
-import "../../connectors/drive-handler-docs.js";
-import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
-import type { SyncResult } from "../../connectors/index.js";
-import { requireDriveId } from "../../connectors/drive-mounts.js";
+import { createGoogleDriveConnector } from "../../connectors/google-drive/connector.js";
+import type { SyncResult } from "../../connectors.js";
+import { requireDriveId } from "../../connectors/google-drive/mounts/core.js";
 import {
   reportRefusal,
   runCredentialedVerb,
@@ -48,7 +45,7 @@ import {
   driveMountCommand,
   driveUnmountCommand,
 } from "./drive-mount-cli.js";
-import { syncConnector } from "../../connectors/activity.js";
+import { syncConnector } from "../../connector-activity/core.js";
 
 /** One row of `bbx drive list`. Matches the `drive.list` procedure's shape. */
 interface DriveListRow {

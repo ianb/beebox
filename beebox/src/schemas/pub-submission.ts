@@ -13,7 +13,7 @@
  * Additive, net-new type (no migration): old boxes simply never hold one.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 const PubSubmissionStatus = z.enum(["new", "processing", "processed"]);

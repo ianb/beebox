@@ -7,7 +7,7 @@ import { checkSystemCards, checkStagedSystemCards } from "../../core/system-card
 
 
 import { Command } from "commander";
-import { formatLintResults, countBrokenRefs, type LintSummary } from "../../cards/index.js";
+import { formatLintResults, countBrokenRefs, type LintSummary } from "../../exports/cards.js";
 import {
   listStagedMarkdown,
   lintMarkdownFiles,

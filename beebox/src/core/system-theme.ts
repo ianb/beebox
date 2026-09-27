@@ -5,7 +5,7 @@ import { nearestDirFromDirs } from "./landmark/nearest.js";
 import { normalizeLandmarkDir } from "./landmark/root-dir.js";
 import { resolveChromeTheme, validateSystemThemeChoice, type PresentationConfigResult, type ResolvedChromeTheme, type ThemeChoice } from "../shared/card-theme/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { isRecord } from "../lib/is-record.js";
 
 export interface SelectedSystemThemeLandmark {

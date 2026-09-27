@@ -14,7 +14,7 @@
  * agent can read any referenced card directly if it needs more context.
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 
 /**

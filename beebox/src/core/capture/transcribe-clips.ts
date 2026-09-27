@@ -17,7 +17,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { readAssetContent } from "../../lib/asset-content.js";
 import { describeAbsentContent } from "../../lib/annex-pointer.js";
-import { renderFrontmatterBlock } from "../../cards/index.js";
+import { renderFrontmatterBlock } from "../../exports/cards.js";
 import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";

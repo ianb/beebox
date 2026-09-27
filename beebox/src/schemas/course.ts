@@ -11,7 +11,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 /** A reference to a component card (the `ref` key is validated by card-lint). */

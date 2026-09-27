@@ -14,7 +14,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const AudioStatusSchema = z.enum(["new", "transcribed"]);
 export type AudioStatus = z.infer<typeof AudioStatusSchema>;

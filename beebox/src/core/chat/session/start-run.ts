@@ -24,7 +24,7 @@ import type {
   ChatBackend,
   ChatBackendRun,
   ChatBackendStartOptions,
-} from "../../../services/claude-chat.js";
+} from "../../../services/claude-chat/core.js";
 
 /**
  * Open-FD count above which a spawn is at risk. Warn with enough headroom below

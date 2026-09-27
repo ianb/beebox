@@ -11,7 +11,7 @@ to an engine's failure.
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { getChatRuntime, setChatRuntime } from "../../src/webapp/chat-runtime.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 

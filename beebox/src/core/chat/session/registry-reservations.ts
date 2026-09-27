@@ -9,7 +9,7 @@
 import { makeLog } from "./log.js";
 import { reserveChatSession, type ChatReservationStore, type ReserveResult } from "./reserve.js";
 import { prewarmReservedChat } from "./registry-warm.js";
-import type { ChatBackend } from "../../../services/claude-chat.js";
+import type { ChatBackend } from "../../../services/claude-chat/core.js";
 import type { ChatSessionOptions } from "./options.js";
 import type { AgentEngine } from "../../box/config.js";
 

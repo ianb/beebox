@@ -14,7 +14,7 @@ import { signSession, COOKIE_NAME, SESSION_MAX_AGE_MS } from "../auth.js";
 import { readBasePrefix } from "../base-prefix.js";
 import { sanitizeReturnTo } from "../login-page.js";
 import { getPublicUrl } from "../../lib/public-url.js";
-import { getLoginGoogleClientCreds } from "../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../google/auth.js";
 import type { AuthRoutesOptions } from "./auth.js";
 import { canonicalizeEmail } from "../local-users.js";
 

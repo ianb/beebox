@@ -20,7 +20,7 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 import { markdocConfig } from "../shared/markdoc-config/core.js";
-import type { LintIssue } from "../cards/index.js";
+import type { LintIssue } from "../exports/cards.js";
 import { errorMessage } from "../lib/error-guards.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM

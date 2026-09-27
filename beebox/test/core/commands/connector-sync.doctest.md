@@ -6,11 +6,8 @@ advances its cursor.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { registerConnector } from "../../../src/connectors/index.js";
-import {
-  createCollectorContext,
-  runCommand,
-} from "../../../src/core/commands/index.js";
+import { runConnectorSync } from "../../../src/core/commands/connector-sync.js";
+import { createCollectorContext } from "../../../src/core/commands/index.js";
 ```
 
 ```ts
@@ -27,7 +24,7 @@ steps:
 ---
 `);
 box.commitAll("add connector procedure");
-registerConnector({
+const fakeConnector = {
   name: "procedure-source",
   produces: [],
   inboxPaths: [],
@@ -42,12 +39,11 @@ registerConnector({
       }],
     };
   },
-});
+};
 const collector = createCollectorContext(box.root);
-const result = await runCommand({
-  name: "connector-sync",
-  args: { connector: "procedure-source" },
-  ctx: collector.ctx,
+const result = await runConnectorSync(collector.ctx, {
+  syncArgs: { connector: "procedure-source" },
+  connectors: [fakeConnector],
 });
 result.success
 => true

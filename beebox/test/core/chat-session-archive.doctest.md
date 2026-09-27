@@ -20,7 +20,7 @@ import { listChatHusks, listChatHusksUnder } from "../../src/core/chat/husk-read
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../src/core/chat/session/origin.js";
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 
 /** Archiving asks the registry whether the chat is still open, so every call needs one. */
 function idleRegistry(box) {

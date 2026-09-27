@@ -25,7 +25,7 @@ import { isSystemCardType } from "../../shared/system-card-paths.js";
 import { checkStagedSystemCards } from "../../core/system-cards.js";
 
 
-import { formatLintResults } from "../../cards/index.js";
+import { formatLintResults } from "../../exports/cards.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";

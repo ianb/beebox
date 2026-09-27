@@ -14,7 +14,7 @@ empty.
 import { cardTypesList } from "../../src/core/agent-guide/cards.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
 import { cardSchemas } from "../../src/schemas.js";
-import { cardSchema, type CardSchema } from "../../src/cards/index.js";
+import { cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { z } from "zod";
 ```
 

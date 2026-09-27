@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { CardSchema } from "../../cards/index.js";
+import type { CardSchema } from "../../exports/cards.js";
 import type { TemplateDefinition } from "../../templates-registry.js";
 import { cardSchemas } from "../../schemas.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";

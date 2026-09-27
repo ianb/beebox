@@ -1,6 +1,6 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type LintIssue } from "../cards/index.js";
+import { body, cardSchema, type LintIssue } from "../exports/cards.js";
 import {
   capturedTabSet,
   tabArrangementProposal,

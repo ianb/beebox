@@ -11,7 +11,7 @@
  */
 
 import * as path from "node:path";
-import type { LintIssue } from "../cards/index.js";
+import type { LintIssue } from "../exports/cards.js";
 import { attachDirFor, isAttachRef } from "../shared/attach-path.js";
 import { isRecord } from "./card-io.js";
 

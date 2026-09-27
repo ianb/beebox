@@ -22,7 +22,7 @@
  * See docs/plans/courseware-lesson-plan.md.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
 import { z } from "zod";
 
 /** Whether a segment plays out live in chat or leans on a pre-made material card. */

@@ -23,7 +23,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { createInFlightSends } from "../../src/webapp/routes/chat-send-dedup.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type BusEvent } from "../../src/core/event-bus.js";

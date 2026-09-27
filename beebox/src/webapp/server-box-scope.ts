@@ -48,7 +48,7 @@ import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
-/** Exported for the hub (`src/hub/hub-server.ts`), which needs the same
+/** Exported for the hub (`src/hub/server/core.ts`), which needs the same
  *  HTML-navigation-vs-API distinction when a proxied request is
  *  unauthenticated: API/WS gets 401, HTML navigation gets a login redirect. */
 export function isApiUrl(url: string): boolean {

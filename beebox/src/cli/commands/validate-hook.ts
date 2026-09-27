@@ -10,7 +10,7 @@
 import * as path from "node:path";
 import { existsSync } from "node:fs";
 import { isRecord } from "../../lib/is-record.js";
-import { formatLintResults } from "../../cards/index.js";
+import { formatLintResults } from "../../exports/cards.js";
 import {
   lintMarkdownFiles,
   formatMarkdownResults,

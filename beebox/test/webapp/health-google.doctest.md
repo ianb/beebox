@@ -13,7 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { googleAuthHealthChecks } from "../../src/webapp/trpc/routers/health-google.js";
-import { saveGoogleTokens, markGoogleAuthDead } from "../../src/connectors/google-token-store.js";
+import { saveGoogleTokens, markGoogleAuthDead } from "../../src/google/token-store.js";
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 

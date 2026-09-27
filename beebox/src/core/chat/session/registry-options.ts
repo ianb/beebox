@@ -1,4 +1,4 @@
-import type { ChatBackend } from "../../../services/claude-chat.js";
+import type { ChatBackend } from "../../../services/claude-chat/core.js";
 import type { ChatSession, ChatSessionOptions } from "./index.js";
 
 export interface RegistryEntry {

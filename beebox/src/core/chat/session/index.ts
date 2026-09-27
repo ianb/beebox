@@ -17,7 +17,7 @@ import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "./load-history.js";
 import { createCoinedRunState, type CoinedRunState } from "./coined-run.js";
-import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBackendStartOptions } from "../../../services/claude-chat.js";
+import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBackendStartOptions } from "../../../services/claude-chat/core.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "./prompts.js";
 import {
   accumulateAssistantText, buildContentBlocks, warnErroredTurn,

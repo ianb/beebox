@@ -14,10 +14,10 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { getAllConnectors } from "../../connectors/index.js";
+import { connectorFactories, type Connector } from "../../connectors.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { runConnectorProcedureTriggers } from "./connector-procedure-triggers.js";
-import { syncConnector } from "../../connectors/activity.js";
+import { syncConnector } from "../../connector-activity/core.js";
 
 /**
  * Arguments for the sync command.
@@ -29,16 +29,15 @@ const SyncArgsSchema = z.object({
 export type SyncArgs = z.infer<typeof SyncArgsSchema>;
 
 /**
- * Execute the sync command.
+ * Run the sync command against an explicit connector set. Split out from
+ * `executeSync` so a test can exercise the command's procedure-trigger and
+ * reporting behavior against a fake connector, without the real registry's
+ * external services.
  */
-async function executeSync(
+export async function runConnectorSync(
   ctx: CommandContext,
-  args: Record<string, unknown>
+  { syncArgs, connectors }: { syncArgs: SyncArgs; connectors: Connector[] },
 ): Promise<CommandResult> {
-  const syncArgs = parseCommandArgs(args, SyncArgsSchema);
-
-  const connectors = getAllConnectors();
-
   if (connectors.length === 0) {
     ctx.writeLine("No connectors configured.");
     return { success: true, data: { created: 0, errors: 0 } };
@@ -98,6 +97,18 @@ async function executeSync(
     success: totalErrors === 0,
     data: { created: totalCreated, errors: totalErrors },
   };
+}
+
+/**
+ * Execute the sync command.
+ */
+async function executeSync(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
+  const syncArgs = parseCommandArgs(args, SyncArgsSchema);
+  const connectors = connectorFactories.list.map((factory) => factory(ctx.boxRoot));
+  return runConnectorSync(ctx, { syncArgs, connectors });
 }
 
 // Register the command

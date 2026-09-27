@@ -13,7 +13,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
 const FileStatusSchema = z.enum(["new", "processed", "invalid"]);
 export type FileStatus = z.infer<typeof FileStatusSchema>;

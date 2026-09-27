@@ -8,12 +8,12 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { folderProblemCounts } from "../../connectors/drive-mount-list.js";
+import { folderProblemCounts } from "../../connectors/google-drive/mount-list.js";
 import {
   driveCardSummary,
   findDriveCardTracking,
   type DriveCardKind,
-} from "../../connectors/google-drive-tracking.js";
+} from "../../connectors/google-drive/tracking.js";
 
 /** How `bbx drive status` names each kind of Drive card. */
 const DRIVE_KIND_LABEL: Record<DriveCardKind, string> = {

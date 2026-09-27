@@ -31,7 +31,7 @@ migrate when you touch the area.
   agents (`bypassPermissions` is hardcoded) — don't design an endpoint
   assuming box-level permission enforcement.
 - Anything the endpoint reads from env: hub-spawned children get a
-  fail-closed allowlist (`src/hub/child-env.ts`) — add the var there or
+  fail-closed allowlist (`src/hub/supervisor/child-env.ts`) — add the var there or
   it silently disappears in prod/dev-hub.
 - Browser console errors surface server-side via `debugLog.submit` →
   `.beebox/client-debug.log` — check it when the frontend call

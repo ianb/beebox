@@ -11,10 +11,10 @@ import { execFileSync } from "node:child_process";
 import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { splitCardContent } from "../../../src/cards/index.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {

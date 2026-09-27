@@ -20,7 +20,7 @@ import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { ChatSession } from "../../src/core/chat/session/index.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { waitForTranscriptEntry } from "../../src/core/chat/session/transcript-sync.js";
 import { resolveSessionLogPath } from "../../src/core/chat/session/history.js";
 import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";

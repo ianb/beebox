@@ -26,7 +26,7 @@ import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { hashStreamToFile, StreamByteLimitError } from "../../lib/hash-stream-to-file.js";
 import { MAX_STAGED_BYTES } from "../../core/capture/staging-limits.js";
 import { getBoxTime } from "../../lib/time.js";
-import type { SubmissionIssue } from "../../cards/index.js";
+import type { SubmissionIssue } from "../../exports/cards.js";
 
 /** Hard ceiling on the number of file parts one submission may carry. */
 const MAX_SUBMISSION_FILES = 200;

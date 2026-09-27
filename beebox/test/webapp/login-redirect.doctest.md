@@ -18,7 +18,7 @@ import http from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createHubServer } from "../../src/hub/hub-server.js";
+import { createHubServer } from "../../src/hub/server/core.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

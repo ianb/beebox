@@ -8,7 +8,7 @@ and is validated against the actual memberships. All against the fake wrangler.
 
 ```ts setup
 import { resolveCloudflareAuth } from "../../src/publish/cloudflare-auth.js";
-import { normalizeTeamDomain } from "../../src/publish/publish-config.js";
+import { normalizeTeamDomain } from "../../src/publish/config.js";
 import { wranglerBearer, WranglerAuthError } from "../../src/services/cloudflare-bearer.js";
 import { createFakeWrangler } from "../../src/services/wrangler.js";
 

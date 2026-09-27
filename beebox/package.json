@@ -5,8 +5,8 @@
   "type": "module",
   "exports": {
     "./cards": {
-      "types": "./dist/cards/index.d.ts",
-      "default": "./dist/cards/index.js"
+      "types": "./dist/exports/cards.d.ts",
+      "default": "./dist/exports/cards.js"
     },
     "./schema": {
       "types": "./dist/exports/schema.d.ts",

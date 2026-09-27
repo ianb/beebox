@@ -13,7 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { emitPhotoBundle, emitOrphanBackQuestion } from "../../../src/core/commands/scan-import-cards.js";
-import { splitCardContent } from "../../../src/cards/index.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 
 function analysis(index, overrides) {

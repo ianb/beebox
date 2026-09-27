@@ -4,7 +4,7 @@ import { realpath, stat } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { Command } from "commander";
 import { z } from "zod";
-import { defaultHubConfigPath, loadHubConfig } from "../../hub/hub-config.js";
+import { defaultHubConfigPath, loadHubConfig } from "../../hub/config.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import {
   closeBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment, type BoxMaintenance,

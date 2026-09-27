@@ -5,7 +5,7 @@
 
 import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
 import type { TemplateDefinition } from "../../templates-registry.js";
-import type { CardSchema } from "../../cards/index.js";
+import type { CardSchema } from "../../exports/cards.js";
 
 const CARD_CATEGORY_GROUPS = [
   {

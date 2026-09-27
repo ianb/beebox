@@ -1,13 +1,13 @@
 /**
  * The box-subprocess env allowlist — the data half of `script-env.ts`, split
  * out so that file stays under the 300-line cap (the same split
- * `src/hub/child-env.ts` made out of `supervisor.ts`, for the same reason and
+ * `src/hub/supervisor/child-env.ts` made out of `supervisor.ts`, for the same reason and
  * with the same fail-closed posture).
  */
 
 /**
  * Env vars a box-spawned subprocess may inherit from the spawning server
- * process. Fail-closed ALLOWLIST, mirroring `src/hub/child-env.ts`'s
+ * process. Fail-closed ALLOWLIST, mirroring `src/hub/supervisor/child-env.ts`'s
  * `CHILD_ENV_ALLOWLIST` one level down: the hub refuses to spread its env
  * into a box's `bbx serve` child, and this refuses to spread that child's env
  * into the box's own agents, scripts, and tricks (Track 1 of
@@ -140,7 +140,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
  * wakeup does not host login.
  */
 const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
-  "BBX_GOOGLE_TOKENS_FILE", // src/connectors/google-token-store.ts -- a path, but to the OAuth token store.
+  "BBX_GOOGLE_TOKENS_FILE", // src/google/token-store.ts -- a path, but to the OAuth token store.
   "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `bbx wakeup` runs the connectors, which resolve their keys from the store. Deliberately absent from the agent profile -- an agent has no store interface yet, and pointing it at the file is the opposite of what the store is for.
 ];
 

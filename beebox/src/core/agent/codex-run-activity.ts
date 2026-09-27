@@ -1,6 +1,6 @@
 /** Render observable activity from official Codex SDK items. */
 
-import type { CodexSdkItem } from "../../services/codex-sdk-session.js";
+import type { CodexSdkItem } from "../../services/codex-sdk-session/core.js";
 import { fmt } from "../../lib/format.js";
 
 export type CodexObservedActivity =

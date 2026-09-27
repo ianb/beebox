@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { describeScheduleAction } from "../../schemas/scheduled-script/schema.js";
 import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
 import { isDue, isWithinBudget } from "../../schemas/scheduled-script/due.js";
-import { checkMissingConnectors } from "../../connectors/requirements.js";
+import { checkMissingConnectors } from "../../requirements.js";
 import {
   saveScriptState,
   recordOutcome,

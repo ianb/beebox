@@ -16,7 +16,7 @@ that behavior in.
 
 ```ts setup
 import { ChatThreadSession } from "../../src/core/chat/session/thread.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { waitForRuns } from "../helpers/chat-session-spawner-helpers.js";
 import { recordSessionStart } from "../../src/core/chat/session/session-start-record.js";

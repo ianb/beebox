@@ -9,7 +9,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { invariant } from "../../lib/invariant.js";
 import {

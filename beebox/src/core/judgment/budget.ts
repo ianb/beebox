@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { withFileLock } from "../../lib/file-lock.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
-import { boxLocalDay } from "../../connectors/activity.js";
+import { boxLocalDay } from "../../connector-activity/core.js";
 
 /** Jev calls a box may make per box-local day. */
 export const JEV_DAILY_CAP = 500;

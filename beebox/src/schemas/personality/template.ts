@@ -4,7 +4,7 @@
  * the emitted card text is identical.
  */
 
-import { renderFrontmatterBlock } from "../../cards/index.js";
+import { renderFrontmatterBlock } from "../../exports/cards.js";
 
 export function createInitialPersonalityTemplate(): string {
   const fields: Record<string, unknown> = {

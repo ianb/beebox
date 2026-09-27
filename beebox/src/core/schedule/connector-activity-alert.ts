@@ -12,8 +12,8 @@
  * promoted separately (`promotion.ts`).
  */
 
-import { boxLocalDay, updateConnectorActivity } from "../../connectors/activity.js";
-import { evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "../../connectors/activity-verdict.js";
+import { boxLocalDay, updateConnectorActivity } from "../../connector-activity/core.js";
+import { evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "../../connector-activity/verdict.js";
 
 interface ConnectorEpisodeResult {
   /** Connectors whose episode began since the last pass. */

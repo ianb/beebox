@@ -21,7 +21,7 @@ import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { splitCardContent } from "../../../src/cards/index.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
 import {
   createStagingSession,
   addFile,

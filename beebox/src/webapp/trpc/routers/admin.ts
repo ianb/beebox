@@ -4,13 +4,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, ownerProcedure } from "../trpc.js";
-import { loadTelegramConfig } from "../../../connectors/telegram.js";
-import { telegramLegacySecretPath, telegramSecretName } from "../../../connectors/telegram-helpers.js";
+import { loadTelegramConfig } from "../../../connectors/telegram/connector.js";
+import { telegramLegacySecretPath, telegramSecretName } from "../../../connectors/telegram/helpers.js";
 import { forgetBoxSecret, setAndGrantSecret } from "../../../core/secrets/lifecycle.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
-import { createCodexCliService } from "../../../services/codex-cli.js";
+import { createCodexCliService } from "../../../services/codex-cli/core.js";
 import { resetCodexAuthCache } from "../../../core/agent/auth-preflight.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
@@ -26,7 +26,7 @@ import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
-import { getLoginGoogleClientCreds } from "../../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../../google/auth.js";
 import { normalizeModelId } from "../../../shared/model-ids.js";
 
 /**

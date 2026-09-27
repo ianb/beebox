@@ -12,8 +12,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
-import { getGoogleAuth } from "../connectors/google-auth.js";
-import { asIcalTime } from "../connectors/calendar-utils.js";
+import { getGoogleAuth } from "../google/auth.js";
+import { asIcalTime } from "../connectors/google-calendar/utils.js";
 import { isRecord } from "../lib/is-record.js";
 
 interface EventFileEntry {

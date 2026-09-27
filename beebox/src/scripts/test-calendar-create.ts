@@ -7,7 +7,7 @@
  * Default date is tomorrow.
  */
 
-import { getGoogleAuth } from "../connectors/google-auth.js";
+import { getGoogleAuth } from "../google/auth.js";
 import { isRecord } from "../lib/is-record.js";
 
 async function main() {

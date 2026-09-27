@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # This is the whole process — there is no by-hand `hub.json` step left. The
 # hub edit goes through `bbx engine hub add-box`, which validates the resulting config
-# with the hub's own loader before writing it (`src/hub/hub-config-edit.ts`).
+# with the hub's own loader before writing it (`src/hub/config-edit.ts`).
 #
 # Usage (run locally) — two forms:
 #
@@ -169,7 +169,7 @@ elif [[ "$REPO" =~ ^https://github\.com/(.+)$ ]]; then
 fi
 
 # The box name is also its URL slug, so it must satisfy the hub's slug rule
-# (SLUG_PATTERN in src/hub/hub-config.ts). Checked locally so a repo whose
+# (SLUG_PATTERN in src/hub/config.ts). Checked locally so a repo whose
 # basename isn't slug-shaped fails before we open an SSH connection; the
 # server-side preflight below re-checks it (along with the reserved names)
 # against the real config.
@@ -374,7 +374,7 @@ fi
 
 # A v2 box is a package whose operational content lives in content/ — so
 # config/ is under content/, not at the package root. Resolve it the same way
-# the hub does (.beebox/box.json marks the content dir; see src/hub/child-spawn.ts's
+# the hub does (.beebox/box.json marks the content dir; see src/hub/supervisor/child-spawn.ts's
 # resolveBoxRoot), instead of assuming either layout.
 if [[ -f "$BOX_PATH/content/.beebox/box.json" ]]; then
   CONTENT_DIR="$BOX_PATH/content"

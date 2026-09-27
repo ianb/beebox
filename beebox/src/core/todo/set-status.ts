@@ -28,7 +28,7 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 import { isMap, isSeq, parseDocument } from "yaml";
-import { splitCardContent } from "../../cards/index.js";
+import { splitCardContent } from "../../exports/cards.js";
 import { assignLocators } from "../../shared/todo-locators.js";
 import { invariant } from "../../lib/invariant.js";
 import { errorMessage } from "../../lib/error-guards.js";

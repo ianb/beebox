@@ -15,7 +15,7 @@ exercised by `pdf-extract-integration.doctest.md`.
 ```ts setup
 import { runPdfMode } from "../../../src/core/commands/scan-import-pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
-import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling.js";
+import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";
 import { extractPdf } from "../../../src/core/commands/pdf-extract.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";

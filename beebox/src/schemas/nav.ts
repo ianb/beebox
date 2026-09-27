@@ -23,7 +23,7 @@
  */
 
 import { z } from "zod";
-import { cardSchema, splitCardContent, type CardSchema } from "../cards/index.js";
+import { cardSchema, splitCardContent, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { NAV_ROUTES } from "../shared/nav-routes.js";
 import { errorMessage } from "../lib/error-guards.js";

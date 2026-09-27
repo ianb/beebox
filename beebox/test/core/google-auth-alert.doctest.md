@@ -14,7 +14,7 @@ import { mkdtemp } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGoogleAuth } from "../../src/core/schedule/google-auth-alert.js";
 import { readRecent } from "../../src/core/notification/log.js";
-import { saveGoogleTokens, markGoogleAuthDead } from "../../src/connectors/google-token-store.js";
+import { saveGoogleTokens, markGoogleAuthDead } from "../../src/google/token-store.js";
 
 process.env.BBX_GOOGLE_TOKENS_FILE = path.join(
   await mkdtemp(path.join(os.tmpdir(), "gauth-alert-")),

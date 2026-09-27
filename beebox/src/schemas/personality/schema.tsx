@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../../cards/index.js";
+import { body, cardSchema, type CardSchema } from "../../exports/cards.js";
 import {
   ConfidenceLevelSchema,
   BeliefSourceSchema,

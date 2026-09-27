@@ -8,7 +8,7 @@ import {
 } from "../../../core/schedule/state.js";
 import { runAndRecord } from "../../../core/schedule/run-action.js";
 import { handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { checkMissingConnectors } from "../../../connectors/requirements.js";
+import { checkMissingConnectors } from "../../../requirements.js";
 
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
 

@@ -156,7 +156,7 @@
     "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages."
   },
   {
-    "path": "beebox/test/hub/hub-config.doctest.md",
+    "path": "beebox/test/hub/config.doctest.md",
     "occurrenceClass": "dot-state-directory",
     "expectedCount": 2,
     "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation."

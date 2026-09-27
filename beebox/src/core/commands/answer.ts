@@ -9,7 +9,7 @@
 import { withBoxWork } from "../../lib/box-maintenance.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { z } from "zod";
 import {
   registerCommand,

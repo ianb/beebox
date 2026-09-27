@@ -16,7 +16,7 @@ import { getOpenRouterKey } from "../../../core/openrouter.js";
 import { lookupOpenRouterModel, readOpenRouterKeyUsage } from "../../../core/openrouter-catalog.js";
 import type { FetchLike } from "../../../core/secrets/probe-registry.js";
 import { addOpenRouterModel, OpenRouterModelInUseError, removeOpenRouterModel } from "../../box-config-openrouter.js";
-import type { Services } from "../../../services/index.js";
+import type { Services } from "../../../services/container.js";
 
 function fetchFor(services: Services): FetchLike {
   return services.openrouterFetch ?? fetch;

@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/schedule/scheduler.js";
 import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent } from "../../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../../exports/cards.js";
 import {
   parseScheduledScript,
   ScheduledScriptSchema,

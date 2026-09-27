@@ -20,7 +20,7 @@ import { makeLog } from "./log.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
 import { setMostActive } from "./history.js";
-import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
+import { createChatBackend, type ChatBackend } from "../../../services/claude-chat/core.js";
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
 import { ChatReservationStore, type ChatReservation, type ReserveResult } from "./reserve.js";
 import type { AgentEngine } from "../../box/config.js";

@@ -16,7 +16,7 @@
  */
 
 import * as path from "node:path";
-import type { LintIssue } from "../cards/index.js";
+import type { LintIssue } from "../exports/cards.js";
 import { groupHusksBySession, listChatHusksTree } from "./chat/husk-read.js";
 
 /**

@@ -6,7 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { z } from "zod";
 import { truncateTitle } from "../core/file-summary.js";
 

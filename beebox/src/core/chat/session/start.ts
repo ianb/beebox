@@ -28,7 +28,7 @@ import {
   type ChatSendInput,
 } from "./messages.js";
 import type { FeatureStore } from "./features.js";
-import type { ChatBackendStartOptions, ChatContentBlock } from "../../../services/claude-chat.js";
+import type { ChatBackendStartOptions, ChatContentBlock } from "../../../services/claude-chat/core.js";
 import type { ChatSessionOptions } from "./options.js";
 
 const log = makeLog("ChatSession");

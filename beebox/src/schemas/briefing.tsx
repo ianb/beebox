@@ -21,7 +21,7 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { emitBodyAsMarkdown } from "../core/markdoc/emit.js";
 import { displayFromRef } from "../core/markdoc/emit-tags.js";
 

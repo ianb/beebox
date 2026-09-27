@@ -2,7 +2,7 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, ownerProcedure } from "../trpc.js";
-import { splitCardContent, type CardSchema } from "../../../cards/index.js";
+import { splitCardContent, type CardSchema } from "../../../exports/cards.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";

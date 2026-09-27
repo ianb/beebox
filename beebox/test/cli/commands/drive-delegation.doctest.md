@@ -17,18 +17,15 @@ import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { getLog } from "../../../src/lib/git/core.js";
-import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../src/services/google-drive.js";
-import { mountDriveFolder, type MountFolderResult } from "../../../src/connectors/drive-mounts.js";
-import { inspectDriveItem, type DriveInspectResult } from "../../../src/connectors/drive-inspect.js";
+import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../src/services/google-drive/core.js";
+import { mountDriveFolder, type MountFolderResult } from "../../../src/connectors/google-drive/mounts/core.js";
+import { inspectDriveItem, type DriveInspectResult } from "../../../src/connectors/google-drive/inspect.js";
 import { dispatchDrive, localDriveService } from "../../../src/cli/commands/drive-dispatch.js";
 import {
   reportRefusal,
   runCredentialedVerb,
   type VerbRefusal,
 } from "../../../src/cli/lib/credentialed-verb.js";
-// Registers the sheets/docs handlers, the same way the CLI entry point does.
-import "../../../src/connectors/drive-handler-sheets.js";
-import "../../../src/connectors/drive-handler-docs.js";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const SHEET_MIME = "application/vnd.google-apps.spreadsheet";

@@ -12,7 +12,7 @@ The fake `ChatBackend` keeps each spawned run open until stopped, so
 
 ```ts setup
 import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 import { stopChatSessionsAndWait } from "../../src/core/chat/session/registry-shutdown.js";

@@ -16,7 +16,7 @@ import { CourseSchema, createCourseTemplate } from "../src/schemas/course.js";
 import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../src/schemas/exposition-plan.js";
 import { LessonPlanSchema, createLessonPlanTemplate } from "../src/schemas/lesson-plan.js";
 import { ProgressSchema, createProgressTemplate } from "../src/schemas/progress.js";
-import { extractRefs } from "../src/cards/index.js";
+import { extractRefs } from "../src/exports/cards.js";
 import { parseCardText } from "../src/core/card-io.js";
 import { createCardSchemaMap } from "../src/schemas.js";
 ```

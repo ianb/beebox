@@ -10,7 +10,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { namedEntityFields } from "../named-entity-fields.js";
 
 const PersonStatus = z.enum(["active", "inactive", "archived"]);

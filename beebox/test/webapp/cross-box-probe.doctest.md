@@ -42,7 +42,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTwoBoxTestServer, commitAll } from "../helpers/test-server.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";

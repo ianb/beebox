@@ -1,4 +1,4 @@
-import type { CardSchema } from "../../cards/index.js";
+import type { CardSchema } from "../../exports/cards.js";
 
 /**
  * Context for a pre-action invocation. Cards are all frontmatter now, so the

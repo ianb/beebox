@@ -31,8 +31,8 @@ import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { z } from "zod";
 
-import { registerConnector, type Connector, type SyncResult } from "./index.js";
-import { renderFrontmatterBlock } from "../cards/index.js";
+import type { Connector, SyncResult } from "../connector.js";
+import { renderFrontmatterBlock } from "../exports/cards.js";
 import { getBoxDir } from "../lib/paths/core.js";
 import { fileExists } from "../lib/file-exists.js";
 import { getBoxTime } from "../lib/time.js";
@@ -272,9 +272,7 @@ class PublishSubmissionsConnector implements Connector {
   }
 }
 
-/** Create and register the publish-submissions connector for a box. */
+/** Create the publish-submissions connector for a box. */
 export function createPublishSubmissionsConnector(boxRoot: string, deps?: PublishSubmissionsDeps): Connector {
-  const connector = new PublishSubmissionsConnector(boxRoot, deps);
-  registerConnector(connector);
-  return connector;
+  return new PublishSubmissionsConnector(boxRoot, deps);
 }

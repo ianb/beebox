@@ -14,7 +14,7 @@ import { isDueForWakeup, isWithinBudget } from "../../schemas/scheduled-script/d
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas.js";
-import { checkMissingConnectors } from "../../connectors/requirements.js";
+import { checkMissingConnectors } from "../../requirements.js";
 import {
   loadScriptState,
   saveScriptState,

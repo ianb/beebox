@@ -13,7 +13,7 @@
 
 import { makeLog } from "./log.js";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
-import type { ChatBackend, ChatBackendStartOptions } from "../../../services/claude-chat.js";
+import type { ChatBackend, ChatBackendStartOptions } from "../../../services/claude-chat/core.js";
 import { resolveSessionModel } from "./model.js";
 import { providerEnvAdditions } from "../../provider-env.js";
 import type { AgentEngine } from "../../box/config.js";

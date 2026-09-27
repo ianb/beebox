@@ -11,7 +11,7 @@
  * See docs/plans/google-auth-reauth-health.md.
  */
 
-import { readGoogleAuthStatus } from "../../../connectors/google-auth-status.js";
+import { readGoogleAuthStatus } from "../../../google/auth-status.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 import { formatDurationShort } from "../../../core/schedule/health-box.js";
 import type { HealthCheck } from "./health.js";

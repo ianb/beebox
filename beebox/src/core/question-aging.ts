@@ -24,7 +24,7 @@ import {
   parseIso8601DurationMs,
   type QuestionFields,
 } from "../schemas/question.js";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "./commands/question-transition.js";
 import { loadQuestionLatch, saveQuestionLatch } from "./question-alert.js";
 import { notifyBoxholder } from "./notify-boxholder.js";

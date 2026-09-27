@@ -5,7 +5,7 @@
  * _bookkeeping/procedure/runs/<name>_<timestamp>/run.procedure-run.card
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
+import { splitCardContent, cardSchema, type CardSchema } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { INCONCLUSIVE_REASONS } from "../shared/inconclusive.js";

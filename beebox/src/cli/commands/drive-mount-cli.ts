@@ -18,7 +18,7 @@ import {
   type LinkResult,
   type MountFolderResult,
   type UnmountResult,
-} from "../../connectors/drive-mounts.js";
+} from "../../connectors/google-drive/mounts/core.js";
 import { jsonFlag, runCredentialedVerb } from "../lib/credentialed-verb.js";
 import { dispatchDrive, localDriveService } from "./drive-dispatch.js";
 

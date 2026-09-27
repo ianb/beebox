@@ -30,7 +30,7 @@
 
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { splitCardContent, type LintIssue } from "../cards/index.js";
+import { splitCardContent, type LintIssue } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { resolveContainedRef } from "./ref-exists.js";
 import { realpathContained } from "../lib/box-containment.js";

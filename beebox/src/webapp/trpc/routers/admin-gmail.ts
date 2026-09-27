@@ -11,7 +11,7 @@ import { z } from "zod";
 import {
   gmailActionInputSchema,
   parseGmailConnectorConfig,
-} from "../../../connectors/gmail-config.js";
+} from "../../../connectors/gmail/config.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";

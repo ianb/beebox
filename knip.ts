@@ -29,7 +29,7 @@ const config: KnipConfig = {
       entry: [
         "src/webapp/server.ts",
         "src/schemas/index.ts",
-        "src/connectors/index.ts",
+        "src/connectors.ts",
         "src/cli/index.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",

@@ -21,7 +21,7 @@ import {
   type DoclingImage,
   type DoclingOcr,
   type DoclingService,
-} from "../../services/docling.js";
+} from "../../services/docling/core.js";
 import { extractPdfText } from "./pdf-probe.js";
 import { err, ok, type Result } from "../../lib/result.js";
 

@@ -16,8 +16,8 @@
  * (`promotion.ts`). See docs/plans/google-auth-reauth-health.md.
  */
 
-import { probeGoogleAuthIfStale } from "../../connectors/google-auth-status.js";
-import { loadTransientState, updateTransientState } from "../../connectors/transient-state.js";
+import { probeGoogleAuthIfStale } from "../../google/auth-status.js";
+import { loadTransientState, updateTransientState } from "../../transient-state.js";
 
 const LATCH_NAME = "google-auth-alert";
 

@@ -17,7 +17,7 @@
 import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+import { body, cardSchema, type CardSchema, type LintIssue } from "../exports/cards.js";
 import { markdocConfig } from "../shared/markdoc-config/core.js";
 
 // Value named imports (`{ parse, validate }`) don't resolve from this CommonJS

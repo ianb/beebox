@@ -12,7 +12,7 @@ import { errorMessage } from "../../lib/error-guards.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { loadEmailFixture } from "../../field-test/email-fixture.js";
 import { fieldScenarioDir, loadFieldScenario } from "../../field-test/scenario.js";
-import { runFieldScenario, DEFAULT_RUNS_ROOT } from "../../field-test/run.js";
+import { runFieldScenario, DEFAULT_RUNS_ROOT } from "../../field-test/run/core.js";
 import { loadRunResults } from "../../field-test/results.js";
 import { writeFieldReport, REPORT_FILENAME } from "../../field-test/report.js";
 import { FAKE_GMAIL_ENV } from "../../field-test/fake-gmail-gate.js";

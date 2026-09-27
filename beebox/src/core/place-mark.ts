@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Document, parseDocument } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { splitCardContent } from "../exports/cards.js";
 import { toRelativePath } from "../lib/paths/core.js";
 import { loadLocation, type StoredLocation } from "./location-store.js";
 import { locationAge } from "./location-format.js";

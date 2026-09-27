@@ -8,7 +8,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { getSearchableTypes } from "../../schemas.js";
 import { buildLoadContext } from "../load-context.js";

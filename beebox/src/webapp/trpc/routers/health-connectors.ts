@@ -7,9 +7,9 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { dismissConnectorEpisode, NoConnectorEpisodeError, undismissedEpisodes } from "../../../connectors/activity-episodes.js";
-import { describeVerdict } from "../../../connectors/activity-verdict.js";
-import { findStrandedDrafts } from "../../../connectors/gmail-drafts.js";
+import { dismissConnectorEpisode, NoConnectorEpisodeError, undismissedEpisodes } from "../../../connector-activity/episodes.js";
+import { describeVerdict } from "../../../connector-activity/verdict.js";
+import { findStrandedDrafts } from "../../../connectors/gmail/drafts/core.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { ownerProcedure } from "../trpc.js";

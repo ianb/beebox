@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { BoxSpec } from "./server-types.js";
 import { acquireBoxWork, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";
 import { BoxMaintenanceError } from "../lib/box-maintenance-error.js";
-import { parseOAuthState } from "../connectors/google-oauth-state.js";
+import { parseOAuthState } from "../google/oauth-state.js";
 import { toError } from "../lib/error-guards.js";
 
 const requests = new Map<string, number>();

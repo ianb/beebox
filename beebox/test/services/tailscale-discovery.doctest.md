@@ -15,7 +15,7 @@ import * as path from "node:path";
 
 import { resolveTargetOrDiscover } from "../../src/services/tailscale-discovery.js";
 import { createFakeTailscaleDeps } from "../../src/services/tailscale-fake.js";
-import { runTailscaleSetup } from "../../src/services/tailscale-setup.js";
+import { runTailscaleSetup } from "../../src/services/tailscale-setup/core.js";
 
 // Scope the exposure file to this run (setup's guard test never records, but
 // keep it hermetic regardless).

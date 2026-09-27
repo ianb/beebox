@@ -25,7 +25,7 @@ import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
-import type { Services } from "../../src/services/index.js";
+import type { Services } from "../../src/services/container.js";
 import { annexNewBox } from "../../src/core/annex/annex-new-box.js";
 import { createGitAnnexService } from "../../src/services/git-annex.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";

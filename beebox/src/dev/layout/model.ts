@@ -91,7 +91,7 @@ export type LayoutFile = ModuleFile | TestFile | DeclarationFile | DataFile;
 export interface PublicSurface {
   /** `package.json` `exports` key (`./cards`). */
   specifier: string;
-  /** The built target the specifier maps to (`beebox/dist/cards/index.js`). */
+  /** The built target the specifier maps to (`beebox/dist/exports/cards.js`). */
   target: string;
   /** Source module the build produces `target` from, or null when unknown. */
   source: string | null;

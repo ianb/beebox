@@ -42,7 +42,7 @@ import {
   type LintResult,
   type LintSummary,
   type LintIssue,
-} from "../cards/index.js";
+} from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
 import { symbolIssues } from "./lint-symbol.js";

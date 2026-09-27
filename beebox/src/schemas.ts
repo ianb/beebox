@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
 import { boxCodePaths, getBoxShapeIfPresent } from "./lib/box-shape.js";
 import { errnoCode, errorMessage } from "./lib/error-guards.js";
 import { isRecord } from "./lib/is-record.js";
-import { type CardSchema } from "./cards/index.js";
+import { type CardSchema } from "./exports/cards.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { DashboardSchema } from "./schemas/dashboard.js";
 import { SettingsSchema } from "./schemas/settings.js";

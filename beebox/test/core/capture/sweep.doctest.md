@@ -8,10 +8,10 @@ advanced past the 60-minute window before the sweep runs.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { splitCardContent } from "../../../src/cards/index.js";
+import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
-import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import {
   createStagingSession,

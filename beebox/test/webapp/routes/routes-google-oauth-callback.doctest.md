@@ -10,7 +10,7 @@ See `issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`.
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import { createGoogleOAuthState } from "../../../src/connectors/google-oauth-state.js";
+import { createGoogleOAuthState } from "../../../src/google/oauth-state.js";
 import { signSession, COOKIE_NAME } from "../../../src/webapp/auth.js";
 import { existsSync } from "node:fs";
 import * as os from "node:os";

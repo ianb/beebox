@@ -15,7 +15,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 
 /**
  * Where a recipe came from — at least one of: `label` (a freeform name, e.g.

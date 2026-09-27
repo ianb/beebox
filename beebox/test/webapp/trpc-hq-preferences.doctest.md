@@ -10,7 +10,7 @@ import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { clearBoxConfigCache } from "../../src/core/box/config.js";
 import { appendHistory, getFeaturesForSession, updateFeaturesForSession } from "../../src/core/chat/session/history.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../src/webapp/chat-runtime.js";
 
 async function waitFor(condition: () => boolean | Promise<boolean>): Promise<void> {

@@ -16,19 +16,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
-import { createFakeGoogleCalendar } from "../../../src/services/google-calendar.js";
-import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake.js";
+import { createFakeGoogleCalendar } from "../../../src/services/google-calendar/core.js";
+import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import { createFakeGoogleAuth } from "../../../src/services/google-auth.js";
 import type { GmailMessage } from "../../../src/services/google-gmail-types.js";
 import {
   assertReadOnlyGwsArgs,
   type GwsRunResult,
-} from "../../../src/connectors/gmail-gws.js";
+} from "../../../src/connectors/gmail/gws.js";
 import {
   availableCalendarsWithSyncing,
   type AvailableCalendarState,
-} from "../../../src/connectors/calendar-config.js";
-import { trackGmailThread, type TrackGmailThreadResult } from "../../../src/connectors/gmail-track.js";
+} from "../../../src/connectors/google-calendar/config.js";
+import { trackGmailThread, type TrackGmailThreadResult } from "../../../src/connectors/gmail/track.js";
 import { localCalendarService } from "../../../src/cli/commands/calendar.js";
 import { localGmailService } from "../../../src/cli/commands/connector.js";
 import { dispatchCredentialed, refusalFor, type VerbRefusal } from "../../../src/cli/lib/credentialed-verb.js";

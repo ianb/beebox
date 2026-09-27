@@ -10,7 +10,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../../cards/index.js";
+import { cardSchema, type InferCardFields } from "../../exports/cards.js";
 import { parseDuration, parseBudget } from "../../scheduled-script-duration.js";
 import { DatetimeField, CronField, RruleField, NotifyField, type ScheduleNotify } from "../../scheduled-script-fields.js";
 import { SCHEDULED_SCRIPT_INSTRUCTIONS } from "./instructions.js";

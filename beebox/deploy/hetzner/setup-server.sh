@@ -97,7 +97,7 @@ done
 
 # ── uv + Docling (document extraction) ──────────────────────────────
 # `bbx scan-import`'s document mode shells out to `uvx docling` (see
-# src/services/docling.ts). uv is installed for the Bee Box user because
+# src/services/docling/core.ts). uv is installed for the Bee Box user because
 # that is who runs the box children, and uv caches its environments and
 # Docling caches its model weights under the invoking user's home — one
 # install serves every box on the host, since they all run as this user.
@@ -117,9 +117,9 @@ su - "$BBX_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HO
 # reading order; `tableformer` covers both fast and accurate table modes.
 # The version comes from the one place that holds it, so this can never pin a
 # different Docling than the extractor asks `uvx` for.
-DOCLING_VERSION="$(sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' "$INSTALL_DIR/beebox/src/services/docling-version.ts")"
+DOCLING_VERSION="$(sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' "$INSTALL_DIR/beebox/src/services/docling/version.ts")"
 if [[ -z "$DOCLING_VERSION" ]]; then
-  echo "Could not read DOCLING_VERSION from src/services/docling-version.ts" >&2
+  echo "Could not read DOCLING_VERSION from src/services/docling/version.ts" >&2
   exit 1
 fi
 echo "Pre-fetching Docling $DOCLING_VERSION models (layout + tableformer)..."

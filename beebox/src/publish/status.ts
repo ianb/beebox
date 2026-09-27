@@ -12,9 +12,9 @@
  * (strict: a wrong deployed state is a failure, not a footnote).
  */
 
-import type { CloudflareProvisioningClient } from "../services/cloudflare-provisioning.js";
+import type { CloudflareProvisioningClient } from "../services/cloudflare-provisioning/core.js";
 import { listPublications } from "./lifecycle.js";
-import { readPublishConfig } from "./publish-config.js";
+import { readPublishConfig } from "./config.js";
 import { localPubWorkerVersion, readPubWorkerConfig } from "./pub-worker-meta.js";
 
 /** Probe a URL for a small text body; `null` on any failure (unreachable, non-200). */

@@ -77,7 +77,7 @@ const MAX_REASON_BYTES = 200;
 /**
  * The box's own words for a refusal or an outage. A pairing refusal carries one
  * sentence in `error`; the hub's box-unavailable 503 carries a code in `error`
- * and the sentence in `message` (`beebox/src/hub/box-unavailable.ts`), so the
+ * and the sentence in `message` (`beebox/src/hub/server/box-unavailable.ts`), so the
  * sentence wins when both are present. Empty when the body said nothing.
  */
 async function readReason(response: Response): Promise<string> {
