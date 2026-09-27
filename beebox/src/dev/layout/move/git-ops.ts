@@ -49,23 +49,63 @@ export function gitGrep(params: { repoRoot: string; pattern: string }): string[]
 }
 
 /**
+ * A `git grep` pattern list is chunked before it hits the command line: a
+ * move list in the thousands (a whole-repo `--mentions-from-git` pass)
+ * produces thousands of literal patterns, which both risks the OS argument
+ * length limit and — via `-e` repeated that many times — makes git's own
+ * matching slower than a few separate calls. Also drops any empty-string
+ * pattern (a real bug elsewhere, not something to hand to `git grep`,
+ * which would otherwise match every line of every file).
+ */
+const MAX_PATTERNS_PER_GREP_CALL = 500;
+
+function chunkPatterns(patterns: string[]): string[][] {
+  const nonEmpty = patterns.filter((p) => p.length > 0);
+  const chunks: string[][] = [];
+  for (let i = 0; i < nonEmpty.length; i += MAX_PATTERNS_PER_GREP_CALL) {
+    chunks.push(nonEmpty.slice(i, i + MAX_PATTERNS_PER_GREP_CALL));
+  }
+  return chunks;
+}
+
+function runGrepAny(params: { repoRoot: string; patterns: string[]; listFilesOnly: boolean }): string[] {
+  const lines = new Set<string>();
+  for (const chunk of chunkPatterns(params.patterns)) {
+    const patternArgs = chunk.flatMap((pattern) => ["-e", pattern]);
+    try {
+      const out = execFileSync("git", ["grep", params.listFilesOnly ? "-l" : "-n", "-F", ...patternArgs, "--"], {
+        cwd: params.repoRoot,
+        encoding: "utf8",
+        maxBuffer: 256 * 1024 * 1024,
+      });
+      for (const line of out.split("\n")) if (line.length > 0) lines.add(line);
+    } catch (e) {
+      if (grepExitStatus(e) === 1) continue;
+      throw e;
+    }
+  }
+  return [...lines];
+}
+
+/**
  * Tracked file paths containing at least one of `patterns` (literal,
- * non-regex, OR-matched) — one `git grep` call for many patterns, so a
- * mention-rewrite pass with dozens of forms doesn't spawn a subprocess per
- * form. `[]` for an empty pattern list (git would otherwise match every file).
+ * non-regex, OR-matched) — a handful of `git grep` calls for many patterns,
+ * so a mention-rewrite pass with dozens (or thousands) of forms doesn't
+ * spawn a subprocess per form. `[]` for an empty pattern list (git would
+ * otherwise match every file).
  */
 export function gitGrepFilesAny(params: { repoRoot: string; patterns: string[] }): string[] {
   if (params.patterns.length === 0) return [];
-  const patternArgs = params.patterns.flatMap((pattern) => ["-e", pattern]);
-  try {
-    const out = execFileSync("git", ["grep", "-l", "-F", ...patternArgs, "--"], {
-      cwd: params.repoRoot,
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    return out.split("\n").filter((s) => s.length > 0);
-  } catch (e) {
-    if (grepExitStatus(e) === 1) return [];
-    throw e;
-  }
+  return runGrepAny({ repoRoot: params.repoRoot, patterns: params.patterns, listFilesOnly: true });
+}
+
+/**
+ * `path:line:content` lines matching at least one of `patterns` (literal,
+ * non-regex, OR-matched) — the multi-pattern counterpart to `gitGrep`,
+ * used to fetch every candidate "needs review" line for every moved path
+ * in one pass instead of one `git grep` per moved path.
+ */
+export function gitGrepLinesAny(params: { repoRoot: string; patterns: string[] }): string[] {
+  if (params.patterns.length === 0) return [];
+  return runGrepAny({ repoRoot: params.repoRoot, patterns: params.patterns, listFilesOnly: false });
 }

@@ -14,7 +14,7 @@ import { surveyDirectoryRenames } from "./mention-directories.js";
 import { directoryForms, fileForms, type FormKind, type LiteralForm } from "./mention-forms.js";
 import { isRelativeMentionCandidateFile, relativeCandidates } from "./mention-relative.js";
 import { isExcludedFromMentionRewrite } from "./mention-history.js";
-import { gitGrep, gitGrepFilesAny, gitLines } from "./git-ops.js";
+import { gitGrepFilesAny, gitGrepLinesAny, gitLines } from "./git-ops.js";
 import type { PlannedMove } from "./list.js";
 import { mentionPatterns, owningRoot, type MentionGroup } from "./mentions.js";
 import { baseOf, dirOf, isWithin } from "../graph.js";
@@ -56,10 +56,26 @@ function orderRank(kind: FormKind): number {
   return kind === "repo-relative" || kind === "directory-repo-relative" ? 0 : 1;
 }
 
+/**
+ * The repo-relative form is always included; the package-relative form is
+ * added only when it's still path-shaped (has a further `/`). `dir` IS the
+ * owning root (`isWithin` treats a path as within itself) has nothing to
+ * slice off. A single bare path segment (`"test"`, `"src"`) is
+ * indistinguishable from an ordinary English word under the directory
+ * token's boundary rule — unlike a file's package-relative form, which
+ * always has an extension to anchor it — so it would flag nearly every
+ * prose mention of the word repo-wide (found via a whole-repo
+ * `--mentions-from-git` pass: bare "test"/"src" package-relative forms
+ * alone produced over 20,000 of ~23,000 "needs review" hits, nearly all in
+ * unrelated prose).
+ */
 function directoryPatterns(dir: string, roots: string[]): string[] {
   const patterns = new Set([dir]);
   const root = owningRoot(dir, roots);
-  if (root !== null) patterns.add(dir.slice(root.length + 1));
+  if (root !== null && root !== dir) {
+    const rel = dir.slice(root.length + 1);
+    if (rel.includes("/")) patterns.add(rel);
+  }
   return [...patterns];
 }
 
@@ -70,36 +86,85 @@ function splitGrepLine(line: string): { path: string; content: string } {
   return { path: line.slice(0, firstColon), content: secondColon === -1 ? "" : line.slice(secondColon + 1) };
 }
 
-function leftoverLines(params: {
-  repoRoot: string;
+interface NeedsReviewGroupSpec {
+  movedPath: string;
   patterns: string[];
+  kind: TokenKind;
+}
+
+interface PatternEntry {
+  pattern: string;
+  kind: TokenKind;
+  owners: string[];
+}
+
+/**
+ * Every group's "needs review" lines, computed from a SHARED grep pass and
+ * a SHARED scan of the in-memory rewritten files — one `git grep` (chunked)
+ * across the union of every group's patterns, and one pass over every
+ * edited file's lines, rather than a subprocess and a full-file scan per
+ * group. A whole-repo `--mentions-from-git` pass can have thousands of
+ * groups; a per-group subprocess call doesn't scale to that.
+ */
+function computeNeedsReview(params: {
+  repoRoot: string;
+  specs: NeedsReviewGroupSpec[];
   fileEdits: ReadonlyMap<string, string>;
   excluded: (path: string) => boolean;
-  kind: TokenKind;
-}): string[] {
-  const lines = new Set<string>();
-  for (const pattern of params.patterns) {
-    for (const line of gitGrep({ repoRoot: params.repoRoot, pattern })) {
-      const { path, content } = splitGrepLine(line);
-      if (params.excluded(path) || params.fileEdits.has(path)) continue;
-      // `git grep -F` matches the bare substring; re-check the boundary rule so a
-      // needs-review hit means the same thing a rewrite candidate would have.
-      if (!containsToken({ text: content, literal: pattern, kind: params.kind })) continue;
-      lines.add(line);
+}): MentionGroup[] {
+  const entriesByKey = new Map<string, PatternEntry>();
+  for (const spec of params.specs) {
+    for (const pattern of spec.patterns) {
+      if (pattern.length === 0) continue;
+      const key = `${spec.kind}\u0000${pattern}`;
+      let entry = entriesByKey.get(key);
+      if (entry === undefined) {
+        entry = { pattern, kind: spec.kind, owners: [] };
+        entriesByKey.set(key, entry);
+      }
+      entry.owners.push(spec.movedPath);
     }
   }
+  const patternEntries = [...entriesByKey.values()];
+  const uniquePatternTexts = [...new Set(patternEntries.map((e) => e.pattern))];
+
+  const linesByMovedPath = new Map<string, Set<string>>();
+  for (const spec of params.specs) linesByMovedPath.set(spec.movedPath, new Set());
+  const record = (entry: PatternEntry, line: string): void => {
+    for (const movedPath of entry.owners) linesByMovedPath.get(movedPath)?.add(line);
+  };
+
+  for (const rawLine of gitGrepLinesAny({ repoRoot: params.repoRoot, patterns: uniquePatternTexts })) {
+    const { path, content } = splitGrepLine(rawLine);
+    if (params.excluded(path) || params.fileEdits.has(path)) continue;
+    for (const entry of patternEntries) {
+      if (!content.includes(entry.pattern)) continue;
+      // `git grep -F` matches the bare substring; re-check the boundary rule so a
+      // needs-review hit means the same thing a rewrite candidate would have.
+      if (!containsToken({ text: content, literal: entry.pattern, kind: entry.kind })) continue;
+      record(entry, rawLine);
+    }
+  }
+
   for (const [path, text] of params.fileEdits) {
     if (params.excluded(path)) continue;
+    // Cheap file-level candidacy filter before the per-line scan: most
+    // patterns aren't anywhere in a given edited file.
+    const relevant = patternEntries.filter((entry) => text.includes(entry.pattern));
+    if (relevant.length === 0) continue;
     for (const [idx, lineText] of text.split("\n").entries()) {
-      for (const pattern of params.patterns) {
-        if (containsToken({ text: lineText, literal: pattern, kind: params.kind })) {
-          lines.add(`${path}:${idx + 1}:${lineText}`);
-          break;
-        }
+      for (const entry of relevant) {
+        if (!lineText.includes(entry.pattern)) continue;
+        if (!containsToken({ text: lineText, literal: entry.pattern, kind: entry.kind })) continue;
+        record(entry, `${path}:${idx + 1}:${lineText}`);
       }
     }
   }
-  return [...lines].toSorted();
+
+  return params.specs.map((spec) => ({
+    movedPath: spec.movedPath,
+    lines: [...(linesByMovedPath.get(spec.movedPath) ?? [])].toSorted(),
+  }));
 }
 
 export function computeMentionRewrite(params: {
@@ -159,38 +224,24 @@ export function computeMentionRewrite(params: {
     if (text !== original) fileEdits.set(path, text);
   }
 
-  const needsReview: MentionGroup[] = [
+  const needsReviewSpecs: NeedsReviewGroupSpec[] = [
     ...params.moves.map((move) => ({
       movedPath: move.from,
-      lines: leftoverLines({
-        repoRoot: params.repoRoot,
-        patterns: mentionPatterns({ oldPath: move.from, roots: params.roots }),
-        fileEdits,
-        excluded,
-        kind: "file" as const,
-      }),
+      patterns: mentionPatterns({ oldPath: move.from, roots: params.roots }),
+      kind: "file" as const,
     })),
     ...directoryRenames.map((rename) => ({
       movedPath: `${rename.from}/`,
-      lines: leftoverLines({
-        repoRoot: params.repoRoot,
-        patterns: directoryPatterns(rename.from, params.roots),
-        fileEdits,
-        excluded,
-        kind: "directory" as const,
-      }),
+      patterns: directoryPatterns(rename.from, params.roots),
+      kind: "directory" as const,
     })),
     ...nonUniformDirs.map((dir) => ({
       movedPath: `${dir}/`,
-      lines: leftoverLines({
-        repoRoot: params.repoRoot,
-        patterns: directoryPatterns(dir, params.roots),
-        fileEdits,
-        excluded,
-        kind: "directory" as const,
-      }),
+      patterns: directoryPatterns(dir, params.roots),
+      kind: "directory" as const,
     })),
   ];
+  const needsReview = computeNeedsReview({ repoRoot: params.repoRoot, specs: needsReviewSpecs, fileEdits, excluded });
 
   return { fileEdits, countsByForm, needsReview };
 }

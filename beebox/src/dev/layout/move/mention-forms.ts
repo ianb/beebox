@@ -61,7 +61,14 @@ export function fileForms(params: { move: PlannedMove; roots: string[] }): Liter
   return forms;
 }
 
-/** Directories have no extension, so only the raw repo-relative and package-relative forms apply. */
+/**
+ * Directories have no extension, so only the raw repo-relative and
+ * package-relative forms apply. The package-relative form is skipped when
+ * it would be a single bare path segment (`"test"`, `"src"`) — with no
+ * extension to anchor it the way a file's package-relative form has, that's
+ * indistinguishable from an ordinary English word and would rewrite prose
+ * that merely contains the word, not a genuine path mention.
+ */
 export function directoryForms(params: { rename: DirectoryRename; roots: string[] }): LiteralForm[] {
   const forms: LiteralForm[] = [
     { old: params.rename.from, new: params.rename.to, kind: "directory-repo-relative", scopeRoot: null },
@@ -69,12 +76,11 @@ export function directoryForms(params: { rename: DirectoryRename; roots: string[
   const root = owningRoot(params.rename.from, params.roots);
   const newRoot = owningRoot(params.rename.to, params.roots);
   if (root !== null && root === newRoot) {
-    forms.push({
-      old: params.rename.from.slice(root.length + 1),
-      new: params.rename.to.slice(root.length + 1),
-      kind: "directory-package-relative",
-      scopeRoot: root,
-    });
+    const oldRel = params.rename.from.slice(root.length + 1);
+    const newRel = params.rename.to.slice(root.length + 1);
+    if (oldRel.includes("/") && newRel.includes("/")) {
+      forms.push({ old: oldRel, new: newRel, kind: "directory-package-relative", scopeRoot: root });
+    }
   }
   return forms;
 }
