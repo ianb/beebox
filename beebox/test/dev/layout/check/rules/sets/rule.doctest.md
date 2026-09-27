@@ -9,6 +9,10 @@ import { setsRule } from "../../../../../../src/dev/layout/check/rules/sets/rule
 import { layout, summary } from "../fixture.js";
 ```
 
+Every fixture below that expects a clean (or unrelated-finding) result gives
+its registry a consumer (`src/entry.ts` importing it), since the
+registry-imported guard now flags a declared registry nothing imports.
+
 ## No registries, no findings
 
 ```ts
@@ -42,6 +46,7 @@ const commandsLayout = layout({
     "src/commands/wakeup.ts": { imports: ["type:src/commands/migrate/command.ts"] },
     "src/commands/init.ts": {},
     "src/commands/migrate/command.ts": {},
+    "src/entry.ts": { imports: ["src/commands.ts"] },
   },
 });
 summary(setsRule.check(commandsLayout)) === ""
@@ -66,6 +71,7 @@ const schemasLayout = layout({
     },
     "src/schemas/memo.ts": {},
     "src/schemas/recipe.ts": {},
+    "src/entry.ts": { imports: ["src/schemas.ts"] },
   },
 });
 summary(setsRule.check(schemasLayout)) === ""
@@ -94,6 +100,7 @@ const assetsLayout = layout({
     "src/assets/logo.ts": {},
     "src/assets/CLAUDE.md": "data",
     "src/assets/stray.ts": {},
+    "src/entry.ts": { imports: ["src/assets.ts"] },
   },
 });
 summary(setsRule.check(assetsLayout))
@@ -114,6 +121,7 @@ const dupLayout = layout({
     "src/other.ts": {
       registry: { directory: "src/dup", ordered: false, form: "list", members: [] },
     },
+    "src/entry.ts": { imports: ["src/dup.ts", "src/other.ts"] },
   },
 });
 const dupFindings = setsRule.check(dupLayout);
@@ -137,6 +145,7 @@ const trpcLayout = layout({
     "trpc/router.ts": {
       registry: { directory: "trpc/routers", ordered: false, form: "list", members: [] },
     },
+    "src/entry.ts": { imports: ["trpc/router.ts"] },
   },
 });
 const trpcFindings = setsRule.check(trpcLayout);
@@ -173,6 +182,7 @@ const verbsLayout = layout({
     "src/verbs/legacy.ts": {},
     "src/verbs/migrate/helper.ts": {},
     "src/lib/shared-helper.ts": {},
+    "src/entry.ts": { imports: ["src/verbs.ts"] },
   },
 });
 summary(setsRule.check(verbsLayout))
@@ -211,6 +221,7 @@ const exportsLayout = layout({
     "src/exports/quick-chat.ts": {},
     "src/exports/cards.ts": {},
     "src/exports/legacy/handler.ts": {},
+    "src/entry.ts": { imports: ["src/exports.ts"] },
   },
 });
 const exportsFindings = setsRule.check(exportsLayout);
@@ -331,8 +342,66 @@ const pathReadLayout = layout({
     },
     "src/schemas/memo.ts": {},
     "src/scripts/loader.ts": { relativePathLiterals: ["../schemas", "../other"] },
+    "src/entry.ts": { imports: ["src/schemas.ts"] },
   },
 });
 summary(setsRule.check(pathReadLayout))
 => registry pkg/src/scripts/loader.ts
+```
+
+## A registry nothing imports
+
+`commands.ts` declares completeness over `src/commands/`, but no module
+value-imports the registry back — the members are used some other way (each
+called directly, say), which is the second-list smell: the directory isn't
+actually enumerated through this registry by anyone. A test-only importer
+doesn't count, matching how tests never count as importers for the units
+rule.
+
+```ts
+const unimportedLayout = layout({
+  files: {
+    "src/commands.ts": {
+      registry: {
+        directory: "src/commands",
+        ordered: false,
+        form: "list",
+        members: [{ source: "src/commands/wakeup.ts" }],
+      },
+    },
+    "src/commands/wakeup.ts": {},
+    "src/commands.test.ts": { test: ["src/commands.ts"] },
+  },
+});
+const unimportedFindings = setsRule.check(unimportedLayout);
+summary(unimportedFindings)
+=> registry pkg/src/commands.ts
+
+unimportedFindings[0]?.message
+=> pkg/src/commands.ts declares pkg/src/commands but nothing imports it; the set's consumers must enumerate it through the registry, or the directory is not a set (delete the registry)
+```
+
+## A type-only import of a registry does not count
+
+`entry.ts` imports `commands.ts` for its type only, same as no importer at
+all — a set's members are read through a value import (`.list`, `.get`), so
+a type-only reference proves nothing about who actually enumerates the set.
+
+```ts
+const typeOnlyLayout = layout({
+  files: {
+    "src/commands.ts": {
+      registry: {
+        directory: "src/commands",
+        ordered: false,
+        form: "list",
+        members: [{ source: "src/commands/wakeup.ts" }],
+      },
+    },
+    "src/commands/wakeup.ts": {},
+    "src/entry.ts": { imports: ["type:src/commands.ts"] },
+  },
+});
+summary(setsRule.check(typeOnlyLayout))
+=> registry pkg/src/commands.ts
 ```
