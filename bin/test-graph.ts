@@ -369,7 +369,7 @@ export async function buildGraph(options?: CacheOptions): Promise<TestGraph> {
  * The repo files esbuild bundles into `beebox/dist/cli.mjs`.
  *
  * A test that execs the bundle has no import edge to anything in it, and the
- * bundle is not `src/cli/**`: `scripts/build-cli.ts` bundles `src/cli/entry/run.ts`
+ * bundle is not `src/cli/**`: `src/scripts/build-cli/build/bundle.ts` bundles `src/cli/entry/run.ts`
  * transitively, which reads 932 files across nearly every `src/` subtree. The
  * selector needs the real set to decide whether a change reaches such a test
  * (plan revision 2026-08-25, mechanism B). Mirrors that script's build options;

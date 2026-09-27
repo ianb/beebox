@@ -67,7 +67,7 @@ export type VoiceIntent =
  * clears it before the HQ round-trip starts, so it lands in the NEXT
  * emission instead. This is the one piece of `runKeywordSend`'s submit
  * logic that's pure enough to doctest headlessly (see
- * `test/frontend/voice-intent.doctest.md`).
+ * `src/frontend/test/input/voice-intent.doctest.md`).
  */
 export function buildVoiceSubmitEmission(opts: {
   priorInput: string;

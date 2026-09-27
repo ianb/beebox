@@ -177,7 +177,7 @@ function matchedSpawners(input: {
 /**
  * Whether a changed path is one of the sources bundled into `dist/cli.mjs`.
  *
- * `scripts/build-cli.ts` bundles `src/cli/entry/run.ts` transitively, so the real
+ * `src/scripts/build-cli/build/bundle.ts` bundles `src/cli/entry/run.ts` transitively, so the real
  * input set is most of `src/` — not `src/cli/**`, which would cover 100 of the
  * 932 files esbuild actually reads. The caller computes the true set; without
  * it we fail open on `src/`, the smallest honest superset.

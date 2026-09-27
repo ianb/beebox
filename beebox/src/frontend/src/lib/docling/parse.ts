@@ -17,7 +17,7 @@
  *
  * Everything is pure over `ArrayBuffer`/`string`, so it is unit-testable in
  * plain Node — `DecompressionStream` is available there too. No React, no
- * Markdoc, no bundler-only imports (see `test/frontend/lib/docling.doctest.md`).
+ * Markdoc, no bundler-only imports (see `src/frontend/test/lib/docling/parse.docling.doctest.md`).
  */
 
 import { isRecord } from "@shared/is-record";

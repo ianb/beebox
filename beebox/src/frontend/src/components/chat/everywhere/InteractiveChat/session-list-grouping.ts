@@ -7,7 +7,7 @@
  * scroll away.
  *
  * Pure so the affordance is testable without a router/DOM
- * (test/frontend/session-list-grouping.doctest.md).
+ * (src/frontend/test/components/chat/everywhere/InteractiveChat/session-list-grouping.doctest.md).
  */
 
 import type { ChatSessionInfo } from "../../../../api";

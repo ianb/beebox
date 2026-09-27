@@ -9,7 +9,7 @@ import XCTest
 final class BulkUploadTests: XCTestCase {
     // MARK: - The inline/batch threshold
 
-    /// Mirrors `test/frontend/file-routing.doctest.md`'s photo cases. (The web
+    /// Mirrors `beebox/src/frontend/test/components/chat/InteractiveChat-attachments/file-routing.doctest.md`'s photo cases. (The web
     /// rule also batches any set containing a non-image; the native composer's
     /// photo picker only ever hands this images, so there is nothing to mirror.)
     /// The two implementations cannot share code across the language boundary, so

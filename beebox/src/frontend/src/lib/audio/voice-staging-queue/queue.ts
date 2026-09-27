@@ -7,7 +7,7 @@
  * file is the public factory plus the app-wide singleton.
  *
  * `createVoiceStagingQueue` is the pure-injection factory
- * (`test/frontend/lib/audio/voice-staging-queue.doctest.md` drives it with an
+ * (`src/frontend/test/lib/audio/voice-staging-queue/queue.doctest.md` drives it with an
  * in-memory store and a fake `send`); the exported functions below are thin
  * wrappers around one real singleton, created (and its drain started) the
  * moment this module is imported. `startVoiceStagingDrainer()` is the

@@ -27,7 +27,7 @@ function formatSecretNeeds(needs: readonly string[]): string {
 /**
  * The reason line for an unusable option, or null when it's usable (or the
  * capability is unknown — loading/forbidden queries never block a picker).
- * Pure so it's doctestable without rendering: `test/frontend/voice-chip-capability-reason.doctest.md`.
+ * Pure so it's doctestable without rendering: `src/frontend/test/components/chat/VoiceChip/panels.voice-chip-capability-reason.doctest.md`.
  */
 export function capabilityReason(state: ServiceCapability | undefined): string | null {
   if (state === undefined || state.usable) return null;

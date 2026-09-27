@@ -10,7 +10,7 @@
  * a chat header row; the chip itself is unchanged.
  *
  * `VoiceChipFace` is exported separately so it can be rendered in a doctest
- * (test/frontend/voice-chip-face.doctest.md) without the Dropdown/router
+ * (src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.doctest.md) without the Dropdown/router
  * context the full chip needs.
  */
 

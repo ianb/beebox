@@ -61,7 +61,7 @@ because the change is *unspecifiable*.
 `docs/cards/migrations.md` has the full template; these are the rules that bite if you
 skip them:
 
-- **Use the harness** (`scripts/migrate/_harness.ts`) — it does the file walk,
+- **Use the harness** (`src/scripts/migrate/_harness.ts`) — it does the file walk,
   dry-run/apply, error collection, and warning dump. Mirror an existing migrator
   (e.g. `image.ts`) only if your shape genuinely doesn't fit.
 - **Be noisy about data loss — non-negotiable.** Declare an `ElementSpec` of the

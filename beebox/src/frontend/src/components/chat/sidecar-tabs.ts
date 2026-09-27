@@ -6,7 +6,7 @@
  * here are the kind that go wrong quietly — where a newly pinned tab lands,
  * which tab an open evicts, and which tab takes over when the active one
  * closes. As a pure function they are reachable by a doctest
- * (`test/frontend/sidecar-tabs.doctest.md`); inside a component they would not
+ * (`src/frontend/test/components/chat/sidecar-tabs.doctest.md`); inside a component they would not
  * be.
  *
  * Ordering is a property of the state, not of the render: `tabs` is always

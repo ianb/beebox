@@ -2,7 +2,7 @@
  * Pure rules behind `TodoItem` (`docs/plans/todos-ui.md`, Track 2): how a
  * todo's words are treated, which todos a reading view leaves out, and how a
  * date chip reads. Split from the component so each rule is doctestable
- * without rendering (`test/frontend/components/todo-item.doctest.md`).
+ * without rendering (`src/frontend/test/components/todo/TodoItem.todo-item.doctest.md`).
  */
 
 import {

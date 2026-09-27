@@ -5,7 +5,7 @@
  * measured) and executes the returned {@link GestureAction}s. Every transition
  * lives here so the machine is doctestable without a DOM. Modes: `idle`,
  * `pending` (down, unclassified), `dismissing`, `swiping`, `panning`,
- * `pinching`, `settling`. See `test/frontend/lightbox-gesture-reducer.doctest.md`.
+ * `pinching`, `settling`. See `src/frontend/test/lib/lightbox-gesture-controller/lightbox-gesture-reducer.doctest.md`.
  *
  * The shapes the transitions move between live in `lightbox-gesture-types.ts`
  * and are re-exported here, so consumers have one import site for the machine.

@@ -1,4 +1,4 @@
-# The browsable-path index and quick-open matching (src/server/file-index.ts)
+# The browsable-path index and quick-open matching (src/server/main/file-index.ts)
 
 Quick-open is the affordance that has to survive the consolidation
 (`docs/plans/general-browser.md`, Track 3). Replacing several reading surfaces
