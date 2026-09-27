@@ -60,7 +60,7 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "connectors.md", readWhen: "Anything about Gmail, Google Drive, Telegram, or calendar sync, or a credential a connector needs.", generate: generateConnectorsDocs },
   { filename: "views.md", readWhen: "Writing or changing a view (a React component that renders a card type).", generate: generateViewsDoc },
   { filename: "procedures.md", readWhen: "Writing or modifying a procedure card, or debugging a procedure run.", generate: generateProcedureGuide },
-  { filename: "triage.md", readWhen: "Working the intake → triage → handle pipeline, or deciding where an inbox item belongs.", generate: generateTriageGuide },
+  { filename: "triage.md", readWhen: "Working the intake → triage → handle pipeline, deciding where an inbox item belongs, or telling a reactor job from a triaged item.", generate: generateTriageGuide },
   { filename: "chat-voice.md", readWhen: "Adjusting how a spoken chat reply is delivered (voice, pacing, emphasis).", generate: generateChatVoiceDoc },
   { filename: "narration-mode.md", readWhen: "The chat snapshot reports narration=\"on\" — the user is dictating, not chatting.", generate: generateNarrationModeDoc },
   { filename: "reducing-claude-md.md", readWhen: "The box's CLAUDE.md is flagged as too large.", generate: generateReducingClaudeMdDoc },

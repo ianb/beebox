@@ -70,6 +70,12 @@ separate \`.commentary.card\` inside this card's attach scope
 commentary anchor (\`{% source %}\`) with no \`ref\`/\`href\` points at *this*
 page — the containing document is the default target.
 
+## How it arrives
+
+The Clerk browser extension's "Comment on this page" captures a web page as a
+\`*.webpage.card\`, with the user's remarks in a commentary card in its attach
+scope. "Save page" produces the same \`*.webpage.card\` without the commentary. It lands in the chosen \`[commentary]\` destination landmark dir, or \`_content/inbox/\` by default.
+
 ## Layout on disk
 
 \`\`\`

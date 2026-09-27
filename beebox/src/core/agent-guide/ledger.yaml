@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after COMMANDS.
-  guide_words: 7535
-  always_loaded_words: 12327
+  # 2026-09-26, after INTAKE.
+  guide_words: 7230
+  always_loaded_words: 12022
   uncited_words_per_section: 60
 
 lint:
@@ -20,6 +20,7 @@ lint:
     - THE_LAWS
     - ABOUT_CARDS
     - COMMANDS
+    - INTAKE
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -473,6 +474,53 @@ rows:
     bin: core
     reason: An agent asked to fix a server or sync reaches for these, and several refuse an agent session or do the wrong thing from its shell.
     audits: [bbx-surface-engine-boundary]
+
+  # --- INTAKE ---
+  - id: intake.arrival
+    rule: Items arrive on their own through the capture UI, connectors, chat, and the Clerk extension, into `_content/inbox/` with job cards in `_bookkeeping/jobs/`; an agent creates and moves cards only as part of its own work.
+    handle: INTAKE
+    bin: core
+    reason: An agent asked where something came from, or how a user adds something, needs the channels; one paragraph carries them, and the per-channel mechanics live on each card type.
+    audits: [how-items-enter, user-adds-item, wakeup-intake-flow]
+  - id: intake.users-do-not-place-files
+    rule: Never tell users to put or place files in directories; they use the web UI, chat, or external services.
+    handle: INTAKE
+    bin: core
+    reason: A reply-shaping rule that bites on any turn where the user asks how to add something, and the trick-question audit shows the temptation.
+    audits: [dont-tell-user-to-place-files]
+  - id: intake.jobs-vs-triage
+    rule: A job (a reactor work order in `_bookkeeping/jobs/`) is not a triaged item (an inbox item routed to a category); the intake → triage → handle pipeline runs only when invoked directly.
+    handle: INTAKE
+    bin: indirect
+    reason: Matters only when working the inbox pipeline or the reactor; moved verbatim to triage.md, whose read-when now names the distinction.
+    audits: [triage-vs-reactor-flow, triage-pipeline-stages]
+    mechanics: box-docs/triage.md
+  - id: intake.capture-detail
+    rule: The capture pipeline (preparation worker, timeline, the `<capture>` message, `bbx scan-import` batches landing in the inbox).
+    handle: INTAKE
+    bin: indirect
+    reason: Needed only when handling a capture; card-capture-session.md and the chat prompt already stated every fact, so nothing moved.
+    audits: [capture-message-meaning]
+    mechanics: box-docs/card-capture-session.md
+  - id: intake.clerk-detail
+    rule: The Clerk extension's webpage card shape, its commentary card, "Save page", and where a capture lands.
+    handle: INTAKE
+    bin: indirect
+    reason: Needed only when handling a captured page. The webpage card rule already had the shape; the "Save page" and landing sentences moved to it.
+    audits: [webpage-vs-commentary]
+    mechanics: box-docs/card-webpage.md
+  - id: intake.connector-detail
+    rule: Working with what connectors sync is the drive, calendar, and email skills; each connector's shape is in connectors.md.
+    handle: INTAKE
+    bin: delete
+    reason: The three skills' descriptions, loaded on every turn, say when to use them, and the box-docs index line for connectors.md says when to read it.
+    audits: [drive-mount-folder]
+  - id: intake.bbx-create
+    rule: "`bbx create` creates cards from templates when the agent needs one."
+    handle: INTAKE
+    bin: delete
+    reason: ABOUT_CARDS states it; the arrival paragraph keeps the clause that the agent creates cards only for its own work.
+    audits: [create-question-card]
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

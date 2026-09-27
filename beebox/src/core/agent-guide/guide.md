@@ -356,20 +356,27 @@ Landmarks earn their spot. If the same kind of thing comes up over and over in c
 
 ## INTAKE — How Items Enter the Box
 
-Most items arrive on their own — you rarely need to place one by hand (though you do create and move cards with `bbx create` / `bbx mv` as part of your work). The arrival mechanisms:
+<!-- rules: intake.arrival -->
+Most items arrive on their own; you create cards with `bbx create` and move
+them with `bbx mv` only as part of your own work. The user records voice
+memos, photos, or text in the **capture UI**, which reaches chat as a
+`<capture>` message pointing at a capture-session card. **Connectors**
+(Gmail, Telegram, Google Calendar, Google Drive) sync during the wakeup
+cycle, creating cards in `_content/inbox/` and job cards in
+`_bookkeeping/jobs/` for the reactor to process. **Chat** messages update
+chat-thread cards, and the **Clerk browser extension** captures a web page
+as a `*.webpage.card`.
 
-- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. The preparation worker transcribes and assembles a timeline, then delivers the session as a `<capture>` chat message pointing at a capture-session card (its child image/audio cards live in that card's attach scope) — the chat agent annotates it and files it. `bbx scan-import` batches (photos/PDFs with no chat message) drop their capture-session card straight into `_content/inbox/` for triage instead.
-- **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during the wakeup cycle (force one now with `bbx force-wakeup`). Connectors create cards in `_content/inbox/` and job cards in `_bookkeeping/jobs/` for processing. Working with what they sync (mounting a Drive folder, authoring an event, drafting an email) is the `drive`, `calendar`, and `email` skills; each connector's shape is in `node_modules/beebox/box-docs/connectors.md`.
-- **`bbx create`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: `bbx create _bookkeeping/questions/Color.question.card -t question`
-- **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.
-- **Clerk browser extension** — the user's "Comment on this page" captures a web page as a `*.webpage.card`: the readable markdown rendering as its body, with `source`/`captured`/`frozen` frontmatter, plus a frozen self-contained snapshot at `attach/page.frozen`. The user's remarks live in a separate `*.commentary.card` *inside the webpage card's attach scope* (`<basename>.attach/`); the webpage view surfaces them inline, and bare `{% source %}` anchors there default to the containing page. "Save page" produces the same `*.webpage.card` without the commentary. It lands in the chosen `[commentary]` destination landmark dir, or `_content/inbox/` by default.
+<!-- rules: intake.users-do-not-place-files -->
+**Do NOT tell users to "put" or "place" files in directories.** Users
+interact through the web UI, chat, or external services. Only agents use
+`bbx create` and `bbx mv`.
 
-Two sorting mechanisms process items that land in `_content/inbox/`. Don't confuse a **job** (a card in `_bookkeeping/jobs/` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
-
-- **Jobs → reactor** — the primary routing path: the wakeup cycle and the connectors create job cards in `_bookkeeping/jobs/`, and the reactor processes them one cycle per wakeup.
-- **The intake → triage → handle pipeline** — runs when invoked directly (`bbx intake` / `bbx triage` / `bbx handle`), moving items through `_content/inbox/intake/` → `staged/` → `triaged/<category>/`. See `node_modules/beebox/box-docs/triage.md` (confidence levels, handler `TRIAGE_ITEMS` contract).
-
-**Common mistake:** Do NOT tell users to "put" or "place" files in directories. Users interact through the web UI, chat, or external services. Only agents use `bbx create` and `bbx mv`.
+<!-- rules: intake.jobs-vs-triage, intake.capture-detail, intake.clerk-detail -->
+A job and a triaged item are different things that share the word "intake";
+both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
+or a captured page holds is in its type's doc (`card-capture-session.md`,
+`card-webpage.md`).
 
 ## COMMANDS — Key Commands
 
