@@ -434,12 +434,13 @@ Filters, examples, and how to read a result: the `bbx search` entry in
 
 ## PROCEDURES — Procedures
 
-Available procedures in `_config/procedures/`:
+<!-- rules: procedures.run-and-read -->
+This box's procedures (`_config/procedures/`); run with `bbx procedure run
+<name>`, and read `node_modules/beebox/box-docs/procedures.md` before writing
+one.
 
 <!-- rules: procedures.list -->
 {{procedures}}
-
-Run with `bbx procedure run <name>`. Read `node_modules/beebox/box-docs/procedures.md` before writing or modifying.
 
 ## GUIDES — Guides
 

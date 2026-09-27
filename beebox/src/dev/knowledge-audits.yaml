@@ -1090,12 +1090,16 @@ tests:
   # (`bbx procedure run` + the triage handler) and fixed the comments. See
   # docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
+  # Status (2026-09-26, doc-structure Track 3, PROCEDURES): pass on the test1
+  # clone, 0 reads, 0 searches, 39k ctx.
   - id: list-procedures
     prompt: "What procedures are configured in this box?"
     expected_level: knows_directly
     watch_for: "Names procedures from agent guide without listing directory"
     tags: [procedures]
 
+  # Status (2026-09-26, doc-structure Track 3, PROCEDURES): pass on the test1
+  # clone, 2 reads, 2 searches, 39k ctx.
   - id: create-procedure
     prompt: "How would you create a new procedure that processes bookmark cards?"
     expected_level: knows_about
@@ -1156,6 +1160,8 @@ tests:
       "re-invoke the run agent with failure context to self-heal, then fail if it
       still doesn't pass; needs exactly one run agent".
 
+  # Status (2026-09-26, doc-structure Track 3, PROCEDURES): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx.
   - id: procedure-vs-procedurerun
     prompt: "Explain the relationship between a procedure card and a procedure-run card."
     expected_level: knows_about
@@ -1170,6 +1176,8 @@ tests:
     tags: [procedures, cli]
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 41k ctx.
+  # Status (2026-09-26, doc-structure Track 3, PROCEDURES): pass on the test1
+  # clone, 4 reads, 4 searches, 39k ctx.
   - id: procedure-in-job
     prompt: "How does a procedure actually get run — what kicks one off?"
     expected_level: knows_about
