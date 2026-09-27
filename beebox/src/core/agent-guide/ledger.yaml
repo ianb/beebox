@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after LANDMARKS.
-  guide_words: 6717
-  always_loaded_words: 11509
+  # 2026-09-26, after SEARCHING.
+  guide_words: 6458
+  always_loaded_words: 11250
   uncited_words_per_section: 60
 
 lint:
@@ -27,6 +27,7 @@ lint:
     - DOCS
     - TODOS
     - LANDMARKS
+    - SEARCHING
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -65,7 +66,6 @@ registry:
     referrers:
       - THE_LAW_OF_CARDS
       - COMMANDS
-      - SEARCHING
       - src/core/agent-guide/search.ts
       - src/core/reactor/prompts.ts
       - src/schemas/audio.tsx
@@ -716,6 +716,33 @@ rows:
     reason: Applies only when surfacing a card in a place or hiding one. The landmark card's own doc (card-landmark.md, "Derived links, and prominence") already stated every fact, so nothing moved; landmark-curation.md's "Curated links" bullet, which still told an agent to list the cards it reaches for, was corrected against the derivation.
     audits: [prominence-vs-links, prominence-housekeeping-directory]
     mechanics: box-docs/card-landmark.md
+
+  # --- SEARCHING ---
+  - id: search.over-grep
+    rule: "`bbx search` is relevance-ranked search over cards, standalone `.md` files, and the engine docs, weighting `contains:`; prefer it to `grep`; jobs and runs are not indexed, so find those with `bbx ls`."
+    handle: SEARCHING
+    bin: core
+    reason: Finding something by content is part of most tasks, and `grep` is every agent's reflex; the not-indexed half stops a failed search being read as "it does not exist".
+    audits: [search-over-grep, search-finds-engine-doc]
+  - id: search.query-style
+    rule: For vague recall, query with one sentence shaped like the `contains:` you hope exists plus any exact tokens; a bare token finds an exact identifier; quoting does not exact-match.
+    handle: SEARCHING
+    bin: core
+    reason: Search is frequent and the phrasing decides whether it finds anything; an agent without it types two guessed keywords or quotes a phrase. Cut to two sentences; the embeddings explanation moved with the examples.
+    audits: [search-query-phrasing, search-exact-identifier]
+  - id: search.examples-filters-results
+    rule: The embeddings explanation, the four example queries, the filter flags, and the result format (a `#fragment` locator, the `contains:` line, an excerpt, "N of total").
+    handle: SEARCHING
+    bin: indirect
+    reason: Usage detail of one command, needed when narrowing a search or reading a truncated result. Moved verbatim to a new `bbx search` entry in bbx-commands.md, whose read-when now names it; the `--path people` example was corrected to `--path _content/people`, since the filter is a prefix of the box-relative path.
+    audits: [search-filters-and-results]
+    mechanics: box-docs/bbx-commands.md
+  - id: search.contains-pointer
+    rule: A card is findable through a good `contains:`, whose rule is in ABOUT_CARDS; the `bbx contains` worklist commands are in bbx-commands.md.
+    handle: SEARCHING
+    bin: delete
+    reason: ABOUT_CARDS states the `contains:` rule and its mechanics line names bbx-commands.md for `bbx contains`; a cross-pointer inside the same document is a second statement.
+    audits: [contains-writing-rule]
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

@@ -415,46 +415,21 @@ ask the boxholder for.
 
 ## SEARCHING — Searching the Box
 
-`bbx search "<query>"` is full-text search over the box's cards — prefer it over
-`grep` for finding cards by content: it understands card structure, ranks by
-relevance, and weights the `contains:` field heavily. Standalone `.md` files
-index too (as kind `markdown`), and so do the engine's reference docs in
-`node_modules/beebox/box-docs/` (kind `engine-doc`) — a question about how
-beebox itself works is a search too. Operational card types (jobs, runs) aren't
-indexed — find those with `bbx ls`.
+<!-- rules: search.over-grep -->
+`bbx search "<query>"` is relevance-ranked search over the box's cards, its
+standalone `.md` files, and the engine's reference docs (kind `engine-doc`),
+weighting each card's `contains:` heavily; prefer it to `grep` for finding
+anything by content. Operational cards (jobs, runs) are not indexed; find
+those with `bbx ls`.
 
-**Query style:** when the box has an embeddings key configured, search ranks by
-*meaning* as well as words (each card's `contains:` sentence is matched
-semantically, fused with keyword ranking). So for vague recall, describe the
-card in one sentence — shaped like the `contains:` line you hope exists — and
-include any exact tokens you remember (names, numbers, IDs): the sentence
-carries the semantic match, the rare tokens nail the keyword match. Both in one
-query is the optimum, not a compromise. For an exact-identifier hunt the bare
-token alone works. Without an embeddings key, ranking is keyword-only: lead
-with distinctive words. Either way it's relevance-ranked — quoting a phrase
-does not do exact-match.
+<!-- rules: search.query-style -->
+For vague recall, describe the card in one sentence shaped like the
+`contains:` line you hope exists, plus any exact tokens you remember (names,
+numbers, IDs); for an exact identifier the bare token works. Quoting a phrase
+does not force an exact match.
 
-Examples:
-
-- `bbx search "the letter about the pension from the insurance company"` — vague
-  recall: describe it; meaning-ranked even though no word may match exactly
-- `bbx search "dentist appointment moved to a new date" --kind email-message` —
-  a summary-shaped sentence, emails only
-- `bbx search "Priya phone" --path people` — exact tokens + a path filter
-- `bbx search "10494" --mode text` — an exact identifier; `--mode text` forces
-  keyword-only ranking (offline, deterministic)
-
-**Filters:** `--kind <type>` (repeatable), `--path <prefix>`, `--limit N`
-(default 10); `--mode <text|hybrid>` (omitted = automatic: semantic+keyword
-when available); `--json` for the structured envelope.
-
-**A result** shows the card's path (with a `#fragment` locator when the match is
-inside the card) and title, then the card's `contains:` sentence and a matched
-excerpt — so you see both *which* card and *where* in it. A truncated run reports
-"N of total."
-
-To make a card findable in the first place, write it a good `contains:` — the
-rule is in **ABOUT_CARDS**; the `bbx contains` worklist commands are in
+<!-- rules: search.examples-filters-results -->
+Filters, examples, and how to read a result: the `bbx search` entry in
 `node_modules/beebox/box-docs/bbx-commands.md`.
 
 ## PROCEDURES — Procedures

@@ -35,6 +35,8 @@ tests:
   # "Where the docs are" and "Searching the Box" sections say so.
   # Status (2026-09-26, doc-structure Track 3, DOCS): pass on the test1 clone, 2
   # reads, 0 searches, 40k ctx.
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 2 reads, 0 searches, 39k ctx.
   - id: search-finds-engine-doc
     prompt: >
       The chat snapshot for this turn reports narration="on". Before you answer,
@@ -4419,6 +4421,8 @@ tests:
   # reaches for bbx search (2 bbx search invocations, no grep).
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 0 reads, 0 searches, 39k ctx.
   - id: contains-writing-rule
     prompt: >
       You're processing a short memo whose body says the dentist
@@ -4434,6 +4438,8 @@ tests:
     tags: [search, cards, behavioral]
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 41k ctx.
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 4 reads, 4 searches, 39k ctx.
   - id: search-over-grep
     prompt: >
       Which cards in this box mention a boiler serial number? How
@@ -4446,6 +4452,8 @@ tests:
     correct_contains: ["bbx search"]
     tags: [search, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 0 reads, 0 searches, 39k ctx.
   - id: search-query-phrasing
     prompt: >
       You half-remember a card about a letter from some insurance
@@ -4461,6 +4469,8 @@ tests:
     correct_contains: ["bbx search", "pension"]
     tags: [search, behavioral]
 
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 2 reads, 2 searches, 39k ctx.
   - id: search-exact-identifier
     prompt: >
       You need every card mentioning ticket number 10494 — an exact
@@ -4475,6 +4485,27 @@ tests:
       match.
     correct_contains: ["10494"]
     tags: [search]
+
+  # Guards ledger row search.examples-filters-results (added 2026-09-26,
+  # doc-structure Track 3, SEARCHING): the filters and the result format
+  # moved from the guide to the `bbx search` entry in bbx-commands.md.
+  # Status (2026-09-26, doc-structure Track 3, SEARCHING): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx (read bbx-commands.md).
+  - id: search-filters-and-results
+    prompt: >
+      You want email-message cards under _content/inbox/email/ that mention a
+      boiler warranty, at most five, ranked by keywords only. Write the exact
+      bbx search command. Then say what a `#fragment` after a result's path
+      means, and what "N of total" at the end of the output tells you. Do not
+      change anything.
+    expected_level: knows_about
+    watch_for: >
+      `bbx search "..." --kind email-message --path _content/inbox/email --limit 5 --mode text`;
+      the fragment locates the match inside the card; "N of total" means the
+      run was truncated and more hits exist (raise --limit or narrow).
+    should_read_any: ["bbx-commands.md"]
+    correct_contains: ["--kind email-message", "--limit 5", "--mode text", "_content/inbox/email"]
+    tags: [search, cli]
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 42k ctx.
   - id: contains-stale-response

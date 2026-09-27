@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
+import { bbxCommandsSearch } from "./bbx-commands-search.js";
 
 /**
  * Lead-in prose + `bbx create` section for the bbx command reference.
@@ -233,6 +234,7 @@ export function generateBbxCommands(): string {
     ...bbxCommandsIntro(),
     ...bbxCommandsTemplates(),
     ...bbxCommandsCore(),
+    ...bbxCommandsSearch(),
     ...bbxCommandsScheduling(),
     ...bbxCommandsConnectors(),
   ];
