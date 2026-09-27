@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-27T05:30:04Z
+Generated: 2026-09-27T05:49:19Z
 Total documents: 453
 
 ## Issues
@@ -55,7 +55,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
-- **docs/plans/agent-guide-spec.md** — "The agent guide is built from a spec" (678 lines) · proposal · draft
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
@@ -131,6 +130,7 @@ Referenced by:
 - docs/development/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/glossary.md:31 (mention) — **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "u
 - docs/implemented-plans/agent-browsing-owner.md:192 (mention) — the plan's outcome invisible (`CLAUDE.md`: infrastructure isn't done until
+- docs/implemented-plans/agent-guide-spec.md:133 (mention) — CLAUDE.md file. Longer files consume more context and reduce adherence";
 - docs/implemented-plans/app-wide-csp.md:223 (mention) — `mode`. Lives in `src/lib/` per CLAUDE.md ("Cross-cutting helpers").
 - docs/implemented-plans/architectural-review.md:68 (mention) — `CLAUDE.md`s, and the boxholder's stated preferences during this review. Where
 - docs/implemented-plans/attach-directories-superseded.md:167 (mention) — Throughout prompts, generated docs, agent instructions, and `CLAUDE.md` mentions, the user-facing terminology is "card a
@@ -207,7 +207,6 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:751 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
 - docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
 - docs/plans/agent-docs.md:87 (mention) — add over my own CLAUDE.md and scripts, is it a framework or a product, how
-- docs/plans/agent-guide-spec.md:133 (mention) — CLAUDE.md file. Longer files consume more context and reduce adherence";
 - docs/plans/asset-offbox-storage.md:363 (mention) — remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:381 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:958 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
@@ -288,9 +287,11 @@ Referenced by:
 - ../issues/closed/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md:13 (mention) — > Closed: implemented by the commit-provenance-trailers plan. Resolving commits: `887f7a51` (script + hooks), `2fa2822c`
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:16 (mention) — CLAUDE.md files is still untouched and stays open here.
+- ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md:23 (mention) — Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:24 (mention) — the box's own CLAUDE.md / agent-guide / rules, not this repo's docs). So the box
 - ../issues/closed/docs-and-chores/2026-08-22-doc-check-skips-untracked-docs.md:28 (mention) — monorepo CLAUDE.md describes that set as the convention ("reads every `.md` in
 - ../issues/closed/docs-and-chores/2026-09-21-card-refs-cannot-link-package-docs-guide-silent-on-it.md:31 (mention) — `node_modules/`, `.git/`, `CLAUDE.md`, `package.json`, any unlisted root
+- ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:17 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:33 (mention) — simplicity bet (`beebox/CLAUDE.md`). Note the cost is NOT "N standing agents":
 - ../issues/closed/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:2 (mention) — title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
 - ../issues/closed/exploration/2026-07-30-do-our-skills-auto-fire.md:19 (mention) — that CLAUDE.md prose routing measured "~0% firing across 400 sessions" — which is
@@ -304,7 +305,6 @@ Referenced by:
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:22 (mention) — CLAUDE.mds) and spot-check their concrete claims against code —
-- ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md:11 (mention) — Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
 - ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md:30 (mention) — them). The box's CLAUDE.md already `@`-includes the agent guide by path
 - ../issues/docs-and-chores/2026-08-12-work-summary-for-the-boxholder.md:62 (mention) — - **Root `CLAUDE.md`** — a general expectation on every agent, at the cost of
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, CLAUDE.md files,
@@ -313,7 +313,6 @@ Referenced by:
 - ../issues/exploration/2026-05-19-subagent-strategy.md:28 (mention) — Connected concern: subagents in beebox don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03-04-cl
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `bbx re
 - ../issues/exploration/2026-05-28-doc-usage-mining.md:14 (mention) — - **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a
-- ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:8 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:9 (mention) — *instructions* (akin to CLAUDE.md), where should it land? Today the only home
 - ../issues/exploration/2026-07-30-subagent-context-inheritance.md:2 (mention) — title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:86 (mention) — system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
@@ -728,12 +727,12 @@ Referenced by:
 - docs/box-layout.md:3 (mention) — The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see
 - docs/cards/schemas.md:332 (mention) — 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 - docs/guides.md:34 (link) — | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
+- docs/implemented-plans/agent-guide-spec.md:11 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/implemented-plans/box-docs-in-package.md:31 (mention) — | `.beebox/agent-guide.md` | engine text plus the box's procedures, personality, shape | partly |
 - docs/implemented-plans/box-search.md:112 (mention) — `.beebox/agent-guide.md` (always loaded) and per-type
 - docs/implemented-plans/doc-structure-box-guidance.md:258 (mention) — | `.beebox/agent-guide.md` (11,081 words) | always | generated | `agent-guide/index.ts` | yes | no (ignored) |
 - docs/implemented-plans/user-location.md:125 (mention) — `.beebox/agent-guide.md`. Sections are **not** gated on box
 - docs/plans/agent-docs.md:415 (mention) — - The box-specific agent guide (`.beebox/agent-guide.md`) needs a box to
-- docs/plans/agent-guide-spec.md:11 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/prompts/logging.md:10 (mention) — - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
 - docs/testing/knowledge-audits.md:36 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:232 (mention) — The scaffold provides `package.json` (with `beebox` pinned), `tsconfig.json`, the standard data directories (`box/`, `st
@@ -742,7 +741,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:10 (mention) — **What is wrong.** Box-local card types are loaded only from the package root's `src/schemas/`. `schemas/registry.ts` re
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:23 (mention) — `.beebox/agent-guide.md:103`):
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:19 (mention) — these passes silently pulls the full box CLAUDE.md → `agent-guide.md` → rules
-- ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:8 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
+- ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:17 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:18 (mention) — - **Always-on** — root `CLAUDE.md` + the generated `agent-guide.md`. Paid for on
 - ../research/openclaw-hermes/compare-context-memory.md:15 (mention) — | Files | Root `CLAUDE.md` (`@`-includes `agent-guide.md`, `briefing.md`, `MAP.md`); `.beebox/agent-guide.md` (657 lines
 - ../research/openclaw-hermes/compare-skills-tools.md:30 (mention) — editing `*.memo.card` loads `card-memo.md`). The agent guide (`agent-guide.md`) is the
@@ -770,8 +769,8 @@ Referenced by:
 - docs/agent-guide.md:6 (link) — [box guidance](box-guidance.md); this page covers the guide itself.
 - docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
 - docs/guides.md:33 (link) — | Box guidance: the instruction files a box agent reads, and who writes each | [box-guidance](box-guidance.md) |
+- docs/implemented-plans/agent-guide-spec.md:512 (mention) — - The weekly review line added to `docs/box-guidance.md` in phase two, which
 - docs/implemented-plans/doc-structure-box-guidance.md:644 (mention) — 4. **Where `docs/box-guidance.md` sits in the developer docs.** Lean: a new
-- docs/plans/agent-guide-spec.md:512 (mention) — - The weekly review line added to `docs/box-guidance.md` in phase two, which
 - docs/prompts/logging.md:131 (link) — nothing to enable. [Box guidance](../box-guidance.md) says which files carry
 - ../issues/closed/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md:53 (mention) — `beebox/docs/box-guidance.md`. Either way, `test/core/box-guidance-sync.doctest.md`
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:20 (mention) — (`beebox/docs/box-guidance.md`, "Generated files carry a marker"). Two
@@ -914,6 +913,7 @@ Title: "Connectors" | 142 lines | current reference
 Referenced by:
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
 - docs/guides.md:14 (link) — | Connectors: the framework, Google auth, Calendar, Gmail, Drive, Telegram | [connectors](connectors.md) |
+- docs/implemented-plans/agent-guide-spec.md:624 (mention) — | scheduled script gets a granted key | 7 | `connectors.md` Credentials | 17, gave up |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/connector-silence.md:78 (mention) — Authored docs about 60 lines (`docs/connectors.md`, `docs/server/health-checks.md`).
 - docs/implemented-plans/doc-structure-box-guidance.md:300 (mention) — | calendar | skill, `connector-calendar.md` rule, `_config/calendar.guide.card` (tracked), compiled `calendar-guide.md`,
@@ -924,7 +924,6 @@ Referenced by:
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
-- docs/plans/agent-guide-spec.md:624 (mention) — | scheduled script gets a granted key | 7 | `connectors.md` Credentials | 17, gave up |
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/prompts/lenses.md:66 (link) — convention: [freshness metadata](../connectors.md#freshness-metadata).
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
@@ -1585,6 +1584,7 @@ Referenced by:
 - CLAUDE.md:67 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/README.md:26 (mention) — Each entry in the directory's `README.md` disposition table says what
 - docs/guides.md:4 (link) — them; walk in from the parent. [Documentation organization](README.md) says
+- docs/implemented-plans/agent-guide-spec.md:68 (mention) — - **Organizing principles** (`docs/README.md`): one home per fact, pointer
 - docs/implemented-plans/doc-lifecycle-clarity.md:51 (mention) — Make `docs/README.md` agree with `docs/plans/README.md`: YAML status is canonical;
 - docs/implemented-plans/doc-structure-box-guidance.md:11 (link) — [organizing principles](../README.md#organizing-principles) to the engine's
 - docs/implemented-plans/doc-structure-cards.md:9 (link) — Fifth cluster under the [organizing principles](../README.md#organizing-principles):
@@ -1598,7 +1598,6 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - docs/plans/README.md:72 (link) — status/location consistency; see [documentation checks](../README.md#enforcement-pnpm-doc-check).
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
-- docs/plans/agent-guide-spec.md:68 (mention) — - **Organizing principles** (`docs/README.md`): one home per fact, pointer
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:93 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
 - ../CLAUDE.md:55 (link) — Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lf
@@ -2110,7 +2109,7 @@ Referenced by:
 Title: "Prominence" | 50 lines | current reference
 
 Referenced by:
-- docs/plans/agent-guide-spec.md:572 (mention) — Indirect text moved verbatim to package docs (new `prominence.md`,
+- docs/implemented-plans/agent-guide-spec.md:572 (mention) — Indirect text moved verbatim to package docs (new `prominence.md`,
 - src/core/agent-guide/guide.md:256 (mention) — `bbx create` values and `bbx contains`; `prominence.md` before writing any
 
 #### docs/box/provenance.md
@@ -2170,8 +2169,8 @@ Title: "Tricks" | 122 lines | current reference
 Referenced by:
 - docs/box-guidance.md:124 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
 - docs/box/schemas.md:114 (mention) — **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox libr
+- docs/implemented-plans/agent-guide-spec.md:618 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- docs/plans/agent-guide-spec.md:618 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - src/core/agent-guide/guide.md:532 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:12 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
@@ -2874,6 +2873,32 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 - → docs/example-names.md (mention)
+
+#### docs/implemented-plans/agent-guide-spec.md
+
+Title: "The agent guide is built from a spec" | 691 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/prompt-surface-cleanup-evaluation.md:650 (link) — **Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
+- ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md:8 (link) — **Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md):
+- ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:9 (link) — **Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md)
+
+References:
+- → ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (frontmatter)
+- → ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (frontmatter)
+- → docs/agent-guide.md (mention)
+- → ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
+- → ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
+- → ../issues/features/2026-06-20-context-size-measurement-legibility.md (link)
+- → docs/README.md (mention)
+- → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
+- → docs/prompts/review.md (mention)
+- → CLAUDE.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/box-guidance.md (mention)
+- → docs/box/prominence.md (mention)
+- → docs/box/tricks.md (mention)
+- → docs/connectors.md (mention)
 
 #### docs/implemented-plans/agent-token-browser-auth.md
 
@@ -3844,8 +3869,8 @@ References:
 - → docs/README.md (link)
 - → CLAUDE.md (mention)
 - → ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md (link)
-- → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
+- → ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
+- → ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
 - → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)
 - → ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md (link)
 - → ../issues/docs-and-chores/2026-05-21-docs-generated-map.md (link)
@@ -3991,7 +4016,7 @@ References:
 - → ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md (frontmatter)
 - → ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md (link)
 - → ../issues/docs-and-chores/2026-03-16-review-all-prompts.md (link)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
+- → ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
 - → ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md (link)
 - → ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md (link)
 - → docs/README.md (mention)
@@ -6006,27 +6031,6 @@ References:
 - → docs/agent-guide.md (mention)
 - → docs/example-names.md (mention)
 
-#### docs/plans/agent-guide-spec.md **[ORPHAN]**
-
-Title: "The agent guide is built from a spec" | 678 lines | proposal | draft
-
-References:
-- → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (frontmatter)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (frontmatter)
-- → docs/agent-guide.md (mention)
-- → ../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md (link)
-- → ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md (link)
-- → ../issues/features/2026-06-20-context-size-measurement-legibility.md (link)
-- → docs/README.md (mention)
-- → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
-- → docs/prompts/review.md (mention)
-- → CLAUDE.md (mention)
-- → src/core/agent-guide/guide.md (mention)
-- → docs/box-guidance.md (mention)
-- → docs/box/prominence.md (mention)
-- → docs/box/tricks.md (mention)
-- → docs/connectors.md (mention)
-
 #### docs/plans/agent-points-at-ui.md
 
 Title: "The agent sees the interface and points at controls in it" | 1306 lines | proposal | partial
@@ -6884,13 +6888,13 @@ References:
 
 #### docs/plans/prompt-surface-cleanup-evaluation.md
 
-Title: "Prompt Surface Cleanup — Evaluation" | 994 lines | proposal | active
+Title: "Prompt Surface Cleanup — Evaluation" | 1000 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/agent-guide-spec.md:89 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/doc-structure-box-guidance.md:105 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/implemented-plans/job-xml-purge.subplan.md:31 (mention) — (`prompt-surface-cleanup-evaluation.md`, Track 1). The parent plan's original Track 1
-- docs/plans/agent-guide-spec.md:89 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
 - docs/prompts/review.md:63 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
@@ -6898,6 +6902,8 @@ References:
 - → docs/box-layout.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/job-xml-purge.subplan.md (mention)
+- → docs/implemented-plans/agent-guide-spec.md (link)
+- → src/core/agent-guide/guide.md (mention)
 
 #### docs/plans/public-site-box-authoring-export.md
 
@@ -7387,7 +7393,7 @@ References:
 Title: "Prompt surface review" | 71 lines | current reference
 
 Referenced by:
-- docs/plans/agent-guide-spec.md:126 (mention) — guide. `docs/prompts/review.md` describes how to review the assembled stack,
+- docs/implemented-plans/agent-guide-spec.md:126 (mention) — guide. `docs/prompts/review.md` describes how to review the assembled stack,
 - docs/prompts/lenses.md:7 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
 - src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
 - ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompts/review.md`; this skill routes a single
@@ -8081,7 +8087,8 @@ Title: "Bee Box Agent Guide" | 615 lines
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
 - docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
-- docs/plans/agent-guide-spec.md:168 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/implemented-plans/agent-guide-spec.md:168 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 
 References:

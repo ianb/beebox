@@ -21,7 +21,7 @@ result before anything else moves.
 (the source of the idea). Related, referenced not duplicated:
 [review all prompts](../../../issues/docs-and-chores/2026-03-16-review-all-prompts.md)
 (the end-to-end read),
-[instruction surface size budget](../../../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
+[instruction surface size budget](../../../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
 (volume),
 [CLAUDE.md / docs backlog](../../../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md)
 (asks for a `testing-practice.md`; the pilot's `testing/README.md` is where

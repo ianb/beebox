@@ -1,6 +1,6 @@
 # Agent guide — the linter
 
-Plan: `docs/plans/agent-guide-spec.md`, Track 2. The guide's prose is
+Plan: `docs/implemented-plans/agent-guide-spec.md`, Track 2. The guide's prose is
 `src/core/agent-guide/guide.md`; the renderer fills its placeholders and strips
 its comments in one pass, and `lintGuide` (`src/core/agent-guide/lint.ts`,
 also `pnpm lint:guide`) checks the result against `ledger.yaml`: cited ids are

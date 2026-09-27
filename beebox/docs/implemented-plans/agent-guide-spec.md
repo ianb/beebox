@@ -1,10 +1,10 @@
 ---
 title: "The agent guide is built from a spec: a YAML ledger, stable placemarkers, annotated source, and a size budget"
-status: draft
+status: implemented
 workstream: doc-structure
 issues:
-  - ../../../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md
-  - ../../../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md
+  - ../../../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md
+  - ../../../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md
 ---
 # The agent guide is built from a spec
 
@@ -32,9 +32,9 @@ version of the other document ... it should at least semantically be able to
 be rebuilt."
 
 **Issues addressed:**
-[knowledge budget for always-loaded context](../../../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md)
+[knowledge budget for always-loaded context](../../../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md)
 (the ledger and the budget check are the discipline it asks for) and
-[instruction surface size budget](../../../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
+[instruction surface size budget](../../../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
 (the target and the measurement; the "inject a slim-down prompt" mechanism it
 proposes is not built, see NOT in scope). Related, not closed:
 [context size measurement legibility](../../../issues/features/2026-06-20-context-size-measurement-legibility.md)

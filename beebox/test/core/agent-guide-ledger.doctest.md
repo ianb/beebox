@@ -1,6 +1,6 @@
 # Agent guide — the ledger and the handle registry
 
-Plan: `docs/plans/agent-guide-spec.md`, Track 1. `src/core/agent-guide/ledger.yaml`
+Plan: `docs/implemented-plans/agent-guide-spec.md`, Track 1. `src/core/agent-guide/ledger.yaml`
 holds the decisions behind the always-loaded guide: the budget, one row per
 rule, and the registry of section handles. The spec is `docs/agent-guide.md`.
 This file holds the ledger to three promises: it parses, every audit a row
