@@ -14,12 +14,12 @@ export interface MentionGroup {
   lines: string[];
 }
 
-function owningRoot(path: string, roots: string[]): string | null {
+export function owningRoot(path: string, roots: string[]): string | null {
   const matches = roots.filter((root) => isWithin(path, root)).toSorted((a, b) => b.length - a.length);
   return matches[0] ?? null;
 }
 
-function mentionPatterns(params: { oldPath: string; roots: string[] }): string[] {
+export function mentionPatterns(params: { oldPath: string; roots: string[] }): string[] {
   const patterns = new Set<string>([params.oldPath, pathWithoutExtension(params.oldPath)]);
   const root = owningRoot(params.oldPath, params.roots);
   if (root !== null) {

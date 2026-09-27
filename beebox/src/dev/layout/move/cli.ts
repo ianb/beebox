@@ -1,25 +1,28 @@
 #!/usr/bin/env node --import tsx
 /**
- * `pnpm layout-move <moves.json> [--dry-run]`: applies a move list — `git mv`
- * each pair, then rewrites every import specifier the move touches (modules,
- * tests, doctest fences, and `bin/**\/*.ts`), and prints every non-import
- * mention of a moved path for hand repair. See
- * docs/plans/file-layout.moves.subplan.md.
+ * `pnpm layout-move <moves.json> [--dry-run] [--no-rewrite-mentions]`:
+ * applies a move list — `git mv` each pair, then rewrites every import
+ * specifier the move touches (modules, tests, doctest fences, and
+ * `bin/**\/*.ts`). By default it also rewrites every confidently-resolvable
+ * non-import mention of a moved path (`mention-rewrite.ts`) and reports the
+ * rest as "needs review"; `--no-rewrite-mentions` reverts to printing every
+ * mention for hand repair instead. See docs/plans/file-layout.moves.subplan.md.
  *
  * Move list shape: `{ "moves": [{ "from": "<repo-relative>", "to": "<repo-relative>" }] }`.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { applyRewrites, moveFiles } from "./apply.js";
 import { collectRewrites, collectSources } from "./edges.js";
 import { parseMoveList } from "./list.js";
+import { computeMentionRewrite, type MentionRewriteResult } from "./mention-rewrite.js";
 import { reportMentions } from "./mentions.js";
 import { scanRoots } from "./roots.js";
 import { validateMoveList } from "./validate.js";
 
 export class MissingMoveListArgumentError extends Error {
   constructor() {
-    super("usage: layout-move <moves.json> [--dry-run]");
+    super("usage: layout-move <moves.json> [--dry-run] [--no-rewrite-mentions]");
     this.name = "MissingMoveListArgumentError";
   }
 }
@@ -27,7 +30,7 @@ export class MissingMoveListArgumentError extends Error {
 export class UnknownArgumentError extends Error {
   readonly argument: string;
   constructor(argument: string) {
-    super("unknown argument; expected a move list path and optional --dry-run");
+    super("unknown argument; expected a move list path and optional --dry-run/--no-rewrite-mentions");
     this.name = "UnknownArgumentError";
     this.argument = argument;
   }
@@ -36,21 +39,39 @@ export class UnknownArgumentError extends Error {
 interface Args {
   moveListPath: string;
   dryRun: boolean;
+  rewriteMentions: boolean;
 }
 
 export function parseArgs(argv: string[]): Args {
   let moveListPath: string | null = null;
   let dryRun = false;
+  let rewriteMentions = true;
   for (const arg of argv) {
     if (arg === "--dry-run") dryRun = true;
+    else if (arg === "--no-rewrite-mentions") rewriteMentions = false;
+    else if (arg === "--rewrite-mentions") rewriteMentions = true;
     else if (moveListPath === null) moveListPath = arg;
     else throw new UnknownArgumentError(arg);
   }
   if (moveListPath === null) throw new MissingMoveListArgumentError();
-  return { moveListPath, dryRun };
+  return { moveListPath, dryRun, rewriteMentions };
 }
 
 const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "../../../../..");
+
+function printMentionRewriteSummary(result: MentionRewriteResult, params: { dryRun: boolean }): void {
+  const verb = params.dryRun ? "would rewrite" : "rewrote";
+  console.log(`layout-move: mention rewrites (${verb})`);
+  for (const [kind, count] of result.countsByForm) console.log(`  ${kind}: ${count}`);
+  console.log(`  ${result.fileEdits.size} file(s) touched`);
+  const needsReviewCount = result.needsReview.reduce((sum, group) => sum + group.lines.length, 0);
+  console.log(`  needs review: ${needsReviewCount} mention(s)`);
+  for (const group of result.needsReview) {
+    if (group.lines.length === 0) continue;
+    console.log(`needs review for ${group.movedPath}:`);
+    for (const line of group.lines) console.log(`  ${line}`);
+  }
+}
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
@@ -71,17 +92,27 @@ async function main(): Promise<void> {
     }
   }
 
-  if (args.dryRun) return;
+  const rewrittenFiles = new Set(byImporter.keys());
+
+  if (args.dryRun) {
+    if (args.rewriteMentions) {
+      const result = computeMentionRewrite({ repoRoot: REPO_ROOT, moves, roots, rewrittenFiles });
+      printMentionRewriteSummary(result, { dryRun: true });
+    }
+    return;
+  }
 
   moveFiles({ repoRoot: REPO_ROOT, moves });
   applyRewrites({ repoRoot: REPO_ROOT, byImporter });
 
-  const mentions = reportMentions({
-    repoRoot: REPO_ROOT,
-    moves,
-    roots,
-    rewrittenFiles: new Set(byImporter.keys()),
-  });
+  if (args.rewriteMentions) {
+    const result = computeMentionRewrite({ repoRoot: REPO_ROOT, moves, roots, rewrittenFiles });
+    for (const [path, text] of result.fileEdits) writeFileSync(resolve(REPO_ROOT, path), text, "utf8");
+    printMentionRewriteSummary(result, { dryRun: false });
+    return;
+  }
+
+  const mentions = reportMentions({ repoRoot: REPO_ROOT, moves, roots, rewrittenFiles });
   for (const group of mentions) {
     if (group.lines.length === 0) continue;
     console.log(`non-import mentions of ${group.movedPath}:`);

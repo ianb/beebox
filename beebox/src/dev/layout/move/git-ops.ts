@@ -47,3 +47,25 @@ export function gitGrep(params: { repoRoot: string; pattern: string }): string[]
     throw e;
   }
 }
+
+/**
+ * Tracked file paths containing at least one of `patterns` (literal,
+ * non-regex, OR-matched) — one `git grep` call for many patterns, so a
+ * mention-rewrite pass with dozens of forms doesn't spawn a subprocess per
+ * form. `[]` for an empty pattern list (git would otherwise match every file).
+ */
+export function gitGrepFilesAny(params: { repoRoot: string; patterns: string[] }): string[] {
+  if (params.patterns.length === 0) return [];
+  const patternArgs = params.patterns.flatMap((pattern) => ["-e", pattern]);
+  try {
+    const out = execFileSync("git", ["grep", "-l", "-F", ...patternArgs, "--"], {
+      cwd: params.repoRoot,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return out.split("\n").filter((s) => s.length > 0);
+  } catch (e) {
+    if (grepExitStatus(e) === 1) return [];
+    throw e;
+  }
+}
