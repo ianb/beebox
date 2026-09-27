@@ -35,7 +35,7 @@ test("frontend source goes to the frontend config, everything else to the root o
   assert.deepEqual(split.backend, [
     "src/core/box.ts",
     "src/scripts/build-cli/build/entry.ts",
-    "test/helpers/fake-agent.ts",
+    "test/core/fake-agent.ts",
   ]);
   assert.deepEqual(split.frontend, ["src/pages/ChatPage.tsx", "test/pages/ChatPage.test.ts"]);
 });
