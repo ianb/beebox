@@ -12,7 +12,7 @@
  * question look like on the wire."
  */
 
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { QuestionForm } from "./questions/QuestionForm";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
@@ -22,7 +22,7 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
 import { bbxSource } from "../lib/source-tag";
 import { renderQuestionAnswer } from "./questions/answer-display";
-import type { RendererProps } from "../renderers";
+import type { RendererProps } from "../file-type-registry";
 
 const ANSWERABLE = new Set(["pending", "expired", "dismissed"]);
 

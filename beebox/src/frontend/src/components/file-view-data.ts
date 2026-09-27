@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { ATTACH_SUFFIX } from "@shared/attach-path";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
@@ -20,7 +20,7 @@ import { RequestError } from "../lib/errors";
 import { resolveLoadState, type LoadFailure } from "../lib/file-load-state";
 import { fetchFromBox, MAX_RETRIES, retryDelayMs, unreachableCause } from "../lib/trpc/transient";
 import { busEventData } from "../lib/bus-events";
-import type { FileData } from "../renderers";
+import type { FileData } from "../file-type-registry";
 import { cardLoadRecovery, fileChangeAffectsPath, type CardLoadRecovery } from "../lib/moved-card-recovery";
 
 /* ---------- path classification ---------- */

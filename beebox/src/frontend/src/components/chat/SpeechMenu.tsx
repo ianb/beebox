@@ -17,7 +17,7 @@
 import type { ReactNode } from "react";
 import { Dropdown, useDropdownClose } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import type { SpeechSegment } from "../../lib/audio/speech-parsing";
+import type { SpeechSegment } from "../../lib/audio/speech-parsing/parse";
 
 const MAX_LABEL_CHARS = 50;
 

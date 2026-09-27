@@ -2,8 +2,8 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
-import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
-import { perBoxIdentityAssetPattern } from "./vite-proxy";
+import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
+import { perBoxIdentityAssetPattern } from "./src/dev/vite-proxy";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;

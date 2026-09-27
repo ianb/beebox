@@ -12,12 +12,12 @@ import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
 import { Stack } from "../../components/ui/Stack";
 import { ErrorText } from "../../components/ui/ErrorText";
-import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
+import { BrowseSidebarBody } from "./components/BrowseSidebarBody/view";
 import { RequestError } from "../../lib/errors";
 import type { BrowseMissingKind, BrowseState } from "../../lib/browse-card-state";
 

@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { withBase } from "../../api";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
-import { CheckboxField, TextField } from "../ui/fields";
+import { CheckboxField, TextField } from "../ui/fields/field";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION = "The link creates one member account for this box and expires after 15 minutes.";

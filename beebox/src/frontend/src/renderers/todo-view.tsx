@@ -4,8 +4,9 @@
  */
 
 import { TodoViewCard } from "../components/TodoViewCard";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "todo-view" }, {
+export const todoViewRenderer: RendererEntry = {
+  selector: { type: "todo-view" },
   renderer: { name: "Todo View", Component: TodoViewCard, priority: 100 },
-});
+};

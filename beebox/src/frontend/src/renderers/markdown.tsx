@@ -2,10 +2,10 @@
  * Markdown renderer — rendered from pre-loaded text content.
  */
 
-import { Markdown } from "../components/Markdown";
+import { Markdown } from "../components/Markdown/body";
 import { StatusMessage } from "../components/ui/StatusMessage";
 import { CardThemeContent } from "../components/themes/CardThemeContent";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function MarkdownRenderer({ data, onNavigate, mode }: RendererProps) {
   if (data.content === undefined) {
@@ -16,7 +16,7 @@ function MarkdownRenderer({ data, onNavigate, mode }: RendererProps) {
   return <div className="p-4">{content}</div>;
 }
 
-registerFileType(
-  { match: (path) => path.endsWith(".md") },
-  { renderer: { name: "Markdown", Component: MarkdownRenderer, priority: 50 } },
-);
+export const markdownRenderer: RendererEntry = {
+  selector: { match: (path) => path.endsWith(".md") },
+  renderer: { name: "Markdown", Component: MarkdownRenderer, priority: 50 },
+};

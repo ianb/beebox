@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useMemo, useRef } from "react";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
 import { busEventData } from "../lib/bus-events";
 import { boxRelativePath } from "@shared/box-path";

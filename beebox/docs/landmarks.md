@@ -221,7 +221,7 @@ box-name setting anywhere.
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
 | Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat.ts`) |
-| App-bar switch / here menus | `src/frontend/src/components/PlacePill.tsx` + the bar's chrome slots |
+| App-bar switch / here menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
 | Doctest coverage | `test/core/landmark/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 

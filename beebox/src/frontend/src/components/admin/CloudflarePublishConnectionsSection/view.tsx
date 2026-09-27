@@ -1,0 +1,285 @@
+/** Global-owner management for server-held Cloudflare publication credentials. */
+
+import { useState, type FormEvent } from "react";
+import { useParams } from "@tanstack/react-router";
+import { trpc, type RouterOutput } from "../../../lib/trpc/client";
+import { Button } from "../../ui/Button";
+import { Badge } from "../../ui/Badge";
+import { Card } from "../../ui/Card";
+import { ErrorText } from "../../ui/ErrorText";
+import { Heading } from "../../ui/Heading";
+import { Hint } from "../../ui/Hint";
+import { Row } from "../../ui/Row";
+import { Stack } from "../../ui/Stack";
+import { Text } from "../../ui/Text";
+import { TextField } from "../../ui/fields/field";
+import { ExternalLink } from "../../ui/ExternalLink";
+import { FriendlyDate } from "../../ui/FriendlyDate";
+import { AdminSectionCard } from "../AdminSectionCard";
+import { SharedPublicationHost } from "./SharedPublicationHost";
+import { Accordion } from "../../ui/Accordion";
+import { TokenSetupGuidance } from "./guidance";
+
+type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
+
+const DESCRIPTION =
+  "These credentials stay on this host. A server-only grant lets this box provision its sites; the box agent cannot read the token.";
+
+export function CloudflarePublishConnectionsSection() {
+  const { boxSlug } = useParams({ strict: false });
+  const connections = trpc.cloudflarePublishConnections.list.useQuery();
+  const utils = trpc.useUtils();
+  const [name, setName] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [apiToken, setApiToken] = useState("");
+  const [rotateTarget, setRotateTarget] = useState<string | null>(null);
+  const [revokeAcknowledged, setRevokeAcknowledged] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  // The add form is long (three fields and the token walkthrough), so it stays
+  // folded once a connection exists; it opens itself for the first one and for
+  // a rotation.
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  const refresh = () => utils.cloudflarePublishConnections.list.invalidate();
+  const save = trpc.cloudflarePublishConnections.save.useMutation({
+    onSuccess: async (_connection, variables) => {
+      setApiToken("");
+      setRotateTarget(null);
+      setSaveError(null);
+      setSaveStatus(`Saved “${variables.name}”. Refreshing saved connections…`);
+      try {
+        await refresh();
+        setSaveStatus(`Saved “${variables.name}”.`);
+      } catch (refreshError) {
+        void refreshError;
+        setSaveStatus(`Saved “${variables.name}”, but the saved connections list could not be refreshed. Reload the page to check it.`);
+      }
+    },
+    onError: (error, variables) => {
+      setSaveStatus(null);
+      setSaveError(redactToken(error.message, variables.apiToken));
+    },
+  });
+  const grant = trpc.cloudflarePublishConnections.grant.useMutation({ onSuccess: refresh, onError: (error) => setActionError(error.message) });
+  const revokeGrant = trpc.cloudflarePublishConnections.revokeGrant.useMutation({ onSuccess: refresh, onError: (error) => setActionError(error.message) });
+  const revoke = trpc.cloudflarePublishConnections.revoke.useMutation({
+    onSuccess: async () => {
+      setActionError(null);
+      await refresh();
+    },
+    onError: (error) => setActionError(error.message),
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActionError(null);
+    setSaveError(null);
+    setSaveStatus(null);
+    save.mutate({ name: name.trim(), accountId: accountId.trim(), apiToken });
+  }
+
+  if (connections.isLoading) {
+    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><Hint>Loading Cloudflare connections…</Hint></AdminSectionCard>;
+  }
+
+  return (
+    <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION}>
+        {connections.error ? <div role="alert"><ErrorText>{connections.error.message}</ErrorText></div> : null}
+        {actionError ? <div role="alert"><ErrorText>{actionError}</ErrorText></div> : null}
+
+        <Stack gap="sm">
+          <Heading level={3}>Saved connections</Heading>
+          {connections.data?.length === 0 ? <Text size="sm" tone="muted">No Cloudflare publishing connection has been added.</Text> : null}
+          {connections.data?.map((connection) => (
+            <ConnectionCard
+              key={connection.name}
+              connection={connection}
+              currentBox={boxSlug ?? ""}
+              revokeAcknowledged={revokeAcknowledged[connection.name] === true}
+              setRevokeAcknowledged={(checked) => setRevokeAcknowledged((state) => ({ ...state, [connection.name]: checked }))}
+              pending={grant.isPending || revokeGrant.isPending || revoke.isPending}
+              onRotate={() => {
+                setName(connection.name);
+                setAccountId(connection.accountId);
+                setApiToken("");
+                setRotateTarget(connection.name);
+              }}
+              onGrant={(targetBox) => { setActionError(null); grant.mutate({ name: connection.name, boxSlug: targetBox }); }}
+              onRevokeGrant={(targetBox) => { setActionError(null); revokeGrant.mutate({ name: connection.name, boxSlug: targetBox }); }}
+              onRevoke={() => { setActionError(null); revoke.mutate({ name: connection.name }); }}
+            />
+          ))}
+        </Stack>
+        <SharedPublicationHost />
+
+        <Accordion
+          id="bbx-admin-cf-publish-add"
+          title={<Text weight="medium">{rotateTarget === null ? "Add a connection" : `Rotate ${rotateTarget}`}</Text>}
+          keepMounted
+          open={editorOpen || rotateTarget !== null || connections.data?.length === 0}
+          onOpenChange={(open) => {
+            setEditorOpen(open);
+            if (!open && rotateTarget !== null) { setRotateTarget(null); setApiToken(""); }
+          }}
+        >
+          <ConnectionEditor
+            name={name}
+            accountId={accountId}
+            apiToken={apiToken}
+            rotateTarget={rotateTarget}
+            pending={save.isPending}
+            setName={setName}
+            setAccountId={setAccountId}
+            setApiToken={setApiToken}
+            saveError={saveError}
+            saveStatus={saveStatus}
+            onSubmit={submit}
+            onCancelRotation={() => { setRotateTarget(null); setApiToken(""); }}
+          />
+        </Accordion>
+    </AdminSectionCard>
+  );
+}
+
+export function ConnectionEditor({
+  name,
+  accountId,
+  apiToken,
+  rotateTarget,
+  pending,
+  saveError,
+  saveStatus,
+  setName,
+  setAccountId,
+  setApiToken,
+  onSubmit,
+  onCancelRotation,
+}: {
+  name: string;
+  accountId: string;
+  apiToken: string;
+  rotateTarget: string | null;
+  pending: boolean;
+  saveError: string | null;
+  saveStatus: string | null;
+  setName: (value: string) => void;
+  setAccountId: (value: string) => void;
+  setApiToken: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancelRotation: () => void;
+}) {
+  return (
+    <form onSubmit={onSubmit}>
+      <Stack gap="sm">
+        <Hint>Saving checks that the token is active and can identify the selected account. It does not test publishing permissions; the first site setup checks those.</Hint>
+        <TextField id="bbx-admin-cf-publish-name" label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Choose a Bee Box label, such as makers. Lowercase letters, digits, and hyphens; starts with a letter." />
+        <TextField id="bbx-admin-cf-publish-account" label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" helper={<span>Find it in Cloudflare under <Text weight="medium">Workers & Pages → Account Details</Text>, or follow <ExternalLink id="bbx-admin-cf-publish-account-help" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" variant="inline">Cloudflare&apos;s account ID instructions</ExternalLink>.</span>} />
+        <TextField id="bbx-admin-cf-publish-token" label="API token" type="password" autoComplete="new-password" value={apiToken} onChange={setApiToken} required maxLength={4096} />
+        <TokenSetupGuidance />
+        <Row gap="sm" wrap>
+          <Button id="bbx-admin-cf-publish-save" type="submit" intent="primary" loading={pending} loadingLabel="Verifying…">{rotateTarget === null ? "Verify and save" : "Verify and rotate"}</Button>
+          {rotateTarget !== null ? <Button id="bbx-admin-cf-publish-cancel-rotate" type="button" intent="secondary" onClick={onCancelRotation}>Cancel rotation</Button> : null}
+        </Row>
+        <CloudflarePublishSaveFeedback error={saveError} status={saveStatus} />
+      </Stack>
+    </form>
+  );
+}
+
+function CloudflarePublishSaveFeedback({ error, status }: { error: string | null; status: string | null }) {
+  if (error !== null) return <div role="alert"><ErrorText>{error}</ErrorText></div>;
+  if (status !== null) return <div role="status" aria-live="polite"><Text size="sm" tone="muted">{status}</Text></div>;
+  return null;
+}
+
+function redactToken(message: string, token: string): string {
+  const candidates = [...new Set([token, token.trim()].filter(Boolean))];
+  return candidates.reduce((safe, candidate) => safe.split(candidate).join("[redacted]"), message);
+}
+
+function ConnectionCard({
+  connection,
+  currentBox,
+  revokeAcknowledged,
+  setRevokeAcknowledged,
+  pending,
+  onRotate,
+  onGrant,
+  onRevokeGrant,
+  onRevoke,
+}: {
+  connection: Connection;
+  currentBox: string;
+  revokeAcknowledged: boolean;
+  setRevokeAcknowledged: (checked: boolean) => void;
+  pending: boolean;
+  onRotate: () => void;
+  onGrant: (boxSlug: string) => void;
+  onRevokeGrant: (boxSlug: string) => void;
+  onRevoke: () => void;
+}) {
+  const currentBoxHasGrant = connection.grants.some((item) => item.boxSlug === currentBox);
+  const tokenId = connection.tokenId === null ? "not retained" : connection.tokenId;
+
+  return (
+    <Card as="article" muted={connection.tokenStatus === "revoked"}>
+      <Stack gap="sm">
+        <Stack gap="xs">
+          <Row gap="sm" wrap align="center"><Heading level={3}>{connection.name}</Heading><Badge tone={connection.tokenStatus === "active" ? "success" : "warning"}>{connection.tokenStatus}</Badge></Row>
+          <Text size="sm">Account <Text mono>{connection.accountId}</Text> · {connection.credentialType} · token {tokenId}</Text>
+          <Text size="sm" tone="muted">Verified: {connection.verifiedAt === null ? "not verified" : <FriendlyDate iso={connection.verifiedAt} />}</Text>
+        </Stack>
+
+        <Stack gap="xs">
+          <Text size="sm" weight="medium">Verified capabilities</Text>
+          <Row gap="xs" wrap>
+            {Object.entries(connection.capabilities).map(([capability, state]) => <Capability key={capability} name={capability} state={state} />)}
+          </Row>
+        </Stack>
+
+        <Stack gap="xs">
+          <Text size="sm" weight="medium">Server grants</Text>
+          {connection.grants.length === 0 ? <Text size="sm" tone="muted">No boxes can use this connection.</Text> : null}
+          {connection.grants.map((item) => (
+            <Row key={item.boxSlug} gap="sm" align="center" wrap>
+              <Text size="sm"><Text mono>{item.boxSlug}</Text>{item.boxSlug === currentBox ? " (this box)" : ""}</Text>
+              <Button id={`bbx-admin-cf-publish-revoke-grant-${connection.name}-${item.boxSlug}`} size="sm" intent="secondary" disabled={pending} onClick={() => onRevokeGrant(item.boxSlug)}>Remove grant</Button>
+            </Row>
+          ))}
+          {currentBox !== "" && !currentBoxHasGrant && connection.tokenStatus === "active" ? (
+            <Button id={`bbx-admin-cf-publish-grant-${connection.name}`} intent="secondary" disabled={pending} onClick={() => onGrant(currentBox)}>Grant server access to this box</Button>
+          ) : null}
+        </Stack>
+
+        <Row gap="sm" wrap>
+          <Button id={`bbx-admin-cf-publish-rotate-${connection.name}`} intent="secondary" disabled={pending} onClick={onRotate}>{connection.tokenStatus === "active" ? "Rotate token" : "Replace token"}</Button>
+          {connection.tokenStatus === "active" ? <Button id={`bbx-admin-cf-publish-revoke-${connection.name}`} intent="destructive" disabled={pending || !revokeAcknowledged} onClick={onRevoke}>Revoke credential</Button> : null}
+        </Row>
+        {connection.tokenStatus === "active" ? (
+          <Row gap="sm" align="start">
+            <input
+              id={`bbx-admin-cf-publish-revoke-ack-${connection.name}`}
+              type="checkbox"
+              checked={revokeAcknowledged}
+              onChange={(event) => setRevokeAcknowledged(event.target.checked)}
+            />
+            <Text size="sm">Revoking removes this host&apos;s token but does not take live sites offline. I have disabled sites first, or understand I will need a working credential to do so.</Text>
+          </Row>
+        ) : null}
+        <Hint>Cloudflare dashboard: <ExternalLink href={`https://dash.cloudflare.com/${connection.accountId}`} id={`bbx-admin-cf-publish-dashboard-${connection.name}`} variant="inline">open this account</ExternalLink></Hint>
+      </Stack>
+    </Card>
+  );
+}
+
+function Capability({ name, state }: { name: string; state: "verified" | "unverified" }) {
+  const label = {
+    tokenForAccount: "account token",
+    r2ObjectWrite: "R2 writes",
+    workerDeploy: "Worker deploy",
+    accessLive: "Access live",
+  }[name] ?? name;
+  return <Badge tone={state === "verified" ? "success" : "neutral"} size="sm">{label}: {state}</Badge>;
+}

@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { LightboxGestureController } from "../lib/lightbox-gesture-controller.js";
+import { LightboxGestureController } from "../lib/lightbox-gesture-controller/controller.js";
 
 export interface LightboxGestureRefs {
   rootRef: RefObject<HTMLDivElement>;

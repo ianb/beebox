@@ -81,12 +81,16 @@ const config: KnipConfig = {
     },
     "beebox/src/frontend": {
       entry: [
-        "src/components/view-widgets/node-entry.tsx",
+        "src/exports/view-widgets.tsx",
         // Bundled on its own into the deploy page by
         // beebox/scripts/build-deploy-page.ts, which names it by path.
-        "src/deploy-page/deploy-page.ts",
+        "src/deploy-page/poll.ts",
+        // The suite is a consumer too: an export reached only from a test is
+        // used. Doctests are markdown — see the root `compilers` config.
+        "test/**/*.ts",
+        "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx"],
+      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;

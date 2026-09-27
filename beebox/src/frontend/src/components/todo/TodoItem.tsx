@@ -23,8 +23,8 @@ import type { TodoLocator } from "@shared/todo-locators";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Text } from "../ui/Text";
-import { dateChips, recheckChip, STATUS_LABEL, todoTextClass } from "./todo-item-logic";
-import { runTick, tickInput, TodoActionsContext, type TodoAddress } from "./todo-actions";
+import { dateChips, recheckChip, STATUS_LABEL, todoTextClass } from "./item-logic";
+import { runTick, tickInput, TodoActionsContext, type TodoAddress } from "./actions";
 
 interface TodoItemProps {
   status: TodoStatus;

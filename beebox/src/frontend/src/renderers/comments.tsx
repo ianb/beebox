@@ -15,7 +15,7 @@ import { StatusMessage } from "../components/ui/StatusMessage";
 import { ErrorText } from "../components/ui/ErrorText";
 import { Heading } from "../components/ui/Heading";
 import { RequestError } from "../lib/errors";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 function CommentsRenderer({ data }: RendererProps) {
   const url = apiRawFileUrl(getApiBase(), data.path);
@@ -49,7 +49,7 @@ function CommentsRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  { match: (path) => path.endsWith(".comments.json") },
-  { renderer: { name: "Comments", Component: CommentsRenderer, priority: 50 } },
-);
+export const commentsRenderer: RendererEntry = {
+  selector: { match: (path) => path.endsWith(".comments.json") },
+  renderer: { name: "Comments", Component: CommentsRenderer, priority: 50 },
+};

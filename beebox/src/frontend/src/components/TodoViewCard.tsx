@@ -21,7 +21,7 @@
 
 import { useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";
@@ -32,7 +32,7 @@ import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { busEventData } from "../lib/bus-events";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
-import { CardRow } from "./todo-view/CardRow";
+import { CardRow } from "./todo-view/CardRow/view";
 import { DatedStrip } from "./todo-view/DatedStrip";
 import {
   Controls,

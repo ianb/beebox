@@ -20,8 +20,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { trpc } from "../../lib/trpc";
-import { finalizeCaptureSession, cancelCaptureSession, CaptureAlreadySealedError } from "../../pages/capture/capture-api";
+import { trpc } from "../../lib/trpc/client";
+import { finalizeCaptureSession, cancelCaptureSession, CaptureAlreadySealedError } from "../../pages/capture/api";
 import { errorMessage } from "@shared/error-guards";
 import type { CaptureBubbleModel, CaptureLiveStatus, CaptureResolution, CaptureVerbs } from "./capture-bubble";
 

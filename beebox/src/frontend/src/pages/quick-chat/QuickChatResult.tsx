@@ -1,4 +1,4 @@
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { href, toSearch } from "../../lib/routing";
 import { getApiBase } from "../../api-core";
 import { emissionKey, serializePersistedEmission } from "../../input/emission-persist";

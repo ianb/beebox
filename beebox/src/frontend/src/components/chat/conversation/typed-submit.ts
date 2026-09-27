@@ -1,6 +1,6 @@
 import { createTypedEmission, draftAttachments } from "../../../input/emission";
 import type { EmissionStore, EmissionDraft } from "../../../input/emission-store";
-import type { EmissionDispatch } from "./use-bound-emission";
+import type { EmissionDispatch } from "./use-bound-emission/hook";
 import type { Receipt } from "../../../input/targets/receipts";
 
 class UnfinishedChatUploadError extends Error {

@@ -1,7 +1,7 @@
 /** Loads the server-owned publication record and wires member-gated actions. */
 
 import { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { SignInLink } from "../BoxSelectionTiles";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";

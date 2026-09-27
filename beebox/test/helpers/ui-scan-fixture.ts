@@ -20,7 +20,7 @@ import type { CheerioAPI } from "cheerio";
 import { invariant } from "../../src/lib/invariant.js";
 import type { VisibleElementLookup } from "../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ScanElement, ScanNode, ScanRect, ScanStyle } from "../../src/frontend/src/lib/ui-scan/types.js";
-import { isNodeVisible, type VisibilityNode } from "../../src/frontend/src/lib/ui-scan/visibility.js";
+import { isNodeVisible, type VisibilityNode } from "../../src/frontend/src/lib/ui-scan/live-dom/visibility.js";
 
 /** The parsed-node union, reached through cheerio's own API so `domhandler`
  *  (a transitive dependency) is never imported by name. */

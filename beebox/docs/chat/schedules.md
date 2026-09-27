@@ -46,13 +46,13 @@ The text content inside the tag is context passed back to the agent when the sch
 
 ### Frontend display
 
-- `SchedulePill` components (in `InteractiveChat-layout.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
+- `SchedulePill` components (in `InteractiveChat-layout/view.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
 - Schedules are fetched via the `chat.schedules` tRPC query on mount and after each turn
 - User can cancel schedules via the × button on each pill, which calls the `chat.cancelSchedule` tRPC mutation
 
 ### Frontend receives the agent's response
 
-The agent's schedule-fired response reaches the UI over the shared WebSocket: the server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` on the box's event-bus stream, and `InteractiveChat-ws.ts` subscribes to that stream via tRPC's `events.subscribe`.
+The agent's schedule-fired response reaches the UI over the shared WebSocket: the server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` on the box's event-bus stream, and `InteractiveChat/ws.ts` subscribes to that stream via tRPC's `events.subscribe`.
 
 ### Hidden system messages
 
@@ -82,8 +82,8 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 | `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/routes/chat-schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
 | `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
-| `src/frontend/src/components/chat/InteractiveChat-layout.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
-| `src/frontend/src/components/chat/InteractiveChat-ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
+| `src/frontend/src/components/chat/InteractiveChat-layout/view.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
+| `src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
 | `src/frontend/src/components/chat/message-parsing.ts` | `stripUserDisplayTags()`, hidden schedule-fired messages |
 
 ## API

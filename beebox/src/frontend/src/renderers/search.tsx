@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
-import { TextField } from "../components/ui/fields";
+import { TextField } from "../components/ui/fields/field";
 import { Text } from "../components/ui/Text";
 import { ErrorText } from "../components/ui/ErrorText";
 import { Hint } from "../components/ui/Hint";
@@ -9,7 +9,7 @@ import { Badge } from "../components/ui/Badge";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { SearchResults, type SearchResult } from "../components/search/SearchResults";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../lib/trpc/client";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
 interface SearchState { query: string; paths: string[]; types: string[]; limit: number }
@@ -50,4 +50,4 @@ function SearchCard(props: RendererProps) {
     ? <SystemCardBoundary path={props.data.path} type="search"><SearchCardBody {...props} /></SystemCardBoundary>
     : <SearchCardBody {...props} />;
 }
-registerFileType({ type: "search" }, { renderer: { name: "Search", Component: SearchCard, priority: 100 } });
+export const searchRenderer: RendererEntry = { selector: { type: "search" }, renderer: { name: "Search", Component: SearchCard, priority: 100 } };

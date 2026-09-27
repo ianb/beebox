@@ -1,6 +1,6 @@
 /** Reuse bootstrap/reservation/directory resolution as one shell-owned operation. */
 import type { ConversationSelection, ConversationTarget } from "@shared/chat-composer-binding";
-import type { trpc, RouterOutput } from "../../../lib/trpc";
+import type { trpc, RouterOutput } from "../../../lib/trpc/client";
 import { chatTailSlice, type ChatInitialLoad } from "../../../machines/chat-types";
 import type { ChatAgentEngine } from "@shared/chat-models";
 import type { ReservationReceipt, ReservationReceipts } from "./reservation-receipts";

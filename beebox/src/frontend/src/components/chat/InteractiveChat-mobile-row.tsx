@@ -10,7 +10,7 @@ import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import { useComposerCaret } from "./composer-caret";
-import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer";
+import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer/view";
 import { segmentCapturing } from "../../machines/transcription-events";
 
 /**

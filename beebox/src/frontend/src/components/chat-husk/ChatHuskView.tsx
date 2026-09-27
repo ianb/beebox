@@ -11,8 +11,8 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Hint } from "../ui/Hint";
-import type { RendererProps } from "../../renderers/index";
-import { trpc } from "../../lib/trpc";
+import type { RendererProps } from "../../file-type-registry";
+import { trpc } from "../../lib/trpc/client";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
 import { transcriptStateLabel } from "../../lib/transcript-state";
 

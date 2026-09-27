@@ -218,7 +218,7 @@ owner — nor correctly fail to be, when a non-owner paired it.
   | side | anchor |
   |---|---|
   | native URL build | `ios-app/BeeBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/BeeBox/Views/ChatWebView.swift` — `authenticatedRequest(for:page:)` (sets `Authorization`; the URL carries no credential, §2); `PairedBox.url(forBoxPath:)` for notification-tap paths |
-  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
+  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/main/router.tsx` (route schema `nativeComposer`) |
 - **Notification-tap navigation.** A tapped notification (§5.10) loads a box-relative path in the
   same chat webview: `ChatWebView.authenticatedRequest(for:page:)` with `.path(<path>)`, built by
   `PairedBox.url(forBoxPath:)`. The chat page keeps `nativeComposer=1` there too (inserted first,
@@ -231,10 +231,10 @@ owner — nor correctly fail to be, when a non-owner paired it.
 
 - `InteractiveChat.tsx` — `usesNativeComposer = nativeComposer === true`;
   `usesNativeShell = isEmbedded || usesNativeComposer`.
-- `InteractiveChat-view.tsx` — suppresses the web composer when `embedded || nativeComposer`.
+- `InteractiveChat/view.tsx` — suppresses the web composer when `embedded || nativeComposer`.
 - `InteractiveChat.tsx` — enables `useNativeEmissionBridge({ enabled: usesNativeShell })` and
   `useNativeLocationBridge({ enabled: usesNativeShell, boxSlug })`.
-- `InteractiveChat-voice.ts` — the web screen wake lock (`useDebouncedWakeLock`) is **not** requested;
+- `InteractiveChat/voice.ts` — the web screen wake lock (`useDebouncedWakeLock`) is **not** requested;
   the device idle timer is native property under the native composer (§4.11).
 - **Viewport/safe-area is owned by native, not the web contract** — `NativeComposerView`,
   `RootView` (safe-area insets), `ChatWebView` (inline media playback).
@@ -386,7 +386,7 @@ the contract.
   | side | anchor |
   |---|---|
   | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV3`, `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
-  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
+  | web parse | `src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
 - **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
   SILENT except when no usable text or image survives.
 
@@ -439,7 +439,7 @@ mint them independently; the ids are per-emission and per-kind.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
+  | web post | `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/BeeBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
   the inflight map (`inflightEmissionGenerations` — id → per-attempt generation), marks them
@@ -482,7 +482,7 @@ mint them independently; the ids are per-emission and per-kind.
   | side | anchor |
   |---|---|
 | native request + state/result decode | `ios-app/BeeBox/Views/ChatWebView.swift` — `beeboxNativeShareLocation` script, `receiveLocationState`, `receiveLocationResult` (15s timeout) |
-  | web handle | `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
+  | web handle | `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
 - **Drift:** request → SILENT→LOUD (15s native timeout); result → LOUD (status message shown).
 
 ### 4.4 Narration state (web → native)
@@ -582,7 +582,7 @@ mint them independently; the ids are per-emission and per-kind.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat-view.tsx` |
+  | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat/view.tsx` |
   | native decode + durable mutation | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandAcknowledgement`; `Storage/ComposerDraftStore.swift` — `applySelectionCommand`; `Views/ChatWebView.swift` — `receiveComposerCommand` |
 - **Drift:** LOUD (native rejection or web 15s timeout is user-visible).
 
@@ -790,7 +790,7 @@ plays that (`lib/audio/tts-client.ts`), so only the page can stop it.
   | side | anchor |
   |---|---|
   | native decide + send | `ios-app/BeeBox/Services/SpeechDictation.swift` — `NativeVoiceTurnState`, `NativeVoiceTurnCommand.startDictationInterruptingSpeech`; `ios-app/BeeBox/Views/NativeComposerView.swift` — `applyVoiceTurn`; `ios-app/BeeBox/Views/ChatWebView.swift` — `deliverSpeechStopRequest`; `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeSpeechCommand` |
-  | web handle | `src/frontend/src/components/chat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
+  | web handle | `src/frontend/src/components/chat/everywhere/InteractiveChat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
 - **Drift:** SILENT-degraded — against a web build without the handler the microphone still opens and
   the speech keeps playing into it. A page load is the same outcome: a request is **settled on the
   spot** if no document is loaded, and **abandoned** on a provisional navigation or a box/session
@@ -842,7 +842,7 @@ is not a substitute for it.
   | side | anchor |
   |---|---|
   | native hold | `ios-app/BeeBox/Services/ScreenAwake.swift` — `ScreenAwakeReason`, `ScreenAwakeState`, `ScreenAwakeHold`; `ios-app/BeeBox/Views/NativeComposerView.swift` — `screenAwakeReasons`; `ios-app/BeeBox/Views/NativeCaptureController.swift` — `NativeCaptureScreen.applyScreenAwake` |
-  | web abstention | `src/frontend/src/components/chat/InteractiveChat-voice.ts` — `useDebouncedWakeLock(nativeComposer ? false : …)`; `src/frontend/src/hooks/useWakeLock.ts` |
+  | web abstention | `src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts` — `useDebouncedWakeLock(nativeComposer ? false : …)`; `src/frontend/src/hooks/useWakeLock.ts` |
 - **Drift:** SILENT both ways. A native build without the hold sleeps under an open microphone (the
   filed bug); a web build that re-acquires its own lock under the native shell breaks nothing —
   native still holds the whole turn — but leaves two mechanisms claiming the screen, which is how
@@ -1161,7 +1161,7 @@ See §1.3 (full request/response/errors).
   | box endpoint | `src/webapp/routes/pairing.ts` — `POST /api/pairing/push-token`, `PushTokenBody` |
   | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
 - **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
-  `test/mobile-contract/fixtures.doctest.md`, posted at the route by
+  `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`, posted at the route by
   `test/webapp/routes/pairing-push-token.doctest.md`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
@@ -1256,7 +1256,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `beeboxLocationState`; result `{id,success,enabled,message}` via `beeboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
-| B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
+| B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat/view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `beeboxNativeComposerCommandAck`, queue + `beebox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `beeboxNativeSpeechCommand`, queue `beeboxNativeSpeechCommandQueue`, event `beebox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `beeboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
@@ -1266,7 +1266,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
-| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/everywhere/InteractiveChat/voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}`; 500 `{error,permanent,code?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
@@ -1521,17 +1521,17 @@ when `android-app/` exists — add them alongside their iOS counterparts at that
 ```anchors
 # Web-side bridge, auth, and receipt surface
 beebox/src/frontend/src/components/chat/native-post.ts
-beebox/src/frontend/src/components/chat/use-native-bridge.ts
-beebox/src/frontend/src/components/chat/native-emission.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-bridge.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts
 beebox/src/frontend/src/components/chat/native-composer-command.ts
 beebox/src/frontend/src/components/chat/native-command-bridge.ts
-beebox/src/frontend/src/components/chat/native-control-scan.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-control-scan.ts
 beebox/src/frontend/src/components/chat/native-control-point.ts
-beebox/src/frontend/src/components/chat/ui-scan-request-handler.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/ui-scan-request-handler.ts
 beebox/src/frontend/src/components/chat/native-last-audio-request.ts
-beebox/src/frontend/src/components/chat/native-speech-command.ts
-beebox/src/frontend/src/components/chat/use-native-composer-commands.ts
-beebox/src/frontend/src/components/chat/use-companion-selection.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-speech-command.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-native-composer-commands.ts
+beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-companion-selection.ts
 beebox/src/frontend/src/lib/mobile-auth.ts
 beebox/src/frontend/src/input/targets/receipts.ts
 

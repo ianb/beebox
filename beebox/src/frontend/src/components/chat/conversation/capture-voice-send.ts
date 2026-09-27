@@ -1,4 +1,4 @@
-import type { EmissionDispatch } from "./use-bound-emission";
+import type { EmissionDispatch } from "./use-bound-emission/hook";
 import type { EmissionDraft } from "../../../input/emission-store";
 import { checkedDraftAttachments } from "./typed-submit";
 

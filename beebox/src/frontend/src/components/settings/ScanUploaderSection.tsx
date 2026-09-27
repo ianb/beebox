@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getApiBase } from "../../api";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -11,7 +11,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
-import { TextField } from "../ui/fields";
+import { TextField } from "../ui/fields/field";
 
 type UploaderToken = RouterOutput["scanTokens"]["list"][number];
 type MintedToken = RouterOutput["scanTokens"]["create"];

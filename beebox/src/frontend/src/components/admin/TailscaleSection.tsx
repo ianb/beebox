@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { getApiBase } from "../../api";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { ExternalLink } from "../ui/ExternalLink";
 import { AdminSectionCard } from "./AdminSectionCard";
 

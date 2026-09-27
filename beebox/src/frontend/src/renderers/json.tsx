@@ -23,7 +23,7 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { RequestError } from "../lib/errors";
 import { errorMessage } from "@shared/error-guards";
-import { registerFileType, type RendererProps } from "./index";
+import type { RendererEntry, RendererProps } from "../file-type-registry";
 
 /** Above this size we don't auto-download/parse — show info + a load button. */
 const LARGE_THRESHOLD = 1024 * 1024; // 1 MiB
@@ -138,7 +138,7 @@ function JsonRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileType(
-  { match: (path) => path.endsWith(".json") },
-  { renderer: { name: "JSON", Component: JsonRenderer, priority: 40 } },
-);
+export const jsonRenderer: RendererEntry = {
+  selector: { match: (path) => path.endsWith(".json") },
+  renderer: { name: "JSON", Component: JsonRenderer, priority: 40 },
+};

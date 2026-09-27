@@ -110,7 +110,7 @@ await build({
 // "external"` here left `import "tailwind-merge"` unresolved for every
 // external box — see the F1 release smoke test).
 await build({
-  entryPoints: [join(root, "src/frontend/src/components/view-widgets/node-entry.tsx")],
+  entryPoints: [join(root, "src/frontend/src/exports/view-widgets.tsx")],
   outfile: join(distDir, "view-widgets", "index.js"),
   bundle: true,
   platform: "node",

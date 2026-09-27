@@ -3,7 +3,7 @@
  */
 import { z } from "zod";
 import { getApiBase } from "../api-core";
-import { trpcClient } from "./trpc";
+import { trpcClient } from "./trpc/client";
 
 const KEY = "bbx-admin-hang-probe-v1";
 const PENDING_KEY = "bbx-admin-hang-probe-pending-v1";

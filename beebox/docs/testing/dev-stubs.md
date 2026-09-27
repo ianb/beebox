@@ -22,7 +22,7 @@ real app; harnesses fabricate states.
 
 ### `/fakestream`
 
-**Location:** `src/frontend/src/machines/chat-actors.ts` (`runFakeStream`)
+**Location:** `src/frontend/src/machines/chatMachine/chat-actors.ts` (`runFakeStream`)
 **Trigger:** Send a chat message beginning with `/fakestream`.
 
 Instead of calling the backend, the chat machine plays a timed script of

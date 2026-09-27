@@ -20,13 +20,13 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { TODO_STATUSES } from "@shared/todo-model";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { busEventData } from "../../lib/bus-events";
 import { fileChangeAffectsPath } from "../../lib/moved-card-recovery";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { CardTodosContext, indexPlateStates } from "./card-todos-context";
 import { TodoSummaryLine } from "./TodoSummaryLine";
-import { FIRST_OPEN_TODO_SELECTOR } from "./todo-summary";
+import { FIRST_OPEN_TODO_SELECTOR } from "./summary";
 
 function firstOpenTodo(container: HTMLElement | null): Element | null {
   return container === null ? null : container.querySelector(FIRST_OPEN_TODO_SELECTOR);

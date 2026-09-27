@@ -4,7 +4,7 @@
 // The output is a template. On the server, deploy/server-bin/bbx-deploy-window
 // replaces the three placeholders with digits and a UTC time, then writes the
 // result where nginx looks for it. Everything else is fixed here, including
-// the bundled client (src/frontend/src/deploy-page/deploy-page.ts): nginx
+// the bundled client (src/frontend/src/deploy-page/poll.ts): nginx
 // serves one self-contained file, with the hub (and every asset it serves)
 // down.
 import { build } from "esbuild";
@@ -28,7 +28,7 @@ class DeployPageBundleError extends Error {
 
 export async function renderDeployPageTemplate(): Promise<string> {
   const bundle = await build({
-    entryPoints: [join(root, "src/frontend/src/deploy-page/deploy-page.ts")],
+    entryPoints: [join(root, "src/frontend/src/deploy-page/poll.ts")],
     tsconfig: join(root, "src/frontend/tsconfig.json"),
     bundle: true,
     write: false,

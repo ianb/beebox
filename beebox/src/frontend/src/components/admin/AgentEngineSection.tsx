@@ -1,7 +1,7 @@
 /** Per-box native agent harness and model policy. */
 
-import { trpc } from "../../lib/trpc";
-import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
+import { trpc } from "../../lib/trpc/client";
+import { CheckboxField, RadioGroup, SelectField } from "../ui/fields/field";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";

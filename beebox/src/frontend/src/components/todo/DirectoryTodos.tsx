@@ -15,12 +15,12 @@
  */
 
 import { useCallback, useEffect, type ReactNode } from "react";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { busEventData } from "../../lib/bus-events";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import { TodoSummaryLine } from "./TodoSummaryLine";
-import { directoryListPath } from "./todo-summary";
+import { directoryListPath } from "./summary";
 
 function directoryTodosInput(dir: string) {
   return {

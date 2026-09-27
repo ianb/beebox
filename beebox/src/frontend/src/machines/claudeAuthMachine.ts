@@ -8,7 +8,7 @@
  */
 
 import { setup, assign, fromPromise, fromCallback } from "xstate";
-import { trpc, trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { fetchSharedStatus } from "../lib/trpc/shared-status";
 import { RequestError } from "../lib/errors";

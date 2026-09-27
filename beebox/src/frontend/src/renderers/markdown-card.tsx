@@ -6,10 +6,10 @@
  * (priority 100) when one matches the card's type.
  */
 
-import { MarkdownCardView } from "../components/MarkdownCardView";
-import { registerFileType } from "./index";
+import { MarkdownCardView } from "../components/MarkdownCardView/view";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType(
-  { match: (_path, data) => data?.kind === "frontmatter" },
-  { renderer: { name: "Card", Component: MarkdownCardView, priority: 30 } },
-);
+export const markdownCardRenderer: RendererEntry = {
+  selector: { match: (_path, data) => data?.kind === "frontmatter" },
+  renderer: { name: "Card", Component: MarkdownCardView, priority: 30 },
+};

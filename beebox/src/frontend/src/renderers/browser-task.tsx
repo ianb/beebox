@@ -5,8 +5,9 @@
  */
 
 import { BrowserTaskView } from "../components/BrowserTaskView";
-import { registerFileType } from "./index";
+import type { RendererEntry } from "../file-type-registry";
 
-registerFileType({ type: "browser-task" }, {
+export const browserTaskRenderer: RendererEntry = {
+  selector: { type: "browser-task" },
   renderer: { name: "Browser task", Component: BrowserTaskView, priority: 100 },
-});
+};

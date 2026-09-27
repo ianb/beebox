@@ -11,7 +11,7 @@
  */
 
 import { useEffect } from "react";
-import { trpcClient } from "../lib/trpc";
+import { trpcClient } from "../lib/trpc/client";
 
 const HEARTBEAT_MS = 30_000;
 const IDLE_MS = 120_000;

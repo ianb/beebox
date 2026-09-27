@@ -11,7 +11,7 @@
  * register itself.
  */
 
-import type { ListProps } from "../frontend/src/file-types/registry";
+import type { ListProps } from "../frontend/src/file-type-registry";
 import type { ImageSummaryAttrs } from "./image";
 import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../frontend/src/api";
 import { resolveRelativePath } from "../frontend/src/lib/view-url";

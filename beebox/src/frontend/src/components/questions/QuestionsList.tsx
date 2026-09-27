@@ -14,7 +14,7 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { QuestionForm, type QuestionInfo } from "./QuestionForm";
 import { renderQuestionAnswer } from "./answer-display";

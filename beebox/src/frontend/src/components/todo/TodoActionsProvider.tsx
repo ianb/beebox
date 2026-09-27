@@ -14,10 +14,10 @@
  */
 
 import { useMemo, type ReactNode } from "react";
-import { trpc } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc/client";
 import { toastError } from "../ui/toast-store";
 import type { AddSelectionInput } from "../../lib/selection/position";
-import { TodoActionsContext, todoSelection, type SetTodoStatusInput, type TodoActions } from "./todo-actions";
+import { TodoActionsContext, todoSelection, type SetTodoStatusInput, type TodoActions } from "./actions";
 
 function isConflict(error: unknown): boolean {
   return typeof error === "object" && error !== null && "data" in error

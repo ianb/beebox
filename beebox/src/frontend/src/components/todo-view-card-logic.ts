@@ -19,7 +19,7 @@ import type { TodoStatus } from "../../../shared/todo-model.js";
 // imports this module. The router's OUTPUT type rather than the core
 // `CollectionResult` on purpose: what reaches the browser has been through
 // JSON, where an `x: string | undefined` field becomes `x?: string`.
-import type { RouterOutput } from "../lib/trpc";
+import type { RouterOutput } from "../lib/trpc/client";
 import type { TodoLocator } from "@core/todo/collect-types";
 
 export type TodoResult = RouterOutput["collections"]["query"];

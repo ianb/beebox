@@ -1,6 +1,6 @@
 import { assign, fromCallback, fromPromise, setup } from "xstate";
 import { errorMessage } from "@shared/error-guards";
-import { trpc, trpcClient } from "../lib/trpc";
+import { trpc, trpcClient } from "../lib/trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { fetchSharedStatus } from "../lib/trpc/shared-status";
 import { RequestError } from "../lib/errors";

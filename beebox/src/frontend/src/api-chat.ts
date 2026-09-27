@@ -27,7 +27,7 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import { z } from "zod";
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
-import { trpcClient } from "./lib/trpc";
+import { trpcClient } from "./lib/trpc/client";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";

@@ -15,7 +15,7 @@
  */
 
 import { useCallback } from "react";
-import { Markdown } from "../Markdown";
+import { Markdown } from "../Markdown/body";
 import { useViewHost } from "../../lib/view-host";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 

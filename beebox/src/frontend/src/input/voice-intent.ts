@@ -23,7 +23,7 @@ import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
 import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
-import { resolveEmissionWords } from "./unsure-words";
+import { resolveEmissionWords } from "./unsure-words/mark";
 
 export type VoiceIntent =
   | {

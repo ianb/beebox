@@ -7,7 +7,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
-import { TextField } from "../ui/fields";
+import { TextField } from "../ui/fields/field";
 
 type FieldErrors = Partial<Record<"current" | "next" | "confirm", string>>;
 

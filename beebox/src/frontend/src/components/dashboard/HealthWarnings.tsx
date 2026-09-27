@@ -3,7 +3,7 @@
  * Only renders when there are issues; invisible when everything is healthy.
  */
 
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 
 type HealthResponse = RouterOutput["health"]["check"];

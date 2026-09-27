@@ -34,15 +34,18 @@ const BOUNDARY_PATTERNS = [
     message: BOUNDARY_BAN_MESSAGE,
   },
   {
-    // The frontend has its OWN src/lib/ (reached at ≤3 climb-outs — verified).
-    // The backend src/lib/ is only reachable at 4+ climb-outs, so these exact
+    // The frontend has its OWN src/lib/ (reached at ≤4 climb-outs — verified
+    // 2026-09-27 after the layout moves added one directory level to many
+    // component units, e.g. `components/chat/workspace/WorkspaceCanvas/view.tsx`).
+    // The backend src/lib/ is only reachable at 5+ climb-outs, so these exact
     // depths cannot false-positive on an intra-frontend `../lib/…` import.
-    // (A deliberately de-normalized spelling like `../../../../x/../lib/y` would
-    // slip past this exact-depth list — accepted: the gate stops accidental
-    // escapes at real depths, not adversarial path obfuscation. The core/webapp/
-    // … bans above use `**/<dir>/**`, which any prefix matches, so only `lib`
-    // — constrained by the frontend's own shallower lib/ — is depth-specific.)
-    group: ["../../../../lib/**", "../../../../../lib/**", "../../../../../../lib/**"],
+    // (A deliberately de-normalized spelling like `../../../../../x/../lib/y`
+    // would slip past this exact-depth list — accepted: the gate stops
+    // accidental escapes at real depths, not adversarial path obfuscation.
+    // The core/webapp/… bans above use `**/<dir>/**`, which any prefix
+    // matches, so only `lib` — constrained by the frontend's own shallower
+    // lib/ — is depth-specific.)
+    group: ["../../../../../lib/**", "../../../../../../lib/**"],
     message:
       "Don't import the backend src/lib/ from the frontend. Move the helper into src/shared/ and import via @shared (the frontend's own src/lib/ is shallower, so this depth is always the backend lib).",
   },
@@ -90,14 +93,14 @@ const SHARED_ALIAS_PATTERN = {
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
 const OUTSIDE_VITE_SHARED_RAW = [
-  "src/components/chat/conversation/controller-pool.ts",
-  "src/components/chat/conversation/start-records.ts",
+  "src/components/chat/conversation/controller-pool/pool.ts",
+  "src/components/chat/conversation/controller-pool/start-records.ts",
   "src/lib/view-url.ts",
-  "src/lib/parseTags.ts",
+  "src/lib/audio/speech-parsing/parseTags.ts",
   "src/lib/structured-output-parsing.ts",
-  "src/lib/audio/speech-parsing.ts",
-  "src/machines/chat-shared.ts",
-  "src/components/view-widgets/node-entry.tsx",
+  "src/lib/audio/speech-parsing/parse.ts",
+  "src/machines/chatMachine/chat-shared.ts",
+  "src/exports/view-widgets.tsx",
   // Transitively loaded by the tap/tsx doctest runner via input/emission +
   // input/voice-intent (root tsconfig, no @shared resolution).
   "src/components/chat/InteractiveChat-helpers.ts",
@@ -107,14 +110,14 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/dictation-draft.ts",
   "src/lib/figure-params.ts",
   "src/lib/location-share.ts",
-  "src/components/chat/native-emission.ts",
-  "src/machines/chat-actors.ts",
+  "src/components/chat/everywhere/InteractiveChat/native-emission.ts",
+  "src/machines/chatMachine/chat-actors.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
-  "src/components/history/CommitDetail-diff.ts",
+  "src/components/history/HistoryViewCard/CommitDetail-diff.ts",
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/result by raw relative path.
   "src/lib/ui-scan/resolve.ts",

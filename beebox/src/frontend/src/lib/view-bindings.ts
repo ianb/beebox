@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { trpcClient } from "./trpc";
+import { trpcClient } from "./trpc/client";
 import { busEventData } from "./bus-events";
 import { viewSlugFromSourcePath } from "./view-source-path";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";

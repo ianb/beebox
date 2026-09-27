@@ -346,7 +346,7 @@ network path; an injected `fetch` still runs.
 ## The admin page
 
 The owner-only **Secrets** section on any box's admin page is the boxholder's
-surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
+surface (`src/frontend/src/components/admin/SecretsSection/*.tsx`):
 
 - **This box** — every granted name as one collapsed row (name, access level,
   verification badge); open a row for its note, **what it is used for**

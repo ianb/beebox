@@ -68,6 +68,12 @@ export interface RendererProps {
   caption?: string;
 }
 
+/** A renderer registration: `src/renderers.ts`'s registry contract, one member per registration. */
+export interface RendererEntry {
+  selector: FileTypeSelector;
+  renderer: FileRenderer;
+}
+
 /** A renderer that can display a file. */
 export interface FileRenderer {
   /** Display name shown in the view toggle. */

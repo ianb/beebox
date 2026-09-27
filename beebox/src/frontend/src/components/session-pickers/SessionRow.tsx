@@ -11,7 +11,7 @@
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { Text } from "../ui/Text";
-import type { RouterOutput } from "../../lib/trpc";
+import type { RouterOutput } from "../../lib/trpc/client";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
 
 /** A session as `chat.byLandmark` reports it under a landmark. */

@@ -1,10 +1,10 @@
 import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { TextField } from "../ui/fields";
+import { TextField } from "../ui/fields/field";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { SearchResults, type SearchResult } from "./SearchResults";
-import { trpc } from "../../lib/trpc";
-import { useWorkspace } from "../chat/workspace/WorkspaceProvider";
+import { trpc } from "../../lib/trpc/client";
+import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 
 export function QuickSearchOverlay() {
   const workspace = useWorkspace();

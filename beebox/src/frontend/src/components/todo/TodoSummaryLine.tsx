@@ -7,7 +7,7 @@
 
 import { Fragment, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
-import { summaryParts, type SummaryReduction } from "./todo-summary";
+import { summaryParts, type SummaryReduction } from "./summary";
 
 /** What "N open" does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
 export interface OpenAction {
