@@ -32,8 +32,8 @@ sure to move it around properly."
 [tricks CLAUDE.md missing commit and process model](../../../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md)
 (Track 2 gives tricks an engine-fact home and the missing facts go there).
 Related but not closed by this plan:
-[knowledge budget for always-loaded context](../../../issues/exploration/2026-06-12-knowledge-budget-always-loaded-context.md)
-and [instruction surface size budget](../../../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
+[knowledge budget for always-loaded context](../../../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md)
+and [instruction surface size budget](../../../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
 (Track 3 sets and measures a target; the enforcing lint they ask for stays
 open),
 [template parks recurrence check](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md)

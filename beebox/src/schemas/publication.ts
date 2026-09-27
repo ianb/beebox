@@ -6,6 +6,7 @@ import { pubIdSchema } from "../publish/manifest.js";
 import { z } from "zod";
 
 export const PublicationSchema: CardSchema = cardSchema("publication", {
+  brief: "Controls for one publication",
   description: "A card that opens the review and serving controls for one server-managed publication",
   category: "authored",
   fields: {

@@ -49,7 +49,8 @@ import type { ProcedureSummary } from "./compile.js";
 import { compileExpositionRules } from "../compile-exposition-rules.js";
 import { ensureAgentContext } from "./claude-md.js";
 
-export type { ProcedureSummary, GuideSummary } from "./compile.js";
+export type { ProcedureSummary } from "./compile.js";
+export type { GuideSummary } from "./config-cards.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -381,8 +382,8 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const boxTemplates = getTemplatesOwnedBy(boxRoot);
   const engineSourcePresent = await fileExists(join(PACKAGE_ROOT, "src", "cli", "index.ts"));
 
-  // Determines whether the agent guide teaches the package-layout code
-  // location rules — see "boxCodeLocationSection" in agent-guide/box-shape.ts.
+  // Decides the paths the agent guide's BOX_CODE table names — see
+  // "boxCodeRows" in agent-guide/box-shape.ts.
   const shape = await getBoxShape(boxRoot);
 
   // Compile personality first so we can include it in the agent guide

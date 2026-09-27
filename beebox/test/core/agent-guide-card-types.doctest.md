@@ -1,8 +1,9 @@
 # Agent guide — Card Types section
 
-`cardTypesSection` builds the "## CARD_TYPES" catalogue in the generated agent
-guide from the box's frontmatter card schemas: grouped by `category`
-(authored / synced / system), each type with its one-line `description`.
+`cardTypesList` fills the `{{card_types}}` placeholder of the "## CARD_TYPES"
+section (`guide.md`) from the box's frontmatter card schemas: grouped by
+`category` (authored / synced / system), each type with its `brief` (five
+words or fewer), or its one-line `description` when it has no brief.
 
 It takes `CardSchema[]` and lists each by its `.type`. This regressed once: it
 took the legacy XML `ElementSchema[]` (`.tagName`), which is empty since every
@@ -10,7 +11,9 @@ schema became frontmatter — so the agent guide's Card Types section rendered
 empty.
 
 ```ts setup
-import { cardTypesSection } from "../../src/core/agent-guide/cards.js";
+import { cardTypesList } from "../../src/core/agent-guide/cards.js";
+import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
+import { cardSchemas } from "../../src/schemas/registry.js";
 import { cardSchema, type CardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 ```
@@ -30,11 +33,8 @@ const system: CardSchema = cardSchema("chat-job", {
   fields: { status: z.string() },
 });
 
-const text = cardTypesSection({ allCardSchemas: [authored, system] });
+const text = cardTypesList({ allCardSchemas: [authored, system] });
 const lines = text.split("\n");
-lines.includes("## CARD_TYPES")
-=> true
-
 // A built-in type with instructions links its doc in the package
 lines.includes("- **memo** — a captured note → `node_modules/beebox/box-docs/card-memo.md`")
 => true
@@ -49,6 +49,27 @@ lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l)
 // A type without instructions has no doc to link
 lines.find((l) => l.startsWith("- **chat-job**"))?.includes("→")
 => false
+```
+
+## The brief wins over the description, and every built-in has one
+
+The list is read on every turn, so each entry is the type's `brief`, five
+words or fewer; the longer `description` is the package-docs index row. A
+schema without a brief (a box-local one) falls back to its description.
+
+```ts
+const briefed: CardSchema = cardSchema("memo", {
+  brief: "A captured note",
+  description: "a captured text or voice note awaiting processing",
+  category: "authored",
+  fields: { status: z.string() },
+});
+cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **memo** — A captured note")
+=> true
+
+// Every built-in schema declares a brief of at most five words
+cardSchemas.filter((s) => s.brief === undefined || s.brief.split(/\s+/).length > 5).map((s) => s.type)
+=> []
 ```
 
 ## A box-local schema's doc is in the box, and a box-local type shadows a built-in
@@ -78,7 +99,7 @@ const boxOnly: CardSchema = cardSchema("widget", {
   instructions: "How to widget.",
 });
 
-const text = cardTypesSection({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
+const text = cardTypesList({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
 const lines = text.split("\n");
 lines.filter((l) => l.startsWith("- **memo**")).join(" | ")
 => - **memo** — this box's memo → `_content/docs/generated/card-memo.md`
@@ -92,7 +113,7 @@ lines.includes("- **widget** — a box-local type → `_content/docs/generated/c
 ```ts
 const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
-const text = cardTypesSection({ allCardSchemas: [bare] });
+const text = cardTypesList({ allCardSchemas: [bare] });
 const lines = text.split("\n");
 lines.includes("- **widget**")
 => true
@@ -101,11 +122,18 @@ lines.some((l) => l.startsWith("**Types you create"))
 => true
 ```
 
-## An empty schema list still renders the header (no crash)
+## An empty schema list still renders the section (no crash)
+
+With no schemas the list is empty, and the section keeps its heading and
+prose with one blank line between paragraphs.
 
 ```ts
-const text = cardTypesSection({ allCardSchemas: [] });
-const lines = text.split("\n");
-lines[0]
-=> ## CARD_TYPES
+JSON.stringify(cardTypesList({ allCardSchemas: [] }))
+=> ""
+
+const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, allCardSchemas: [] });
+const section = guide.split("## CARD_TYPES\n")[1]?.split("\n## ")[0] ?? "";
+const paragraphs = section.trim().split("\n\n");
+[paragraphs.length, paragraphs[0]?.startsWith("Each type with handling instructions"), paragraphs[1]?.startsWith("A new kind of thing"), section.includes("\n\n\n")].join("|")
+=> 2|true|true|false
 ```

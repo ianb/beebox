@@ -35,6 +35,7 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const EmailOutboundSchema = cardSchema("email-outbound", {
+  brief: "An outgoing email draft",
   description: "An agent-composed outgoing email — uploaded to Gmail as a draft for the user to review and send",
   category: "authored",
   fields: {

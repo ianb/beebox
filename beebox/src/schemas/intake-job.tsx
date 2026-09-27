@@ -11,6 +11,7 @@ import { z } from "zod";
 import { cardSchema, cardRef, type InferCardFields } from "../cards/index.js";
 
 export const IntakeJobSchema = cardSchema("intake-job", {
+  brief: "A job to triage arrivals",
   description: "A system job to triage newly arrived inbox items; created by connectors and bbx wakeup",
   category: "system",
   searchable: false,

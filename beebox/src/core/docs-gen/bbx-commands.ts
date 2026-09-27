@@ -11,6 +11,8 @@ import { z } from "zod";
 import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
+import { bbxCommandsSearch } from "./bbx-commands-search.js";
+import { bbxCommandsMachine } from "./bbx-commands-machine.js";
 
 /**
  * Lead-in prose + `bbx create` section for the bbx command reference.
@@ -32,13 +34,12 @@ function bbxCommandsIntro(): string[] {
     "The card type is inferred from the filename (e.g., `my-question.question.card` → question template).",
     "",
     "**Options:**",
-    "- `-t, --template <name>` — Override template (usually auto-detected from filename)",
-    "- `-c, --content <text>` — Content for memo cards",
-    "- `-p, --prompt <text>` — Prompt for question cards",
-    "- `-m, --memo <text>` — Context/background for question cards",
-    "-  `-o, --options <items...>` — Options for select questions",
+    "- `<path> [key=value ...]` — the card's path, then the template's arguments as `key=value` pairs (see the examples)",
+    "- `-t, --template <name>` — Override the template (usually inferred from the card type in the filename)",
     "- `-a, --attachment <path>` — Path to an attachment file",
     "- `--commit` — Commit the new card immediately",
+    "- `--list-templates` — List every template this box can use",
+    "- `--describe-template <name>` — Show a template's arguments",
     "",
     "**Examples:**",
     "```bash",
@@ -52,6 +53,13 @@ function bbxCommandsIntro(): string[] {
     "# Create a scheduled script",
     'bbx create _config/schedules/check.scheduled-script.card runs="bbx engine wakeup" cron="0 6 * * *"',
     "```",
+    "",
+    "For array or structured frontmatter values, use **JSON** (`options='[\"Red\",\"Blue\"]'`)",
+    "— JSON is the default for anything machine-set. **Two-step pattern:** for a",
+    "complex card, `bbx create` a minimal one, then edit it to fill in the details.",
+    "",
+    "`bbx create --list-templates` lists every template this box can use, its own",
+    "included; the built-in ones are below.",
     "",
     "### Available Templates",
     "",
@@ -93,7 +101,7 @@ function bbxCommandsTemplates(): string[] {
 }
 
 /**
- * Hand-written command sections: mv, rm, validate, answer, status, reactor, finish.
+ * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, session, reactor, finish.
  */
 function bbxCommandsCore(): string[] {
   return [
@@ -132,7 +140,9 @@ function bbxCommandsCore(): string[] {
     "bbx validate <path>",
     "```",
     "",
-    "Always validate after creating or editing cards. Returns a non-zero exit code on failure.",
+    "Validation already runs after every edit (a hook installed by `bbx engine init`) and on commit,",
+    "so you rarely call this yourself; run it to re-check one card while debugging. Returns a",
+    "non-zero exit code on failure.",
     "",
     "## bbx view test",
     "",
@@ -152,11 +162,24 @@ function bbxCommandsCore(): string[] {
     "Answer a pending question card.",
     "",
     "```",
-    "bbx answer <path>",
+    "bbx answer <question> <answer>",
     "```",
     "",
-    "Interactively answers a question. For agents, it's often easier to edit the card XML directly",
-    "(set the `<answer>` element and `status=\"answered\"`).",
+    "`<answer>` is the answer text, or an option ID (`a`, `b`, `c`, …) for a select question.",
+    "",
+    "## bbx contains",
+    "",
+    "Maintain the `contains:` field across the box.",
+    "",
+    "```",
+    "bbx contains list [--missing] [--stale] [--json]",
+    "bbx contains update <card> --text \"...\"",
+    "```",
+    "",
+    "If you edit content and the",
+    "sentence still holds, `bbx contains update <card> --text \"...\"` clears the",
+    "staleness flag; `bbx contains list --missing` / `--stale` shows which cards",
+    "still need one written or refreshed.",
     "",
     "## bbx status",
     "",
@@ -165,6 +188,20 @@ function bbxCommandsCore(): string[] {
     "```",
     "bbx status",
     "```",
+    "",
+    "## bbx session",
+    "",
+    "Read a past session's transcript (chats, wakeups, job runs).",
+    "",
+    "```",
+    "bbx session [<id>] [--list] [--latest] [--dialogue-only] [--tool-report] [--since <when>]",
+    "```",
+    "",
+    "`--list` to find recent sessions, `--latest` or `<id>` to view (`--dialogue-only` for just",
+    "the conversation, `--tool-report` for tool usage, `--since 2d` for a",
+    "window). To *search* a large transcript, spawn a subagent (Task tool) to",
+    "read it and report back the relevant part instead of pulling the whole",
+    "transcript into your own context.",
     "",
     "## bbx reactor",
     "",
@@ -199,8 +236,10 @@ export function generateBbxCommands(): string {
     ...bbxCommandsIntro(),
     ...bbxCommandsTemplates(),
     ...bbxCommandsCore(),
+    ...bbxCommandsSearch(),
     ...bbxCommandsScheduling(),
     ...bbxCommandsConnectors(),
+    ...bbxCommandsMachine(),
   ];
   return lines.join("\n");
 }

@@ -8,7 +8,7 @@
  *
  *   - `BOX_DIRS` (paths.ts) is derived from the entries below that carry a
  *     `boxDirsKey`.
- *   - `directoryLayoutSection()` (agent-guide/box-shape.ts) looks up entries
+ *   - `directoryLayoutRows()` (agent-guide/box-shape.ts) looks up entries
  *     by key for its path/description text.
  *   - `docs/box-layout.md`'s per-area tables are checked against this spec by
  *     `test/cli/lib/box-layout-spec.doctest.md` (a doc that drifts fails the
@@ -71,9 +71,7 @@ export const BOX_LAYOUT = [
     description:
       "Per-category holding spots (`<category>/`), plus `_unsure/` for low-confidence items paired " +
       "with a question card.",
-    agentDescription:
-      "Categorized; awaiting the handler procedure. `<category>` is one of this box's triage " +
-      "destinations (a landmark with a `for: [triage]` entry in its `destinations`), not a fixed list.",
+    agentDescription: "Categorized; awaiting the handler procedure.",
   },
   {
     boxDirsKey: "inboxTriagedUnsure",
@@ -101,7 +99,7 @@ export const BOX_LAYOUT = [
     path: "_content/drive",
     area: "content",
     description: "Google Drive sync (spreadsheets as JSON, docs as markdown).",
-    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync. The `bbx drive` verbs work from your shell; the connectors doc says how",
+    agentDescription: "Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync",
   },
   {
     boxDirsKey: "calendar",
@@ -161,9 +159,7 @@ export const BOX_LAYOUT = [
     agentDescription:
       "Cards that make something happen **outside** the box — an action serialized as a card for an " +
       "external effector to pick up and execute (a Telegram message to send, etc.), flushed by " +
-      "`bbx finalize`. Email drafts are the exception: a reply's `email-outbound` card goes in its " +
-      "source thread's directory under `_content/inbox/email/` (next to the message it answers), not " +
-      "here — the Gmail connector reads the thread from there for correct threading",
+      "`bbx finalize`.",
   },
   {
     boxDirsKey: "resources",

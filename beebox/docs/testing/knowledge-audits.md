@@ -110,10 +110,15 @@ Each entry in `knowledge-audits.yaml` has these fields:
   when the required relationship has legitimate wording variation that a list
   of exact substrings would overfit.
 - `cards_contain` — strings that must appear in card files created by the agent.
+- `cards_not_under` — box-relative directory prefixes (`_tmp/`) no card the agent created or modified may sit under.
 - `should_read` — files the agent should read before answering.
 - `should_read_any` — alternative files, at least one of which the agent should
   read. Use this when generated guidance and its installed skill are equivalent
   navigation outcomes.
+- `should_search` — `web`, `box`, or `any`: the agent must look something up
+  before answering. `web` is a WebSearch or WebFetch (a Codex provider search
+  counts), `box` a `bbx search` command, `any` either. Use it for the laws
+  that require checking rather than answering from memory.
 - `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
 - `tags` — for filtering with `--filter`.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `CLAUDE.md` (and its `@MAP.md` import) actually load into the agent's context at session start.

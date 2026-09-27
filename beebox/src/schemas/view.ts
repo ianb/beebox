@@ -60,6 +60,7 @@ function validateViewParams({ fields }: { fields: Record<string, unknown> }): Li
 }
 
 export const ViewSchema: CardSchema = cardSchema("view", {
+  brief: "An interface view card",
   fields: viewFields,
   searchable: false,
   validate: validateViewParams,

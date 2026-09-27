@@ -20,6 +20,8 @@ export const KNOWN_TOOL_NAMES = [
   "TodoWrite",
   "Task",
   "Agent",
+  "WebSearch",
+  "WebFetch",
 ] as const;
 
 export type KnownToolName = (typeof KNOWN_TOOL_NAMES)[number];

@@ -127,20 +127,24 @@ plus the box's own conventions, and a managed skill holds its trigger, its
 first commands, and a pointer. `test/core/box-docs-pointers.doctest.md` fails
 when a pointer names a doc the package does not ship.
 
-The agent guide follows the same rule. A section whose facts only some runs
+The agent guide follows the same rule; its ledger, bins, and handles are in
+[agent guide](agent-guide.md). A section whose facts only some runs
 need moves to a package doc and leaves one short pointer section behind:
 [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
 mechanics that the guide's PROVENANCE section points at, and
 [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
-rules behind the guide's TODOS section.
+rules behind the guide's TODOS section, and [history](box/history.md) the
+commit trailers behind its HISTORY section.
 
 Review the week's changes against these rules before landing docs work: list
 the guidance sources touched since the last review
 (`git log --since=1.week --name-only -- src/core/box src/core/agent-guide
 src/core/docs-gen docs/box src/core/init-rules.ts`) and, for each, check
 that the surface is a registry row of the right class and that any fact it
-adds has one home. A `read-when:` line that promises a subject the doc does
-not cover is the failure the check most often finds.
+adds has one home. For each row added to the agent guide's ledger
+(`src/core/agent-guide/ledger.yaml`), check that its reason still holds. A
+`read-when:` line that promises a subject the doc does not cover is the
+failure the check most often finds.
 
 To add a surface, add its row to `GUIDANCE_SURFACES` and to the table above.
 A tracked row also needs its content in `MANAGED_STOCK_TEMPLATES`

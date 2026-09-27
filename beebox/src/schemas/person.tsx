@@ -17,6 +17,7 @@ const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;
 
 export const PersonSchema = cardSchema("person", {
+  brief: "A key person",
   description: "A key person — identity, aliases, role, contact info, and freeform notes; referenced from briefings' key-people",
   category: "authored",
   fields: {

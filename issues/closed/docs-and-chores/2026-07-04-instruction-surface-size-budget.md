@@ -1,8 +1,20 @@
 ---
 title: "instruction surface size budget"
-workstream: unknown
+workstream: doc-structure
 area: beebox
+resolution: implemented
 ---
+
+**Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md):
+the ledger's `budget:` header is the target size, and `pnpm lint:guide`
+asserts the rendered guide and the always-loaded total against it — the
+measurement (knowledge-audit ledger) this issue names is now paired with an
+assertion that acts on it. The "inject a slim-down prompt" delivery mechanism
+this issue proposes (a `bbx validate` warning triggering an in-session fix)
+was deliberately not built; the linter fails the build instead, which is the
+`git blame`-visible enforcement point this plan chose. [Context size
+measurement legibility](../../features/2026-06-20-context-size-measurement-legibility.md)
+stays open — its compositional per-layer breakdown is a separate ask.
 
 (From the OpenClaw/Hermes comparison, 2026-07: the agent guide is generated at
 ~657 lines with no budget at all — we *measure* via the knowledge-audit ledger

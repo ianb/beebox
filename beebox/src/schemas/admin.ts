@@ -3,6 +3,7 @@ import { body, cardSchema } from "../cards/index.js";
 import { SYSTEM_CARD_PATHS } from "../shared/system-card-paths.js";
 
 export const AdminSchema = cardSchema("admin", {
+  brief: "The Admin interface card",
   description: "The canonical Admin interface card",
   category: "system",
   searchable: false,

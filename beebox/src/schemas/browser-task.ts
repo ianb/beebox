@@ -79,6 +79,7 @@ function promptReferencesBox(fields: Record<string, unknown>): LintIssue[] {
 }
 
 export const BrowserTaskSchema = cardSchema("browser-task", {
+  brief: "A logged-in browser task",
   description: "A prompt for someone with a logged-in browser, and the inbox that receives what they found",
   category: "authored",
   validate: ({ fields }) => promptReferencesBox(fields),

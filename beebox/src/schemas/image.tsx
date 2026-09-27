@@ -85,6 +85,7 @@ const DocumentMeta = z.object({
 });
 
 export const ImageSchema = cardSchema("image", {
+  brief: "A photo",
   description: "A photo (typically from a capture session) — the image file lives in the attach scope; analysis fills description/OCR/EXIF",
   category: "synced",
   fields: {

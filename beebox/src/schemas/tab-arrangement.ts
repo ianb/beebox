@@ -86,6 +86,7 @@ function validatedArrangementIssues(fields: Record<string, unknown>): LintIssue[
 }
 
 export const TabArrangementSchema = cardSchema("tab-arrangement", {
+  brief: "A captured set of tabs",
   description: "A Clerk-captured tab set and an identity-preserving proposal for arranging it",
   category: "synced",
   validate: ({ fields }) => validatedArrangementIssues(fields),

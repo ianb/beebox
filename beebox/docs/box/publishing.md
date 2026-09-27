@@ -122,7 +122,7 @@ src/publications/field-guide/
 ```
 
 Keep dependencies local to this project; do not modify the box-root package or
-engine lockfile. Declare dependencies in `project/package.json`, commit the
+engine lockfile. Do not import Bee Box frontend components into a published site. Declare dependencies in `project/package.json`, commit the
 site-local `pnpm-lock.yaml`, and provide the ordinary `build` script. Prepare
 runs `pnpm install --frozen-lockfile` and `pnpm run build`, then publishes only
 `project/dist/`. The build can use its own declared bundler and dependency

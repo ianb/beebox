@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
-import { testSuiteSchema, type AuditTest, type TestSuite } from "./test-suite-schema.js";
+import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "./test-suite-schema.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { createClaudeAgent } from "../../core/agent/index.js";
 import type { AgentInvokeOptions } from "../../core/agent/types.js";
@@ -56,10 +56,12 @@ export interface AutomatedChecks {
   notMatchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
+  cardsNotUnderChecks: Array<{ prefix: string; found: boolean; foundAt?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
+  shouldSearchCheck?: { where: SearchWhere; found: boolean; matched?: string | undefined } | undefined;
 }
 
 export interface TestResult {
@@ -130,7 +132,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
         .filter((fixturePath) => path.basename(fixturePath) === CLAUDE_MD)
         .map((fixturePath) => path.join(path.dirname(fixturePath), AGENTS_MD)));
     }
-    const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    const cardsBefore = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // In chat mode, mirror what ChatSession.resolveSystemPrompt builds.
     const systemPrompt = test.chat_mode
       ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
@@ -158,7 +160,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
       });
     const result = await agent.invoke(invokeOpts);
     if (!result.success) throw new KnowledgeAuditAgentError(engine, result.error);
-    const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    const cardsAfter = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
     // comes from the validated live stream captured by its adapter above.
     const logDir = invokeOpts.cwd ?? boxRoot;
@@ -284,6 +286,10 @@ const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext)
   },
   Grep: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
   Glob: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  // Web lookups count as searches under their own tool name, matching the
+  // Codex runner's provider searches (`codex-audit-behavior.ts`).
+  WebSearch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  WebFetch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
   Bash: ({ block, summary, acc }) => {
     if (summary) acc.bashCommands.push(summary);
     if (block.input) {

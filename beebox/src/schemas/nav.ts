@@ -61,6 +61,7 @@ const NavObject = z.object(navFields);
 export type NavFields = z.infer<typeof NavObject>;
 
 export const NavSchema: CardSchema = cardSchema("nav", {
+  brief: "The box's top navigation",
   fields: navFields,
   searchable: false,
   instructions: `# Nav Card

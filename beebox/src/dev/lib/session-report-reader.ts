@@ -218,6 +218,8 @@ const TOOL_CALL_DESCRIBERS: Partial<
   Grep: (input) => `Grep "${input.pattern || ""}" in ${input.path || "."}`,
   TodoWrite: () => "TodoWrite",
   Task: (input) => `Task: ${String(input.description || "").substring(0, 120)}`,
+  WebSearch: (input) => `WebSearch "${String(input.query || "")}"`,
+  WebFetch: (input) => `WebFetch ${String(input.url || "")}`,
 };
 
 function describeToolCall(name: string, input: Record<string, unknown>): string {

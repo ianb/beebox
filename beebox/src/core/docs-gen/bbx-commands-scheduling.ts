@@ -76,6 +76,8 @@ export function bbxCommandsScheduling(): string[] {
     "connector, disabled) show as blocked/disabled, never as failures. A task whose",
     "last run completed its work but whose check reached no verdict shows as `?`",
     "inconclusive — unknown, not broken — and does not affect the exit code.",
+    "`inconclusive` means the last run did its work but its check never reached a",
+    "verdict — unknown, not broken; do not redo the work on that basis.",
     "",
     "## bbx scheduler",
     "",
@@ -105,7 +107,38 @@ export function bbxCommandsScheduling(): string[] {
     "(e.g. telegram messages). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
     "",
+    ...bbxCommandsNotify(),
     ...bbxCommandsChat(),
+  ];
+}
+
+/** The `## bbx notify` section: reaching the boxholder now, moved from the agent guide. */
+function bbxCommandsNotify(): string[] {
+  return [
+    "## bbx notify",
+    "",
+    "Send the boxholder a notification now. Run `bbx notify --check` first when you are about to",
+    "promise a reminder or a watch: it prints which channels can reach the person and exits 1 when",
+    "none can.",
+    "",
+    "`--loudness` is `dot` (badge only), `quiet` (muted; held back while they are in the app), or",
+    "`loud` (sound). `--target` is where a tap lands: `chat:<sessionId>`, `chat:new`, `card:<path>`,",
+    "`question:<path>`, `admin:<section>`, `dashboard`. `--tag <key>` makes a later notification",
+    "replace this one. A long body goes on stdin with `--body -`; without it stdin is never read.",
+    "`--dry-run` prints what a send would do without sending. A failure the person must fix, after",
+    "they left the chat it came from:",
+    "",
+    "```sh",
+    "bbx notify \"I couldn't read the receipt you photographed\" --loudness quiet \\",
+    "  --target chat:<that sessionId> --body \"The total is cut off. Can you retake it?\"",
+    "```",
+    "",
+    "In a chat turn, `<callout loudness=\"quiet\">` does this for the turn's outcome. A reminder at a",
+    "time is a scheduled-script card with `notify:`; a watch that notifies when something happens is",
+    "a scheduled-script card whose `runs:` pipes `bbx changes` into `bbx judge` and then an agent or",
+    "`bbx notify`. Both examples are in `card-scheduled-script.md`; the judgment card is",
+    "`card-judgment.md`.",
+    "",
   ];
 }
 

@@ -11,6 +11,7 @@ import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "..
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {
+  brief: "Job writing missing contains: lines",
   description: "A system job to write missing contains: fields for a batch of cards; bbx wakeup queues one batch per cycle",
   category: "system",
   searchable: false,

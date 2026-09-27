@@ -18,6 +18,7 @@ import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../car
 import { TODO_STATUSES } from "../shared/todo-model.js";
 
 export const TodoViewSchema = cardSchema("todo-view", {
+  brief: "A scoped list of todos",
   description: "A todos display surface scoped to a glob — the box-wide plate, or a project-local subtree instance",
   category: "authored",
   fields: {

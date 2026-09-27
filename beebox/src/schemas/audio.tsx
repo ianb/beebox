@@ -34,6 +34,7 @@ const TranscriptionError = z.object({
 });
 
 export const AudioSchema = cardSchema("audio", {
+  brief: "A recorded speech clip",
   description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript and summary filled on transcription",
   category: "synced",
   fields: {

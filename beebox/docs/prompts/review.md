@@ -41,7 +41,7 @@ Every agent's context is a stack; each layer has a loading class:
 
 ## Principles
 
-- **One home per concept.** ABOUT_CARDS/PROVENANCE own card concepts; a schema's `instructions` own that type's fields; a skill owns its domain. Everything else *points*, via the `SECTION` registry (`agent-guide/sections.ts`) so references can't drift from headings. Re-teaching is the disease; per-section drift is how prompts rot.
+- **One home per concept.** ABOUT_CARDS/PROVENANCE own card concepts; a schema's `instructions` own that type's fields; a skill owns its domain. Everything else *points*, via the handle registry (`agent-guide/ledger.yaml`, read by `section()`/`xref()` in `agent-guide/sections.ts`) so references can't drift from headings. Re-teaching is the disease; per-section drift is how prompts rot.
 - **Deliberate duplication only.** The Laws may restate what a mechanics section carries — high-stakes, high-drift rules earn it. Anything else stated twice is a bug: fix at the canonical home, make the other site defer.
 - **Role before mechanics.** Lead surfaces open with identity ("a personal workspace where the filesystem is state, Git is history, and you do the work") so every rule after it has a why.
 - **Verify claims against code.** A prompt asserting a trailer, flag, or field that code doesn't emit is worse than silence. Audit prompt claims against the implementation; add `src/dev/knowledge-audits.yaml` entries for conventions agents must retain (`pnpm knowledge-audit`).

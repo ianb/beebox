@@ -1,5 +1,5 @@
 ---
-read-when: Adding or changing a box-local card schema under `src/schemas/`, its validate/summarize hooks, or its templates.
+read-when: Adding or changing a box-local card schema under `src/schemas/`, its validate/summarize hooks, or its templates, or checking what schema and view code may import.
 ---
 
 # Writing Box-Local Schemas
@@ -52,6 +52,9 @@ Key patterns:
 - `type` is the discriminator; don't list it under `fields`, and the on-disk YAML needn't carry
   it — the filename `Foo.<type>.card` supplies it.
 - `title` and `contains` are available on every card type automatically.
+- `brief` (five words or fewer) is the type's entry in the agent guide's card-type list, read on
+  every turn; `description` (one line) is its row in the docs index. Without a `brief` the guide
+  lists the `description`.
 
 ## Validation beyond Zod — the `validate` hook
 
@@ -107,6 +110,8 @@ export default cardSchema("plant", {
   filename summary.
 
 ## Available Imports
+
+**Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox library surface: `beebox/cards` (card/schema primitives), `beebox/schema` (Zod and YAML, version-pinned to the engine), and `beebox/view-widgets` (view components). Don't add other dependencies to `package.json` — that file isn't yours to edit.
 
 From `beebox/cards` (`validate` and `summarize` are config hooks on `cardSchema`, not imports):
 - `cardSchema(type, config)` — define a frontmatter card schema

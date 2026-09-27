@@ -59,6 +59,7 @@ const PdfMetadata = z.object({
 });
 
 export const PdfSchema = cardSchema("pdf", {
+  brief: "An extracted PDF",
   description: "An extracted PDF — rendered text as the body, original bytes and page/figure renders in the attach scope",
   category: "synced",
   searchable: true,

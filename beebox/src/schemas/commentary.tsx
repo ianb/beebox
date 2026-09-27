@@ -61,6 +61,7 @@ function validateMarkdocBody(bodyText: string): string[] {
 }
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
+  brief: "Anchored remarks on a card",
   description: "Anchored remarks on a host card (extfile, webpage, or doc) — attach-only, anchor-then-remark body",
   category: "authored",
   // The generic body-Markdoc pass in card-lint.ts skips a card whose schema

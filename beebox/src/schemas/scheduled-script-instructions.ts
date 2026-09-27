@@ -1,4 +1,4 @@
-import { SECTION } from "../core/agent-guide/sections.js";
+import { section } from "../core/agent-guide/sections.js";
 
 /**
  * The `instructions` prose for scheduled-script cards (agent-facing prompt
@@ -77,7 +77,7 @@ runs: >
   && bbx notify --loudness loud --target chat:new "The contractor's quote is in"
 \`\`\`
 
-\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${SECTION.REACHING_THE_BOXHOLDER} section of the agent guide has that example, and the judgment card instructions say how to write the judgment.
+\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${section("REACHING_THE_BOXHOLDER")} section of the agent guide has that example, and the judgment card instructions say how to write the judgment.
 
 ## Testing a schedule
 - \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing; with no \`--target\` it previews \`chat:new\`.

@@ -11,14 +11,13 @@ import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { loadCardFrontmatter } from "../frontmatter-field.js";
 import { parseGuide, parseGuideCard, compileGuide } from "../../schemas/guide.js";
-import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../../schemas/personality.js";
+import { compileSpeakingVoice } from "../../schemas/personality.js";
 import { compileBriefing, BriefingSchema } from "../../schemas/briefing.js";
-import { loadBoxholders } from "../boxholder-cards.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 import { pruneGuideRules } from "./guide-rules-prune.js";
-import { invariant } from "../../lib/invariant.js";
+import { readConfigGuides, readPersonality, type GuideSummary } from "./config-cards.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
 
@@ -131,85 +130,29 @@ interface GuideCompileContext {
 }
 
 /**
- * Summary of a compiled guide, for inclusion in the agent guide.
- */
-export interface GuideSummary {
-  name: string;
-  guidePath: string;
-  compiledPath: string;
-  appliesTo: string;
-  jobTypes: string[];
-}
-
-/**
  * Compile config/*.guide.card and generate job-type rules.
  * Returns summaries of all compiled guides.
  */
 async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSummary[]> {
   const { boxRoot, rulesDir } = ctx;
-  const configDir = getBoxDir(boxRoot, "config");
-  let files: string[];
-  try {
-    files = await readdir(configDir);
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`[generate-docs] could not read ${configDir}; assuming no guides:`, e);
-    }
-    return [];
-  }
-
-  const guideFiles = files.filter((f) => f.endsWith(".guide.card"));
-  if (guideFiles.length === 0) return [];
+  const configGuides = await readConfigGuides(boxRoot);
 
   // job-type → list of { guidePath, appliesTo, compiledPath }
   const jobTypeMap = new Map<string, Array<{ guidePath: string; appliesTo: string; compiledPath: string }>>();
-  const allGuides: GuideSummary[] = [];
 
-  for (const filename of guideFiles) {
-    const guidePath = `${BOX_DIRS.config}/${filename}`;
-    const guideName = filename.replace(".guide.card", "");
-
-    try {
-      const content = await readFile(join(configDir, filename), "utf-8");
-      const fields = parseGuideCard(content);
-      if (fields === null) {
-        console.warn(`Skipping unparseable guide: ${guidePath}`);
-        continue;
+  for (const { summary, compiled } of configGuides) {
+    const { guidePath, appliesTo, compiledPath } = summary;
+    await writeFile(
+      join(boxRoot, compiledPath),
+      withDocId({ relativePath: compiledPath, content: compiled })
+    );
+    for (const jobType of summary.jobTypes) {
+      let entries = jobTypeMap.get(jobType);
+      if (!entries) {
+        entries = [];
+        jobTypeMap.set(jobType, entries);
       }
-      const parsed = parseGuide(fields);
-      const compiled = compileGuide(parsed, guideName);
-      const compiledFilename = `${guideName}-guide.md`;
-      const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
-
-      await writeFile(
-        join(boxRoot, compiledPath),
-        withDocId({ relativePath: compiledPath, content: compiled })
-      );
-
-      allGuides.push({
-        name: guideName,
-        guidePath,
-        compiledPath,
-        appliesTo: parsed.appliesTo ?? "",
-        jobTypes: parsed.jobTypes,
-      });
-
-      // Collect job-type mappings
-      for (const jobType of parsed.jobTypes) {
-        let entries = jobTypeMap.get(jobType);
-        if (!entries) {
-          entries = [];
-          jobTypeMap.set(jobType, entries);
-        }
-        entries.push({
-          guidePath,
-          appliesTo: parsed.appliesTo ?? "",
-          compiledPath,
-        });
-      }
-    } catch (e) {
-      // Skip unparseable guide cards, but surface them so malformed cards aren't silent.
-      console.warn(`[generate-docs] could not parse guide card ${filename}:`, e);
+      entries.push({ guidePath, appliesTo, compiledPath });
     }
   }
 
@@ -238,7 +181,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
     ctx.written.add(ruleFilename);
   }
 
-  return allGuides;
+  return configGuides.map((g) => g.summary);
 }
 
 /**
@@ -343,60 +286,26 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
 }
 
 /**
- * Scan `_config/*.personality.card`, compile each, and return the compiled markdown
- * and speaking-voice JSON.
+ * Compile `_config/*.personality.card`, write its markdown and the
+ * speaking-voice JSON, and return the compiled section for the agent guide.
  */
 export async function compilePersonalities(boxRoot: string): Promise<string | undefined> {
-  const configDir = getBoxDir(boxRoot, "config");
-  let files: string[];
-  try {
-    files = await readdir(configDir);
-  } catch (_e) {
-    return undefined;
-  }
+  const personality = await readPersonality(boxRoot);
+  if (personality === undefined) return undefined;
 
-  const personalityFiles = files.filter((f) => f.endsWith(".personality.card"));
-  if (personalityFiles.length === 0) return undefined;
+  const compiledPath = `${DOCS_DIR}/personality-${personality.name}.md`;
+  await writeFile(
+    join(boxRoot, compiledPath),
+    withDocId({ relativePath: compiledPath, content: personality.compiled })
+  );
 
-  // Only support one personality card (main) for now
-  const [filename] = personalityFiles;
-  invariant(filename !== undefined, "checked personalityFiles.length === 0 above");
-  const personalityName = filename.replace(".personality.card", "");
+  // Write speaking-voice JSON for Electron consumption
+  const voice = compileSpeakingVoice(personality.fields);
+  const voicePath = `${DOCS_DIR}/speaking-voice.json`;
+  await writeFile(
+    join(boxRoot, voicePath),
+    JSON.stringify(voice, null, 2) + "\n"
+  );
 
-  try {
-    const content = await readFile(join(configDir, filename), "utf-8");
-    const parsed = parseCardText(content, {
-      source: filename,
-      schemas: await createCardSchemaMap(boxRoot),
-    });
-    // parseCardText validated these fields against the personality schema
-    // (createCardSchemaMap includes it). PersonalityFields is a hand-written
-    // interface not derived from that schema, so TS can't connect the generic
-    // `Record<string, unknown>` to it — see the follow-up to derive one from
-    // the other.
-    // eslint-disable-next-line no-restricted-syntax -- validated at parse; hand-written interface can't be inferred from the CardSchema-typed schema
-    const fields = parsed.fields as unknown as PersonalityFields;
-    const boxholders = await loadBoxholders(boxRoot);
-    const compiled = compilePersonality(fields, { boxholders });
-    const compiledFilename = `personality-${personalityName}.md`;
-    const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
-
-    await writeFile(
-      join(boxRoot, compiledPath),
-      withDocId({ relativePath: compiledPath, content: compiled })
-    );
-
-    // Write speaking-voice JSON for Electron consumption
-    const voice = compileSpeakingVoice(fields);
-    const voicePath = `${DOCS_DIR}/speaking-voice.json`;
-    await writeFile(
-      join(boxRoot, voicePath),
-      JSON.stringify(voice, null, 2) + "\n"
-    );
-
-    return compiled;
-  } catch (e) {
-    console.error(`[generate-docs] Failed to compile personality ${filename}:`, e);
-    return undefined;
-  }
+  return personality.compiled;
 }

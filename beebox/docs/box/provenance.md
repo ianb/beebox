@@ -1,5 +1,5 @@
 ---
-read-when: Writing content derived from or quoting another card, file, person, or external page — the `{% quote %}` and `{% source %}` tags, `ref`/`href`, `usage`, and anchoring a span.
+read-when: Writing content derived from or quoting another card, file, person, or external page — the `{% quote %}` and `{% source %}` tags, `ref`/`href`, `usage`, and anchoring a span — or naming a link-shaped frontmatter field.
 ---
 
 # Quotes and provenance
@@ -90,6 +90,14 @@ Refs are tracked automatically — `bbx validate` warns when a `ref` no
 longer resolves, and `bbx mv` rewrites them when the target moves. Inside
 `{% source %}`, exactly one of `ref` / `href` is **required** — it names
 where the wrapped content came from.
+
+A ref reaches only the box's own areas (`_content`, `_config`, …): package docs under `node_modules/` can be read but not linked, so name them in plain text.
+
+**Link-shaped fields use one vocabulary.** Internal targets use `ref`; external
+targets use `href`. Put either in an object whose sibling fields explain the
+relationship — for example `sources: [{href, retrieved, usage}]` — never an
+ad-hoc bare URL string array. These names rhyme with `{% source %}`; use
+date-only ISO (`YYYY-MM-DD`) for `retrieved`.
 
 ### `usage` — how the source was used
 

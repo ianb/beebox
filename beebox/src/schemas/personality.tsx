@@ -88,6 +88,7 @@ const ContextNote = z.object({
 });
 
 export const PersonalitySchema: CardSchema = cardSchema("personality", {
+  brief: "The assistant's voice and style",
   description: "The assistant's voice and communication style — tone, traits, and boxholder relationship; compiled into every agent's context",
   category: "authored",
   fields: {

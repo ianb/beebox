@@ -37,6 +37,8 @@
     "src/core/views/types.ts",
     "src/core/chat/card-activity.ts",
     "src/shared/card-activity-kinds.ts",
+    "src/core/agent-guide/ledger.yaml",
+    "src/core/agent-guide/guide.md",
     "tsconfig.json",
     "tsconfig.base.json"
   ],
@@ -58,6 +60,7 @@
     "typecheck:tooling": "tsc --noEmit -p tsconfig.tooling.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/tooling.tsbuildinfo",
     "lint": "node --import tsx ../bin/with-slot.ts -- pnpm run '/^lint:(backend|frontend)$/'",
     "lint:changed": "node --import tsx ../bin/lint-changed.ts",
+    "lint:guide": "tsx src/dev/lint-guide.ts",
     "lint:backend": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/backend src/ scripts/ test/ user-stories/",
     "lint:frontend": "cd src/frontend && pnpm lint",
     "start": "node dist/webapp/server.js",

@@ -33,6 +33,7 @@ import { cardSchema, type InferCardFields } from "../cards/index.js";
 const StatusEnum = z.enum(["new", "read", "replied", "archived"]);
 
 export const EmailThreadSchema = cardSchema("email-thread", {
+  brief: "A synced Gmail thread",
   description: "A synced Gmail thread envelope — subject, participants, and refs to its email-message cards; created by the Gmail connector",
   category: "synced",
   fields: {

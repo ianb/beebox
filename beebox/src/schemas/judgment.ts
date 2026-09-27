@@ -55,6 +55,7 @@ const QuestionField = z
 
 export const JudgmentSchema = cardSchema("judgment", {
   description: "An authored Jev prompt: named noul, choice, and score questions that `bbx judge` asks about a state from stdin",
+  brief: "Questions bbx judge asks",
   category: "authored",
   searchable: false,
   fields: {

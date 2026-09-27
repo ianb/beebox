@@ -21,6 +21,7 @@ const PlaceStatus = z.enum(["active", "inactive", "archived"]);
 export type PlaceStatusType = z.infer<typeof PlaceStatus>;
 
 export const PlaceSchema = cardSchema("place", {
+  brief: "A named location",
   description: "A named location (Home, Office) with optional coordinates so location-aware context can recognize where the boxholder is",
   category: "authored",
   // Cross-field rule Zod's per-field shape can't express: coordinates are

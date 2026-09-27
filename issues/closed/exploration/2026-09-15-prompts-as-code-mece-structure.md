@@ -96,7 +96,7 @@ different readers and different lifetimes.
   the end-to-end read this argues for, with tooling already built: the prompt
   viewer at `/main/dev/prompts/` shows every fragment and the assembled context
   stacks with per-layer token counts, and gives each a citable name.
-- [Instruction surface size budget](../../docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
+- [Instruction surface size budget](../docs-and-chores/2026-07-04-instruction-surface-size-budget.md)
   — attacks accretion by volume, with a proposed `bbx validate` size warning.
 
 Those two cover *reading* the prompts and *bounding their size*. Neither covers

@@ -20,6 +20,7 @@ const GlinkOrigin = z.enum(["mirror", "manual"]);
 export type GlinkOriginType = z.infer<typeof GlinkOrigin>;
 
 export const GlinkSchema = cardSchema("glink", {
+  brief: "Pointer to a Drive item",
   description: "A pointer to a Google Drive item that is not copied into the box — Drive metadata plus the boxholder's purpose notes",
   category: "synced",
   fields: {

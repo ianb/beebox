@@ -18,6 +18,7 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const WebpageSchema = cardSchema("webpage", {
+  brief: "A captured web page",
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
   fields: {
@@ -69,6 +70,12 @@ separate \`.commentary.card\` inside this card's attach scope
 (\`<basename>.attach/\`), and the webpage view surfaces them inline. A
 commentary anchor (\`{% source %}\`) with no \`ref\`/\`href\` points at *this*
 page — the containing document is the default target.
+
+## How it arrives
+
+The Clerk browser extension's "Comment on this page" captures a web page as a
+\`*.webpage.card\`, with the user's remarks in a commentary card in its attach
+scope. "Save page" produces the same \`*.webpage.card\` without the commentary. It lands in the chosen \`[commentary]\` destination landmark dir, or \`_content/inbox/\` by default.
 
 ## Layout on disk
 

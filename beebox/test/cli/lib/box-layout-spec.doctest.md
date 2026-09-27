@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/box-layout-spec.js";
 import { BOX_ROOT_VOCABULARY } from "../../../src/lib/box-root-vocabulary.js";
 import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/lib/paths.js";
-import { directoryLayoutSection } from "../../../src/core/agent-guide/box-shape.js";
+import { directoryLayoutRows } from "../../../src/core/agent-guide/box-shape.js";
 
 const keyedEntries = BOX_LAYOUT.filter((entry) => entry.boxDirsKey !== undefined);
 const boxLayoutDoc = await fs.readFile(new URL("../../../docs/box-layout.md", import.meta.url), "utf-8");
@@ -75,12 +75,12 @@ const vocabAreaNames = new Set(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "are
 
 ## The agent guide's directory table text comes from the same spec entries
 
-`directoryLayoutSection` doesn't hand-list directory paths or prose anymore —
+`directoryLayoutRows` doesn't hand-list directory paths or prose anymore —
 it looks up each row by `BOX_DIRS` key. Spot-check a few rows carry the
 spec's exact wording:
 
 ```ts
-const guide = directoryLayoutSection();
+const guide = directoryLayoutRows();
 guide.includes("| `_bookkeeping/questions/` | Pending questions for the user |")
 => true
 

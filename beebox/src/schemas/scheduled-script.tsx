@@ -21,9 +21,7 @@ const { rrulestr } = rrulePkg;
 
 export { parseDuration, parseBudget } from "./scheduled-script-duration.js";
 
-// ============================================
-// Schema
-// ============================================
+// --- Schema ---
 
 const SourceField = z.union([
   z.string(),
@@ -43,6 +41,7 @@ const RequiresField = z.object({
 });
 
 export const ScheduledScriptSchema = cardSchema("scheduled-script", {
+  brief: "A schedule for a command",
   description: "Declarative scheduling for a command — cron/at/rrule plus budgets, locks, and wakeup opportunism",
   category: "authored",
   searchable: false,
@@ -98,15 +97,11 @@ export const ScheduledScriptSchema = cardSchema("scheduled-script", {
   },
 });
 
-// ============================================
-// Field types (raw frontmatter shape)
-// ============================================
+// --- Field types (raw frontmatter shape) ---
 
 export type ScheduledScriptFields = InferCardFields<typeof ScheduledScriptSchema>;
 
-// ============================================
-// Parsed scheduled script (computed/normalized)
-// ============================================
+// --- Parsed scheduled script (computed/normalized) ---
 
 /** What a schedule does when it fires: run a command, or send a notification. */
 export type ScheduleAction =
@@ -196,9 +191,7 @@ export function parseScheduledScript(fields: ScheduledScriptFields): ParsedSched
   };
 }
 
-// ============================================
-// Schedule evaluation
-// ============================================
+// --- Schedule evaluation ---
 
 export interface ScheduleCheckContext {
   lastRun: string | null;
@@ -316,9 +309,7 @@ function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
   }
 }
 
-// ============================================
-// Template
-// ============================================
+// --- Template ---
 
 export interface ScheduledScriptTemplateOptions {
   cron?: string;

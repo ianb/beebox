@@ -74,3 +74,55 @@ const invalid = auditTestSchema.safeParse({
 invalid.success
 => false
 ```
+
+`should_search` asks whether the agent looked something up. A web lookup is a
+WebSearch or WebFetch in the recorded searches (the Codex runner records its
+provider searches under `WebSearch`), a box lookup is a `bbx search` command,
+and `any` takes either. A `grep` is a search but not a lookup either way.
+
+```ts
+function searched(where: "web" | "box" | "any", observed: Partial<AgentBehavior>) {
+  const check = runChecks({ ...auditTest, correct_matches: [], should_search: where }, {
+    behavior: { ...behavior("answer"), ...observed },
+    newOrModifiedCards: new Map(),
+  }).shouldSearchCheck;
+  return check?.found === true ? `yes: ${check.matched ?? ""}` : "no";
+}
+const web = { searches: [{ tool: "WebFetch", summary: "https://example.com/release" }] };
+const box = { bashRawCommands: ["bbx search \"kitchen renovation budget\""] };
+const grep = { searches: [{ tool: "Grep", summary: "kitchen in ." }], bashRawCommands: ["grep -r kitchen _content"] };
+JSON.stringify({
+  webAsWeb: searched("web", web),
+  boxAsWeb: searched("web", box),
+  boxAsBox: searched("box", box),
+  grepAsAny: searched("any", grep),
+  webAsAny: searched("any", web),
+})
+=> {"webAsWeb":"yes: WebFetch https://example.com/release","boxAsWeb":"no","boxAsBox":"yes: bbx search \"kitchen renovation budget\"","grepAsAny":"no","webAsAny":"yes: WebFetch https://example.com/release"}
+```
+
+An audit without `should_search` carries no search check, so it cannot fail one.
+
+```ts
+runChecks(auditTest, { behavior: behavior("answer"), newOrModifiedCards: new Map() }).shouldSearchCheck
+=> undefined
+```
+
+## `cards_not_under` refuses a card written under a forbidden prefix
+
+A card that landed under `_tmp/` fails the check even when the response never
+names the path; a card under `_content/` passes.
+
+```ts
+const tmpTest = auditTestSchema.parse({ ...auditTest, cards_not_under: ["_tmp/"] });
+const underTmp = runChecks(tmpTest, {
+  behavior: behavior("Saved it."),
+  newOrModifiedCards: new Map([["./_tmp/Garden.doc.card", "south fence"]]),
+});
+const underContent = runChecks(tmpTest, {
+  behavior: behavior("Saved it."),
+  newOrModifiedCards: new Map([["./_content/Garden.doc.card", "south fence"]]),
+});
+JSON.stringify({ tmp: underTmp.cardsNotUnderChecks[0], content: underContent.cardsNotUnderChecks[0] })
+=> {"tmp":{"prefix":"_tmp/","found":true,"foundAt":"./_tmp/Garden.doc.card"},"content":{"prefix":"_tmp/","found":false}}
+```

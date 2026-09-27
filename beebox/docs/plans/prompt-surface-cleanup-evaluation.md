@@ -647,6 +647,12 @@ open question.
 
 ### Track 5 — Agent-guide per-section trims + string normalization (rounds 1+2)
 
+**Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
+the agent-guide sections themselves: every section was binned and rewritten
+against a ledger, and the string-array-to-template-literal normalization is
+moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
+plan's tracks are untouched.
+
 **What.** Per-section edits, most deferring shared concepts to Track 0. Plus a
 cross-cutting refactor: **normalize each section from string-array to a single
 template literal** so it reads as prose (round-2 whole-file note, applies to all

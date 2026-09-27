@@ -70,6 +70,7 @@ const captureSessionFields = {
 };
 
 export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
+  brief: "One recording session's captures",
   description: "Groups the images, audio clips, and files from one recording session, with an assembled timeline transcript as the body",
   category: "synced",
   searchable: true,

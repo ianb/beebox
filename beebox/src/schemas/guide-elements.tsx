@@ -113,6 +113,7 @@ const guideFields = {
 };
 
 export const GuideSchema: CardSchema = cardSchema("guide", {
+  brief: "Preferences for one domain",
   description: "A living theory of the user for a job type — triage rules, actions, experiments, and reactions with confidence tracking",
   category: "authored",
   searchable: false,
@@ -124,6 +125,14 @@ A guide is a living document — the theory of the user. Treat it as a model to 
 **Confidence ladder:** hypothesis → low → medium → high → confirmed. Only upgrade when there's evidence. Only downgrade when evidence contradicts. Never jump from hypothesis to confirmed in one step.
 
 **Source hierarchy:** user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
+
+**Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past
+chat sessions and writes what it learned into personality/guide cards as
+\`source: inferred\` entries — treat those as the agent's own working hypotheses:
+don't promote them past \`medium\`, and don't use them to contradict a
+\`user-stated\` belief (that takes the boxholder's say-so). The full
+confidence-ladder detail lives with the retrospective procedure; run reports are
+in \`_content/reviews/retro/\`.
 
 **ALWAYS have active experiments.** If all experiments are resolved, propose new ones. Experiments are how the system learns — without them it stagnates. Aim for 1-3 active experiments at any time.
 

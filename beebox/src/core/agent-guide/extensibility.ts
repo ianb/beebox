@@ -1,43 +1,22 @@
 /**
- * Box extensibility surfaces — procedures and guides.
- *
- * Both are dynamic: their lists vary per-box and are scanned by generate-docs,
- * so they stay in the always-loaded guide as compact per-box indexes. The
- * static-prose surfaces that used to live here — schedules and tricks — moved
- * to on-demand skills (box-skills-content.ts), since an agent only needs their
- * authoring mechanics when it forms the intent to use them.
+ * Fillers for the per-box extensibility sections of `guide.md`: this box's
+ * procedures (`{{procedures}}`) and guides (`{{guides}}`). Both vary per box
+ * and are scanned by generate-docs; an empty list omits its section.
  */
 
-import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 
-export function proceduresSection(procedures: ProcedureSummary[]): string {
-  if (procedures.length === 0) return "";
-  const lines: string[] = [
-    "## Procedures",
-    "",
-    "Available procedures in `_config/procedures/`:",
-    "",
-  ];
-  for (const p of procedures) {
-    lines.push(`- **${p.name}** — ${p.description}`);
-  }
-  lines.push("");
-  lines.push(`Run with \`bbx procedure run <name>\`. Read \`${BOX_PACKAGE_DOCS}/procedures.md\` before writing or modifying.`);
-  return lines.join("\n");
+/** PROCEDURES: one line per procedure card, or null to omit the section. */
+export function procedureList(procedures: ProcedureSummary[]): string | null {
+  if (procedures.length === 0) return null;
+  return procedures.map((p) => `- **${p.name}** — ${p.description}`).join("\n");
 }
 
-export function guidesSection(guides: GuideSummary[]): string {
-  if (guides.length === 0) return "";
-  const lines: string[] = [
-    "## Guides",
-    "",
-    "Guides (`*.guide.card`) hold the boxholder's preferences for handling specific domains — how *this* user wants a domain done, beyond what general knowledge tells you. **Read the relevant guide before acting**, even in a domain you know.",
-    "",
-  ];
-  for (const g of guides) {
+/** GUIDES: one line per guide card with its compiled doc, or null to omit the section. */
+export function guideList(guides: GuideSummary[]): string | null {
+  if (guides.length === 0) return null;
+  return guides.map((g) => {
     const note = g.appliesTo ? ` — ${g.appliesTo}` : "";
-    lines.push(`- **${g.name}**${note} → \`${g.compiledPath}\``);
-  }
-  return lines.join("\n");
+    return `- **${g.name}**${note} → \`${g.compiledPath}\``;
+  }).join("\n");
 }
