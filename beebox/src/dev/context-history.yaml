@@ -754,6 +754,13 @@ test1:
       peak: 45497
       added: 5030
       turns: 4
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36606
+      peak: 41724
+      added: 5118
+      turns: 4
   question-directive:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -769,6 +776,13 @@ test1:
       peak: 43381
       added: 2174
       turns: 9
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36487
+      peak: 46935
+      added: 10448
+      turns: 16
   question-answer-creates-job:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -777,6 +791,13 @@ test1:
       peak: 41198
       added: 0
       turns: 1
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36457
+      peak: 47603
+      added: 11146
+      turns: 7
   guide-vs-procedure:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -2393,6 +2414,13 @@ test1:
       peak: 46591
       added: 0
       turns: 1
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 44937
+      peak: 44937
+      added: 0
+      turns: 2
   callout-speech-relationship:
     - date: 2026-07-03T11:14:29.560Z
       boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
@@ -2776,6 +2804,13 @@ test1:
       peak: 46220
       added: 0
       turns: 2
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 44995
+      peak: 50488
+      added: 5493
+      turns: 7
   calendar-create-event:
     - date: 2026-07-03T11:37:34.849Z
       boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
@@ -3821,6 +3856,20 @@ test1:
       peak: 43253
       added: 1553
       turns: 4
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36484
+      peak: 41324
+      added: 4840
+      turns: 4
+    - date: 2026-09-27T05:08:24.629Z
+      boxCommit: f94dc2e39154bf455d27add13325dfab9f3cca50
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36626
+      peak: 40031
+      added: 3405
+      turns: 4
   capture-message-meaning:
     - date: 2026-07-10T06:51:13.953Z
       boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
@@ -4344,6 +4393,13 @@ test1:
       peak: 39715
       added: 0
       turns: 2
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36480
+      peak: 39822
+      added: 3342
+      turns: 4
   todo-annotation-todo-view-card:
     - date: 2026-07-29T04:34:08.445Z
       boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
@@ -4553,6 +4609,13 @@ test1:
       peak: 52488
       added: 12764
       turns: 12
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36548
+      peak: 49498
+      added: 12950
+      turns: 16
   todo-application-query-plate:
     - date: 2026-07-29T13:13:53.463Z
       boxCommit: c39e8c1c01fa547092cdc68c87cbd58ceff1abda
@@ -6371,6 +6434,30 @@ test1:
       peak: 41719
       added: 5122
       turns: 3
+  question-learning-sink:
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36504
+      peak: 42581
+      added: 6077
+      turns: 7
+  question-ask-decision-rule:
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36497
+      peak: 41392
+      added: 4895
+      turns: 4
+  question-alert-and-aging:
+    - date: 2026-09-27T05:08:04.909Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: e98c8ae7aab3268be61108e7eee40f23746c13a3
+      initial: 36498
+      peak: 39953
+      added: 3455
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

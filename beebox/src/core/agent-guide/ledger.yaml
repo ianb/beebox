@@ -8,11 +8,12 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after THE_LAWS: raised by 168 words for THE_LAW_OF_CHECKING
-  # (new, by the boxholder's decision) and the sharpened THE_LAW_OF_CARDS; the
-  # clone already measured 22 words over the previous ceiling.
-  guide_words: 5391
-  always_loaded_words: 10183
+  # 2026-09-27, after QUESTIONS (-52). THE_LAWS before it raised them by 168
+  # words for THE_LAW_OF_CHECKING (new, by the boxholder's decision) and the
+  # sharpened THE_LAW_OF_CARDS; the clone already measured 22 words over the
+  # ceiling before that.
+  guide_words: 5339
+  always_loaded_words: 10131
   uncited_words_per_section: 60
 
 lint:
@@ -39,6 +40,7 @@ lint:
     - CARD_TYPES
     - PROVENANCE
     - PERSONALITY
+    - QUESTIONS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -691,6 +693,52 @@ rows:
     bin: core
     reason: The only place an agent learns that a box-local type's or a guide's doc is in the box rather than the package; GUIDES and CARD_TYPES link into it.
     audits: [docs-compiled-location]
+
+  # --- QUESTIONS ---
+  - id: questions.ask-in-chat
+    rule: In chat, ask in your reply; never create a question card for something you can ask the user directly.
+    handle: QUESTIONS
+    bin: core
+    reason: Any turn with something unresolved raises it, and an agent that has read about question cards reaches for one in chat, where it hides the question from the person who is right there.
+    audits: [question-ask-decision-rule, callout-for-a-question]
+  - id: questions.job-default
+    rule: In a job, triage, procedure, or wakeup, a question card is a good default for what only the boxholder can decide, and an ambiguity the job cannot resolve ends in asking, not a guess.
+    handle: QUESTIONS
+    bin: core
+    reason: Unattended work meets ambiguity on tasks nobody predicted, and the slip is to guess past it or treat asking as failure; the rule sets the default.
+    audits: [question-ask-decision-rule]
+  - id: questions.check-existing
+    rule: Before asking, check `_bookkeeping/questions/` including answered, dismissed, and expired cards; an answer is a `user-stated` fact, and a dismissal or expiry raises the bar for asking again without closing the question.
+    handle: QUESTIONS
+    bin: core
+    reason: Every question an agent considers can already have been asked, and re-asking an answered question wastes the boxholder's attention; the schema's instructions say it too, but the agent reads them only after deciding to ask.
+    audits: [question-ask-decision-rule, question-dismissed-expired-meaning]
+  - id: questions.alert
+    rule: A new question is sent to the boxholder when the box has Telegram or push set up, so the agent does not also chase it in chat or a todo.
+    handle: QUESTIONS
+    bin: core
+    reason: Read from the code (`src/core/question-alert.ts`); without it an agent adds a reminder todo or a chat nudge beside every question it asks, doubling what the system already sends.
+    audits: [question-alert-and-aging]
+  - id: questions.aging
+    rule: An unanswered question gets one reminder after 7 days and leaves the active view after 30 (half and all of `expires-after:` when set), and stays answerable.
+    handle: QUESTIONS
+    bin: core
+    reason: Read from the code (`src/core/question-aging.ts`); an agent that believes a question waits forever either re-asks or never sets `expires-after:` on a time-sensitive one.
+    audits: [question-alert-and-aging, question-dismissed-expired-meaning]
+  - id: questions.directive-learning
+    rule: "`directive:` (what the follow-up job does with the answer) and `learning:` (`{sink, ref?, proposal}`, the belief and where it lands, recorded as `source: user-stated`; sink `briefing` targets the root briefing) are set as the question card's doc describes."
+    handle: QUESTIONS
+    bin: indirect
+    reason: Needed only when writing a question card, and the card's doc (the question schema's instructions) states both fields; the guide's sink mechanics moved there, with the one sentence it lacked (the follow-up job records the belief as the strongest evidence tier). The guide keeps the field names so an agent knows to look.
+    audits: [question-learning-sink, question-directive, question-answer-creates-job]
+    mechanics: box-docs/card-question.md
+  - id: questions.mechanics-pointer
+    rule: The question card's fields, templates, and reference are in box-docs/card-question.md.
+    handle: QUESTIONS
+    bin: core
+    reason: The section's pointer line; an agent about to write a question card needs the field reference, and create-question-card expects it answered from here.
+    audits: [create-question-card, question-directive]
+    mechanics: box-docs/card-question.md
 
   # --- TODOS ---
   - id: todos.todo-vs-question

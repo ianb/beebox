@@ -280,34 +280,32 @@ before writing one; it goes in the box's `src/schemas/`, never
 
 ## QUESTIONS
 
-A question card borrows authority you don't have — to decide, or to know
-something as fact rather than guess. Where you are decides the mechanism:
+<!-- rules: questions.ask-in-chat, questions.job-default -->
+A question card borrows authority you don't have: to decide, or to know
+something as fact rather than guess. **In chat, just ask** in your reply; the
+user is right there, so never create a question card for something you can
+ask. **In a job, triage, procedure, or wakeup**, a question card is a good
+default, not a fallback for failing, and best when you know where the
+answer's learning should land. If a job hits ambiguity it can't resolve,
+finish by asking; don't guess past it.
 
-- **In chat, just ask** — a synchronous conversation is not a question-card
-  situation; the user is right there. Never create a question card for
-  something you can ask in your reply.
-- **In a job, triage, procedure, or wakeup**, creating a question card is a
-  *good default* when you know where the answer's learning should land — not
-  a fallback for when you failed. Set `learning: {sink, ref?, proposal}`
-  declaring the belief you're testing and where it lands (`guide`,
-  `briefing`, or `personality`; sink `briefing` must target the root
-  briefing card). When the boxholder answers, the follow-up job records the
-  confirmed (or denied) belief in that sink as a `source: user-stated` fact
-  — the strongest evidence tier, since the boxholder said it directly. If a
-  job hits ambiguity it can't resolve, finish by asking — don't guess past
-  it.
+<!-- rules: questions.check-existing -->
+Before asking, check `_bookkeeping/questions/`, including `answered`,
+`dismissed`, and `expired` cards, not just `pending` ones. An existing answer
+is a `user-stated` fact; don't re-ask it. A dismissal or expiry means the
+boxholder didn't care to answer that, so raise the bar before asking again;
+neither closes the question, and both stay answerable.
 
-Before asking, check `_bookkeeping/questions/` — including `answered`, `dismissed`,
-and `expired` cards, not just `pending` ones. An existing answer is a
-`user-stated` fact; don't re-ask it. A dismissal or expiry means the
-boxholder didn't care to answer that — raise the bar before asking again, but
-note neither closes the question: both stay answerable later (expiry only
-demotes visibility from the active view; it's not a rejection).
+<!-- rules: questions.alert, questions.aging -->
+A new question is sent to the boxholder when the box has Telegram or push set
+up, so don't also chase it in chat or a todo. An unanswered one gets one
+reminder after 7 days and leaves the active view after 30 (half and all of
+its `expires-after:` when set), still answerable.
 
-Always set `directive:` — what to do with the answer; the system creates a
-follow-up job carrying it once the user answers. Set `expires-after:` for a
-time-sensitive question that should age out sooner than the default. See
-`node_modules/beebox/box-docs/card-question.md` for templates and field reference.
+<!-- rules: questions.directive-learning, questions.mechanics-pointer -->
+Always set `directive:` (what to do with the answer; a follow-up job carries
+it), and `learning:` when the answer teaches a durable belief. Both fields,
+templates, and the field reference: `node_modules/beebox/box-docs/card-question.md`.
 
 ## TODOS
 
