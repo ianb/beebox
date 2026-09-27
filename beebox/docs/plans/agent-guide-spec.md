@@ -466,17 +466,18 @@ subplan: it can start only after this plan has fixed the row form.
 
 ## Open design questions
 
-1. **Budget numbers.** 6,000 guide words and 11,000 always-loaded are the
-   proposal. Lean: set them after Track 3's binning shows the core size,
-   with the ledger header carrying today's numbers until then so the test
-   never fails on a number nobody chose.
-2. **Handle style for the currently unnamed sections.** `KEY_COMMANDS` and
-   `SEARCHING` read naturally; "Speak the User's Language" and "Where to
-   Record What You Find" do not shorten well (`SPEAKING`, `RECORDING`?).
-   Lean: short nouns, and the heading keeps a plain-language subtitle after
-   the handle, as PROVENANCE does today.
-3. **Whether CARD_TYPES keeps a description per type.** Lean: five words per
-   type; the list is how an agent picks a type without opening sixty docs.
+Settled 2026-09-26 with the boxholder ("I'm not too concerned about the
+budget if we follow the rules. So go to work"):
+
+1. **Budget numbers.** The ledger header starts at today's measured numbers
+   (guide 9,234 rendered words, always-loaded 14,194 on the test1 clone) so
+   the linter asserts no growth from day one; the numbers are lowered to the
+   measured result when Track 3 and 4 finish. The rules, not the number,
+   are the discipline.
+2. **Handles for the unnamed sections.** Short nouns, with the plain
+   heading kept as a subtitle after the handle, as PROVENANCE does today.
+3. **CARD_TYPES.** Keeps a five-word description per type.
+4. **Track 4** runs in this plan.
 
 ## Knowledge audits
 
