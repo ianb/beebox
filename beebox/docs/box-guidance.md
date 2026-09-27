@@ -133,7 +133,8 @@ need moves to a package doc and leaves one short pointer section behind:
 [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
 mechanics that the guide's PROVENANCE section points at, and
 [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
-rules behind the guide's TODOS section.
+rules behind the guide's TODOS section, and [history](box/history.md) the
+commit trailers behind its HISTORY section.
 
 Review the week's changes against these rules before landing docs work: list
 the guidance sources touched since the last review

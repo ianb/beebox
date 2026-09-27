@@ -2203,6 +2203,8 @@ tests:
   # history questions. bash_contains checks the actual command string (not
   # the description). git-trailers answered from agent guide without running.
 
+  # Status (2026-09-26, doc-structure Track 3, HISTORY): pass on the test1
+  # clone, 3 reads, 3 searches, 38k ctx.
   - id: git-history-first
     prompt: "The process-pages procedure ran earlier today but I'm not sure what it did. Can you find out?"
     expected_level: knows_directly
@@ -2214,6 +2216,9 @@ tests:
       what happened. The failure mode is searching for files, reading
       procedure run directories, or saying "I don't have access to logs."
 
+  # Status (2026-09-26, doc-structure Track 3, HISTORY): pass on the test1
+  # clone, 2 reads, 2 searches, 38k ctx. Left knows_directly: the guide still
+  # names the `Phase:` trailer, which is all this answer needs.
   - id: git-trailers
     prompt: "How can I find all commits from the capture-assembly phase?"
     expected_level: knows_directly
@@ -2221,6 +2226,8 @@ tests:
     correct_contains: ["Phase"]
     tags: [git]
 
+  # Status (2026-09-26, doc-structure Track 3, HISTORY): pass on the test1
+  # clone, 3 reads, 3 searches, 38k ctx.
   - id: git-recent-activity
     prompt: "What's been happening in this box recently?"
     expected_level: knows_directly
@@ -2231,6 +2238,23 @@ tests:
       The agent should use git log as a primary information source.
       Supplementing with directory listings is fine, but git log should
       come first.
+
+  # Guards ledger row history.trailers (added 2026-09-26, doc-structure Track
+  # 3, HISTORY): the trailer catalogue moved from the guide to box-docs/history.md.
+  # Status (2026-09-26, doc-structure Track 3, HISTORY): pass on the test1
+  # clone, 2 reads, 2 searches, 38k ctx.
+  - id: git-trailer-trick-run
+    prompt: >
+      Which commit trailer marks the commits a trick run made, what value does
+      it carry, and what git command lists every commit the trick named
+      "umbrella" made? Do not change anything.
+    expected_level: knows_about
+    watch_for: >
+      `Run-By: trick/umbrella`, found with `git log --all --grep='^Run-By:
+      trick/umbrella'` (or equivalent).
+    should_read_any: ["history.md", "tricks.md"]
+    correct_contains: ["Run-By", "trick/umbrella", "--grep"]
+    tags: [git]
 
   # === Don't Drop Important Information ===
   #

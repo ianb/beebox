@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after TOOLS.
-  guide_words: 6247
-  always_loaded_words: 11039
+  # 2026-09-26, after HISTORY.
+  guide_words: 6113
+  always_loaded_words: 10905
   uncited_words_per_section: 60
 
 lint:
@@ -32,6 +32,7 @@ lint:
     - GUIDES
     - SECRETS
     - TOOLS
+    - HISTORY
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -808,6 +809,21 @@ rows:
     reason: Rare, and needed only when a tool is missing. Moved verbatim to a new `bbx host install` entry in bbx-commands.md; the guide keeps one pointer sentence carrying the command and the `sudo apt` prohibition, since the reflex fires before any doc is open.
     audits: [host-package-install]
     mechanics: box-docs/bbx-commands.md
+
+  # --- HISTORY ---
+  - id: history.git-log-first
+    rule: Git history is the box's record of what happened; to reconstruct it, read `git log` first rather than searching the filesystem for clues.
+    handle: HISTORY
+    bin: core
+    reason: The question of what happened arrives on ordinary turns, and without the rule an agent reads run directories and file timestamps or says it has no logs.
+    audits: [git-history-first, git-recent-activity]
+  - id: history.trailers
+    rule: The trailer catalogue (`<Verb>-By` provenance, `Procedure:`/`Step:`, `Run-By:`, `Phase:`, `Session:`, `Commit-Source:`/`Fallback:`) and the `git log` filtering examples.
+    handle: HISTORY
+    bin: indirect
+    reason: Needed only when filtering history by what made a commit, and the guide's own advice was to read them off the log. Moved verbatim to a new prose doc, box-docs/history.md (git is not a `bbx` command, so not bbx-commands.md), with the `-By` list completed against src/shared/commit-trailers.ts and the writers (Pushed-By, Fetched-By, Tracked-By, Expired-By were missing). The guide keeps one sentence naming three trailers and the doc.
+    audits: [git-trailer-trick-run, git-trailers]
+    mechanics: box-docs/history.md
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
