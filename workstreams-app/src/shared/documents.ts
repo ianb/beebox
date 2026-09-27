@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DOCUMENT_ROLES } from "../../../beebox/src/dev/document-lifecycle.js";
+import { DOCUMENT_ROLES } from "../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 
 export const issuePrioritySchema = z.enum([
   "important",

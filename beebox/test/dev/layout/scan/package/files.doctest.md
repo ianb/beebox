@@ -18,9 +18,11 @@ const execFileAsync = promisify(execFile);
 
 ## `classifyFile`
 
-A TypeScript extension is always a module; `.d.ts`, test suffixes, and
-non-module extensions are decided by extension alone, regardless of
-`isSourceRoot`.
+A TypeScript extension is always a module; a declaration file, test
+suffixes, and non-module extensions are decided by extension alone,
+regardless of `isSourceRoot`. `.d.mts` and `.d.cts` are the `.mts`/`.cts`
+module-flavored twins of `.d.ts` and classify the same way, not as ordinary
+`.mts`/`.cts` modules.
 
 ```ts
 classifyFile("pkg/src/foo.ts", true)
@@ -30,6 +32,12 @@ classifyFile("pkg/src/foo.tsx", true)
 => module
 
 classifyFile("pkg/src/foo.d.ts", true)
+=> declaration
+
+classifyFile("pkg/src/foo.d.mts", true)
+=> declaration
+
+classifyFile("pkg/src/foo.d.cts", true)
 => declaration
 
 classifyFile("test/foo.doctest.md", false)

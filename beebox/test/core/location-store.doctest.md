@@ -6,8 +6,8 @@ invalid file to `null` (reported as "unknown") rather than throwing — so a
 hand-edit or partial write can never crash a read or an agent turn.
 
 ```ts setup
-import { loadLocation, saveLocation } from "../src/core/location-store.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { loadLocation, saveLocation } from "../../src/core/location-store.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 20, capturedAt: "2026-06-29T12:00:00.000Z", source: "web" };
 ```

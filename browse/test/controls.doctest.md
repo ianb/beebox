@@ -10,7 +10,7 @@ in that file's header; this exercises the contract.
 import assert from "node:assert/strict";
 import {
   annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
-} from "../../../browse/src/controls.js";
+} from "../src/controls.js";
 
 const SNAPSHOT = [
   '- navigation "Primary" [ref=e1]',

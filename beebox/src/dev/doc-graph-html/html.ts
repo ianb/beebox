@@ -21,7 +21,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { buildGraph, ROOT, type DocInfo } from "../doc-graph-data.js";
+import { buildGraph, ROOT, type DocInfo } from "../doc-graph-data/data.js";
 import { CURATOR, PILLARS, classifyPillars, classifyRings } from "./data.js";
 import { renderCurator, renderHealth, renderPillars, renderRings } from "./render.js";
 import { PAGE_CSS } from "./css.js";

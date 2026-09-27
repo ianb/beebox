@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
 
 export const ROOT = PACKAGE_ROOT;

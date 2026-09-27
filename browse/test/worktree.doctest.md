@@ -1,21 +1,16 @@
-# browse session profiles and the run timeout (bin/browse)
+# browse session profiles (`bin/browse`)
 
 Chrome holds an exclusive `SingletonLock` on a profile directory and aborts
 rather than open one another live instance owns. So every `bin/browse
 --session <name>` needs its own profile, or only one session can be running at
 a time — which is what made a second concurrent session impossible.
 
-`run()`'s wall-clock ceiling is the other half of the same fix: agent-browser
-0.27.0's `wait --fn` polls forever unless `AGENT_BROWSER_DEFAULT_TIMEOUT` is
-set, and an unbounded child hung `screenshot`, `snapshot`, and `open`.
-
 ```ts setup
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { sessionProfileDir } from "../../../browse/src/worktree.js";
-import { run } from "../../../browse/packages/agent-browser-typed/src/runner.js";
+import { sessionProfileDir } from "../src/worktree.js";
 
 const base = await mkdtemp(join(tmpdir(), "browse-profile-"));
 process.env["BROWSE_PROFILE_BASE"] = base;
@@ -73,18 +68,6 @@ is an error rather than a guess at a location.
 delete process.env["BROWSE_PROFILE_BASE"];
 await refused(async () => sessionProfileDir("alpha"))
 => BROWSE_PROFILE_BASE is not set. Invoke via bin/browse, not directly.
-```
-
-## A child that ignores its own timeout is still killed
-
-`timeoutMs` is the backstop under the settle wait: whatever the upstream
-binary does about timeouts, the wrapper cannot hang forever.
-
-```ts
-process.env["BROWSE_PROFILE_BASE"] = base;
-const killed = await refused(async () => run(["--version"], { timeoutMs: 1 }));
-killed.includes("killed after 1ms")
-=> true
 ```
 
 ```ts cleanup

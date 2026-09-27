@@ -16,8 +16,8 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 
-import { listBrowsablePaths, scorePath, searchPaths } from "../../../workstreams-app/src/server/main/file-index.js";
-import { documentLifecycle } from "../../src/dev/document-lifecycle.js";
+import { listBrowsablePaths, scorePath, searchPaths } from "../../../../workstreams-app/src/server/main/file-index.js";
+import { documentLifecycle } from "../../../src/dev/doc-graph-data/document-lifecycle.js";
 
 async function git(cwd: string, args: string[]) {
   return execa("git", args, { cwd });

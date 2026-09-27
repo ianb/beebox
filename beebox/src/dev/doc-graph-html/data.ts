@@ -10,7 +10,7 @@
  */
 
 import * as path from "node:path";
-import { type DocInfo } from "../doc-graph-data.js";
+import { type DocInfo } from "../doc-graph-data/data.js";
 
 // ----- Pillars: eight chapters of "what this codebase does" -----
 

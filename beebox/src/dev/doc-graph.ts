@@ -10,7 +10,7 @@
  */
 
 import * as path from "node:path";
-import { buildGraph, type DocInfo, type Reference } from "./doc-graph-data.js";
+import { buildGraph, type DocInfo, type Reference } from "./doc-graph-data/data.js";
 
 function contextPreview(context: string): string {
   return context.slice(0, 120).trimEnd();

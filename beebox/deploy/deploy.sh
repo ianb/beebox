@@ -441,7 +441,7 @@ step "Building frontend..."
 # that file is missing or stale on the server, every box-local schema fails to
 # load. Building here keeps dist/ in lockstep with the source we rsync.
 step "Building CLI bundle (dist/cli.mjs + dist/cards)..."
-(cd "$CHECKOUT/beebox" && node src/scripts/build-cli/build.ts >/dev/null)
+(cd "$CHECKOUT/beebox" && node src/scripts/build-cli/build/bundle.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
 # the same way dist/ does. Any bbx engine activity on the server would rewrite it,
 # but the per-box docs refresh below skips a dirty box, so build it here

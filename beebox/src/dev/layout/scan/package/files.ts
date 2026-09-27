@@ -14,20 +14,27 @@ const TYPESCRIPT_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
 const PLAIN_JS_EXTENSIONS = [".js", ".mjs", ".cjs"];
 const TEST_SUFFIXES = [".doctest.md", ".test.ts", ".tour.ts"];
 
-/** A TypeScript source file, `.d.ts` excluded. */
+const DECLARATION_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"];
+
+/** A declaration file: `.d.ts`, and its `.d.mts`/`.d.cts` module-flavored twins. */
+function isDeclarationFile(path: string): boolean {
+  return DECLARATION_SUFFIXES.some((suffix) => path.endsWith(suffix));
+}
+
+/** A TypeScript source file, declaration files excluded. */
 function isTypeScriptFile(path: string): boolean {
-  return !path.endsWith(".d.ts") && TYPESCRIPT_EXTENSIONS.some((ext) => path.endsWith(ext));
+  return !isDeclarationFile(path) && TYPESCRIPT_EXTENSIONS.some((ext) => path.endsWith(ext));
 }
 
 /**
- * `.d.ts` -> declaration; doctest/test/tour -> test; a TypeScript extension ->
- * module; a plain `.js`/`.mjs`/`.cjs` -> module only when `isSourceRoot` says
- * the file sits in `src/` or a source root (a top-level directory holding
- * TypeScript); such a file elsewhere is a static asset (data), e.g. the
- * frontend's `public/sw.js`.
+ * A declaration file -> declaration; doctest/test/tour -> test; a TypeScript
+ * extension -> module; a plain `.js`/`.mjs`/`.cjs` -> module only when
+ * `isSourceRoot` says the file sits in `src/` or a source root (a top-level
+ * directory holding TypeScript); such a file elsewhere is a static asset
+ * (data), e.g. the frontend's `public/sw.js`.
  */
 export function classifyFile(path: string, isSourceRoot: boolean): FileKind {
-  if (path.endsWith(".d.ts")) return "declaration";
+  if (isDeclarationFile(path)) return "declaration";
   if (TEST_SUFFIXES.some((suffix) => path.endsWith(suffix))) return "test";
   if (isTypeScriptFile(path)) return "module";
   if (PLAIN_JS_EXTENSIONS.some((ext) => path.endsWith(ext))) return isSourceRoot ? "module" : "data";

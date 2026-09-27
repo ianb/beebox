@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ROOT, type DocInfo } from "../doc-graph-data.js";
+import { ROOT, type DocInfo } from "../doc-graph-data/data.js";
 import {
   CURATOR,
   PILLARS,
