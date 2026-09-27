@@ -2,13 +2,14 @@
  * Command registry.
  *
  * Every command the CLI, the webapp, and the reactor can run through
- * `runCommand`. Importing this module registers all of them with
- * `command-runner.ts`; the CLI entry point and the webapp server import it
- * once so registration happens before anything calls `runCommand`.
+ * `runCommand`. `command-runner.ts` (the lookups: `getCommand`, `runCommand`,
+ * `listCommands`) imports this module at its own load, so importing any
+ * lookup is what loads every command below — no consumer needs a bare
+ * side-effect `import "./commands.js"`.
  */
 
 import { defineRegistry } from "../shared/registry.js";
-import { installCommands, type CommandDefinition } from "./command-runner.js";
+import type { CommandDefinition } from "./command-types.js";
 import { answerCommand } from "./commands/answer.js";
 import { attachmentsCommand } from "./commands/attachments.js";
 import { connectorSyncCommand } from "./commands/connector-sync.js";
@@ -62,5 +63,3 @@ export const commands = defineRegistry<CommandDefinition>({
     wakeupCommand,
   ],
 });
-
-installCommands(commands.list);

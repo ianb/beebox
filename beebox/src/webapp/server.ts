@@ -9,9 +9,6 @@ import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyWebsocket from "@fastify/websocket";
 import fastifyCookie from "@fastify/cookie";
-// Registers every command with the command runner before any route can call
-// `runCommand`; see core/commands.ts.
-import "../core/commands.js";
 import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";

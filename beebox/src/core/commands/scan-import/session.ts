@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { CommandContext } from "../../command-runner.js";
+import type { CommandContext } from "../../command-types.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { createFileTemplate } from "../../../schemas/file.js";
 import { invariant } from "../../../lib/invariant.js";

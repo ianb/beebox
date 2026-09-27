@@ -15,7 +15,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 

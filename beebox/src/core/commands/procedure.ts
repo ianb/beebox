@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { parseCommandArgs, type CommandDefinition, type CommandResult } from "../command-runner.js";
+import { parseCommandArgs, type CommandDefinition, type CommandResult } from "../command-types.js";
 import { startProcedure, resumeProcedure } from "../procedure/engine/core.js";
 import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";

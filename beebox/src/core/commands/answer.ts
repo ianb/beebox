@@ -16,7 +16,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { assertNever } from "../../lib/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";

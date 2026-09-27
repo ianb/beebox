@@ -11,7 +11,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import {
   searchBox,
   UnknownKindError,

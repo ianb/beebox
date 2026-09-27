@@ -21,7 +21,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../../command-runner.js";
+} from "../../command-types.js";
 import { isCardFile, isMarkdownFile } from "../../../lib/paths/core.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { invariant } from "../../../lib/invariant.js";

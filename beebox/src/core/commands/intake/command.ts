@@ -6,7 +6,7 @@
  * both invoke it through the same surface.
  */
 
-import type { CommandDefinition } from "../../command-runner.js";
+import type { CommandDefinition } from "../../command-types.js";
 import { runIntake } from "./run.js";
 
 export const intakeCommand: CommandDefinition = {

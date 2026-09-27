@@ -8,9 +8,23 @@ Presence checks stay with the command (friendlier error text), so a missing
 field gets the command's own message, not a schema failure.
 
 ```ts setup
-import { runCommand, createCollectorContext } from "../../src/core/command-runner.js";
-import "../../src/core/commands.js";
+import { runCommand, createCollectorContext, getCommand, listCommands } from "../../src/core/command-runner.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+```
+
+## A lookup loads every command with no other import
+
+`getCommand`/`listCommands` read `commands.ts`'s registry directly, and
+`command-runner.ts` imports that registry at its own load — so importing a
+lookup above (with no side-effect `import "../../src/core/commands.js"`
+alongside it) is sufficient to have every command registered:
+
+```ts
+getCommand("search")?.name
+=> search
+
+listCommands().length > 15
+=> true
 ```
 
 ## Wrong-typed fields fail loudly, naming the field

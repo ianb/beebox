@@ -5,7 +5,7 @@
  * the triage subagent, and applies its decisions. See `src/core/triage.ts`.
  */
 
-import type { CommandDefinition } from "../command-runner.js";
+import type { CommandDefinition } from "../command-types.js";
 import { runTriage } from "../triage/run/core.js";
 
 export const triageCommand: CommandDefinition = {

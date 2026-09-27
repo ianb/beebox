@@ -22,7 +22,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { runUnignore } from "../attachments-gitignore.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { describeUnlistedBinaries, findUnlistedBinaries } from "../annex/unlisted-binaries.js";

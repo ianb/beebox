@@ -25,7 +25,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { splitCardContent } from "../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { isRecord } from "../../lib/is-record.js";

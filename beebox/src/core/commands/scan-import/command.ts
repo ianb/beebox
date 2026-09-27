@@ -49,7 +49,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../../command-runner.js";
+} from "../../command-types.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../../schemas/capture-session.js";

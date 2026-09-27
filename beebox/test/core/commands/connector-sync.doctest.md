@@ -8,7 +8,6 @@ advances its cursor.
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runConnectorSync } from "../../../src/core/commands/connector-sync.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
-import "../../../src/core/commands.js";
 ```
 
 ```ts

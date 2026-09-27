@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { triggeredByTrailer } from "../../../shared/commit-trailers.js";
 import { z } from "zod";
-import { parseCommandArgs, type CommandContext, type CommandDefinition, type CommandResult } from "../../command-runner.js";
+import { parseCommandArgs, type CommandContext, type CommandDefinition, type CommandResult } from "../../command-types.js";
 import { getBoxDir, isCardFile, parseCardName } from "../../../lib/paths/core.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";

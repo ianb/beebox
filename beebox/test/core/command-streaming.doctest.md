@@ -7,7 +7,6 @@ import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
-import "../../src/core/commands.js";
 import { executeCommandStreaming } from "../../src/webapp/routes/commands.js";
 ```
 

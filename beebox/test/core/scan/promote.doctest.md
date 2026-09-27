@@ -27,7 +27,6 @@ import {
 import { findEntry, loadLedger } from "../../../src/core/upload-helpers.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { runCommand, createCollectorContext } from "../../../src/core/command-runner.js";
-import "../../../src/core/commands.js";
 import { hideAssetsAgain } from "../../helpers/legacy-ignore-block.js";
 
 const HASH_A = "a".repeat(64);

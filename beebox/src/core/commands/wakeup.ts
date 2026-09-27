@@ -11,7 +11,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { buildToolingScriptEnv } from "../script-env/core.js";
 import { runCollectedChild } from "../../lib/run-child.js";
 import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";

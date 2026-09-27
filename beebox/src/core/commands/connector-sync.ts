@@ -13,7 +13,7 @@ import {
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
 import { connectorFactories, type Connector } from "../../connectors.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { runConnectorProcedureTriggers } from "../connector-procedure-triggers.js";

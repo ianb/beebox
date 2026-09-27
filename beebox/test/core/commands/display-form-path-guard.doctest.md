@@ -14,7 +14,6 @@ directly; this file covers `ls` and `create`, which are reached only through
 ```ts setup
 import { runCommand } from "../../../src/core/command-runner.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
-import "../../../src/core/commands.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 

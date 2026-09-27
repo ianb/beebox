@@ -11,12 +11,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import {
-  runCommand,
   parseCommandArgs,
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
-} from "../command-runner.js";
+} from "../command-types.js";
+import { runScanImportCommand } from "../scan-import-dispatch.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import {
   loadLedger,
@@ -162,7 +162,7 @@ async function processGroup(
   const scanArgs: Record<string, unknown> = { inputs: group.files };
   if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
   if (source !== undefined && source.trim().length > 0) scanArgs["source"] = source;
-  const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
+  const result = await runScanImportCommand(ctx, scanArgs);
 
   if (!result.success) {
     ctx.writeLine(`  failed: ${result.error}`);

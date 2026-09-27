@@ -6,7 +6,7 @@
  * `src/core/handle.ts`.
  */
 
-import type { CommandDefinition } from "../command-runner.js";
+import type { CommandDefinition } from "../command-types.js";
 import { runHandle, formatHandlingLines, handleVerdict, describeHandleFailures } from "../handle.js";
 
 export const handleCommand: CommandDefinition = {
