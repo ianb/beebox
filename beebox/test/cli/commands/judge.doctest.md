@@ -5,7 +5,7 @@ the box, stdin, the environment, and the Jev service given; it prints to stdout
 and returns the exit code. One Jev call per state, one JSON line per state;
 `--min`, `--choice`, and `--decide` make the decision. Every test here uses the
 fake Jev, whose scripted answers go through the real response parser. See
-docs/plans/notifications.md (Track D).
+docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
 import * as fs from "node:fs/promises";

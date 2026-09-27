@@ -2,8 +2,8 @@
 
 How a box reaches the boxholder when they are not looking: one notification
 now, a reminder at a time, and a watch that fires when something in the box
-changes. Design history: [the plan](plans/notifications.md) and its
-[design notes](plans/notifications-design-notes.md).
+changes. Design history: [the plan](implemented-plans/notifications.md) and its
+[design notes](implemented-plans/notifications-design-notes.md).
 
 ## What it is
 

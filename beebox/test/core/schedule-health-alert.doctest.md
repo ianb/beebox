@@ -2,7 +2,7 @@
 
 A scheduled task that keeps failing, is overdue, or cannot parse is a health
 entry on the dashboard: the `scheduled-tasks` check. It never notifies on its
-own (docs/plans/notifications.md, Track E).
+own (docs/implemented-plans/notifications.md, Track E).
 
 `recordScheduleEpisodes` runs from the scheduler daemon after each box's tick.
 It stamps each newly unhealthy task's latch, so the scheduler log records the

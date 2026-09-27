@@ -1,6 +1,6 @@
 ---
 title: "Notifications and proactive work: experience, pieces, and worked examples"
-status: draft
+status: implemented
 workstream: notifications
 issues:
   - ../../../issues/features/2026-09-25-notifications-and-proactive-design.md

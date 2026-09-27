@@ -4,7 +4,7 @@
 refreshes the verdict (the ~daily probe, skipped here since the state is
 already fresh) and records each breakage episode once, for the scheduler log.
 A dead grant is the `google-auth` health check with the reconnect link; it
-never notifies on its own (docs/plans/notifications.md, Track E). See
+never notifies on its own (docs/implemented-plans/notifications.md, Track E). See
 `docs/plans/google-auth-reauth-health.md`.
 
 ```ts setup

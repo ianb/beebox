@@ -1,6 +1,6 @@
 ---
 title: "Notifications and proactive work: pieces an agent composes to reach the person"
-status: draft
+status: implemented
 workstream: notifications
 issues:
   - ../../../issues/features/2026-09-25-notifications-and-proactive-design.md
@@ -12,6 +12,14 @@ issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md
 ---
 # Notifications and proactive work: pieces an agent composes to reach the person
+
+> **Status: implemented and merged** (Tracks A–F). Doctests and `pnpm
+> test:changed` pass; the iOS app builds with 347 XCTests passing on the
+> simulator and registration verified against the test box. The boxholder's
+> real-device walk — [docs/notifications.md, "Verification
+> walk"](../notifications.md#verification-walk) — has not run; it is gated
+> by `needs: [manual-testing]` on the anchor issue,
+> `issues/features/2026-09-25-notifications-and-proactive-design.md`.
 
 When I ask the box for a reminder, I want it to reach my phone at the right
 time so I do not have to keep the box open. When I ask to be told when the

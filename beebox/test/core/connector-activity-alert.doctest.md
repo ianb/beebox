@@ -5,7 +5,7 @@ brings each connector's episode up to date (a connector that has gone quiet or
 keeps failing) and records a new episode once, for the scheduler log. The
 dashboard shows a warning until the condition clears or the owner dismisses
 it. Nothing is sent: health never notifies on its own
-(docs/plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
+(docs/implemented-plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
 `connector-activity-verdict.doctest.md` for its cases.
 
 ```ts setup

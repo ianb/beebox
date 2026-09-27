@@ -3,7 +3,7 @@
 A judgment card is an authored Jev prompt: named questions in frontmatter, the
 instructions in the body, no state (`src/schemas/judgment.ts`). Each question's
 `criteria` takes the Decisions API shape for its type, and one refinement per
-type names the shape it needs. See docs/plans/notifications.md (Track D).
+type names the shape it needs. See docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
 import { JudgmentSchema, judgmentQuestions } from "../../src/schemas/judgment.js";

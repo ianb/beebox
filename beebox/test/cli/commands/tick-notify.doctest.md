@@ -3,7 +3,7 @@
 A scheduled-script card with `notify:` in place of `runs:` is a reminder: when
 it comes due, `bbx tick` sends the notification in process through
 `notifyBoxholder`, with no shell and no agent. State recording and `once`
-deletion are the same as for a command. See docs/plans/notifications.md
+deletion are the same as for a command. See docs/implemented-plans/notifications.md
 (Track D).
 
 ```ts setup

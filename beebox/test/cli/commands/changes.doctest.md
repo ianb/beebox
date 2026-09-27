@@ -4,7 +4,7 @@
 environment given; it prints to stdout and returns the exit code. The
 comparison is a tree diff between `--since` and HEAD, so a card added and then
 moved inside the window appears once, at its final path, and a card that only
-moved is not "added". See docs/plans/notifications.md (Track D).
+moved is not "added". See docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
 import * as fs from "node:fs/promises";

@@ -5,7 +5,7 @@ A box may make at most 500 Jev calls per box-local day
 reserves its calls all at once, so a batch never half-runs. Over the cap
 `bbx judge` defers with the reason `budget`, which keeps a schedule's change
 cursor; the health check counts those deferrals over the last 24 hours. See
-docs/plans/notifications.md (Track D).
+docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
 import * as fs from "node:fs/promises";

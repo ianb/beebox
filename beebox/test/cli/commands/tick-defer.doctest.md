@@ -6,7 +6,7 @@ A scheduled `runs:` pipeline that has nothing to do exits 75 after writing
 `lastDeferReason`, neither counting nor clearing failures, and `once` does not
 delete the card: only `success` does. Exit 75 without a marker is not evidence
 (any command may exit 75), so it is a `failure`. The reason moves the change
-cursor or holds it. See docs/plans/notifications.md (Track D).
+cursor or holds it. See docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
 import { execSync } from "node:child_process";
