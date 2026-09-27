@@ -10,17 +10,21 @@ issues:
 
 The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 `src/core/agent-guide/*.ts`) is the only thing a box agent knows before its
-task arrives. It grew from 3,355 source words in May 2026 to 11,399 in
-September, one justified paragraph per feature, because nothing asked each
-paragraph to earn its place on the always-loaded tier. Phase two of the
-doc-structure workstream moved 1,900 words out and left 9,234.
+task arrives. Its source grew from 3,355 words at `f2da8f5f2` (2026-04-27,
+the first commit of `src/core/agent-guide/`) to 11,435 at `35964e981`
+(2026-09-26, before phase two's demotions), one justified paragraph per
+feature, because nothing asked each paragraph to earn its place on the
+always-loaded tier. Phase two left 9,870 at `02ea3470f`. Count: every
+`src/core/agent-guide/*.ts` at the commit, `git show` piped to `wc -w`, so
+code and comments are included; the rendered guide on the test1 clone is
+9,234 words by `wc -w` on `.beebox/agent-guide.md`.
 
 This plan gives the guide a source of truth it can be semantically rebuilt
 from: a YAML ledger with one row per rule, its reason, its tier, and the
 audits that guard it; a registry of stable placemarkers; annotations in the
 guide's source tying each paragraph to a row; a doctest that holds the two in
 step; and a size budget. It then rewrites the guide against that ledger:
-every paragraph binned as core, indirect, derivable, or rationale; the core
+every block binned by an ordered test as law, core, indirect, or delete; the core
 rewritten for an agent reader (rule, the case where it bites, pointer); the
 laws revisited; QUESTIONS re-read against the code. The boxholder's framing,
 2026-09-26: "two documents, with the actual agent guide being the built
@@ -44,21 +48,20 @@ rendered guide exceeds a constant. About 20 lines. It slows growth and
 explains nothing: the next feature still lands its paragraph in the guide and
 raises the constant.
 
-**Chosen design, five tracks.**
+**Chosen design, four tracks.**
 
 | Track | What | Source + test lines | Prose |
 |---|---|---|---|
 | 1 Ledger and registry | `src/core/agent-guide/ledger.yaml`, its schema, the placemarker registry, `docs/agent-guide.md` (spec: decision rules, build shape) | ~300 | ~250 |
 | 2 Annotations and the build test | annotation syntax in the section templates, stripping in the renderer, `pnpm agent-guide --annotated`, doctest: coverage both ways, no leaks, budget | ~350 | 0 |
-| 3 Binning | every paragraph of the current guide gets a row and a bin; indirect rows move to their surface; derivable and rationale rows are deleted | ~200 | ~2,500 moved or deleted |
+| 3 Binning | every block of the current guide gets a row and a bin; indirect rows move to their surface; delete rows go with a stated substitute | ~200 | ~2,500 moved or deleted |
 | 4 The rewrite | core rows rewritten to the section skeleton; THE_LAWS gains CHECKING and a sharpened CARDS; QUESTIONS rebuilt from the code; every section gets a handle | ~800 (template text) | ~800 |
-| 5 The chat prompt in the ledger | rows for `src/core/chat/session/prompts.ts`, overlap with the guide resolved to one home; its rewrite is a follow-on | ~150 | ~300 |
 
-Source and test about 1,800 lines, prose about 3,850 moved, deleted, or
+Source and test about 1,650 lines, prose about 3,550 moved, deleted, or
 rewritten. Counted together this is a **BIG CHANGE**; the boxholder asked for
 the strong approach on 2026-09-26 ("we need a strong approach to that guide,
-since it's important"). Track 5 is the one that can be cut without leaving the
-guide half-specified.
+since it's important"). Track 4 is the one that can be deferred without
+leaving the guide half-specified (see Could this be simpler).
 
 ## Stated preferences this plan trades against
 
@@ -90,11 +93,13 @@ guide half-specified.
 
 ## What already exists
 
-- **Section functions and handles**: `src/core/agent-guide/index.ts:74-100`
-  assembles 22 sections; `sections.ts:19` defines the `SECTION` constants
+- **Section functions and handles**: `src/core/agent-guide/index.ts:74-109`
+  assembles 21 sections into the array and `:111-114` appends the optional
+  personality section; `sections.ts:19` defines the `SECTION` constants
   (THE_LAWS, the three law names, ABOUT_CARDS, CARD_TYPES, QUESTIONS, TODOS,
-  PROVENANCE). The chat prompt (`src/core/chat/session/prompts.ts:121`) and
-  the laws refer to sections by handle. Reuse: the registry is these
+  PROVENANCE). The chat prompt imports `SECTION`
+  (`src/core/chat/session/prompts.ts:15-17`) and names TODOS at `:121`; the
+  laws name PROVENANCE and ABOUT_CARDS (`laws.ts`). Reuse: the registry is these
   constants plus one per remaining section.
 - **Axis comments**: `index.ts` and `sections.ts` carry the group comments
   from phase two (laws, how to speak, cards, where things are, how to act,
@@ -141,19 +146,21 @@ not what belongs where.
 - **Row**: one entry in `ledger.yaml`. Fields: `id` (dotted,
   `<section>.<slug>`), `rule` (one sentence, the thing an agent must know or
   do), `handle` (the placemarker of the section that carries it, or the
-  surface it moved to), `bin` (`core` | `law` | `indirect` | `derivable` |
-  `rationale`), `reason` (why that bin, one or two sentences), `audits`
+  surface it moved to), `bin` (`law` | `core` | `indirect` | `delete`), `reason` (why that bin, one or two sentences), `audits`
   (ids in `knowledge-audits.yaml`), `mechanics` (where the how-to lives:
   a package doc, a rule, a skill), `source` (the template file and
   function). A row is the unit of decision; the guide text is its
   rendering.
-- **Bin**: the row's tier. `law`: the system cannot tolerate the failure;
-  stated first, named, bulletproofed. `core`: an agent on an unknown task
-  would err without it; stays in the guide. `indirect`: needed when
-  touching one thing; lives on that thing's surface, the guide keeps at most
-  a pointer. `derivable`: visible by looking (a schema, `--help`, a
-  listing); deleted, no pointer. `rationale`: written for a human; deleted or
-  moved to developer docs.
+- **Bin**: the row's tier, decided by an ordered test so one row fits
+  exactly one bin. Ask in order and stop at the first yes: (1) would the
+  system be unable to tolerate an agent breaking this? `law`. (2) Would an
+  agent on a task it cannot predict err without it? `core`. (3) Does it
+  apply only when touching one thing (a field, a command, a card type)?
+  `indirect`: it lives on that thing's surface and the guide keeps at most
+  a pointer. (4) Otherwise `delete`: the agent can see it by looking (a
+  schema, `--help`, a listing) or it was written for a human; the reason
+  says which and what the agent looks at instead. A `delete` row never
+  keeps a pointer; if a pointer is needed, the answer to (3) was yes.
 - **Handle** (placemarker): the ALL_CAPS name of a section, in the registry
   section of the ledger with what it governs and who refers to it. Stable
   once registered; a rename is a ledger change with a reason and a sweep of
@@ -238,12 +245,22 @@ under `budget.always_loaded_words`.
 guide diverges from it. The unannotated-paragraph check is the regrowth
 stop: a new paragraph needs a row, and a row needs a reason.
 
-**Direction.** Annotation form is an HTML comment, the same family as the
-DOCID marker; a leaked one is harmless, and the doctest asserts none leak
-(boxholder lean, 2026-09-26). Paragraph detection: blank-line separated
-blocks outside code fences; a list is one paragraph; a heading line is not a
-paragraph. The generated CARD_TYPES list is one annotated block
-(`card-types.list`), not one row per type.
+**Direction.** Annotation form is an HTML comment; a leaked one is
+harmless, and the doctest asserts none leak (boxholder lean, 2026-09-26).
+The block model is span-based, not paragraph-based, because sections are
+template literals with interpolated, per-box content
+(`cards.ts:29-35,137-169` builds card examples; `cards.ts:216-246` groups
+card types from the schemas; `extensibility.ts:14-42` lists this box's
+procedures and guides): an annotation `<!-- rule: <id> -->` opens a span
+that runs to the next annotation or heading, and the check is that every
+non-blank, non-heading line of the render lies inside a span. A generated
+list is one span opened by `<!-- rule: <section>.list -->` in the section
+function around the interpolation, so per-box variation inside it is
+covered without per-box rows. A heading's one-line intro is a span of its
+own (`<section>.intro`). The stripper removes only `<!-- rule: ... -->`
+comments and runs before `withDocId` (`src/core/docs-gen/index.ts:400-403`
+wraps the render), so the DOCID marker is untouched; the doctest asserts
+the DOCID line survives.
 
 **First chunk.** Stripping plus the leak check, with the laws annotated as
 the first section; the coverage checks land per section as Track 3 bins
@@ -252,16 +269,20 @@ day one.
 
 ### Track 3: bin every paragraph
 
-**What.** A row for each of the guide's roughly 180 paragraphs, binned, with
-the reason. Then the moves: `indirect` rows go to their surface (a package
-doc, a card rule, a skill) with the section-hash check confirming a verbatim
-move; `derivable` and `rationale` rows are deleted; each deletion names in
-the reason what the agent looks at instead.
+**What.** A row for each of the guide's roughly 180 blocks, binned by the
+ordered test, with the reason. Then the moves: `indirect` rows go to their
+surface (a package doc, a card rule, a skill) with the section-hash check
+confirming a verbatim move, and `test/core/box-docs-pointers.doctest.md`
+extended to the ledger's `mechanics:` field; `delete` rows go, each naming
+in its reason what the agent looks at instead. Package-doc, rule, and skill
+edits are in scope here: a moved block changes what an agent reads on
+demand, so each receiving doc's read-when line is checked against the new
+content and the section's audits run at `knows_about`.
 
 **Why.** ABOUT_CARDS is 2,137 words; its core is about 300. The rest is the
 `prominence:` field (40 lines, indirect: the card rule for landmarks and the
 prominence doc hold it), `theme:` (indirect), a list of validation error
-messages (derivable: `bbx validate` prints them), and refs rules already in
+messages (delete: `bbx validate` prints them), and refs rules already in
 the laws' reach. Key Commands (681) is mostly usage detail `bbx --help`
 gives. How Items Enter the Box (432) is system description an agent rarely
 acts on. The pattern repeats in most sections.
@@ -287,9 +308,13 @@ code. Every section gets its handle in the heading.
 paragraph) state the rule and name the temptation; the loose ones describe
 the system and let the agent infer. The laws are three, all about the
 record; the one observed failure they do not cover is an agent answering
-from memory what it could have checked. QUESTIONS predates the learning
-sinks, the question-followup job, and the todo-review procedure as they now
-exist.
+from memory what it could have checked. QUESTIONS is current on its
+mechanics (`cards.ts:249-279` matches `src/schemas/question.ts:174-202` and
+`question-followup-job.ts:26-68`) but carries the `learning:` sink
+mechanics inline, which the ordered test files as indirect, and omits two
+things the code does: the new-question alert
+(`src/core/question-alert.ts:69-90`) and the nudge and expiry defaults
+(`src/core/question-aging.ts:38-52,150-153`).
 
 **Direction, the laws.** Four:
 
@@ -308,11 +333,12 @@ Dropped after discussion: HONESTY and AUTHORITY (no observed failure), KEYS
 and KEEPING (stated strongly in their sections; not seen slipping). The
 spec records this so the next person does not re-derive it.
 
-**Direction, QUESTIONS.** Read `src/core/question-aging.ts`,
-`question-alert.ts`, the `question` and `question-followup-job` schemas, and
-the todo-review procedure; write the rows from the code; then the text. The
-in-chat-ask-directly rule and the check-existing-questions rule are core;
-the `learning:` sink mechanics are indirect (the question card's own doc).
+**Direction, QUESTIONS.** Rows from the code: the in-chat-ask-directly rule,
+the job-time default, and the check-existing-questions rule are core; the
+`learning:` sink and `directive:` mechanics are indirect (the question
+card's own doc, `card-question.md`); the alert and the aging defaults get
+one core sentence each so an agent knows a question is seen and does not
+wait forever. The section is rewritten to the skeleton, not from scratch.
 
 **Direction, the skeleton.** Each section: `## HANDLE` (one line on what it
 governs), the rules as short paragraphs or a list, one closing line
@@ -323,35 +349,29 @@ which.
 **First chunk.** THE_LAWS: the sharpened CARDS and the new CHECKING, with
 two pressure audits each, run on the clone box.
 
-### Track 5: the chat system prompt joins the ledger
-
-**What.** Rows for the 3,943-word chat system prompt
-(`src/core/chat/session/prompts.ts`), with `handle: chat-prompt`, binned
-the same way; overlaps with the guide (links and embeds, views, todos)
-resolved to one home with the other side pointing.
-
-**Why.** The ledger's purpose is one accounting of the always-loaded tier.
-The chat prompt is a third of it and overlaps the guide in at least three
-places.
-
-**Direction.** Ledger rows and the overlap resolution in this plan; the
-prompt's own rewrite to the skeleton is a follow-on plan, because the prompt
-carries transport-specific instructions (attachments, speech, selections)
-that need their own read against the code.
-
 ## Could this be simpler?
 
 **Simplest version:** the budget warning in `generateDocs` plus a one-off
 trim of ABOUT_CARDS and KEY_COMMANDS. About 60 source lines and a day of
-prose work. It gets the guide to perhaps 7,500 words.
+prose work. It gets the guide to perhaps 7,500 words and is undone
+paragraph by paragraph by the next features, which is how 3,355 words
+became 11,435.
 
-**What the fuller plan buys.** The simple version fails the next time a
-feature lands: nothing records why its paragraph should not be in the guide,
-so the trim is undone paragraph by paragraph, which is how 3,355 words
-became 11,399 (organizing principle: one home per fact, applied to the
-decisions themselves). The annotation test is what makes the ledger binding
-rather than advisory; without it the ledger is a third document that
-drifts. The law and QUESTIONS work is judgment the trim would not do.
+**The middle version:** Tracks 1 and 2 with the ledger holding rows only
+for moved and deleted blocks, the registry, the span check, and the budget;
+no rewrite of the core, no law changes, no QUESTIONS work. That stops
+regrowth (a new block needs a span and a row) and records every removal,
+at about a third of the cost.
+
+**What the fuller plan buys over the middle.** With rows only for what
+moved, the roughly 4,500 words that stay have no stated reason to stay, so
+the next review cannot tell "core, argued" from "never examined", and the
+budget number is a guess. The rewrite is where the adherence gain is: the
+dense sections that work state the rule and name the temptation, and the
+loose ones do not; a ledger over unchanged prose changes nothing an agent
+reads. The law changes answer an observed failure. If the cost is the
+objection, the middle version is Tracks 1 to 3 without Track 4, and Track 4
+becomes its own plan; the ledger carries either way.
 
 Over-builds rejected: generating the guide text from the ledger (the text
 needs an author; the ledger holds decisions, not prose); one row per card
@@ -362,8 +382,8 @@ tier).
 
 ## Subplans
 
-none. The chat prompt's rewrite (Track 5's follow-on) will be its own plan
-when Track 5 has produced the rows it needs.
+none. The chat prompt's ledger and rewrite is a follow-on plan, not a
+subplan: it can start only after this plan has fixed the row form.
 
 ## Failure modes
 
@@ -377,6 +397,7 @@ when Track 5 has produced the rows it needs.
 | Pressure audits for THE_LAW_OF_CHECKING pass because the model happens to know the answer | audit prompts use facts dated after the model's cutoff and assert a WebSearch or WebFetch tool call | none | clear |
 | QUESTIONS rewritten from a misread of the code | the existing question audits plus a read-against-code Codex review of that commit | none | clear |
 | The ledger and `SECTION` diverge | Track 1 doctest | none | clear |
+| A box's own schemas, guides, procedures, or personality render content the fixture never showed, outside any span or over budget | Track 2 doctest runs on two fixtures: a bare box and one with a box-local schema, a guide card, a procedure, and a personality card; generated content sits inside its section's list span by construction | budget asserted on the bare fixture, reported for the rich one and for the clone box | clear on the fixtures; a real box's overage shows only in the `agent-context` number |
 
 > **Critical gap:** none unresolved. The fifth row is the residual risk: a
 > behavior no audit covers can regress unseen. The mitigation is the rule
@@ -404,15 +425,20 @@ when Track 5 has produced the rows it needs.
 
 ## NOT in scope
 
-- **Rewriting the chat system prompt's text**: Track 5 adds its rows and
-  resolves overlaps; the rewrite is a follow-on plan.
+- **The chat system prompt** (`src/core/chat/session/prompts.ts`, 3,943
+  words, loaded for chat sessions only; its header at `:8-12` scopes it to
+  the chat control surface): a different surface from the guide every box
+  agent gets. It overlaps the guide in at least three places (links and
+  embeds, views, todos) and deserves the same ledger treatment as a
+  follow-on plan once this one has set the form.
 - **The reactor prompt** (`src/core/reactor/prompts.ts`): it is not
   always-loaded in chat; same treatment later if wanted.
 - **Auto-injecting a "slim down" prompt** when the budget is exceeded (the
   size-budget issue's proposal): the check warns; trimming is judgment.
 - **Generating guide prose from the ledger**: the ledger holds decisions.
-- **Package docs, rules, skills content**: destinations for moved rows,
-  edited only to receive them.
+- **Rewriting package docs, rules, or skills beyond receiving moved
+  blocks**: Track 3 edits them to receive content and checks their
+  read-when lines; their own structure is phase two's and stays.
 - **Personality section**: box-compiled from the personality card; a row
   records it as `core` by owner, no rewrite.
 - **A law for honesty, authority, keys, or keeping**: considered and
@@ -440,9 +466,14 @@ when Track 5 has produced the rows it needs.
 - THE_LAW_OF_CHECKING: two pressure audits (a fact outside the box dated
   after the model cutoff; a fact inside the box the prompt tempts the agent
   to assume), each asserting the tool call, `bash_contains: ["bbx search"]`
-  or a WebSearch/WebFetch observation. The runner
-  (`src/dev/lib/test-runner.ts:287-296`) records Grep, Glob, and shell
-  searches today and not the web tools, so Track 4 extends it first.
+  or a web search observation. Today the Claude runner records Read, Grep,
+  Glob, and Bash only (`src/dev/lib/test-runner.ts:280-298`;
+  `src/shared/known-tools.ts:13-23` lists no web tool), while the Codex
+  runner already records provider searches
+  (`src/dev/lib/codex-audit-behavior.ts:14-31`); and the audit schema has no
+  search assertion (`src/dev/lib/test-suite-schema.ts:20-43`). Track 4
+  first adds WebSearch and WebFetch to the Claude capture and a
+  `should_search` field checked in `audit-checks.ts`.
 - THE_LAW_OF_CARDS sharpened: one pressure audit offering the agent a reason
   to write a loose `.md`.
 - QUESTIONS: the existing `question-*` audits, re-read for currency, run
@@ -469,12 +500,25 @@ when Track 5 has produced the rows it needs.
    core in the same commit where the section is small, a following commit
    where it is not.
 5. Track 4 QUESTIONS.
-6. Track 5 rows and overlap resolution.
-7. Budget numbers set; Track 2's budget assertion enabled; after-measurement
+6. Budget numbers set; Track 2's budget assertion enabled; after-measurement
    (word counts, audit baselines, ten name-only walks) recorded here.
 
 Each track's commits get a Codex diff review; the plan ships as one piece
 when the boxholder says so.
+
+## Codex plan review (2026-09-26)
+
+Eleven findings, all adopted: the annotation model became span-based with
+generated lists as single spans and the stripper scoped to `rule:` comments
+before `withDocId`; the bins became an ordered four-way test; the web-tool
+capture claim now distinguishes the Claude runner, the Codex runner, and
+the missing `should_search` assertion; the QUESTIONS premise was corrected
+from "stale" to "current mechanics, two omissions, one indirect block"; the
+growth numbers carry commits and the counting command; two citations were
+made exact; per-box variability became a failure-mode row with two
+fixtures; the middle design is named in Could this be simpler; package-doc
+edits moved into Track 3's scope; and the chat-prompt track was cut to a
+follow-on plan since that prompt is a chat-only surface.
 
 ## Rollout shape
 
