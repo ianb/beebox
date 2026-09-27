@@ -48,7 +48,7 @@ lines. The boxholder opened the move window on 2026-09-27.
 - `pnpm layout-check` (step 3): the finding list and the definition of done.
 - `pnpm --dir beebox doc-check --fix` repairs moved-doc links when the
   basename is unique repo-wide.
-- The scanner's resolved import edges (`src/dev/layout/scan/package.ts`)
+- The scanner's resolved import edges (`src/dev/layout/scan/package/scan.ts`)
   give every specifier that points at a moved file, which is what the move
   tool rewrites.
 

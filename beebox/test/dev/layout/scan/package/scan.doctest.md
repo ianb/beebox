@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { scanPackage } from "../../../../src/dev/layout/scan/package.js";
+import { scanPackage } from "../../../../../src/dev/layout/scan/package/scan.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-scan-"));

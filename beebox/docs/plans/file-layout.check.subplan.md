@@ -93,7 +93,7 @@ small part of the same pass.
 1. `src/lib/registry.ts`: `defineRegistry<M>` per the parent plan's
    signature; `DuplicateRegistryKeyError`; `Registry<M>` exposes `list`,
    `byKey`, `get`. Doctest at `test/lib/registry.doctest.md`.
-2. `src/dev/layout/model.ts`, `scan/package.ts`: walk `src/` and `test/` of a
+2. `src/dev/layout/model.ts`, `scan/package/scan.ts`: walk `src/` and `test/` of a
    package root (skip `node_modules`, `dist`), parse each `.ts`/`.tsx`/
    `.mjs` and each `.doctest.md`/`.test.ts`, resolve relative and aliased
    specifiers to repo paths, record type-only. `registries.ts`: extract

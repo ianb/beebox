@@ -2,7 +2,7 @@
 
 End-to-end coverage of `edges.ts`, `apply.ts`, and `mentions.ts` together
 against a real temp git repo, the same fixture style as
-`test/dev/layout/scan/package.doctest.md`.
+`test/dev/layout/scan/package/scan.doctest.md`.
 
 ```ts setup
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";

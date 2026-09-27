@@ -6,9 +6,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import type { PublicSurface } from "../model.js";
-import { isRecord } from "../../../lib/is-record.js";
-import { isRepoFile, resolveRepoRelative } from "./resolve.js";
+import type { PublicSurface } from "../../model.js";
+import { isRecord } from "../../../../lib/is-record.js";
+import { isRepoFile, resolveRepoRelative } from "../resolve.js";
 
 function literalPathFromJoinOrString(expression: ts.Expression): string | null {
   if (ts.isStringLiteral(expression)) return expression.text;

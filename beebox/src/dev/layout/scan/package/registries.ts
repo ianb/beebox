@@ -3,8 +3,8 @@
  * enumerated by (rule 4 of the layout plan) out of a module's parsed AST.
  */
 import ts from "typescript";
-import type { Finding, ImportEdge, RegistryDecl, RegistryMember } from "../model.js";
-import { resolveRepoRelative } from "./resolve.js";
+import type { Finding, ImportEdge, RegistryDecl, RegistryMember } from "../../model.js";
+import { resolveRepoRelative } from "../resolve.js";
 
 /** Local identifiers bound to the registry module's `defineRegistry` export. */
 interface RegistryBindings {

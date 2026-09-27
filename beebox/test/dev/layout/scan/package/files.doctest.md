@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { rm } from "node:fs/promises";
-import { classifyFile, listPackageFiles } from "../../../../src/dev/layout/scan/files.js";
+import { classifyFile, listPackageFiles } from "../../../../../src/dev/layout/scan/package/files.js";
 
 const execFileAsync = promisify(execFile);
 ```

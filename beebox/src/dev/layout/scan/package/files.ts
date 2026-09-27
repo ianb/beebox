@@ -4,7 +4,7 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { dirOf, isWithin } from "../graph.js";
+import { dirOf, isWithin } from "../../graph.js";
 
 const execFileAsync = promisify(execFile);
 

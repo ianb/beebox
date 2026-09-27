@@ -16,7 +16,7 @@
 import { dirname, resolve } from "node:path";
 import { defaultRoots } from "../default-roots.js";
 import type { Finding } from "../model.js";
-import { scanPackage } from "../scan/package.js";
+import { scanPackage } from "../scan/package/scan.js";
 import { renderFindings, renderSummary } from "./report.js";
 import { layoutRules } from "./rules.js";
 

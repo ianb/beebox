@@ -8,9 +8,9 @@ package's `src/lib/registry.ts`: a local (possibly renamed) binding of
 identifier bound to any other module is not a registry call.
 
 ```ts setup
-import { extractRegistries } from "../../../../src/dev/layout/scan/registries.js";
-import { parseSourceFile } from "../../../../src/dev/layout/scan/imports.js";
-import type { ImportEdge } from "../../../../src/dev/layout/model.js";
+import { extractRegistries } from "../../../../../src/dev/layout/scan/package/registries.js";
+import { parseSourceFile } from "../../../../../src/dev/layout/scan/imports.js";
+import type { ImportEdge } from "../../../../../src/dev/layout/model.js";
 
 function edge(params: { specifier: string; names: string[]; target: string | null }): ImportEdge {
   return { specifier: params.specifier, target: params.target, external: false, typeOnly: false, names: params.names, dynamic: false };

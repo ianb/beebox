@@ -7,15 +7,15 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { errorMessage } from "../../../lib/error-guards.js";
-import { isRecord } from "../../../lib/is-record.js";
-import { invariant } from "../../../lib/invariant.js";
-import { isWithin } from "../graph.js";
-import type { Finding, ImportEdge, LayoutFile, ModuleFile, PackageLayout, TestFile } from "../model.js";
+import { errorMessage } from "../../../../lib/error-guards.js";
+import { isRecord } from "../../../../lib/is-record.js";
+import { invariant } from "../../../../lib/invariant.js";
+import { isWithin } from "../../graph.js";
+import type { Finding, ImportEdge, LayoutFile, ModuleFile, PackageLayout, TestFile } from "../../model.js";
 import { classifyFile, listPackageFiles } from "./files.js";
-import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "./imports.js";
+import { extractModuleFacts, parseSourceFile, type RawImportEdge } from "../imports.js";
 import { extractRegistries } from "./registries.js";
-import { type Aliases, loadAliases, resolveImport } from "./resolve.js";
+import { type Aliases, loadAliases, resolveImport } from "../resolve.js";
 import { scanPublicSurfaces } from "./surfaces.js";
 
 // Loaded via a dynamic import behind a non-literal specifier, not a static

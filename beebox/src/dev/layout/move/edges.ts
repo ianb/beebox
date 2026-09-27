@@ -11,7 +11,7 @@ import { dirOf } from "../graph.js";
 import { modules, tests } from "../graph.js";
 import type { ImportEdge } from "../model.js";
 import { extractModuleFacts, parseSourceFile } from "../scan/imports.js";
-import { scanPackage } from "../scan/package.js";
+import { scanPackage } from "../scan/package/scan.js";
 import { type Aliases, loadAliases, resolveImport } from "../scan/resolve.js";
 import { binFiles } from "./roots.js";
 import { computeNewSpecifier } from "./specifier.js";

@@ -7,7 +7,7 @@ source file) that produces each target.
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { scanPublicSurfaces } from "../../../../src/dev/layout/scan/surfaces.js";
+import { scanPublicSurfaces } from "../../../../../src/dev/layout/scan/package/surfaces.js";
 
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-surfaces-"));
 async function write(rel: string, content: string) {
