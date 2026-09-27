@@ -50,7 +50,7 @@ const SECRET_BYTES = 32;
  * `deviceId`, so a cookie-authenticated request resolves to exactly the
  * identity a bearer-authenticated one does.
  *
- * `createdBy` is load-bearing, not decoration: `webapp/capture-request-owner.ts`
+ * `createdBy` is load-bearing, not decoration: `webapp/routes/capture-request-owner.ts`
  * uses it as the authenticated email for capture-session ownership, which is
  * what enforces cross-user isolation (`core/capture/pending.ts` X4). A cookie
  * that dropped it would silently downgrade that check for any gate that

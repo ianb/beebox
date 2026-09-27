@@ -50,7 +50,7 @@ import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../../
 import {
   authorizeCaptureSessionOwner,
   resolveCaptureRequestOwner,
-} from "../../capture-request-owner.js";
+} from "../capture-request-owner.js";
 import { getDirectoryForSession } from "../../../core/chat/session/history.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./lifecycle.js";

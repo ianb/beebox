@@ -17,10 +17,10 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { extensionToMimetype } from "../../../lib/mimetype.js";
+import { extensionToMimetype } from "../../../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../../serving-security.js";
 import { BoxImageError, resolveBoxImage } from "./box-image.js";
-import { fileEtag } from "../../file-etag.js";
+import { fileEtag } from "../../../file-etag.js";
 
 export function registerApiImageRoutes({
   server,

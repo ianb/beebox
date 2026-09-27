@@ -18,7 +18,7 @@ import {
   isCaptureAudioFormatError,
 } from "../../../core/capture/audio-format.js";
 import { isStagingLimitError } from "../../../core/capture/staging-limits.js";
-import { authorizeCaptureSessionOwner } from "../../capture-request-owner.js";
+import { authorizeCaptureSessionOwner } from "../capture-request-owner.js";
 
 type UploadKind = "audio" | "photo" | "file";
 type CaptureUploadRequest = FastifyRequest<{ Params: { id: string } }>;

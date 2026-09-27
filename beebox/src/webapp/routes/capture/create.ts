@@ -12,7 +12,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { createStagingSession, readStagingSession } from "../../../core/capture/staging-store/core.js";
-import { resolveCaptureRequestOwner } from "../../capture-request-owner.js";
+import { resolveCaptureRequestOwner } from "../capture-request-owner.js";
 
 export const CAPTURE_CAPABILITIES = {
   acceptedAudioFormats: ["webm-opus", "m4a-aac"],

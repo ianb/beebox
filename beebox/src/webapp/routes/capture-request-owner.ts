@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
-import { resolveMobileBearerIdentity } from "../core/mobile/pairing.js";
-import { resolveBoxIdentity } from "./box-identity.js";
+import { resolveMobileBearerIdentity } from "../../core/mobile/pairing.js";
+import { resolveBoxIdentity } from "../box-identity.js";
 
 export type CaptureRequestOwner =
   | { status: "ok"; email: string | null }

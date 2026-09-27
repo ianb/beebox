@@ -13,15 +13,15 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
-import { commitPaths, pathsHaveChanges, stageFiles } from "../../../lib/git/core.js";
-import type { EventBus } from "../../../core/event-bus/core.js";
-import { fileEtag } from "../../file-etag.js";
-import { boxRelativePath } from "../../../shared/box-path.js";
-import { extensionToMimetype } from "../../../lib/mimetype.js";
+import { commitPaths, pathsHaveChanges, stageFiles } from "../../../../lib/git/core.js";
+import type { EventBus } from "../../../../core/event-bus/core.js";
+import { fileEtag } from "../../../file-etag.js";
+import { boxRelativePath } from "../../../../shared/box-path.js";
+import { extensionToMimetype } from "../../../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../../serving-security.js";
-import { errnoCode } from "../../../lib/error-guards.js";
-import { probePointer } from "../../../lib/asset-content.js";
-import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
+import { errnoCode } from "../../../../lib/error-guards.js";
+import { probePointer } from "../../../../lib/asset-content.js";
+import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image

@@ -355,6 +355,23 @@ counts only `module`, `test`, and `declaration` files (and subdirectories) as
 candidate members; a data file such as a directory's `CLAUDE.md` is outside
 the rules' scope (Ontology, "Scope of the rules") and is never unclaimed.
 
+A set's registry must be the list its consumers actually use: something
+outside the set reads it back (`.list`, `.get`, `.byKey`, or the shared
+members object passed to a framework call, as `trpc/routers.ts`'s
+`routerMembers` is both the registry and `router(...)`'s argument), the same
+way for every member. A directory whose members share no contract a
+consumer reads uniformly is not a set, however similar the files look inside
+it — each register function's own options differing per module (a route
+registrar, a health-check namespace) is exactly that tell. Declaring a
+registry over such a directory only to satisfy the check is a second list:
+it typechecks against a deliberately loose contract (`(...args: never[]) =>
+…`, `Record<string, unknown>`) that proves nothing, while every real caller
+keeps importing members individually. The check catches this mechanically
+(the "registry must be imported" finding, `rules/sets/registry-imported.ts`):
+a registry no module value-imports is flagged, and the fix is to delete the
+registry and let the directory be an ordinary subject directory, not to
+manufacture a reader.
+
 **Rule 2: members do not import each other's values.**
 A member imports infrastructure and lower layers, never a sibling member's
 runtime values. `import type` between members is allowed (type-only edges

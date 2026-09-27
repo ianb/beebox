@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Metadata } from "sharp";
 import { BoxImageError, resolveBoxImage } from "./box-image.js";
-import { fileEtag } from "../../file-etag.js";
+import { fileEtag } from "../../../file-etag.js";
 import { ImageTransformCache } from "./image-transform-cache.js";
 import {
   ImageOptionError,

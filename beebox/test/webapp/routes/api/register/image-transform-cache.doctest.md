@@ -6,7 +6,7 @@ The cache shares identical misses and admits no more than two distinct transform
 import { mkdir, mkdtemp, readdir, rm, truncate, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ImageTransformCache } from "../../../../src/webapp/routes/api/image-transform-cache.js";
+import { ImageTransformCache } from "../../../../../src/webapp/routes/api/register/image-transform-cache.js";
 
 const root = await mkdtemp(join(tmpdir(), "bbx-image-cache-"));
 const cache = new ImageTransformCache(root);

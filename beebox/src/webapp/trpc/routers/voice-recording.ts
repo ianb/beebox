@@ -8,7 +8,7 @@
  * `(recordingId, emissionId)` — see `state.ts`), so a retried call is a safe
  * replay; this router adds no side effect beyond that one write.
  *
- * Owner check mirrors `authorizeCaptureSessionOwner` (`webapp/capture-request-owner.ts`):
+ * Owner check mirrors `authorizeCaptureSessionOwner` (`webapp/routes/capture-request-owner.ts`):
  * the caller's authenticated email must match the session's `createdBy`.
  * `ctx.user` is cookie/hub identity only — unlike the raw capture routes, the
  * tRPC context does not yet resolve a mobile bearer's identity into `ctx.user`

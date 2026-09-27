@@ -4,7 +4,7 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../../helpers/doctest-server.js";
 
 const server = await makeTestServer();
 const jpeg = await Sharp({

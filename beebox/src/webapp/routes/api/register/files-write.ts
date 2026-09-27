@@ -17,16 +17,16 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import type { EventBus } from "../../../core/event-bus/core.js";
-import { fileEtag } from "../../file-etag.js";
-import { stageFiles, commitPaths, pathsHaveChanges } from "../../../lib/git/core.js";
-import { boxRelativePath } from "../../../shared/box-path.js";
+import type { EventBus } from "../../../../core/event-bus/core.js";
+import { fileEtag } from "../../../file-etag.js";
+import { stageFiles, commitPaths, pathsHaveChanges } from "../../../../lib/git/core.js";
+import { boxRelativePath } from "../../../../shared/box-path.js";
 import {
   attachDirFor,
   attachDirOwnerBasename,
   isInsideAttachScope,
-} from "../../../shared/attach-path.js";
-import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
+} from "../../../../shared/attach-path.js";
+import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
 
 interface RegisterApiFilesWriteRoutesOptions {
   server: FastifyInstance;

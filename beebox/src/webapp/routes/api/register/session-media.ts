@@ -37,10 +37,10 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { findTranscriptLineByUuid } from "../../../cli/lib/session-line-scan.js";
-import { extractSessionMedia } from "../../../cli/lib/session-media-extract.js";
-import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
-import { parseSessionMediaRef, SESSION_MEDIA_ROUTE } from "../../../shared/session-media.js";
+import { findTranscriptLineByUuid } from "../../../../cli/lib/session-line-scan.js";
+import { extractSessionMedia } from "../../../../cli/lib/session-media-extract.js";
+import { resolveSessionLogPath } from "../../../../core/chat/session/history.js";
+import { parseSessionMediaRef, SESSION_MEDIA_ROUTE } from "../../../../shared/session-media.js";
 
 /**
  * How long a client may reuse a fetched image without asking again.

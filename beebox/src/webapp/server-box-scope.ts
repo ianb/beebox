@@ -10,7 +10,7 @@ import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import { registerApiRoutes } from "./routes/api/register.js";
+import { registerApiRoutes } from "./routes/api/register/core.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";

@@ -9,7 +9,7 @@ The route bails immediately after `stat`, before any header, ETag, or Range
 work, so no code path can describe the pointer as if it were the file.
 
 ```ts setup
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../../helpers/doctest-server.js";
 
 const server = await makeTestServer();
 

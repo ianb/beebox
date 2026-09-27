@@ -30,7 +30,7 @@ import { selectResumableCaptures } from "../../../core/capture/pending.js";
 import {
   authorizeCaptureSessionOwner,
   resolveCaptureRequestOwner,
-} from "../../capture-request-owner.js";
+} from "../capture-request-owner.js";
 import { resumeStagingSessions } from "../../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../lib/awake-timeout.js";

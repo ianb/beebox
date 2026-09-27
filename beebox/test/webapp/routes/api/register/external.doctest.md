@@ -5,7 +5,7 @@ Serves an allowlisted file from **outside** the box root as a JSON envelope
 live wrapper. Mounted only with the explicit development-surface opt-in.
 
 ```ts setup
-import { makeTestServer } from "../../../helpers/doctest-server.js";
+import { makeTestServer } from "../../../../helpers/doctest-server.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";

@@ -8,9 +8,9 @@ conversation full of old photos costs nothing until someone scrolls to one.
 ```ts setup
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { TEST_SLUG } from "../../../helpers/test-server.js";
-import { getSessionLogPath, encodeProjectDir } from "../../../../src/core/chat/session/transcript-paths.js";
+import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { TEST_SLUG } from "../../../../helpers/test-server.js";
+import { getSessionLogPath, encodeProjectDir } from "../../../../../src/core/chat/session/transcript-paths.js";
 
 const app = await makeTestServer();
 

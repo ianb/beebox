@@ -15,8 +15,8 @@ inert types (images, etc.) gain `nosniff` but stay inline.
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import net from "node:net";
-import { makeTestServer, TEST_SLUG } from "../../../helpers/doctest-server.js";
-import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
+import { makeTestServer, TEST_SLUG } from "../../../../helpers/doctest-server.js";
+import { statusRouter } from "../../../../../src/webapp/trpc/routers/status.js";
 
 const server = await makeTestServer();
 ```

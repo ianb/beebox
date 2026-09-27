@@ -8,9 +8,9 @@ declaration is a couple of lines (base URL + auth header shape).
 
 ```ts setup
 import Fastify from "fastify";
-import { makeTestServer } from "../../../helpers/doctest-server.js";
-import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
-import { boxSlug } from "../../../../src/lib/box-slug.js";
+import { makeTestServer } from "../../../../helpers/doctest-server.js";
+import { grantSecret, setSecret } from "../../../../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../../../../src/lib/box-slug.js";
 
 // A fake upstream standing in for api.replicate.com.
 const upstream = Fastify();

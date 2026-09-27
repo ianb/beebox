@@ -17,8 +17,8 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Readable } from "node:stream";
-import { errorMessage } from "../../../lib/error-guards.js";
-import { resolveSecret } from "../../../core/secrets/resolve.js";
+import { errorMessage } from "../../../../lib/error-guards.js";
+import { resolveSecret } from "../../../../core/secrets/resolve.js";
 
 interface AdapterDef {
   /** Default upstream base URL; BBX_ADAPTER_BASE_<NAME> overrides (tests). */

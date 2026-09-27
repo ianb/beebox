@@ -7,8 +7,8 @@ import {
   imageTransformCacheKey,
   negotiateImageFormat,
   parseImageTransformOptions,
-} from "../../../../src/webapp/routes/api/image-transform-options.js";
-import { selectImageCacheEvictions, shouldSweepImageCache } from "../../../../src/webapp/routes/api/image-transform-cache.js";
+} from "../../../../../src/webapp/routes/api/register/image-transform-options.js";
+import { selectImageCacheEvictions, shouldSweepImageCache } from "../../../../../src/webapp/routes/api/register/image-transform-cache.js";
 
 function optionError(query: Record<string, unknown>): string {
   try { parseImageTransformOptions(query); return "accepted"; }
