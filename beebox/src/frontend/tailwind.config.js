@@ -123,6 +123,13 @@ export default {
         "dropdown-panel-in-right": "dropdown-panel-in-right 150ms ease-out forwards",
         "dropdown-panel-in-left": "dropdown-panel-in-left 150ms ease-out forwards",
       },
+      // The plugin's ordered-list indent fits a one-digit marker. From "10."
+      // on, the marker overhangs the container and an `overflow-hidden`
+      // parent (chat messages) clips its first digit.
+      typography: {
+        DEFAULT: { css: { ol: { paddingInlineStart: "2.25em" } } },
+        sm: { css: { ol: { paddingInlineStart: "2.25em" } } },
+      },
     },
   },
   plugins: [typography],
