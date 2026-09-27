@@ -25,13 +25,18 @@ readers are agents and people.
 ## Decisions (developer, 2026-09-27)
 
 - **One word, one meaning.** A word that means two things anywhere in the
-  codebase is a bug. Fix it by renaming one use. Do not treat it as two
-  bounded contexts that may each keep the word.
+  codebase is generally a bug, usually fixed by renaming one use. Each case
+  is a point for discussion with the developer, not an automatic bug: do
+  not treat a collision as two bounded contexts that may each keep the
+  word, and do not rename without that discussion.
 - **Files where they apply.** An `ONTOLOGY.md` can exist in any directory
   whose subtree holds concepts local to it. Not every directory has one.
   Add one only when the directory has its own concepts.
-- **Always referenced.** Every `ONTOLOGY.md` is linked from a `CLAUDE.md`,
-  so an agent knows where the ontologies are without searching.
+- **Always referenced, from the same directory.** The `CLAUDE.md` in the
+  same directory as an `ONTOLOGY.md` links to it with a line such as
+  "See also `path/from/root/ONTOLOGY.md`". If the directory has no
+  `CLAUDE.md`, create one; a one-line `CLAUDE.md` is acceptable. An agent
+  then knows where each ontology is without searching.
 - **Placement by coverage.** A concept lives in the ontology of the lowest
   directory that covers every area that uses it. When a new area starts to
   use a concept, the concept moves up to the directory that covers both.
@@ -39,36 +44,41 @@ readers are agents and people.
 - **Format.** OpenCode's `CONTEXT.md` form: a bold term and a definition, an
   `_Avoid_:` line that names the wrong words, a **Relationships** section of
   one-line rules between terms, and flagged open questions.
+- **Parallel ontologies for the codebase and for boxes.** The box agents'
+  ontology is a separate document, maintained on its own. It is not
+  generated from codebase entries, and one entry does not serve both
+  audiences. The exception to consider: a structured single source in the
+  style of the agent guide's ledger (`beebox/src/core/agent-guide/ledger.yaml`),
+  from which both are rendered or checked.
+- **The glossary is superseded.** `beebox/docs/glossary.md` is replaced by
+  the ontology files.
 
 ## Proposed shape (not yet decided)
 
-- **Entry fields.** Add two fields to the OpenCode form: what identifies an
-  instance, and the audience (box-facing or engine-internal).
+- **Entry fields.** Add one field to the OpenCode form: what identifies an
+  instance.
 - **Planning.** A plan's Ontology section becomes a change set against the
   ontology files: concepts added, changed, renamed, moved up, or removed, or
   "no changes". The plan uses the ontology's names. The plan reviewer and
   the cross-model review check the change set against the files. The finish
   skill applies it when the plan lands. Plan review is the human approval
   step for ontology changes.
-- **Box ontology.** Generate the box agents' ontology from the box-facing
-  entries, the way the agent guide is generated. No source found in the
-  research below splits a developer ontology from an end-user ontology, so
-  this part has no precedent.
+- **Box ontology.** Where it lives in a box and how box agents load it,
+  alongside the agent guide. No source found in the research below keeps a
+  separate end-user ontology, so this part has no precedent.
 - **Check.** A script can verify mechanically that every `ONTOLOGY.md` is
-  linked from a `CLAUDE.md`, and that no term is defined in two ontology
-  files. It cannot judge placement or meaning.
+  linked from the `CLAUDE.md` in its directory, and that no term is defined
+  in two ontology files. It cannot judge placement or meaning.
 - **Pilot.** Start with two or three areas that already have strong plan
   ontologies (notifications, publications, chat). Measure whether later
   plans in those areas reuse the terms or define them again.
 
 ## Open questions
 
-- Which `CLAUDE.md` links an `ONTOLOGY.md`: the nearest one above it, a list
-  in the package or root `CLAUDE.md`, or both.
-- What becomes of `beebox/docs/glossary.md`. It could become the root
-  ontology, since its "User-facing:" lines are a start on the audience field.
-  [Fill out the glossary](2026-05-21-fill-out-the-glossary.md) is probably
-  superseded by this issue.
+- How to move the glossary's content. Its entries seed the root ontology.
+  Its "User-facing:" lines (what UI copy and agent replies call a concept)
+  belong with the box ontology or the UI copy guidance, not the codebase
+  ontology.
 - How the one-meaning rule applies to words that are also everyday English,
   and to names from external systems (Git, Codex, Cloudflare) that the code
   must use as they are.

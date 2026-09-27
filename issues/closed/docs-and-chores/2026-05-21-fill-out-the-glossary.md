@@ -2,7 +2,13 @@
 title: "fill out the glossary"
 workstream: unknown
 area: docs
+resolution: superseded
 ---
+
+> **Superseded 2026-09-27** by [codebase ontology files](../../docs-and-chores/2026-09-27-codebase-ontology-files.md).
+> The developer decided that `ONTOLOGY.md` files, placed where their concepts
+> apply and kept current through planning, replace `docs/glossary.md`. Its
+> `_Avoid_:` and relationship-line ideas carry over as the ontology format.
 
 `docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific meanings. The starter set covers box, card, attach scope, attachment, asset, asset manifest, wakeup cycle, connector, procedure, service, cardworks, inbox, archive, bbx, bbx attachments. Things to add:
 
@@ -21,7 +27,7 @@ Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/
 
 Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.
 
-**2026-08-25 addendum (from [research/opencode/inspiration.md](../../research/opencode/inspiration.md)).**
+**2026-08-25 addendum (from [research/opencode/inspiration.md](../../../research/opencode/inspiration.md)).**
 OpenCode's `CONTEXT.md` gives each term an `_Avoid_:` line naming the wrong word, and
 follows the terms with a list of one-line invariant relationships between them. Both
 are cheap and would have caught the duplicate `asset` entry the glossary carried until
