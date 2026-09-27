@@ -4,7 +4,7 @@ The 2026-08 rename left every existing box with an ignore file that named the
 former state directory and lock prefix, so the next autocommit tracked
 `.beebox/`, the locks, and the pid file. This migration rewrites `.gitignore`
 and untracks exactly those, leaving the shape marker tracked. See
-`scripts/migrate/box-gitignore.ts`.
+`src/scripts/migrate/box-gitignore.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
@@ -17,7 +17,7 @@ function git(cwd, ...args) {
   return execFileSync("git", args, { cwd }).toString().trim();
 }
 function runMigration(box, apply) {
-  const args = ["--import", "tsx", "scripts/migrate/box-gitignore.ts", box.root];
+  const args = ["--import", "tsx", "src/scripts/migrate/box-gitignore.ts", box.root];
   if (apply) args.push("--apply");
   return execFileSync(process.execPath, args, { cwd: process.cwd(), stdio: "pipe" }).toString();
 }

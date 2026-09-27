@@ -2,7 +2,7 @@
 
 Boxes that predate the rename kept git hooks that look for the former CLI at
 a checkout that no longer exists. The migration runs the same installer
-`bbx init` runs. See `scripts/migrate/box-hooks.ts`.
+`bbx init` runs. See `src/scripts/migrate/box-hooks.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 function runMigration(box, apply) {
-  const args = ["--import", "tsx", "scripts/migrate/box-hooks.ts", box.root];
+  const args = ["--import", "tsx", "src/scripts/migrate/box-hooks.ts", box.root];
   if (apply) args.push("--apply");
   return execFileSync(process.execPath, args, { cwd: process.cwd(), stdio: "pipe" }).toString().trim();
 }

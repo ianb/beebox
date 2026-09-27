@@ -64,7 +64,7 @@ file.
 ```ts
 const legacyBox = await makeTmpBox();
 const legacyPath = path.join(legacyBox.root, ".beebox/chat-model.json");
-const script = path.resolve("scripts/migrate/chat-model-to-box-config.ts");
+const script = path.resolve("src/scripts/migrate/chat-model-to-box-config.ts");
 const migrate = async () => run("pnpm", ["exec", "tsx", script, legacyBox.root, "--apply"]);
 
 await fs.mkdir(path.dirname(legacyPath), { recursive: true });

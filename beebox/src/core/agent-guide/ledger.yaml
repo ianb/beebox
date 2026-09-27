@@ -91,7 +91,7 @@ registry:
       - src/core/reactor/prompts.ts
       - src/schemas/audio.tsx
       - src/schemas/doc.tsx
-      - src/schemas/image.tsx
+      - src/schemas/image/schema.tsx
       - src/schemas/memo.ts
       - src/schemas/person.tsx
       - docs/box/provenance.md
@@ -101,7 +101,7 @@ registry:
     governs: the catalogue of this box's card types and when to define a new one
     referrers:
       - ABOUT_CARDS
-      - src/schemas/registry.ts
+      - src/schemas.ts
       - docs/prompts/lenses.md
       - src/dev/knowledge-audits.yaml
   - handle: QUESTIONS
@@ -139,7 +139,7 @@ registry:
     referrers:
       - src/dev/knowledge-audits.yaml
       - src/core/chat/session/prompts.ts
-      - src/schemas/scheduled-script-instructions.ts
+      - src/schemas/scheduled-script/instructions.ts
   - handle: SEARCHING
     governs: finding cards and engine docs with bbx search
     referrers:
