@@ -233,8 +233,8 @@ issue, "Constraints for the check").
   `frontend/src/lib/audio/`). Engineering principle 7's own example.
 - **Mirror**: the test directory that corresponds to a source directory
   (`test/core/chat/session/` for `src/core/chat/session/`).
-- **Behaviour group (tests)**: a subdirectory of a mirror that holds
-  multi-module tests of one behaviour and has no source counterpart
+- **Black-box group (tests)**: a directory directly under the test root
+  with no source counterpart, holding tests that import no source module
   (`test/tours/`, `test/user-stories/`).
 
 ## Tracks / scope
@@ -515,17 +515,21 @@ explain what qualifies as a service or connector; each gains one sentence on
 the axis.
 
 **Rule 8: a package has one source root; its test root mirrors it
-directory-for-directory and file-for-file; a test lives at the lowest mirror
-that contains everything it imports.**
-`<package>/test/<path>` mirrors `<package>/src/<path>`. A test of one module
-carries that module's name; more tests of one module add a facet after a dot.
-A test that exercises several modules lives in the mirror of the lowest
-directory containing all of them and is named for the behaviour; such tests
-may be grouped in a behaviour-group subdirectory whose name has no source
-counterpart. Test helpers and fixtures follow rule 3: the lowest test
+directory-for-directory; every test names its subject.**
+`<package>/test/<path>` mirrors `<package>/src/<path>`. A test's name, up to
+the first dot, names its subject: a module or a subdirectory in the mirrored
+source directory. More tests of one subject add a facet after the dot
+(`history.archive.doctest.md`). A test of a directory as a whole lives in the
+directory's parent mirror and is named for the directory
+(`session.lifecycle.doctest.md` beside the `session/` mirror). Imports do not
+place a test: a test imports collaborators, fakes, and types for setup, and a
+2026-09-27 run of an import-based rule flagged 565 such imports as
+misplacements. The one place a test names no subject is a black-box test,
+which imports no source module and lives in a group directly under the test
+root with no source counterpart (`test/tours/`). Test helpers and fixtures follow rule 3: the lowest test
 directory containing all their users, so a helper used across areas lives in
 `test/helpers/` and shared data in `test/fixtures/`. Nothing under `test/`
-needs an allowlist: every child is a mirror, a behaviour group, or support
+needs an allowlist: every child is a mirror, a black-box group, or support
 placed by rule 3.
 
 Three consequences make the rule exception-free and are decided in the
@@ -533,7 +537,7 @@ move plan. `beebox/scripts/` is a second source root today (mirrored at
 `test/scripts/`) and folds into `src/`. `beebox/user-stories/` is a third
 (`package.json:57` typechecks it, `eslint.config.ts:56` lists it as a root):
 its journeys are product-level tests and go to the `test/user-stories/`
-behaviour group, its pipeline is dev tooling and goes under `src/`, its
+black-box group, its pipeline is dev tooling and goes under `src/`, its
 catalog is documentation. `src/frontend/` is a nested package with its own
 `package.json`, so its tests mirror its own `src/` under `src/frontend/test/`
 rather than `beebox/test/frontend/`; tap's include (`.taprc:28-30` lists only
@@ -549,27 +553,26 @@ Full paths under the rule:
 | same module, a second facet | `beebox/test/core/chat/session/history.archive.doctest.md` |
 | `beebox/src/cli/commands/wakeup/command.ts` | `beebox/test/cli/commands/wakeup/command.doctest.md` |
 | `beebox/src/cli/commands/wakeup/steps.ts` | `beebox/test/cli/commands/wakeup/steps.doctest.md` |
-| several modules of `session/` (no `lifecycle.ts`) | `beebox/test/core/chat/session/lifecycle.doctest.md` |
+| the `session/` directory as a whole | `beebox/test/core/chat/session.lifecycle.doctest.md` |
 | the schemas registry `beebox/src/schemas.ts` | `beebox/test/schemas.doctest.md` |
-| whole-app tour | `beebox/test/tours/<name>.tour.ts` (behaviour group at the root mirror) |
+| whole-app tour | `beebox/test/tours/<name>.tour.ts` (black-box group) |
 | `beebox/src/frontend/src/lib/docling.ts` | `beebox/src/frontend/test/lib/docling.doctest.md` |
 | `bin/lib/schedules/store.ts` | `bin/test/lib/schedules/store.test.ts` |
 | helper used by `core/agent` tests only | `beebox/test/core/agent/fake-agent.ts` |
 | helper used across areas | `beebox/test/helpers/isolate-user-home.ts` |
 
-*Measure:* three checks. Containment: every `src/` import of a test (doctest
-fences or `.test.ts` imports; both forms run under tap) resolves inside
-the test's mirrored directory or its descendants, or in `lib/`, `shared/`, or
-a `test/` support module placed by rule 3. Naming: `X.doctest.md` or
-`X.<facet>.doctest.md` in mirror `D` requires `X.ts`, `X.tsx`, or `X/` in
-`D`'s source directory; a test with no counterpart must import at least two
-modules of `D`. Structure: every directory under `test/` is a mirror of a
-source directory or a behaviour group whose name has no source counterpart.
-*Mechanical:* all three. *Judgment:* the behaviour name for a multi-module
-test. *Examples:* `test/core/chat-session-archive.doctest.md` →
+*Measure:* three checks. Naming: a test in an exact mirror `D` of source
+directory `S` has a stem whose first dot-segment is a module stem or
+subdirectory name in `S`. Structure: a test outside an exact mirror sits in
+a group directly under the test root with no source counterpart and imports
+no source module. Package: a test's value imports never reach a nested
+package or another package (those tests belong to that package's test root).
+*Mechanical:* all three. *Judgment:* none. *Examples:*
+`test/core/chat-session-archive.doctest.md` →
 `test/core/chat/session/archive.doctest.md`. `test/webapp/trpc-health-*` →
-`test/webapp/trpc/routers/health/`. The 21 loose files at `test/` root each
-mirror a module below the root (`test/env.doctest.md` → `test/lib/env.doctest.md`).
+`test/webapp/trpc/routers/health/`. `test/cli/commands/tick-force.doctest.md`
+→ `tick.force.doctest.md`. The 21 loose files at `test/` root each name a
+module below the root (`test/env.doctest.md` → `test/lib/env.doctest.md`).
 
 **Rule 9: the module map's layer rules are unchanged and apply below every
 new directory.**
@@ -589,7 +592,7 @@ lint:circular` and the existing import-boundary lint rules.
 | 5 units become directories | import graph | yes | unit name |
 | 6 no `index`; surfaces in `exports/` | basename, re-export shape, `exports` map | yes | new name |
 | 7 `CLAUDE.md` states axis | presence | no | axis matches listing |
-| 8 test placement | test imports, listing | yes | multi-module test name |
+| 8 test placement | test names, test imports, listing | yes | none |
 | 9 layers | madge, eslint | yes (exists) | none |
 
 The check is a repo script under `beebox/src/dev/` run from pre-commit on
