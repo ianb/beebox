@@ -1,6 +1,6 @@
 import { bucketByFrame, dispatchEvent } from "./events.js";
-import { FrameRecorder, patchConsole } from "./recorder.js";
-import type { RunResult } from "./recorder.js";
+import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import type { RunMeta } from "./transcript.js";
 import { withGuards } from "./guards.js";
@@ -42,7 +42,7 @@ export interface RunOptions {
   eventsPath: string | undefined;
 }
 
-export type { RunResult } from "./recorder.js";
+export type { RunResult } from "./recorder/frame-recorder.js";
 
 class CanvasLoopRunner {
   #options: RunOptions;

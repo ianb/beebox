@@ -17,7 +17,7 @@ import yaml from "highlight.js/lib/languages/yaml";
 /**
  * Highlighted source for the browser's code, data, and fenced-block views.
  *
- * highlight.js, because `workstreams-app/src/router/router-markdown.ts` — one
+ * highlight.js, because `workstreams-app/src/router/server/markdown.ts` — one
  * of the reading surfaces this browser consolidates — already highlights with
  * it, so the two surfaces agree on what code looks like down to the palette
  * (`styles.css`, the `.hljs-*` rules copied from there). Registered a

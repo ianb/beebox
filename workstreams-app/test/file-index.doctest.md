@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 
-import { listBrowsablePaths, scorePath, searchPaths } from "../src/server/file-index.js";
+import { listBrowsablePaths, scorePath, searchPaths } from "../src/server/main/file-index.js";
 import { documentLifecycle } from "../../beebox/src/dev/document-lifecycle.js";
 
 async function git(cwd: string, args: string[]) {

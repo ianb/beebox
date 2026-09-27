@@ -8,7 +8,7 @@
  * stored token can be scoped to ingestion only and can never rewrite a manifest.
  * The manifest itself is still read from PUB_STORE. Every failure is fail-closed
  * and typed; every response (including the thank-you page) leaves through
- * `withSecurityHeaders` at the `handle` exit in `index.ts`.
+ * `withSecurityHeaders` at the `handle` exit in `worker.ts`.
  *
  * Twice-enforced no-public-submit (the Val Town lesson): even though Track A's
  * zod union makes `public` + `submit` unrepresentable, this endpoint independently

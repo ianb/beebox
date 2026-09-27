@@ -2,7 +2,7 @@
 
 ## Topology
 
-`workstreams-app/src/router/router.ts` composes the gated servers, boot, and
+`workstreams-app/src/router/server/listener.ts` composes the gated servers, boot, and
 signal handling. Lifecycle lives in `router-core.ts`,
 `router-worktree-start.ts`, `router-worktree-teardown.ts`, and
 `router-lifecycle.ts`; effects in `router-effects.ts` and

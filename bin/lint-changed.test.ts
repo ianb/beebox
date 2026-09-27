@@ -85,7 +85,7 @@ test("the frontend package is never its own lint run — beebox covers it", () =
   );
   // A genuinely nested package still wins by longest prefix.
   assert.equal(packageOf("beebox/pub-worker/src/w.ts", PACKAGE_DIRS), "beebox/pub-worker");
-  assert.equal(packageOf("workstreams-app/src/router/router.ts", PACKAGE_DIRS), "workstreams-app");
+  assert.equal(packageOf("workstreams-app/src/router/server/listener.ts", PACKAGE_DIRS), "workstreams-app");
 });
 
 test("the root fan-out reduces to the packages the change touched", () => {
@@ -94,7 +94,7 @@ test("the root fan-out reduces to the packages the change touched", () => {
       "beebox/src/core/box.ts",
       "site/src/index.ts",
       "schedules/nightly/run.ts",
-      "workstreams-app/src/router/router.ts",
+      "workstreams-app/src/router/server/listener.ts",
     ],
     packageDirs: PACKAGE_DIRS,
     hasScript: (dir, script) => (dir === "beebox" ? true : script === "lint"),

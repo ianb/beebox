@@ -133,15 +133,15 @@ a duplicate.
 
 ## Worked example
 
-`examples/bounce.ts` + `examples/bounce-events.json` — a bouncing ball you can
+`src/examples/bounce.ts` + `src/examples/bounce-events.json` — a bouncing ball you can
 grab (mousedown within its radius), drag, and throw (release with the drag
 velocity); `r` resets it. It exercises `setup`/`draw`, all the mouse handlers,
 `keyPressed`, seeded `random()` for the launch velocity, frame-tagged `log()`,
 and `snapshot("released")`:
 
 ```sh
-pnpm --dir canvas-loop run cli run examples/bounce.ts \
-  --events examples/bounce-events.json --out out
+pnpm --dir canvas-loop run cli run src/examples/bounce.ts \
+  --events src/examples/bounce-events.json --out out
 ```
 
 Produces a ~13-image transcript for 120 frames:
@@ -261,7 +261,7 @@ function PersistedFigure() {
 
 ### Demo
 
-`dev-demo/main.tsx` embeds two figures — orbit (uncontrolled, controls +
+`src/dev-demo/main.tsx` embeds two figures — orbit (uncontrolled, controls +
 recorder + an `onEvent` readout) and fjord (controlled, wired to `localStorage`
 with a "clear saved state" link). Build the self-contained page with:
 

@@ -1,7 +1,7 @@
 import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { issueChangeKey, IssuesPane } from "../components/IssuesPane.js";
+import { issueChangeKey, IssuesPane } from "../components/IssuesPane/panel.js";
 import { Button } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Issue, IssueChange } from "../types.js";

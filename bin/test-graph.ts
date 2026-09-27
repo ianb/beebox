@@ -18,7 +18,7 @@
 import { build, type Metafile, type BuildFailure, type Plugin, type PluginBuild } from "esbuild";
 import { readFileSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
-import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
+import { candidateFiles, isRelative } from "../agent-doctest/src/doctest-hooks/resolve-rules.ts";
 import {
   cacheFile,
   changedBetween,
@@ -174,7 +174,7 @@ class DoctestHooksUnavailableError extends Error {
 
 
 export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
-  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks.ts");
+  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks/hooks.ts");
   const hooks: unknown = await import(hooksPath);
   if (!isDoctestHooks(hooks)) throw new DoctestHooksUnavailableError(hooksPath);
   const { generateTestSource } = hooks;
