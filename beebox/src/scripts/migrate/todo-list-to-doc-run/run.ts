@@ -10,7 +10,7 @@
  * in its module doc comment) and `docs/implemented-plans/retire-todo-list-schema.md`
  * / `issues/closed/features/2026-07-29-retire-todo-list-schema.md` for why.
  *
- * Doesn't use the shared `scripts/migrate/_harness.ts` scaffold: this
+ * Doesn't use the shared `src/scripts/migrate/_harness.ts` scaffold: this
  * migration renames files and needs a box-wide ref-rewrite pass after every
  * card converts (the harness's per-file `convert()` has no post-loop hook
  * and no box-root argument to do that with) — same reason `doc-to-gdoc.ts`
@@ -21,8 +21,8 @@
  * filename no longer matches, so a re-run can't double-convert it.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/todo-list-to-doc-run.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/todo-list-to-doc-run.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/todo-list-to-doc-run/run.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/todo-list-to-doc-run/run.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, unlink, writeFile } from "node:fs/promises";

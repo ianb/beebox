@@ -40,8 +40,8 @@
  * found at its new path on the next walk and simply reports "already".
  *
  * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx scripts/migrate/question-lifecycle-run.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/question-lifecycle-run.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/question-lifecycle-run/run.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/question-lifecycle-run/run.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile, readdir, access, unlink, mkdir } from "node:fs/promises";

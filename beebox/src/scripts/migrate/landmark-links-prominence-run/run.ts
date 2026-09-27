@@ -5,8 +5,8 @@
  * arg parsing, split out to stay under the file-length budget). Same
  * convention as every harness-based migrator:
  *
- *   pnpm exec tsx scripts/migrate/landmark-links-prominence-run.ts <boxRoot>            # dry-run
- *   pnpm exec tsx scripts/migrate/landmark-links-prominence-run.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/landmark-links-prominence-run/run.ts <boxRoot>            # dry-run
+ *   pnpm exec tsx src/scripts/migrate/landmark-links-prominence-run/run.ts <boxRoot> --apply
  *
  * Registered in `src/core/migrations.ts` under this file's path.
  */

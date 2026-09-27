@@ -63,7 +63,7 @@ export interface GitCommitOptions {
    * Skip `pre-commit`/`commit-msg` hooks (`git commit --no-verify`). Default
    * false — an engine-driven commit SHOULD normally clear the same
    * card-validation gate a human commit does. The one deliberate exception
-   * today is `box-packageify` (`scripts/migrate/box-packageify.ts`): its
+   * today is `box-packageify` (`src/scripts/migrate/box-packageify.ts`): its
    * commit both installs a fresh `.git/hooks/pre-commit` AND is the commit
    * that would trigger it, and the migration's own preconditions already
    * machine-verify the structural transform — see that script's doc

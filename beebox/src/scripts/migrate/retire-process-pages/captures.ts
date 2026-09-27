@@ -44,8 +44,8 @@
  * the pipeline) is a clean no-op.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/retire-process-captures.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/retire-process-captures.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/retire-process-pages/captures.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/retire-process-pages/captures.ts <boxRoot> --apply
  */
 
 import * as fs from "node:fs/promises";

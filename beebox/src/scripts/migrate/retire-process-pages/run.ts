@@ -30,8 +30,8 @@
  * Idempotent: a box without the procedure is a clean no-op.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/retire-process-pages.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/retire-process-pages.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/retire-process-pages/run.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/retire-process-pages/run.ts <boxRoot> --apply
  */
 
 import * as fs from "node:fs/promises";
