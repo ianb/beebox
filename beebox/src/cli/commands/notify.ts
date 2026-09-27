@@ -10,7 +10,7 @@
  * channels can reach the person without sending, so an agent can check before
  * promising a reminder. `--dry-run` prints the intent, who each channel would
  * reach, the presence reading, and the channels a send would try, and sends
- * and logs nothing; with no `--target` it previews `chat:new`. See docs/plans/notifications.md (Track A, "Testability").
+ * and logs nothing; with no `--target` it previews `chat:new`. See docs/implemented-plans/notifications.md (Track A, "Testability").
  *
  * From a box-spawned shell every mode asks the box server, which holds the
  * channel keys; elsewhere it runs in this process (`notify-route.ts`).

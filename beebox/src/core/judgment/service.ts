@@ -3,7 +3,7 @@
  *
  * - `BBX_JEV_FAKE=1` / `=0`: a fake with a fixed confident yes / no, so a dev
  *   box runs a judgment pipeline end to end with no key (the `BBX_NOTIFY_FAKE`
- *   precedent, docs/plans/notifications.md "Testability").
+ *   precedent, docs/implemented-plans/notifications.md "Testability").
  * - Otherwise the box's OpenRouter key, read the way quick chat reads it;
  *   none means `unconfigured`.
  *

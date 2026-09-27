@@ -88,3 +88,14 @@ decisions three ways (current agent pass, the `smallModel` slot, Jev) and
 compare agreement with what actually happened. Triage has exactly the recorded
 history to make that possible, which is why it is the better of the two to try
 first.
+
+## 2026-09-26 (notifications workstream)
+
+Partly addressed, not closed. The notifications work built the general Jev
+plumbing this issue's two applications would sit on top of:
+`jev.judge` (`src/core/judgment/service.ts`) returning a probability per
+option plus a confidence (`noul`/choice/score per
+`src/schemas/judgment-instructions.ts`), and the `.judgment.card` schema
+(`src/schemas/judgment.ts`) plus `bbx judge` as its runner. Neither triage
+routing nor the quick-capture entry point was rewired to use it — both
+halves of this issue are still open work.

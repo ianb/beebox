@@ -2,7 +2,7 @@
  * The situation a judgment starts from: whose box this is and what it is for.
  * A judgment card's `situation:` ref names a card whose text is used whole;
  * without one, the root briefing's `{% purpose %}` block is used, so every
- * judgment knows whose box it is. See docs/plans/notifications.md (Track D and
+ * judgment knows whose box it is. See docs/implemented-plans/notifications.md (Track D and
  * Track F, "Give Jev the situation").
  */
 

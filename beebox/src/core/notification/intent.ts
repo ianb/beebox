@@ -1,7 +1,7 @@
 /**
  * The notification vocabulary: an intent to reach the person, its loudness,
  * the channels that can carry it, and the two line shapes of the notification
- * log (`log.ts`). See docs/plans/notifications.md ("Ontology", Track A).
+ * log (`log.ts`). See docs/implemented-plans/notifications.md ("Ontology", Track A).
  *
  * An intent is never a card and is never committed: it is one line in the
  * gitignored `.beebox/notifications.jsonl`, and each attempt on a channel is

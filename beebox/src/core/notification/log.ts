@@ -8,7 +8,7 @@
  * filesystems in use deliver atomically, and the file is never rewritten in
  * place. Rotation renames the file to `notifications.1.jsonl` (replacing the
  * previous one); a writer still holding the old descriptor lands its line in
- * the rotated file, which readers also read. See docs/plans/notifications.md
+ * the rotated file, which readers also read. See docs/implemented-plans/notifications.md
  * (Track A).
  */
 

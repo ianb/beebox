@@ -1,7 +1,7 @@
 /**
  * The health passes the scheduler daemon runs after each box's tick. None of
  * them notifies: each condition is a health check on the dashboard
- * (docs/plans/notifications.md, Track E). They keep each condition's
+ * (docs/implemented-plans/notifications.md, Track E). They keep each condition's
  * once-per-episode latch, and the scheduler log records an episode when it
  * begins. Each one is isolated: a pass that throws is logged under its own
  * event and cannot suppress the others.

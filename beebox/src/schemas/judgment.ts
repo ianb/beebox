@@ -3,7 +3,7 @@
  * Decisions API types (noul, choice, score) in frontmatter, the instructions
  * in the body, and no state: `bbx judge` reads the state from stdin at run
  * time. `<name>.judgment.card`, anywhere in the box, by convention
- * `_config/judgments/`. See docs/plans/notifications.md (Track D).
+ * `_config/judgments/`. See docs/implemented-plans/notifications.md (Track D).
  *
  * Each question's `criteria` takes the wire shape for its type; one
  * refinement per type names the shape it needs.

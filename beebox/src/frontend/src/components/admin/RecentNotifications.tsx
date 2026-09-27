@@ -1,6 +1,6 @@
 /**
  * The last three days of notifications from the log, each with what every
- * channel did with it (docs/plans/notifications.md, Track A). Read-only: the
+ * channel did with it (docs/implemented-plans/notifications.md, Track A). Read-only: the
  * log is the record, and a failure here is also a health check.
  */
 

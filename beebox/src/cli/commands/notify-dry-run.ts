@@ -4,7 +4,7 @@
  * (`planNotification`), so a dry run is a faithful preview. From a box-spawned
  * shell the channel keys are the box server's, read through
  * `notifications.channels`, since this process has none of them. See
- * docs/plans/notifications.md ("Testability").
+ * docs/implemented-plans/notifications.md ("Testability").
  */
 
 import { planNotification, type ChannelFlags, type NotifyPlan, type NotifyServices } from "../../core/notify-boxholder.js";

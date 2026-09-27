@@ -43,7 +43,7 @@ async function exitWithProcedureError(message: string | undefined): Promise<neve
  * an inner `bbx changes --or-skip` or `bbx judge --or-skip` wrote names the
  * reason and wins; with none, nothing needed doing and the run records
  * `no-change`. See
- * docs/plans/notifications.md (Track D, "Deferred at the tick, with evidence").
+ * docs/implemented-plans/notifications.md (Track D, "Deferred at the tick, with evidence").
  */
 async function exitSkipped(): Promise<never> {
   const deferFile = process.env[MEMORY_ENV.deferFile];

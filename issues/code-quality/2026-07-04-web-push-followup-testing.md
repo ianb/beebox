@@ -46,24 +46,18 @@ start until the keys exist.
 
 ## Blocking prod use
 
-- **Generate + install prod VAPID keys.** `npx web-push generate-vapid-keys`, add
-  `BBX_VAPID_PUBLIC_KEY` / `BBX_VAPID_PRIVATE_KEY` (optional `BBX_VAPID_SUBJECT`) to
-  `/home/beebox/.env`, then `systemctl restart bbx-hub beebox-scheduler`.
-  Documented in `beebox/docs/server/configuration.md` → "Web Push (VAPID) keys". Until
-  then the Admin "Enable notifications" button reports "Push is not configured on
-  the server" and nothing sends. (Ops task, not a code change.)
-- **The keys never reach a hub-spawned box server.** (Found 2026-09-26 in the
-  notifications worktree.) Prod runs `bbx engine hub`, which spawns each box's
-  `bbx serve` with the fail-closed allowlist in `beebox/src/hub/child-env.ts`, and
-  `BBX_VAPID_*` is not on it. So even with the keys in `.env`, a box server's
-  `push.vapidPublicKey` returns null and its server-side sends are `unconfigured`;
-  only the scheduler (which reads `.env` directly) could send. Adding the private
-  key to every child's env is a custody decision for the boxholder (the APNs key is
-  passed by path, `BBX_APNS_KEY_PATH`, which is on the allowlist).
-  **2026-09-26, later:** the notifications workstream added `BBX_VAPID_*` to
-  the allowlist (`src/hub/child-env.ts`), on the reasoning that box servers
-  are the sending side and the APNs key already reaches them the same way.
-  The boxholder can reverse this by removing the three names.
+- **VAPID keys: now automated.** `beebox/deploy/deploy.sh` (~line 889)
+  self-generates a server-wide VAPID keypair on deploy when `.env` has none
+  and writes it in place; the manual `npx web-push generate-vapid-keys` step
+  above is no longer needed. Still worth a prod check the next deploy: confirm
+  `/home/beebox/.env` picks up the generated pair and the Admin "Enable
+  notifications" button stops reporting "not configured."
+- **The keys never reach a hub-spawned box server. Fixed.** (Found
+  2026-09-26 in the notifications worktree.) Prod runs `bbx engine hub`,
+  which spawns each box's `bbx serve` with the fail-closed allowlist in
+  `beebox/src/hub/child-env.ts`; `BBX_VAPID_*` is now on it, alongside the
+  already-allowlisted `BBX_APNS_KEY_PATH`. The boxholder can reverse this by
+  removing the three names.
 
 ## Verification not yet done
 

@@ -7,7 +7,7 @@
  * from its device and the device's label is logged, never the token. Missing
  * keys are `skipped: unconfigured`, never a throw. Every send appends one line
  * to `.beebox/push-debug.log` with the loudness and target. See
- * docs/plans/notifications.md (Track B).
+ * docs/implemented-plans/notifications.md (Track B).
  */
 
 import * as fs from "node:fs/promises";

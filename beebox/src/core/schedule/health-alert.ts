@@ -5,7 +5,7 @@
  * A task that is newly failing, overdue, or invalid is a health entry: the
  * `scheduled-tasks` check in the dashboard's health snapshot
  * (`webapp/trpc/routers/health-schedules.ts`). It never notifies on its own
- * (docs/plans/notifications.md, Track E); a boxholder-requested schedule that
+ * (docs/implemented-plans/notifications.md, Track E); a boxholder-requested schedule that
  * cannot run is promoted separately (`promotion.ts`).
  *
  * This module keeps the once-per-episode latch so the scheduler log records an

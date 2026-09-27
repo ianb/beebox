@@ -7,7 +7,7 @@
  * the inputs that passed; `--echo` passes stdin through when anything passed,
  * for a `pass-output` precheck that feeds an agent. The card's body is the
  * instructions, after the situation (`core/judgment/situation.ts`). See
- * docs/plans/notifications.md (Track D).
+ * docs/implemented-plans/notifications.md (Track D).
  *
  * Exit codes: 0 judged (or a dry run); 2 a bad card or flags; 75 deferred,
  * after writing `{ "reason" }` to `$BBX_DEFER_FILE` when set: `no-pass`

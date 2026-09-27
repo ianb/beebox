@@ -1,6 +1,6 @@
 /**
  * The decision after a judgment: basic conditions over Jev's answers, combined
- * with AND. A judgment is not a decision (docs/plans/notifications.md, Track
+ * with AND. A judgment is not a decision (docs/implemented-plans/notifications.md, Track
  * D): `bbx judge`'s `--min`, `--choice`, and `--decide` make it, and `jq` over
  * the JSON output is the escape hatch.
  *

@@ -1,7 +1,7 @@
 /**
  * The notification log, read for the Admin "Recent" list and the `chat:new`
  * banner, and the server-side send for `bbx notify`. The log
- * (`core/notification/log.ts`) is the record. See docs/plans/notifications.md
+ * (`core/notification/log.ts`) is the record. See docs/implemented-plans/notifications.md
  * (Track A).
  *
  * `send` and `channels` exist because a box-spawned shell holds none of the

@@ -64,7 +64,7 @@ it sees what the person keeps doing, asking about, and struggling with.
   doctor follow-ups from a scanned summary, returns tracked from email, trip
   itineraries from confirmations, a family trivia night as a view on the TV,
   a daily quiz with an archive. Several depend on
-  [proactive notifications](2026-08-09-agent-outcomes-need-a-voice.md), which
+  [proactive notifications](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md), which
   do not work yet.
 
 ## Related

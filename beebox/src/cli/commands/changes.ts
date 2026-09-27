@@ -7,7 +7,7 @@
  * the window appears once, at its final path. Inside a scheduled script
  * `--since` defaults to `$BBX_SINCE_COMMIT`, the schedule's own cursor (see
  * `core/schedule/memory.ts`); outside one, a missing `--since` is an error,
- * never a guess. See docs/plans/notifications.md (Track D).
+ * never a guess. See docs/implemented-plans/notifications.md (Track D).
  *
  * `--cat` prints each card after a `=== <path>` line; `--cat --all` prints
  * every matching card, changed or not. A card with a `body-file: { ref }`

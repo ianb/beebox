@@ -4,7 +4,7 @@
  * A target is a string with a scheme (`chat:<sessionId>`, `chat:new`,
  * `card:<path>`, `question:<path>`, `admin:<section>`, `dashboard`), parsed once into a
  * discriminated union and rendered to a root-relative deep link per box. It is
- * never a raw URL. See docs/plans/notifications.md ("Ontology", Track A).
+ * never a raw URL. See docs/implemented-plans/notifications.md ("Ontology", Track A).
  */
 
 import { resolveRefPath } from "../../shared/ref-path.js";

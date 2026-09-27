@@ -7,7 +7,7 @@
  * this pass has recorded it, and dropped when the condition clears, so a
  * relapse is a new episode. The dashboard shows the condition as a
  * `connector-activity:<name>` health check until it clears or the boxholder
- * dismisses it there. It never notifies on its own (docs/plans/notifications.md,
+ * dismisses it there. It never notifies on its own (docs/implemented-plans/notifications.md,
  * Track E); a boxholder-requested schedule that needs the connector is
  * promoted separately (`promotion.ts`).
  */

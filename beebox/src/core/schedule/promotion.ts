@@ -2,7 +2,7 @@
  * The promotion rule: health never notifies on its own, except when it blocks
  * something the boxholder asked for. A schedule card with `requested-by:
  * boxholder` that could not run says so once per episode, `loud`. See
- * docs/plans/notifications.md (Track E, "Promotion").
+ * docs/implemented-plans/notifications.md (Track E, "Promotion").
  *
  * Three triggers, each latched in `alertedFor` as `skipped:<reason>`
  * (`skip.ts` says when each latch clears):

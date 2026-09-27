@@ -4,7 +4,7 @@
  * `.beebox/presence.json` current (`presence-tracker.ts` says when a write is
  * due); once the drop to zero is written, the sweep stops and the entry is
  * removed, so the map holds only boxes someone is using. See
- * docs/plans/notifications.md (Track A, presence).
+ * docs/implemented-plans/notifications.md (Track A, presence).
  */
 
 import { createPresenceTracker, type PresenceTracker } from "./presence-tracker.js";

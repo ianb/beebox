@@ -1,7 +1,7 @@
 /**
  * The `instructions` prose for judgment cards (agent-facing prompt surface).
  * The writing guidance comes from a trial against two real boxes (2026-09-26);
- * see docs/plans/notifications.md (Track D and Track F).
+ * see docs/implemented-plans/notifications.md (Track D and Track F).
  */
 
 export const JUDGMENT_INSTRUCTIONS = `# Judgment Cards

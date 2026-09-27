@@ -1,5 +1,5 @@
 /**
- * The in-app banner for a live notification (docs/plans/notifications.md,
+ * The in-app banner for a live notification (docs/implemented-plans/notifications.md,
  * Track A). Mounted once under the app shell; shows a `notification` bus event
  * whose loudness is `quiet` or `loud` (a `dot` is a badge only) until the
  * person dismisses it or follows its link. One at a time: a newer notification

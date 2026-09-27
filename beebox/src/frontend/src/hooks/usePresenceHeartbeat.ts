@@ -1,6 +1,6 @@
 /**
  * Report that a person is using this tab, so a `quiet` notification shows in
- * the app instead of buzzing a phone (docs/plans/notifications.md, Track A,
+ * the app instead of buzzing a phone (docs/implemented-plans/notifications.md, Track A,
  * presence).
  *
  * While the tab is visible and the person has interacted in the last two

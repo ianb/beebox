@@ -6,7 +6,7 @@
  * sidecar (an email's text), capped the same; a `--cards` batch (no
  * `--per-line`) is every card after a `=== <path>` line, like `bbx changes
  * --cat`, and is refused over `--max-batch` items. See
- * docs/plans/notifications.md (Track D).
+ * docs/implemented-plans/notifications.md (Track D).
  */
 
 import * as fs from "node:fs/promises";

@@ -3,7 +3,7 @@
  * recently. The server keeps the count and writes `.beebox/presence.json` by
  * atomic rename; any process reads it. A missing, unreadable, or stale file
  * (older than 90 seconds) counts as nobody present, so an error falls toward
- * sending. See docs/plans/notifications.md (Track A).
+ * sending. See docs/implemented-plans/notifications.md (Track A).
  */
 
 import * as fs from "node:fs/promises";

@@ -2,7 +2,7 @@
  * A capture that failed for good tells the person who has left: one `quiet`
  * notification to the chat it was headed for, sent only when nobody is present
  * in the app (an open app already shows the failed capture bubble). Success
- * sends nothing. See docs/plans/notifications.md (Track E).
+ * sends nothing. See docs/implemented-plans/notifications.md (Track E).
  */
 
 import { errorMessage } from "../../lib/error-guards.js";

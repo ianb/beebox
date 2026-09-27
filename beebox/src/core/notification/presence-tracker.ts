@@ -2,7 +2,7 @@
  * The server's in-memory presence count for one box: web sessions (one random
  * id per tab) heard from by heartbeat within the last 90 seconds. Pure: the
  * caller passes the time and writes `.beebox/presence.json` when
- * {@link PresenceTracker.due} says so. See docs/plans/notifications.md
+ * {@link PresenceTracker.due} says so. See docs/implemented-plans/notifications.md
  * (Track A, presence).
  *
  * Write rule: when the count differs from the last written count (including a

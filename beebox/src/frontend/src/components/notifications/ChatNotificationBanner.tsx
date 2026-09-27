@@ -1,5 +1,5 @@
 /**
- * The `chat:new` banner (docs/plans/notifications.md, Track A). A tap on a
+ * The `chat:new` banner (docs/implemented-plans/notifications.md, Track A). A tap on a
  * `chat:new` notification opens `/<box>/chat?session=new&notification=<id>`;
  * this loads that intent, shows it above the composer, and hands it to the
  * send funnel (`opened-notification-store.ts`) so the first message carries it

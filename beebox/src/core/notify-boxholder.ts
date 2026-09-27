@@ -6,7 +6,7 @@
  * (`notification/channels.ts`), sends once per chosen channel in process, and
  * logs one delivery line per channel. No queue and no retry: a failure is a
  * `failed` line, and the notification health checks surface it. See
- * docs/plans/notifications.md (Track A).
+ * docs/implemented-plans/notifications.md (Track A).
  */
 
 import { randomBytes } from "node:crypto";

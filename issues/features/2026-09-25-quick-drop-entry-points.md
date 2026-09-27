@@ -36,7 +36,7 @@ starts, on which device, and what the person sees after they let go of it.
   watch, or confirm. But a capture that succeeds silently reads as a failure
   ([capture success is invisible](../bugs/2026-08-20-capture-success-is-invisible.md)),
   and the confirmation currently lives in a chat the person has already left
-  ([capture confirmation misses a user who left](2026-08-21-capture-confirmation-misses-a-user-who-left.md)).
+  ([capture confirmation misses a user who left](../closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md)).
   This half overlaps [notifications and proactive work](2026-09-25-notifications-and-proactive-design.md).
 - **Quick chat versus capture.** Is a quick drop a message to the agent
   (Quick chat routes it to a conversation), or a capture that lands in the

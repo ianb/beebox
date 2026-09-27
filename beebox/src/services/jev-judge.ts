@@ -1,7 +1,7 @@
 /**
  * The three Jev question types (Noul, Choice, Score) as one judgment: several
  * named questions over one state, sent in one Decisions API call. The wire
- * shapes follow OpenRouter's Decisions API (docs/plans/notifications.md,
+ * shapes follow OpenRouter's Decisions API (docs/implemented-plans/notifications.md,
  * "Prior art"): a `noul` answer is `{ noul: p }`; a `choice` answer is
  * `{ choice, confidence, probabilities }`; a `score` answer is `{ score,
  * confidence, probabilities, legend }`.

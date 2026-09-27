@@ -1,14 +1,20 @@
 ---
 title: "Let an agent flag a file for the boxholder's attention, without building an exhibit"
-workstream: dev-comments
+workstream: notifications
 area: monorepo
-needs: [design]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-dev-comments — designing document comments
 labels: [workstreams-app, exhibits]
 priority: important
+resolution: implemented
 ---
+
+Closed by the notifications workstream: `<callout loudness=...>` (turn-end,
+graded) plus `bbx notify --target card:<path>` (`src/cli/commands/notify.ts`)
+give an agent a way to point at a specific card/file and say "look at this"
+without building an exhibit. See
+[docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
 
 > **Job to be done:** *When I have built something specifically for the boxholder
 > to look at — after a discussion, not as part of routine work — I want to point
@@ -61,8 +67,8 @@ disposition write, which reopens a boundary that was drawn on purpose.
 
 ## Related
 
-- [document-comments](../../beebox/docs/plans/document-comments.md) — the
+- [document-comments](../../../beebox/docs/plans/document-comments.md) — the
   boxholder→agent direction of the same channel. This is the agent→boxholder
   direction, and the two should not end up with different vocabulary.
-- [general-browser](../../beebox/docs/plans/general-browser.md) — its
+- [general-browser](../../../beebox/docs/plans/general-browser.md) — its
   recency feed is where a flagged file would be badged.

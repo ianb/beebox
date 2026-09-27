@@ -4,7 +4,7 @@
  * schedule last ran) and one carried value (`carry`) live in the schedule's
  * machine-local state, never in git. Each run sees them as environment
  * variables, gets a file to write the next carry to, and gets a fresh path for
- * a defer marker. See docs/plans/notifications.md (Track D).
+ * a defer marker. See docs/implemented-plans/notifications.md (Track D).
  *
  * - `BBX_SINCE_COMMIT`: the cursor. Set to HEAD before a schedule's first run,
  *   so the first run sees no changes: a schedule is about the future.

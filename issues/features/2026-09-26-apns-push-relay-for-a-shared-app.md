@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: worktree-notifications — while landing APNs delivery (2026-09-26)
 ---
 
-The notifications work (`beebox/docs/plans/notifications.md`, Track B and C)
+The notifications work (`beebox/docs/implemented-plans/notifications.md`, Track B and C)
 sends APNs pushes from the box server with an APNs key in the server's
 environment. That works while the app is built and installed by the same
 person who runs the box. It does not work once one app, published from one

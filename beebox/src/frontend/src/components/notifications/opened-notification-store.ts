@@ -1,6 +1,6 @@
 /**
  * The notification a `chat:new` tap opened, waiting to ride along with the
- * first message of the new conversation (docs/plans/notifications.md, Track A).
+ * first message of the new conversation (docs/implemented-plans/notifications.md, Track A).
  *
  * The chat's banner (`ChatNotificationBanner`) sets it once the intent loads
  * and clears it when it unmounts; the send funnel reads it into the message's

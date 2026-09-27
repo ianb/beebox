@@ -3,7 +3,7 @@
  * a person has interacted with it in the last two minutes; the server counts
  * the tabs heard from in the last 90 seconds per box and keeps
  * `.beebox/presence.json` current for every process that decides whether to
- * notify (`core/notification/presence.ts`). See docs/plans/notifications.md
+ * notify (`core/notification/presence.ts`). See docs/implemented-plans/notifications.md
  * (Track A, presence).
  */
 

@@ -1,6 +1,6 @@
 /**
  * Why a schedule could not run, and the latch a boxholder-requested schedule
- * uses so it says so once per episode. See docs/plans/notifications.md
+ * uses so it says so once per episode. See docs/implemented-plans/notifications.md
  * (Track E, "Promotion") and `promotion.ts`.
  *
  * The tick records `skipped: { reason, since }` in schedule state when a due

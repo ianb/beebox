@@ -258,7 +258,7 @@ export const eventSchemas = {
   /**
    * The box tried to reach the person (`notifyBoxholder`): the intent plus
    * its rendered root-relative `url`. The live signal for open apps; the
-   * record is `.beebox/notifications.jsonl` (docs/plans/notifications.md,
+   * record is `.beebox/notifications.jsonl` (docs/implemented-plans/notifications.md,
    * Track A).
    */
   notification: notificationEventSchema,

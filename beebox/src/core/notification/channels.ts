@@ -13,7 +13,7 @@
  *
  * Every candidate channel not tried gets a `skipped` delivery (`present` or
  * `no-audience`) for the caller to log. `web-push` and `telegram` are not
- * candidates for a `dot`, so they get no line. See docs/plans/notifications.md
+ * candidates for a `dot`, so they get no line. See docs/implemented-plans/notifications.md
  * (Track A).
  */
 

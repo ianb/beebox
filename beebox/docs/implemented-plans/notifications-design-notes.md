@@ -4,9 +4,9 @@ status: implemented
 workstream: notifications
 issues:
   - ../../../issues/features/2026-09-25-notifications-and-proactive-design.md
-  - ../../../issues/features/2026-08-09-agent-outcomes-need-a-voice.md
-  - ../../../issues/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md
-  - ../../../issues/features/2026-08-22-file-asks-agent-flagged-attention.md
+  - ../../../issues/closed/features/2026-08-09-agent-outcomes-need-a-voice.md
+  - ../../../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md
+  - ../../../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md
   - ../../../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md
   - ../../../issues/code-quality/2026-07-04-web-push-followup-testing.md
 ---

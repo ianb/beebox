@@ -2,7 +2,7 @@
  * `BBX_NOTIFY_FAKE=1`: every channel sends through its fake service to a
  * synthetic audience, so a dev box exercises the whole delivery path with no
  * phone, browser, or Telegram chat, and the log records each delivery as
- * `sent (fake)`. See docs/plans/notifications.md ("Testability").
+ * `sent (fake)`. See docs/implemented-plans/notifications.md ("Testability").
  *
  * `BBX_PUSH_FAKE=1`, the web-push-only switch this replaced, is read as an
  * alias for one release, with a warning.

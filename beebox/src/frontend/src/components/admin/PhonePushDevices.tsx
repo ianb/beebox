@@ -2,7 +2,7 @@
  * The paired phones that registered for APNs push, with the environment their
  * build was signed for, from the `push` projection of `pairing.devices` (which
  * never carries the token). Says so when the server has no APNs key, since
- * then no phone gets a push. See docs/plans/notifications.md (Track B).
+ * then no phone gets a push. See docs/implemented-plans/notifications.md (Track B).
  */
 
 import { trpc } from "../../lib/trpc";

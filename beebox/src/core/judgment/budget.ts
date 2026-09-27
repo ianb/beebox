@@ -4,7 +4,7 @@
  * zone. Over the cap, `bbx judge` defers with the reason `budget`, which holds
  * the schedule's change cursor, so a stuck schedule spends at most the cap and
  * drops nothing. `deferrals` keeps the times of the last day's budget
- * deferrals, for the health check. See docs/plans/notifications.md (Track D).
+ * deferrals, for the health check. See docs/implemented-plans/notifications.md (Track D).
  */
 
 import * as fs from "node:fs/promises";

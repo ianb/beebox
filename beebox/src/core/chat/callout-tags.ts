@@ -10,7 +10,7 @@
  * without a `context` or a body is not a callout, as in the frontend's
  * `parseCallouts`. While a web session is present the callout is on screen,
  * so a `quiet` or `loud` one is not pushed (`onScreen`); a `dot` still badges
- * the phone. See docs/plans/notifications.md (Track E).
+ * the phone. See docs/implemented-plans/notifications.md (Track E).
  */
 
 import { parseAttrs } from "../../shared/parse-attrs.js";

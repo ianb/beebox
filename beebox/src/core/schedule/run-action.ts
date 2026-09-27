@@ -3,7 +3,7 @@
  * tick`, `bbx wakeup`'s on-wakeup pass, the web app's "run now"). A `runs:`
  * card executes its command through the shell; a `notify:` card sends its
  * notification in this process through `notifyBoxholder`, with no shell and no
- * agent. See docs/plans/notifications.md (Track D).
+ * agent. See docs/implemented-plans/notifications.md (Track D).
  *
  * `runAndRecord` wraps a run in schedule memory (`memory.ts`) and records its
  * outcome in the schedule's state.

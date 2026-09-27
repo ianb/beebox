@@ -11,7 +11,7 @@
  *
  * All three are push type `alert`, the type that covers badge changes; the
  * badge is always 1 because the box keeps no unread count. See
- * docs/plans/notifications.md (Track B).
+ * docs/implemented-plans/notifications.md (Track B).
  */
 
 import { createHash } from "node:crypto";

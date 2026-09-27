@@ -3,7 +3,7 @@
  *
  * `register-fake-push <label>` pairs a stand-in phone with a fake APNs token in
  * `sandbox`, so the APNs channel has an audience and runs end to end with no
- * iPhone (docs/plans/notifications.md, "Testability"). It is for dev boxes,
+ * iPhone (docs/implemented-plans/notifications.md, "Testability"). It is for dev boxes,
  * and refuses where a fake device could reach Apple or sit beside a real
  * phone: when APNs keys are configured outside fake mode, and on a box with a
  * device registered for the production host.
