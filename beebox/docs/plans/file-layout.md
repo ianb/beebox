@@ -227,8 +227,9 @@ issue, "Constraints for the check").
 - **Entry**: a module in a directory that something outside the directory
   imports (in a set, the registry's import of a member). Read from the import
   graph; the registry is excluded by declaration.
-- A module that declares a registry is always an entry: rule 4 fixes where
-  it lives, so the units rule never moves it into a helper's unit.
+- A module whose location a registry fixes (the registry itself, or a set
+  member's entry) is always an entry: rule 4 fixes where it lives, so the
+  units rule never moves it into a helper's unit.
 - **Unit**: an entry plus the sibling modules reachable from it by imports
   inside the directory and from no other entry. Two entries whose reachable
   sets overlap share infrastructure; they are not one unit.
@@ -349,7 +350,10 @@ given the declaration and the registry's location (rule 4).
 *Examples:* `schemas/` fails today (twenty non-members). `cli/commands/`
 fails (about thirty helpers). `trpc/routers/` fails (`health-*` ×19,
 `chat-*-procedures` ×3, `landmark-payload`, `share-contract`).
-`scripts/migrate/` passes against its path registry.
+`scripts/migrate/` passes against its path registry. The completeness check
+counts only `module`, `test`, and `declaration` files (and subdirectories) as
+candidate members; a data file such as a directory's `CLAUDE.md` is outside
+the rules' scope (Ontology, "Scope of the rules") and is never unclaimed.
 
 **Rule 2: members do not import each other's values.**
 A member imports infrastructure and lower layers, never a sibling member's

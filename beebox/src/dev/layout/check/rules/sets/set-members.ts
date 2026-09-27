@@ -1,7 +1,11 @@
 /**
  * Finding 3 (set-members): completeness both ways — a direct child of the set
  * directory that no member claims, and a member whose source is missing or
- * outside a valid location.
+ * outside a valid location. Only `module`, `test`, and `declaration` files
+ * (and subdirectories) are candidate members; `data` files (fixtures,
+ * `.card`, `.html`, `.svg`, assets, a directory's `CLAUDE.md`/`AGENTS.md`)
+ * are opaque to the rules (Ontology, "Scope of the rules") and never
+ * unclaimed.
  */
 import type { Finding } from "../../../model.js";
 import { childrenOf, dirOf, stemOf } from "../../../graph.js";
@@ -16,6 +20,7 @@ export function unclaimedChildFindings(layout: PackageLayout, entry: DeclEntry):
   const { files, dirs } = childrenOf(layout, decl.directory);
   const message = `not a member of ${module.path}; register it or move it out of the set`;
   for (const file of files) {
+    if (file.kind === "data") continue;
     if (!sources.has(file.path)) findings.push({ rule: "set-members", path: file.path, message });
   }
   for (const subdirectory of dirs) {

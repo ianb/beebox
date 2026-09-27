@@ -72,9 +72,13 @@ summary(setsRule.check(schemasLayout)) === ""
 => true
 ```
 
-## A set directory holding a data file
+## A set directory holding a data file is clean; a stray module is still a finding
 
-A data file is never a valid member location, so it is always unclaimed.
+Data files (a directory's `CLAUDE.md`, `AGENTS.md`, fixtures, assets) are
+opaque to the rules (Ontology, "Scope of the rules"): the completeness check
+counts only `module`, `test`, and `declaration` files (and subdirectories) as
+candidate members, so `CLAUDE.md` is never unclaimed. `stray.ts` is a module,
+so it still is.
 
 ```ts
 const assetsLayout = layout({
@@ -88,11 +92,12 @@ const assetsLayout = layout({
       },
     },
     "src/assets/logo.ts": {},
-    "src/assets/palette.json": "data",
+    "src/assets/CLAUDE.md": "data",
+    "src/assets/stray.ts": {},
   },
 });
 summary(setsRule.check(assetsLayout))
-=> set-members pkg/src/assets/palette.json
+=> set-members pkg/src/assets/stray.ts
 ```
 
 ## Two registries declare the same set directory

@@ -161,13 +161,18 @@ summary(unitsRule.check(dynLayout))
 => unit-directory pkg/src/dyn/main.ts
 ```
 
-## A set directory is skipped; a member directory's own subdirectory is not
+## A set directory is skipped; a member directory's own subdirectory is not, but its entry is fixed
 
 `registry.ts` declares `src/setdir` as a set (its `directory`), so
 `setdir`'s own top level is never analysed here (rule 1 owns it). One
 member, `memberA`, is itself a directory; `memberA` is not the set
-directory, so it is in scope like any other, and its `entry.ts` +
-`helper.ts` form a unit beside `second.ts`.
+directory, so it is in scope like any other. `entry.ts` is the directory
+member's source (`<dir>/<name>/<entry>.ts`), so its location is fixed the
+same as a registry-declaring module: it stays an entry regardless of its
+exclusive helper `helper.ts`, and produces no unit-directory finding.
+`second.ts` is a plain export `registry.ts` imports directly (not a set
+member), so it is an ordinary entry; its own exclusive helper
+`second-helper.ts` still gets a finding.
 
 ```ts
 const setLayout = layout({
@@ -177,21 +182,22 @@ const setLayout = layout({
       registry: {
         directory: "src/setdir",
         entry: "entry",
-        members: [
-          { source: "src/setdir/memberA/entry.ts" },
-          { source: "src/setdir/memberA/second.ts" },
-          { source: "src/setdir/memberB.ts" },
-        ],
+        members: [{ source: "src/setdir/memberA/entry.ts" }, { source: "src/setdir/memberB.ts" }],
       },
     },
     "src/setdir/memberB.ts": { imports: [] },
     "src/setdir/memberA/entry.ts": { imports: ["src/setdir/memberA/helper.ts"] },
     "src/setdir/memberA/helper.ts": { imports: [] },
-    "src/setdir/memberA/second.ts": { imports: [] },
+    "src/setdir/memberA/second.ts": { imports: ["src/setdir/memberA/second-helper.ts"] },
+    "src/setdir/memberA/second-helper.ts": { imports: [] },
   },
 });
-summary(unitsRule.check(setLayout))
-=> unit-directory pkg/src/setdir/memberA/entry.ts
+const setFindings = unitsRule.check(setLayout);
+summary(setFindings)
+=> unit-directory pkg/src/setdir/memberA/second.ts
+
+setFindings[0]?.message
+=> second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix
 ```
 
 ## A module used only under one subdirectory is shared-infrastructure

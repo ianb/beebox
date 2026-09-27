@@ -18,6 +18,27 @@ interface UnitsContext {
   layout: PackageLayout;
   importersByTarget: Map<string, Set<string>>;
   setDirs: Set<string>;
+  /**
+   * Modules whose location a registry fixes: the registry itself, or the
+   * source of one of its members (a file member, or a directory member's
+   * `<dir>/<name>/<entry>.ts`). Such a module is always an entry of its
+   * directory and never a unit-directory or shared-infrastructure move
+   * candidate (docs/plans/file-layout.md, Ontology).
+   */
+  fixedEntries: Set<string>;
+}
+
+function computeFixedEntries(layout: PackageLayout): Set<string> {
+  const fixed = new Set<string>();
+  for (const module of modules(layout)) {
+    if (module.registries.length > 0) fixed.add(module.path);
+    for (const registry of module.registries) {
+      for (const member of registry.members) {
+        if (member.source !== null) fixed.add(member.source);
+      }
+    }
+  }
+  return fixed;
 }
 
 function moduleImportersOf(layout: PackageLayout): Map<string, Set<string>> {
@@ -158,13 +179,18 @@ interface UnitDirectorySpec {
   siblings: ModuleFile[];
   entries: Set<string>;
   owners: Map<string, Set<string>>;
+  fixedEntries: Set<string>;
 }
 
 function unitDirectoryFindings(spec: UnitDirectorySpec): Finding[] {
-  const { dir, siblings, entries, owners } = spec;
+  const { dir, siblings, entries, owners, fixedEntries } = spec;
   if (entries.size < 2) return [];
   const findings: Finding[] = [];
   for (const entryPath of [...entries].toSorted()) {
+    // A registry fixes this entry's location (itself, or as a set member's
+    // source): it stays an entry of its directory and is never swept into
+    // a unit-directory move, whatever helpers it exclusively reaches.
+    if (fixedEntries.has(entryPath)) continue;
     const entryModule = siblings.find((sibling) => sibling.path === entryPath);
     if (entryModule === undefined) continue;
     const helpers = siblings.filter((sibling) => {
@@ -187,16 +213,17 @@ interface SharedInfrastructureSpec {
   siblings: ModuleFile[];
   importersByTarget: Map<string, Set<string>>;
   setDirs: Set<string>;
+  fixedEntries: Set<string>;
 }
 
 function sharedInfrastructureFindings(spec: SharedInfrastructureSpec): Finding[] {
-  const { dir, siblings, importersByTarget, setDirs } = spec;
+  const { dir, siblings, importersByTarget, setDirs, fixedEntries } = spec;
   const findings: Finding[] = [];
   for (const sibling of siblings) {
-    // A module that declares a registry has its location fixed by rule 4
-    // (it must sit at the set directory's parent), so it is never a
-    // shared-infrastructure move candidate.
-    if (sibling.registries.length > 0) continue;
+    // A module whose location a registry fixes (it declares the registry,
+    // or it is a set member's source) is never a shared-infrastructure move
+    // candidate.
+    if (fixedEntries.has(sibling.path)) continue;
     const importers = importersByTarget.get(sibling.path) ?? new Set<string>();
     if (importers.size === 0) continue;
     const target = sharedTarget({ dir, importers, setDirs });
@@ -218,16 +245,21 @@ function checkDirectory(ctx: UnitsContext, dir: string): Finding[] {
     siblings
       .filter(
         (sibling) =>
-          sibling.registries.length > 0 ||
-          isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()),
+          ctx.fixedEntries.has(sibling.path) || isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()),
       )
       .map((sibling) => sibling.path),
   );
   const adjacency = buildAdjacency(siblings, siblingPaths);
   const owners = computeOwners(adjacency, entries);
   return [
-    ...unitDirectoryFindings({ dir, siblings, entries, owners }),
-    ...sharedInfrastructureFindings({ dir, siblings, importersByTarget: ctx.importersByTarget, setDirs: ctx.setDirs }),
+    ...unitDirectoryFindings({ dir, siblings, entries, owners, fixedEntries: ctx.fixedEntries }),
+    ...sharedInfrastructureFindings({
+      dir,
+      siblings,
+      importersByTarget: ctx.importersByTarget,
+      setDirs: ctx.setDirs,
+      fixedEntries: ctx.fixedEntries,
+    }),
   ];
 }
 
@@ -243,7 +275,12 @@ export const unitsRule: LayoutRule = {
     "rule 5: a unit of two or more files becomes its own directory",
   check(layout: PackageLayout): Finding[] {
     const setDirs = new Set(modules(layout).flatMap((module) => module.registries.map((registry) => registry.directory)));
-    const ctx: UnitsContext = { layout, importersByTarget: moduleImportersOf(layout), setDirs };
+    const ctx: UnitsContext = {
+      layout,
+      importersByTarget: moduleImportersOf(layout),
+      setDirs,
+      fixedEntries: computeFixedEntries(layout),
+    };
     const scopedDirs = [...layout.directories].filter((dir) => inScope(layout, dir) && !setDirs.has(dir));
     return scopedDirs.flatMap((dir) => checkDirectory(ctx, dir)).toSorted(compareFindings);
   },
