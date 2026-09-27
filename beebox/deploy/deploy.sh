@@ -1097,6 +1097,11 @@ fi
 # 2026-09-26 APNs client, for one) would fail here with ERR_MODULE_NOT_FOUND
 # before it could install anything. So: symlink when the lockfiles match,
 # otherwise install into the stage.
+# The stage persists across deploys, so a symlink left by an earlier run must
+# not short-circuit this decision: drop it and decide again.
+if [[ -L "$stage_dir/node_modules" ]]; then
+  rm "$stage_dir/node_modules"
+fi
 if [[ ! -e "$stage_dir/node_modules" ]]; then
   if [[ -d "$install_dir/node_modules" ]] && cmp -s "$stage_dir/pnpm-lock.yaml" "$install_dir/pnpm-lock.yaml"; then
     ln -s "$install_dir/node_modules" "$stage_dir/node_modules"
