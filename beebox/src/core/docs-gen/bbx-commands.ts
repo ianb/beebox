@@ -53,6 +53,13 @@ function bbxCommandsIntro(): string[] {
     'bbx create _config/schedules/check.scheduled-script.card runs="bbx engine wakeup" cron="0 6 * * *"',
     "```",
     "",
+    "For array or structured frontmatter values, use **JSON** (`options='[\"Red\",\"Blue\"]'`)",
+    "— JSON is the default for anything machine-set. **Two-step pattern:** for a",
+    "complex card, `bbx create` a minimal one, then edit it to fill in the details.",
+    "",
+    "`bbx create --list-templates` lists every template this box can use, its own",
+    "included; the built-in ones are below.",
+    "",
     "### Available Templates",
     "",
   ];
@@ -93,7 +100,7 @@ function bbxCommandsTemplates(): string[] {
 }
 
 /**
- * Hand-written command sections: mv, rm, validate, answer, status, reactor, finish.
+ * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, reactor, finish.
  */
 function bbxCommandsCore(): string[] {
   return [
@@ -152,11 +159,24 @@ function bbxCommandsCore(): string[] {
     "Answer a pending question card.",
     "",
     "```",
-    "bbx answer <path>",
+    "bbx answer <question> <answer>",
     "```",
     "",
-    "Interactively answers a question. For agents, it's often easier to edit the card XML directly",
-    "(set the `<answer>` element and `status=\"answered\"`).",
+    "`<answer>` is the answer text, or an option ID (`a`, `b`, `c`, …) for a select question.",
+    "",
+    "## bbx contains",
+    "",
+    "Maintain the `contains:` field across the box.",
+    "",
+    "```",
+    "bbx contains list [--missing] [--stale] [--json]",
+    "bbx contains update <card> --text \"...\"",
+    "```",
+    "",
+    "If you edit content and the",
+    "sentence still holds, `bbx contains update <card> --text \"...\"` clears the",
+    "staleness flag; `bbx contains list --missing` / `--stale` shows which cards",
+    "still need one written or refreshed.",
     "",
     "## bbx status",
     "",

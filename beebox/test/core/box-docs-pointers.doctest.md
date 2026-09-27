@@ -1,7 +1,8 @@
 # Every `box-docs/<name>.md` pointer names a doc the package ships
 
 Plan: `docs/implemented-plans/doc-structure-box-guidance.md`, Track 2. A nested guide, a
-managed skill, and the agent guide (`guide.md`) send an agent to an engine doc by path,
+managed skill, the agent guide (`guide.md`), and the guide ledger's `mechanics:` field
+(`ledger.yaml`) send an agent to an engine doc by path,
 `node_modules/beebox/box-docs/<name>.md` (written in source as
 `${BOX_PACKAGE_DOCS}/<name>.md`). A pointer to a file the package does not
 ship leaves the agent with nothing to read, so every such path in those
@@ -24,7 +25,7 @@ const POINTER = /(?:\$\{BOX_PACKAGE_DOCS\}|box-docs)\/([\w.-]+\.md)/g;
 
 async function sourceFiles(): Promise<string[]> {
   const guide = (await fs.readdir(path.join(PACKAGE_ROOT, GUIDE_DIR)))
-    .filter((f) => f.endsWith(".ts") || f.endsWith(".md"))
+    .filter((f) => f.endsWith(".ts") || f.endsWith(".md") || f.endsWith(".yaml"))
     .map((f) => `${GUIDE_DIR}/${f}`);
   return [...SOURCES, ...guide];
 }

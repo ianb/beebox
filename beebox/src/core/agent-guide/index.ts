@@ -19,7 +19,7 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 import { directoryLayoutRows, boxCodeRows } from "./box-shape.js";
 import { procedureList, guideList } from "./extensibility.js";
-import { createExamples, cardTypesList } from "./cards.js";
+import { cardTypesList } from "./cards.js";
 import { engineSourceNote } from "./where-docs.js";
 import { renderGuideLines, strippedText, type Filler, type GuideLine } from "./render.js";
 
@@ -76,7 +76,6 @@ function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
   } = options;
   return {
     engine_source_note: () => engineSourceNote(engineSourcePresent),
-    create_examples: () => createExamples(),
     card_types: () => cardTypesList({ allCardSchemas, boxCardSchemas, boxTemplates }),
     directory_layout: () => directoryLayoutRows(),
     box_code_dirs: () => boxCodeRows(shape),

@@ -5,10 +5,12 @@
 # Schema: ledger-schema.ts.
 
 budget:
-  # Measured on the test1 clone, 2026-09-26, before any binning: `wc -w`
-  # of the rendered guide, and the `pnpm agent-context chat` total.
-  guide_words: 9508
-  always_loaded_words: 14300
+  # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
+  # after each section is binned, so the ceilings ratchet down: `wc -w` of
+  # the rendered guide, and the `pnpm agent-context chat` total. Last:
+  # 2026-09-26, after ABOUT_CARDS.
+  guide_words: 8016
+  always_loaded_words: 12808
   uncited_words_per_section: 60
 
 lint:
@@ -16,6 +18,7 @@ lint:
   # section is binned.
   covered_sections:
     - THE_LAWS
+    - ABOUT_CARDS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -207,6 +210,171 @@ rows:
     audits: [narration-capture-uses-quote-tag]
     mechanics: ABOUT_CARDS
 
+  # --- ABOUT_CARDS ---
+  - id: about-cards.shape
+    rule: A card is a markdown file with required YAML frontmatter named `Name.type.card`; the filename's suffix is the type and picks the schema.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Every card an agent reads or writes depends on it, and an agent that guesses the type from a `type:` key or an XML shape writes cards that do not load.
+    audits: [card-type-from-filename, memo-xml-structure, memo-yaml-format]
+  - id: about-cards.naming
+    rule: Name a card in `First_Last` form, capitalized words joined by underscores, not dashes or lowercase slugs.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Every created card gets a name, and nothing else tells an agent the convention; the example card shows it. The no-duplicate-basename half went with the validation warnings, since the warning names it.
+    audits: [card-filename-convention]
+  - id: about-cards.title
+    rule: "`title:` is the human-readable display title, distinct from the filename."
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Set on most created cards; without it an agent treats the filename as the title. Whether a type requires it is on the type's own doc.
+    audits: [doc-with-image-attach-scope]
+  - id: about-cards.body-tags
+    rule: A card body is markdown plus the box's Markdoc tags, `{% quote %}` for the user's verbatim words and `{% source %}` for provenance.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: One sentence that names the two tags every agent writes and points at the law and at PROVENANCE for how.
+    audits: [quote-tag-syntax]
+  - id: about-cards.contains
+    rule: "`contains:` is one sentence stating what is inside the card, not what it is, carrying the information when it is short, never a list of parts, under 200 characters; write it on create or substantial edit."
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Every card an agent writes has it, and search and listings rank on it; the audits show an agent writes a pointer sentence ("contains scheduling information") without the rule.
+    audits: [contains-writing-rule]
+  - id: about-cards.contains-commands
+    rule: "`bbx contains update <card> --text` confirms a still-accurate sentence and clears the staleness flag; `bbx contains list --missing` / `--stale` finds cards that need one."
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Needed only when maintaining `contains:` fields, and the staleness warning itself names the update command.
+    audits: [contains-stale-response]
+    mechanics: box-docs/bbx-commands.md
+  - id: about-cards.symbol
+    rule: "Most cards have no `symbol:`; mark only the few someone returns to often, as `{ glyph: … }` (an emoji or a letter or two) or `{ src: <box ref> }`."
+    handle: ABOUT_CARDS
+    bin: core
+    reason: The failure is the reflex to add one to every card an agent creates, which makes the mark worthless; the two shapes stay because they are shorter than a pointer.
+    audits: [card-symbol-restraint, card-symbol-image-key]
+  - id: about-cards.symbol-colours
+    rule: A symbol's `foreground:`/`background:` take `#rgb`, `#rrggbb`, `hsl()`, `hsla()`, `rgb()`, or `rgba()` and nothing else.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Needed only when colouring a symbol, and the validator names the six forms when one is wrong. Moved to the visual-treatment doc; nothing else documented symbols.
+    audits: [card-symbol-colours]
+    mechanics: box-docs/card-themes.md
+  - id: about-cards.prominence
+    rule: Leave `prominence:` absent on most cards; when a piece of work is done, mark its one result `primary` and your own working material `background`, never every output `primary`.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: An agent that does not know the field exists either never marks its result or marks every output primary, and both break Browse and the Landmarks page; the default and the one-primary rule are what every writing agent needs.
+    audits: [prominence-mark-own-artifact, prominence-housekeeping-directory, prominence-vs-links]
+  - id: about-cards.prominence-values
+    rule: The tests for `entry-point`, `primary`, and `background`, the landmark rules, the validate thresholds, and how to list what a directory declares.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Forty lines needed only when choosing a value. Moved verbatim to a new package doc; the landmark half is also in the landmark card's rule.
+    audits: [prominence-entry-point-choice]
+    mechanics: box-docs/prominence.md
+  - id: about-cards.theme
+    rule: "`theme:` is an optional catalogued visual choice set through Properties; never invent a theme name or stock."
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Touched only when styling a card. card-themes.md already stated every fact in the guide's paragraph, so nothing moved; the paragraph went and the mechanics line points there.
+    audits: [card-theme-choice]
+    mechanics: box-docs/card-themes.md
+  - id: about-cards.refs
+    rule: Every ref and internal link is written with a leading `/` and resolves from the box root; `attach/…` is the one exception; never `../`.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Every link and ref an agent writes, in cards and replies; a relative or climbing path is the commonest broken-link cause.
+    audits: [internal-links-resolve-to-box-root, links-always-box-root, landmark-ref-box-root, attach-is-the-exception]
+  - id: about-cards.refs-legacy-bare
+    rule: A bare path resolves relative to the document it is written in, as a legacy form.
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: It describes a form nobody should write; the leading-slash rule already says what to write, and the validator reports a link that does not resolve.
+    audits: [internal-links-resolve-to-box-root]
+  - id: about-cards.ref-reach
+    rule: A ref reaches only the box's own areas; package docs under `node_modules/` are named in plain text, not linked.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Bites only when linking an engine doc from a card, and the link-validation warning reports it.
+    audits: [ref-package-doc-plain-text]
+    mechanics: box-docs/provenance.md
+  - id: about-cards.link-with-title
+    rule: When naming another card or file in a card body or a reply, link it with a human title rather than a bare filename.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Applies to every reply and card body; the chat audit tracks the bare-filename slip.
+    audits: [chat-reference-card-as-link, links-always-box-root]
+  - id: about-cards.link-fields
+    rule: Link-shaped frontmatter uses `ref` for internal and `href` for external targets, inside an object whose sibling fields explain the relation; `retrieved` is date-only ISO.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Bites only when designing a field for a schema or view. Moved to the doc on refs and sources, whose read-when now names link-shaped fields.
+    audits: [link-fields-external-href-envelope, link-fields-internal-ref]
+    mechanics: box-docs/provenance.md
+  - id: about-cards.no-git-metadata
+    rule: No `created` or `modified` in frontmatter; Git tracks both.
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: The validator warns on a frontmatter key the type's schema does not declare, which is the substitute; and memo declares `created`, so the blanket rule was wrong for it. The draft had this core.
+    audits: [memo-yaml-format]
+  - id: about-cards.status-type-specific
+    rule: "`status:` values are type-specific; check the type's schema."
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: The type's doc lists its fields and their values, and the card rule loads when the card is in play.
+    audits: [find-schema-fields]
+  - id: about-cards.not-xml
+    rule: Cards are not XML.
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: History; the shape sentence says what a card is. bbx-commands.md's `bbx answer` entry, the last surface that said XML, was corrected against the command.
+    audits: [memo-xml-structure]
+  - id: about-cards.attachments
+    rule: Files a card references live in a sibling `<basename>.attach/` directory, referenced from the body as `attach/…`; create the directory yourself.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Any card that carries a file; an agent without it puts files in a top-level directory or links them with a relative path.
+    audits: [attach-sibling-directory, doc-with-image-attach-scope]
+  - id: about-cards.create-with-template
+    rule: Prefer `bbx create <path> -t <template>` over writing frontmatter by hand.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: The default way to make a card; the template gets the required fields right.
+    audits: [create-question-card]
+  - id: about-cards.template-list
+    rule: The list of every registered template, one `bbx create` line each.
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: Derivable. `bbx create --list-templates` lists every template the box can use, its own included, and bbx-commands.md lists the built-in ones with their arguments. Replaces the generated `{{create_examples}}` list and its filler.
+    audits: [create-question-card]
+  - id: about-cards.create-json-two-step
+    rule: Array or structured values on the `bbx create` line are JSON; for a complex card, create a minimal one and then edit it.
+    handle: ABOUT_CARDS
+    bin: indirect
+    reason: Usage detail of one command, needed only when passing an array on the command line.
+    audits: [create-array-value-json]
+    mechanics: box-docs/bbx-commands.md
+  - id: about-cards.mv-rm
+    rule: Move and delete box content with `bbx mv` / `bbx rm`, never `git mv`, `mv`, `git rm`, or `rm`; `bbx mv` rewrites inbound references and `bbx rm` routes to trash.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: The raw tools succeed silently while breaking every inbound ref or destroying content, so nothing corrects the agent afterward.
+    audits: [move-store-content-uses-bbx-mv, move-card-syntax]
+  - id: about-cards.validation
+    rule: Cards validate on load; a warning after an edit says what to fix, and a commit that includes an invalid card is rejected.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Every edit; it tells the agent a warning is its to fix now, not noise.
+    audits: [validate-card]
+  - id: about-cards.validation-warnings
+    rule: The catalogue of validation warnings and what each means.
+    handle: ABOUT_CARDS
+    bin: delete
+    reason: Each warning's own text says what is wrong and how to fix it.
+    audits: [validate-card]
+
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
     rule: When the engine's source ships beside the package docs, DOCS names it as the fallback reference.
@@ -214,12 +382,6 @@ rows:
     bin: core
     reason: Generated from the package install; the row is the decision to mention it.
     audits: []
-  - id: about-cards.create-examples
-    rule: ABOUT_CARDS lists every registered template as a `bbx create <path> -t <name>` line.
-    handle: ABOUT_CARDS
-    bin: core
-    reason: Generated from engine data; the row is the decision to list it.
-    audits: [create-question-card]
   - id: card-types.list
     rule: CARD_TYPES lists every card type the box sees, grouped by category, with its reference doc and any box-local templates.
     handle: CARD_TYPES

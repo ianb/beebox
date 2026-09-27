@@ -1,21 +1,11 @@
 /**
- * Fillers for the card sections of `guide.md`: the `bbx create` template
- * list in ABOUT_CARDS (`{{create_examples}}`) and the card-type catalogue in
- * CARD_TYPES (`{{card_types}}`), both built from the schema and template
- * registries.
+ * Filler for the card-type catalogue in `guide.md`'s CARD_TYPES
+ * (`{{card_types}}`), built from the schema and template registries.
  */
 
 import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
 import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
-import { getAllTemplates } from "../../schemas/templates.js";
-
-/** The ABOUT_CARDS `bbx create` line for each registered template. */
-export function createExamples(): string {
-  return getAllTemplates()
-    .map((t) => `- \`bbx create <path> -t ${t.name}\` — ${t.description}`)
-    .join("\n");
-}
 
 const CARD_CATEGORY_GROUPS = [
   {

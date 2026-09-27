@@ -73,7 +73,6 @@ are placeholders, each filled by a function in the section files beside it
 | Placeholder | Filled with | Filler |
 |---|---|---|
 | `{{engine_source_note}}` | the engine-source sentence, when the source ships | `where-docs.ts` |
-| `{{create_examples}}` | one `bbx create` line per template | `cards.ts` |
 | `{{card_types}}` | the card-type catalogue and box-local templates | `cards.ts` |
 | `{{directory_layout}}` | the directory table's rows | `box-shape.ts` |
 | `{{box_code_dirs}}` | the box-code table's rows | `box-shape.ts` |

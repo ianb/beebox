@@ -342,6 +342,7 @@ tests:
       <AreaLabel>:path/inside. The agent should translate both back to their
       canonical box-relative forms.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
   - id: card-symbol-restraint
     prompt: "When you write a new card, should you give it a `symbol`? What makes a card worth marking?"
     expected_level: knows_directly
@@ -362,6 +363,7 @@ tests:
       guidance is in the agent guide's shared-frontmatter section, and whether
       that section is always-on is a separate question from this field.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 1 searches, 42k ctx.
   - id: card-symbol-image-key
     prompt: "You want a card's symbol to be a picture stored in the box rather than an emoji. What do you write?"
     expected_level: knows_directly
@@ -538,6 +540,7 @@ tests:
     watch_for: "Lists types from agent guide without filesystem search"
     tags: [cards, schemas]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 3 reads, 1 searches, 42k ctx.
   - id: memo-xml-structure
     prompt: "Show me the XML structure of a memo card."
     expected_level: knows_directly
@@ -549,6 +552,7 @@ tests:
       (Phase 2 removed the XML card format). The agent should correct the
       premise and describe the real structure directly, not invent XML.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 42k ctx.
   - id: create-question-card
     prompt: "How would you create a new question card asking the user to pick a color?"
     expected_level: knows_directly
@@ -806,6 +810,7 @@ tests:
     watch_for: "Lists commands from agent guide without running bbx --help"
     tags: [cli]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 1 searches, 42k ctx.
   - id: move-card-syntax
     prompt: "How do you move a card from inbox to archive?"
     expected_level: knows_directly
@@ -820,6 +825,7 @@ tests:
   # box-root-paths rewrite of the ref rule (REF_PATH_RULE, Track E);
   # internal-links-resolve-to-box-root's watch_for was widened to the new
   # "always write the leading /" framing.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 0 searches, 42k ctx.
   - id: move-store-content-uses-bbx-mv
     prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
     expected_level: knows_directly
@@ -827,6 +833,7 @@ tests:
     correct_contains: ["bbx mv"]
     tags: [cli, links]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
   - id: internal-links-resolve-to-box-root
     prompt: "A markdown link in a card or dossier is [x](/_content/foo/bar.jpg). What does the leading slash mean?"
     expected_level: knows_directly
@@ -852,6 +859,7 @@ tests:
   # passes but read node_modules/beebox/box-docs/card-landmark.md first (5 turns) — weakest of
   # the three; it recalls the box-path rule but verifies the links[] field shape,
   # so re-check it if the landmark schema docs move.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 51k ctx.
   - id: links-always-box-root
     prompt: >
       There's a card at store/notes/Beta_Launch.doc.card. In your reply to me,
@@ -871,6 +879,7 @@ tests:
       - '\]\(\.\./'
     tags: [links, chat, paths]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 43k ctx.
   - id: landmark-ref-box-root
     prompt: >
       I'm adding an entry to a landmark card's links list that points at the
@@ -887,6 +896,7 @@ tests:
       - 'ref:\s*["'']?(?!/)[\w./-]*\.card'
     tags: [links, landmark, paths]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 3 reads, 3 searches, 42k ctx.
   - id: attach-is-the-exception
     prompt: >
       A card at store/trips/Trip.record.card has ![the cabin](attach/photo.jpg)
@@ -902,6 +912,7 @@ tests:
     correct_contains: ["Trip.attach/photo.jpg"]
     tags: [links, cards, attachments, paths]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 42k ctx.
   - id: validate-card
     prompt: "How do you validate a card after editing it?"
     expected_level: knows_directly
@@ -3412,6 +3423,7 @@ tests:
   # `_content/docs/generated/card-<type>.md` is stale for every phase-2 type. Bug,
   # not test issue. Filed implicitly by these audits.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 3 reads, 1 searches, 42k ctx.
   - id: memo-yaml-format
     prompt: "Show me a tiny example of a memo card on disk — what does the file actually contain?"
     expected_level: knows_about
@@ -3431,6 +3443,7 @@ tests:
 
   # Status (2026-09-26, doc-structure Track 3): pass (3 reads) after the
   # CARD_TYPES trim.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 5 reads, 4 searches, 42k ctx.
   - id: card-type-from-filename
     prompt: "How does the system know what type a card is? Where does the type discriminator come from?"
     expected_level: knows_directly
@@ -3442,6 +3455,7 @@ tests:
     correct_contains: ["filename"]
     tags: [cards, format]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 1 searches, 42k ctx.
   - id: attach-sibling-directory
     prompt: "If a memo card has a voice recording attached, where on disk does the audio file live, and how does the card reference it?"
     expected_level: knows_directly
@@ -3457,6 +3471,7 @@ tests:
       the audio file in a top-level audio/ dir, or referencing it with a
       relative path that doesn't go through the attach scope.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 6 reads, 0 searches, 42k ctx.
   - id: doc-with-image-attach-scope
     prompt: >
       Actually create (using Write or bbx create — don't just describe) a
@@ -3471,7 +3486,7 @@ tests:
       The `.doc.card` body (not a separate `.md` inside `.attach/`) carries
       the markdown; the image path uses the scoped `attach/` form. Bonus:
       mkdir's `Trip_Report.attach/` even without a real binary.
-    cards_contain: ["attach/photo.jpg"]
+    cards_contain: ["attach/photo.jpg", "Trip Report"]
     max_turns: 15
     tags: [cards, attachments, behavioral, doc]
     notes: >
@@ -3481,6 +3496,7 @@ tests:
       knowledge-only `doc-with-image-where-body` audit which checks the
       agent's response prose instead.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 3 reads, 3 searches, 42k ctx.
   - id: find-schema-fields
     prompt: "I want to know exactly what fields a `.bookmark.card` allows. How would you find out?"
     expected_level: knows_about
@@ -3609,6 +3625,7 @@ tests:
   # used those instead of "verbatim" — knowledge was correct, only the
   # vocabulary differed.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
   - id: quote-tag-syntax
     prompt: >
       When you write a doc that reproduces the user's own words verbatim,
@@ -3961,7 +3978,7 @@ tests:
       How do I cite the page so the card preserves both its URL and the date I
       checked it today, August 29, 2026?
     expected_level: knows_about
-    should_read_any: ["box-docs/provenance.md"]
+    should_read_any: ["provenance.md"]
     watch_for: >
       Uses a `{% source %}` tag with the external page in `href=` and the
       date-only ISO check date in `retrieved="2026-08-29"`. Does not put the
@@ -3972,12 +3989,14 @@ tests:
   # Status (2026-08-30): both link-field-vocabulary audits pass at
   # knows_directly with 0 file reads and 0 searches. The agent used ref for the
   # internal target and a sources object with href/retrieved/usage externally.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 42k ctx.
   - id: link-fields-external-href-envelope
     prompt: >
       I am defining data for a custom card view. It needs to preserve two public
       web sources, how each source was used, and when each page was checked.
       What field shape and names should I use? Show a small YAML example.
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["provenance.md"]
     watch_for: >
       Uses an object envelope such as sources: [{href, retrieved, usage}] rather
       than a bare URL string array or an invented url/link field. retrieved is a
@@ -3989,13 +4008,19 @@ tests:
     response_not_contains: ["urls:"]
     tags: [source, cards, views, provenance, link-fields]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the
+  # test1 clone after one fix, 5 reads, 3 searches, 42k ctx. The first run
+  # answered correctly after reading provenance.md from inside box-docs/, so
+  # the "box-docs/provenance.md" path missed; should_read_any now names the
+  # bare filename.
   - id: link-fields-internal-ref
     prompt: >
       I am defining a card field used by a custom view. Each entry points to an
       internal project card and records why that project is related. What target
       field name and shape should I use? Show a small YAML example and explain
       what happens if the target card moves.
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["provenance.md"]
     watch_for: >
       Uses ref inside an object with a sibling such as note or usage. Explains
       that bbx mv rewrites tracked refs; does not substitute href, url, or a bare
@@ -4025,7 +4050,7 @@ tests:
       out into a person card. What should I put in `{% source %}`'s `usage`
       attribute — is there a fixed enum I should pick from?
     expected_level: knows_about
-    should_read_any: ["box-docs/provenance.md"]
+    should_read_any: ["provenance.md"]
     watch_for: >
       Says `usage=` is free-form natural language, not an enum. Encourages
       writing the actual derivation (something like `usage="extracted
@@ -4055,7 +4080,7 @@ tests:
       sentence I write be wrapped in `{% source %}` pointing at
       myself?
     expected_level: knows_about
-    should_read_any: ["box-docs/provenance.md"]
+    should_read_any: ["provenance.md"]
     watch_for: >
       Says no — `{% source %}` marks spans derived from another card or
       file, not the agent's own framing prose. Connective tissue and
@@ -4071,7 +4096,7 @@ tests:
       I mark that passage in the card body, and should it go inside a
       {% quote %} tag?
     expected_level: knows_about
-    should_read_any: ["box-docs/provenance.md"]
+    should_read_any: ["provenance.md"]
     watch_for: >
       Puts the passage in the `{% source %}` body itself — a bare
       `{% source pos="..." %}the passage{% /source %}` — with the remark as
@@ -4242,6 +4267,7 @@ tests:
   # agent guide without re-reading docs (0 files read); search-over-grep
   # reaches for bbx search (2 bbx search invocations, no grep).
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
   - id: contains-writing-rule
     prompt: >
       You're processing a short memo whose body says the dentist
@@ -4298,16 +4324,20 @@ tests:
     correct_contains: ["10494"]
     tags: [search]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 1 searches, 42k ctx.
   - id: contains-stale-response
     prompt: >
       After you edit a card's body, validation warns "card content
       changed but contains: didn't — review it". The contains sentence
       is still accurate. What do you do?
-    expected_level: knows_directly
+    expected_level: knows_about
     watch_for: >
       Runs `bbx contains update <card> --text "..."` with the same text
       to confirm — knows the update command is the acknowledgment that
       clears the staleness flag, and doesn't just ignore the warning.
+      Since agent-guide Track 3 the command lives in bbx-commands.md, not
+      the guide.
+    should_read_any: ["bbx-commands.md"]
     correct_contains: ["bbx contains update"]
     tags: [search, cards, behavioral]
 
@@ -4719,12 +4749,14 @@ tests:
   # These are knows_directly / knows_about checks as declared; none answered
   # with zero reads.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 0 searches, 42k ctx.
   - id: card-theme-choice
     prompt: >
       I want one memo to look like a cream paper card while the rest of the
       box keeps its defaults. What should I write, and where can I inspect or
       remove that choice?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["card-themes.md"]
     watch_for: >
       Uses the card's theme object with name paper and stock cream, identifies
       Properties as the inspection surface, and says Use default removes the
@@ -5591,6 +5623,7 @@ tests:
   # (ref="/store/notes/Beta_Launch.doc.card", "Saved to [Beta Launch](/store/…)"),
   # which is the Track E exemplar change landing. One run only; the RATE caveat
   # above still governs.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 2 reads, 0 searches, 51k ctx.
   - id: chat-reference-card-as-link
     prompt: "Quick, save this before I forget: beta ships in August, hold the pricing page until launch, and move standups to Tuesdays."
     expected_level: knows_directly
@@ -6098,6 +6131,7 @@ tests:
   # Status (2026-09-06, Claude): 3/3 pass on the first run — mark-own-artifact
   # answered with 0 reads / 0 searches; the other two with one read each.
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 0 searches, 42k ctx.
   - id: prominence-mark-own-artifact
     prompt: >
       You just wrote _content/projects/kitchen/Kitchen_Remodel_Plan.doc.card.
@@ -6117,6 +6151,11 @@ tests:
       - 'pinned: true'
     tags: [prominence, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the
+  # test1 clone after one fix, 2 reads, 2 searches, 42k ctx. The first run
+  # gave the right answer (a background landmark in logs/) but failed the
+  # `bbx rm` blocklist by naming deletion as the approach to avoid; that
+  # blocklist entry is dropped, watch_for still covers deletion.
   - id: prominence-housekeeping-directory
     prompt: >
       _content/projects/deck/logs/ holds fifty generated log cards that
@@ -6130,10 +6169,14 @@ tests:
       the mechanism.
     correct_contains: ["background"]
     response_not_matches:
-      - 'bbx rm'
       - 'gitignore'
     tags: [prominence, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1
+  # clone, 2 reads, 2 searches, 42k ctx, but hedged: after reading
+  # prominence.md ("forty recipes: mark nothing, give the directory an entry
+  # point") it said marking one recipe primary would misuse the field. The
+  # doc and this audit's expectation disagree; a question for the boxholder.
   - id: prominence-vs-links
     prompt: >
       The boxholder wants the bread recipe to show up under the Recipes
@@ -6146,6 +6189,91 @@ tests:
       move is adding a `links:` entry.
     correct_contains: ["primary"]
     tags: [prominence, navigation]
+
+  # === Agent guide Track 3: rows moved out of ABOUT_CARDS ===
+  # Each guards a rule that moved from the always-loaded guide to a package
+  # doc (src/core/agent-guide/ledger.yaml names the row and its new home), so
+  # each expects a read of that doc.
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 0 searches, 42k ctx.
+  - id: prominence-entry-point-choice
+    prompt: >
+      _content/recipes/ holds forty recipe cards and one index card that lists
+      and groups them. The boxholder wants a newcomer to Browse to land in the
+      right place. Which `prominence:` value, if any, goes on the index and
+      which on the recipes? Say why, and do not change any files.
+    expected_level: knows_about
+    watch_for: >
+      The index is `entry-point` (it orients a reader and sends them onward);
+      the recipes stay unmarked, since when everything is the thing you mark
+      nothing and give the directory an entry point. FAILS on marking the
+      recipes `primary`.
+    should_read_any: ["prominence.md"]
+    correct_contains: ["entry-point"]
+    tags: [prominence, navigation, agent-guide-moves]
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 0 searches, 42k ctx.
+  - id: card-symbol-colours
+    prompt: >
+      Give _content/garden/Tomatoes.doc.card a symbol: a white T on a dark
+      green background. Show the exact frontmatter you'd write, and say which
+      colour formats the field accepts. Do not change any files.
+    expected_level: knows_about
+    watch_for: >
+      `symbol: { glyph: T, foreground: …, background: … }` with colours in one
+      of the six forms (`#rgb`, `#rrggbb`, `hsl()`, `hsla()`, `rgb()`,
+      `rgba()`), and says named colours such as `white` are not accepted.
+    should_read_any: ["card-themes.md"]
+    correct_contains: ["glyph", "background"]
+    correct_matches:
+      - 'rrggbb|hsla?\(|rgba?\('
+    tags: [cards, symbol, agent-guide-moves]
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 1 searches, 42k ctx.
+  - id: ref-package-doc-plain-text
+    prompt: >
+      You're writing a doc card that tells the boxholder where the engine's
+      views reference lives: node_modules/beebox/box-docs/views.md. Show the
+      sentence you'd put in the card body. Do not change any files.
+    expected_level: knows_about
+    watch_for: >
+      Names the path in plain text (backticks are fine) rather than as a
+      markdown link, because a ref reaches only the box's own areas and a
+      package doc cannot be linked. FAILS on `[…](/node_modules/…)` or any
+      markdown link to the package doc.
+    should_read_any: ["provenance.md"]
+    correct_contains: ["node_modules/beebox/box-docs/views.md"]
+    response_not_matches:
+      - '\]\(/?node_modules/'
+    tags: [links, provenance, agent-guide-moves]
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 1 reads, 1 searches, 42k ctx.
+  - id: create-array-value-json
+    prompt: >
+      With one `bbx create` command, make a question card at
+      _bookkeeping/questions/Paint.question.card asking the boxholder to pick
+      a paint colour from Red, Blue, and Green. Show the command; do not run
+      it.
+    expected_level: knows_about
+    watch_for: >
+      Uses `bbx create` with the question template and passes the options as
+      a JSON array (`options='["Red","Blue","Green"]'`) or the `-o` option;
+      includes a directive.
+    should_read_any: ["bbx-commands.md"]
+    correct_contains: ["bbx create"]
+    correct_matches:
+      - '\[\s*"Red"|-o\s|--options'
+    tags: [cli, cards, agent-guide-moves]
+  # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 0 reads, 0 searches, 42k ctx.
+  - id: card-filename-convention
+    prompt: >
+      You're saving notes from a call with Odette Marlowe about the garage
+      roof as a new doc card in _content/notes/. What is the card's full
+      path? Answer with the path and one line on why; do not create it.
+    expected_level: knows_directly
+    watch_for: >
+      A `First_Last`-style name of capitalized words joined by underscores,
+      ending `.doc.card`, e.g. `_content/notes/Odette_Marlowe_Garage_Roof.doc.card`.
+      FAILS on dashes, lowercase slugs, or spaces.
+    correct_matches:
+      - '_content/notes/[A-Z][A-Za-z0-9]*(?:_[A-Z0-9][A-Za-z0-9]*)+\.doc\.card'
+    tags: [cards, naming]
 
   # === Send-time attention, independent of conversation focus ===
   # Status (2026-09-07): 2/2 pass on Claude; both 0 reads/searches.

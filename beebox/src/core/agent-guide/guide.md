@@ -166,178 +166,85 @@ for them, in anything a user-facing surface renders:
 
 ## ABOUT_CARDS
 
-Cards are the box's central unit — and the primary user-visible thing. What the
-user sees in the browser, what a view renders, the thing every ref points at: it
-is a card. THE_LAW_OF_CARDS says everything worth keeping goes into one;
-this is what one *is* and how to work with it.
+What a card is, the frontmatter every card shares, and the commands that make, move, and check one. THE_LAW_OF_CARDS says everything worth keeping goes into a card; the user sees cards, and every ref points at one.
 
-### What a card is
-
+<!-- rules: about-cards.shape -->
 A card is a **markdown file with required YAML frontmatter**, named in
-`Name.type.card` form — for example `Trip_Report.doc.card`. The **type comes
-from the filename** — the `.doc.card` / `.recipe.card` suffix — so the filename
-is load-bearing. Cards are not XML; anything that says so is stale.
+`Name.type.card` form. The **type comes from the filename** — the `.doc.card` /
+`.recipe.card` suffix — so the filename is load-bearing: it picks the schema
+that validates the card.
 
+<!-- rules: about-cards.shape, about-cards.naming, about-cards.title, about-cards.contains, about-cards.body-tags, about-cards.refs, about-cards.link-with-title, about-cards.attachments -->
 ```
+_content/projects/kitchen/Kitchen_Remodel.doc.card
 ---
-contains: Dana's kitchen-remodel preferences and the contractor's quote.
+title: Kitchen remodel
+contains: The open-shelving plan for the kitchen and the contractor's $18,400 quote.
 ---
-The body is plain markdown.
+{% quote %}No more upper cabinets. I want to see the dishes.{% /quote %}
+The contractor's quote is [attached](attach/quote.pdf); the ceiling for the
+job is in [the house budget](/_content/projects/House_Budget.doc.card).
 ```
 
-The box defines its own tags for card bodies, written in Markdoc's `{% tag %}`
-syntax: `{% quote %}` for the user's verbatim words (see **THE_LAW_OF_QUOTING**)
-and `{% source %}` for provenance and refs (see **PROVENANCE**).
+<!-- rules: about-cards.naming, about-cards.title, about-cards.body-tags -->
+Name a card in **`First_Last`** form: capitalized words joined by underscores
+(`Trip_Report`, `Odette_Marlowe`), not dashes or lowercase slugs. `title:` is
+the human-readable display title, distinct from the filename. The body is
+markdown plus the box's Markdoc tags: `{% quote %}` for the user's verbatim
+words (**THE_LAW_OF_QUOTING**) and `{% source %}` for provenance
+(**PROVENANCE**).
 
-### Frontmatter every card shares
+<!-- rules: about-cards.contains -->
+**`contains:`** is one sentence stating what can be found inside the card —
+the prime retrieval field for `bbx search` and listings. Write it when you
+create or substantially edit a card. Describe what is *in* the card, not what
+it *is* ("Priya's phone number and her kids' names," not "a person card").
+When the info is concise let the sentence carry it ("Dentist moved to June
+17"); never a list of parts; keep it under 200 characters.
 
-Most frontmatter is defined by the card's own type (see **CARD_TYPES**,
-next), but a few belong to every card:
+<!-- rules: about-cards.symbol, about-cards.prominence -->
+Two fields mark a card out, and **most cards should have neither**.
+`symbol:` is a small mark for a tab strip or listing — `{ glyph: 🍞 }` (an
+emoji or a letter or two) or `{ src: <box ref to an image> }`; mark only the
+handful someone returns to often, since a box where everything is marked has
+nothing marked. `prominence:` says who the card is for; absent is the
+ordinary level, right by default, and every card stays readable at every
+level. When you finish the thing a piece of work was for, mark that one card
+`primary` and what you wrote for yourself along the way `background`.
+Marking every output primary is the failure this field exists to avoid.
 
-- **`title:`** — a human-readable display title (distinct from the filename).
-  Optional on most types; a few require it.
-- **`contains:`** — one sentence stating what can be found inside the card; the
-  prime retrieval field for `bbx search` and listings. Write it when you create
-  or substantially edit a card. Describe what is *in* the card, not what it *is*
-  ("Priya's phone number and her kids' names," not "a person card"). When the
-  info is concise let the sentence carry it ("Dentist moved to June 17"); never a
-  list of parts; keep it under 200 characters. If you edit content and the
-  sentence still holds, `bbx contains update <card> --text "..."` clears the
-  staleness flag; `bbx contains list --missing` / `--stale` shows which cards
-  still need one written or refreshed.
-- **`symbol:`** — the small mark that stands for the card in a tab strip, a
-  listing, or a tile: `symbol: { glyph: 🍞 }`, optionally with
-  `foreground:`/`background:` colours (`#rgb`, `#rrggbb`, `hsl()`,
-  `hsla()`, `rgb()`, `rgba()` — nothing else), or `symbol: { src: <box ref
-  to an image> }` for a picture. The glyph is an emoji or a letter or two, not
-  a word. **Most cards should have none.** Mark the handful someone returns to
-  often; a box where everything is marked has nothing marked, so do not add one
-  by reflex when you create a card.
-- **`prominence:`** — who the card is for, and whether the box puts it in
-  front of a reader who is looking around rather than looking for it. **Leave
-  it absent for most cards**: absent is a level (*ordinary* — for the reader,
-  if they look) and it is the right one by default. This is not access: every
-  card, at every level, is readable and addressable. Three written values:
-  - `entry-point` — *where a reader starts.* A card whose main job is to
-    orient a reader to this directory or area and send them onward: an index,
-    an overview, a dashboard, a roster, a gallery, a collection view. Not a
-    card that is merely important; a recipe is never an entry point, the
-    recipe index is. A landmark card is not one either: it marks a place, and
-    the place's entry point is a visitable card inside it. Ask: *would a
-    newcomer open this first to understand what is here?* Usually one per
-    directory.
-  - `primary` — *the thing itself.* The card a reader came to this directory
-    for, as opposed to material toward it or about it: a project's plan is
-    primary; its research notes, quotes, drafts, and call logs are not. Not
-    "because it is good" but "because it is the thing." Ask: *is this the
-    thing itself, or material toward it?* One piece of work produces one
-    primary card. If everything here is the thing (forty recipes), mark
-    nothing and give the directory an entry point instead.
-  - `background` — *for you, not the reader.* Material you use but did not
-    write for the boxholder to look at: logs, state, imports, scratch,
-    generated intermediates, and anything already embedded in another card
-    (an image that appears inside a primary document is background on its
-    own; the document is where a reader sees it). Cards the box writes for
-    itself (jobs, runs, chat threads) and landmark cards are background by
-    type. On a landmark card, `prominence: background` is the one value to
-    write: it marks the whole place as housekeeping and folds everything
-    under it. Never write `entry-point` or `primary` on a landmark.
+<!-- rules: about-cards.refs, about-cards.link-with-title -->
+**Refs.** Wherever a card points at another — a `ref:` value, a body tag, a
+markdown link — **always write a leading `/`: the path resolves from the box
+root.** The one exception is `attach/…`, the card's own attach scope. Never
+`../`. When you name another card or file, in a card body or a reply, link it
+with a human title rather than writing a bare filename: `the dates are in
+[the beta launch plan](/_content/notes/Beta_Launch.doc.card)`.
 
-  `prominence` is not `status`: `status` is lifecycle, `prominence` is who
-  the card is for. When you finish the thing a piece of work was for, mark
-  that one card `primary` and what you wrote for yourself along the way
-  `background`. Marking every output primary is the failure this field
-  exists to avoid; `bbx validate` warns at a third entry point or an eighth
-  primary card in one directory. To surface a card in a place that is not
-  its own directory, or with a contextual label or a fixed position, use
-  that place's landmark `links:` — the card cannot say that about itself.
-  `bbx ls --format "{prominence} {title}" <dir>` shows what a directory has
-  declared.
-- **`theme:`** — an optional visual choice, `{ name: "paper", stock: "cream" }`.
-  It is independent of the preferred view. Use card Properties to inspect the
-  effective theme or choose a catalogued override; see the card-themes guide
-  for available names, stocks, and the **Use default** action. Do not invent
-  theme IDs or stocks.
-- **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
-  points at another card (a `ref:` value, `key-people[].ref`, a `{% source %}`
-  anchor), the path works the same way. **Always write a leading `/` — the path resolves from the box root.** The one exception is `attach/…`, the card's own attach scope. Never `../`. A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write. A ref reaches only the box's own areas (`_content`, `_config`, …): package docs under `node_modules/` can be read but not linked, so name them in plain text.
-  The same goes for a markdown link — in a card body, a plain `.md` dossier, or
-  a response you hand back to whoever invoked you. When you name another card or
-  file, link it with a human title rather than writing a bare filename:
-  `the dates are in [the beta launch plan](/_content/notes/Beta_Launch.doc.card)`.
-  The full `ref`/`href` semantics (tracking, `bbx mv` rewriting, external `href`)
-  live in **PROVENANCE**.
-- **Link-shaped fields use one vocabulary.** Internal targets use `ref`; external
-  targets use `href`. Put either in an object whose sibling fields explain the
-  relationship — for example `sources: [{href, retrieved, usage}]` — never an
-  ad-hoc bare URL string array. These names rhyme with `{% source %}`; use
-  date-only ISO (`YYYY-MM-DD`) for `retrieved`.
-- **No Git-tracked metadata.** Don't put `created` / `modified` (or the like)
-  in frontmatter — Git already tracks both authoritatively. Don't duplicate what
-  the history already knows.
+<!-- rules: about-cards.attachments -->
+**Attachments.** Files a card references — images, PDFs, sidecars — live in
+a sibling `<basename>.attach/` directory (`Trip_Report.attach/photo.jpg`
+beside `Trip_Report.doc.card`), referenced from the body with the `attach/`
+prefix. Create the `.attach/` directory yourself when you add the first file.
 
-Many types also carry a `status:` field, but its allowed values are
-type-specific (`new` / `processed`, `draft` / `sent`, `active` / `archived`,
-…) — check the type's schema for the vocabulary that applies.
+<!-- rules: about-cards.create-with-template, about-cards.mv-rm -->
+Prefer `bbx create <path> -t <template>` over authoring frontmatter by hand:
+the template gets the shape right. **Move and delete box content with `bbx mv`
+/ `bbx rm`, never `git mv` / `mv` or `git rm` / `rm`** — a card, a directory,
+or a plain `.md` dossier. `bbx mv` rewrites every inbound reference and
+`bbx rm` routes deletes to trash; the raw tools leave references dangling.
 
-### Naming
+<!-- rules: about-cards.validation -->
+Cards validate on load. After you edit one, any problem comes back as a
+warning that says what to fix; it doesn't block the edit, but fix it
+promptly, since a commit that includes an invalid card is rejected.
 
-The preferred (not required) convention is **`First_Last`** form: capitalized
-words joined by underscores (`Trip_Report`, `Maria_Gomez`) — not dashes, not
-lowercase slugs. No two cards in a directory may share a basename.
-
-### Attachments
-
-Files a card references — images, PDFs, sidecars — live in a sibling
-`<basename>.attach/` directory, referenced from the body with the `attach/`
-prefix:
-
-```
-_content/notes/Trip_Report.doc.card
-_content/notes/Trip_Report.attach/photo.jpg
-```
-
-Then in the body: `![the view from the cabin](attach/photo.jpg)`. Create the
-`.attach/` directory yourself when you add the first attachment — it's just a
-sibling directory, no special command.
-
-### Creating and manipulating cards
-
-Prefer `bbx create` with a template over authoring frontmatter by hand — the
-template gets the shape right, and the filename drives type detection:
-<!-- rules: about-cards.create-examples -->
-{{create_examples}}
-
-For array or structured frontmatter values, use **JSON** (`options='["Red","Blue"]'`)
-— JSON is the default for anything machine-set. **Two-step pattern:** for a
-complex card, `bbx create` a minimal one, then edit it to fill in the details.
-
-**Move and delete box content with `bbx mv` / `bbx rm`, never `git mv` / `mv` or
-`git rm` / `rm`** — a card, a directory, or a plain `.md` dossier. `bbx mv`
-rewrites every inbound reference (frontmatter refs, body tags, inline markdown
-links) and `bbx rm` routes deletes to trash; the raw tools relocate the files but
-leave those references dangling.
-
-### Validation
-
-Cards validate on load. After you edit a card, validation runs automatically and
-any problem comes back as a **warning** — it doesn't block the edit, but fix it
-promptly (a commit that includes an invalid card is rejected). You rarely call
-`bbx validate` yourself; only to re-check a specific card while debugging. The
-warnings you'll see:
-
-- **invalid `<type>` frontmatter** — a required field is missing, a value has the
-  wrong type, or an unknown key crept in. Make the frontmatter match the type.
-- **reference failed to resolve / broken internal link** — a `ref` or markdown
-  link points at a card that doesn't exist (common after a hand-move — use
-  `bbx mv`, which rewrites refs).
-- **retired `view:` scheme** — drop the prefix and reference the plain box path:
-  `[the trip report](/_content/notes/Trip_Report.doc.card)` to link, `![the trip
-  report](/_content/notes/Trip_Report.doc.card)` to embed.
-- **duplicate basename** — two cards in one directory share a name; rename one.
-- **`contains:` too long** — keep it under 200 characters.
-
-The full catalogue of card types is in **CARD_TYPES**, next.
+<!-- rules: about-cards.contains-commands, about-cards.create-json-two-step, about-cards.prominence-values, about-cards.theme, about-cards.symbol-colours, about-cards.ref-reach, about-cards.link-fields -->
+Mechanics, in `node_modules/beebox/box-docs/`: `bbx-commands.md` for
+`bbx create` values and `bbx contains`; `prominence.md` before writing any
+`prominence:` value; `card-themes.md` for `theme:` and a symbol's colours;
+`provenance.md` for `ref`/`href` fields and what a ref can reach. Each type's
+own fields are in its doc, listed in **CARD_TYPES**, next.
 
 ## CARD_TYPES
 
@@ -443,7 +350,7 @@ This box root also holds `package.json`, `node_modules/`, and the box's source c
 
 The Landmarks instrument is the user's quick-jump surface to the spots in the box they actually live in. Directories organize the box for the system — inbox, jobs, archive, etc. Landmarks orient that organization toward the user: the places they keep returning to, the destinations of their recurring asks. A landmark is a `<Name>.landmark.card` placed **inside** the directory it marks — its presence turns that directory into a destination in the Landmarks instrument. (The box root's landmark is `Box.landmark.card`.)
 
-A landmark's link list is mostly derived: the `entry-point` and `primary` cards under its directory (stopping at nested landmarks) appear in the Landmarks instrument and in the place menu without being listed — see `prominence:` under "Frontmatter every card shares". Write a `links:` entry only for what a card cannot say about itself: a target outside the directory, a contextual label, a fixed order. A place that is housekeeping (logs, imports, machinery) gets `prominence: background` on its landmark; it leaves the Landmarks instrument and everything under it folds.
+A landmark's link list is mostly derived: the `entry-point` and `primary` cards under its directory (stopping at nested landmarks) appear in the Landmarks instrument and in the place menu without being listed — see `prominence:` in **ABOUT_CARDS**. Write a `links:` entry only for what a card cannot say about itself: a target outside the directory, a contextual label, a fixed order. A place that is housekeeping (logs, imports, machinery) gets `prominence: background` on its landmark; it leaves the Landmarks instrument and everything under it folds.
 
 Landmarks earn their spot. If the same kind of thing comes up over and over in chat — recipes, an ongoing project, a todo list — and there is no landmark for it, that's a signal worth raising with the user. Do not create one quietly for something trivial. But the flip side is active: when you build out a new structure the user will want to return to, drop a landmark in it so the structure isn't invisible from the Landmarks instrument. Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or editing one.
 
@@ -579,7 +486,8 @@ excerpt — so you see both *which* card and *where* in it. A truncated run repo
 "N of total."
 
 To make a card findable in the first place, write it a good `contains:` — the
-rule and the `bbx contains` worklist commands are in **ABOUT_CARDS**.
+rule is in **ABOUT_CARDS**; the `bbx contains` worklist commands are in
+`node_modules/beebox/box-docs/bbx-commands.md`.
 
 ## PROCEDURES — Procedures
 
