@@ -53,6 +53,10 @@ await write("pkg/src/shared/thing.ts", "export const thing = 1;\n");
 await write("pkg/src/webapp/user.ts", 'import { thing } from "@shared/thing";\nexport const value = thing;\n');
 // A non-import mention that must NOT be rewritten, only reported.
 await write("pkg/docs/note.md", "See pkg/src/a.ts for details.\n");
+// An importer outside any package root (no `package.json` above it), the
+// same shape as `schedules/box-convergence/targets.ts` — the move tool must
+// still find and rewrite this one.
+await write("schedules/x/run.ts", 'import { a } from "../../pkg/src/a.js";\nexport const value = a;\n');
 await git(["add", "-A"]);
 
 const plannedMoves = [
@@ -66,14 +70,14 @@ const sources = await collectSources({ repoRoot, roots });
 const { byImporter, edgeCount } = collectRewrites({ sources, moveMap });
 ```
 
-## Only the affected edges are collected: the moved file's own import, the distant importer's, the doctest's, and the alias importer's
+## Only the affected edges are collected: the moved file's own import, the distant importer's, the doctest's, the alias importer's, and the non-package importer's
 
 ```ts
 edgeCount
-=> 4
+=> 5
 
 JSON.stringify([...byImporter.keys()].toSorted())
-=> ["pkg/src/other/importer.ts","pkg/src/sub/a.ts","pkg/src/webapp/user.ts","pkg/test/x.doctest.md"]
+=> ["pkg/src/other/importer.ts","pkg/src/sub/a.ts","pkg/src/webapp/user.ts","pkg/test/x.doctest.md","schedules/x/run.ts"]
 ```
 
 ## Applying moves the files and rewrites every collected specifier
@@ -92,6 +96,9 @@ applyRewrites({ repoRoot, byImporter });
 => true
 
 (await read("pkg/test/x.doctest.md")).includes('from "../src/sub/a.js"')
+=> true
+
+(await read("schedules/x/run.ts")).includes('from "../../pkg/src/sub/a.js"')
 => true
 ```
 
