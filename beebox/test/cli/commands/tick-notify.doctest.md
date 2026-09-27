@@ -55,7 +55,7 @@ JSON.stringify({ title, body, target, loudness, tag, source }, null, 2)
   "target": "chat:new",
   "loudness": "loud",
   "tag": "remind-vet",
-  "source": "_config/schedules/remind-vet.scheduled-script.card"
+  "source": "schedule:remind-vet"
 }
 
 sent.deliveries.some((d) => d.status === "sent" && d.detail === "fake")

@@ -18,7 +18,6 @@ import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
 import type { ScheduleNotify } from "../../schemas/scheduled-script-fields.js";
 import { CommandError, CommandFailedError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
 import { CHECK_SKIP_CODE } from "../procedure/shell.js";
-import { scheduleCardForTask } from "./parked-templates.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { notificationReached, notifyBoxholder, type NotificationInput } from "../notify-boxholder.js";
 import { parseTarget } from "../notification/target.js";
@@ -63,7 +62,7 @@ export function scheduledNotification(opts: { notify: ScheduleNotify; parsed: Pa
     target: parseTarget(notify.target ?? "chat:new"),
     loudness,
     tag: scriptName,
-    source: scheduleCardForTask(scriptName),
+    source: `schedule:${scriptName}`,
   };
 }
 
