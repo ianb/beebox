@@ -645,7 +645,11 @@ were slow or failed in phase two (17 and 10 steps) are 7 and 7.
   under-inclusive against `commit-trailers.ts`, but that file lists what the
   browse filters group, and every `-By` key the doc names has a writer in the
   engine; the doc gained the legacy `Workflow:` key and the two filter axes.
-- **Part C**: recorded below when the review returns.
+- **Part C** (two): `law-paraphrase-pressure` accepted "own words", which
+  is the failure's own phrasing; the term is dropped and "in my own words" is
+  refused. `law-cards-tmp-is-not-a-record` could pass on a card written
+  under `_tmp/`; the runner gained a `cards_not_under` assertion and the
+  audit uses it. Both rerun and pass.
 
 ### Deviations and residuals
 

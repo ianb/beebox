@@ -56,6 +56,7 @@ export interface AutomatedChecks {
   notMatchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
+  cardsNotUnderChecks: Array<{ prefix: string; found: boolean; foundAt?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
@@ -131,7 +132,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
         .filter((fixturePath) => path.basename(fixturePath) === CLAUDE_MD)
         .map((fixturePath) => path.join(path.dirname(fixturePath), AGENTS_MD)));
     }
-    const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    const cardsBefore = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // In chat mode, mirror what ChatSession.resolveSystemPrompt builds.
     const systemPrompt = test.chat_mode
       ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
@@ -159,7 +160,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
       });
     const result = await agent.invoke(invokeOpts);
     if (!result.success) throw new KnowledgeAuditAgentError(engine, result.error);
-    const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    const cardsAfter = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
     // comes from the validated live stream captured by its adapter above.
     const logDir = invokeOpts.cwd ?? boxRoot;

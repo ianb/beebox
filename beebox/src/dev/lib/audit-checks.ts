@@ -43,6 +43,13 @@ export function runChecks(
     }
     return { expected, found: false };
   });
+  const cardsNotUnderChecks = (test.cards_not_under ?? []).map((prefix) => {
+    const normalized = prefix.replace(/^\.?\//, "");
+    for (const filePath of newOrModifiedCards.keys()) {
+      if (filePath.replace(/^\.?\//, "").startsWith(normalized)) return { prefix, found: true, foundAt: filePath };
+    }
+    return { prefix, found: false };
+  });
   const shouldReadChecks = (test.should_read ?? []).map((file) => ({
     file,
     wasRead: behavior.filesRead.some((read) => read.includes(file)),
@@ -69,6 +76,7 @@ export function runChecks(
     notMatchesChecks,
     containsAnyCheck,
     cardsContainChecks,
+    cardsNotUnderChecks,
     shouldReadChecks,
     shouldReadAnyCheck,
     shouldNotReadChecks,
@@ -83,6 +91,7 @@ export function automatedChecksPassed(checks: AutomatedChecks): boolean {
     checks.notMatchesChecks.every((check) => !check.found) &&
     (checks.containsAnyCheck?.found ?? true) &&
     checks.cardsContainChecks.every((check) => check.found) &&
+    checks.cardsNotUnderChecks.every((check) => !check.found) &&
     checks.shouldReadChecks.every((check) => check.wasRead) &&
     (checks.shouldReadAnyCheck?.wasRead ?? true) &&
     checks.shouldNotReadChecks.every((check) => !check.wasRead) &&

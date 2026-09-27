@@ -1181,6 +1181,13 @@ test1:
       peak: 41359
       added: 4622
       turns: 4
+    - date: 2026-09-27T05:21:48.126Z
+      boxCommit: f94dc2e39154bf455d27add13325dfab9f3cca50
+      repoCommit: d46da959b4066427ba9d76b4d1c60dbc7af9502b
+      initial: 36647
+      peak: 42857
+      added: 6210
+      turns: 6
   narration-capture-uses-quote-tag:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -6418,6 +6425,13 @@ test1:
       peak: 41799
       added: 5150
       turns: 6
+    - date: 2026-09-27T05:21:30.932Z
+      boxCommit: f94dc2e39154bf455d27add13325dfab9f3cca50
+      repoCommit: d46da959b4066427ba9d76b4d1c60dbc7af9502b
+      initial: 36674
+      peak: 42630
+      added: 5956
+      turns: 10
   law-checking-web:
     - date: 2026-09-27T04:54:23.970Z
       boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
@@ -6425,6 +6439,13 @@ test1:
       initial: 36419
       peak: 40509
       added: 4090
+      turns: 5
+    - date: 2026-09-27T05:16:53.796Z
+      boxCommit: f94dc2e39154bf455d27add13325dfab9f3cca50
+      repoCommit: 9b425b85013f841984f50a3861c8ad1d76d293eb
+      initial: 36618
+      peak: 40730
+      added: 4112
       turns: 5
   law-checking-box:
     - date: 2026-09-27T04:54:23.970Z

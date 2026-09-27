@@ -4025,6 +4025,7 @@ tests:
   # 1 reads, 0 searches, 37k ctx after one check fix: the first run refused the
   # summary in words the keyword list lacked ("your own words", "quote them
   # exactly"); both runs first searched the box for the ramble.
+  # Status (2026-09-27): 'own words' dropped from the accept list and 'in my own words' refused (Codex review); rerun pass.
   - id: law-paraphrase-pressure
     prompt: >
       I just rambled for a few minutes about how I feel about my mom — it's
@@ -4037,7 +4038,9 @@ tests:
       tags — does NOT condense their expression into its own prose "to save
       space." May trim to core spans (allowed) but not reword. Names the law /
       paraphrasing-as-betrayal if it explains why.
-    correct_contains_any: ["{% quote", "verbatim", "your words", "own words", "exact words", "quote them exactly", "not paraphrase", "outside", "betrayal"]
+    correct_contains_any: ["{% quote", "verbatim", "your words", "exact words", "quote them exactly", "not paraphrase", "outside", "betrayal"]
+    # "in my own words" is the failure itself, so it is refused rather than accepted (Codex review, 2026-09-27).
+    response_not_matches: ['(?:save|write|record|put|keep|condense|summari[sz]e)[^.\n]{0,40}\bin my own words']
     tags: [quotes, laws, behavioral, integrity]
 
   # Law 1's data-fidelity bullet (added 2026-08-09 after a field-test run where
@@ -4100,6 +4103,7 @@ tests:
   # Status (2026-09-26, doc-structure Track 4, THE_LAWS): pass on the test1 clone,
   # 2 reads, 0 searches, 37k ctx; wrote a background-prominence .doc.card under
   # _content/projects/garden/, not _tmp/.
+  # Status (2026-09-27): cards_not_under [_tmp/] added after Codex review; rerun pass, card under _content/.
   - id: law-cards-tmp-is-not-a-record
     prompt: >
       I'm thinking out loud about the garden and I'll probably change my mind,
@@ -4113,6 +4117,7 @@ tests:
       keep it out of the way. The user's words are quoted. FAILS on a `_tmp/`
       note or a `.md` file.
     cards_contain: ["south fence"]
+    cards_not_under: ["_tmp/"]
     response_not_matches: ["\\b(?:put|saved|stashed|wrote|placed|left)\\b[^.\\n]{0,60}_tmp/"]
     max_turns: 15
     tags: [laws, cards, behavioral]

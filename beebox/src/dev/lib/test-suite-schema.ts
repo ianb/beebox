@@ -38,6 +38,8 @@ export const auditTestSchema = z.object({
    */
   response_not_matches: z.array(regexPatternSchema).optional(),
   cards_contain: z.array(z.string()).optional(),
+  /** Box-relative directory prefixes no created or modified card may sit under (`_tmp/`). */
+  cards_not_under: z.array(z.string()).optional(),
   should_read: z.array(z.string()).optional(),
   /** At least one path fragment must appear in observed reads. */
   should_read_any: z.array(z.string()).min(1).optional(),

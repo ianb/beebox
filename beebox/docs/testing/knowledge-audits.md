@@ -110,6 +110,7 @@ Each entry in `knowledge-audits.yaml` has these fields:
   when the required relationship has legitimate wording variation that a list
   of exact substrings would overfit.
 - `cards_contain` — strings that must appear in card files created by the agent.
+- `cards_not_under` — box-relative directory prefixes (`_tmp/`) no card the agent created or modified may sit under.
 - `should_read` — files the agent should read before answering.
 - `should_read_any` — alternative files, at least one of which the agent should
   read. Use this when generated guidance and its installed skill are equivalent

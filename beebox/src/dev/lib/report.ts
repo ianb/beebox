@@ -217,6 +217,20 @@ function formatShouldSearch(checks: Checks): string[] {
   return [`- ${check.found ? "\u2713" : "\u2717"} Searched (${check.where})${detail}`];
 }
 
+/** The checks over cards the agent created or modified. */
+function formatCardChecks(checks: Checks): string[] {
+  const lines: string[] = [];
+  for (const c of checks.cardsContainChecks) {
+    const detail = c.found && c.foundIn ? ` (in ${c.foundIn})` : "";
+    lines.push(`- ${c.found ? "\u2713" : "\u2717"} Card contains "${c.expected}"${detail}`);
+  }
+  for (const c of checks.cardsNotUnderChecks) {
+    const detail = c.found && c.foundAt ? ` (${c.foundAt})` : "";
+    lines.push(`- ${c.found ? "\u2717" : "\u2713"} No card under "${c.prefix}"${detail}`);
+  }
+  return lines;
+}
+
 function formatCheckLines(checks: Checks): string[] {
   const checkLines = formatPositiveTextChecks(checks);
   for (const c of checks.notContainsChecks) {
@@ -233,10 +247,7 @@ function formatCheckLines(checks: Checks): string[] {
     const detail = c.found && c.matched ? ` (matched "${c.matched}")` : "";
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains any of [${c.options.map((o) => `"${o}"`).join(", ")}]${detail}`);
   }
-  for (const c of checks.cardsContainChecks) {
-    const detail = c.found && c.foundIn ? ` (in ${c.foundIn})` : "";
-    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Card contains "${c.expected}"${detail}`);
-  }
+  checkLines.push(...formatCardChecks(checks));
   for (const c of checks.shouldReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2713" : "\u2717"} Read ${c.file}`);
   }

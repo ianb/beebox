@@ -107,3 +107,22 @@ An audit without `should_search` carries no search check, so it cannot fail one.
 runChecks(auditTest, { behavior: behavior("answer"), newOrModifiedCards: new Map() }).shouldSearchCheck
 => undefined
 ```
+
+## `cards_not_under` refuses a card written under a forbidden prefix
+
+A card that landed under `_tmp/` fails the check even when the response never
+names the path; a card under `_content/` passes.
+
+```ts
+const tmpTest = auditTestSchema.parse({ ...auditTest, cards_not_under: ["_tmp/"] });
+const underTmp = runChecks(tmpTest, {
+  behavior: behavior("Saved it."),
+  newOrModifiedCards: new Map([["./_tmp/Garden.doc.card", "south fence"]]),
+});
+const underContent = runChecks(tmpTest, {
+  behavior: behavior("Saved it."),
+  newOrModifiedCards: new Map([["./_content/Garden.doc.card", "south fence"]]),
+});
+JSON.stringify({ tmp: underTmp.cardsNotUnderChecks[0], content: underContent.cardsNotUnderChecks[0] })
+=> {"tmp":{"prefix":"_tmp/","found":true,"foundAt":"./_tmp/Garden.doc.card"},"content":{"prefix":"_tmp/","found":false}}
+```
