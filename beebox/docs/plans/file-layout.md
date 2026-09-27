@@ -797,6 +797,12 @@ the rule or dropping it).
   for rule 8 to have one root. Where under `src/` (`src/scripts/` or
   `src/dev/`) is a move-plan decision.
 
+- **Data files.** The rules treat data files (fixtures, Markdown, JSON,
+  assets) as opaque. A proposal to replace that with placement rules per kind
+  (directory guidance, tool configuration, consumed data following its
+  readers) was raised on 2026-09-27; the boxholder is reviewing data rules in
+  another workstream, so this plan leaves the Ontology entry as written.
+
 ## Knowledge audits
 
 Not applicable: these rules are dev-repo guidance, invisible to box agents.

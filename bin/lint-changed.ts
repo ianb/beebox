@@ -32,14 +32,14 @@ import { packageOwnerDirs } from "./workspace-packages.js";
 const REPO_ROOT = join(import.meta.dirname, "..");
 
 /**
- * What `lint:backend` covers: `eslint src/ scripts/ test/ user-stories/` from
- * beebox, whose config ignores `src/frontend/**` and `**\/*.mjs`.
+ * What `lint:backend` covers: `eslint src/ test/` from beebox, whose config
+ * ignores `src/frontend/**` and `**\/*.mjs`.
  */
-const BACKEND_ROOTS = ["src", "scripts", "test", "user-stories"];
+const BACKEND_ROOTS = ["src", "test"];
 
-/** What `lint:frontend` covers: `eslint src/` from beebox/src/frontend. */
+/** What `lint:frontend` covers: `eslint src/ test/` from beebox/src/frontend. */
 const FRONTEND_DIR = "beebox/src/frontend";
-const FRONTEND_ROOT = `${FRONTEND_DIR}/src/`;
+const FRONTEND_ROOTS = [`${FRONTEND_DIR}/src/`, `${FRONTEND_DIR}/test/`];
 
 // `{ts,tsx,js,jsx}` is the preset's own file glob (personal-vibe-check/preset.ts
 // `exts`); `.cjs` rides eslint's default flat-config files. `.mjs` is in the
@@ -75,10 +75,12 @@ export function splitBeeBoxTargets(paths: string[]): BeeBoxTargets {
   const frontend: string[] = [];
   for (const path of paths) {
     // The whole frontend subtree is in the backend config's `ignores`, but only
-    // its `src/` is in `lint:frontend`'s argument — so `src/frontend/vite.config.ts`
-    // is linted by neither, and must not be handed to either.
+    // its `src/` and `test/` are in `lint:frontend`'s arguments — so
+    // `src/frontend/vite.config.ts` is linted by neither, and must not be handed
+    // to either.
     if (path.startsWith(`${FRONTEND_DIR}/`)) {
-      if (path.startsWith(FRONTEND_ROOT) && hasExtension(path, FRONTEND_EXTENSIONS)) {
+      const inFrontendRoot = FRONTEND_ROOTS.some((root) => path.startsWith(root));
+      if (inFrontendRoot && hasExtension(path, FRONTEND_EXTENSIONS)) {
         frontend.push(path.slice(`${FRONTEND_DIR}/`.length));
       }
       continue;

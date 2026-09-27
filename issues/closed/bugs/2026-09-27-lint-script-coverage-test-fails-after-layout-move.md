@@ -5,7 +5,14 @@ discovered-by: agent
 filed-by: agent
 discovered-in: worktree-file-layout — while wiring up test running for browse's doctests
 area: beebox
+resolution: implemented
 ---
+
+Fixed on `worktree-file-layout` in the same commit that closes this item: the
+fold of `beebox/scripts/` and `beebox/user-stories/` into `src/` caused it, so
+it was the layout work's own regression, not a pre-existing failure.
+`BACKEND_ROOTS` is now `src`, `test`; the frontend roots gained `test/` for the
+frontend package's new test root; both guard tests were updated.
 
 Root `pnpm test` fails on a clean checkout at the tip of `worktree-file-layout`
 (commit `d5f271f0e`, after the "Layout moves" series). `bin/lint-script-coverage.test.ts`
