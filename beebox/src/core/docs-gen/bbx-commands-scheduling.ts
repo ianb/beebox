@@ -76,6 +76,8 @@ export function bbxCommandsScheduling(): string[] {
     "connector, disabled) show as blocked/disabled, never as failures. A task whose",
     "last run completed its work but whose check reached no verdict shows as `?`",
     "inconclusive — unknown, not broken — and does not affect the exit code.",
+    "`inconclusive` means the last run did its work but its check never reached a",
+    "verdict — unknown, not broken; do not redo the work on that basis.",
     "",
     "## bbx scheduler",
     "",

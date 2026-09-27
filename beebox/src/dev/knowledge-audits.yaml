@@ -804,6 +804,7 @@ tests:
   # cards (interface-as-cards) rather than `bbx session` (which still exists and
   # bbx-session-how-to-use passes). See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
   - id: list-bbx-commands
     prompt: "What bbx commands are available to you? List the ones you'd use most."
     expected_level: knows_directly
@@ -920,6 +921,7 @@ tests:
     correct_contains: ["bbx validate"]
     tags: [cli]
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
   - id: bbx-session-exists
     prompt: "I want to review the transcript of a past chat — what command gives me that?"
     expected_level: knows_directly
@@ -960,6 +962,7 @@ tests:
       hand-edit would silently falsify (reconcile never overwrites a set value,
       so an edit sticks).
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 41k ctx.
   - id: bbx-session-how-to-use
     prompt: "How do I use bbx session to catch up on just the conversation from the last day, without tool-call noise?"
     expected_level: knows_about
@@ -971,6 +974,7 @@ tests:
       to discover --since and --dialogue-only rather than guessing flags.
       A good answer lands on something like "bbx session --since 1d --dialogue-only".
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 2 reads, 2 searches, 41k ctx.
   - id: bbx-chat-self-note-exists
     prompt: "You are running as a scheduled sub-agent (daily rumination, weekly research, etc.). After you've done your work and committed, how do you leave a short note in the live chat session so the boxholder sees what you did when they next revisit chat?"
     expected_level: knows_directly
@@ -1113,6 +1117,7 @@ tests:
     correct_contains: ["--directive"]
     tags: [procedures, cli]
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 41k ctx.
   - id: procedure-in-job
     prompt: "How does a procedure actually get run — what kicks one off?"
     expected_level: knows_about
@@ -1310,6 +1315,7 @@ tests:
     watch_for: "Traces actual flow (connector → wakeup → inbox) rather than hypothetical"
     tags: [connectors]
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 5 reads, 5 searches, 41k ctx.
   - id: outbound-notifications
     prompt: "How would outbound notifications work?"
     expected_level: knows_about
@@ -1464,6 +1470,7 @@ tests:
       *.telegram-message.card output card (status: pending). The failure mode is
       marking the message sent/delivered itself.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
   - id: chat-thread-seen-note
     prompt: "You're processing a chat-thread card and decide to acknowledge the new messages without replying. Can you leave yourself a note to pick up on your next pass over this thread? How?"
     expected_level: knows_about
@@ -1477,11 +1484,13 @@ tests:
       read ambiguously and drew the agent to `bbx chat self-note` (the live-chat
       mechanism, a different context).
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
+  # should_read named node_modules/beebox/box-docs/card-chat-job.md, which the runner refuses on a clone whose node_modules/beebox is a symlink (UnsafeAuditFixturePathError); it now names the bare filename.
   - id: chat-job-processing
     prompt: "I have a chat job card. Walk me through how to process it."
     expected_level: knows_about
     watch_for: "Reads job, follows thread ref, finds new messages, responds or acknowledges, commits, finishes"
-    should_read: ["node_modules/beebox/box-docs/card-chat-job.md"]
+    should_read: ["card-chat-job.md"]
     correct_contains: ["thread", "bbx finish"]
     tags: [chat, jobs]
 
@@ -3096,6 +3105,7 @@ tests:
   # passed 1/1 without reads. It kept content edits with the card/draft and
   # named sync or template damage as the system-level exception.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 5 reads, 3 searches, 41k ctx.
   - id: agent-feedback-skill-opportunity
     prompt: >
       While doing an unrelated cleanup task, you discover that bbx validate
@@ -3147,6 +3157,8 @@ tests:
       The directory is an agent-to-developer observation inbox, not a general
       user-feedback or question channel.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 41k ctx.
+  # The first run answered "**No.**" correctly but failed the `^\s*No` check on the bold markup; the check is now `^\W*No`.
   - id: beebox-system-feedback-boundary
     prompt: >
       While working in this box, you notice a project card gives the wrong
@@ -3158,7 +3170,7 @@ tests:
       Neither belongs in the Bee Box system feedback inbox. Correct or discuss
       the project card and draft in their normal box workflow. Reserve the
       feedback directory for defects or friction in Bee Box software itself.
-    correct_matches: ["^\\s*No\\b"]
+    correct_matches: ["^\\W*No\\b"]
     tags: [feedback, cards, boundary]
 
   - id: agent-feedback-card-uses-it
@@ -4282,6 +4294,7 @@ tests:
     correct_contains: ["June 17"]
     tags: [search, cards, behavioral]
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 41k ctx.
   - id: search-over-grep
     prompt: >
       Which cards in this box mention a boiler serial number? How
@@ -4537,6 +4550,7 @@ tests:
   # vocabulary (`stt="hq"`) and adding the retranscribe-clause exception. 1/1
   # passes, 0 reads, 0 searches, 54k ctx — unaffected by the change.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
   - id: chat-last-audio-when
     prompt: >
       My dictated messages sometimes come out mangled. If a transcription
@@ -4578,6 +4592,7 @@ tests:
   # it can be declined/unavailable, from the agent-guide line + chat-prompt
   # sentence alone.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
   - id: chat-screenshot-when
     prompt: >
       A user in chat says a custom view they have open "looks broken — the
@@ -5577,6 +5592,7 @@ tests:
   # for JSONL files under ~/.claude/projects/ by hand or grepping the
   # box for a "chat log".
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 1 reads, 1 searches, 41k ctx.
   - id: review-previous-chat-session
     prompt: "How would you review what was said in a previous chat session?"
     expected_level: knows_directly
@@ -6349,6 +6365,7 @@ tests:
   # credentialed cycle by its old name, and reaching for an operator verb at
   # all.
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 2 reads, 1 searches, 41k ctx.
   - id: bbx-surface-force-wakeup
     prompt: "The boxholder mounted a Drive folder a minute ago and asks you: did it sync yet? How do you find out right now rather than waiting for the next hourly run?"
     expected_level: knows_directly
@@ -6361,6 +6378,7 @@ tests:
     correct_contains: ["force-wakeup"]
     tags: [bbx-surface]
 
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 4 reads, 4 searches, 42k ctx.
   - id: bbx-surface-engine-boundary
     prompt: "The box's web UI is not responding. The boxholder asks you to get it back up. What do you do?"
     expected_level: knows_directly
@@ -6372,6 +6390,33 @@ tests:
       bbx engine serve / hub / scheduler start, and does not claim to have
       restarted anything.
     tags: [bbx-surface]
+
+  # === Agent guide Track 3: rows moved out of COMMANDS ===
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 3 reads, 0 searches, 41k ctx.
+  - id: health-inconclusive-meaning
+    prompt: >
+      `bbx health` lists the nightly digest task as `?` inconclusive. Should you
+      run the digest's work again to be safe? Answer in two sentences; do not
+      run anything.
+    expected_level: knows_about
+    watch_for: >
+      No: inconclusive means the last run did its work but its check reached no
+      verdict — unknown, not broken — so the work is not redone on that basis.
+    should_read_any: ["bbx-commands.md"]
+    correct_matches:
+      - '^\W*No\b'
+    correct_contains_any: ["verdict", "unknown", "not broken"]
+    tags: [bbx-surface, health, agent-guide-moves]
+  # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 3 reads, 1 searches, 41k ctx.
+  # The first run, with the `bbx calendar` line cut from COMMANDS, read the .ics files by hand; the line is back and the second run used the command.
+  - id: calendar-upcoming-events
+    prompt: "What's on my calendar for the next three days?"
+    expected_level: knows_about
+    watch_for: >
+      Runs `bbx calendar 3d` (or `bbx calendar` and filters) rather than listing
+      .ics files by hand or saying it cannot see the calendar.
+    bash_contains: ["bbx calendar"]
+    tags: [calendar, agent-guide-moves]
 
   # === Static site publishing ===
   # The nested publication guide is intentionally lazy: agents should find

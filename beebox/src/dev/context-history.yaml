@@ -1590,6 +1590,13 @@ test1:
       peak: 46080
       added: 4742
       turns: 3
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41180
+      peak: 50160
+      added: 8980
+      turns: 9
   list-connectors:
     - date: 2026-07-03T11:01:45.769Z
       boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
@@ -1621,6 +1628,13 @@ test1:
       peak: 43055
       added: 1874
       turns: 8
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41172
+      peak: 50951
+      added: 9779
+      turns: 11
   how-schedules-work:
     - date: 2026-07-03T11:01:45.769Z
       boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
@@ -1866,6 +1880,13 @@ test1:
       peak: 59294
       added: 18105
       turns: 5
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41211
+      peak: 44582
+      added: 3371
+      turns: 4
   chat-thread-invariant:
     - date: 2026-07-03T11:14:29.560Z
       boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
@@ -3060,6 +3081,13 @@ test1:
       peak: 42499
       added: 1306
       turns: 3
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41011
+      peak: 48790
+      added: 7779
+      turns: 8
   contains-stale-response:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -4976,6 +5004,13 @@ test1:
       peak: 53467
       added: 2698
       turns: 4
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41919
+      peak: 50189
+      added: 8270
+      turns: 9
   todo-agent-own-followup:
     - date: 2026-09-17T14:59:08.842Z
       boxCommit: 9d3e7295d082ce2d5c66096c20be33312dd6ed1e
@@ -5212,6 +5247,13 @@ test1:
       peak: 57897
       added: 8795
       turns: 15
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41228
+      peak: 48340
+      added: 7112
+      turns: 13
   beebox-system-feedback-boundary:
     - date: 2026-09-21T12:22:55.408Z
       boxCommit: 3a3ec74960cddf76477a1a6d644f13eeafc596e8
@@ -5234,6 +5276,20 @@ test1:
       peak: 48929
       added: 0
       turns: 1
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41235
+      peak: 44810
+      added: 3575
+      turns: 5
+    - date: 2026-09-27T01:50:49.975Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41287
+      peak: 41287
+      added: 0
+      turns: 2
   iphone-photos-album-setup:
     - date: 2026-09-24T22:50:43.911Z
       boxCommit: 64bbee98d54cdb4e6c8152db70cc00fc86a533b2
@@ -5371,6 +5427,21 @@ test1:
       peak: 48369
       added: 5979
       turns: 4
+  calendar-upcoming-events:
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41175
+      peak: 53815
+      added: 12640
+      turns: 14
+    - date: 2026-09-27T01:50:49.975Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41258
+      peak: 46671
+      added: 5413
+      turns: 9
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

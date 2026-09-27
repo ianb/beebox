@@ -100,7 +100,7 @@ function bbxCommandsTemplates(): string[] {
 }
 
 /**
- * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, reactor, finish.
+ * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, session, reactor, finish.
  */
 function bbxCommandsCore(): string[] {
   return [
@@ -185,6 +185,20 @@ function bbxCommandsCore(): string[] {
     "```",
     "bbx status",
     "```",
+    "",
+    "## bbx session",
+    "",
+    "Read a past session's transcript (chats, wakeups, job runs).",
+    "",
+    "```",
+    "bbx session [<id>] [--list] [--latest] [--dialogue-only] [--tool-report] [--since <when>]",
+    "```",
+    "",
+    "`--list` to find recent sessions, `--latest` or `<id>` to view (`--dialogue-only` for just",
+    "the conversation, `--tool-report` for tool usage, `--since 2d` for a",
+    "window). To *search* a large transcript, spawn a subagent (Task tool) to",
+    "read it and report back the relevant part instead of pulling the whole",
+    "transcript into your own context.",
     "",
     "## bbx reactor",
     "",

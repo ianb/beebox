@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after ABOUT_CARDS.
-  guide_words: 8016
-  always_loaded_words: 12808
+  # 2026-09-26, after COMMANDS.
+  guide_words: 7535
+  always_loaded_words: 12327
   uncited_words_per_section: 60
 
 lint:
@@ -19,6 +19,7 @@ lint:
   covered_sections:
     - THE_LAWS
     - ABOUT_CARDS
+    - COMMANDS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -374,6 +375,104 @@ rows:
     bin: delete
     reason: Each warning's own text says what is wrong and how to fix it.
     audits: [validate-card]
+
+  # --- COMMANDS ---
+  - id: commands.reference
+    rule: Card operations are in ABOUT_CARDS; the full `bbx` reference, every flag included, is box-docs/bbx-commands.md.
+    handle: COMMANDS
+    bin: core
+    reason: The section's pointer line; it tells an agent that the short list is not the whole surface and where the rest is.
+    audits: [list-bbx-commands]
+    mechanics: box-docs/bbx-commands.md
+  - id: commands.force-wakeup
+    rule: "`bbx force-wakeup [--connector <name>]` runs a real wakeup on the server now and reports what each connector did; it is the only way to answer \"did it sync?\" now."
+    handle: COMMANDS
+    bin: core
+    reason: The everyday sync question, and the obvious alternative (`bbx engine wakeup` from the agent's shell) silently syncs nothing and reports "nothing new".
+    audits: [bbx-surface-force-wakeup]
+  - id: commands.session
+    rule: "`bbx session` reads a past session's transcript (chats, wakeups, job runs)."
+    handle: COMMANDS
+    bin: core
+    reason: Nothing else tells an agent the command exists, and without it an agent hunts JSONL files under ~/.claude. The draft had the whole bullet indirect; the existence stays core, the flags moved.
+    audits: [bbx-session-exists, review-previous-chat-session]
+  - id: commands.session-flags
+    rule: "`bbx session` flags (`--list`, `--latest`, `--dialogue-only`, `--tool-report`, `--since`), and reading a large transcript through a subagent."
+    handle: COMMANDS
+    bin: indirect
+    reason: Usage detail of one command, and `bbx session --help` shows the flags too; bbx-commands.md had no entry, so one was added.
+    audits: [bbx-session-how-to-use]
+    mechanics: box-docs/bbx-commands.md
+  - id: commands.self-note
+    rule: From a scheduled run, `bbx chat self-note "<body>"` leaves the boxholder a record in the live chat session that chat does not answer.
+    handle: COMMANDS
+    bin: core
+    reason: Scheduled sub-agents load the guide but not the chat prompt, so the guide is the only place they learn how to report back.
+    audits: [bbx-chat-self-note-exists]
+  - id: commands.chat-family
+    rule: "`bbx chat screenshot`, `whats-changed`, `retranscribe`, and `ask-about-audio`, and when each applies."
+    handle: COMMANDS
+    bin: delete
+    reason: They work only in a live chat session, and the chat system prompt, loaded there, states each with when to use it; bbx-commands.md has the rest. The draft had this indirect.
+    audits: [chat-screenshot-when, chat-last-audio-when]
+  - id: commands.seen-note
+    rule: "While processing a chat-thread card, a note to yourself goes in the `text:` of the `kind: seen` entry you append, not in `bbx chat self-note`."
+    handle: COMMANDS
+    bin: indirect
+    reason: Applies only to chat-thread processing, and the chat-thread card rule already shows the `text:` note; nothing moved.
+    audits: [chat-thread-seen-note]
+    mechanics: card-chat-thread rule
+  - id: commands.health
+    rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
+    handle: COMMANDS
+    bin: indirect
+    reason: Needed only when reading scheduled-task health. The guide keeps a one-line pointer so the command is not mistaken for an operator verb; the inconclusive rule moved.
+    audits: [health-inconclusive-meaning]
+    mechanics: box-docs/bbx-commands.md
+  - id: commands.finish
+    rule: "`bbx finish <job-file>` is the required closing step of a job: it deletes the job card and commits."
+    handle: COMMANDS
+    bin: indirect
+    reason: Applies only while processing a job, and the reactor prompt and each job type's card rule already say it where the job runs; nothing moved.
+    audits: [chat-job-processing]
+    mechanics: the reactor prompt (src/core/reactor/prompts.ts) and each job type's card rule
+  - id: commands.calendar
+    rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m)."
+    handle: COMMANDS
+    bin: core
+    reason: Binned indirect first (the calendar skill and bbx-commands.md carry it), but with the line gone the calendar-upcoming-events audit read the .ics files by hand instead, so the line is back. "What's on my calendar" is an everyday ask that does not look like calendar work until the agent is in it.
+    audits: [calendar-upcoming-events]
+    mechanics: calendar skill
+  - id: commands.feedback-skill
+    rule: When Bee Box itself behaves confusingly, use the `beebox-system-feedback` skill and record a `.doc.card` in `_config/feedback/`.
+    handle: COMMANDS
+    bin: delete
+    reason: The skill's description, loaded on every turn, says when to use it and what not to use it for, and its body says where the record goes.
+    audits: [agent-feedback-skill-opportunity, beebox-system-feedback-boundary]
+  - id: commands.search-pointer
+    rule: "`bbx search` over `grep` for finding cards by content."
+    handle: COMMANDS
+    bin: delete
+    reason: SEARCHING states it in full.
+    audits: [search-over-grep]
+  - id: commands.procedure-run
+    rule: "`bbx procedure run <name-or-path>` runs a procedure."
+    handle: COMMANDS
+    bin: delete
+    reason: PROCEDURES states it beside the list of this box's procedures.
+    audits: [procedure-in-job]
+  - id: commands.system-run
+    rule: "`bbx engine wakeup`, `bbx reactor`, and `bbx finalize` are run by the system, not the agent."
+    handle: COMMANDS
+    bin: delete
+    reason: The agent recognizes them from git log trailers and bbx-commands.md; the `bbx engine` sentence and the force-wakeup line cover the boundary that matters.
+    audits: [bbx-surface-force-wakeup, outbound-notifications]
+  - id: commands.engine-not-yours
+    rule: Anything under `bbx engine` is an operator or machine command; ask the boxholder instead of running one.
+    handle: COMMANDS
+    bin: core
+    reason: An agent asked to fix a server or sync reaches for these, and several refuse an agent session or do the wrong thing from its shell.
+    audits: [bbx-surface-engine-boundary]
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
