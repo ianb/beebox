@@ -65,7 +65,7 @@ import type BetterSqlite3Module from "better-sqlite3";
 // cleanly (both `tsc --noEmit` and `node --import tsx` resolve it via the
 // `.js`-extension NodeNext convention) — no awkwardness to fall back from.
 import { resolveClaudeCodeBinary } from "../beebox/src/core/sdk-binary-path.js";
-import { isRecord } from "../beebox/src/lib/is-record.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 import {
   createRealRun,
   MissingEnginesNodeError,

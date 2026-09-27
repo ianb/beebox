@@ -13,7 +13,7 @@
  * Does NOT create new documents on Drive — only pulls and pushes edits.
  */
 
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { Connector, SyncResult } from "../../connector.js";
 import { getGoogleAuth } from "../../google/auth.js";
 import { isGoogleServiceAllowed } from "../../core/box/config.js";
@@ -35,7 +35,7 @@ import { stampGlinkCard } from "./card-stamp.js";
 import { syncDriveFile } from "./file-sync.js";
 import { syncFolderCard } from "./folder-sync.js";
 import { createFolderSyncDeps } from "./sync-deps.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { withDriveMirrorLock } from "./lock.js";
 
 // Ensure handlers are registered

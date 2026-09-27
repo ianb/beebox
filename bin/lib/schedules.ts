@@ -17,7 +17,7 @@ import * as path from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 /** A refusal this module raises for input it will not guess about. The base of
  *  every schedule failure, so `instanceof ScheduleError` still catches them all. */

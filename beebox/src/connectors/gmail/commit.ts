@@ -3,7 +3,7 @@
  * body summarizing the threads pulled in a sync (new vs. updated, capped).
  */
 
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export interface ThreadNote {
   subject: string;

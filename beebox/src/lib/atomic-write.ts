@@ -22,7 +22,7 @@
 import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** fsync a directory so a rename's new dir entry is durable across a crash.
  *  Platforms that can't fsync a directory handle surface a benign errno we

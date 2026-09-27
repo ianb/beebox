@@ -14,7 +14,7 @@ import * as path from "node:path";
 import ICAL from "ical.js";
 import { getGoogleAuth } from "../google/auth.js";
 import { asIcalTime } from "../connectors/google-calendar/utils.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 interface EventFileEntry {
   filename: string;

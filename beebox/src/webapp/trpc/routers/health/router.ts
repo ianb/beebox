@@ -18,7 +18,7 @@ import { getDeepgramCredentials } from "../../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey } from "../../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../../core/transcription/dispatch/core.js";
 import { getBoxShape } from "../../../../lib/box-shape.js";
-import { isRecord } from "../../../../lib/is-record.js";
+import { isRecord } from "../../../../shared/is-record.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
 import { engineHealthChecks } from "./checks/engine.js";
 import { googleAuthHealthChecks } from "./checks/google.js";

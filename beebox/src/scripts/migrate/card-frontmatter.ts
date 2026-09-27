@@ -21,7 +21,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const CONTENT_TYPE_HEADER = "---\ncontent-type: application/x-card+xml\n---\n";
 const FRONTMATTER_OPEN = /^---\r?\n/;

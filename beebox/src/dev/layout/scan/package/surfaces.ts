@@ -17,7 +17,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import type { LayoutFile, PublicSurface } from "../../model.js";
-import { isRecord } from "../../../../lib/is-record.js";
+import { isRecord } from "../../../../shared/is-record.js";
 import { dirOf } from "../../graph.js";
 import { parseSourceFile } from "../imports.js";
 import { isRepoFile, resolveRepoRelative } from "../resolve.js";

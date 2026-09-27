@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { splitCardContent } from "../../exports/cards.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../../schemas/glink.js";
 import { createGfolderTemplate } from "../../schemas/gfolder.js";
 import type { DriveFile } from "../../services/google-drive/core.js";

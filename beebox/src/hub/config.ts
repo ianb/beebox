@@ -19,7 +19,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
 import { requireBoxRoot } from "../lib/box-shape.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any

@@ -13,7 +13,7 @@ import {
   createCliContext,
   createCollectorContext,
 } from "../../core/command-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 interface SearchCliOptions {
   kind?: string[];

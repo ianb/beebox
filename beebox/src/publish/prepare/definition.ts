@@ -5,7 +5,7 @@ import { lstat, open } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { pubIdSchema } from "../manifest.js";
 
 const nameSchema = z.string().regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/, "use a lowercase slug with letters, digits, and hyphens");

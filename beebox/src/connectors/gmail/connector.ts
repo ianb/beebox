@@ -4,7 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../../core/box/config.js";
 import { truncateTitle } from "../../core/file-summary.js";
-import { errorMessage, errnoCode } from "../../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { BOX_DIRS, getBoxDir } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
@@ -25,7 +25,7 @@ import { uploadPendingDrafts } from "./drafts/core.js";
 import { resolveFakeGmailService } from "../../field-test/fake-gmail-gate.js";
 import { getGoogleAuth } from "../../google/auth.js";
 import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "../../google/sync-skipped.js";
-import { ok, err, type Result } from "../../lib/result.js";
+import { ok, err, type Result } from "../../shared/result.js";
 import { evaluateGmailRules } from "./rules.js";
 import { parseGmailTransientState, type GmailTransientState } from "./state.js";
 import {

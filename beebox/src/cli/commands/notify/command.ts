@@ -25,13 +25,13 @@
 import * as fs from "node:fs/promises";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../../core/notify-boxholder.js";
 import { describeRoute, notifyRoute, onServer, type NotifyRoute } from "./route.js";
 import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } from "../../../core/notification/intent.js";
 import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../../core/notification/target.js";
 import { printDryRun } from "./dry-run.js";
-import { err, ok, type Result } from "../../../lib/result.js";
+import { err, ok, type Result } from "../../../shared/result.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
 import { MEMORY_ENV } from "../../../core/schedule/memory.js";
 

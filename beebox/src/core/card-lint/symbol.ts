@@ -8,7 +8,7 @@
  */
 
 import type { LintIssue } from "../../cards/lint-format.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { countGraphemes } from "../../shared/graphemes.js";
 import { isCssColour, CSS_COLOUR_FORMS } from "../../shared/css-colour.js";
 import { MAX_GLYPH_GRAPHEMES } from "../../shared/card-symbol.js";

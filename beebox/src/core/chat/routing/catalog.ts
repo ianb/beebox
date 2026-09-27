@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml, YAMLParseError } from "yaml";
 import { z } from "zod";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxTime } from "../../../lib/time.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
 import { isRealUserMessage } from "../../../cli/lib/session-real-user.js";

@@ -20,7 +20,7 @@
  */
 import * as path from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { SURFACE } from "../../cli/surface-data.js";
 
 /**

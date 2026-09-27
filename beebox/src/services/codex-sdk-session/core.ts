@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { CODEX_BOX_SANDBOX } from "./sandbox.js";
-import { toError } from "../../lib/error-guards.js";
+import { toError } from "../../shared/error-guards.js";
 import { declaredPresent } from "../../lib/declared-present.js";
 import type { ChatContentBlock } from "../claude-chat-types.js";
 

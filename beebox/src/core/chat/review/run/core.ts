@@ -19,7 +19,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../../transcript-render.js";
 import { discoverSessions, QUIESCENCE_MS, readSessionWindow, type QualifiedSession } from "../discovery.js";
 import { appliedSpanFor, computeSpanId } from "../span.js";

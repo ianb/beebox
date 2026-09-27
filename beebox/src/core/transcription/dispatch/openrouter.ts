@@ -53,8 +53,8 @@
  */
 
 import ky, { isHTTPError, type HTTPError } from "ky";
-import { isRecord } from "../../../lib/is-record.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { OPENROUTER_BASE_URL } from "../../openrouter.js";
 import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "../voxtral-text.js";
 import { truncateUpstreamBody } from "../upstream-body.js";

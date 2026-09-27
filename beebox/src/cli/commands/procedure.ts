@@ -14,7 +14,7 @@ import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../core/command-runner.js";
 import { procedureOutcome } from "../../core/commands/procedure.js";
 import type { CommandResult } from "../../core/command-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import {

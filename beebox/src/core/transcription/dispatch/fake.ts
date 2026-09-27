@@ -18,7 +18,7 @@ import type {
   TranscriptionError,
   WordTimestamp,
 } from "./core.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /** One scripted transcription result. */
 const fakeTranscriptionEntrySchema = z.object({

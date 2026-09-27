@@ -11,7 +11,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveSessionLogPath } from "./history.js";
 import { resolveChatEngine } from "./engine.js";
 import { loadSessionHistory } from "./load-history.js";

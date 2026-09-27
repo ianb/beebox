@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import type { CommandContext } from "../../command-types.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { createFileTemplate } from "../../../schemas/file.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import {
   PDF_EXTENSION,
   SUPPORTED_IMAGE_EXTENSIONS,

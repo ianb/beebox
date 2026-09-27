@@ -8,7 +8,7 @@
  */
 
 import { resolveRefPath } from "../../shared/ref-path/core.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { SYSTEM_CARD_PATHS } from "../../shared/system-card-paths.js";
 
 export type Target =

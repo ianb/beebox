@@ -16,7 +16,7 @@
 
 import { z } from "zod";
 import { loadBoxTimezone } from "../core/box/config.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { getBoxTime } from "../lib/time.js";
 import type { Connector, SyncResult } from "../connectors.js";
 import { loadTransientState, transientStatePath, updateTransientState } from "../transient-state.js";

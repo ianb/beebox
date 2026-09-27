@@ -18,7 +18,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { CommandContext, CommandResult } from "./command-runner.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { CAPTURE_STAGING_IGNORE_PATTERN } from "../lib/asset-extensions.js";
 
 

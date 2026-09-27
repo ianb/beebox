@@ -35,7 +35,7 @@ import {
   writeAnnexInfoAttributes,
 } from "../info-attributes.js";
 import { findAttachScopes } from "../../../lib/attach-scopes.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { gitignoreIgnoresAssets } from "../../attachments-gitignore.js";
 import { checkAnnexSmudgeHooks } from "./smudge-hooks.js";
 

@@ -9,7 +9,7 @@
  * own members (rule 4).
  */
 
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import type { CommandContext, CommandResult } from "./command-types.js";
 import { scanImportCommand } from "./commands/scan-import/command.js";
 

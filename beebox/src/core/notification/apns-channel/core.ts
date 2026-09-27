@@ -20,7 +20,7 @@ import {
   type ApnsService,
 } from "../../../services/apns.js";
 import { pruneDevicePush, type DevicePushRegistration } from "../../mobile/pairing.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 import { formatTarget } from "../target.js";
 import { buildApnsRequest } from "./payload.js";

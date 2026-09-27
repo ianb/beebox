@@ -19,7 +19,7 @@ import { fileEtag } from "../../../file-etag.js";
 import { boxRelativePath } from "../../../../shared/box-path.js";
 import { extensionToMimetype } from "../../../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../../serving-security.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { probePointer } from "../../../../lib/asset-content.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
 

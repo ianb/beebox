@@ -20,7 +20,7 @@
  * `nodeHandlers[node.type]` is still typed `NodeHandler | undefined`
  * (`noUncheckedIndexedAccess`) for the case where a *deployed* build is
  * older than the Markdoc version actually running — `tolerateNever`
- * (`src/lib/invariant.ts`) covers that gap at runtime: it logs and the
+ * (`src/shared/invariant.ts`) covers that gap at runtime: it logs and the
  * walker degrades by emitting the node's children rather than crashing.
  * Many members share the same "degrade to children" handler — tables,
  * comments, parse errors, and the generic base `node` type — grouped below
@@ -29,7 +29,7 @@
 
 import type { Node, NodeType } from "@markdoc/markdoc";
 
-import { tolerateNever } from "../../../lib/invariant.js";
+import { tolerateNever } from "../../../shared/invariant.js";
 import { emitTag } from "../emit-tags.js";
 
 type NodeHandler = (node: Node, out: string[]) => void;

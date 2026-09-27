@@ -16,7 +16,7 @@ import { getMostActive } from "../../../core/chat/session/history.js";
 import { resumeBulkSessions } from "../../../core/bulk-upload/resume.js";
 import { sweepBulkBatches, type UnfiledBatch, type StrandedBatch } from "../../../core/bulk-upload/sweep.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../../core/bulk-upload/worker/core.js";
-import { startAwakeTimeout, type AwakeTimeout } from "../../../lib/awake-timeout.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 
 /** How much awake time between bulk sweeps (matches capture's cadence). */

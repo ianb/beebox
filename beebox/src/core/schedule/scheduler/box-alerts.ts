@@ -13,7 +13,7 @@
  *   date, which the dashboard check and dismissals read.
  */
 
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { recordScheduleEpisodes } from "./health-alert.js";
 import { refreshGoogleAuth } from "./google-auth-alert.js";
 import { updateConnectorEpisodes } from "./connector-activity-alert.js";

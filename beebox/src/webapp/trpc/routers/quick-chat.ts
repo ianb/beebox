@@ -11,7 +11,7 @@ import { createJevService, serializeJevRequest } from "../../../services/jev.js"
 import { JevError } from "../../../services/jev-wire.js";
 import { getOpenRouterKey } from "../../../core/openrouter.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { errnoCode, toError } from "../../../lib/error-guards.js";
+import { errnoCode, toError } from "../../../shared/error-guards.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { getChatRuntime } from "../../chat-runtime.js";

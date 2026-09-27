@@ -43,7 +43,7 @@ import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { resolveConditions } from "./schedules-alert-lifecycle.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 import { alertIfBailed, startWorkstream } from "./schedules-workstream.js";
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 /** How many log lines a `failed` alert carries as details. */
 const LOG_TAIL_LINES = 40;

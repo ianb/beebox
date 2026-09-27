@@ -8,7 +8,7 @@
  */
 
 import { getGoogleAuth } from "../google/auth.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 async function main() {
   const boxRoot = process.argv[2];

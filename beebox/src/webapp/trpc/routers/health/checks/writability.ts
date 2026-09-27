@@ -2,7 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
-import { errnoCode } from "../../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../../shared/error-guards.js";
 
 export type Writability = "writable" | "missing" | "not-writable";
 

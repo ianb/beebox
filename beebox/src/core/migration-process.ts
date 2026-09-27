@@ -1,6 +1,6 @@
 /** Migration subprocess lifetime: cancellation finishes before ownership releases. */
 import { spawn } from "node:child_process";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 export async function runMigrationProcess(opts: {
   file: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv;

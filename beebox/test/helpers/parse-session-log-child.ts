@@ -10,7 +10,7 @@
  */
 
 import { parseSessionLog, type SessionLogSlice } from "../../src/cli/lib/session.js";
-import { errorMessage } from "../../src/lib/error-guards.js";
+import { errorMessage } from "../../src/shared/error-guards.js";
 
 const [, , logPath, sliceJson] = process.argv;
 if (logPath === undefined || sliceJson === undefined) {

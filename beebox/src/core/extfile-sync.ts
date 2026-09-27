@@ -14,7 +14,7 @@ import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
 import { parse as parseYaml } from "yaml";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external/ref.js";
 import { rootsForBox } from "./external/roots.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "./card-io.js";
 
 export type ExtfileSyncStatus = "stamped" | "unchanged" | "unresolved";

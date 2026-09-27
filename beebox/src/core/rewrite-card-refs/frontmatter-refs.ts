@@ -11,7 +11,7 @@
  * safe-direction gap — never matched, so never corrupted.
  */
 
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** A per-ref transform: given a raw ref token, return it unchanged or rewritten. */
 export type RefTransform = (rawRef: string) => string;

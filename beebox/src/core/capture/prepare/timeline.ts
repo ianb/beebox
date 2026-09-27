@@ -24,7 +24,7 @@ import { createCardSchemaMap } from "../../../schemas.js";
 import { type ImageFields, ImageSchema } from "../../../schemas/image/schema.js";
 import { type AudioFields, AudioSchema } from "../../../schemas/audio.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 async function readImageCard(cardPath: string): Promise<ImageFields | null> {
   try {

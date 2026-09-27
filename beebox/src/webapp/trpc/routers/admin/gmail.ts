@@ -13,7 +13,7 @@ import {
   parseGmailConnectorConfig,
 } from "../../../../connectors/gmail/config.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
-import { errnoCode, errorMessage } from "../../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 import { stageAndCommitPaths } from "../../../../lib/git/core.js";
 import { getBoxDir, BOX_DIRS } from "../../../../lib/paths/core.js";
 import { ownerProcedure } from "../../procedures.js";

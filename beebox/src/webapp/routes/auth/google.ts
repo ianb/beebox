@@ -9,7 +9,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { OAuth2Client } from "google-auth-library";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { signSession, COOKIE_NAME, SESSION_MAX_AGE_MS } from "../../auth.js";
 import { readBasePrefix } from "../../base-prefix.js";
 import { sanitizeReturnTo } from "./login-page.js";

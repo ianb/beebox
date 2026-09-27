@@ -12,7 +12,7 @@
 import ky, { isHTTPError } from "ky";
 import { z } from "zod";
 import { buildMultipartForm, type MultipartPart } from "../../../lib/multipart.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getOpenAiThinkingKey } from "../../openai-thinking-key.js";
 import type {
   DetailedTranscriptionResult,

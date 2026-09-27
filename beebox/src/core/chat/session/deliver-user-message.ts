@@ -21,7 +21,7 @@ import type { ChatSessionRegistry } from "./registry/core.js";
 import type { EventBus } from "../../event-bus/core.js";
 import { resolveSessionLogPath } from "./history.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveChatEngine } from "./engine.js";
 import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";

@@ -33,7 +33,7 @@ import { readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import type { WarningCollector } from "./_warnings.js";
 import { WarningCollector as WarningCollectorClass } from "./_warnings.js";
-import { errorMessage, errnoCode } from "../../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 
 export type ConvertOutcome = "converted" | "already";
 

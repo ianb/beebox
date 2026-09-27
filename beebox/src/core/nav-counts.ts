@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxDir } from "../lib/paths/core.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { mapInBatches } from "../lib/map-batched.js";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { countPlateTodos } from "./todo/count.js";

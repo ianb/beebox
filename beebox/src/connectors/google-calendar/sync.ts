@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { type GoogleCalendarService } from "../../services/google-calendar/core.js";
 import {
   eventToIcs,
@@ -39,7 +39,7 @@ import { patchLocalEdit, writeBackPushedEvent, type LocalPushOutcome } from "./l
 import { recordFailedLocalPush } from "./strand.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { decideCalendarSync } from "./decide.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export interface SyncAccumulator {
   created: string[];

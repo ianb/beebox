@@ -9,7 +9,7 @@
 
 import { buildToolingScriptEnv } from "../../script-env/core.js";
 import { runCollectedChild } from "../../../lib/run-child.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /**
  * Run `bbx <command>` as a subprocess, streaming output to `onLog`. Returns

@@ -25,7 +25,7 @@ import { toRelativePath, isCardFile } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
 import { cardFields, parseCardText } from "./card-io.js";
-import { errorMessage, errnoCode } from "../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../shared/error-guards.js";
 import { createCardSchemaMap } from "../schemas.js";
 import {
   QuestionSchema,

@@ -16,7 +16,7 @@
 import * as fs from "node:fs";
 import * as readline from "node:readline";
 import { z } from "zod";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { isRecord } from "../../core/card-io.js";
 
 /** One assistant line of a Claude Code session JSONL (fields we read). */

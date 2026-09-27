@@ -13,7 +13,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { readCardFrontmatter } from "../card-io.js";
 import type { JobCardInfo } from "./types.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 /**
  * Recover when a job card was queued, from its filename's timestamp prefix.

@@ -54,7 +54,7 @@ import { runCalendarSync } from "./run.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./push.js";
 import { pushPendingLocalEdits } from "./local-push.js";
 import { dropDuplicateFilenames } from "./event-index.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 interface GoogleCalendarConnectorOptions {
   /** Injected calendar service (tests); the real one is built from box auth when omitted. */

@@ -15,7 +15,7 @@
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
-import { errorMessage, errnoCode } from "../../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 
 async function findDocCards(root: string): Promise<string[]> {
   const out: string[] = [];

@@ -13,7 +13,7 @@ import { parseProcedureRun, type ProcedureRunFields } from "../../../schemas/pro
 import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core.js";
 import { fmt } from "../../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
-import { ok, err, type Result } from "../../../lib/result.js";
+import { ok, err, type Result } from "../../../shared/result.js";
 import type { CommandContext } from "../../command-runner.js";
 import {
   type ProcedureOptions,
@@ -27,7 +27,7 @@ import { loadProcedureDefinition } from "./parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./run-card.js";
 import { runSteps, finalizeRun } from "./orchestrate.js";
 import { resolveRunDir } from "../engine-query.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 
 export type { AgentFactory } from "../engine-types.js";

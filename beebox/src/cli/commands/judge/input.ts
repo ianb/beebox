@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { splitCardContent } from "../../../exports/cards.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import { BODY_FILE_CAP, bodyFileSection } from "../../lib/body-file-section.js";
 

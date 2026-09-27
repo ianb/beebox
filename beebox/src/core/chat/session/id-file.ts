@@ -31,8 +31,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
-import { isRecord } from "../../../lib/is-record.js";
-import { sleep } from "../../../lib/sleep.js";
+import { isRecord } from "../../../shared/is-record.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 /** Env var carrying the session id directly, when known at spawn (resumes). */
 export const BBX_CHAT_SESSION_ID_ENV = "BBX_CHAT_SESSION_ID";

@@ -28,7 +28,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { parse as parseYaml, isMap, parseDocument } from "yaml";
 import { runMigration } from "./_harness.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 export interface RewriteResult {
   /** The card's new text, or null when nothing needed moving. */

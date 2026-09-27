@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 
 const MAX_CACHE_BYTES = 512 * 1024 * 1024;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;

@@ -6,7 +6,7 @@ import { readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderFrontmatterBlock } from "../../cards/frontmatter.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { findAbsoluteMachinePaths } from "../../lib/absolute-path-check.js";
 import { runMigration } from "./_harness.js";
 

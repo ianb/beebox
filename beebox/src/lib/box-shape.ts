@@ -17,7 +17,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { LEGACY_PACKAGE_NAME, migrateBoxState } from "./state-migration.js";
 import {
   BoxShapeError,

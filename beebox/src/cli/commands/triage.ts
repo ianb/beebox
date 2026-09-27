@@ -8,7 +8,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../core/command-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const triageCommand = new Command("triage")
   .description("Run one triage pass: classify intake-complete items and route them.")

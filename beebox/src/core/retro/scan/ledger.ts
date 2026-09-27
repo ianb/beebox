@@ -13,7 +13,7 @@ import * as readline from "node:readline";
 import * as path from "node:path";
 import { z } from "zod";
 import { ObservationSchema } from "../observations.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 const LEDGER_FILE = ".beebox/retro/observations.jsonl";
 

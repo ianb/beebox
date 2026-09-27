@@ -26,7 +26,7 @@ import {
   type TriageApplication,
   type TriageDecision,
 } from "./routing.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { loadEffectiveSmallModel } from "../../model-policy.js";
 
 class TriageAgentFailedError extends Error {

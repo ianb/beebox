@@ -27,7 +27,7 @@ import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
 import { parseFrontmatterObject } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { BOX_DIRS } from "../../../lib/paths/core.js";
 
 /** Default filing spot when no commentary destination is chosen. */

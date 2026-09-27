@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { router, publicProcedure } from "../procedures.js";
 import { listViews } from "../../views/compiler/compile.js";
 import { resolveContainedRef } from "../../../core/ref-exists.js";

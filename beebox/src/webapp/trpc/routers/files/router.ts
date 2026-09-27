@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import { router, publicProcedure } from "../../procedures.js";
 import { loadCardFile } from "../../../../core/card-io.js";
 import { buildLoadContext } from "../../../../core/load-context.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { summarize } from "../../../../core/loader-registry.js";
 import type { LoadCardContext } from "../../../../core/card-io.js";
 import type { CardSchema } from "../../../../cards/schema.js";

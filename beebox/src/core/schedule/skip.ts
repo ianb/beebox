@@ -9,7 +9,7 @@
  * `skipped:<reason>`, beside the health values.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import type { DeferReason } from "./defer-reason.js";
 import type { StoredEngineUnavailability } from "../agent/engine-availability-store.js";
 

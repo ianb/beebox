@@ -24,7 +24,7 @@ import { createCardSchemaMap } from "../../schemas.js";
 import { checkMissingConnectors } from "../../requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
 import { parkedUpdatesForTask } from "./parked-templates.js";

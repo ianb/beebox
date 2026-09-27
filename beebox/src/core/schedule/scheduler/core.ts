@@ -20,7 +20,7 @@ import {
   loadBoxesConfig,
   type BoxesConfig,
 } from "../../box/boxes-config.js";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../../lib/dev-bundle-reload.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */

@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";

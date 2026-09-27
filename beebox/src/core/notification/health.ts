@@ -11,7 +11,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { notificationLogPath, readRecent, type LoggedNotification } from "./log.js";
 import { jevBudgetHealthCheck } from "../judgment/budget.js";
 

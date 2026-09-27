@@ -27,7 +27,7 @@ import {
   createPendingBrowserRequests,
   type PendingOutcome,
 } from "./pending-browser-request.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 
 export interface LastAudioFulfillment {
   audio: Buffer;

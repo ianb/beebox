@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import YAML from "yaml";
 import { z } from "zod";
 import type { ContextStats } from "./context-usage.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const contextHistoryEntrySchema = z.object({
   date: z.string(),

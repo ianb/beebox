@@ -28,7 +28,7 @@ import {
 import type { SessionEntry } from "../../lib/session.js";
 import { fmt } from "../../../lib/format.js";
 import { renderEntries, type RenderOptions } from "./render.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 export interface SinceWindow {
   cutoff: number;

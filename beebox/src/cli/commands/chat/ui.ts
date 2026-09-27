@@ -12,7 +12,7 @@
 
 import { Command } from "commander";
 
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
 import { loopbackHeaders } from "./audio.js";
 import { formatUiDump } from "../../../core/chat/ui-dump.js";

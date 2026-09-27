@@ -11,8 +11,8 @@
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { errorMessage } from "../../lib/error-guards.js";
-import { invariant } from "../../lib/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
 
 import { readJson } from "./json-io.js";
 

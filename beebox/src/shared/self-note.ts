@@ -11,7 +11,7 @@
  */
 
 import { stripChatAppTags } from "./chat-tags.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "./invariant.js";
 
 /** Parsed self-note metadata. */
 export interface SelfNoteInfo {

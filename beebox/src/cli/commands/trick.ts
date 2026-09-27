@@ -18,7 +18,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { stageAll, commit, getStatus } from "../../lib/git/core.js";
 import { buildScriptEnv } from "../../core/script-env/core.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
 import { readTrickSecrets, resolveTrickSecret } from "../lib/trick-secrets.js";
 import { BOX_PACKAGE_DOCS } from "../../core/docs-gen/shared.js";

@@ -19,7 +19,7 @@
  * leave the user's files half-processed.
  */
 
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { isAnnexBox } from "./is-annex-box.js";
 
 /**

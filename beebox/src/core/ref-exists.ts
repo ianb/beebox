@@ -19,8 +19,8 @@ import { access } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
-import { errnoCode } from "../lib/error-guards.js";
-import { BOX_ROOT_VOCABULARY } from "../lib/box-root-vocabulary.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { BOX_ROOT_VOCABULARY } from "../shared/box-root-vocabulary.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */

@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { createEmailThreadTemplate } from "../../../src/schemas/email-thread.js";
-import { errorMessage } from "../../../src/lib/error-guards.js";
+import { errorMessage } from "../../../src/shared/error-guards.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../../src/services/google-gmail-types.js";
 import {

@@ -9,7 +9,7 @@
  */
 
 import { makeLog } from "../log.js";
-import { checkInvariant } from "../../../../lib/invariant.js";
+import { checkInvariant } from "../../../../shared/invariant.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "../history.js";
 import { buildTimezoneContext } from "../../../box/config.js";

@@ -25,7 +25,7 @@ import { makeLog } from "./log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { containedSessionCwd, getSessionDir, getSessionLogPath } from "./transcript-paths.js";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";

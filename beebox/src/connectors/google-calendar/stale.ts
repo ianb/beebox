@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { icsToGoogleEvent, isInWindow } from "./ics.js";
 import { type CalendarState } from "./state.js";
 import { strandEntry } from "./strand.js";

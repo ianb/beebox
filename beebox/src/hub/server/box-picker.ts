@@ -19,7 +19,7 @@ import { resolveRequestIdentity, getOwnerEmail } from "../../webapp/auth.js";
 import { filterAccessibleBoxes } from "../../webapp/box-access.js";
 import { loginRedirect, stripBasePrefixHeader } from "../../webapp/base-prefix.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 function escapeHtml(value: string): string {
   const escapes: Record<string, string> = {

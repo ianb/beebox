@@ -9,7 +9,7 @@
  */
 
 import { Command } from "commander";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { addDriveFile, type AddDriveFileResult } from "../../../connectors/google-drive/add-file.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../../connectors/google-drive/inspect.js";

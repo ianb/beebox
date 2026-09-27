@@ -8,7 +8,7 @@
  * when the id lands.
  */
 
-import { checkInvariant } from "../../../../lib/invariant.js";
+import { checkInvariant } from "../../../../shared/invariant.js";
 import type { ChatSession } from "../run/core.js";
 import type { RegistryEntry } from "./options.js";
 

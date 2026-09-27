@@ -17,7 +17,7 @@
  * (`forDir` — see `landmarks.ts`).
  */
 
-import { naturalCompare } from "../../../lib/natural-sort.js";
+import { naturalCompare } from "../../../shared/natural-sort.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
 import type { ProminenceEntry, PrunedSubtree } from "../prominence-index.js";
 import type { ProminenceLevel } from "../../../shared/prominence.js";

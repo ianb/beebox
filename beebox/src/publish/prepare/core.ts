@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { withFileLock } from "../../lib/file-lock.js";
 import { parsePublicationName, readPublicationDefinition, publicationSourcePath, type PublicationDefinition } from "./definition.js";
 import { prepareProject } from "./project.js";

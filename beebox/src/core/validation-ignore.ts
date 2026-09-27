@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import * as ignoreModule from "ignore";
 import type { Ignore, Options } from "ignore";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 // `ignore` is a legacy CJS package (no `type`/`exports` in package.json) whose
 // ESM-style `.d.ts` declares a merged function+namespace default export. Under

@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { errnoCode } from "../../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../../shared/error-guards.js";
 import { encodeProjectDir } from "../../transcript-paths.js";
 import { parseSdkSessionId } from "../../id.js";
 

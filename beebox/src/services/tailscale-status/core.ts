@@ -11,7 +11,7 @@
  * `tailscale-status-running.ts`.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import {
   parseStatusJson,
   toBackendState,

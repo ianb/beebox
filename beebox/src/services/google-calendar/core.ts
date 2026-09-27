@@ -8,7 +8,7 @@
 import ky, { HTTPError } from "ky";
 import type { GoogleAuthService } from "../google-auth.js";
 import { NotFoundError } from "../../lib/errors.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { validateResponse } from "../connector-response.js";
 import {
   calendarListSchema,

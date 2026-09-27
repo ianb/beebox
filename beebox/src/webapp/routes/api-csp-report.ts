@@ -16,7 +16,7 @@
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;

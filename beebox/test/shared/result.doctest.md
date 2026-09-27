@@ -1,12 +1,12 @@
 # Result
 
-`Result<T, E>` (`src/lib/result.ts`) is the one Result convention: a two-arm
+`Result<T, E>` (`src/shared/result.ts`) is the one Result convention: a two-arm
 discriminated union keyed on `ok`, with `value` on success and `error` on
 failure. It's for failures the caller branches on; broken invariants and infra
-failures throw instead (see `lib/invariant.ts`).
+failures throw instead (see `shared/invariant.ts`).
 
 ```ts setup
-import { ok, err, okVoid, type Result } from "../../src/lib/result.js";
+import { ok, err, okVoid, type Result } from "../../src/shared/result.js";
 
 // A tagged error arm — the pattern for a function whose caller acts on the cause.
 type LookupError =

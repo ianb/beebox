@@ -35,7 +35,7 @@ import {
   transcriptPrintable,
   type SinceWindow,
 } from "./modes.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript.js";
 import {
   parseDiagnosticEngine,

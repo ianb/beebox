@@ -17,7 +17,7 @@ import { describeAbsentContent } from "../../lib/annex-pointer.js";
 import type { PreAction, PreActionContext } from "../preaction-types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription/dispatch/core.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../card-io.js";
 
 /** Audio file extensions we can transcribe. */

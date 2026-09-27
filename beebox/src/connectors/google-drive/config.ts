@@ -16,8 +16,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
-import { ok, err, type Result } from "../../lib/result.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
+import { ok, err, type Result } from "../../shared/result.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
 
 /** A pre-card folder mount. Legacy input only — see the module comment. */

@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { readdir } from "node:fs/promises";
 import { Command } from "commander";
 import chalk from "chalk";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { loadEmailFixture } from "../../field-test/email-fixture.js";
 import { fieldScenarioDir, loadFieldScenario } from "../../field-test/scenario.js";

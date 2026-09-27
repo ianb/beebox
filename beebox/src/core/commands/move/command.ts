@@ -24,9 +24,9 @@ import {
 } from "../../command-types.js";
 import { isCardFile, isMarkdownFile } from "../../../lib/paths/core.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./operations.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../../lib/box-reserved-segments.js";
 

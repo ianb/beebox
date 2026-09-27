@@ -7,7 +7,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../core/command-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const trashCommand = new Command("rm")
   .description("Move one or more cards to the trash")

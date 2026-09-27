@@ -18,7 +18,7 @@ import { configureManagedPublicationSharedHost } from "../../../publish/managed-
 import { ensurePublicationReferenceCard } from "../../../publish/publication-reference-card.js";
 import { publicationCardUrl } from "../../../shared/publication-card.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { authenticatedOwnerProcedure, authedProcedure, router } from "../procedures.js";
 

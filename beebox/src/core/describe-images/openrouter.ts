@@ -24,7 +24,7 @@
 import { promises as fs } from "node:fs";
 import ky from "ky";
 import { z } from "zod";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { OPENROUTER_BASE_URL, openRouterProvider } from "../openrouter.js";
 import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./helpers.js";
 import {

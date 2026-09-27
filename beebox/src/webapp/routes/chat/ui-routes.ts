@@ -30,7 +30,7 @@
 import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import { getBoxTime } from "../../../lib/time.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { verifyAgentBearer } from "../../../core/agent/token.js";
 import {
   createPendingBrowserRequests,

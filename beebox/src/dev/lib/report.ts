@@ -5,7 +5,7 @@
 
 import type { TestResult } from "./test-runner/runner.js";
 import type { ContextHistoryEntry } from "./context-history.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export interface ReportOptions {
   boxRoot: string;

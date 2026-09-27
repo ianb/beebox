@@ -12,7 +12,7 @@ import { router, publicProcedure } from "../../procedures.js";
 import { cardFields, parseCardText } from "../../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../../schemas.js";
 import { BriefingSchema } from "../../../../schemas/briefing.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { chatSessionProcedures } from "./session-procedures.js";
 import { chatControlProcedures } from "./control-procedures.js";
 import { chatBootstrapProcedure } from "./bootstrap-procedure.js";

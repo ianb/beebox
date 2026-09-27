@@ -31,7 +31,7 @@
 
 import { realpath, readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "./error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /**
  * A box-relative path (forward slashes, no leading slash, `..`-free) proven to

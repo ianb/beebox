@@ -9,7 +9,7 @@
  * same command logic.
  */
 
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { commands } from "./commands.js";
 import type { CommandContext, CommandDefinition, CommandResult } from "./command-types.js";
 

@@ -15,7 +15,7 @@ import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { loadScriptState } from "../../core/schedule/state.js";
 import { describeCadence } from "../../core/schedule/describe.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 
 export const scheduledCommand = new Command("scheduled")
   .description("Show all scheduled scripts and their state")

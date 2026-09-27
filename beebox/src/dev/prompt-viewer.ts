@@ -19,7 +19,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { execa } from "execa";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import {
   buildViewerData,
   relativizeHome,

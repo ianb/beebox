@@ -19,7 +19,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 
 import {
   EMPTY_SCHEDULE_STATE,

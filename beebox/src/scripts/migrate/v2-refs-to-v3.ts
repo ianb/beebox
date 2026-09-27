@@ -30,8 +30,8 @@ import * as path from "node:path";
 import { listBoxCardFiles, listBoxMarkdownFiles } from "../../core/list-cards.js";
 import { mapV2Path } from "../../core/migrations/one-root-mapping.js";
 import { collectCardRefTokens, rewriteCardRefTokens } from "../../core/rewrite-card-refs/core.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { isInBoxNamespace } from "../../shared/ref-path/box-namespace.js";
 import { formatRefSuffix, parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 
 /**

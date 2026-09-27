@@ -20,7 +20,7 @@ import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 
 import { transcribePreAction } from "./preactions/transcribe.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 export type { PreAction, PreActionContext, PreActionResult } from "./preaction-types.js";
 

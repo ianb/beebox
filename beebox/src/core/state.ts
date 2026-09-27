@@ -13,7 +13,7 @@ import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 import type { LoadCardContext } from "./card-io.js";
 import { getBoxMetadata } from "./box/structure/core.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 class InvalidBoxError extends Error {
   constructor() {

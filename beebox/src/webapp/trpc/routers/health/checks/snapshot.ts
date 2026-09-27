@@ -26,7 +26,7 @@
  * `health.ts` (which imports this one for the router).
  */
 
-import { errorMessage } from "../../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../../shared/error-guards.js";
 import type { HealthCheck, VersionInfo } from "../router.js";
 
 /** What `health.check` returns — the shape the dashboard renders. */

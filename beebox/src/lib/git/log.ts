@@ -20,7 +20,7 @@ import {
   parseTrailersMulti,
   type CommitTrigger,
 } from "../../shared/commit-trailers.js";
-import { invariant } from "../invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /**
  * Extended log entry with multi-value trailer support.

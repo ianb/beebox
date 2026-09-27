@@ -12,8 +12,8 @@
 
 import { z } from "zod";
 import { parseDuration } from "../../scheduled-script-duration.js";
-import { assertNever } from "../../lib/invariant.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { assertNever } from "../../shared/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { AutomaticTrackingBudget } from "./tracking.js";
 
 const DEFAULT_TRACKING_THREADS = 25;

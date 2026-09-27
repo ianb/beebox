@@ -30,7 +30,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { acquireLock, releaseLock } from "../../lib/file-lock.js";
 
 const exposureTargetSchema = z.object({

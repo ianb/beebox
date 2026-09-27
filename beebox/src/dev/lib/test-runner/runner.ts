@@ -9,7 +9,7 @@ import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "../box-guard.js";
 import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../test-suite-schema.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { createClaudeAgent } from "../../../core/agent/invoke/core.js";
 import type { AgentInvokeOptions } from "../../../core/agent/types.js";
 import { createCodexAgent } from "../../../core/agent/codex-agent.js";

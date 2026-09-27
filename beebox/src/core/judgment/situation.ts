@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { resolveRefPath } from "../../shared/ref-path/core.js";
 
 /** The root briefing, box-relative (`core/docs-gen/compile.ts` reads the same file). */

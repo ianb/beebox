@@ -11,10 +11,10 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadCardFrontmatter } from "../../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../../lib/paths/core.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
-import { naturalCompare } from "../../../../lib/natural-sort.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import { naturalCompare } from "../../../../shared/natural-sort.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
-import { BOX_ROOT_VOCABULARY } from "../../../../lib/box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "../../../../shared/box-root-vocabulary.js";
 
 /** The underscore area names — what the box root listing shows, and all it shows. */
 const BOX_AREA_NAMES: ReadonlySet<string> = new Set(

@@ -1,12 +1,12 @@
 # Invariant and exhaustiveness helpers
 
-`assertNever`, `invariant`, and `checkInvariant` (`src/lib/invariant.ts`) are the
+`assertNever`, `invariant`, and `checkInvariant` (`src/shared/invariant.ts`) are the
 internal should-never-happen tools: they crash loudly on broken invariants and
 make union dispatch fail to compile when a member is added. They are not for
 boundary/user-facing validation.
 
 ```ts setup
-import { assertNever, invariant, checkInvariant, tolerateNever, InvariantError } from "../../src/lib/invariant.js";
+import { assertNever, invariant, checkInvariant, tolerateNever, InvariantError } from "../../src/shared/invariant.js";
 
 // A dispatch that uses assertNever as its exhaustiveness terminator.
 function label(kind: "a" | "b"): string {

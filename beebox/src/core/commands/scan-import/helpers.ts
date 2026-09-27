@@ -10,8 +10,8 @@
  * its doctest keep importing from one place.
  */
 
-import { invariant } from "../../../lib/invariant.js";
-import { sleep } from "../../../lib/sleep.js";
+import { invariant } from "../../../shared/invariant.js";
+import { setTimeout as sleep } from "node:timers/promises";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
@@ -20,7 +20,7 @@ import {
   type BatchUsage,
 } from "../../describe-images/gemini.js";
 import { ScanVisionBatchError, type ScanVisionService } from "../../../services/scan-vision.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 export { buildScanPrompt } from "../../describe-images/gemini.js";
 export type { ScanPageAnalysis, BatchUsage } from "../../describe-images/gemini.js";

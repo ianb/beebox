@@ -21,7 +21,7 @@ import { createGoogleAuthService, type GoogleAuthService } from "../services/goo
 import { createGoogleCalendarService, type GoogleCalendarService } from "../services/google-calendar/core.js";
 import { createGoogleDriveService, type GoogleDriveService } from "../services/google-drive/core.js";
 import { createGoogleGmailService, type GoogleGmailService } from "../services/google-gmail/core.js";
-import { err, ok, type Result } from "../lib/result.js";
+import { err, ok, type Result } from "../shared/result.js";
 
 /**
  * The message for a box with a service switched off. It names the agent's own

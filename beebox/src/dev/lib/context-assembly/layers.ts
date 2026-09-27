@@ -10,7 +10,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 /** How a layer reaches the agent's context. */
 export type LayerLoading = "always" | "situational" | "on-demand";

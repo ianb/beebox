@@ -20,7 +20,7 @@ import {
   saveContainsState,
   rebaseContains,
 } from "./contains-state.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Base class so callers can catch every contains-update failure at once. */
 export class ContainsUpdateError extends Error {

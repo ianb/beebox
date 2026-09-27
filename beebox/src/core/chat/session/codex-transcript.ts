@@ -9,7 +9,7 @@ import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js"
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { mapV2Path } from "../../migrations/one-root-mapping.js";
 
 const threadReadSchema = z.object({

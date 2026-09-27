@@ -16,7 +16,7 @@ import { getBoxDir } from "../../../lib/paths/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import type { TriageCategory } from "../instructions.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 class TriageDestinationConflictError extends Error {
   readonly file: string;

@@ -29,8 +29,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { BOX_BUILT_DEPENDENCIES } from "../core/box/package.js";
-import { isRecord } from "../lib/is-record.js";
-import { invariant } from "../lib/invariant.js";
+import { isRecord } from "../shared/is-record.js";
+import { invariant } from "../shared/invariant.js";
 
 /** Extract a `version` string from a parsed `package.json`-shaped value, throwing on anything else. */
 function requireVersion(parsed: unknown): string {

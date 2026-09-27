@@ -51,7 +51,7 @@ import { join, dirname, basename, relative, resolve, posix } from "node:path";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { migrateQuestionCard, QUESTIONS_DIR } from "./lifecycle.js";
 import { repairExternalRefs } from "./refs.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 const execFileAsync = promisify(execFile);
 

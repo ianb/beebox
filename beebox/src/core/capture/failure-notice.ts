@@ -5,7 +5,7 @@
  * sends nothing. See docs/implemented-plans/notifications.md (Track E).
  */
 
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxTime } from "../../lib/time.js";
 import type { Target } from "../notification/target.js";
 import { livePresence } from "../notification/presence.js";

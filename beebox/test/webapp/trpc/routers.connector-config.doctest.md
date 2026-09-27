@@ -14,7 +14,7 @@ mount-writing procedures that DO exist are covered in
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getLog } from "../../../src/lib/git/core.js";
-import { errorMessage } from "../../../src/lib/error-guards.js";
+import { errorMessage } from "../../../src/shared/error-guards.js";
 import { simpleGit } from "simple-git";
 
 function caller(boxRoot) {

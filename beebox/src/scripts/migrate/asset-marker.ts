@@ -21,7 +21,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const OLD_MARKER = "# bbx-attach-binaries (managed by bbx attachments init-gitignore)";
 const NEW_MARKER = "# bbx-assets (managed by bbx attachments init-gitignore)";

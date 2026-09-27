@@ -13,8 +13,8 @@
  */
 
 import * as fs from "node:fs/promises";
-import { isBoxRootVocabularyName } from "./box-root-vocabulary.js";
-import { errnoCode } from "./error-guards.js";
+import { isBoxRootVocabularyName } from "../shared/box-root-vocabulary.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 /** OS/editor junk that is never a real stray — ignored outright, not reported. */
 const IGNORED_JUNK = new Set([".DS_Store", "Thumbs.db", "desktop.ini", ".localized"]);

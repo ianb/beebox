@@ -17,7 +17,7 @@
 
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { invariant } from "../../../../src/lib/invariant.js";
+import { invariant } from "../../../../src/shared/invariant.js";
 import type { VisibleElementLookup } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ScanElement, ScanNode, ScanRect, ScanStyle } from "../../../../src/frontend/src/lib/ui-scan/types.js";
 import { isNodeVisible, type VisibilityNode } from "../../../../src/frontend/src/lib/ui-scan/live-dom/visibility.js";

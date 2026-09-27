@@ -18,7 +18,7 @@ import {
   updateContainsField,
   ContainsUpdateError,
 } from "../../core/search/contains-update.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Human output cap per group; --json is always complete. */
 const LIST_CAP = 100;

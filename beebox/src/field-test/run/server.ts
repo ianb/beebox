@@ -21,8 +21,8 @@
 import { execa, type ResultPromise } from "execa";
 import * as net from "node:net";
 import { randomBytes } from "node:crypto";
-import { sleep } from "../../lib/sleep.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { setTimeout as sleep } from "node:timers/promises";
+import { errorMessage } from "../../shared/error-guards.js";
 import { killGroup, pidAlive } from "../../hub/child-process-utils.js";
 import { bbxBinary, type FieldBox } from "../run-box.js";
 

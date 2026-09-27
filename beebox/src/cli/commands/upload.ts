@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../core/command-runner.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const uploadCommand = new Command("upload")
   .description("Upload a batch of files to the box (dedup by content hash)")

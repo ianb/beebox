@@ -43,7 +43,7 @@ import type { EventBus } from "../core/event-bus/core.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, InternalServerOptions } from "./server-types.js";
-import { assertNever, invariant } from "../lib/invariant.js";
+import { assertNever, invariant } from "../shared/invariant.js";
 import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;

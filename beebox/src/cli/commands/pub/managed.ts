@@ -3,7 +3,7 @@
 import { Command } from "commander";
 import type { inferRouterOutputs } from "@trpc/server";
 
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { generatePubId } from "../../../publish/manifest.js";
 import { publicationUrl as buildPublicationUrl, samePublicationAudience, type PublicationUrlScope } from "../../../shared/publication-url.js";
 import type { AppRouter } from "../../../webapp/trpc/routers.js";

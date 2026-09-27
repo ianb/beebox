@@ -12,11 +12,11 @@ import { fmt } from "../../../lib/format.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "../shell.js";
 import { evaluateInstructions } from "../engine-validate-model.js";
-import { invariant, assertNever } from "../../../lib/invariant.js";
+import { invariant, assertNever } from "../../../shared/invariant.js";
 import type { InconclusiveReason } from "../../../shared/inconclusive.js";
 import type { CommandContext } from "../../command-runner.js";
 import type { ParsedPhase, ParsedStep, AgentFactory, ProcedureSeverity, ValidateStatus } from "../engine-types.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 export interface PhaseShellResult {
   exitCode: number;

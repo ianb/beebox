@@ -3,9 +3,9 @@ import type { Stats } from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { probePointer } from "../../../../lib/asset-content.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
-import { isRecord } from "../../../../lib/is-record.js";
-import { isInBoxNamespace } from "../../../../lib/box-namespace.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import { isRecord } from "../../../../shared/is-record.js";
+import { isInBoxNamespace } from "../../../../shared/ref-path/box-namespace.js";
 import { resolveAttachRef } from "../../../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../../../../lib/box-namespace-resolve.js";
 

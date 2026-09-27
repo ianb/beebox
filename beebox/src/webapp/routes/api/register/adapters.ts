@@ -17,7 +17,7 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Readable } from "node:stream";
-import { errorMessage } from "../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveSecret } from "../../../../core/secrets/resolve.js";
 
 interface AdapterDef {

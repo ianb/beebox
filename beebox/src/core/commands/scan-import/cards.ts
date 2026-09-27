@@ -24,7 +24,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseCardText, serializeCardText } from "../../card-io.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { type CardSchema } from "../../../exports/cards.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { createImageTemplate } from "../../../schemas/image/schema.js";

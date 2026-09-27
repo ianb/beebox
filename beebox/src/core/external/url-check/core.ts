@@ -19,7 +19,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { listBoxCardFiles, listBoxMarkdownFiles } from "../../list-cards.js";
 import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./fetch.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 
 const execFileP = promisify(execFile);

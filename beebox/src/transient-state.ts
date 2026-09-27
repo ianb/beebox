@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "./lib/atomic-write.js";
-import { errnoCode } from "./lib/error-guards.js";
+import { errnoCode } from "./shared/error-guards.js";
 import { getBoxDir } from "./lib/paths/core.js";
 
 import { withCardLock } from "./lib/card-lock.js";

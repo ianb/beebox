@@ -17,7 +17,7 @@ import { acquireChatActiveLock, releaseChatActiveLock } from "../../schedule/sta
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import type { ChatChannel } from "../../../shared/chat-channel.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { chatModelForEngine } from "../../../shared/chat-models.js";
 import { normalizeModelId } from "../../../shared/model-ids.js";

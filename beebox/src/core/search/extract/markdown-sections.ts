@@ -9,7 +9,7 @@
  * Adapted from ske's `extractMarkdownSections` (predecessor project).
  */
 
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 export interface MarkdownSection {
   /** Hierarchical heading path, e.g. "/Components/Programs". */

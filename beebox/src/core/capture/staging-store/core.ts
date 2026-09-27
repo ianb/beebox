@@ -16,7 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { enforceStagingLimits } from "../staging-limits.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { handleStagingUploadReplay } from "./upload-replay.js";
 import { StagingPathError, StagingSessionGoneError, StagingSessionNotOpenError } from "../staging-errors.js";
 import { M4ASegmentFileCountError, StagingAudioFormatMismatchError, type CaptureAudioFormat } from "../audio-format.js";

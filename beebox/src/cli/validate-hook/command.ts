@@ -9,7 +9,7 @@
 
 import * as path from "node:path";
 import { existsSync } from "node:fs";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { formatLintResults } from "../../exports/cards.js";
 import {
   lintMarkdownFiles,
@@ -29,7 +29,7 @@ import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
-import { isBoxRootVocabularyName } from "../../lib/box-root-vocabulary.js";
+import { isBoxRootVocabularyName } from "../../shared/box-root-vocabulary.js";
 import { recordHookWarning } from "./warning-cache.js";
 
 /**

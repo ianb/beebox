@@ -35,7 +35,7 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { MANAGED_STOCK_TEMPLATES } from "../core/box/templates.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 import {
   TEMPLATE_STOCK_HASHES,
   type TemplateStockEntry,

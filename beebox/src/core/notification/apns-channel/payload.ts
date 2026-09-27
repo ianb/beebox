@@ -15,7 +15,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import type { ApnsHeaders } from "../../../services/apns.js";
 import type { NotificationIntent } from "../intent.js";
 import { formatTarget } from "../target.js";

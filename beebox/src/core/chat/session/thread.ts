@@ -11,7 +11,7 @@ import { EventEmitter } from "node:events";
 import { withBoxWork } from "../../../lib/box-maintenance.js";
 import { withChatRunAdmission } from "./run-lock.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
-import { assertNever, invariant } from "../../../lib/invariant.js";
+import { assertNever, invariant } from "../../../shared/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat/core.js";

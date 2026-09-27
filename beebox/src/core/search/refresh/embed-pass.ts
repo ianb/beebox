@@ -15,7 +15,7 @@
 
 import { getByID, insert, remove } from "@orama/orama";
 import { contentHash } from "../../../lib/content-hash.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import {
   EMBEDDER_ID,
   EmbeddingsError,

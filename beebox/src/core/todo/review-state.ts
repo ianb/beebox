@@ -20,10 +20,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
-import { sleep } from "../../lib/sleep.js";
+import { setTimeout as sleep } from "node:timers/promises";
 import { TodoLocatorSchema } from "../../shared/todo-locators.js";
 import { TodoSnapshotSchema } from "./review-snapshot.js";
 

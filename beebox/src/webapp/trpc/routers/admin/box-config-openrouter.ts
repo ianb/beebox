@@ -7,7 +7,7 @@
  * removal must see the same file the write replaces.
  */
 
-import { isRecord } from "../../../../lib/is-record.js";
+import { isRecord } from "../../../../shared/is-record.js";
 import type { AddedModel } from "../../../../shared/chat-models.js";
 import { mutateConfig, type BoxConfigMutationResult } from "../../../box-config-write.js";
 

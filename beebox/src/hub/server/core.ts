@@ -32,7 +32,7 @@ import type http from "node:http";
 import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
@@ -59,7 +59,7 @@ import {
   HUB_EMAIL_HEADER,
   HUB_AUTH_OFF_HEADER,
 } from "../../webapp/auth.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import type { HubVerdict } from "../health.js";
 import { registerHealthRoutes } from "./health-routes.js";
 import { registerHubErrorHandler } from "./http-error.js";

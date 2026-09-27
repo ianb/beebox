@@ -1,5 +1,5 @@
 import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry/core.js";

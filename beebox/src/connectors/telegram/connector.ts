@@ -17,14 +17,14 @@
  */
 
 import * as path from "node:path";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import type { Connector, SyncResult } from "../../connector.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { loadTransientState, updateTransientState } from "../../transient-state.js";
 import { createChatJob } from "../../job-cards/chat-utils.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import type { TelegramService } from "../../services/telegram.js";
 import { createTelegramService } from "../../services/telegram.js";
 import type {

@@ -64,7 +64,7 @@ import { lintFilenameAttachRef } from "./filename-attach.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
 import { findAbsoluteMachinePaths } from "../../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../../schemas/concept-map.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { validateThemeChoice } from "../../shared/card-theme/core.js";
 
 export interface LintDispatchOptions {

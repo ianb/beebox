@@ -28,7 +28,7 @@ import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { buildLoadContext } from "../../load-context.js";
 import { summarizeCardText } from "./summarize-card.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { mapInBatches } from "../../../lib/map-batched.js";
 import { listScopedCardPaths } from "../card-scope.js";
 import { defaultGlobFor, refMatchesHere } from "./here.js";

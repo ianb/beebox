@@ -6,12 +6,12 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { stripLeadingMapInclude } from "../../maps/include-line.js";
 import { installTemplateFile } from "../../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../../template-stock-hashes.js";
 import { generateRules } from "../../init-rules.js";
-import { invariant, assertNever } from "../../../lib/invariant.js";
+import { invariant, assertNever } from "../../../shared/invariant.js";
 import { generateSkills } from "./skills.js";
 import { MANAGED_STOCK_TEMPLATES, PUBLICATIONS_NOTES, writeFileIfMissing } from "../templates.js";
 import {

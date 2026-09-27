@@ -19,7 +19,7 @@ import { createCardSchemaMap } from "../../../schemas.js";
 import { DOCS_DIR, withDocId } from "../shared.js";
 import { pruneGuideRules } from "./guide-rules-prune.js";
 import { readConfigGuides, readPersonality, type GuideSummary } from "../config-cards/core.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxDir, BOX_DIRS } from "../../../lib/paths/core.js";
 
 /**

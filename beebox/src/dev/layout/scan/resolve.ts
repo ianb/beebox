@@ -6,7 +6,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import * as posixPath from "node:path/posix";
 import ts from "typescript";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { dirOf } from "../graph.js";
 
 /** Join `relative` onto `fromDir` and normalize; no existence check. */

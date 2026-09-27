@@ -17,7 +17,7 @@ import { splitCardContent } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { ownerProcedure, publicProcedure, router } from "../procedures.js";
 

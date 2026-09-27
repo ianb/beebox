@@ -20,7 +20,7 @@ import type { ChatSessionRegistry } from "../chat/session/registry/core.js";
 import { stagingBaseDir, readStagingSession, isBulkSession} from "../capture/staging-store/core.js";
 import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "./worker/core.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 export async function resumeBulkSessions(deps: {
   boxRoot: string;

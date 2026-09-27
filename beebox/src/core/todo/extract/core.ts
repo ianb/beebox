@@ -19,7 +19,7 @@
 import { splitCardContent } from "../../../exports/cards.js";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "../../card-io.js";
 import { TodosFieldSchema } from "../../../shared/todo-model.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { extractBodyTodos } from "./body.js";
 import { resolveTodoRefs } from "../../../shared/todo-text.js";
 import type { TodoCollectionIssue, TodoItem } from "../collect-types.js";

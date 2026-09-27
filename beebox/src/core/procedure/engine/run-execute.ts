@@ -2,7 +2,7 @@
 
 import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../../agent/invoke/core.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { fmt } from "../../../lib/format.js";
 import { loadAgentEngine } from "../../box/config.js";
 import { loadEffectiveBoxModel } from "../../model-policy.js";

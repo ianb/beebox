@@ -17,11 +17,11 @@ import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 import { fmt } from "../../lib/format.js";
 import { parseDuration } from "../../scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule/running-procedures.js";
-import { ok, type Result } from "../../lib/result.js";
+import { ok, type Result } from "../../shared/result.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
 import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY, MAX_RUNS_PER_PROCEDURE } from "./run-expiry.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const RUN_DIR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{4}$/;
 

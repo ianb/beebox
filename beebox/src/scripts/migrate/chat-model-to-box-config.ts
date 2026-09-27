@@ -32,8 +32,8 @@
 import * as path from "node:path";
 import { readFile, rm } from "node:fs/promises";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { isRecord } from "../../lib/is-record.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { modelTier } from "../../shared/agent-models.js";
 

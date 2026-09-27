@@ -9,7 +9,7 @@ import { captureMigrationSnapshot, changedMigrationPaths } from "./migration-rec
 import { createAgent } from "./agent/invoke/core.js";
 import { cardFields, parseCardText } from "./card-io.js";
 import { QuestionSchema, createTextQuestionTemplate } from "../schemas/question.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 

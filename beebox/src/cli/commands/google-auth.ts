@@ -14,14 +14,14 @@ import { Command } from "commander";
 import Fastify from "fastify";
 import open from "open";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import {
   getBoxGoogleClientCreds,
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../google/auth.js";
 import { loadGoogleTokens, saveGoogleTokens } from "../../google/token-store.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const googleAuthCommand = new Command("google-auth")
   .description("Set up Google OAuth2 credentials")

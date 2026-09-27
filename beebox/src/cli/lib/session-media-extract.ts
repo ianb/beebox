@@ -22,7 +22,7 @@
  */
 
 import { BASE64_PAYLOAD_RE } from "./session-oversize.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 /**
  * Stand-in written where a payload was.

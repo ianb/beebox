@@ -26,7 +26,7 @@
  *   until new items arrive, even after its baseline leaves the 60-day record.
  */
 
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 import { addDays, type ActivityFile, type ConnectorDay, type ConnectorEpisode } from "./core.js";
 
 const BASELINE_DAYS = 28;

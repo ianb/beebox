@@ -18,7 +18,7 @@ import {
 } from "../../../cli/lib/session.js";
 import { loadChatRegistryIndex } from "./registries.js";
 import { isSessionSettled, type RetroState } from "../state.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 /** How long a transcript must sit unmodified before it can be observed. */
 export const QUIESCENCE_MS = 30 * 60 * 1000;

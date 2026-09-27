@@ -10,7 +10,7 @@
 import { TelegramMessageSchema, type TelegramMessageFields } from "../../schemas/telegram-message.js";
 import { deliverPendingOutputCards } from "./delivery-loop.js";
 import type { TelegramService } from "../../services/telegram.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 const CARD_SUFFIX = ".telegram-message.card";
 

@@ -27,7 +27,7 @@ import {
   dropCardState,
   type ContainsState,
 } from "../contains-state.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 export interface RefreshState {
   boxRoot: string;

@@ -30,8 +30,8 @@ import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { BOX_BUILT_DEPENDENCIES } from "../core/box/package.js";
-import { isRecord } from "../lib/is-record.js";
-import { invariant } from "../lib/invariant.js";
+import { isRecord } from "../shared/is-record.js";
+import { invariant } from "../shared/invariant.js";
 import { fileExists } from "../lib/file-exists.js";
 import { BOX_PACKAGE_DOCS } from "../core/docs-gen/shared.js";
 

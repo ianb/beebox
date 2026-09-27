@@ -24,7 +24,7 @@ import {
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;

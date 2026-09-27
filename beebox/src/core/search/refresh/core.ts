@@ -42,7 +42,7 @@ import {
 } from "./file.js";
 import { runEmbedPass } from "./embed-pass.js";
 import type { EmbeddingsService } from "../../../services/openai-embeddings.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 export interface OpenSearchIndexResult {
   db: SearchIndex;

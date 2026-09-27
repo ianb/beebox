@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core.js";
 import { fmt } from "../../../lib/format.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { ok, err, type Result } from "../../../lib/result.js";
+import { ok, err, type Result } from "../../../shared/result.js";
 import type { CommandContext } from "../../command-runner.js";
 import {
   type ProcedureOptions,

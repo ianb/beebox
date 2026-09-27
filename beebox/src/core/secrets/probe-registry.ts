@@ -39,7 +39,7 @@
  */
 
 import { z } from "zod";
-import { errnoCode, toError } from "../../lib/error-guards.js";
+import { errnoCode, toError } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { parseJsonSecret } from "./json-secret.js";
 import { lookupByName } from "./name-match.js";

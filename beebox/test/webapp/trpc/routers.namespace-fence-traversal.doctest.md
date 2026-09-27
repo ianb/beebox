@@ -25,7 +25,7 @@ import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { cardRouter } from "../../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../../src/webapp/trpc/routers/status.js";
 import { historyRouter } from "../../../src/webapp/trpc/routers/history.js";
-import { errorMessage } from "../../../src/lib/error-guards.js";
+import { errorMessage } from "../../../src/shared/error-guards.js";
 
 /** The message a display-form-rejecting tRPC procedure throws, or "ok". */
 async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<string> {

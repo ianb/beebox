@@ -14,7 +14,7 @@ import {
   type LogEntry,
 } from "../../../core/schedule/scheduler/core.js";
 import { BBX_STATE_DIR } from "../../../lib/state-dir.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import {
   loadBoxesConfig,
   addBoxToManifest,

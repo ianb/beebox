@@ -17,7 +17,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import {
   getSessionUser,
   getOwnerEmail,

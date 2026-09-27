@@ -15,7 +15,7 @@
  * 5. Optionally poll (sleep + recurse)
  */
 
-import { sleep } from "../../../lib/sleep.js";
+import { setTimeout as sleep } from "node:timers/promises";
 import * as path from "node:path";
 import {
   acquireLock as acquireFileLock,

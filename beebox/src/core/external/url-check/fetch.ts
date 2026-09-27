@@ -8,7 +8,7 @@
  */
 
 import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../../../webapp/routes/api/proxy-image.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 /**
  * Matches an http(s) URL in raw card/markdown text. Excludes whitespace and the

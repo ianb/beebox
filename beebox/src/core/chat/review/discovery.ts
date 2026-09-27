@@ -26,7 +26,7 @@ import {
   getSessionMetadata,
   parseSessionLog,
 } from "../../../cli/lib/session.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk-read.js";
 import { localOrigin } from "../session/origin.js";
 import { huskTranscriptPath } from "../husk-transcript.js";

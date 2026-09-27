@@ -44,8 +44,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import { errnoCode } from "../../lib/error-guards.js";
-import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
 
 class MergeConflictError extends Error {
   readonly fromAbs: string;

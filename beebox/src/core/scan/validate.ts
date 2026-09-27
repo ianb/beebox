@@ -24,7 +24,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 import { fileTypeFromFile } from "file-type";
 import { PDF_EXTENSION, SUPPORTED_IMAGE_EXTENSIONS } from "../upload-helpers.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Accepted extension → the magic-byte MIME types that may back it. */
 const ACCEPTED_TYPES: Record<string, string[]> = {

@@ -14,7 +14,7 @@
  */
 
 import webpush from "web-push";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -42,7 +42,7 @@
  *    `_content/<name>` since `store/` was always user content in v2.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /**
  * The exhaustive set of v2 `content/`-relative top-level names this mapper

@@ -13,7 +13,7 @@ import {
   boxLogFile,
   type LogEntry,
 } from "../../../core/schedule/scheduler/core.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 export interface LogFilters {
   errors?: boolean | undefined;

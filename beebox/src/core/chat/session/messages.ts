@@ -11,7 +11,7 @@
 
 import { isThirdPartyModel } from "../../../shared/agent-models.js";
 import type { AttentionSnapshot } from "../../../shared/chat-composer-binding.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat/core.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";

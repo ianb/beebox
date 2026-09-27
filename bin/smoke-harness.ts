@@ -14,7 +14,7 @@ import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
-import { invariant } from "../beebox/src/lib/invariant.js";
+import { invariant } from "../beebox/src/shared/invariant.js";
 import {
   BudgetExhaustedError,
   MissingBoxSlugError,

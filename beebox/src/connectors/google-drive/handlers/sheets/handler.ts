@@ -8,8 +8,8 @@
 import { contentHash } from "../../../../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../../../lib/error-guards.js";
-import { isRecord } from "../../../../lib/is-record.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
+import { isRecord } from "../../../../shared/is-record.js";
 import { safeFilename } from "../../../../job-cards/chat-utils.js";
 import {
   buildSheetData,

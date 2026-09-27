@@ -17,7 +17,7 @@ import type {
 } from "./core.js";
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../deepgram-key.js";
 import { isAuthRejection, markSecretVerificationFailed } from "../../secrets/probe-registry.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";

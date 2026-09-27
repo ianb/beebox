@@ -37,7 +37,7 @@ import {
   createLastAudioPending,
   type LastAudioFulfillment,
 } from "../../../core/last-audio-pending.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { findStagedVoiceAudio } from "../../../core/voice-recording/staged-audio.js";
 import type { ChatRoutesContext } from "./context.js";
 

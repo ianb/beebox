@@ -18,8 +18,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../../exports/cards.js";
-import { isRecord } from "../../../lib/is-record.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 
 /** The seeded hourly Drive sync, by the name its card and `--script` use. */

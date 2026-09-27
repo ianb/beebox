@@ -5,7 +5,7 @@ compare by value, so `foo-2` comes before `foo-3` comes before `foo-20` — not 
 lexical order (`foo-2`, `foo-20`, `foo-3`) that plain `localeCompare` produces.
 
 ```ts setup
-import { naturalCompare } from "../../src/lib/natural-sort.js";
+import { naturalCompare } from "../../src/shared/natural-sort.js";
 ```
 
 ## Numeric suffixes sort by value, not lexically

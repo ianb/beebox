@@ -26,7 +26,7 @@ import {
   wordCount,
   type AssembledContext,
 } from "./lib/context-assembly/assembly.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 import { collectGuideInputs } from "../core/agent-guide/box-inputs.js";
 import { renderAgentGuideLines } from "../core/agent-guide/guide/core.js";
 import { annotatedText, strippedText } from "../core/agent-guide/render.js";

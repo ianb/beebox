@@ -11,7 +11,7 @@
  */
 
 import { getBoxTime } from "../../lib/time.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { CommandFailedError, stderrSection } from "../../lib/exec-with-timeout.js";
 import { INCONCLUSIVE_EXIT_CODE, findInconclusiveLine } from "../../shared/inconclusive.js";
 import { loadAgentEngine } from "../box/config.js";

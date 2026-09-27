@@ -18,7 +18,7 @@ import { buildJudgePrompt } from "../../core/procedure/engine-validate-model.js"
 import { buildTriageSystemPrompt } from "../../core/triage/run/core.js";
 import { connectorRules } from "../../core/init-rules.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const TEMPLATES_DIR = path.join(PACKAGE_ROOT, "templates", "procedures");
 

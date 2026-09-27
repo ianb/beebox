@@ -20,7 +20,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";

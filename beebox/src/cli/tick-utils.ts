@@ -12,7 +12,7 @@ import {
 } from "../schemas/scheduled-script/schema.js";
 import { isDueForWakeup, isWithinBudget } from "../schemas/scheduled-script/due.js";
 import { cardFields, parseCardText } from "../core/card-io.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { createCardSchemaMap } from "../schemas.js";
 import { checkMissingConnectors } from "../requirements.js";
 import {

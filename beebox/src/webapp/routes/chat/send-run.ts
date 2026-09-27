@@ -7,8 +7,8 @@
  */
 
 import type { BoxWork } from "../../../lib/box-maintenance.js";
-import { startAwakeTimeout } from "../../../lib/awake-timeout.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { startAwakeTimeout } from "../../../shared/awake-timeout.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import type { ChatMessage, ChatSendInput, ChatSession } from "../../../core/chat/session/run/core.js";
 import { createTurnBuffer, scheduleTurnCleanup } from "../../../core/chat/turn-buffer.js";
 

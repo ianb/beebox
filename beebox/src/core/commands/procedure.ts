@@ -15,8 +15,8 @@ import type {
   ProcedureOutcome,
   ProcedureInconclusive,
 } from "../procedure/engine/core.js";
-import type { Result } from "../../lib/result.js";
-import { isRecord } from "../../lib/is-record.js";
+import type { Result } from "../../shared/result.js";
+import { isRecord } from "../../shared/is-record.js";
 import { type InconclusiveReason } from "../../shared/inconclusive.js";
 
 /**

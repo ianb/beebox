@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import type { DriveFile } from "../../services/google-drive/core.js";
 import {
@@ -21,7 +21,7 @@ import {
 } from "./card-stamp.js";
 import { mountEntries, planFolderSync } from "./folder-plan.js";
 import { claimPath, probeAbsent, resolveChildren } from "./folder-steps.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import type { AbsentEntry } from "./folder-plan.js";
 import type {
   FolderMount,

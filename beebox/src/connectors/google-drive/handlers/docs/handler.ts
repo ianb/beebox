@@ -26,7 +26,7 @@
 import { contentHash } from "../../../../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 import type {
   DriveTypeHandler,
   InspectResult,

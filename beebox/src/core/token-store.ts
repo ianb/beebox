@@ -31,9 +31,9 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError, type LockProfile } from "../lib/file-lock.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;

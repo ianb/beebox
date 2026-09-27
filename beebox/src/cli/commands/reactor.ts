@@ -9,7 +9,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runReactor } from "../../core/reactor/engine/core.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const reactorCommand = new Command("reactor")
   .description("Process pending jobs")

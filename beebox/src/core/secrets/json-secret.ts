@@ -17,7 +17,7 @@
  */
 
 import type { z } from "zod";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Parse a JSON-string secret value into its fields, or `null` when the value

@@ -9,7 +9,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { listViews } from "../../../webapp/views/compiler/compile.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 export const viewLintCommand = new Command("lint")
   .description("Flag card-less views — every view must attach to a card type via rendersCardTypes; exit non-zero if any lack it")

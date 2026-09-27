@@ -7,7 +7,7 @@
  */
 
 import http from "node:http";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 
 
 /**

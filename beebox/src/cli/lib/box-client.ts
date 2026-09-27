@@ -19,7 +19,7 @@
  */
 
 import { createTRPCClient, httpLink, type TRPCClient } from "@trpc/client";
-import { err, ok, type Result } from "../../lib/result.js";
+import { err, ok, type Result } from "../../shared/result.js";
 import type { AppRouter } from "../../webapp/trpc/routers.js";
 
 /** The env vars `core/script-env.ts` hands every box-spawned subprocess. */

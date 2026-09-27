@@ -8,7 +8,7 @@
 
 import { type SessionContentBlock, transformContent } from "./session-content.js";
 import { writesProgressUpdates } from "../../shared/model-ids.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { isCompactionSummary, isPlumbingMessage } from "./session-text.js";
 
 /**

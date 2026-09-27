@@ -7,7 +7,7 @@
 
 import { join } from "node:path";
 import { readdir, unlink, writeFile } from "node:fs/promises";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import type { CardSchema } from "../../exports/cards.js";
 import { getBuiltinTemplates, type TemplateDefinition } from "../../templates-registry.js";
 import { generateCardDoc } from "./content.js";

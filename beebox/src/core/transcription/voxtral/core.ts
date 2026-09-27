@@ -22,7 +22,7 @@ import {
   shapeVoxtralResult,
   type VoxtralResponse,
 } from "./request.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 // Re-exported for callers (chat-audio-routes, doctests) that post-process
 // Voxtral output without going through transcribeAudioVoxtral.

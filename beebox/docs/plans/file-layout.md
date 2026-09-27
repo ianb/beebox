@@ -634,12 +634,18 @@ allows. *Mechanical:* both. *Judgment:* none. *Examples:*
 → `tick.force.doctest.md`. The 21 loose files at `test/` root each name a
 module below the root (`test/env.doctest.md` → `test/lib/env.doctest.md`).
 
-**Rule 9: the module map's layer rules are unchanged and apply below every
-new directory.**
-`src/lib/` imports nothing upward; `src/shared/` is isomorphic; a subject
-directory's helpers stay under it and never migrate to `lib/` unless they have
-no `core/` dependency (`docs/module-map.md`). *Mechanical:* `pnpm
-lint:circular` and the existing import-boundary lint rules.
+**Rule 9: the module map's layer rules apply below every new directory; the
+layer order flipped 2026-09-27.**
+`src/shared/` is now the lowest layer (isomorphic, dependency-free, imports
+nothing else in the package); `src/lib/` sits above it (backend-only generic
+helpers that may use Node and may import `shared/`, never the reverse). A
+subject directory's helpers stay under it and never migrate to `lib/` unless
+they have no `core/` dependency (`docs/module-map.md`). The former
+`shared/` re-export shims over dependency-free `lib/` implementations
+(`invariant`, `is-record`, `error-guards`, `result`, the ref-path box
+namespace) were retired: each implementation moved down into `shared/` and
+the `lib/` original was deleted. *Mechanical:* `pnpm lint:circular` and the
+existing import-boundary lint rules.
 
 ### What the check needs from each rule
 

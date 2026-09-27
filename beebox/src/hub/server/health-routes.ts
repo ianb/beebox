@@ -28,7 +28,7 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { verifyDiagBearerKey } from "../../webapp/auth.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
 import type { HubHealth } from "./core.js";
 import type { DiskHealth } from "../disk-health.js";

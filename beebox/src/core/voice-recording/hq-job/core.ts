@@ -15,10 +15,10 @@
  * `core/capture/prepare.ts`'s `inFlightIds`.
  */
 
-import { invariant } from "../../../lib/invariant.js";
-import { errorMessage, errnoCode } from "../../../lib/error-guards.js";
+import { invariant } from "../../../shared/invariant.js";
+import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { startAwakeTimeout } from "../../../lib/awake-timeout.js";
+import { startAwakeTimeout } from "../../../shared/awake-timeout.js";
 import { jitteredBackoff } from "../../../shared/backoff.js";
 import { buildWavHeader } from "../../../shared/wav.js";
 import type { EventBus } from "../../event-bus/core.js";

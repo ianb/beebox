@@ -1,4 +1,4 @@
-import { startAwakeTimeout } from "../lib/awake-timeout.js";
+import { startAwakeTimeout } from "../shared/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
@@ -8,8 +8,8 @@ import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex,
 import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
 import { getBoxTimeISO } from "../lib/time.js";
-import { errorMessage } from "../lib/error-guards.js";
-import { invariant } from "../lib/invariant.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { invariant } from "../shared/invariant.js";
 import { MANIFEST_PATH, isProcedureMigration, type Migration } from "./migrations.js";
 import {
   appendManifestEntry,

@@ -9,13 +9,13 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { type GoogleCalendarService } from "../../services/google-calendar/core.js";
 import { validateIcsTimezone } from "./utils.js";
 import { icsToGoogleEvent } from "./ics.js";
 import { decideCalendarSync } from "./decide.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import {
   BBX_DELETE_PATTERN,
   formatEventDate,

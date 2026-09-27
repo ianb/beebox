@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { fileExists } from "../../lib/file-exists.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 /** The browse env var whose absence makes the wrapper fail closed. */
 const BROWSE_KEY_ENV = "BBX_BROWSE_API_KEY";

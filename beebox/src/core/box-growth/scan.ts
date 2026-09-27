@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import * as path from "node:path";
 import { execa } from "execa";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";

@@ -26,7 +26,7 @@ import { loadRunningProcedures } from "../core/schedule/running-procedures.js";
 import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../lib/git/core.js";
 import type { TickOptions, ScriptResult } from "./commands/tick.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { scheduleOutcomeLine } from "../shared/schedule-error.js";
 import {
   boxEngineUnavailability,

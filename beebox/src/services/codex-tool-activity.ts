@@ -3,7 +3,7 @@
 import { z } from "zod";
 import type { CodexSdkItem } from "./codex-sdk-session/core.js";
 import type { ChatMessageAssistant, ChatMessageContent } from "../core/chat/message-types.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { declaredPresent } from "../lib/declared-present.js";
 
 const changeSchema = z.looseObject({

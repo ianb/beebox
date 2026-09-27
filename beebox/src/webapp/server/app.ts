@@ -35,7 +35,7 @@ import {
 } from "../server-root/root-routes.js";
 import { registerCspReportRoute } from "../routes/api-csp-report.js";
 import { HASHED_ASSET_CACHE_OPTIONS } from "../static-cache.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
 import {
   DEV_BUNDLE_RELOAD_EXIT_CODE,

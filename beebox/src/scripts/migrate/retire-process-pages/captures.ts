@@ -52,7 +52,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 const PROCEDURE_REL = "config/procedures/process-captures.procedure.card";
 const TRIGGER_REL = "config/schedules/process-captures.scheduled-script.card";

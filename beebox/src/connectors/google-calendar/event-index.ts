@@ -26,8 +26,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { contentHash } from "../../lib/content-hash.js";
-import { errnoCode } from "../../lib/error-guards.js";
-import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** Version marker written into the state file once its keys are composite. */
 export const EVENT_INDEX_VERSION = 2;

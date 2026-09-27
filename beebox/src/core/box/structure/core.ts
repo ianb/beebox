@@ -19,7 +19,7 @@ import { UNIGNORE_BLOCK } from "../../attachments-gitignore.js";
 import { installTricksPackageJson } from "../templates.js";
 import { syncBoxGuidance } from "../guidance-sync/core.js";
 import { z } from "zod";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { migrateBoxState } from "../../../lib/state-migration.js";
 
 /**

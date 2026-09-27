@@ -26,7 +26,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { isRecord } from "../core/card-io.js";
 
 const OAUTH_STATE_RELATIVE_PATH = ".beebox/google-oauth-state.secret.json";

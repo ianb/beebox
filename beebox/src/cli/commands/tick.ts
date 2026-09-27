@@ -22,7 +22,7 @@ import {
   evaluateSkip,
   executeScript,
 } from "../tick-helpers.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 
 export interface TickOptions {

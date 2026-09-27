@@ -15,7 +15,7 @@ import * as fsSync from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseDuration } from "../../schemas/scheduled-script/schema.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export interface FetchStub {
   /** URL pattern — exact match, or prefix match if ends with * */

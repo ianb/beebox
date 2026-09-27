@@ -25,7 +25,7 @@ import {
 import { providerEnvAdditions } from "../provider-env/core.js";
 import { isThirdPartyModel } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli/core.js";
 

@@ -19,7 +19,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 const MESSAGE_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 

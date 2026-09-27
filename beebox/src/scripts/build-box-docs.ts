@@ -11,7 +11,7 @@
  */
 
 import { ensurePackageDocs } from "../core/docs-gen/package-docs/core.js";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 
 const result = await ensurePackageDocs();
 switch (result.status) {

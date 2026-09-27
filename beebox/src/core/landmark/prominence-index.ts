@@ -21,7 +21,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { typeFromFilename, type LoadCardContext } from "../card-io.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { effectiveLevel, type ProminenceLevel } from "../../shared/prominence.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";

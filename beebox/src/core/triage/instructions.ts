@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
 import { findDestination } from "../landmark/destination.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 
 /**

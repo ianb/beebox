@@ -10,7 +10,7 @@
  */
 
 import type { GmailMessage, GmailLabel } from "../google-gmail/core.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 export function messageMatchesQuery(opts: {
   msg: GmailMessage;

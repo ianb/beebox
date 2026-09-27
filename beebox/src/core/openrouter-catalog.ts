@@ -10,7 +10,7 @@
  */
 
 import { z } from "zod";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import type { FetchLike } from "./secrets/probe-registry.js";
 
 const CATALOG_URL = "https://openrouter.ai/api/v1/models";

@@ -16,7 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { RECHECK_NEVER } from "../../../shared/todo-model.js";
 import { extractCardTodos } from "../extract/core.js";

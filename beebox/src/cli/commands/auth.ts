@@ -39,7 +39,7 @@ import {
   OwnerExistsError,
   UserExistsError,
 } from "../../webapp/local-users-errors.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
 
 /** The known, clean-message errors `local-users.ts` throws — never a bare stack trace for these. */

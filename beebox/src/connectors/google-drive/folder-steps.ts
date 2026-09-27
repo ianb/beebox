@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import type { DriveFile, GoogleDriveService } from "../../services/google-drive/core.js";
 import { DRIVE_SHORTCUT_MIME, type ResolvedChild } from "./folder-plan.js";
 import type { FolderSyncDeps } from "./folder-types.js";

@@ -21,7 +21,7 @@ import { buildLoadContext } from "../load-context.js";
 import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git/core.js";
 import { fileEtag } from "../../webapp/file-etag.js";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { isInBoxNamespace } from "../../shared/ref-path/box-namespace.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import type { ViewCard, ViewFile } from "./types.js";
 

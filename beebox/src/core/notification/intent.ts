@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import { parseTarget, type Target } from "./target.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const LOUDNESS = ["dot", "quiet", "loud"] as const;
 /** `dot`: badge only. `quiet`: a muted notification. `loud`: a notification with sound. */

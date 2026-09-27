@@ -14,7 +14,7 @@ import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { readJson } from "./json-io.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
 

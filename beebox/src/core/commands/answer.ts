@@ -18,7 +18,7 @@ import {
   type CommandResult,
 } from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";

@@ -11,7 +11,7 @@ import { serviceCapabilities, unusableWarning } from "../../../core/model-capabi
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey, OPENAI_THINKING_SECRET_NAME } from "../../../core/openai-thinking-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 

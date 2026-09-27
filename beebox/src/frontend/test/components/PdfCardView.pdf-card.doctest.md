@@ -13,7 +13,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { parseCardText } from "../../../core/card-io.js";
 import { PdfSchema } from "../../../schemas/pdf.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import {
   EXTRACTED_CARD_TYPE,
   missingPageRenders,

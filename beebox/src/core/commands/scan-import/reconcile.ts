@@ -6,7 +6,7 @@
  * into photo bundles, orphan backs, unsure pages, and blank pages.
  */
 
-import { assertNever, invariant } from "../../../lib/invariant.js";
+import { assertNever, invariant } from "../../../shared/invariant.js";
 import type { ScanPageAnalysis } from "../../describe-images/gemini.js";
 
 export interface ResolvedPage {

@@ -1,6 +1,6 @@
 /** Bounded graceful-close boundary for registry-owned chat sessions. */
 
-import { startAwakeTimeout } from "../../../../lib/awake-timeout.js";
+import { startAwakeTimeout } from "../../../../shared/awake-timeout.js";
 
 const CHAT_SHUTDOWN_GRACE_MS = 10_000;
 

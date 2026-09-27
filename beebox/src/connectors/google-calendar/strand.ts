@@ -20,7 +20,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import {
   localCalendarFailure,
   type CalendarSyncFailure,
@@ -29,7 +29,7 @@ import {
 } from "./notes.js";
 import { type CalendarState } from "./state.js";
 import { type EventFileEntry } from "./event-index.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /**
  * How long a transiently-failing push keeps being retried before the event is

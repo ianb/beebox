@@ -6,10 +6,10 @@ import { withBoxWork } from "../box-maintenance.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
-import { invariant } from "../invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "../state-migration.js";
 import { PreV3ShapeError } from "../box-shape-errors.js";
-import { isRecord } from "../is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 

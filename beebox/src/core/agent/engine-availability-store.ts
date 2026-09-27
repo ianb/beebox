@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { BBX_STATE_DIR } from "../../lib/state-dir.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import type { EngineProvider, EngineUnavailability } from "./engine-unavailability.js";
 
 export interface StoredEngineUnavailability extends EngineUnavailability {

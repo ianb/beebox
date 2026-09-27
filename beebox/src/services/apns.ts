@@ -15,7 +15,7 @@
 
 import { createHash } from "node:crypto";
 import { Notification, Provider } from "@parse/node-apn";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

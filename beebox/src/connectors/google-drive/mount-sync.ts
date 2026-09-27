@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import type { GoogleDriveService } from "../../services/google-drive/core.js";
 import { syncFolderCard } from "./folder-sync.js";
 import { withDriveMirrorLock } from "./lock.js";

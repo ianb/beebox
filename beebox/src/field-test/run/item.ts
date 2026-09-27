@@ -28,8 +28,8 @@
 import * as path from "node:path";
 import { mkdir } from "node:fs/promises";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { assertNever } from "../../lib/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { assertNever } from "../../shared/invariant.js";
 import { debriefQuestions, type DebriefResult } from "../questionnaire.js";
 import { boxQuiescenceProbes, waitForQuiescence } from "../quiescence.js";
 import { applyCleanup, checkpointTag } from "./checkpoints.js";

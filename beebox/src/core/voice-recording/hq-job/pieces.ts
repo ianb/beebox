@@ -11,7 +11,7 @@
  * piece length via {@link nextPieceSeconds} down to {@link HQ_PIECE_FLOOR_SECONDS}.
  */
 
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 /** Bytes/second for 16 kHz mono 16-bit PCM: 16000 samples/s × 2 bytes/sample. */
 export const PCM_BYTES_PER_SECOND = 32_000;

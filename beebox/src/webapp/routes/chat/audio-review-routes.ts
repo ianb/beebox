@@ -21,7 +21,7 @@
  */
 
 import { z } from "zod";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import type { ChatRoutesContext } from "./context.js";
 
 const retranscriptionBodySchema = z.object({

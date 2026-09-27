@@ -14,7 +14,7 @@ import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
 import { BOX_DIRS } from "../lib/paths/core.js";

@@ -37,7 +37,7 @@ import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
 import { boxTmpDir } from "../../../lib/box-tmp.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { verifyAgentBearer } from "../../../core/agent/token.js";
 import {
   createPendingBrowserRequests,

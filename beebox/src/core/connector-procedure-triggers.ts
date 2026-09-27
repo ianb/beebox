@@ -1,7 +1,7 @@
 /** Run procedure requests emitted by connector syncs. */
 
 import type { ConnectorProcedureTrigger } from "../connectors.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import type { CommandContext } from "./command-types.js";
 import { procedureRunCommand } from "./commands/procedure.js";
 

@@ -27,7 +27,7 @@
 
 import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
-import { errorMessage, errnoCode } from "../../../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
 import { WarningCollector } from "../_warnings.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../../core/list-cards.js";
 import { rewriteReferrerRefs, rewriteViewRefs, type Remap } from "../../../core/rewrite-card-refs/core.js";

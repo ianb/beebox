@@ -12,8 +12,8 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { errorMessage } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
 
 
 const ROOT = resolve(import.meta.dirname, "../../../..");

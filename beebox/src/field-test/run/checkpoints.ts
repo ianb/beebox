@@ -34,7 +34,7 @@
  */
 
 import { rm } from "node:fs/promises";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { commit, getHead, getStatus, revertToSnapshot, stageAll } from "../../lib/git/core.js";
 import { createTag } from "../../lib/git-refs.js";
 import { stagingBaseDir } from "../../core/capture/staging-schema.js";

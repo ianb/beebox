@@ -24,7 +24,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../exports/cards.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
 import {
   deleteQuarantineEntry,

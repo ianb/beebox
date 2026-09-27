@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import { requireBoxRoot } from "../lib/paths/core.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { getSystemState } from "../core/state.js";
 import { cardFields, parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas.js";

@@ -20,7 +20,7 @@ import { splitCardContent } from "../../../exports/cards.js";
 import { GuideObject } from "../../../schemas/guide/schema.js";
 import { parseGuide } from "../../../schemas/guide/parse.js";
 import { compileGuide } from "../../../schemas/guide/compile.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 export const SCAN_GUIDE_REL_PATH = "_config/scan.guide.card";
 

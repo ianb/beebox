@@ -32,7 +32,7 @@ import {
   type VoiceHqResult,
 } from "../../../core/capture/staging-store/core.js";
 import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
-import { toError } from "../../../lib/error-guards.js";
+import { toError } from "../../../shared/error-guards.js";
 import type { TrpcContext } from "../context.js";
 
 /** The DTO `status` returns. */

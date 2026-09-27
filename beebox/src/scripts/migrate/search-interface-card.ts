@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /** Install the copyable Search card's canonical seeded instance. */
 import { seedSystemCards, checkSystemCards, SystemCardInvariantError } from "../../core/system-cards.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { SEARCH_SYSTEM_CARD_MIGRATION } from "../../shared/system-card-paths.js";
 
 const boxRoot = process.argv[2];

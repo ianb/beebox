@@ -2,10 +2,10 @@
 
 Narrows an `unknown` to a plain string-keyed object — the blessed replacement
 for the `value as Record<string, unknown>` cast that follows a `typeof` check.
-See `src/lib/is-record.ts`.
+See `src/shared/is-record.ts`.
 
 ```ts setup
-import { isRecord } from "../../src/lib/is-record.js";
+import { isRecord } from "../../src/shared/is-record.js";
 ```
 
 A plain object narrows to a record, so string-key access needs no cast:

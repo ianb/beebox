@@ -13,7 +13,7 @@
  */
 
 import type { GoogleDriveService, DriveFile } from "../../services/google-drive/core.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 // ─── Handler interface ──────────────────────────────────────────────────────
 

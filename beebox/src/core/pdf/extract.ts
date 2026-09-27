@@ -23,7 +23,7 @@ import {
   type DoclingService,
 } from "../../services/docling/core.js";
 import { extractPdfText } from "./probe.js";
-import { err, ok, type Result } from "../../lib/result.js";
+import { err, ok, type Result } from "../../shared/result.js";
 
 const gzipAsync = promisify(gzip);
 

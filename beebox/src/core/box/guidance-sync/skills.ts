@@ -29,7 +29,7 @@ import {
 import { BEEBOX_SYSTEM_FEEDBACK_SKILL } from "./skills-content-beebox-system-feedback.js";
 import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { readDocId, withDocId } from "../../docs-gen/shared.js";
 
 /** Box-relative skills directory. */

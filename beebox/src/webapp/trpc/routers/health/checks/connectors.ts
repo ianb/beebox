@@ -10,7 +10,7 @@ import { TRPCError } from "@trpc/server";
 import { dismissConnectorEpisode, NoConnectorEpisodeError, undismissedEpisodes } from "../../../../../connector-activity/episodes.js";
 import { describeVerdict } from "../../../../../connector-activity/verdict.js";
 import { findStrandedDrafts } from "../../../../../connectors/gmail/drafts/core.js";
-import { errorMessage } from "../../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../../shared/error-guards.js";
 import { getBoxTime } from "../../../../../lib/time.js";
 import { ownerProcedure } from "../../../procedures.js";
 import type { HealthCheck } from "../router.js";

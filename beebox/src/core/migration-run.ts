@@ -15,9 +15,9 @@ import * as path from "node:path";
 import { runMigrationProcess } from "./migration-process.js";
 import { assertSystemCardsComplete } from "./system-cards.js";
 import { isSystemCardMigration } from "../shared/system-card-paths.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { MANIFEST_PATH, MIGRATIONS, type ManifestEntry, type Migration } from "./migrations.js";
 
 class ManifestReadError extends Error {

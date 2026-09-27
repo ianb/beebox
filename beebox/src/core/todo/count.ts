@@ -31,7 +31,7 @@
 
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { mapInBatches } from "../../lib/map-batched.js";
 import { isBoxholderTodo } from "../../shared/todo-model.js";
 import { createCardSchemaMap } from "../../schemas.js";

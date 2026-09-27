@@ -7,7 +7,7 @@
  */
 
 import { makeLog } from "../log.js";
-import { errorMessage } from "../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
 import { transcriptExistsForContext } from "../transcript-paths.js";
 import type { ChatSessionOptions } from "../options.js";
 

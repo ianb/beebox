@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /** Bootstrap creates files, rather than transforming walked cards, so it does not use the transform harness. */
 import { seedSystemCards, checkSystemCards, SystemCardInvariantError } from "../../core/system-cards.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { REMAINING_SYSTEM_CARD_MIGRATION } from "../../shared/system-card-paths.js";
 
 const boxRoot = process.argv[2];

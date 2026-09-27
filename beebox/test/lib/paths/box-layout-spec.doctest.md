@@ -11,7 +11,7 @@ whole-file generated) `docs/box-layout.md` mixes prose with tables.
 ```ts setup
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/paths/box-layout-spec.js";
-import { BOX_ROOT_VOCABULARY } from "../../../src/lib/box-root-vocabulary.js";
+import { BOX_ROOT_VOCABULARY } from "../../../src/shared/box-root-vocabulary.js";
 import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/lib/paths/core.js";
 import { directoryLayoutRows } from "../../../src/core/agent-guide/guide/box-shape.js";
 

@@ -36,8 +36,8 @@ import {
   rewriteViewRefs,
   type Remap,
 } from "../../core/rewrite-card-refs/core.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
 import { attachDirFor, isAttachRef, resolveAttachRef } from "../../shared/attach-path.js";
 import { isUrlRef, resolveRefPath } from "../../shared/ref-path/core.js";
 

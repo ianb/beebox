@@ -9,8 +9,8 @@
  * what the next state IS.
  */
 
-import { err, ok, type Result } from "../../../lib/result.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { err, ok, type Result } from "../../../shared/result.js";
+import { assertNever } from "../../../shared/invariant.js";
 import type { HqTranscriptionService } from "../../../shared/transcription-services.js";
 import type { HqFailure, StagingVoice, VoiceHqResult } from "../../capture/staging-schema.js";
 import type { HqErrorClassification } from "../classify.js";

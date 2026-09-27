@@ -2,8 +2,8 @@
  * Parses a move list's JSON shape: `{ "moves": [{ "from": "...", "to": "..." }] }`.
  * Other top-level keys are ignored. `validate.ts` checks the paths themselves.
  */
-import { errorMessage } from "../../../lib/error-guards.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
 
 export interface PlannedMove {
   from: string;

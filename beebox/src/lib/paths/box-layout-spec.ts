@@ -25,9 +25,9 @@
  * See "Track A — Shape v3 core" in `docs/implemented-plans/one-root-box-layout.md`.
  */
 
-import type { BoxLayoutEntry } from "../box-layout-types.js";
+import type { BoxLayoutEntry } from "../../shared/box-layout-types.js";
 
-export type { BoxLayoutArea, BoxLayoutEntry, BoxRootVocabularyEntry } from "../box-layout-types.js";
+export type { BoxLayoutArea, BoxLayoutEntry, BoxRootVocabularyEntry } from "../../shared/box-layout-types.js";
 export const BOX_LAYOUT = [
   // _content/ — the box's user content. The only open-vocabulary area.
   {

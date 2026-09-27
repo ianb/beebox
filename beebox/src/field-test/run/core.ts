@@ -28,7 +28,7 @@ import { mkdir } from "node:fs/promises";
 import { execa } from "execa";
 import { randomBytes } from "node:crypto";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { createChatBackend, type ChatBackend } from "../../services/claude-chat/core.js";
 import { createFieldBox } from "../run-box.js";
 import { startFieldServer, type FieldServer } from "./server.js";

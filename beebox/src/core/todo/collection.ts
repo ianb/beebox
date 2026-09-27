@@ -18,7 +18,7 @@ import {
   type TodoPlateState,
   type TodoStatus,
 } from "../../shared/todo-model.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { compareTodoLocator, formatTodoLocation, type CollectedTodo, type TodoItem } from "./collect-types.js";
 import { deriveTodo } from "./derive.js";
 import { extractCardTodos, mayHaveTodo } from "./extract/core.js";

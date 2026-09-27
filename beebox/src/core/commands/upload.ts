@@ -29,7 +29,7 @@ import {
   type UploadLedgerEntry,
   type ScanGroup,
 } from "../upload-helpers.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../card-io.js";
 
 const UploadArgsSchema = z.object({

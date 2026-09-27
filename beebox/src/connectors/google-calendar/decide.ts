@@ -32,7 +32,7 @@
  *   delete cap is reached or the state has no calendar id for the event → `noop`.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /** What the sync should do with one event, in either direction. */
 export type SyncDecision =

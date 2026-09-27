@@ -6,7 +6,7 @@ import type { GmailConnectorConfig, GmailRule } from "./config.js";
 import { rfc822MessageIdFor, summarizeGmailMessage } from "./mime.js";
 import type { GmailPendingSummary, GmailRuleState, GmailTransientState } from "./state.js";
 import { remainingAutomaticTrackingBudget } from "./tracking.js";
-import { assertNever, invariant } from "../../lib/invariant.js";
+import { assertNever, invariant } from "../../shared/invariant.js";
 
 const PENDING_SUMMARY_LIMIT = 50;
 

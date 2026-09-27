@@ -17,7 +17,7 @@ import {
 } from "../tailscale.js";
 import { binaryAbsent, cliError, DOC, type TailscaleReport } from "../tailscale-report.js";
 import { classifyAuthPosture, looksLikeGuardedRouter } from "../tailscale-target.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /** The Running-backend branch: HTTPS cert → serve config → probe. */
 export async function runningStatus(

@@ -30,8 +30,8 @@ import path from "node:path";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 import { EMBEDDING_DIMENSIONS } from "../../services/openai-embeddings.js";
-import { invariant } from "../../lib/invariant.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch

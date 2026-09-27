@@ -33,7 +33,7 @@ import {
 } from "../capture-request-owner.js";
 import { resumeStagingSessions } from "../../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
-import { startAwakeTimeout, type AwakeTimeout } from "../../../lib/awake-timeout.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { handleCaptureUpload } from "./upload.js";
 import { handleCreateCaptureSession } from "./create.js";

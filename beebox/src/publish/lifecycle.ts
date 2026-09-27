@@ -28,7 +28,7 @@ import path from "node:path";
 
 import { getBoxDir } from "../lib/paths/core.js";
 import { stageAndCommitPaths } from "../lib/git/core.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 import {
   createR2PublishStore,

@@ -9,7 +9,7 @@
  */
 
 import { getHead } from "../../../lib/git/core.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { fmt } from "../../../lib/format.js";
 import type { ParsedStep } from "../engine-types.js";
 import type { ExecuteStepParams } from "./step.js";

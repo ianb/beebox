@@ -10,7 +10,7 @@
 import { Command } from "commander";
 
 import { chatReviewCommand } from "./review.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
 import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./audio.js";
 import { uiCommand } from "./ui.js";

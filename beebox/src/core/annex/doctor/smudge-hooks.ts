@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 /** The command git-annex installs for checkout/merge content refreshes. */
 export const ANNEX_SMUDGE_LINE = "git annex smudge --update";

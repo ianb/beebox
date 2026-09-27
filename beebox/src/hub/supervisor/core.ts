@@ -19,7 +19,7 @@ import { installReloadHandler } from "./supervised-reload.js";
 import * as path from "node:path";
 import type { HubConfig, BoxEntry } from "../config.js";
 import { HubState } from "./state.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
 import { killGroup, killAfterGrace, describeError, BOX_KILL_GRACE_MS, waitForExit } from "../child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";

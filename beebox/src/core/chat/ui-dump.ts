@@ -17,7 +17,7 @@
  */
 
 import type { UiScanEntry, UiScanPayload } from "../../shared/ui-scan/core.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 /** Column the `(no address)` marker is padded out to, so the addressless read as a column. */
 const NO_ADDRESS_COLUMN = 56;

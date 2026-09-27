@@ -12,7 +12,7 @@
  */
 
 import type { BoxRuntimeStatus, BoxRunStatus } from "./supervisor/core.js";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 
 /** Whether the hub as a whole is serving. `"unhealthy"` (→ HTTP 503) if ANY
  *  box is broken; `"ok"` (→ 200) otherwise, including a fleet that's merely

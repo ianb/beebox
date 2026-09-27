@@ -12,7 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { cardFields, parseCardText, serializeCardText } from "../../core/card-io.js";
 import type { CardSchema } from "../../exports/cards.js";
 import { createCardSchemaMap } from "../../schemas.js";

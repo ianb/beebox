@@ -10,7 +10,7 @@ import { acquireBoxWork } from "../../../../lib/box-maintenance.js";
  */
 
 import { makeLog } from "../log.js";
-import { errorMessage } from "../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
 import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../../features.js";

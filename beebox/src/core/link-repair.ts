@@ -19,7 +19,7 @@ import { glob } from "glob";
 import { listBoxMarkdownFiles } from "./list-cards.js";
 import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
 import { fileExists } from "../lib/file-exists.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 import { formatLinkDestination } from "./body-refs.js";
 
 const INDEX_IGNORE = [

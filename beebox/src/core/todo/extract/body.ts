@@ -37,8 +37,8 @@ import { collectTagSpans, tagNameFor } from "../../body-markdoc-lint.js";
 import { isTodoStatus } from "../../../shared/todo-model.js";
 import { assignLocators, isTodoTag } from "../../../shared/todo-locators.js";
 import type { TodoItem, TodoLocator } from "../collect-types.js";
-import { errorMessage } from "../../../lib/error-guards.js";
-import { invariant } from "../../../lib/invariant.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { invariant } from "../../../shared/invariant.js";
 import { flattenNodes, resolveTodoRefs, type FlattenResult } from "../../../shared/todo-text.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM

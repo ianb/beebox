@@ -21,7 +21,7 @@ import { readLandmarkSymbol } from "../../../../core/landmark/symbol.js";
 import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { readLandmarkCard } from "../../../../core/landmark/card-cache.js";
 import { prunedSubtree } from "../../../../core/landmark/prominence-index.js";
-import { errorMessage } from "../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../../lib/box-namespace-resolve.js";
 import type { CardSymbolData } from "../../../../shared/card-symbol.js";
 import type { ProminenceLevel } from "../../../../shared/prominence.js";

@@ -39,7 +39,7 @@ import { loadViewCards } from "../../../core/views/cards.js";
 import { typecheckViews } from "./typecheck.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import type { ViewProps } from "../../../core/views/types.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {

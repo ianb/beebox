@@ -25,7 +25,7 @@
  */
 
 import type { ChatBackendRun } from "../../../services/claude-chat/core.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 
 export type ChatRunPhase = "idle" | "starting" | "ready" | "streaming" | "stopping";
 

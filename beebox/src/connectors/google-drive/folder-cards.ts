@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { driveIdFromCardContent, GFOLDER_CARD_TYPE } from "./tracking.js";
 
 export interface GfolderCardInDir {

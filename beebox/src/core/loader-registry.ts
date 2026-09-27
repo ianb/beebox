@@ -15,7 +15,7 @@ import type { CardSchema, CardSummaryBase, CardSummaryParts } from "../cards/sch
 import { cardFields, formatZodIssues } from "./card-io.js";
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 import { readCardSymbol } from "./card-symbol.js";
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import { validateThemeChoice } from "../shared/card-theme/core.js";
 
 interface PathRegistration {

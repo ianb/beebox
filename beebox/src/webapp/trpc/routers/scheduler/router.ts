@@ -18,7 +18,7 @@ import { stageAndCommitPaths } from "../../../../lib/git/core.js";
 import { listSchedules, type ScheduleEntry } from "./schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./run.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
-import { isRecord } from "../../../../lib/is-record.js";
+import { isRecord } from "../../../../shared/is-record.js";
 import { BOX_DIRS } from "../../../../lib/paths/core.js";
 
 export type { ScheduleEntry };

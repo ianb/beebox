@@ -23,7 +23,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 
 const STATE_VERSION = 1;
 /** At most one persisted write per this interval — recency is a coarse hint,

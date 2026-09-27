@@ -10,7 +10,7 @@
  * concurrent finalize/job-tick pair can't interleave two transitions.
  */
 
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import {
   readStagingSession,

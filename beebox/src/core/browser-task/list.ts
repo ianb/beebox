@@ -11,7 +11,7 @@ import { createCardSchemaMap } from "../../schemas.js";
 import { BrowserTaskSchema, BROWSER_TASK_INBOX_DIR } from "../../schemas/browser-task.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { browserTaskState, type BrowserTaskState } from "../../shared/browser-task-state.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 export interface BrowserTaskListItem {
   /** Box-relative card path. */

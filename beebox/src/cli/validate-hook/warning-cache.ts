@@ -3,9 +3,9 @@
 import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { requestScopedLock, withFileLock } from "../../lib/file-lock.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 
 interface Notice {
   sessionId: string;

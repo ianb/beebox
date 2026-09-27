@@ -16,7 +16,7 @@
  * instead of surfacing as an opaque spawn error.
  */
 import * as fs from "node:fs";
-import { errnoCode, errorMessage } from "../../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 import { generateDocs } from "../../../docs-gen/generate/core.js";
 import { makeLog } from "../log.js";
 import { providerEnvAdditions } from "../../../provider-env/core.js";

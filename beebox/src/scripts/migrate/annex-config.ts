@@ -33,7 +33,7 @@ import * as path from "node:path";
 import { runAnnexDoctor } from "../../core/annex/doctor/core.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 async function main(): Promise<number> {
   const target = process.argv[2];

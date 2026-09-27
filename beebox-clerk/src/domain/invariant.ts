@@ -1,6 +1,6 @@
 /**
  * Should-never-happen assertion — always throws when `cond` is falsy, in
- * every environment. Mirrors beebox's `src/lib/invariant.ts` (not a
+ * every environment. Mirrors beebox's `src/shared/invariant.ts` (not a
  * shared dependency; clerk is a standalone package).
  *
  *   const el = document.getElementById("root");

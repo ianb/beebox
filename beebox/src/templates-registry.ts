@@ -11,7 +11,7 @@
  * module's existing consumers.
  */
 
-import { invariant } from "./lib/invariant.js";
+import { invariant } from "./shared/invariant.js";
 import { type TemplateDefinition } from "./templates-shape.js";
 import { templateGroups } from "./templates.js";
 

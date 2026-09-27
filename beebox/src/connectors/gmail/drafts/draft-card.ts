@@ -21,8 +21,8 @@ import * as fs from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../../../exports/cards.js";
 import { CardIOError } from "../../../core/card-io.js";
-import { errorMessage } from "../../../lib/error-guards.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { GmailDraftRejectedError } from "../../../services/google-gmail/core.js";
 
 /** The frontmatter field that marks a draft the connector has stopped retrying. */

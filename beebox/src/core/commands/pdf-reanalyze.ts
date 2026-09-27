@@ -28,7 +28,7 @@ import {
 } from "../command-types.js";
 import { splitCardContent } from "../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling/core.js";

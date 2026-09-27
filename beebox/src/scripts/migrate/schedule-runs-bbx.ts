@@ -26,7 +26,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 
 /** `runs: cb …` at any indentation, the command word alone. */
 const RUNS_CB = /^(\s*(?:-\s*)?runs:\s*)cb(?=\s|$)/gmu;

@@ -31,7 +31,7 @@ import { execa } from "execa";
 import { rm, mkdir, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 
 const DIST_RELEASE_DIR = path.join(PACKAGE_ROOT, "dist-release");
 

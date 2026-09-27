@@ -7,9 +7,9 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { errorMessage } from "../../../../lib/error-guards.js";
-import { isRecord } from "../../../../lib/is-record.js";
-import { invariant } from "../../../../lib/invariant.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+import { isRecord } from "../../../../shared/is-record.js";
+import { invariant } from "../../../../shared/invariant.js";
 import { isWithin } from "../../graph.js";
 import type { Finding, ImportEdge, LayoutFile, ModuleFile, PackageLayout, TestFile } from "../../model.js";
 import { classifyFile, listPackageFiles } from "./files.js";

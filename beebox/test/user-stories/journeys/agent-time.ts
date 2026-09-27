@@ -9,7 +9,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { isRecord } from "../../../src/lib/is-record.ts";
+import { isRecord } from "../../../src/shared/is-record.ts";
 import { parseJsonLine } from "../../../src/scripts/user-stories/json-io.ts";
 
 export interface AgentTiming {

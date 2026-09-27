@@ -3,10 +3,10 @@
  */
 
 import { fileExists } from "../lib/file-exists.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "../shared/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { linkTarget, matchReferenceDefinitionAt } from "./body-refs.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

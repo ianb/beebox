@@ -33,7 +33,7 @@ import { loadValidationIgnore, type ValidationIgnore } from "../../../core/valid
 import type { LoadCardContext } from "../../../core/card-io.js";
 import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors } from "./box-checks.js";
 import { resolveCliTargetPath } from "../../lib/cli-target-path.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /**
  * Whether to emit ANSI color. `bbx` run interactively by a human is the rare

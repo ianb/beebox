@@ -12,7 +12,7 @@ import {
   repairFrontmatterPaths,
   repairLinks,
 } from "../beebox/src/dev/doc-check/link-repair.js";
-import { errnoCode } from "../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 
 const DATE_RE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 

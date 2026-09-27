@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import type { GoogleCalendarService } from "../../services/google-calendar/core.js";
 

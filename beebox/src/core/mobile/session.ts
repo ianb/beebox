@@ -29,7 +29,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 /** Cookie name. Mirrored in `docs/mobile-contract.md` §8 (mirrored constants). */
 export const MOBILE_COOKIE_NAME = "bbx_mobile";

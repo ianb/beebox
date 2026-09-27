@@ -28,7 +28,7 @@ import { briefingFor, LOG_TAIL_LINES } from "./schedules-briefing.js";
 import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
-import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/shared/error-guards.js";
 import { NewlineInToolPatternError, NoWorkstreamToStartError } from "./schedules-errors.js";
 
 /** Fail-closed, the same three states `wt_other_agent_live` treats as live

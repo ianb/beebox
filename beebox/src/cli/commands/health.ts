@@ -19,7 +19,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import {
   loadScheduleHealth,
   formatDurationShort,

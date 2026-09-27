@@ -15,7 +15,7 @@ import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { loadBoxSchemas } from "../../schemas.js";
 import { listSchemaLoadFailures } from "../../schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")

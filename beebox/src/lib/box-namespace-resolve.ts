@@ -36,10 +36,10 @@
 import { lstat, readlink, realpath } from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
-import { isInBoxNamespace } from "./box-namespace.js";
+import { isInBoxNamespace } from "../shared/ref-path/box-namespace.js";
 import { findReservedNestedSegment } from "./box-reserved-segments.js";
-import { errnoCode } from "./error-guards.js";
-import { invariant } from "./invariant.js";
+import { errnoCode } from "../shared/error-guards.js";
+import { invariant } from "../shared/invariant.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 
 export interface BoxNamespacePath {

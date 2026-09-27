@@ -18,7 +18,7 @@ import { registerApiBrowseRoutes } from "./browse.js";
 import { registerApiFilesRoutes } from "./files.js";
 import { registerProxyImageRoutes } from "../proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./files-write.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import { isTaskOutputPathForBox } from "../../../../core/chat/session/transcript-paths.js";
 import { registerApiAdapterRoutes } from "./adapters.js";
 import { registerApiExternalRoute } from "./external.js";

@@ -41,7 +41,7 @@
 
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
-import { invariant } from "../beebox/src/lib/invariant.js";
+import { invariant } from "../beebox/src/shared/invariant.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,

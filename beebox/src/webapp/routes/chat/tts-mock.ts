@@ -12,7 +12,7 @@
  * and the request body explicitly opts in (`mock: true`).
  */
 
-import { sleep } from "../../../lib/sleep.js";
+import { setTimeout as sleep } from "node:timers/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Readable } from "node:stream";

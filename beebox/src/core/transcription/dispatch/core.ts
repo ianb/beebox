@@ -10,7 +10,7 @@ import { transcribeAudioVoxtral } from "../voxtral/core.js";
 import { transcribeAudioDeepgram } from "./deepgram.js";
 import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getOpenAiThinkingKey } from "../../openai-thinking-key.js";
 import {
   HQ_TRANSCRIPTION_SERVICES,

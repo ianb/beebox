@@ -15,7 +15,7 @@ import {
   type CommandResult,
 } from "../command-types.js";
 import { connectorFactories, type Connector } from "../../connectors.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { runConnectorProcedureTriggers } from "../connector-procedure-triggers.js";
 import { syncConnector } from "../../connector-activity/core.js";
 

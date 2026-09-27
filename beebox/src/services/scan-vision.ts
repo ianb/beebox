@@ -27,8 +27,8 @@ import { analyzeScanBatchWithOpenRouter } from "../core/describe-images/openrout
 import { GeminiEmptyResponseError } from "../core/describe-images/helpers.js";
 import { isAuthRejection } from "../core/secrets/probe-registry.js";
 import type { ModelRoute } from "../core/openrouter.js";
-import { err, ok, type Result } from "../lib/result.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { err, ok, type Result } from "../shared/result.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 export interface ScanVisionAnalyzeArgs {
   imagePaths: string[];

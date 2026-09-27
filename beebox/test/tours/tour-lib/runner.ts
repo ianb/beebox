@@ -9,7 +9,7 @@
  */
 
 import path from "node:path";
-import { invariant } from "../../../src/lib/invariant.js";
+import { invariant } from "../../../src/shared/invariant.js";
 import { BrowseSession } from "./browse.js";
 import { captureCheckpoint } from "./checkpoint.js";
 import { buildExpectAPI } from "./expect.js";

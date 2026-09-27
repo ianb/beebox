@@ -17,7 +17,7 @@
 
 import { Command } from "commander";
 import { SURFACE, type SurfaceEntry } from "../surface-data.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { VERB_COMMANDS } from "../commands.js";
 
 /** The one-line summary `bbx --help` gives the engine namespace. */

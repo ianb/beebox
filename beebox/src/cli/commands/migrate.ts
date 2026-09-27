@@ -31,7 +31,7 @@ import {
 } from "../../core/migration-run.js";
 import { migrationQuestions } from "../../core/migration-repair.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");

@@ -13,7 +13,7 @@ import {
 import { getAllTemplates } from "../../templates-registry.js";
 import { describeTemplateArgs } from "../../templates-describe.js";
 import { loadBoxSchemas } from "../../schemas.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 interface CreateOptions {
   template?: string;

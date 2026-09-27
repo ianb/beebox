@@ -8,7 +8,7 @@
  * answers is worse than an error.
  */
 
-import { assertNever } from "../../lib/invariant.js";
+import { assertNever } from "../../shared/invariant.js";
 import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "../glm-key.js";
 import { openRouterChatAdditions } from "./openrouter-chat.js";

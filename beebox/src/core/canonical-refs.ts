@@ -38,7 +38,7 @@ import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.j
 import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";
 import { fileExists } from "../lib/file-exists.js";
-import { assertNever } from "../lib/invariant.js";
+import { assertNever } from "../shared/invariant.js";
 
 /**
  * The verdict on one ref:

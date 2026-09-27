@@ -16,8 +16,8 @@ import { writeFile, readFile, access, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
-import { errorMessage } from "../lib/error-guards.js";
-import { isRecord } from "../lib/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
 
 class TtsRequestError extends Error {
   readonly voice: string;

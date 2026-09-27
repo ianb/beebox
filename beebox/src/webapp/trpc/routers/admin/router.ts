@@ -17,7 +17,7 @@ import { baseServerUrl } from "../../../base-server-url.js";
 import { googleAdminProcedures } from "./google.js";
 import { backupAdminProcedures } from "./backup.js";
 import { openrouterAdminProcedures } from "./openrouter.js";
-import { errnoCode, errorMessage } from "../../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../../services/tailscale.js";
 import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../../box-config-write.js";
 import { isConfigurableModel, loadAddedModels } from "../../../../core/box/config.js";

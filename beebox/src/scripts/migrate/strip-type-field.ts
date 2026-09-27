@@ -19,7 +19,7 @@
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { errorMessage, errnoCode } from "../../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 
 const TYPE_LINE_RE = /^type:\s*([\w-]+)\s*$/m;
 const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---/;

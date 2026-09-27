@@ -7,7 +7,7 @@
  * cancel handle wired to server close.
  */
 
-import { startAwakeTimeout, type AwakeTimeout } from "../../../lib/awake-timeout.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { sweepVoiceSessions } from "../../../core/voice-recording/sweep.js";
 
 /** How much awake time between voice sweeps — same cadence as the capture abandonment sweep. */

@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
-import { errnoCode } from "../../../../lib/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 
 export async function getFileKind(boxRoot: string, inputPath: string): Promise<{ kind: "directory" | "file" | "missing" }> {
   if (inputPath === "" || inputPath === "/") return { kind: "directory" };

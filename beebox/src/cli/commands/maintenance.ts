@@ -5,12 +5,12 @@ import { userInfo } from "node:os";
 import { Command } from "commander";
 import { z } from "zod";
 import { defaultHubConfigPath, loadHubConfig } from "../../hub/config.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import {
   closeBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment, type BoxMaintenance,
 } from "../../lib/box-maintenance.js";
 import { captureMigrationSnapshot } from "../../core/migration-recovery.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /** Root deployment scripts retain privilege; gate files belong to the box user. */
 async function boxIdentity(roots: string[]): Promise<() => void> {

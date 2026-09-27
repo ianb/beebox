@@ -40,8 +40,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { errnoCode } from "../../lib/error-guards.js";
-import { isRecord } from "../../lib/is-record.js";
+import { errnoCode } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
 import { mapV2Path } from "../../core/migrations/one-root-mapping.js";
 
 const TRACKER_REL = "_config/template-versions.json";

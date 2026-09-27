@@ -15,8 +15,8 @@ import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-targ
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
-import { invariant } from "../../../lib/invariant.js";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { invariant } from "../../../shared/invariant.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../../find-inbound-card-refs.js";
 

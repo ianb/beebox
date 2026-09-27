@@ -13,8 +13,8 @@
 import { Command } from "commander";
 
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { errorMessage } from "../../../lib/error-guards.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { resolveCloudflareAuth } from "../../../publish/cloudflare-auth.js";
 import { type SetupAuthBundle, setupPublishing } from "../../../publish/setup/core.js";
 import { statusPublishing, type StatusReport } from "../../../publish/status.js";

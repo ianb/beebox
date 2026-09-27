@@ -39,8 +39,8 @@ import {
 } from "./internal.js";
 import { withBoxGitLock } from "../git-lock.js";
 import { inspectIndexLock, recoverStaleIndexLock } from "../git-stale-lock.js";
-import { sleep } from "../sleep.js";
-import { errorMessage } from "../error-guards.js";
+import { setTimeout as sleep } from "node:timers/promises";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { GitLogFormat } from "./internal.js";
 import { parseTrailers } from "../../shared/commit-trailers.js";
 

@@ -26,7 +26,7 @@ import { mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from "node:f
 import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { contentHash } from "../../../lib/content-hash.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { cardSchemas } from "../../../schemas.js";
 import { getBuiltinTemplates } from "../../../templates-registry.js";
 import { generateViewsDoc } from "../../views/doc/core.js";

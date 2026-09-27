@@ -13,7 +13,7 @@
  * so nothing here needs a "not yet real" case.
  */
 
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever } from "../../../shared/invariant.js";
 import { getMostActive } from "./history.js";
 import type { ChatSession } from "./run/core.js";
 import type { ChatSessionRegistry } from "./registry/core.js";

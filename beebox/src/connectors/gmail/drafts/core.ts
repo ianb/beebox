@@ -17,8 +17,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
-import { isRecord } from "../../../lib/is-record.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { isRecord } from "../../../shared/is-record.js";
 import { parseFrontmatterObject } from "../../../exports/cards.js";
 import { parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";

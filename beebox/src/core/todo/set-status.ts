@@ -30,8 +30,8 @@ import type { Node } from "@markdoc/markdoc";
 import { isMap, isSeq, parseDocument } from "yaml";
 import { splitCardContent } from "../../exports/cards.js";
 import { assignLocators } from "../../shared/todo-locators.js";
-import { invariant } from "../../lib/invariant.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { invariant } from "../../shared/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { TodoLocator } from "./collect-types.js";
 
 // Same CJS/ESM workaround as `extract-body.ts`.

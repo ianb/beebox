@@ -17,7 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import type { DriveComment } from "../../services/google-drive/core.js";
 
 /** Bare filename of the comments sidecar within an attach scope. */

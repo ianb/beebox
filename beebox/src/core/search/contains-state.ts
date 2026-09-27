@@ -29,7 +29,7 @@ import {
 import { declareInputFiles, effectiveContains } from "./extract/core.js";
 import { writeJsonAtomic } from "./store.js";
 import { contentHash } from "../../lib/content-hash.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 const STATE_FILENAME = "contains-state.json";
 // v2: containsText records the *effective* contains (per-kind description

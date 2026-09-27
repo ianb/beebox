@@ -19,7 +19,7 @@ import { ensureAgentCommitted, captureBaseline } from "../../agent/invoke/core.j
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../prompts.js";
 import { computeTodoAmbientLine } from "../../todo/ambient-summary.js";
 import type { ProcessJobsOptions, JobWithContent } from "../types.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { loadEffectiveBoxModel } from "../../model-policy.js";
 import { fmt } from "../../../lib/format.js";
 

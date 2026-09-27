@@ -13,8 +13,8 @@
 import { execa } from "execa";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { err, ok, type Result } from "../../lib/result.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { err, ok, type Result } from "../../shared/result.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /** Awake-second budget for a probe. These read a few pages; anything near this is pathological. */
 const PROBE_TIMEOUT_MS = 30_000;

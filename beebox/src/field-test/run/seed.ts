@@ -19,9 +19,9 @@
 
 import * as path from "node:path";
 import { mkdir, readFile } from "node:fs/promises";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { clearBoxConfigCache } from "../../core/box/config.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { commit, getStatus, stageAll } from "../../lib/git/core.js";
 import { getBoxDir } from "../../lib/paths/core.js";

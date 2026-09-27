@@ -14,7 +14,7 @@
 
 import * as path from "node:path";
 import { execa } from "execa";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { CheckResult } from "../results.js";
 
 /** How long one check may take. Checks read the box off disk; a check that

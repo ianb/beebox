@@ -4,9 +4,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
-import { isRecord } from "../../lib/is-record.js";
+import { isRecord } from "../../shared/is-record.js";
 import { BOX_DIRS, getBoxDir } from "../../lib/paths/core.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { getAllDriveHandlers } from "./handlers.js";
 
 const DRIVE_CARD_IGNORE = [

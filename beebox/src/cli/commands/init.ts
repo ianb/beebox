@@ -20,7 +20,7 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
 import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh/core.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * Print the fresh-init banner and initialize git at the box root. Split out of

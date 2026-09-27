@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { attachDirFor, isAttachDirName, isInsideAttachScope } from "../../shared/attach-path.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { findLinkedCardPaths } from "../find-inbound-card-refs.js";
 import { scanBoxRepositoryStats, type BoxRepositoryStats } from "./repository-stats.js";
 

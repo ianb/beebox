@@ -25,7 +25,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { chatUploadBatchesDir, ensureBoxTmpDir } from "../../../lib/box-tmp.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 
 interface RegisterChatUploadRoutesOptions {
   server: FastifyInstance;

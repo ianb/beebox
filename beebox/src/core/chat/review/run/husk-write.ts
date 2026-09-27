@@ -21,7 +21,7 @@ import { splitCardContent } from "../../../../exports/cards.js";
 import { isRecord } from "../../../card-io.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
 import { contentHash } from "../../../../lib/content-hash.js";
-import { errorMessage } from "../../../../lib/error-guards.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
 import { scanBundle, type LeakKind } from "../../../../publish/leak-scan.js";
 import { setDerivedContains } from "../../../search/contains-update.js";
 import type { ReviewOutput } from "../reviewer.js";

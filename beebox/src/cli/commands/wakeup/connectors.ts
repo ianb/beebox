@@ -13,7 +13,7 @@ import {
   type ConnectorProcedureTrigger,
 } from "../../../connectors.js";
 import { ConnectorFatalError } from "../../../connector.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import type { WakeupConnectorOutcome } from "../../wakeup-outcome.js";
 import { createCliContext } from "../../../core/command-runner.js";
 import { runConnectorProcedureTriggers } from "../../../core/connector-procedure-triggers.js";

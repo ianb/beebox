@@ -7,10 +7,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../../lib/error-guards.js";
+import { errnoCode } from "../../shared/error-guards.js";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /**
  * Narrow an ical.js value to an `ICAL.Time`, or `null`. ical.js's typings both

@@ -1,5 +1,5 @@
 import { MODEL_ID } from "./model-ids.js";
-import { invariant } from "../lib/invariant.js";
+import { invariant } from "./invariant.js";
 
 /** Agent-engine names shared by box config, chat, and procedure model policy. */
 export const AGENT_ENGINES = ["claude", "codex"] as const;

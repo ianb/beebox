@@ -8,7 +8,7 @@
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { type CalendarEvent } from "../../services/google-calendar/core.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import { asIcalTime } from "./utils.js";
 
 export type GoogleCalendarEvent = CalendarEvent;

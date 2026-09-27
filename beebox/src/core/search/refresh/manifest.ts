@@ -7,8 +7,8 @@
 import { promises as fs } from "node:fs";
 import { z } from "zod";
 import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "../store.js";
-import { invariant } from "../../../lib/invariant.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { invariant } from "../../../shared/invariant.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /** Stat/hash record for a declared input file (e.g. a gdoc snapshot). */
 const inputFileEntrySchema = z.object({

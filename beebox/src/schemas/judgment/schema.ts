@@ -11,7 +11,7 @@
 
 import { z } from "zod";
 import { body, cardRef, cardSchema, type InferCardFields } from "../../exports/cards.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 import type { JudgeQuestion } from "../../services/jev-judge.js";
 import { JUDGMENT_INSTRUCTIONS } from "./instructions.js";
 

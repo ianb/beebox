@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../exports/cards.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { AGENT_ENGINES, type AgentEngine } from "../../shared/agent-models.js";

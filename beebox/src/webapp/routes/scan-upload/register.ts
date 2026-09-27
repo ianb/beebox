@@ -39,7 +39,7 @@ import { qpdfAvailable, validateScanFile } from "../../../core/scan/validate.js"
 import { isAnnexBox } from "../../../core/annex/is-annex-box.js";
 import { SCAN_CONTRACT_VERSION } from "../../../core/scan/contract-version.js";
 import { makeScanAuthPreHandler, scanAuthOf, type ScanAuth } from "./scan-auth.js";
-import { invariant } from "../../../lib/invariant.js";
+import { invariant } from "../../../shared/invariant.js";
 import { consumeScanRateLimit } from "./rate-limit.js";
 import { notifyScanUpload, startScanPromoteLifecycle } from "./promote-lifecycle.js";
 import {

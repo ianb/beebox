@@ -18,9 +18,9 @@
 import { execa } from "execa";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { err, ok, okVoid, type Result } from "../../lib/result.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { startAwakeTimeout } from "../../lib/awake-timeout.js";
+import { err, ok, okVoid, type Result } from "../../shared/result.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { startAwakeTimeout } from "../../shared/awake-timeout.js";
 import { DOCLING_VERSION } from "./version.js";
 
 /**

@@ -36,7 +36,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { splitFrontmatter } from "../beebox/src/dev/doc-check/frontmatter.js";
-import { errnoCode, errorMessage } from "../beebox/src/lib/error-guards.js";
+import { errnoCode, errorMessage } from "../beebox/src/shared/error-guards.js";
 
 /** Active plans only — implemented plans are finished and unimplemented ones are parked/superseded. */
 const PLANS_DIR = "beebox/docs/plans";

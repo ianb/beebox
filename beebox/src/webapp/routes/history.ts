@@ -12,7 +12,7 @@ import { simpleGit } from "simple-git";
 import { describeAbsentContent, parseAnnexPointer } from "../../lib/annex-pointer.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "./serving-security.js";
-import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { isInBoxNamespace } from "../../shared/ref-path/box-namespace.js";
 
 /**
  * Register history API routes.

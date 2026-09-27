@@ -18,8 +18,8 @@ import { sendPush, VapidNotConfiguredError, webPushConfigured } from "./send-pus
 import { boxSlug } from "../lib/box-slug.js";
 import { getBoxTime } from "../lib/time.js";
 import { getPublicUrl } from "../lib/public-url.js";
-import { errorMessage } from "../lib/error-guards.js";
-import { assertNever } from "../lib/invariant.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { assertNever } from "../shared/invariant.js";
 import { createEventBus } from "./event-bus/core.js";
 import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
 import { formatTarget, targetUrl } from "./notification/target.js";

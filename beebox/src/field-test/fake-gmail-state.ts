@@ -25,7 +25,7 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
-import { errorMessage, errnoCode } from "../lib/error-guards.js";
+import { errorMessage, errnoCode } from "../shared/error-guards.js";
 import {
   createFakeGoogleGmail,
   type FakeGoogleGmailService,

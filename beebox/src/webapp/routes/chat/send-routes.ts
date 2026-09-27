@@ -11,7 +11,7 @@
 import { acquireBoxWork } from "../../../lib/box-maintenance.js";
 import { randomUUID } from "node:crypto";
 import type { FastifyReply } from "fastify";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../../core/chat/whats-changed.js";
 import type { SessionUser } from "../../auth.js";

@@ -15,8 +15,8 @@
  */
 
 import type { OAuth2Client } from "google-auth-library";
-import { isRecord } from "../lib/is-record.js";
-import { errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../shared/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
 import { getGoogleAuth, getBoxGoogleClientCreds } from "./auth.js";
 import {
   loadGoogleTokens,

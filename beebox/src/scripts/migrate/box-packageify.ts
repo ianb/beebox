@@ -21,7 +21,7 @@
 
 import * as path from "node:path";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 
 const RETIRED =
   "box-packageify was retired (all boxes are v2 now); a box that predates the " +

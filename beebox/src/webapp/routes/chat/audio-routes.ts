@@ -28,7 +28,7 @@ import {
   CompiledSpeakingVoiceSchema,
   type CompiledSpeakingVoice,
 } from "../../../schemas/personality/schema.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "./tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../../core/tts/resolve.js";

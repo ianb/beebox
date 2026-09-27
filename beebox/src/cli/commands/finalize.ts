@@ -17,7 +17,7 @@ import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
 import { rotateIfNeeded } from "../../core/notification/log.js";
 import { getBoxTime } from "../../lib/time.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { syncConnector } from "../../connector-activity/core.js";
 import type { TelegramService } from "../../services/telegram.js";
 import type { PushService } from "../../services/push.js";

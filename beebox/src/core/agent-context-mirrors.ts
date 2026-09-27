@@ -2,7 +2,7 @@
 
 import { dirname, join, relative } from "node:path";
 import { lstat, mkdir, readFile, readdir, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { AGENTS_MD, CLAUDE_MD } from "./agent-instruction-files.js";
 import { withDocId, withoutDocId } from "./docs-gen/shared.js";

@@ -4,7 +4,7 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { CommandFailedError, CommandTimedOutError, execWithTimeout } from "../../lib/exec-with-timeout.js";
 import { PUBLICATION_COMMAND_TIMEOUT_MS, type PrepareDeps, type ProjectCommandRequest } from "./types.js";
 import { BundlePolicyError, bundlePolicyError, projectCommandError } from "./errors.js";

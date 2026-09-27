@@ -14,7 +14,7 @@ import { loadBoxholders } from "./boxholder-cards.js";
 import { parseCardText } from "../../card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { DOCS_DIR } from "../shared.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxDir, BOX_DIRS } from "../../../lib/paths/core.js";
 
 /**

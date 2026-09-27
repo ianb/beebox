@@ -17,8 +17,8 @@
 
 import { undismissedEpisodes } from "../../connector-activity/episodes.js";
 import { describeVerdict } from "../../connector-activity/verdict.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { assertNever } from "../../lib/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { assertNever } from "../../shared/invariant.js";
 import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
 import { formatRetryAt } from "../agent/engine-unavailability.js";
 import type { Target } from "../notification/target.js";

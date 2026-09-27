@@ -43,7 +43,7 @@ import { isAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { formatLinkDestination, inlineLinkPattern, linkTarget } from "../body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./frontmatter-refs.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant } from "../../shared/invariant.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns

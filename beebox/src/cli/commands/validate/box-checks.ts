@@ -10,8 +10,8 @@ import * as path from "node:path";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../../lib/box-shape.js";
 import { checkBoxRoot } from "../../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../../lib/box-reserved-segments.js";
-import { BOX_ROOT_VOCABULARY } from "../../../lib/box-root-vocabulary.js";
-import { errnoCode } from "../../../lib/error-guards.js";
+import { BOX_ROOT_VOCABULARY } from "../../../shared/box-root-vocabulary.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { loadPresentationConfig } from "../../../core/box/presentation.js";
 
 /**

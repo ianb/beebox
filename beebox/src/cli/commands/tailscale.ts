@@ -15,8 +15,8 @@ import * as readline from "node:readline";
 
 import { Command } from "commander";
 
-import { errorMessage } from "../../lib/error-guards.js";
-import { assertNever } from "../../lib/invariant.js";
+import { errorMessage } from "../../shared/error-guards.js";
+import { assertNever } from "../../shared/invariant.js";
 import { createRealTailscaleDeps, type TailscaleTarget } from "../../services/tailscale.js";
 import { defaultHubConfigPath, resolveTargetOrDiscover } from "../../services/tailscale-discovery.js";
 import {

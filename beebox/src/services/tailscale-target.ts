@@ -21,7 +21,7 @@
  *     body) — refuse rather than assume it is protected.
  */
 
-import { isRecord } from "../lib/is-record.js";
+import { isRecord } from "../shared/is-record.js";
 import type { ProbeResult, TailscaleDeps } from "./tailscale.js";
 
 /** The running target's effective auth posture, from a loopback `/auth/me` probe. */

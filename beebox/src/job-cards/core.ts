@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
+import { errnoCode } from "../shared/error-guards.js";
 import { parseFrontmatterObject } from "../exports/cards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 

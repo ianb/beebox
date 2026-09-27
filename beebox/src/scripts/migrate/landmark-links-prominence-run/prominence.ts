@@ -42,7 +42,7 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { parseDocument } from "yaml";
-import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { fileExists } from "../../../lib/file-exists.js";
 import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
 import { parseLandmarkFields, type LandmarkLinkData } from "../../../schemas/landmark.js";
