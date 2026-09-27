@@ -4839,6 +4839,21 @@ tests:
     correct_contains: ["medium"]
     tags: [retro, personality, behavioral]
 
+  # Guards ledger row personality.block (added 2026-09-26, doc-structure
+  # Track 3, PERSONALITY): the compiled personality reaches the agent. The
+  # expected name is test1's personality card ("Egg"); on another box, change
+  # correct_contains to that box's name.
+  # Status (2026-09-26, doc-structure Track 3, PERSONALITY): pass on the test1
+  # clone, 0 reads, 0 searches, 36k ctx.
+  - id: personality-voice-loaded
+    prompt: "What's your name in this box, and how are your replies supposed to sound? Answer from what you already know; don't look anything up."
+    expected_level: knows_directly
+    watch_for: >
+      Gives the name and the tone from the personality section (for test1:
+      Egg; casual, direct, concise, curious), without reading the card.
+    correct_contains: ["Egg"]
+    tags: [personality]
+
   # === Last-Audio Fetch (bbx chat get-last-audio) ===
   #
   # Deliberately low-promoted: one INPUT FORMAT line in the chat prompt, a

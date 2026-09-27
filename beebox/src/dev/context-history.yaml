@@ -6233,6 +6233,14 @@ test1:
       peak: 40985
       added: 3164
       turns: 4
+  personality-voice-loaded:
+    - date: 2026-09-27T04:32:01.396Z
+      boxCommit: c4f9d1ce17b7bc4e5ba16abfda39c957fc20140b
+      repoCommit: 73c37a215e2c964cdf3c80407685170c80b81753
+      initial: 36346
+      peak: 36346
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
