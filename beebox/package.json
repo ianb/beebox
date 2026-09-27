@@ -79,7 +79,7 @@
     "generate:doc-images": "tsx src/dev/generate-doc-images/generate.ts",
     "doc-graph": "tsx src/dev/doc-graph.ts > docs/doc-graph.md",
     "doc-check": "tsx src/dev/doc-check/check.ts",
-    "layout-check": "tsx src/dev/layout/check/cli.ts",
+    "layout-check": "tsx src/dev/layout/check/cli/main.ts",
     "layout-move": "tsx src/dev/layout/move/cli.ts",
     "doc-graph-html": "tsx src/dev/doc-graph-html/html.ts",
     "test:watch": "tap --watch",
