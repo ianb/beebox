@@ -109,6 +109,9 @@ const TOOL_CATEGORIES = {
   Agent: "task",
   Task: "task",
   TodoWrite: "todo",
+  // "search" renders as "searched documents"; a web lookup is not that.
+  WebSearch: "tool",
+  WebFetch: "tool",
 } satisfies Record<KnownToolName, string>;
 
 function toolCategory(name: string): string {

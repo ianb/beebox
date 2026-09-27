@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
-import { testSuiteSchema, type AuditTest, type TestSuite } from "./test-suite-schema.js";
+import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "./test-suite-schema.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { createClaudeAgent } from "../../core/agent/index.js";
 import type { AgentInvokeOptions } from "../../core/agent/types.js";
@@ -60,6 +60,7 @@ export interface AutomatedChecks {
   shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
+  shouldSearchCheck?: { where: SearchWhere; found: boolean; matched?: string | undefined } | undefined;
 }
 
 export interface TestResult {
@@ -284,6 +285,10 @@ const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext)
   },
   Grep: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
   Glob: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  // Web lookups count as searches under their own tool name, matching the
+  // Codex runner's provider searches (`codex-audit-behavior.ts`).
+  WebSearch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  WebFetch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
   Bash: ({ block, summary, acc }) => {
     if (summary) acc.bashCommands.push(summary);
     if (block.input) {

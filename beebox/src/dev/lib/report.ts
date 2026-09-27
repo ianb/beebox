@@ -210,6 +210,13 @@ function formatShouldReadAny(checks: Checks): string[] {
   return [`- ${check.wasRead ? "\u2713" : "\u2717"} Read any of [${check.files.join(", ")}]${detail}`];
 }
 
+function formatShouldSearch(checks: Checks): string[] {
+  if (checks.shouldSearchCheck === undefined) return [];
+  const check = checks.shouldSearchCheck;
+  const detail = check.matched === undefined ? "" : ` (matched: "${check.matched}")`;
+  return [`- ${check.found ? "\u2713" : "\u2717"} Searched (${check.where})${detail}`];
+}
+
 function formatCheckLines(checks: Checks): string[] {
   const checkLines = formatPositiveTextChecks(checks);
   for (const c of checks.notContainsChecks) {
@@ -241,6 +248,7 @@ function formatCheckLines(checks: Checks): string[] {
     const detail = c.found && c.matchedCommand ? ` (matched: "${c.matchedCommand}")` : "";
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);
   }
+  checkLines.push(...formatShouldSearch(checks));
   return checkLines;
 }
 

@@ -57,6 +57,8 @@ const TOOL_INPUT_SUMMARIZERS: Partial<
   Grep: (input) => `${input.pattern} in ${input.path || "."}`,
   TodoWrite: () => "update todos",
   Task: (input) => String(input.description || input.prompt || "").substring(0, 120),
+  WebSearch: (input) => String(input.query || ""),
+  WebFetch: (input) => String(input.url || ""),
 };
 
 /**
