@@ -38,12 +38,14 @@ export type ConnectorFactory = (boxRoot: string) => Connector;
 export const connectorFactories = defineRegistry<ConnectorFactory>({
   directory: "./connectors",
   entry: "connector",
-  ordered: false,
+  // Order is semantics: a full wakeup runs connectors in this order, which is
+  // the order they self-registered in before this registry existed.
+  ordered: true,
   members: {
     gmail: createGmailConnector,
-    googleDrive: createGoogleDriveConnector,
     googleCalendar: createGoogleCalendarConnector,
     telegram: createTelegramConnector,
+    googleDrive: createGoogleDriveConnector,
     publishSubmissions: createPublishSubmissionsConnector,
   },
 });
