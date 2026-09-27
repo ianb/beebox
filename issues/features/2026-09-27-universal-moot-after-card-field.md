@@ -40,9 +40,12 @@ states the time after which the card is moot.
 
 ## Open design questions
 
-- **Name.** `moot-after`, `relevant-until`, `expires`, or other. `expires`
-  is already used on `procedure-run` with a different meaning (may be
-  deleted), so reusing it would give one name two meanings.
+- **Name.** The developer prefers `expires` over "moot" (2026-09-27).
+  `procedure-run` already has `expires` with a narrower meaning: after that
+  date `bbx procedure gc` may delete the run directory. Either rename that
+  field (for example to `delete-after`), or define the universal `expires`
+  as "stops mattering" and let `procedure-run` treat deletion as what
+  expiry means for its type. Do not leave one name with two meanings.
 - **Value.** An absolute date-time, a duration from creation (like
   `expires-after`), or both.
 - **Effect.** What each surface does with a moot card: listings, search
