@@ -92,9 +92,12 @@ steps:
 await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add maybe procedure");
 
-const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const lines = [];
+const ctx = { boxRoot: box.root, writeLine: (line) => { lines.push(line); }, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "maybe" });
 print(`success: ${result.ok}`);
+// A precheck that printed nothing reports its exit code as a number, in plain text.
+print(lines.find((l) => l.includes("Skipped:")));
 
 // The skipped step's shell never ran
 const files = await box.list("_bookkeeping/output");
@@ -110,6 +113,7 @@ print(`skipped step: ${run.steps[0].id} = ${run.steps[0].status}`);
 print(`runs step: ${run.steps[1].id} = ${run.steps[1].status}`);
 =>
 success: true
+  Skipped: precheck exit 75
 bad.txt exists: false
 good.txt exists: true
 skipped step: skipped = skipped

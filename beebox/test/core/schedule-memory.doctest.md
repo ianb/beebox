@@ -3,7 +3,8 @@
 A scheduled `runs:` command sees its own previous run through five
 environment variables (`src/core/schedule/memory.ts`): `BBX_SINCE_COMMIT` (the
 box HEAD at the previous run), `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and two temp
-paths, `BBX_CARRY_OUT` and `BBX_DEFER_FILE`. The cursor and the carry live in
+paths, `BBX_CARRY_OUT` and `BBX_DEFER_FILE`. A sixth, `BBX_SCHEDULE_NAME`,
+names the schedule. The cursor and the carry live in
 the schedule's machine-local state. See docs/plans/notifications.md (Track D).
 
 ```ts setup
@@ -46,6 +47,7 @@ runs: >-
     echo "added: [$(git diff --name-only --diff-filter=A "$BBX_SINCE_COMMIT" HEAD | paste -sd, -)]";
   } > _tmp/seen.txt &&
   echo "$BBX_DEFER_FILE" > _tmp/defer-path.txt &&
+  echo "$BBX_SCHEDULE_NAME" > _tmp/schedule-name.txt &&
   { [ ! -f _tmp/next-carry ] || cp _tmp/next-carry "$BBX_CARRY_OUT"; } &&
   [ ! -f _tmp/fail ]
 ---
@@ -73,6 +75,14 @@ await box.read("_tmp/seen.txt")
 time: (none)
 carry: (none)
 added: []
+```
+
+`BBX_SCHEDULE_NAME` is the card's stem, so a `bbx notify` in the pipeline
+names the schedule as its source (`schedule:watch`).
+
+```ts continue
+(await box.read("_tmp/schedule-name.txt")).trim()
+=> watch
 ```
 
 The run succeeded, so the cursor moved to HEAD, and the carry is in state:
@@ -180,11 +190,11 @@ reason from an exit-75 marker (`test/cli/commands/tick-defer.doctest.md`); a
 
 `bbx procedure run` inside a schedule inherits the tick's environment, and its
 shell steps rebuild their environment through the script-env allowlist
-(`src/core/procedure/shell.ts`), which lists the five names.
+(`src/core/procedure/shell.ts`), which lists the six names.
 
 ```ts
 const box = await makeTmpBox();
-const names = ["BBX_SINCE_COMMIT", "BBX_SINCE_TIME", "BBX_CARRY_IN", "BBX_CARRY_OUT", "BBX_DEFER_FILE"];
+const names = ["BBX_SINCE_COMMIT", "BBX_SINCE_TIME", "BBX_CARRY_IN", "BBX_CARRY_OUT", "BBX_DEFER_FILE", "BBX_SCHEDULE_NAME"];
 for (const name of names) process.env[name] = `value-of-${name}`;
 const shell = await runShell(box.root, names.map((n) => `echo "$${n}"`).join("\n"));
 for (const name of names) delete process.env[name];
@@ -194,6 +204,7 @@ value-of-BBX_SINCE_TIME
 value-of-BBX_CARRY_IN
 value-of-BBX_CARRY_OUT
 value-of-BBX_DEFER_FILE
+value-of-BBX_SCHEDULE_NAME
 ```
 
 ```ts cleanup

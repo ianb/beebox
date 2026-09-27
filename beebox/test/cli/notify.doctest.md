@@ -11,7 +11,7 @@ target.
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { runNotify } from "../../src/cli/commands/notify.js";
+import { notifySource, runNotify } from "../../src/cli/commands/notify.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
@@ -128,10 +128,23 @@ JSON.stringify([tg.sent.at(-1).text.replace(slug, "<box>"), tg.sent.at(-1).silen
 => ["Field trip form due\nSign it by Friday.\n/<box>/browse/_content/inbox/field-trip.email.card",false]
 ```
 
-## The body comes from piped stdin when no `--body` is given; `quiet` is the default
+## Stdin is the body only when asked: `--body -` or `--body-file -`; `quiet` is the default
+
+An agent's shell or a schedule's pipeline can hold stdin open with nothing
+coming, so `bbx notify` never reads it unasked. With stdin piped and no body
+flag, the body is empty and stdin is left alone.
 
 ```ts
-await run("Weekly summary", { target: "dashboard" }, "Three cards changed.\n")
+let stdinReads = 0;
+const counted = async () => { stdinReads += 1; return "never read"; };
+const quietLog = console.log;
+console.log = () => {};
+const unasked = await runNotify(box.root, { title: "Unasked", options: { target: "dashboard", channel: "telegram" }, readStdin: counted, source: "doctest", services: { tg, push } });
+console.log = quietLog;
+JSON.stringify([unasked, (await lastIntent()).body, stdinReads])
+=> [0,"",0]
+
+await run("Weekly summary", { target: "dashboard", body: "-" }, "Three cards changed.\n")
 =>
 <id>: apns skipped (no-audience), web-push sent, telegram sent
 exit 0
@@ -139,6 +152,47 @@ exit 0
 const summary = await lastIntent();
 JSON.stringify([summary.body, summary.loudness, summary.source])
 => ["Three cards changed.","quiet","doctest"]
+
+await run("From stdin", { target: "dashboard", bodyFile: "-", channel: "telegram" }, "Via --body-file -\n")
+=>
+<id>: telegram sent
+exit 0
+
+(await lastIntent()).body
+=> Via --body-file -
+```
+
+A `-` body with nothing piped, or with stdin already carrying the targets, is
+a usage error:
+
+```ts continue
+[
+  await run("x", { target: "dashboard", body: "-" }),
+  await run("x", { targetsFromStdin: true, bodyFile: "-" }, "dashboard\n"),
+].join("\n")
+=>
+stderr: Error: the body is stdin (-), but nothing is piped on stdin
+exit 2
+stderr: Error: stdin carries the targets with --targets-from-stdin; give the body with --body or --body-file
+exit 2
+```
+
+## The source: the chat, else the schedule, else the command
+
+From a chat session's shell the source is the chat. In a schedule's pipeline
+the tick sets `BBX_SCHEDULE_NAME` to the card's stem (and lets it through to a
+procedure's shells), so a notification names the schedule that sent it.
+
+```ts
+[
+  notifySource({ chatSession: "s1", env: { BBX_SCHEDULE_NAME: "watch-field-trip" } }),
+  notifySource({ chatSession: null, env: { BBX_SCHEDULE_NAME: "watch-field-trip" } }),
+  notifySource({ chatSession: null, env: {} }),
+].join("\n")
+=>
+chat:s1
+schedule:watch-field-trip
+bbx notify
 ```
 
 ## `--body-file` reads the body from a file
@@ -280,6 +334,14 @@ stderr: Error: --presence applies only with --dry-run
 exit 2
 stderr: Error: --presence must be a whole number of active web sessions (got "some")
 exit 2
+```
+
+A dry run needs no `--target`: it previews `chat:new`, where most
+notifications land. A send still requires one.
+
+```ts continue
+(await run("Pick up Sam", { dryRun: true })).split("\n")[0]
+=> intent: quiet "Pick up Sam" -> chat:new
 ```
 
 ## Fake mode shows in a dry run

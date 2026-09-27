@@ -13,6 +13,8 @@
  *   may write the next one to. An absent or empty file keeps the old value.
  * - `BBX_DEFER_FILE`: where `bbx changes --or-skip` (and later `bbx judge`)
  *   write `{ "reason": ... }` before exiting 75.
+ * - `BBX_SCHEDULE_NAME`: the schedule card's stem, so `bbx notify` in the
+ *   pipeline names the schedule as its source.
  */
 
 import * as fs from "node:fs/promises";
@@ -24,8 +26,9 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { saveScriptState, type ScriptState } from "./state.js";
 import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";
 
-/** The five environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
+/** The six environment names; `script-env-allowlist.ts` lets them through to procedure shells. */
 export const MEMORY_ENV = {
+  scheduleName: "BBX_SCHEDULE_NAME",
   sinceCommit: "BBX_SINCE_COMMIT",
   sinceTime: "BBX_SINCE_TIME",
   carryIn: "BBX_CARRY_IN",
@@ -63,6 +66,7 @@ export async function prepareRunMemory(
   const carryOutPath = path.join(dir, "carry-out");
   const deferFilePath = path.join(dir, "defer.json");
   const env: Record<string, string> = {
+    [MEMORY_ENV.scheduleName]: scriptName,
     [MEMORY_ENV.sinceTime]: state.lastRun ?? "",
     [MEMORY_ENV.carryIn]: state.carry ?? "",
     [MEMORY_ENV.carryOut]: carryOutPath,

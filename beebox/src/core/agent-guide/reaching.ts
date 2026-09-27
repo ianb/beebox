@@ -23,7 +23,7 @@ ${quotedDefault}
 
 Before you promise a reminder or a watch, run \`bbx notify --check\`. If nothing can reach the person, say so instead of promising.
 
-**Now: \`bbx notify\`.** \`--loudness\` is \`dot\` (badge only), \`quiet\` (muted; held back while they are in the app), or \`loud\` (sound). \`--target\` is where a tap lands: \`chat:<sessionId>\`, \`chat:new\`, \`card:<path>\`, \`question:<path>\`, \`admin:<section>\`, \`dashboard\`. \`--tag <key>\` makes a later notification replace this one. A failure the person must fix, after they left the chat it came from:
+**Now: \`bbx notify\`.** \`--loudness\` is \`dot\` (badge only), \`quiet\` (muted; held back while they are in the app), or \`loud\` (sound). \`--target\` is where a tap lands: \`chat:<sessionId>\`, \`chat:new\`, \`card:<path>\`, \`question:<path>\`, \`admin:<section>\`, \`dashboard\`. \`--tag <key>\` makes a later notification replace this one. A long body goes on stdin with \`--body -\`; without it stdin is never read. A failure the person must fix, after they left the chat it came from:
 
 \`\`\`sh
 bbx notify "I couldn't read the receipt you photographed" --loudness quiet \\
@@ -64,7 +64,7 @@ steps:
       pass-output: true
       shells:
         - |
-          bbx changes --match '_content/inbox/**/*.email.card' --cat --or-skip \\
+          bbx changes --match '_content/inbox/**/*.email-message.card' --cat --or-skip \\
             | bbx judge _config/judgments/field-trip.judgment.card --min trip=0.8 --or-skip --echo
     run:
       agents:

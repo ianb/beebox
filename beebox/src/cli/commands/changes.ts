@@ -10,7 +10,11 @@
  * never a guess. See docs/plans/notifications.md (Track D).
  *
  * `--cat` prints each card after a `=== <path>` line; `--cat --all` prints
- * every matching card, changed or not. `--log` prints the commit subjects in
+ * every matching card, changed or not. A card with a `body-file: { ref }`
+ * sidecar (an email-message) is followed by a `--- body ---` line and the
+ * sidecar's text, capped at 4,000 characters (`cli/lib/body-file-section.ts`). A `--match` glob
+ * naming a card type the box does not know (`*.email.card`) warns on stderr,
+ * since it can never match a real card. `--log` prints the commit subjects in
  * the window. `--or-skip` exits 75 (the procedure skip code) when nothing
  * changed, after writing `{ "reason": "no-change" }` to `$BBX_DEFER_FILE` when
  * that is set; with `--all` it still keys on whether anything changed.
@@ -27,6 +31,8 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getRangeChangedPaths, getRangeSubjects, getTreeFiles } from "../../lib/git-range.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { bodyFileSection } from "../lib/body-file-section.js";
 
 const KINDS = { added: "A", modified: "M", any: "AMR" } as const;
 type Kind = keyof typeof KINDS;
@@ -60,6 +66,19 @@ function checkOptions(options: ChangesOptions, env: NodeJS.ProcessEnv): string |
   return { since: since.trim(), kind };
 }
 
+/** Warn about each glob whose last segment names a card type (`*.<type>.card`) the box has no schema for. */
+async function warnUnknownTypes(boxRoot: string, globs: readonly string[]): Promise<void> {
+  const typed = globs.flatMap((glob) => {
+    const type = /\.([\w-]+)\.card$/.exec(path.posix.basename(glob))?.[1];
+    return type === undefined ? [] : [{ glob, type }];
+  });
+  if (typed.length === 0) return;
+  const known = await createCardSchemaMap(boxRoot);
+  for (const { glob, type } of typed) {
+    if (!known.has(type)) console.error(`bbx changes: warning: --match ${glob} names card type "${type}", which this box has no schema for; it matches no cards`);
+  }
+}
+
 async function printCards(boxRoot: string, files: readonly string[]): Promise<void> {
   for (const file of files) {
     let text: string;
@@ -73,6 +92,8 @@ async function printCards(boxRoot: string, files: readonly string[]): Promise<vo
     }
     console.log(`=== ${file}`);
     console.log(text.replace(/\n$/, ""));
+    const body = await bodyFileSection(boxRoot, { file, text });
+    if (body !== null) console.log(body);
   }
 }
 
@@ -85,6 +106,7 @@ export async function runChanges(boxRoot: string, opts: { options: ChangesOption
     return 2;
   }
   const { since, kind } = checked;
+  await warnUnknownTypes(boxRoot, options.match);
   let changed: string[];
   try {
     const diff = await getRangeChangedPaths(boxRoot, { from: since, to: "HEAD", filter: KINDS[kind] });

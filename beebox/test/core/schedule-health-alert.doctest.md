@@ -119,6 +119,15 @@ scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "20
 => true
 ```
 
+With no heartbeat ever (a dev box, where no daemon runs), the check passes and
+says so, rather than claiming tasks are running:
+
+```ts continue
+const never = scheduledTasksCheck({ ...health, scheduler: { status: "never", lastTickAt: null, ageMs: null } }, NOW);
+`${never.ok} | ${never.message}`
+=> true | The scheduler has never run on this box
+```
+
 ## Engine quota is a check too
 
 An engine out of usage quota used to notify; it is now the `engine-quota`

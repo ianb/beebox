@@ -2,7 +2,8 @@
  * `bbx judge`'s states: what is judged, read from stdin (or `--replay`).
  * Without `--per-line` the whole text is one state; with it, each non-empty
  * line is one. With `--cards` a line is a card path and the state is the card
- * text, its body capped at 4,000 characters; a `--cards` batch (no
+ * text, its body capped at 4,000 characters and followed by its `body-file`
+ * sidecar (an email's text), capped the same; a `--cards` batch (no
  * `--per-line`) is every card after a `=== <path>` line, like `bbx changes
  * --cat`, and is refused over `--max-batch` items. See
  * docs/plans/notifications.md (Track D).
@@ -13,9 +14,10 @@ import * as path from "node:path";
 import { splitCardContent } from "../../cards/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
+import { BODY_FILE_CAP, bodyFileSection } from "../lib/body-file-section.js";
 
 /** The trial's 400 was too short to judge on (2026-09-26). */
-export const CARD_BODY_CAP = 4000;
+export const CARD_BODY_CAP = BODY_FILE_CAP;
 
 export const DEFAULT_MAX_BATCH = 20;
 
@@ -49,9 +51,13 @@ async function cardState(boxRoot: string, cardPath: string): Promise<string | nu
     throw e;
   }
   const split = splitCardContent(text);
-  if (split.body.length <= CARD_BODY_CAP) return text.replace(/\n$/, "");
-  const body = `${split.body.slice(0, CARD_BODY_CAP)}\n… (body cut at ${String(CARD_BODY_CAP)} of ${String(split.body.length)} characters)`;
-  return text.slice(0, text.length - split.body.length) + body;
+  const card =
+    split.body.length <= CARD_BODY_CAP
+      ? text.replace(/\n$/, "")
+      : text.slice(0, text.length - split.body.length) +
+        `${split.body.slice(0, CARD_BODY_CAP)}\n… (body cut at ${String(CARD_BODY_CAP)} of ${String(split.body.length)} characters)`;
+  const sidecar = await bodyFileSection(boxRoot, { file: resolved, text });
+  return sidecar === null ? card : `${card}\n${sidecar}`;
 }
 
 async function readCards(boxRoot: string, lines: string[]): Promise<Array<{ path: string; text: string }>> {

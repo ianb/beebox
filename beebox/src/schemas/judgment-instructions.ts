@@ -46,7 +46,7 @@ the last check, concatenated. Judge only what the emails say.
 Run from a procedure precheck with \`pass-output: true\`, so an agent writes the notification only when the judge says yes:
 
 \`\`\`sh
-bbx changes --match '_content/inbox/**/*.email.card' --cat --or-skip \\
+bbx changes --match '_content/inbox/**/*.email-message.card' --cat --or-skip \\
   | bbx judge _config/judgments/field-trip.judgment.card --min trip=0.8 --or-skip --echo
 \`\`\`
 
@@ -67,12 +67,12 @@ The state is one email card: frontmatter (from, to, subject, date) and body.
 \`\`\`
 
 \`\`\`sh
-bbx changes --match '_content/inbox/**/*.email.card' --or-skip \\
+bbx changes --match '_content/inbox/**/*.email-message.card' --or-skip \\
   | bbx judge _config/judgments/needs-reply.judgment.card --per-line --cards --min reply.expects=0.8 --select --or-skip
 \`\`\`
 
 ## \`bbx judge\`
-- State: all of stdin is one state; \`--per-line\` makes each line a state; \`--cards\` reads each line as a card path (body capped at 4,000 characters). A \`--cards\` batch over \`--max-batch\` (default 20) items is refused: use \`--per-line\`. \`--replay <file>\` reads the state from a file.
+- State: all of stdin is one state; \`--per-line\` makes each line a state; \`--cards\` reads each line as a card path (body capped at 4,000 characters, then an email's \`body-file\` text, capped the same). A \`--cards\` batch over \`--max-batch\` (default 20) items is refused: use \`--per-line\`. \`--replay <file>\` reads the state from a file.
 - Output: one JSON line per state, \`{input, answers}\`. \`--select\` prints only the inputs that passed; \`--echo\` prints stdin unchanged when anything passed.
 - Decision: \`--min name=p\` (a noul's probability, or \`name.option=p\` for a choice or score option), \`--choice name=option\`, and \`--decide '{"name": {"min": p, "max": p, "is": option}}'\`, all combined with AND. With no condition every state passes.
 - \`--or-skip\`: when nothing passed, write the reason \`no-pass\` to \`$BBX_DEFER_FILE\` and exit 75, so a schedule records \`deferred\` and \`once\` does not fire.

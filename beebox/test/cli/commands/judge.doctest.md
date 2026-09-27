@@ -106,6 +106,19 @@ await judge(box, "_config/judgments/field-trip.judgment.card", { perLine: true, 
 exit 0
 ```
 
+An email-message card keeps the email's text in a `body-file` sidecar. With
+`--cards` the state is the card followed by that text, as `bbx changes --cat`
+prints it, so the judge sees the body and not only the subject.
+
+```ts continue
+const thread = "_content/inbox/email/Trip.email-thread.attach";
+await box.write(`${thread}/msg-001.email-message.card`, "---\ntype: email-message\nsubject: Spring outing\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n");
+await box.write(`${thread}/msg-001.attach/msg-001.body.txt`, `The field trip is on May 3. ${"Please read on. ".repeat(20)}\n`);
+await judge(box, "_config/judgments/field-trip.judgment.card", { perLine: true, cards: true }, { stdin: `${thread}/msg-001.email-message.card\n` })
+=> {"input":"_content/inbox/email/Trip.email-thread.attach/msg-001.email-message.card","answers":{"trip":{"type":"noul","probability":0.92}}}
+exit 0
+```
+
 `--min` sets the bar and `--select` prints only the inputs that passed, so the
 next command in the pipe gets paths.
 
@@ -169,6 +182,25 @@ exit 75
 
 await fs.readFile(BBX_DEFER_FILE, "utf-8")
 => {"reason":"no-pass"}
+```
+
+When `bbx changes --or-skip` found nothing, it wrote `no-change` and exited
+75, and the judge downstream reads an empty stdin. That marker already says
+why, so the judge exits 75 without a word. With no marker yet, it defers and
+says so.
+
+```ts continue
+const upstream = path.join(dir, "upstream.json");
+await fs.writeFile(upstream, '{"reason":"no-change"}\n');
+await judge(box, trip, { min: ["trip=0.8"], echo: true, orSkip: true }, { stdin: "", env: { BBX_DEFER_FILE: upstream } })
+=> exit 75
+
+await fs.readFile(upstream, "utf-8")
+=> {"reason":"no-change"}
+
+await judge(box, trip, { min: ["trip=0.8"], echo: true, orSkip: true }, { stdin: "", env: { BBX_DEFER_FILE: path.join(dir, "fresh.json") } })
+=> stderr: bbx judge: deferred (no-pass): no state on stdin
+exit 75
 ```
 
 Every call is in `.beebox/jev-debug.log`: the card, the input, the state cut
@@ -235,11 +267,11 @@ await fs.access(box.path(".beebox/jev-debug.log")).then(() => "logged", () => "n
 ```
 
 A state under 300 characters draws a warning: without the body, answers sit
-near 50%.
+near 50%. It gives the length and does not echo the state back.
 
 ```ts continue
 out.split("\n").find((l) => l.startsWith("stderr:"))
-=> stderr: bbx judge: warning: the state for One short state. is 16 characters; a state without the body judges near 50%
+=> stderr: bbx judge: warning: a state is 16 characters; a state without the body judges near 50%
 ```
 
 A `situation:` ref replaces the briefing; with neither, the dry run says so.

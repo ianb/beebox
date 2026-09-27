@@ -61,7 +61,11 @@ then `skipped: present` on every channel, and a `dot` still badges.
 - **`bbx notify`** (`src/cli/commands/notify.ts`): an agent's call. From a
   box-spawned shell it goes through the box server; otherwise it runs in
   process. `--check` sends nothing and exits 1 when no channel can reach the
-  person; agents run it before promising a reminder or a watch.
+  person; agents run it before promising a reminder or a watch. The body comes
+  from `--body` or `--body-file`; stdin is read only for `--body -` or
+  `--body-file -`, never implicitly, so an open stdin pipe cannot hang it. The
+  source is the chat session, else `schedule:<name>` inside a schedule's
+  `runs:`, else `bbx notify`.
 - **Callouts.** `<callout loudness="quiet|loud">` in a chat turn becomes one
   intent at turn end, targeted at that chat, tagged with the session so a later
   turn replaces it (`src/core/chat/callout-tags.ts`). A callout needs a
@@ -91,13 +95,17 @@ within hours ([chat timers](chat/schedules.md)).
 - **Memory** (`src/core/schedule/memory.ts`). Schedule state keeps
   `lastCommit` (the box HEAD at this schedule's last run) and `carry` (one
   value up to 4 KB). A `runs:` command sees `BBX_SINCE_COMMIT`,
-  `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and the writable paths `BBX_CARRY_OUT` and
-  `BBX_DEFER_FILE`. Before a schedule's first run, `lastCommit` is set to HEAD,
+  `BBX_SINCE_TIME`, `BBX_CARRY_IN`, the writable paths `BBX_CARRY_OUT` and
+  `BBX_DEFER_FILE`, and `BBX_SCHEDULE_NAME`. Before a schedule's first run, `lastCommit` is set to HEAD,
   so the first run sees no changes.
 - **`bbx changes`** prints the cards added or modified under `--match` globs
   since `$BBX_SINCE_COMMIT`, from a tree diff, so a card moved during the
   window appears once at its final path. `--cat` prints each card after a
-  `=== <path>` line; `--or-skip` defers when nothing changed.
+  `=== <path>` line, and for a card with a `body-file` sidecar (an
+  `email-message`) its text after `--- body ---`, capped at 4,000 characters;
+  `--or-skip` defers when nothing changed. A `--match` glob naming an unknown
+  card type (`*.email.card`) warns on stderr. Gmail writes `email-thread` cards
+  and, in each thread's attach scope, one `email-message` card per message.
 - **Judgment card and `bbx judge`.** A `<name>.judgment.card` is a prompt for
   Jev, a small judging model: named `noul`, `choice`, or `score` questions and
   instructions, with the situation (by default the root briefing's purpose)
@@ -140,10 +148,10 @@ never promotes.
 
 ### In git and transient
 
-| In git (the rule) | Transient, gitignored (`.beebox/`) |
+| In git (the rule) | Transient, gitignored (`.beebox/` unless named) |
 |---|---|
 | Schedule cards with `notify:` or `runs:` | `notifications.jsonl`: rotated to `notifications.1.jsonl` at finalize when older than 30 days or over 8 MB |
-| Judgment cards | Schedule state: `lastCommit`, `carry`, `lastDeferReason`, `skipped` |
+| Judgment cards | Schedule state in `_config/schedules/.state/`: `lastCommit`, `carry`, `lastDeferReason`, `skipped` |
 | Procedure cards | `presence.json` |
 | The briefing's "Reaching me" section | `jev-budget.json`, `jev-debug.log` (every Jev call and its answers) |
 | | `mobile-devices.secret.json` (paired phones and their APNs registration) |
@@ -156,7 +164,8 @@ never promotes.
   audience; the log records `sent (fake)`.
 - `bbx notify --dry-run` prints the intent, the audience per channel, the
   presence reading, and the channels a send would try, and sends and logs
-  nothing; `--presence <n>` overrides the reading.
+  nothing; `--presence <n>` overrides the reading. With no `--target` a dry
+  run previews `chat:new`; a send requires one.
 - `bbx pairing register-fake-push <label>` pairs a stand-in phone with a fake
   APNs token (dev boxes only).
 - `BBX_JEV_FAKE=1` (yes) or `=0` (no) answers every judgment with no key;

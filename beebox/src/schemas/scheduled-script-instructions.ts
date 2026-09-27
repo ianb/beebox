@@ -80,7 +80,7 @@ runs: >
 \`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${SECTION.REACHING_THE_BOXHOLDER} section of the agent guide has that example, and the judgment card instructions say how to write the judgment.
 
 ## Testing a schedule
-- \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing.
+- \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing; with no \`--target\` it previews \`chat:new\`.
 - \`BBX_NOTIFY_FAKE=1\` sends every notification through fake channels and logs \`sent (fake)\`.
 - \`BBX_JEV_FAKE=1\` (or \`=0\`) makes \`bbx judge\` answer yes (or no) with no key; \`bbx judge --dry-run\` and \`--replay <file>\` test the judgment itself.
 - \`bbx changes --since <commit>\` runs the change list outside a schedule.`;

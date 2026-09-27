@@ -2,12 +2,15 @@
  * bbx notify — reach the boxholder from an agent or a script.
  *
  * A thin layer over `notifyBoxholder`: parse the flags, read the body (flag,
- * file, or piped stdin, because a composed body does not belong on a command
- * line), send, and report each channel's delivery. `--check` reports which
+ * file, or stdin with `--body -` / `--body-file -`, because a composed body
+ * does not belong on a command line), send, and report each channel's
+ * delivery. Stdin is read only when a flag asks for it: an agent's shell or a
+ * schedule's pipeline can hold an open stdin pipe, and an implicit read would
+ * wait on it forever. `--check` reports which
  * channels can reach the person without sending, so an agent can check before
  * promising a reminder. `--dry-run` prints the intent, who each channel would
  * reach, the presence reading, and the channels a send would try, and sends
- * and logs nothing. See docs/plans/notifications.md (Track A, "Testability").
+ * and logs nothing; with no `--target` it previews `chat:new`. See docs/plans/notifications.md (Track A, "Testability").
  *
  * From a box-spawned shell every mode asks the box server, which holds the
  * channel keys; elsewhere it runs in this process (`notify-route.ts`).
@@ -30,6 +33,7 @@ import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../.
 import { printDryRun } from "./notify-dry-run.js";
 import { err, ok, type Result } from "../../lib/result.js";
 import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
+import { MEMORY_ENV } from "../../core/schedule/memory.js";
 
 export interface NotifyCliOptions {
   body?: string | undefined;
@@ -48,7 +52,7 @@ export interface NotifyCliOptions {
 export interface NotifyRun {
   title: string | undefined;
   options: NotifyCliOptions;
-  /** Piped stdin, or null when stdin is a terminal. Read lazily: only when the flags call for it. */
+  /** Piped stdin, or null when stdin is a terminal. Read only when a flag asks: `-` as the body, or `--targets-from-stdin`. */
   readStdin: (() => Promise<string>) | null;
   /** Which code or chat session wrote it. */
   source: string;
@@ -75,9 +79,17 @@ function target(value: string): Parsed<Target> {
   }
 }
 
+/** `--body -` or `--body-file -`: the body is stdin. */
+async function bodyFromStdin(run: NotifyRun): Promise<Parsed<string>> {
+  if (run.options.targetsFromStdin === true) return err("stdin carries the targets with --targets-from-stdin; give the body with --body or --body-file");
+  if (run.readStdin === null) return err("the body is stdin (-), but nothing is piped on stdin");
+  return ok((await run.readStdin()).replace(/\r?\n$/, ""));
+}
+
 async function readBody(run: NotifyRun): Promise<Parsed<string>> {
   const { options } = run;
   if (options.body !== undefined && options.bodyFile !== undefined) return err("give --body or --body-file, not both");
+  if (options.body === "-" || options.bodyFile === "-") return bodyFromStdin(run);
   if (options.body !== undefined) return ok(options.body);
   if (options.bodyFile !== undefined) {
     try {
@@ -86,15 +98,18 @@ async function readBody(run: NotifyRun): Promise<Parsed<string>> {
       return err(`could not read --body-file ${options.bodyFile}: ${errorMessage(e)}`);
     }
   }
-  if (options.targetsFromStdin === true || run.readStdin === null) return ok("");
-  return ok((await run.readStdin()).replace(/\r?\n$/, ""));
+  return ok("");
 }
+
+/** A dry run with no `--target` previews a new chat, where most notifications land. */
+const DRY_RUN_TARGET = "chat:new";
 
 async function readTargets(run: NotifyRun): Promise<Parsed<Target[]>> {
   const { options } = run;
   if (options.targetsFromStdin !== true) {
-    if (options.target === undefined) return err("--target is required (or --targets-from-stdin)");
-    const one = target(options.target);
+    const given = options.target ?? (options.dryRun === true ? DRY_RUN_TARGET : undefined);
+    if (given === undefined) return err("--target is required (or --targets-from-stdin)");
+    const one = target(given);
     return one.ok ? ok([one.value]) : one;
   }
   if (options.target !== undefined) return err("give --target or --targets-from-stdin, not both");
@@ -219,6 +234,13 @@ export async function runNotify(boxRoot: string, run: NotifyRun): Promise<number
   return run.options.check === true ? check(boxRoot, { route, services: run.services }) : send(boxRoot, { route, run });
 }
 
+/** Who sent it: the chat session running this shell, else the schedule whose pipeline ran it, else the command. */
+export function notifySource({ chatSession, env }: { chatSession: string | null; env: NodeJS.ProcessEnv }): string {
+  if (chatSession !== null) return `chat:${chatSession}`;
+  const schedule = env[MEMORY_ENV.scheduleName];
+  return schedule === undefined || schedule === "" ? "bbx notify" : `schedule:${schedule}`;
+}
+
 async function readAllStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
@@ -228,9 +250,9 @@ async function readAllStdin(): Promise<string> {
 export const notifyCommand = new Command("notify")
   .description("Notify the boxholder: log it, show it in an open app, and send it on the channels its loudness calls for")
   .argument("[title]", "One-line title (required unless --check)")
-  .option("--body <text>", "Body text (default: piped stdin, else empty)")
-  .option("--body-file <path>", "Read the body from a file")
-  .option("--target <target>", "Where a tap lands: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard")
+  .option("--body <text>", "Body text, or - to read it from stdin (default: empty; stdin is never read unless asked)")
+  .option("--body-file <path>", "Read the body from a file, or - for stdin")
+  .option("--target <target>", "Where a tap lands: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard (with --dry-run, default chat:new)")
   .option("--loudness <loudness>", "dot (badge only), quiet (no sound; held back while the person is in the app), or loud", "quiet")
   .option("--tag <tag>", "Collapse key: a later notification with the same tag replaces this one")
   .option("--channel <channel>", "Deliver on this channel only (apns, web-push, telegram); for testing")
@@ -247,7 +269,7 @@ export const notifyCommand = new Command("notify")
         title,
         options,
         readStdin: process.stdin.isTTY === true ? null : readAllStdin,
-        source: chatSession === null ? "bbx notify" : `chat:${chatSession}`,
+        source: notifySource({ chatSession, env: process.env }),
       });
       process.exit(exitCode);
     } catch (e) {

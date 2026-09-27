@@ -2,14 +2,21 @@
  * Semantic text formatting for CLI and web output.
  *
  * Provides semantic formatters (header, success, error, etc.) that
- * translate to ANSI colors for terminal output. The web UI can
- * render these ANSI codes using ansi-to-html.
+ * translate to ANSI colors for terminal output. Output that is not a
+ * terminal (a tick's log, a pipe, the web UI's command output, which does
+ * not render ANSI) is plain, and `NO_COLOR` turns color off everywhere.
  */
 
-import { Chalk } from "chalk";
+import { Chalk, type ColorSupportLevel } from "chalk";
 
-// Force color output even when not a TTY (for web streaming)
-const chalk = new Chalk({ level: 2 });
+/** 256-color on a terminal; none when stdout is not one or `NO_COLOR` is set (https://no-color.org). */
+export function colorLevel({ isTTY, env }: { isTTY: boolean | undefined; env: NodeJS.ProcessEnv }): ColorSupportLevel {
+  const noColor = env["NO_COLOR"];
+  if (noColor !== undefined && noColor !== "") return 0;
+  return isTTY === true ? 2 : 0;
+}
+
+const chalk = new Chalk({ level: colorLevel({ isTTY: process.stdout.isTTY, env: process.env }) });
 
 /**
  * Semantic text formatters.

@@ -487,9 +487,10 @@ per delivery are git history that is all plumbing (boxholder decision).
   writable", which probes by opening the file for append, so an unwritable
   log is reported by a check that does not depend on the log.
 - `src/cli/commands/notify.ts`: `bbx notify <title> [--body <text> |
-  --body-file <path> | stdin] --target <t> [--loudness dot|quiet|loud]
+  --body-file <path>] --target <t> [--loudness dot|quiet|loud]
   [--tag] [--channel <name>] [--check] [--targets-from-stdin]`.
-  `--body-file` and stdin exist
+  `--body-file` and stdin (`--body -` or `--body-file -`, never implicit:
+  an open stdin pipe would hang it) exist
   because a body an agent composed does not belong on a command line.
   `--check` prints which channels can reach the person and exits 1 when
   none can, so an agent can check before promising (the failure in
@@ -826,7 +827,7 @@ then a `judge` precheck field; both are replaced by commands.
         pass-output: true
         shells:
           - |
-            bbx changes --match '_content/inbox/**/*.email.card' --cat --or-skip \
+            bbx changes --match '_content/inbox/**/*.email-message.card' --cat --or-skip \
               | bbx judge _config/judgments/field-trip.judgment.card --min trip=0.8 --or-skip --echo
       run:
         agents:

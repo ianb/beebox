@@ -27,7 +27,7 @@ import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { JudgmentSchema, judgmentQuestions, type JudgmentFields } from "../../schemas/judgment.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
-import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
+import { MEMORY_ENV, readDeferMarker, writeDeferMarker } from "../../core/schedule/memory.js";
 import type { DeferReason } from "../../core/schedule/defer-reason.js";
 import { checkConditions, ConditionError, parseChoiceFlag, parseDecideFlag, parseMinFlag, passes, type Condition } from "../../core/judgment/decide.js";
 import { resolveSituation, SituationRefError } from "../../core/judgment/situation.js";
@@ -106,6 +106,28 @@ async function defer(reason: DeferReason, { env, detail }: { env: NodeJS.Process
   return CHECK_SKIP_CODE;
 }
 
+/** Warn about each state under {@link THIN_STATE_CHARS}: without the body, answers sit near 50%. */
+function warnThin(states: readonly JudgedState[]): void {
+  for (const { input, state } of states) {
+    if (state.length >= THIN_STATE_CHARS) continue;
+    // Name a card path; a state that is its own input is not echoed back.
+    const which = input === state ? "a state" : `the state for ${input.split("\n")[0] ?? ""}`;
+    console.error(`bbx judge: warning: ${which} is ${String(state.length)} characters; a state without the body judges near 50%`);
+  }
+}
+
+/**
+ * No state on stdin: an upstream `bbx changes --or-skip` found nothing. No
+ * call and no key are needed. When that step already wrote its marker, it
+ * said why, and a second line would be noise: exit 75 silently.
+ */
+async function nothingToJudge({ env, orSkip }: { env: NodeJS.ProcessEnv; orSkip: boolean }): Promise<number> {
+  if (!orSkip) return 0;
+  const deferFile = env[MEMORY_ENV.deferFile];
+  if (deferFile !== undefined && deferFile !== "" && (await readDeferMarker(deferFile)) !== null) return CHECK_SKIP_CODE;
+  return defer("no-pass", { env, detail: "no state on stdin" });
+}
+
 interface JudgeRun {
   boxRoot: string;
   cardPath: string;
@@ -150,11 +172,7 @@ async function runJudgeChecked(run: JudgeRun): Promise<number> {
   const text = options.replay === undefined ? run.stdin : await fs.readFile(path.resolve(options.replay), "utf-8");
   const read = await readStates(boxRoot, { text, perLine: options.perLine === true, cards: options.cards === true, maxBatch });
   if (!read.ok) throw usage(read.error);
-  for (const { input, state } of read.states) {
-    if (state.length < THIN_STATE_CHARS) {
-      console.error(`bbx judge: warning: the state for ${input.split("\n")[0] ?? ""} is ${String(state.length)} characters; a state without the body judges near 50%`);
-    }
-  }
+  warnThin(read.states);
   const inputs = read.states.map((s) => ({
     ...s,
     request: { model: card.fields.model, situation: situation.text, instructions: card.fields.body.trim(), questions, state: s.state },
@@ -164,10 +182,7 @@ async function runJudgeChecked(run: JudgeRun): Promise<number> {
     for (const { request } of inputs) console.log(serializeJudgeRequest(request));
     return 0;
   }
-  if (inputs.length === 0) {
-    // Nothing to judge (an upstream `bbx changes --or-skip` found nothing): no call, no key needed.
-    return options.orSkip === true ? defer("no-pass", { env, detail: "no state on stdin" }) : 0;
-  }
+  if (inputs.length === 0) return nothingToJudge({ env, orSkip: options.orSkip === true });
   let jev = run.jev;
   let fake = false;
   if (jev === undefined) {

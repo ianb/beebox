@@ -91,7 +91,8 @@ function skipPromotion(cause: SkipCause): Promotion {
       return {
         latch: "skipped:missing-connectors",
         body: google
-          ? `It needs ${list(cause.connectors)}, and the box's Google connection needs reconnecting. ${RECONNECT_GOOGLE}`
+          ? // A missing connector cannot tell never-connected from expired; name both.
+            `It needs ${list(cause.connectors)}. Google is not connected or its access expired; open Admin › Google Services.`
           : `It needs ${list(cause.connectors)}, which this box does not have set up.`,
         target: google ? GOOGLE_TARGET : { kind: "dashboard" },
       };

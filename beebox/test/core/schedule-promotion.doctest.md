@@ -60,7 +60,7 @@ await tick(box, "watch")
 await sent(box)
 =>
 loud | Your field trip watch could not run | admin:google-services
-It needs gmail, and the box's Google connection needs reconnecting. Reconnect Google in Admin, in the Google Services section.
+It needs gmail. Google is not connected or its access expired; open Admin › Google Services.
 
 const state = await loadScriptState(box.root, "watch");
 `${state.skipped.reason} | ${state.alertedFor}`
