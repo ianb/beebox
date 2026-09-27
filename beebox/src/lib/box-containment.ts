@@ -6,7 +6,7 @@
  * No CVE-clean maintained library exists (`resolve-path` had CVE-2018-3732;
  * `@fastify/static`'s own containment shipped a traversal bug in 2026,
  * GHSA-pr96-94w5-mx2h), so this is hand-rolled and exhaustively doctested
- * (`test/box-containment.doctest.md`). Every line here is security-review
+ * (`test/lib/box-containment.doctest.md`). Every line here is security-review
  * surface — keep it small.
  *
  * Two layers:

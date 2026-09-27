@@ -1,6 +1,6 @@
 # Migration: re-key the template tracker onto v3 paths
 
-`scripts/migrate/rekey-template-versions.ts` repairs
+`src/scripts/migrate/rekey-template-versions.ts` repairs
 `_config/template-versions.json`, whose keys the one-root migration left on
 pre-one-root paths. Each key is decided by what is on disk: a key whose file
 exists is kept, a key whose file is missing is re-keyed when its v3 path

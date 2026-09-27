@@ -26,7 +26,7 @@ const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
 // Repeatable production bundle composition analysis, run via
-// `pnpm analyze:bundle` (src/dev/analyze-bundle.ts), which sets this env var
+// `pnpm analyze:bundle` (src/dev/analyze-bundle/analyze.ts), which sets this env var
 // before shelling out to `vite build`. Absent/unset on every ordinary build
 // (dev server and plain `pnpm build`), so the plugin never runs by default.
 const ANALYZE_BUNDLE = process.env.BBX_ANALYZE_BUNDLE === "1";

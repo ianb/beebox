@@ -102,7 +102,7 @@ slugs in fixtures and examples.
 ## What was built (2026-08-17)
 
 `deploy/add-box.sh` is now the whole process. New `bbx hub add-box <slug>
-<path>` (`beebox/src/hub/hub-config-edit.ts`) writes the `hub.json`
+<path>` (`beebox/src/hub/config-edit.ts`) writes the `hub.json`
 entry: it plans the edit, validates the candidate through the hub's own loader
 (`parseHubConfig`, extracted from `loadHubConfig`), and only then writes it
 atomically. The script validates every argument locally, `--dry-run`s the hub

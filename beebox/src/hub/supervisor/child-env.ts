@@ -69,7 +69,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   // The old name notifyFakeMode() still honors, with a warning, for one release after the
   // BBX_NOTIFY_FAKE rename (2026-09). Remove this entry when fake-mode.ts drops the alias.
   "BBX_PUSH_FAKE",
-  // src/core/notification/apns-channel.ts -- the server sends APNs pushes (callouts). The .p8 key is
+  // src/core/notification/apns-channel/core.ts -- the server sends APNs pushes (callouts). The .p8 key is
   // passed by PATH, like BBX_GOOGLE_TOKENS_FILE; the other three identify the key and the app.
   "BBX_APNS_KEY_PATH",
   "BBX_APNS_KEY_ID",

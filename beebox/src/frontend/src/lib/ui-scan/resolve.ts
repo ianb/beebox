@@ -5,7 +5,7 @@
  * browser-guaranteed, with no selector escaping (hence kebab-case and not dots:
  * `querySelector("#a.b")` parses as id `a` plus class `b`).
  *
- * Fails closed, like `resolveRefPath` (`src/shared/ref-path.ts`): an id that is
+ * Fails closed, like `resolveRefPath` (`src/shared/ref-path/core.ts`): an id that is
  * not a well-formed `bbx-` address is rejected without touching the document, and
  * a well-formed one that matches nothing is a named failure the caller renders
  * as broken. A *duplicate* cannot be detected here — `getElementById` returns

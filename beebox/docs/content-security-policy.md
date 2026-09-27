@@ -80,7 +80,7 @@ CSP entry — only things the browser contacts directly.
 
 ## Reviewing violations + hardening
 
-`pnpm csp-digest` (`src/dev/csp-digest.ts`) dedupes the log and prints a digest:
+`pnpm csp-digest` (`src/dev/csp-report/digest.ts`) dedupes the log and prints a digest:
 each directive+origin that fired, with counts and a first/last-seen window, or
 "safe to harden" when clean. By default it runs **incrementally** against the
 local primary box (`~/src/boxes/test1`): it reports only entries newer than the

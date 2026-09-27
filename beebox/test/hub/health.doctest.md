@@ -1,6 +1,6 @@
 # Hub health verdict: idle is not broken, crash-loop is
 
-`src/hub/hub-health.ts` derives the hub's `/healthz` verdict from per-box
+`src/hub/health.ts` derives the hub's `/healthz` verdict from per-box
 supervisor state. The whole point is the distinction the constant `status:
 "ok"` couldn't make (the 2026-07-16 better-sqlite3 ABI incident: every child
 crash-looping, `/healthz` green): a `stopped` box is a lazy hub's normal rest,

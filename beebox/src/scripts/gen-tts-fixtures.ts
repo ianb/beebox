@@ -8,7 +8,7 @@
  * these files, optionally streamed slowly to simulate a slow backend.
  *
  * Run once (needs THINKING_OPENAI_API_KEY):
- *   pnpm tsx scripts/gen-tts-fixtures.ts
+ *   pnpm tsx src/scripts/gen-tts-fixtures.ts
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";

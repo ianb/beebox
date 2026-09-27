@@ -1,6 +1,6 @@
 # Package docs: beebox's reference docs live in the package, not the box
 
-`engineDocs()` (`src/core/docs-gen/package-docs.ts`) computes every reference
+`engineDocs()` (`src/core/docs-gen/package-docs/core.ts`) computes every reference
 doc about the engine itself — the static reference docs, one `card-<type>.md`
 per built-in schema with `instructions`, and a `README.md` index — from the
 running source alone. `ensurePackageDocs()` writes them into

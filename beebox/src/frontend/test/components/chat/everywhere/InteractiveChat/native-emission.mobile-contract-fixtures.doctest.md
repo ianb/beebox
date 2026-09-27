@@ -41,7 +41,7 @@ import { buildApnsRequest } from "../../../../../../core/notification/apns-chann
 import { parseTarget } from "../../../../../../core/notification/target.js";
 
 // Shared cross-platform golden fixtures (also loaded by
-// test/core/notification/apns-payload.doctest.md and
+// test/core/notification/apns-channel/payload.doctest.md and
 // test/webapp/trpc/routers/debug-log.submit.doctest.md); stays at the package root per
 // rule 3 (multiple areas' tests are users), even though this doctest itself
 // moved into the frontend's own test tree.

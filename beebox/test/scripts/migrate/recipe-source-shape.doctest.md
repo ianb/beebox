@@ -1,6 +1,6 @@
 # Migration: retype recipe `source` / `hero-image`
 
-`scripts/migrate/recipe-source-shape.ts` converts the recipe card's freeform
+`src/scripts/migrate/recipe-source-shape.ts` converts the recipe card's freeform
 string `source:` and `hero-image:` into typed objects. `rewriteRecipeText(fileName, raw)`
 is the pure per-card entry: it returns the rewritten text, or `null` when nothing
 changed (idempotent).

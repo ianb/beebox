@@ -1,6 +1,6 @@
 # MAP.md coverage check
 
-Tests for `src/core/maps/verify.ts`. Finalize stamps a map that passes this
+Tests for `src/core/maps/finalize/verify.ts`. Finalize stamps a map that passes this
 check even when the agent did not change it, so the rules decide which maps
 count as current. Each rule restates the refresh-maps prompt's format section.
 

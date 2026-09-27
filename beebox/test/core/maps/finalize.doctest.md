@@ -1,6 +1,6 @@
 # Map refresh finalize
 
-Tests for `src/core/maps/finalize.ts` — the mechanical post-agent step
+Tests for `src/core/maps/finalize/core.ts` — the mechanical post-agent step
 that stamps state and ensures `CLAUDE.md` per directory.
 
 ```ts setup

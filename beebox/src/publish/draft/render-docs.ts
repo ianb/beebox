@@ -11,10 +11,10 @@
  * **Reused Markdoc pipeline.** Parsing/transform/HTML emission reuse the box's
  * existing Markdoc config so a published doc renders the same as it does
  * in-app: `markdocConfig` + `makeHeadingNode` from
- * `src/shared/markdoc-config.ts` (the same config the frontend React renderer
+ * `src/shared/markdoc-config/core.ts` (the same config the frontend React renderer
  * wires up in `src/frontend/src/components/Markdown.tsx`'s `buildRenderConfig`).
  * The `parse → transform → renderers.html` shape mirrors the dev doc browser's
- * `renderMarkdownToHtml` in `workstreams-app/src/router/router-docs.ts:144` — which we can't import
+ * `renderMarkdownToHtml` in `workstreams-app/src/router/server/docs.ts:144` — which we can't import
  * (separate package), so the pipeline is reconstructed here on the shared
  * config. The autolinking tokenizer (`parseMarkdown`, frontend-only, excluded
  * from the backend tsconfig) is deliberately NOT reused: a bare-URL autolink

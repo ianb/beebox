@@ -27,7 +27,7 @@ manual CLI call the ritual never mentions.
 `confidence: low, source: default` plus explicit `unresolved` questions. The
 retro observer sinks observations back into the card (`personality` is a
 first-class sink — `beebox/src/core/retro/observations.ts:19`), and
-`compilePersonality` (`beebox/src/schemas/personality.tsx`, invoked from
+`compilePersonality` (`beebox/src/schemas/personality/schema.tsx`, invoked from
 `src/core/docs-gen/compile.ts:371`) compiles the card into the agent guide
 every agent receives. There is no identity moment, no agent-chosen element, and
 no visual/signature identity at all: `goes-by` reaches only prompt text ("You

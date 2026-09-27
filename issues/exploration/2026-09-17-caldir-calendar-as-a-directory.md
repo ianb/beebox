@@ -49,7 +49,7 @@ and were paid for in edge cases:
 caldir names a file `2026-06-25T0900__dentist.ics`. We name it
 `2026-06-25_a1b2c3d4.ics` — the date plus the last eight characters of an
 opaque Google event id (`eventFilename`,
-`beebox/src/connectors/google-calendar-ics.ts:323-330`).
+`beebox/src/connectors/google-calendar/ics.ts:323-330`).
 
 That undercuts the whole reason for the format. `ls _content/calendar/` should
 tell a person or an agent what is in there, and ours tells them nothing. A

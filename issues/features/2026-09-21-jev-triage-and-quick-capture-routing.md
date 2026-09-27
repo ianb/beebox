@@ -20,7 +20,7 @@ option and a confidence.
 The triage stage already has the exact shape Jev serves. It compiles a
 destination doc from landmarks' `destinations:` frontmatter, runs a subagent
 over a batch of intake-complete items, and applies decisions
-(`beebox/src/core/triage/index.ts`, `instructions.ts`, `routing.ts`).
+(`beebox/src/core/triage/run/core.ts`, `instructions.ts`, `routing.ts`).
 
 The important part is what the decision carries: a **self-reported confidence
 word** — `confident` | `probable` | `guess` (`routing.ts:33`) — and behavior

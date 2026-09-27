@@ -1,6 +1,6 @@
 # Migration: normalize card references onto a `ref` key
 
-`scripts/migrate/normalize-ref-keys.ts` rewrites the two historical card-ref
+`src/scripts/migrate/normalize-ref-keys.ts` rewrites the two historical card-ref
 shapes that stored a reference under a non-`ref` key into the canonical
 `{ ref: <path> }` form. `rewriteCardText(fileName, raw)` is the pure per-card
 entry: it returns the rewritten text, or `null` when nothing changed (so the

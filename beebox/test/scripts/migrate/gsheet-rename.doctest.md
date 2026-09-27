@@ -1,6 +1,6 @@
 # Migration: rename `sheet` card type to `gsheet`
 
-`scripts/migrate/gsheet-rename.ts` renames every `*.sheet.card` to `*.gsheet.card`
+`src/scripts/migrate/gsheet-rename.ts` renames every `*.sheet.card` to `*.gsheet.card`
 (the type comes from the filename, so the rename *is* the type change) and
 rewrites inbound `.sheet.card` references to `.gsheet.card`. `rewriteSheetRefs(text)`
 is the pure ref-rewrite entry point.

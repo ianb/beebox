@@ -18,7 +18,7 @@
  * package root.
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/box-hooks.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/box-hooks.ts <boxRoot> --apply
  */
 import * as path from "node:path";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";

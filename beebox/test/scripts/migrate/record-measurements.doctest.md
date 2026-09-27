@@ -1,6 +1,6 @@
 # Migration: rename record `measures` to `measurements`
 
-`scripts/migrate/record-measurements.ts` renames the `record` card's
+`src/scripts/migrate/record-measurements.ts` renames the `record` card's
 `measures` field to `measurements` (the vocabulary sweep's field split —
 `quantity` is new and optional, so only the rename needs migrating).
 `rewriteCardText(fileName, raw)` is the pure per-card entry: it returns the

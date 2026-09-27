@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-27T19:00:22Z
+Generated: 2026-09-27T22:53:44Z
 Total documents: 456
 
 ## Issues
@@ -823,7 +823,7 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/file-layout.md:780 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
+- docs/plans/file-layout.md:809 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
 - docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-cleanup-evaluation.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
@@ -1471,7 +1471,7 @@ References:
 
 #### docs/module-map.md
 
-Title: "Module map: where shared code lives" | 59 lines | current reference
+Title: "Module map: where shared code lives" | 62 lines | current reference
 
 Referenced by:
 - CLAUDE.md:38 (link) — - Generic dependency-light helpers: `src/lib/`; browser/server shared code: `src/shared/`; CLI-domain helpers: `src/cli/
@@ -4882,7 +4882,7 @@ References:
 Title: "Questions, end-to-end" | 664 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:391 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
+- docs/cards/migrations.md:391 (mention) — `question-lifecycle` (`src/scripts/migrate/question-lifecycle-run/run.ts`, pure transform in `src/scripts/migrate/questi
 - docs/questions.md:8 (mention) — `docs/implemented-plans/questions-end-to-end.md`.
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:9 (mention) — aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
@@ -6512,7 +6512,7 @@ References:
 
 #### docs/plans/file-layout.md
 
-Title: "Source file layout: principles, rules, and what a check can verify" | 802 lines | proposal | draft
+Title: "Source file layout: principles, rules, and what a check can verify" | 831 lines | proposal | draft
 
 Referenced by:
 - docs/plans/file-layout.check.subplan.md:10 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
@@ -8065,7 +8065,7 @@ References:
 Title: "User stories" | 278 lines | current reference
 
 Referenced by:
-- docs/testing.md:43 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
+- docs/testing.md:43 (link) — | [User-stories catalog](docs/user-stories/README.md) | What can the software actually do? Claims read from the source b
 - docs/user-stories/README.md:23 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:61 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).

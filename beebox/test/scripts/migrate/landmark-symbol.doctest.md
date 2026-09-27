@@ -1,6 +1,6 @@
 # Migration: a landmark's mark moves onto the card
 
-`scripts/migrate/landmark-symbol.ts` moves `navigation.symbol` to the card's own
+`src/scripts/migrate/landmark-symbol.ts` moves `navigation.symbol` to the card's own
 `symbol` group, now that every card may carry one. `rewriteLandmarkSymbol` is
 the whole decision as a pure function of the card's text; the harness around it
 only reads and writes files.

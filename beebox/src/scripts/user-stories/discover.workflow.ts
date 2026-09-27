@@ -396,7 +396,7 @@ List every command in \`beebox/src/cli/commands/\` and every subcommand register
 List (1) every tRPC router and procedure under \`beebox/src/webapp/trpc/\`, (2) every
 route registered under \`beebox/src/webapp/routes/\` and in
 \`beebox/src/webapp/server-box-scope.ts\` / \`server-root.ts\`, and (3) every frontend
-route in \`beebox/src/frontend/src/router.tsx\`. For each, check the catalog covers the
+route in \`beebox/src/frontend/src/main/router.tsx\`. For each, check the catalog covers the
 capability it exposes.`,
     { label: "critic:routes", phase: "Critics", schema: CRITIC_SCHEMA, effort: "high" },
   ),
@@ -405,7 +405,7 @@ capability it exposes.`,
 
 ## Your enumeration: card types
 
-List every card schema registered in \`beebox/src/schemas/registry.ts\` (and the schema
+List every card schema registered in \`beebox/src/schemas.ts\` (and the schema
 files it points at). For each card type, check the catalog represents its user-facing purpose —
 how it gets created, what it is for, where the user encounters it.`,
     { label: "critic:schemas", phase: "Critics", schema: CRITIC_SCHEMA, effort: "high" },

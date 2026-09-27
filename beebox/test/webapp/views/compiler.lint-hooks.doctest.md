@@ -6,7 +6,7 @@ validation hook paths: the shell `bbx validate --hook` (installed
 `.claude/settings.json`) and the in-process `cardValidatorHook()` that agent chat
 and agent-run sessions use. Both call the shared `lintViewFile`, and then, for a
 view that compiles, `lintViewMarkdown`: rendering card text other than through
-`Markdown` is an error of the same weight (`test/core/view-markdown-check.doctest.md`).
+`Markdown` is an error of the same weight (`test/core/views/markdown-check.doctest.md`).
 
 ```ts setup
 import { mkdir, writeFile, rm } from "node:fs/promises";

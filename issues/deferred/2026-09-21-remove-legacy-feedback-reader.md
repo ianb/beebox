@@ -21,7 +21,7 @@ Code that exists only for the legacy shape:
   `isLegacyFeedbackFilename` and `isFeedbackFilename`.
 - `feedback-review/collect.ts:260-264` — the transition refusal to resolve a
   legacy note before its box migration.
-- `beebox/scripts/migrate/feedback-to-doc-cards.ts:13-68` — the converter can
+- `beebox/src/scripts/migrate/feedback-to-doc-cards.ts:13-68` — the converter can
   become a retired script tombstone. Keep the append-only manifest entry in
   `beebox/src/core/migrations.ts`.
 - `feedback-review/collect.test.ts` — legacy list and resolve cases can be

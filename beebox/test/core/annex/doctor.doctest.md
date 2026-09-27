@@ -1,7 +1,7 @@
 # `bbx doctor annex`
 
 Is git-annex set up correctly in this repository? See
-`src/core/annex/doctor.ts`.
+`src/core/annex/doctor/core.ts`.
 
 **Repair by default.** Most of what can be wrong is something the box can put
 right, so reporting it to a human who then runs the obvious command is a wasted

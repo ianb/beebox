@@ -1,7 +1,7 @@
 /**
  * ChatThreadSession — Persistent SDK chat run for a single chat thread.
  *
- * Adapted from ChatSession (src/core/chat/session/index.ts) but:
+ * Adapted from ChatSession (src/core/chat/session/run/core.ts) but:
  * - Targeted at a specific thread (not the whole box)
  * - Intercepts <chat-response> tags from agent output for immediate delivery
  * - Can be parked (run closed but session ID preserved) and resumed

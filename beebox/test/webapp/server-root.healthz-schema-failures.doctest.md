@@ -1,6 +1,6 @@
 # `/healthz` surfaces box-local schema load failures
 
-Keep-last-good (`loadOneSchemaFile` in `src/schemas/registry.ts`) means a
+Keep-last-good (`loadOneSchemaFile` in `src/schemas.ts`) means a
 box-local schema file that fails to (re-)load keeps serving its previous
 good version rather than dropping the card type — but that used to make
 the failure itself invisible (`console.warn` only). `/healthz` now rolls up

@@ -11,7 +11,7 @@
  *
  * `compileBriefing` emits the frontmatter records plus the body's Markdoc
  * as markdown for inclusion in CLAUDE.md (via `@`-include). The body
- * emitter lives at `src/core/markdoc/emit.ts`. The frontend renders the
+ * emitter lives at `src/core/markdoc/emit/core.ts`. The frontend renders the
  * records from frontmatter (default card viewer's field table) and the
  * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
  * `src/frontend/src/components/BriefingTags.tsx`.

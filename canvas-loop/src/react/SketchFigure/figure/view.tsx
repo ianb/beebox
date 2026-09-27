@@ -1,6 +1,6 @@
 // <SketchFigure> — the browser TEA runner as a React component. This file is
 // mounting + prop plumbing + lifecycle ONLY; the runtime lifecycle (create +
-// wire input + teardown) is delegated to `attachSketch` (browser/mount.ts),
+// wire input + teardown) is delegated to `attachSketch` (src/browser/mount.ts),
 // the same implementation the imperative `mountSketch` uses. SSR-safe by
 // construction: no window/document/canvas is touched at module scope or
 // during render. `useSyncExternalStore` reports client-vs-server so the

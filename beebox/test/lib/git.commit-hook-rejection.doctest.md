@@ -8,7 +8,7 @@ which every caller would take as success.
 
 Boxes install both hooks (`bbx validate --staged`, `git annex pre-commit`), so a
 rejected commit is an ordinary path, not an exotic one. See
-`commitAndReadHead` in `src/lib/git.ts`.
+`commitAndReadHead` in `src/lib/git/core.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";

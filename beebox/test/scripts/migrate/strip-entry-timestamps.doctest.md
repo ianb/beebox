@@ -1,6 +1,6 @@
 # Migration: strip file-metadata timestamps from guide/personality cards
 
-`scripts/migrate/strip-entry-timestamps.ts` removes `created-at` / `updated-at` /
+`src/scripts/migrate/strip-entry-timestamps.ts` removes `created-at` / `updated-at` /
 `added-at` keys from guide and personality cards — git is the record of when
 something was written, and a fresh `created-at` on every regen was a
 template-churn source. `stripTimestamps(node)` mutates the parsed frontmatter in

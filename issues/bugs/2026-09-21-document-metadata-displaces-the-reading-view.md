@@ -20,7 +20,7 @@ this is a reading hierarchy problem, not missing data.
 
 ## Verified mechanism
 
-`beebox/src/frontend/src/components/MarkdownCardView.tsx:83` filters out `theme`
+`beebox/src/frontend/src/components/MarkdownCardView/view.tsx:83` filters out `theme`
 and the outer title, then renders the remaining frontmatter above the body
 through `FrontmatterFields` at line 98. This includes common card metadata.
 `components/themes/CardProperties.tsx:21` separately presents prominence.

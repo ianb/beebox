@@ -19,7 +19,7 @@ because it blocked an unrelated commit.
 
 The `<upload>` chat message that is supposed to announce a finished batch
 failed to deliver (`state ?? "failed:prepare"` in
-`beebox/src/core/bulk-upload/worker.ts:56`) in all three instances. Nothing in
+`beebox/src/core/bulk-upload/worker/core.ts:56`) in all three instances. Nothing in
 the reports suggests the person who uploaded ever saw an error — they had
 every reason to believe the upload worked. The only way any of the three
 failures surfaced was an agent noticing a self-note, or — the third time —

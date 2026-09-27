@@ -29,7 +29,7 @@ say so and cite both, rather than one claim silently replacing the other.
 Verified absent. The concept does not exist anywhere in `beebox/src/`; every
 "stale" match is about GPS fixes or template updates. The nearest relative is
 `personality` beliefs, which carry `source: user-stated | inferred`
-(`beebox/src/schemas/personality.tsx`) — belief revision in one narrow place.
+(`beebox/src/schemas/personality/schema.tsx`) — belief revision in one narrow place.
 
 This is the item with the most weight for this box, because its subject matter
 is people and plans, where facts expire. Today a superseded claim survives
@@ -58,7 +58,7 @@ The orphan half is cheap: `findInboundCardRefs`
 panel and a pre-delete warning, and no lint uses it. The concept half is the
 valuable half, and structural lint could never grow into it: card lint checks
 schemas, ref existence, path forms, and Markdoc
-(`beebox/src/core/card-lint.ts`), all of which ask whether a card is
+(`beebox/src/core/card-lint/core.ts`), all of which ask whether a card is
 well-formed, never whether the box is missing one.
 
 Output is a proposal for the boxholder, not a validation failure.
@@ -67,8 +67,8 @@ Output is a proposal for the boxholder, not a validation failure.
 
 The gist has one source touch ten to fifteen pages at ingest. A box files the
 source and stops: intake normalizes filenames and moves files
-(`beebox/src/core/intake.ts`), triage routes or asks
-(`beebox/src/core/triage/routing.ts`), and nothing opens a second card to add
+(`beebox/src/core/commands/intake/run.ts`), triage routes or asks
+(`beebox/src/core/triage/run/routing.ts`), and nothing opens a second card to add
 what the source said. This is the pattern's load-bearing behavior and the
 place where the two designs actually differ. It needs a decision, and it is
 genuinely two-sided.

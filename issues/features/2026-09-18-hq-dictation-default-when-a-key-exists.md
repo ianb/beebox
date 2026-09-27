@@ -22,7 +22,7 @@ is a setting most utterances never get.
 
 ## What exists today
 
-- `loadTranscriptionConfig` (`beebox/src/core/transcription/index.ts:175`)
+- `loadTranscriptionConfig` (`beebox/src/core/transcription/dispatch/core.ts:175`)
   defaults to `service: "voxtral"` for streaming and `hqService: "whisper"`
   for the HQ pass, overridable in `_config/transcription.json`.
 - The HQ pass is a separate call (`POST /api/chat/transcribe-audio`) over the

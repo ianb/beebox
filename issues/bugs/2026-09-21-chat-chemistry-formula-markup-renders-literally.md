@@ -20,7 +20,7 @@ broken during an exercise about coefficients and subscripts.
 The journey screenshots 20 and 21 show the literal output in the chat. The
 shared frontend renderer uses Markdoc and configures ordinary document,
 heading, paragraph, link, image, blockquote, and custom-tag rendering; it has
-no formula-specific transform. `beebox/src/frontend/src/components/Markdown.tsx:136-162,287-304`
+no formula-specific transform. `beebox/src/frontend/src/components/Markdown/body.tsx:136-162,287-304`
 and `beebox/src/frontend/src/components/chat/markdown-rendering.tsx:236-239`.
 
 The resolution needs to decide how authored formula notation should become a

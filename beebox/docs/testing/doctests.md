@@ -6,7 +6,7 @@ run as tests. The default test form.
 ## What it is
 
 **Location:** `test/*.doctest.md`
-**Runner:** TAP with a custom Node.js loader (the monorepo's `agent-doctest` package — loader hook at `agent-doctest/src/doctest-hooks.ts`, exposed via the `agent-doctest/hooks` export)
+**Runner:** TAP with a custom Node.js loader (the monorepo's `agent-doctest` package — loader hook at `agent-doctest/src/doctest-hooks/hooks.ts`, exposed via the `agent-doctest/hooks` export)
 **Run:** `pnpm test` (runs alongside traditional tests)
 
 Doctest files are executable markdown documents. The prose explains behavior; fenced code blocks contain examples that are run as tests. A Node.js loader hook transforms them into TAP tests at runtime.

@@ -55,7 +55,7 @@ import { execa } from "execa";
 import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
 
 // `etimeToSeconds` is re-exported because it is part of this module's tested
-// surface (beebox/test/dev/process-cleanup-liveness.doctest.md).
+// surface (bin/test/process-cleanup.liveness.doctest.md).
 export { etimeToSeconds };
 
 // Mirror workstreams-app/src/router/server/listener.ts's roots (including the BBX_MAIN_ROOT override) so

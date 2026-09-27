@@ -1,7 +1,7 @@
 /**
  * Capture session card schema (Phase-2 frontmatter + Markdoc transcript body).
  *
- * Written by the capture preparation worker (`src/core/capture/prepare.ts`)
+ * Written by the capture preparation worker (`src/core/capture/prepare/core.ts`)
  * when a recorded/photographed capture session is delivered to chat as a
  * `<capture>` message, and by `bbx scan-import` for photo/PDF batches that
  * never touch chat. Frontmatter carries the session metadata and the
@@ -9,7 +9,7 @@
  * attach scope). The markdown body is the assembled transcript: transcribed
  * speech interleaved, in timeline order, with `{% image %}` markers (where a
  * photo was taken) and `{% silence %}` markers (gaps) — see
- * `src/shared/markdoc-config.ts`.
+ * `src/shared/markdoc-config/core.ts`.
  *
  * The chat agent — not a background procedure — annotates and files these
  * cards; see `instructions` below.
@@ -143,7 +143,7 @@ export function parseCaptureSession(content: string): ParsedCaptureSession | nul
 /**
  * Template for creating a capture session card — frontmatter manifests with
  * an empty transcript body (filled in later: the capture preparation worker
- * builds the timeline for chat captures, `src/core/capture/timeline.ts`;
+ * builds the timeline for chat captures, `src/core/capture/prepare/timeline.ts`;
  * `bbx scan-import` fills its own).
  *
  * `imageRefs`, `audioRefs`, `fileRefs` are bare child-card filenames

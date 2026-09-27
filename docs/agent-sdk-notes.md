@@ -1360,7 +1360,7 @@ interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
     stream.
   Two shapes, no reproduction, so `0.3.251` is safe on this machine and the
   settled path was taken as written. Worth knowing why this machine is probably
-  not exposed: nothing here relocates the tasks dir. `beebox/src/core/agent/run.ts`
+  not exposed: nothing here relocates the tasks dir. `beebox/src/core/agent/invoke/run.ts`
   builds its child env through `buildScriptEnv`, which touches `PATH` and
   `ANTHROPIC_BASE_URL` and sets neither `TMPDIR` nor `CLAUDE_CODE_TMPDIR`, so
   box agents inherit the ordinary macOS temp dir.

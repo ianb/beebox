@@ -46,7 +46,7 @@ own observation kind and a churn guard — small design work.)
 ## Proposed shape (needs the boxholder's call, then design)
 
 1. **Fields on the personality card**, next to `goes-by`
-   (`beebox/src/schemas/personality.tsx`): optional `emoji` first.
+   (`beebox/src/schemas/personality/schema.tsx`): optional `emoji` first.
    An image `avatar` (attach ref) is a *separate, later call* — it carries
    schema/validation/transport questions emoji doesn't, and even OpenClaw's
    ritual never asks for one.

@@ -9,8 +9,8 @@
  * Idempotent — skips cards already on `gdoc`.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/doc-to-gdoc.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/doc-to-gdoc.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/doc-to-gdoc.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/doc-to-gdoc.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";

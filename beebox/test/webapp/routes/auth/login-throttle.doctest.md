@@ -1,6 +1,6 @@
 # Login throttle (pure decision core, injected clock)
 
-`src/webapp/login-throttle.ts` is a pure, in-memory throttle for the login and
+`src/webapp/routes/auth/login-throttle.ts` is a pure, in-memory throttle for the login and
 setup POSTs. It never reads the clock itself — every time-dependent method takes
 an injected `now` — so the whole backoff schedule is driven with plain integers.
 Three independent limits: per-`(ip,email)` exponential backoff, a per-IP bucket

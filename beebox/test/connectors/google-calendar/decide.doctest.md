@@ -1,6 +1,6 @@
 # Google Calendar sync decision policy
 
-`decideCalendarSync` (`src/connectors/google-calendar-decide.ts`) is the single
+`decideCalendarSync` (`src/connectors/google-calendar/decide.ts`) is the single
 pure function holding the connector's who-wins precedence. The IO passes gather
 booleans from disk/state and dispatch on its `SyncDecision`. It has no fs or
 API dependency, so the whole policy is exercised here.

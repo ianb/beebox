@@ -9,7 +9,7 @@
  * commands it drove — capture is now prepared in-process and delivered to
  * chat (src/core/capture/), so the old inbox procedure is dead.
  *
- * `installProcedures` (src/core/box/defaults.ts) only ever ADDS or UPDATES
+ * `installProcedures` (src/core/box/structure/defaults.ts) only ever ADDS or UPDATES
  * template files — it never prunes. So every box initialized before this
  * release still carries
  *   config/procedures/process-captures.procedure.card

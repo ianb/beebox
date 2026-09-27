@@ -38,7 +38,7 @@ A path outside every underscore area is rejected:
 describe(resolveBoxNamespacePath("/box", "package.json"))
 => escaped
 
-describe(resolveBoxNamespacePath("/box", "src/lib/paths.ts"))
+describe(resolveBoxNamespacePath("/box", "src/lib/paths/core.ts"))
 => escaped
 
 describe(resolveBoxNamespacePath("/box", "node_modules/foo/index.js"))

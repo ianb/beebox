@@ -5,7 +5,7 @@ collection (`core/todo/query.ts`, the same runner `bbx query todos` and the
 web list use): filters (`--status`, `--assigned`, `--glob`,
 `--on-plate`), a human listing grouped by plate-state, and `--json` for the
 full structured records. `runTodosForBox(boxRoot, options)` is exercised
-directly (same approach as `test/cli/auth-command.doctest.md`) rather than
+directly (same approach as `test/cli/commands/auth.doctest.md`) rather than
 spawning the CLI as a subprocess.
 
 ```ts setup

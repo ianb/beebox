@@ -156,7 +156,7 @@ signing changes.
 - `BeeBox/Views/ChatWebView.swift` is the native transport and navigation
   boundary. Keep allowed-origin checks, delivery deduplication, receipt
   timeouts, and navigation reload behavior explicit.
-- `beebox/src/frontend/src/components/chat/native-emission.ts` and the
+- `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/native-emission.ts` and the
   hooks beside it are the web side. Native must submit an `Emission` to the
   visible web session; it must not call chat-send APIs behind the webview.
 - Web-to-native traffic uses named `WKScriptMessageHandler` channels. Validate

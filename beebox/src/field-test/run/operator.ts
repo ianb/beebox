@@ -2,7 +2,7 @@
  * The field-test operator session (`docs/plans/agent-field-tests.md`, Track 3).
  *
  * One persistent conversation for a whole run — "a person is a single
- * identity" — built on the `ChatBackend` service (`src/services/claude-chat.ts`)
+ * identity" — built on the `ChatBackend` service (`src/services/claude-chat/core.ts`)
  * rather than `runAgent`, which is one-shot and box-rooted. Using the service
  * interface is what makes this wrapper testable: the fake backend gives a
  * scripted operator with no SDK, no subprocess and no cost.

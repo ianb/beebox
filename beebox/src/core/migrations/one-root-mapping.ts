@@ -24,7 +24,7 @@
  *    "procedure/runs")` literally, box-root-relative — a gap in the landed
  *    Tracks A–C (procedure runs wasn't in `BOX_ROOT_VOCABULARY` either). Both
  *    are now fixed: `BOX_LAYOUT` carries a `procedureRuns` entry
- *    (`_bookkeeping/procedure/runs`, `src/lib/box-layout-spec.ts`), and every
+ *    (`_bookkeeping/procedure/runs`, `src/lib/paths/box-layout-spec.ts`), and every
  *    v3 call site reads it via `BOX_DIRS.procedureRuns` /
  *    `getBoxDir(boxRoot, "procedureRuns")`. This mapper converts
  *    `content/procedure/**` → `_bookkeeping/procedure/**`, so a migrated

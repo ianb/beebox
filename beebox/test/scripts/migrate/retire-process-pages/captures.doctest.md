@@ -1,6 +1,6 @@
 # Migration: retire the process-captures pipeline
 
-`scripts/migrate/retire-process-captures.ts` prunes the retired
+`src/scripts/migrate/retire-process-pages/captures.ts` prunes the retired
 `process-captures` procedure card and its one-shot scheduled trigger from a
 deployed box (`installProcedures` never prunes). A **stock** procedure card —
 one whose content hash matches a shipped version in `SHIPPED_PROCEDURE_HASHES`

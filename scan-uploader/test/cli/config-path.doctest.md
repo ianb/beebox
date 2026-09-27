@@ -1,6 +1,6 @@
 # Default config path resolution
 
-`resolveConfigPath` (`src/config-path.ts`) is the single resolver shared by
+`resolveConfigPath` (`src/cli/config-path.ts`) is the single resolver shared by
 the bare run, `configure`'s `--config` default, and `schedule install`'s
 `--config` default (one resolver, one way to do it) — an explicit
 `--config <path>` never goes through this module at all. Order:

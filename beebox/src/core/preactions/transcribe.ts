@@ -7,7 +7,7 @@
  *
  * `audio` was historically handled here too; that path is dead now —
  * capture-session audio is transcribed by the capture preparation worker
- * (src/core/capture/transcribe-clips.ts).
+ * (src/core/capture/prepare/transcribe-clips.ts).
  */
 
 import * as fs from "node:fs/promises";

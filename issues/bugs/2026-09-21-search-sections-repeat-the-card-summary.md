@@ -15,8 +15,8 @@ could not help the person choose.
 
 ## Verified mechanism
 
-`beebox/src/core/search/extract.ts:122,136` gives each section the card's title
-and `contains`. `beebox/src/core/search/query.ts:215` prefers nonempty `contains`
+`beebox/src/core/search/extract/core.ts:122,136` gives each section the card's title
+and `contains`. `beebox/src/core/search/query/core.ts:215` prefers nonempty `contains`
 over section content for the snippet. Matching title/contains/content at
 `query.ts:44` also lets a card-title query return all its sections.
 

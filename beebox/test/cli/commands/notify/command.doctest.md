@@ -1,9 +1,9 @@
 # `bbx notify`: reach the boxholder from an agent
 
-`src/cli/commands/notify.ts` parses the flags, reads the body, and calls
+`src/cli/commands/notify/command.ts` parses the flags, reads the body, and calls
 `notifyBoxholder`, in this process or, from a box-spawned shell, in the box
 server's (last section). `runNotify(boxRoot, run)` is driven directly and returns the
-exit code (same approach as `test/cli/todos.doctest.md`): 0 when the
+exit code (same approach as `test/cli/commands/todos.doctest.md`): 0 when the
 notification reached the person, 1 when it reached nobody, 2 on a bad flag or
 target.
 

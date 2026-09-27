@@ -210,7 +210,7 @@ pub-worker routes are in §6a.
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
-(`src/hub/child-env.ts:42-119`): per-box children receive an exact-name
+(`src/hub/supervisor/child-env.ts:42-119`): per-box children receive an exact-name
 allowlist of env vars, never a spread. `src/hub/supervisor/child-spawn.ts` explicitly sets
 `extendEnv: false`, so the subprocess library cannot merge ambient parent
 variables back into that allowlist. `BBX_SESSION_SECRET` never reaches a
@@ -276,7 +276,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
 | Client error sanitization | `webapp/trpc/trpc.ts`, `webapp/server.ts:114-128` | ok | tRPC unconditionally removes response stacks and replaces internal-error messages; raw 5xx responses stay generic; full errors remain in server-side logs |
 | Development-surface opt-in | `server-types.ts`, `lib/env.ts`, `routes/api.ts`, `routes/chat-audio-routes.ts` | mitigated | `BBX_DEV_SURFACES=1` is a strict positive opt-in set only by development launchers; omission disables the external-file route and rejects mock TTS before provider lookup |
-| Path traversal containment | `src/shared/ref-path.ts` | ok | All ref/path resolution goes through one pure module; `..` escaping the box root → `null` everywhere, never clamped (frontend clamping removed 2026-07-30); callers must degrade visibly |
+| Path traversal containment | `src/shared/ref-path/core.ts` | ok | All ref/path resolution goes through one pure module; `..` escaping the box root → `null` everywhere, never clamped (frontend clamping removed 2026-07-30); callers must degrade visibly |
 | Login throttling | `login-throttle.ts` | ok | Per-(IP,email) exponential backoff + per-IP and per-email buckets (X-Forwarded-For rotation defeated) + global scrypt concurrency cap 2 (memory-DoS guard); all maps hard-capped at 4000 entries; throttle, never lockout |
 | Session mechanics | `auth.ts` | ok | HMAC-SHA256 cookie, 30-day TTL, timing-safe verify with length pre-check; `gen`-based revocation on password change/user removal; hub mode never verifies cookies in the box process |
 | Timing-safe comparisons | `auth.ts:68-76,171-184`, `browse-key.ts:57-72` | ok | All bearer/secret compares |
@@ -379,10 +379,10 @@ context:**
 
 | Channel | Source | file:line |
 |---|---|---|
-| Email bodies + attachments | Gmail connector | `src/connectors/gmail.ts` |
+| Email bodies + attachments | Gmail connector | `src/connectors/gmail/connector.ts` |
 | Web clippings + frozen-page HTML | Chrome extension (`beebox-clerk`) | `beebox-clerk/src/platform/clerk-api.ts` |
-| Telegram message text | Telegram connector | `src/connectors/telegram.ts` |
-| Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar.ts` |
+| Telegram message text | Telegram connector | `src/connectors/telegram/connector.ts` |
+| Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar/connector.ts` |
 | Image text (OCR/vision) | Scan-import + vision models — injection can hide *in a screenshot* | `src/services/scan-vision-claude.ts` |
 | Voice transcripts | Transcription pipeline | `src/core/transcription/` |
 | Card bodies generally | Any of the above lands as a card, and cards become agent context | `src/core/card-io.ts` |

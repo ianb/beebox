@@ -7,7 +7,7 @@
  * obvious command afterwards is a wasted round trip.
  *
  * Deliberately NOT a `bbx serve` startup gate — see the header of
- * src/core/annex/doctor.ts for why.
+ * src/core/annex/doctor/core.ts for why.
  */
 
 import { Command } from "commander";

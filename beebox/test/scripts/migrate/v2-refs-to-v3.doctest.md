@@ -1,6 +1,6 @@
 # Migration: v2-layout refs rewritten to their v3 paths
 
-`scripts/migrate/v2-refs-to-v3.ts` rewrites a box-absolute ref still written in
+`src/scripts/migrate/v2-refs-to-v3.ts` rewrites a box-absolute ref still written in
 the v2 layout to the path the one-root migration moved its target to, using
 the same `mapV2Path` table. It rewrites only when the mapped target exists.
 `v3FormOf` is the pure decision.

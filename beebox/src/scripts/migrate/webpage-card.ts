@@ -25,8 +25,8 @@
  * CommentaryView path.
  *
  * Idempotent. Usage:
- *   pnpm exec tsx scripts/migrate/webpage-card.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/webpage-card.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/webpage-card.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/webpage-card.ts <boxRoot> --apply
  */
 
 import { access, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";

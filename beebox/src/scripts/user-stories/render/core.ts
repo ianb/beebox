@@ -6,7 +6,7 @@
  * verification actually recorded for that story. Nothing here invents text — every sentence comes
  * from a story file, a verifier note, a panel note, or a browser check.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/render.ts \
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts \
  *           > beebox/user-stories/catalog/<date>.md
  */
 import { loadRun } from "./load-run.js";

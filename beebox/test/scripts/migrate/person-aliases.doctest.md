@@ -1,6 +1,6 @@
 # Migration: rename person `called` to `aliases`
 
-`scripts/migrate/person-aliases.ts` renames the `person` card's `called` field
+`src/scripts/migrate/person-aliases.ts` renames the `person` card's `called` field
 to the standard `aliases`. `rewriteCardText(fileName, raw)` is the pure per-card
 entry: it returns the rewritten text, or `null` when nothing changed (idempotent).
 

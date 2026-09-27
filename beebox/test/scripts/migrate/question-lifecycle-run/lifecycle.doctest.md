@@ -1,6 +1,6 @@
 # Migration: question card lifecycle cleanup
 
-`scripts/migrate/question-lifecycle.ts` is the pure per-card transform behind
+`src/scripts/migrate/question-lifecycle-run/lifecycle.ts` is the pure per-card transform behind
 the `question-lifecycle` migration (Track A,
 `docs/implemented-plans/questions-end-to-end.md`): strip `answered-by:`, backfill
 `asked-at:` on pending cards, relocate stray question cards into

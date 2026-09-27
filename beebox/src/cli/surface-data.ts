@@ -163,7 +163,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Engine: no agent-reachable form ----------------------------------
   { name: "maintenance", audience: "engine", reason: "deploy holds box ownership across activation; runs as root and spans the fleet" },
-  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor.ts:441)" },
+  { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor/core.ts:441)" },
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
   { name: "boxes", audience: "engine", reason: "the machine-wide box manifest; an agent has no second box" },
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },

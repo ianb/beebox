@@ -120,7 +120,7 @@ fi
 # touched. Scope caveat: this whole subtree ships across a store release, so a
 # store-version skew gate is deliberately out of scope (runtime validation in
 # clerk-api.ts handles deployed skew by degradation).
-if echo "$staged" | grep -qE '^(beebox/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|beebox-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
+if echo "$staged" | grep -qE '^(beebox/src/webapp/trpc/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|beebox-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
   echo "[pre-commit] .: pnpm snapshot:clerk-contract (clerk contract staleness gate)"
   (cd "$REPO_DIR" && pnpm --silent snapshot:clerk-contract)
   if ! git -C "$REPO_DIR" diff --exit-code -- beebox-clerk/src/contract/clerk-contract.generated.ts; then

@@ -1,6 +1,6 @@
 # Retrospective Scan
 
-`runRetroScan` (`src/core/retro/scan.ts`) drives one retrospective run:
+`runRetroScan` (`src/core/retro/scan/core.ts`) drives one retrospective run:
 discover qualifying chat sessions, observe each through a `RetroObserver`,
 dedupe evidence against the ledger, persist walker state, and write the
 per-run report. The observer here is a scripted fake — the real one

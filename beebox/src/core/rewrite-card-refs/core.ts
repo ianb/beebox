@@ -33,7 +33,7 @@
  * frontmatter keys, which is the whole reason this scan is text-surgical).
  *
  * Ref grammar (the 3-form rule, `?query`/`#fragment` splitting, fail-closed
- * containment) lives in `src/shared/ref-path.ts` — this module only maps its
+ * containment) lives in `src/shared/ref-path/core.ts` — this module only maps its
  * box-relative answers to/from absolute paths and re-appends the suffix when it
  * rewrites, so a `?view=`- or `#anchor`-bearing ref both resolves and survives.
  */
@@ -53,7 +53,7 @@ export type Remap = (resolvedAbsPath: string) => string | null;
 
 /**
  * Resolve a ref's path part to an absolute filesystem path via the shared ref
- * algebra (`src/shared/ref-path.ts`). Returns `null` for refs that name nothing
+ * algebra (`src/shared/ref-path/core.ts`). Returns `null` for refs that name nothing
  * in the box — the shared `isExternalRef` test (empty, any `scheme:`, a
  * protocol-relative `//host`, a bare `#anchor`), so `mailto:`/`view:`/`tel:`
  * are skipped rather than fed to the resolver — and for refs that escape the

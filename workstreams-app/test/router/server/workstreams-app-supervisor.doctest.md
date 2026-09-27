@@ -270,7 +270,7 @@ assert.deepEqual(supervisor.targetFor("/workstreams/assets/index.js"), {
 });
 
 fake.setActiveJobs(2);
-fake.triggerWatch("src/server/app.ts");
+fake.triggerWatch("src/server/main/app.ts");
 await fake.fireTimer(10);
 assert.deepEqual(supervisor.state(), {
   phase: "ready",
@@ -299,7 +299,7 @@ Frontend-only edits are left to Vite HMR. The periodic fingerprint still
 recovers a missed backend watcher event and schedules another app-only restart.
 
 ```ts continue
-fake.triggerWatch("src/frontend/App.tsx");
+fake.triggerWatch("src/frontend/main/App.tsx");
 await fake.fireTimer(10);
 assert.equal(fake.spawnOptions.length, 4);
 
@@ -336,12 +336,12 @@ but includes backend and shared contracts.
 
 ```ts
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-supervisor-"));
-await fs.mkdir(path.join(root, "src/frontend"), { recursive: true });
-await fs.mkdir(path.join(root, "src/server"), { recursive: true });
-await fs.writeFile(path.join(root, "src/frontend/App.tsx"), "one");
-await fs.writeFile(path.join(root, "src/server/app.ts"), "one");
+await fs.mkdir(path.join(root, "src/frontend/main"), { recursive: true });
+await fs.mkdir(path.join(root, "src/server/main"), { recursive: true });
+await fs.writeFile(path.join(root, "src/frontend/main/App.tsx"), "one");
+await fs.writeFile(path.join(root, "src/server/main/app.ts"), "one");
 const before = await fingerprintWorkstreamsApp(root);
-await fs.writeFile(path.join(root, "src/frontend/App.tsx"), "two");
+await fs.writeFile(path.join(root, "src/frontend/main/App.tsx"), "two");
 assert.equal(await fingerprintWorkstreamsApp(root), before);
 await fs.mkdir(path.join(root, "node_modules", ".vite"), { recursive: true });
 await fs.mkdir(path.join(root, ".cache"), { recursive: true });
@@ -350,11 +350,11 @@ await fs.writeFile(path.join(root, "node_modules", ".vite", "metadata.json"), "g
 await fs.writeFile(path.join(root, ".cache", "generated.json"), "generated");
 await fs.writeFile(path.join(root, ".tap", "results.json"), "generated");
 assert.equal(await fingerprintWorkstreamsApp(root), before);
-await fs.writeFile(path.join(root, "src/server/app.ts"), "two");
+await fs.writeFile(path.join(root, "src/server/main/app.ts"), "two");
 assert.notEqual(await fingerprintWorkstreamsApp(root), before);
 
 assert.equal(shouldRestartWorkstreamsBackend("src/frontend/styles.css"), false);
-assert.equal(shouldRestartWorkstreamsBackend("src/router/router.ts"), false);
+assert.equal(shouldRestartWorkstreamsBackend("src/router/server/listener.ts"), false);
 assert.equal(shouldRestartWorkstreamsBackend("src/shared/workstreams.ts"), true);
 assert.equal(shouldRestartWorkstreamsBackend("package.json"), true);
 assert.equal(shouldRestartWorkstreamsBackend("test/server.doctest.md"), false);

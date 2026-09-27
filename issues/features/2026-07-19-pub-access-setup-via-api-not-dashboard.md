@@ -49,7 +49,7 @@ instructions are already wrong. The boxholder lost real time to it.
 
 ## What it prints today
 
-From `accessSetupInstructions` (`beebox/src/publish/setup.ts`):
+From `accessSetupInstructions` (`beebox/src/publish/setup/core.ts`):
 
 ```
 1. Zero Trust dashboard → Settings → Authentication → add Google as a login method.

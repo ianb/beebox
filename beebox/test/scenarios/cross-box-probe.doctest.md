@@ -27,8 +27,8 @@ authenticated-owner context for `alpha` — and tries to reach box B
 addressing `beta` directly. tRPC procedures are called the way every other
 router doctest calls them, via `appRouter.createCaller(ctx)` with a `ctx`
 shaped like what the real per-box auth wall would hand a request already
-authenticated to `alpha` (see `test/webapp/trpc-procedures.doctest.md`,
-`test/webapp/trpc-secrets.doctest.md`) — this exercises the SAME procedure
+authenticated to `alpha` (see `test/webapp/trpc/procedures.doctest.md`,
+`test/webapp/trpc/routers/secrets.doctest.md`) — this exercises the SAME procedure
 code the real HTTP/tRPC transport would call after auth admits the request;
 what differs is skipping the transport's own auth-header parsing, which is
 `two-box-fixture.doctest.md`'s job, not this file's. Raw Fastify routes go
@@ -255,7 +255,7 @@ collections.query (here): BAD_REQUEST
 
 ### `files.summarize`
 
-`summarizePath` in `src/webapp/trpc/routers/files.ts` once normalized only
+`summarizePath` in `src/webapp/trpc/routers/files/router.ts` once normalized only
 absolute inputs; it now runs every input through
 `resolveBoxNamespacePathOnDisk`, which fences both `..`-relative escapes and
 the box namespace. This step is the regression anchor and must keep printing
@@ -304,7 +304,7 @@ chat.openers: BAD_REQUEST
 ## 5. `GET /alpha/api/task-output?file=<B's task output>`
 
 Full coverage (including the `..`-in-path and symlink-escape variants) lives
-in `test/webapp/routes/task-output-route.doctest.md`; one line here keeps
+in `test/webapp/routes/commands.task-output.doctest.md`; one line here keeps
 this file a complete anchor.
 
 ```ts continue

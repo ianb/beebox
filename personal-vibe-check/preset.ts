@@ -755,7 +755,7 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
         // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
         // across beebox (backend + frontend), beebox-clerk, and
         // agent-doctest; 3 sites kept a justified single-line disable comment
-        // (agent-doctest/src/check.ts and
+        // (agent-doctest/src/tap-check/check.ts and
         // beebox frontend useSSRMachine.ts, router.tsx) where the
         // condition is genuinely defensive against a case the type system
         // can't see (e.g. a cast at a parse/runtime boundary).

@@ -16,7 +16,7 @@ the failure is a project-level API toggle, not a credential.
 
 ## Mechanism
 
-`beebox/src/connectors/drive-handler-docs.ts` has two call paths to the Docs
+`beebox/src/connectors/google-drive/handlers/docs/handler.ts` has two call paths to the Docs
 API, and only one of them degrades gracefully:
 
 - `pull()` (line ~219) wraps `service.getDocument()` in `tryGetDocument()`

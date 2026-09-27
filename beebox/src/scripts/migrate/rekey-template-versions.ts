@@ -33,8 +33,8 @@
  * Idempotent: a box whose keys are all v3 is a clean no-op.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/rekey-template-versions.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/rekey-template-versions.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/rekey-template-versions.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/rekey-template-versions.ts <boxRoot> --apply
  */
 
 import * as fs from "node:fs/promises";

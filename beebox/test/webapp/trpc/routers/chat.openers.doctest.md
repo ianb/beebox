@@ -117,7 +117,7 @@ JSON.stringify(await caller(box.root).chat.openers({}))
 ## A briefing that fails validation offers none, and doesn't fall back
 
 A blank opener is a card validation error (see
-`test/schemas/briefing-compile.doctest.md`). A broken card shouldn't blank the
+`test/schemas.briefing-compile.doctest.md`). A broken card shouldn't blank the
 chat — but it shouldn't quietly promote the root's openers into that directory
 either, which would hide the breakage behind plausible-looking buttons.
 

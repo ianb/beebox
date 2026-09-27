@@ -53,7 +53,7 @@ records around; the markdown at the end is just a view over them.
   "story": "As a box owner, I want ... so that ...",
   "group": "connectors",          // product capability area, NOT a source directory
   "audience": "agent-scripts",    // web-ui | agent-scripts | operator
-  "files": ["beebox/src/connectors/google-calendar.ts"],
+  "files": ["beebox/src/connectors/google-calendar/connector.ts"],
   "evidence": "runCalendarSync catches the per-calendar failure: on HTTP 410 it ...",
   "sourceFile": "seam-connectors.r2.json"
 }

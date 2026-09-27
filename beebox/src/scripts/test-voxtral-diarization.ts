@@ -6,7 +6,7 @@
  *
  * Usage:
  *   THINKING_OPENAI_API_KEY=... BBX_MISTRAL_API_KEY=... \
- *     tsx scripts/test-voxtral-diarization.ts
+ *     tsx src/scripts/test-voxtral-diarization.ts
  *
  * Caches the generated WAV at scripts/.voxtral-sample.wav so reruns don't
  * keep hitting OpenAI. Delete that file to regenerate.

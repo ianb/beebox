@@ -1,7 +1,7 @@
 // Bundles the <SketchFigure> dev demo into ONE self-contained HTML file at the
 // monorepo dev/ directory, served at /<worktree>/dev/canvas-loop.html straight
 // from disk (so it never cold-starts the worktree). esbuild bundles
-// dev-demo/main.tsx (React + the component + two sketches) to an IIFE with the
+// src/dev-demo/main.tsx (React + the component + two sketches) to an IIFE with the
 // automatic JSX runtime; this script wraps it in a light HTML shell with inline
 // CSS. The output HTML is TRACKED — regenerate after touching the demo or the
 // component with:  pnpm --dir canvas-loop run build:dev-demo

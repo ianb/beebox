@@ -15,8 +15,8 @@
  * left behind; git doesn't track empty dirs, so they vanish on commit.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/delete-deprecated-cards.ts <root>           # dry-run
- *   pnpm exec tsx scripts/migrate/delete-deprecated-cards.ts <root> --apply
+ *   pnpm exec tsx src/scripts/migrate/delete-deprecated-cards.ts <root>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/delete-deprecated-cards.ts <root> --apply
  */
 
 import { unlink } from "node:fs/promises";

@@ -16,7 +16,7 @@
  * `bbx procedure run`, is left exactly as it was.
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/schedule-engine-verbs.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/schedule-engine-verbs.ts <boxRoot> --apply
  */
 import * as path from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
@@ -180,7 +180,7 @@ async function main(): Promise<number> {
 
 // Guarded so `repointRunsCommand` can be imported by a test without the script
 // running and exiting the test process (the convention in
-// scripts/migrate/record-measurements.ts and its siblings).
+// src/scripts/migrate/record-measurements.ts and its siblings).
 if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
   try {
     process.exit(await main());

@@ -2,7 +2,7 @@
 
 A scheduled script can declare `<requires><connector>name</connector></requires>`
 and the scheduler skips it cleanly when the connector isn't configured
-(`src/connectors/requirements.ts`).
+(`src/requirements.ts`).
 
 That probe used to check one thing: does `_config/connectors/<name>.secret.json`
 exist? Credentials now live in the machine store

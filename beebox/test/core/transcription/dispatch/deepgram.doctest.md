@@ -1,7 +1,7 @@
 # Word confidence plumbing
 
 Deepgram is the only transcription backend that reports per-word acoustic
-confidence. `mapDeepgramWords` (`src/core/transcription/deepgram.ts`) carries
+confidence. `mapDeepgramWords` (`src/core/transcription/dispatch/deepgram.ts`) carries
 it into `WordTimestamp.confidence`, guarding at read because Deepgram success
 responses are not zod-validated: a word is only attached with `confidence`
 when the raw value is genuinely a `number`. The fake transcription service

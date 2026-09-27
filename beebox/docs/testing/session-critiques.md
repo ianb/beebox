@@ -4,7 +4,7 @@ A real agent session, reviewed for whether the CLI tools served the agent.
 
 ## What it is
 
-Report generator in `src/dev/lib/session-report.ts`; subagent in
+Report generator in `src/dev/lib/session-report/report.ts`; subagent in
 `.claude/agents.json`.
 
 Session critiques evaluate whether CLI tools helped or hindered the agent during real agentic sessions. Unlike knowledge audits (which test what the agent knows), session critiques test whether the tools the agent used gave it good output.

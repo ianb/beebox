@@ -15,8 +15,8 @@
  * splits) without exposing any cards yet.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/card-frontmatter.ts <boxRoot>             # dry-run
- *   pnpm exec tsx scripts/migrate/card-frontmatter.ts <boxRoot> --apply     # execute
+ *   pnpm exec tsx src/scripts/migrate/card-frontmatter.ts <boxRoot>             # dry-run
+ *   pnpm exec tsx src/scripts/migrate/card-frontmatter.ts <boxRoot> --apply     # execute
  */
 
 import * as fs from "node:fs/promises";

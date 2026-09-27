@@ -9,7 +9,7 @@ undated todo legible each get an explicit spelling: a card header names the
 card, a `§` line names the section when it changes, indentation follows the
 parent chain, and an annotation gets its own `—` line.
 `runQueryForBox(boxRoot, { collection, options })` is exercised directly,
-same approach as `test/cli/todos.doctest.md`.
+same approach as `test/cli/commands/todos.doctest.md`.
 
 ```ts setup
 import { runQueryForBox } from "../../../src/cli/commands/query.js";

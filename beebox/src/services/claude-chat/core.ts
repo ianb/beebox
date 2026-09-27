@@ -152,7 +152,7 @@ function providerEnvMatches(warm: Record<string, string | undefined>, next: Reco
 
 /**
  * Whether a `start()` call's options are compatible with a pre-warmed slot.
- * Exported for `test/services/service-claude-chat.doctest.md`: this and
+ * Exported for `test/services/claude-chat.doctest.md`: this and
  * `warmSlotKey` are the warm pool's whole decision surface, and getting either
  * wrong hands a chat a subprocess baked for a different conversation.
  * The warm subprocess has its options baked in, so we only consume it if

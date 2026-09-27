@@ -1,6 +1,6 @@
 # Box layout spec: single source for BOX_DIRS, the agent guide, and the docs
 
-`BOX_LAYOUT` (`src/lib/box-layout-spec.ts`) is the one place the box
+`BOX_LAYOUT` (`src/lib/paths/box-layout-spec.ts`) is the one place the box
 directory list, its paths, and its prose live. `BOX_DIRS` (`paths.ts`) and the
 in-box agent guide's directory table (`agent-guide/box-shape.ts`) both derive
 from it; this doctest checks the derivation, plus that `docs/box-layout.md`'s

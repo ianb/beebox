@@ -5,7 +5,7 @@
  * `setup` (the guided serve-config loop) is chunk 2.
  *
  * This file is presentation only: it wires the real deps, runs the state
- * machine in `src/services/tailscale-status.ts`, formats the report, and maps
+ * machine in `src/services/tailscale-status/core.ts`, formats the report, and maps
  * the terminal state to the process exit code (like `health.ts` over
  * `health-box.ts`). All logic and the injectable seam live in the service
  * modules.

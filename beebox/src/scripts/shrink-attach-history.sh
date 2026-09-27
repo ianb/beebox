@@ -14,7 +14,7 @@
 #   - filter-repo removes the `origin` remote as a safety. The script
 #     restores it.
 #
-# Usage:  scripts/shrink-attach-history.sh <box-root>
+# Usage:  src/scripts/shrink-attach-history.sh <box-root>
 #
 # Requires `git-filter-repo` (brew install git-filter-repo).
 

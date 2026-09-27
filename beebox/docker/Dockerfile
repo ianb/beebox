@@ -14,7 +14,7 @@
 
 # ─────────────────────────────────────────────────────────────────────────
 # Build stage — install the workspace and produce the release tarball the
-# same way scripts/release.ts does (build:cli + frontend build + pnpm pack).
+# same way src/scripts/release.ts does (build:cli + frontend build + pnpm pack).
 # ─────────────────────────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS build
 
@@ -117,7 +117,7 @@ ENV CLAUDE_CONFIG_DIR=/app/claude-config
 # engine (under node_modules, as here) would fall back to a bare `^version`
 # range that 404s (src/core/box/package.ts defaultBeeBoxSpec), so the
 # box-local `pnpm install` must be told to use the tarball — same as
-# scripts/smoke-external-box.ts does.
+# src/scripts/smoke-external-box.ts does.
 ENV BBX_INIT_BEEBOX_SPEC=file:/app/beebox.tgz
 
 USER node
@@ -141,7 +141,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash \
 # better-sqlite3 (event-bus storage) and the other native/generated deps run
 # their install scripts — pnpm 10 blocks them by default (and, non-interactive,
 # a blocked build is a hard error, not a warning). The flag form is the same
-# one scripts/smoke-external-box.ts uses; a package.json `pnpm` field is no
+# one src/scripts/smoke-external-box.ts uses; a package.json `pnpm` field is no
 # longer read by pnpm 10.26.
 RUN printf '%s\n' \
       '{' \

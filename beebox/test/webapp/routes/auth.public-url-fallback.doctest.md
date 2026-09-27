@@ -9,7 +9,7 @@ router's port) is wrong for `bbx hub`, which listens on its own port
 (4310 by default, or whatever `hub.json` configures) — without threading
 the hub's own base URL in as the fallback, an unconfigured hub's Google
 login would round-trip back to a server that was never listening on 3210.
-`registerAuthSurface`'s `publicUrlFallback` option (`src/webapp/routes/auth.ts`)
+`registerAuthSurface`'s `publicUrlFallback` option (`src/webapp/routes/auth/register.ts`)
 is what lets a caller (the hub, here) override it; omitting it keeps the
 standalone box server's behavior exactly as it was.
 

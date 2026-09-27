@@ -126,7 +126,7 @@ JSON.stringify(resolveContainedRef({ boxRoot: "/box", ref: "/../etc/passwd", fro
 
 A `?query` or `#fragment` addresses a viewer or a location *within* the target,
 not a different file, so it is split off before resolution (shared with the
-frontend via `src/shared/ref-path.ts`). Handing the fragment to the filesystem
+frontend via `src/shared/ref-path/core.ts`). Handing the fragment to the filesystem
 is what used to false-flag `feedback.target.ref`'s documented `path#fragment`
 form as a broken ref.
 

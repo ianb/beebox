@@ -17,7 +17,7 @@ export const ROOT = PACKAGE_ROOT;
 const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "docs/prompts.md"]);
 
 // `box-docs` is the engine's generated reference docs for boxes (gitignored;
-// src/core/docs-gen/package-docs.ts), full of illustrative example links.
+// src/core/docs-gen/package-docs/core.ts), full of illustrative example links.
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports", "box-docs"];
 // AGENTS.md files are gitignored, generated mirrors of the sibling CLAUDE.md
 // (bin/generate-agents-md.ts, for Codex sessions) — not documents; scanning

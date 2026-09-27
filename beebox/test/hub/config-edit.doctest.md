@@ -2,7 +2,7 @@
 
 `hub.json` used to be hand-edited on the live server to add a box, which meant
 a bad slug was discovered by the hub refusing to boot — after the file had
-already been replaced. `src/hub/hub-config-edit.ts` turns the edit into a plan
+already been replaced. `src/hub/config-edit.ts` turns the edit into a plan
 that is validated through the hub's own loader first, so every rejection
 happens with the live file untouched.
 

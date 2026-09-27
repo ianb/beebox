@@ -84,7 +84,7 @@ resolution: implemented
 ```
 
 Unknown keys are reported by
-`workstreams-app/src/server/issue-domain.ts`; adding a real field requires
+`workstreams-app/src/server/main/issue-domain.ts`; adding a real field requires
 updating both this contract and `KNOWN_FRONTMATTER_KEYS` there.
 
 ### Identity and grouping

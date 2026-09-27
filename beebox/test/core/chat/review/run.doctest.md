@@ -1,6 +1,6 @@
 # Chat Review: a run end to end
 
-`src/core/chat/review/run.ts` walks the husks whose transcripts have grown,
+`src/core/chat/review/run/core.ts` walks the husks whose transcripts have grown,
 asks a reviewer for a title / `contains` / account, writes them to the husk, and
 advances the journal.
 

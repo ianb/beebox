@@ -7,7 +7,7 @@ areas (`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) all
 live there together. shapeVersion 3 is the only box shape.
 
 This mirrors what `src/cli/commands/init.ts`'s action does, without going
-through Commander — same style as `test/cli/lib/init.doctest.md`'s `fullInit`
+through Commander — same style as `test/core/box/structure.init.doctest.md`'s `fullInit`
 helper. It deliberately skips `symlinkClaudeMemory` (the one installer with a
 REAL global side effect — it touches `~/.claude/projects/`), since a
 filesystem doctest shouldn't leave litter outside its own tmpdir.

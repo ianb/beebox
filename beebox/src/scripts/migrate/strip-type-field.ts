@@ -13,8 +13,8 @@
  * Idempotent. Safe on cards that already have no type field.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/strip-type-field.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/strip-type-field.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/strip-type-field.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/strip-type-field.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";

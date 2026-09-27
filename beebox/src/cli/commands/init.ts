@@ -47,7 +47,7 @@ async function announceAndInitGit(
   console.log("Git repository initialized with initial commit.");
 
   // Annex HERE, not in `initBox`. `initBox` writes the box `.gitignore` from
-  // an annex probe (`src/core/box/index.ts`), but `scaffoldBoxRoot` calls it
+  // an annex probe (`src/core/box/structure/core.ts`), but `scaffoldBoxRoot` calls it
   // before there is a `.git` — so on a fresh init the probe can only ever read
   // false and the box would be written manifest-scheme no matter what. The
   // repository has to exist first, so this step re-writes the `.gitignore` the

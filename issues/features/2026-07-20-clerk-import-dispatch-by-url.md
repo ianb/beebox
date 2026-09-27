@@ -44,7 +44,7 @@ fixing a real failure, not adding polish.
 
 ## There is already a foundation
 
-`extractDriveFileId` (`beebox/src/connectors/drive-types.ts:108`) already
+`extractDriveFileId` (`beebox/src/connectors/google-drive/types.ts:108`) already
 parses exactly the URL shapes this needs, and documents them:
 
 ```

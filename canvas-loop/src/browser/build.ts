@@ -1,6 +1,6 @@
 // Bundles the browser playground into ONE self-contained HTML file — every
 // module inlined, zero runtime imports, no external requests (it is published
-// behind a strict CSP). esbuild bundles browser/app.ts (runtime + the five
+// behind a strict CSP). esbuild bundles src/browser/app/playground.ts (runtime + the five
 // sketches) to an IIFE; this script wraps it in a dark, minimal HTML shell with
 // inline CSS. Regenerate with `pnpm --dir canvas-loop run build:playground`.
 import { build } from "esbuild";

@@ -16,8 +16,8 @@
  *
  * Idempotent: a card whose `source`/`hero-image` is already an object (or
  * absent) is left untouched. Registered in src/core/migrations.ts. Also:
- *   pnpm exec tsx scripts/migrate/recipe-source-shape.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/recipe-source-shape.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/recipe-source-shape.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/recipe-source-shape.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile } from "node:fs/promises";

@@ -1,6 +1,6 @@
 # OpenRouter transcription: shaping the normalized response
 
-The HQ transcription fallback (`src/core/transcription/openrouter.ts`) reaches
+The HQ transcription fallback (`src/core/transcription/dispatch/openrouter.ts`) reaches
 the same OpenAI models `whisper.ts` calls directly, and OpenRouter hands back
 one normalized shape. These tests cover the translation into the result every
 transcription caller already handles — no network, just the shaper.

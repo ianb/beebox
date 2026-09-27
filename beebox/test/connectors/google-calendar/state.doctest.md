@@ -1,6 +1,6 @@
 # Calendar syncToken delta merge
 
-`mergeSyncTokens` (`src/connectors/google-calendar-state.ts`) resolves one
+`mergeSyncTokens` (`src/connectors/google-calendar/state.ts`) resolves one
 save's per-calendar cursor changes against freshly-loaded transient state,
 relative to a `snapshot` — the tokens as of this sync's LAST save (the baseline
 is advanced after every save; see `SyncTokenSnapshot`). This keeps a concurrent

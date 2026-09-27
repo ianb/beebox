@@ -26,7 +26,7 @@
  * the working tree exactly as it found it.
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/annex-config.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/annex-config.ts <boxRoot> --apply
  */
 
 import * as path from "node:path";

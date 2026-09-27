@@ -1,4 +1,4 @@
-# The recency feed (src/server/recency.ts)
+# The recency feed (src/server/main/recency.ts)
 
 The browser's front door (`docs/plans/general-browser.md`, Track 3). The
 boxholder's rule is *"a file is interesting if it has been modified recently, in

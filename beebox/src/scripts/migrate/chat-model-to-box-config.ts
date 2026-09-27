@@ -26,7 +26,7 @@
  * Reversing the two steps would lose the value instead.
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/chat-model-to-box-config.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/chat-model-to-box-config.ts <boxRoot> --apply
  */
 
 import * as path from "node:path";

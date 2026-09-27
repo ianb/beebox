@@ -228,7 +228,7 @@ if (resolvedPages.length === 0) {
   const mapped = await agent<PageMap>(
     `You are planning a browser verification pass. Repository root: ${ROOT}.
 
-Read the frontend route table at \`beebox/src/frontend/src/router.tsx\` — that is the
+Read the frontend route table at \`beebox/src/frontend/src/main/router.tsx\` — that is the
 definitive list of pages the app serves. Then read \`${OUT}/stories.final.json\` and take the
 stories whose \`audience\` is \`web-ui\`.
 

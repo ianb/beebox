@@ -56,7 +56,7 @@ reminder of the spoken keywords — `"send message"`, `"clean up and send"`,
 `"send and close"`, `"erase message"`, `"cancel message"`, `"microphone off"`,
 cycling every 10 seconds and filtered to what is currently valid (before
 anything is said, only `"microphone off"` is offered). That is `KeywordHint`
-(`beebox/src/frontend/src/components/chat/KeywordHint.tsx`), positioned by
+(`beebox/src/frontend/src/components/chat/InteractiveChat-composer/KeywordHint.tsx`), positioned by
 `MicOverlay` beside the volume bars.
 
 The iOS native composer has no equivalent. `NativeComposerView.swift` has no

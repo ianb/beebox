@@ -5,7 +5,7 @@ see and unpair their own phone. `pairing.devices` and `pairing.revokeDevice` are
 `authedProcedure` and decide scope themselves rather than offering the UI a
 choice of two procedures: the owner reaches every device on the box, and a
 member reaches the devices they paired. The rule itself is pinned in
-`test/core/mobile/device-visibility.doctest.md`; this is the gate over HTTP.
+`test/core/mobile/pairing.device-visibility.doctest.md`; this is the gate over HTTP.
 
 ```ts setup
 import { mkdtemp } from "node:fs/promises";

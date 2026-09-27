@@ -117,7 +117,7 @@ const rejectedRun = scripted({ "/receipts": [summary({ rejected: 1 })] });
 ## Per-box totals, for the desktop notification
 
 The run also hands back what each box actually took in, which is all
-`src/notify.ts` needs to decide whether to post a banner. Totals sum across
+`src/cli/notify.ts` needs to decide whether to post a banner. Totals sum across
 targets *and* across retry rounds, so a file that was unsettled in round 1 and
 uploaded in round 2 is one upload for the box, not two events to report. Both
 targets in `config` point at box `b`:

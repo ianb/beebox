@@ -4,7 +4,7 @@ The Google-services OAuth callback persists shared, broadly-scoped Google tokens
 and is reachable outside the per-box auth wall. `createGoogleOAuthState` (called
 behind the owner wall in `googleSetup`) mints a one-time nonce the callback must
 present back via `consumeGoogleOAuthState`; without a valid nonce the callback
-rejects. See `src/connectors/google-oauth-state.ts`.
+rejects. See `src/google/oauth-state.ts`.
 
 ```ts setup
 import * as os from "node:os";

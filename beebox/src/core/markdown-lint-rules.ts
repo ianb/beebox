@@ -199,7 +199,7 @@ export interface LinkResolution {
 
 /**
  * Resolve an inline-link url the way BBX002 does, via the shared ref algebra
- * (`src/shared/ref-path.ts`): leading `/` against the box root, anything else
+ * (`src/shared/ref-path/core.ts`): leading `/` against the box root, anything else
  * relative to the file's own directory, and — `kind: "markdown"` — no attach
  * scope, since a `.md` dossier owns no `<basename>.attach/` directory, so
  * `attach/x` is a literal subdirectory. Any `?query`/`#fragment` addresses a

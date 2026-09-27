@@ -55,7 +55,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Chat System Prompt",
-    source: "src/core/chat/session/index.ts → CHAT_SYSTEM_PROMPT",
+    source: "src/core/chat/session/run/core.ts → CHAT_SYSTEM_PROMPT",
     scope: "System prompt for the persistent web UI chat session. Active whenever the user is chatting via the main chat page.",
     text: CHAT_SYSTEM_PROMPT,
   });
@@ -73,7 +73,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Commit Nudge Prompt",
-    source: "src/core/agent/index.ts → COMMIT_NUDGE_PROMPT",
+    source: "src/core/agent/invoke/core.ts → COMMIT_NUDGE_PROMPT",
     scope: "Sent as a follow-up user message when an agent session ends with uncommitted changes. Resumes the session to force a commit.",
     text: COMMIT_NUDGE_PROMPT,
   });
@@ -102,7 +102,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Triage System Prompt (template)",
-    source: "src/core/triage/index.ts → buildTriageSystemPrompt()",
+    source: "src/core/triage/run/core.ts → buildTriageSystemPrompt()",
     scope: "System prompt for the triage subagent (`bbx wakeup` preprocessing): categorizes each staged inbox item with a confidence level. The box's compiled per-landmark triage instructions are interpolated as the ruleset.",
     text: buildTriageSystemPrompt({ doc: "${triageInstructions}", categories: [] }),
   });
@@ -156,7 +156,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Procedure Context Block (template)",
-    source: "src/core/procedure/engine.ts → buildContextBlock()",
+    source: "src/core/procedure/engine/core.ts → buildContextBlock()",
     scope: "Prepended to every procedure agent's system prompt. Provides the agent with the current date, run card path, step ID, and any precheck output or runtime directive.",
     text: `# Context
 

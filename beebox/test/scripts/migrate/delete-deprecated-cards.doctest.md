@@ -1,6 +1,6 @@
 # Migration: delete deprecated schema-less cards
 
-`scripts/migrate/delete-deprecated-cards.ts` hard-deletes the deprecated,
+`src/scripts/migrate/delete-deprecated-cards.ts` hard-deletes the deprecated,
 schema-less card types — `news-item`, `news-brief`, and `workflow` — which have
 no registered schema and no code that reads them. `isDeprecatedCard(name)` is
 the load-bearing selection logic the migration harness drives (the harness then

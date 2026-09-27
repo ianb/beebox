@@ -2,7 +2,7 @@
 
 The server half of `bbx chat ui`: a loopback long-poll that parks until the
 browser tab holding a chat session answers with its control inventory. A direct
-sibling of the screenshot rendezvous (`test/core/screenshot.doctest.md`) — the
+sibling of the screenshot rendezvous (`test/core/pending-browser-request.screenshot.doctest.md`) — the
 same pending-request registry with the same 2 s ack window, so `no-client` (no
 tab was listening) and `timeout` (a tab saw it and never answered) stay honestly
 distinct — with a JSON answer instead of an image, and no `declined` outcome

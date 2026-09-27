@@ -67,7 +67,7 @@ all.
      assess it on its own terms rather than dismissing it as not-SDK.
    - **CODEX** — for every Codex version in the briefing, read the release
      from `openai/codex` on GitHub (releases page or CHANGELOG). beebox's use:
-     `beebox/src/services/codex-sdk-session.ts` (the `@openai/codex-sdk`
+     `beebox/src/services/codex-sdk-session/core.ts` (the `@openai/codex-sdk`
      thread that runs a box's Codex chat) and `beebox/src/services/codex-binary.ts`;
      the same pinned binary is `/usr/local/bin/codex` on the production
      server, so a new model, a renamed flag, a changed transcript or event

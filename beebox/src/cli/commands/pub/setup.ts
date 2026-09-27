@@ -1,7 +1,7 @@
 /**
  * `bbx pub setup` / `bbx pub status` — the Cloudflare-facing halves of the `bbx
  * pub` family (`docs/implemented-plans/pub-setup-wrangler.md`), split from `pub.ts` to
- * keep each command module small. The logic lives in `src/publish/setup.ts` /
+ * keep each command module small. The logic lives in `src/publish/setup/core.ts` /
  * `src/publish/status.ts` behind injectable clients; these actions resolve the
  * wrangler-login (or env) auth, wire the real clients, and format the results.
  *

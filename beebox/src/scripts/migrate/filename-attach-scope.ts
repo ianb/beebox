@@ -20,8 +20,8 @@
  *
  * Idempotent: a repaired card holds an `attach/` ref and is skipped.
  * Registered in src/core/migrations.ts. Also:
- *   pnpm exec tsx scripts/migrate/filename-attach-scope.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/filename-attach-scope.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/filename-attach-scope.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/filename-attach-scope.ts <boxRoot> --apply
  */
 
 import { statSync } from "node:fs";

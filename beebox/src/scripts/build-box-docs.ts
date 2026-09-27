@@ -4,8 +4,8 @@
  * release tarball ships them (`box-docs` is in package.json `files`).
  *
  * At runtime every `generateDocs` call does the same thing (`ensurePackageDocs`
- * in `src/core/docs-gen/package-docs.ts`), which keeps a writable checkout
- * current on its own. A packed install may be read-only, so `scripts/release.ts`
+ * in `src/core/docs-gen/package-docs/core.ts`), which keeps a writable checkout
+ * current on its own. A packed install may be read-only, so `src/scripts/release.ts`
  * runs this before `pnpm pack`. Prints nothing when the directory was already
  * current; one line when it wrote; fails when it cannot write.
  */

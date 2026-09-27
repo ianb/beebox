@@ -227,7 +227,7 @@ async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun 
   return exitCode;
 }
 
-/** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/notify.doctest.md` drives. */
+/** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/commands/notify/command.doctest.md` drives. */
 export async function runNotify(boxRoot: string, run: NotifyRun): Promise<number> {
   const route = notifyRoute();
   if (run.options.verbose === true) console.error(describeRoute(route));

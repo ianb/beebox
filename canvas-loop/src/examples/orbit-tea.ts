@@ -1,4 +1,4 @@
-// Orbit toy, TEA edition — a port of gallery/orbit-toy/sketch.ts to The Elm
+// Orbit toy, TEA edition — a port of src/gallery/orbit-toy/sketch.ts to The Elm
 // Architecture. A sun with three orbiting planets:
 //
 //   - declared params drive a control panel: `speed-scale` (slider) multiplies

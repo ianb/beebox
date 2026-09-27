@@ -131,7 +131,7 @@ export default [
     // `user-stories/`, outside that glob — `tsconfig.user-stories.json` fed
     // `typecheck:user-stories`'s plain `tsc`, never ESLint. So the rule never
     // ran with type information against them at all (confirmed: `git show
-    // 14d93deb0:beebox/user-stories/pipeline/discover.workflow.ts` lints clean
+    // 14d93deb0:beebox/src/scripts/user-stories/discover.workflow.ts` lints clean
     // under that commit's config, and typescript-eslint's own debug log shows
     // it parsing "without type information"). The fold moved the files under
     // `src/`, which put them in the type-aware program for the first time and

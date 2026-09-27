@@ -96,7 +96,7 @@ function render(docs: Map<string, DocInfo>): string {
 
   <footer class="colophon">
     Rendered ${new Date().toISOString().slice(0, 19).replace("T", " ")} UTC by
-    <code>src/dev/doc-graph-html.ts</code> from a live scan of <code>beebox/</code>.
+    <code>src/dev/doc-graph-html/html.ts</code> from a live scan of <code>beebox/</code>.
     The pillar narration and curator's notes are hand-edited at the top of that file.
     Vibe images by Gemini Flash Image, prompted for textures only.
     For the dry audit (every reference in context, full inventory), see <a href="doc-graph.md">doc-graph.md</a>.

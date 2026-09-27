@@ -1,6 +1,6 @@
 # `bbx secrets` — the CLI plumbing
 
-`src/cli/commands/secrets.ts` is plumbing for deploy scripts, the migration,
+`src/cli/commands/secrets/command.ts` is plumbing for deploy scripts, the migration,
 emergencies, and agents. Two rules live in the CLI rather than in the store: a
 value never comes from argv, and mutations refuse in an agent session without
 `--agent-confirmed` (the `bbx auth` pattern). Each subcommand body is an exported

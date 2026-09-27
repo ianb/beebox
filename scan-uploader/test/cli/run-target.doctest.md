@@ -1,9 +1,9 @@
 # The per-target run loop
 
-`runTarget` is the orchestration in `src/run-target.ts`: walk → settle gate →
+`runTarget` is the orchestration in `src/cli/run-target.ts`: walk → settle gate →
 identity snapshot → hash → batch check → PUT unknowns → **restat before
 disposition**. Each scenario below runs a real `runTarget` against a fake
-HTTP server (`test/fake-scan-server.ts`) and a real folder on disk, so the
+HTTP server (`test/cli/fake-scan-server.ts`) and a real folder on disk, so the
 filesystem side effects (or their absence) are the actual assertion, not a
 mock's call log.
 
@@ -185,7 +185,7 @@ await serverD2.close();
 `summaryD` above counted `rejected: 1` with `rejectedOnUpload: 0` — the
 `check` endpoint reported a verdict the server had already reached on some
 earlier run. A rejection the server reaches on *this* run's PUT counts in
-both. The distinction is what lets the desktop notifier (`src/notify.ts`)
+both. The distinction is what lets the desktop notifier (`src/cli/notify.ts`)
 report a refusal once: the file stays in place and the server keeps
 remembering its hash, so `rejected` is 1 on every sweep from then on, while
 `rejectedOnUpload` is 1 only on the sweep that learned it.

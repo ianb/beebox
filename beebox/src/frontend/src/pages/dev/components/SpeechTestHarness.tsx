@@ -4,7 +4,7 @@
  * Renders the real SpeechMenu against the real useSpeechPlayback hook and
  * TTSClient, but points the client at the backend's mock TTS (slow fixture
  * audio). It installs window.__speechTestLog / window.__speechState so an
- * external driver (scripts/test-speech-browser.sh, via bin/browse) can click
+ * external driver (src/scripts/test-speech-browser.sh, via bin/browse) can click
  * the menu and assert playback behavior and timing.
  *
  * Not part of the product — only mounted under /dev/speech in dev builds.

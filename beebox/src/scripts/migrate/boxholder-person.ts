@@ -20,8 +20,8 @@
  * keys is left untouched. A box with no personality card is a no-op.
  *
  * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx scripts/migrate/boxholder-person.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/boxholder-person.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/boxholder-person.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/boxholder-person.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";

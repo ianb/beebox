@@ -20,8 +20,8 @@
  * Idempotent: a rewritten ref resolves, so a second run leaves it alone.
  * Registered in src/core/migrations.ts before `filename-attach-scope`, so a
  * v2-form `filename.ref` is in v3 form by the time that migration reads it.
- *   pnpm exec tsx scripts/migrate/v2-refs-to-v3.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/v2-refs-to-v3.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/v2-refs-to-v3.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/v2-refs-to-v3.ts <boxRoot> --apply
  */
 
 import { existsSync } from "node:fs";

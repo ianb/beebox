@@ -512,7 +512,7 @@ await box.cleanup();
 ## Scheme refs (`mailto:`, `view:`) are never resolved, even on a name collision
 
 Whether a ref names something outside the box is decided by one shared test
-(`isExternalRef` in `src/shared/ref-path.ts`) — the same one BBX002 uses — not by
+(`isExternalRef` in `src/shared/ref-path/core.ts`) — the same one BBX002 uses — not by
 looking for `://`. This box deliberately constructs the collision that the
 narrower test missed: files whose names are literally `mailto:dana.doc.card` and
 `view:Ledger.doc.card`, so a scheme ref would resolve to a card that is moving.

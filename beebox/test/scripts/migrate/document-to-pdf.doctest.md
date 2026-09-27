@@ -1,6 +1,6 @@
 # Migration: rename `document` card type to `pdf`
 
-`scripts/migrate/document-to-pdf.ts` renames every `*.document.card` to
+`src/scripts/migrate/document-to-pdf.ts` renames every `*.document.card` to
 `*.pdf.card` (the type comes from the filename, so the rename *is* the type
 change) and rewrites inbound `.document.card` references to `.pdf.card`.
 `rewriteDocumentRefs(text)` is the pure ref-rewrite entry point;

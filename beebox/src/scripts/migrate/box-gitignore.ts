@@ -30,7 +30,7 @@
  * --sweep` commits it as "Apply migration: gitignore-2026-09".
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/box-gitignore.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/box-gitignore.ts <boxRoot> --apply
  */
 import { execFile } from "node:child_process";
 import * as path from "node:path";

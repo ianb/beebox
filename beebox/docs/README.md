@@ -74,7 +74,7 @@ rename/delete) or 2+ matches is reported for manual handling, not rewritten.
 Links inside code spans / fenced blocks (syntax illustrations) and generated
 emitter outputs are left untouched. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
-unique. Mechanism: `src/dev/doc-link-repair.ts`.
+unique. Mechanism: `src/dev/doc-check/link-repair.ts`.
 
 ## Organizing principles
 

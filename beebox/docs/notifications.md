@@ -84,7 +84,7 @@ then `skipped: present` on every channel, and a `dot` still badges.
 ### Reminders: `notify:` schedule cards
 
 A scheduled-script card with `notify:` in place of `runs:` is a reminder
-(`src/schemas/scheduled-script.tsx`; the card instructions have the example).
+(`src/schemas/scheduled-script/schema.tsx`; the card instructions have the example).
 `bbx tick` calls `notifyBoxholder` in process: no agent and no shell. With
 `at` and `once: true`, the card deletes itself after it fires. The chat's
 `<schedule>` tag is a different thing: it comes back to one conversation
@@ -113,7 +113,7 @@ within hours ([chat timers](chat/schedules.md)).
   decision (`--min`, `--choice`, `--decide`); `--echo` passes stdin on to an
   agent, `--select` prints the inputs that passed. A daily cap of 500 calls
   per box lives in `.beebox/jev-budget.json`. The card instructions
-  (`src/schemas/judgment-instructions.ts`) are the guide to writing one.
+  (`src/schemas/judgment/instructions.ts`) are the guide to writing one.
 - **Composition.** When the notification text is fixed, `runs:` is one
   pipeline ending in `bbx notify`. When an agent must write it, `runs:` is
   `bbx procedure run <name>`, the procedure's precheck is the `changes | judge`
@@ -198,7 +198,7 @@ Run on a real device after the server setup, on a box whose briefing has a
 4. Set up the field-trip watch: the schedule and procedure cards from the
    agent guide's example (`src/core/agent-guide/guide/reaching.ts`), and this
    judgment card, from the judgment card instructions
-   (`src/schemas/judgment-instructions.ts`):
+   (`src/schemas/judgment/instructions.ts`):
 
    ```yaml
    # _config/judgments/field-trip.judgment.card

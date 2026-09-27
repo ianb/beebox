@@ -15,8 +15,8 @@
  * themselves are unchanged.
  *
  * Idempotent. Usage:
- *   pnpm exec tsx scripts/migrate/asset-marker.ts <boxRoot>             # dry-run
- *   pnpm exec tsx scripts/migrate/asset-marker.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/asset-marker.ts <boxRoot>             # dry-run
+ *   pnpm exec tsx src/scripts/migrate/asset-marker.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile } from "node:fs/promises";

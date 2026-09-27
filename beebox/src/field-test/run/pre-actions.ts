@@ -79,7 +79,7 @@ async function runBbx(opts: {
  * Drain the box's pending jobs to completion. A single wakeup runs only ONE
  * reactor cycle (`maxCycles: 1`, `src/cli/commands/wakeup/command.ts`), so a job the
  * arrival spawns — or a low-priority follow-up a connector-scoped cycle skips
- * (`src/core/reactor/cycle.ts`: an all-low-priority cycle is skipped under
+ * (`src/core/reactor/engine/cycle.ts`: an all-low-priority cycle is skipped under
  * `skipLowPriority`) — survives it and sits in `_bookkeeping/jobs`. That lone leftover
  * keeps the box from ever going quiescent, so without this every email item and
  * every day boundary burns its full quiescence timeout (seen in the first

@@ -216,7 +216,7 @@ box-name setting anywhere.
 | Component | Location |
 |---|---|
 | Schema | `src/schemas/landmark.ts` |
-| Schema registration | `src/schemas/registry.ts` |
+| Schema registration | `src/schemas.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
 | Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
 | Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |

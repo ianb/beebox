@@ -9,7 +9,7 @@ priority: normal
 ---
 
 `/workstreams/issues` filters by category, priority, needs, status, and sort
-(`workstreams-app/src/frontend/router.tsx:15`), but not by **workstream** —
+(`workstreams-app/src/frontend/main/router.tsx:15`), but not by **workstream** —
 even though issue frontmatter carries `workstream:` and the server already has
 `issuesForWorkstream` (`documents-service.ts`) plus a per-workstream summary on
 the detail page (`WorkstreamIssueSummary.tsx`).

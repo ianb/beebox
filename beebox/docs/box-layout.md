@@ -2,7 +2,7 @@
 
 The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see a different summary in `.beebox/agent-guide.md`.
 
-> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/lib/box-layout-spec.ts` — `BOX_DIRS` (`src/lib/paths.ts`) and the in-box agent guide (`src/core/agent-guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `_content/`/`_bookkeeping/`/`_config`/`_publish`/`_tmp`/`tricks`/`.claude` tables below to match — `test/cli/lib/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
+> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/lib/paths/box-layout-spec.ts` — `BOX_DIRS` (`src/lib/paths/core.ts`) and the in-box agent guide (`src/core/agent-guide/guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `_content/`/`_bookkeeping/`/`_config`/`_publish`/`_tmp`/`tricks`/`.claude` tables below to match — `test/lib/paths/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
 
 ## What a box is
 

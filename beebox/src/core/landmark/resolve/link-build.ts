@@ -34,7 +34,7 @@ export interface ResolveOptions {
   landmarkDir: string;
   /**
    * Box-relative path of the landmark card itself — the document every `ref`
-   * resolves against (see `src/shared/ref-path.ts`).
+   * resolves against (see `src/shared/ref-path/core.ts`).
    */
   landmarkPath: string;
   /** Absolute path to the box root. */
@@ -57,7 +57,7 @@ export interface BuildLinkInput {
 
 /**
  * Resolve one `ref` into a link the client can follow. Resolution goes through
- * the shared ref algebra (`src/shared/ref-path.ts`), so a leading-`/` ref means
+ * the shared ref algebra (`src/shared/ref-path/core.ts`), so a leading-`/` ref means
  * the box root — the form validate and `bbx mv` already understood, which this
  * layer used to mis-resolve to an OS-absolute path. A `?query`/`#fragment`
  * addresses a location within the target: it's kept on the emitted `ref` but

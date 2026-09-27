@@ -16,7 +16,7 @@
  * migrated automatically: exit 1 loudly so it's investigated by hand.
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/box-packageify.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/box-packageify.ts <boxRoot> --apply
  */
 
 import * as path from "node:path";

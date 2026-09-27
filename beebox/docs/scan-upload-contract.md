@@ -155,7 +155,7 @@ reports an uploader that has fallen behind.
 
 **`SCAN_CONTRACT_VERSION`** is one monotonic integer, spelled once on each side
 (`beebox/src/core/scan/contract-version.ts`,
-`scan-uploader/src/contract-version.ts`). The client sends it as
+`scan-uploader/src/cli/contract-version.ts`). The client sends it as
 `X-Scan-Contract`; the box returns its own as `contractVersion` on the check
 response; the client compares them every sweep and reports which side is
 behind.
@@ -187,7 +187,7 @@ Do **not** bump for:
 | Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
 | Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
 | A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
-| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
+| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/cli/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
 
 The row above is the one to read carefully, because it is where a plausible
 reading goes wrong: the question is never "does this touch a limit or a header

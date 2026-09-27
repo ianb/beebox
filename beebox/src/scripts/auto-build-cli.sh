@@ -40,7 +40,7 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 
-# What `scripts/build-cli.ts` actually bundles, as two pathspec groups.
+# What `src/scripts/build-cli/build/bundle.ts` actually bundles, as two pathspec groups.
 #
 # Two rather than one because a git pathspec cannot re-include a subdirectory
 # of an excluded path — exclusions are applied after every include, so

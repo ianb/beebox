@@ -1,6 +1,6 @@
 # `bbx hub` routing: the endpoint seam, plus the D2 auth split (Track D, chunks D1-D2)
 
-`src/hub/hub-server.ts` never talks to a child process directly — it only
+`src/hub/server/core.ts` never talks to a child process directly — it only
 consumes `EndpointProvider` (`src/hub/endpoints.ts`). This doctest proves
 the router/proxy layer against a **fake endpoint**: a trivial `http.Server`
 standing in for "a box the hub supervises," fed in via
@@ -249,7 +249,7 @@ rejectedUpgrade.startsWith("HTTP/1.1 404")
 
 ## A lazy provider's `ensureRunning` cold-starts an HTTP request; WS upgrades never trigger it
 
-Mirrors a lazy `Supervisor` (`src/hub/supervisor.ts`) without spawning a real
+Mirrors a lazy `Supervisor` (`src/hub/supervisor/core.ts`) without spawning a real
 process: `get()` only returns an endpoint while `running` is true;
 `ensureRunning()` is the only thing that flips it on. This proves
 `hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics

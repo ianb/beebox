@@ -1,6 +1,6 @@
 # Reactor cycle control flow
 
-`runOneCycle` (`src/core/reactor/cycle.ts`) is one reactor cycle as a pipeline
+`runOneCycle` (`src/core/reactor/engine/cycle.ts`) is one reactor cycle as a pipeline
 of named stages — sync → refresh docs → discover → process. These tests
 exercise the stage-level contract directly (discovery outcomes, the explicit
 processed count) plus the engine-level `maxCycles` cap and stuck-cycle guard

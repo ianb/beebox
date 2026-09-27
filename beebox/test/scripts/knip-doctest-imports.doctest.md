@@ -23,8 +23,8 @@ const fence = (info: string, ...lines: string[]): string =>
 ## Static imports come through verbatim
 
 ```ts
-doctestImports(fence("ts setup", 'import { loadBox } from "../../src/core/box/index.js";'))
-=> import { loadBox } from "../../src/core/box/index.js";
+doctestImports(fence("ts setup", 'import { loadBox } from "../../src/core/box/structure/core.js";'))
+=> import { loadBox } from "../../src/core/box/structure/core.js";
 ```
 
 The multi-line named form is one statement, not several:
@@ -45,8 +45,8 @@ a module only after a fixture exists. Knip would see an opaque module
 reference, so the named bindings get rewritten into an import clause:
 
 ```ts continue
-doctestImports(fence("ts", 'const { loadBoxConfig } = await import("../../src/core/box/index.js");'))
-=> import { loadBoxConfig } from "../../src/core/box/index.js";
+doctestImports(fence("ts", 'const { loadBoxConfig } = await import("../../src/core/box/structure/core.js");'))
+=> import { loadBoxConfig } from "../../src/core/box/structure/core.js";
 ```
 
 A renamed binding keeps the *exported* name, which is the one knip matches

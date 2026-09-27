@@ -1,6 +1,6 @@
 # Markdoc emit-nodes: graceful degradation
 
-`emitNode`'s dispatch table (`src/core/markdoc/emit-nodes.ts`) enumerates all
+`emitNode`'s dispatch table (`src/core/markdoc/emit/nodes.ts`) enumerates all
 28 members of Markdoc's vendor `NodeType` union. Most of this module's
 coverage comes indirectly through the other `markdoc-*.doctest.md` files and
 `briefing-compile.doctest.md`, which exercise the handled types (headings,

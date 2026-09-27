@@ -11,7 +11,7 @@ priority: normal
 
 `docs/implemented-plans/card-symbol.md` Track D folded a landmark's mark into
 the standard `symbol` field, migrating `navigation.symbol` up via
-`landmark-symbol` (`beebox/scripts/migrate/landmark-symbol.ts`,
+`landmark-symbol` (`beebox/src/scripts/migrate/landmark-symbol.ts`,
 registered in `beebox/src/core/migrations.ts`). Readers accept both shapes so
 existing boxes keep working before they run the migration. Once every box that
 matters has `landmark-symbol` recorded in its `_config/migrations.jsonl`

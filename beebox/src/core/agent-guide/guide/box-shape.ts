@@ -6,7 +6,7 @@
  * The directory table is a curated subset of directories, some collapsed
  * together (all of `_bookkeeping/archive/*` reads as one row here). Canonical
  * directory paths and descriptions come from the single `BOX_LAYOUT` spec
- * (`src/lib/box-layout-spec.ts`); this file owns which rows appear and in what
+ * (`src/lib/paths/box-layout-spec.ts`); this file owns which rows appear and in what
  * order, plus the `_bookkeeping/archive/` rollup the spec does not model. The
  * `_tmp/` row is the document's own text.
  */

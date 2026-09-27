@@ -1,6 +1,6 @@
 # Password login + first-run setup (route tier)
 
-The local login surface (`src/webapp/routes/auth.ts`): `POST /auth/login` verifies
+The local login surface (`src/webapp/routes/auth/register.ts`): `POST /auth/login` verifies
 credentials and mints the session cookie; `POST /auth/setup` claims the owner
 account with a live setup token. These are ROOT routes (not box-scoped), so the
 doctest injects against the bare Fastify instance rather than the slug-prefixing

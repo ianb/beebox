@@ -1,6 +1,6 @@
 // The dev demo: two <SketchFigure> instances proving the ./react component
 // embeds outside beebox (this is a plain client page, no beebox
-// import anywhere in ./react). Bundled by dev-demo/build.ts into the tracked,
+// import anywhere in ./react). Bundled by src/dev-demo/build.ts into the tracked,
 // self-contained dev/canvas-loop.html. Imports the component through its public
 // package name — exactly how a consumer would.
 //

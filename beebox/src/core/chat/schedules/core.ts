@@ -85,7 +85,7 @@ function log(...args: unknown[]): void {
  * constructing a manager or arming any timers. This is the single source of
  * truth for "what schedules does this box have on disk" — the
  * `ChatScheduleManager` re-arms exactly these entries on serve boot, and the
- * hub supervisor (`src/hub/pending-schedules.ts`) checks exactly these entries
+ * hub supervisor (`src/hub/supervisor/pending-schedules.ts`) checks exactly these entries
  * to decide whether a lazy box must stay running. Sharing the loader means the
  * hub's notion of "pending" can never drift from what serve would re-arm.
  *

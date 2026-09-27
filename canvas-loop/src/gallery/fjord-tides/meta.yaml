@@ -31,7 +31,7 @@ self-report-summary: >
   case for landscape work, it's the main tool" — since the View primitive
   set (at the time) had no polygon/bezier/gradient/clip support, which was
   the direct motivation for adding those primitives afterward (this sketch
-  was later ported to examples/fjord-tea.ts with zero v.ctx use, visually
+  was later ported to src/examples/fjord-tea.ts with zero v.ctx use, visually
   equivalent).
 features-exercised:
   - TEA tier (init/update/draw)

@@ -19,8 +19,8 @@
  *
  * Idempotent: a box with no `*.document.card` (already renamed) is a no-op.
  * Registered in src/core/migrations.ts. Also:
- *   pnpm exec tsx scripts/migrate/document-to-pdf.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/document-to-pdf.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/document-to-pdf.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/document-to-pdf.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, rename, stat, writeFile } from "node:fs/promises";

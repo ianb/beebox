@@ -54,7 +54,7 @@ Three hooks are installed per box:
 
 Refs should be written from the box root (`/_content/notes/Plan.doc.card`); the one
 exception is a card's own `attach/…` scope. A document-relative ref still
-resolves — liberal resolution is permanent (`src/shared/ref-path.ts`) — but it
+resolves — liberal resolution is permanent (`src/shared/ref-path/core.ts`) — but it
 means something different depending on where the document lives.
 
 `bbx validate --canonical` reports every ref written in the relative form, naming
@@ -91,5 +91,5 @@ bury the broken-ref signal that actually needs acting on. It is a whole-box chec
 `docs/implemented-plans/box-root-paths.md` (Track F).
 
 Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
-Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`
+Per-schema migrators: `scripts/migrate/*.ts` + `src/scripts/migrate/_warnings.ts`
 (noisy-mode field-loss detection).

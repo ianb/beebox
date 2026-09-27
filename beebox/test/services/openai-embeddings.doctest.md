@@ -4,7 +4,7 @@
 derives deterministic unit vectors from each text so tests never need a
 real key. `getOpenAiEmbeddingsKey` resolves the box's `openai` grant from the
 machine secret store — the grant semantics are covered in
-`test/core/secrets-key-readers.doctest.md`; what matters here is that an
+`test/core/secrets/lifecycle.keys.doctest.md`; what matters here is that an
 unconfigured box yields `null` rather than throwing, so the search path can
 degrade to text mode.
 

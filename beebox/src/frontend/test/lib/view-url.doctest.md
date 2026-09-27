@@ -121,7 +121,7 @@ resolveRelativePath(undefined, "_content/notes.md")
 => _content/notes.md
 ```
 
-The rules themselves live in `src/shared/ref-path.ts` (shared with the backend's
+The rules themselves live in `src/shared/ref-path/core.ts` (shared with the backend's
 ref checking), including its fail-closed containment: a path that climbs above
 the box root is `null`, never clamped back to the root. Callers degrade visibly
 — a link renders as a broken marker, an image gets an empty (broken) src.

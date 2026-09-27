@@ -1,6 +1,6 @@
 /**
  * The words on the page nginx serves while a production deploy has the hub
- * stopped (`deploy/nginx/beebox.conf`, `scripts/build-deploy-page.ts`).
+ * stopped (`deploy/nginx/beebox.conf`, `src/scripts/build-deploy-page.ts`).
  *
  * The page is unauthenticated, so it states only when the update started and
  * how long updates usually take — never a commit, ref, or anything else that

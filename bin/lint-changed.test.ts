@@ -30,7 +30,7 @@ test("frontend source goes to the frontend config, everything else to the root o
     "beebox/src/frontend/test/pages/ChatPage.test.ts",
     "beebox/test/core/box.doctest.md",
     "beebox/src/scripts/build-cli/build/entry.ts",
-    "beebox/test/helpers/fake-agent.ts",
+    "beebox/test/core/fake-agent.ts",
   ]);
   assert.deepEqual(split.backend, [
     "src/core/box.ts",

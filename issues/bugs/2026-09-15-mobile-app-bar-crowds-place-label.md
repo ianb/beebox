@@ -49,9 +49,9 @@ model gauge, and harness modifier. This reduces its width, but the surrounding
 bar still needs a layout decision when all controls are present. Do not remove
 the label without preserving a clear way to identify chat properties.
 
-Start at `beebox/src/frontend/src/components/AppNav.tsx:152`: the right-hand
+Start at `beebox/src/frontend/src/components/AppNav/nav.tsx:152`: the right-hand
 controls do not shrink. The flexible place pill uses `min-w-0` and a truncated
-label in `beebox/src/frontend/src/components/PlacePill.tsx:165` and `:194`.
+label in `beebox/src/frontend/src/components/AppNav/PlacePill.tsx:165` and `:194`.
 Check narrow widths with both count badges, chat properties, and voice controls
 visible. Preserve a recognizable, tappable place selector.
 
@@ -76,7 +76,7 @@ Nothing left the bar:
    from `sm:` up, rather than the reverse. The `aria-label` names the chip in
    full at every width.
 4. **The questions, plate, and error badges became segments of one pill**
-   (`beebox/src/frontend/src/components/app-nav-badges.tsx`). Three capsules
+   (`beebox/src/frontend/src/components/AppNav/app-nav-badges.tsx`). Three capsules
    spent 52px on padding and gaps to carry 40px of content. Each segment is
    still its own control with its own destination and accessible name.
 5. **HQ-in-flight is a pulse below `sm:`** instead of the word "transcribing…",

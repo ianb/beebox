@@ -109,7 +109,7 @@ it current (step 4 above).
 | Endpoints & auth | `beebox/src/webapp/`, `beebox/src/hub/`, `beebox/pub-worker/src/` |
 | Credentials | `beebox/src/webapp/auth*`, `beebox/src/webapp/local-users*`, `beebox/src/webapp/auth-capabilities.ts`, `beebox/src/webapp/setup-token.ts`, `beebox/src/core/token-store.ts`, `beebox/src/core/agent/token.ts`, `beebox/src/core/mobile/`, `beebox/src/core/scan/tokens.ts`, `beebox/src/core/*-key.ts`, `beebox/src/core/search/embeddings-key.ts`, `beebox/src/google/token-store.ts`, `beebox/src/google/auth.ts`, `beebox/src/webapp/trpc/routers/admin/router.ts`, `beebox/src/publish/connector-secret.ts`, `beebox/src/lib/env.ts`, `beebox/deploy/`, any `process.env` addition anywhere |
 | Data egress | `beebox/src/connectors/`, `beebox/src/core/agent/`, `beebox/src/core/transcription/`, `beebox/src/services/`, `beebox/src/publish/`, `beebox/src/core/external/` |
-| Internal practices | `beebox/src/shared/ref-path.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
+| Internal practices | `beebox/src/shared/ref-path/core.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
 | Operational | `beebox/deploy/`, `beebox/src/services/tailscale-setup/exposure.ts`, `beebox/src/hub/` (child-env allowlist), systemd units |
 | Publishing | `beebox/src/publish/`, `beebox/pub-worker/` |
 | Clients | `ios-app/` (token storage, pairing), `beebox-clerk/` (host permissions, what it sends) |

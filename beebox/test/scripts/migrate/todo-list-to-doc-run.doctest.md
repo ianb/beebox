@@ -1,6 +1,6 @@
 # Migration: retire `todo-list` → `doc` with embedded `{% todo %}`
 
-`scripts/migrate/todo-list-to-doc.ts` exports the pure per-card transform,
+`src/scripts/migrate/todo-list-to-doc-run/convert.ts` exports the pure per-card transform,
 `convertTodoListCard(raw)`. It converts a `.todo-list.card`'s frontmatter
 (`name`, `details`, `agent-notes`, `items[]`) into a `.doc.card`'s shape
 (`title:` + a markdown body): items become a list, each wrapped in
@@ -11,7 +11,7 @@ timestamp (the tag deliberately has no attribute for it) becomes a trailing
 "(completed …)" parenthetical inside the wrapped text; item/card `agent-notes`
 become prose (inline parenthetical for items, a blockquote for the card).
 Anything outside this mapping is reported in `warnings`, never silently
-dropped. `scripts/migrate/todo-list-to-doc-run.ts` is the CLI driver (file
+dropped. `src/scripts/migrate/todo-list-to-doc-run/run.ts` is the CLI driver (file
 walk, rename, box-wide inbound-ref rewrite) — exercised separately below via
 `makeTmpBox` + a subprocess, since it isn't a pure function.
 

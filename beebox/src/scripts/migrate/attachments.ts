@@ -33,9 +33,9 @@
  * virtual prefix; cross-card refs use the full new path.
  *
  * Usage:
- *   pnpm exec tsx scripts/migrate/attachments.ts <boxRoot>             # dry-run
- *   pnpm exec tsx scripts/migrate/attachments.ts <boxRoot> --apply     # execute
- *   pnpm exec tsx scripts/migrate/attachments.ts <boxRoot> --apply --no-commit
+ *   pnpm exec tsx src/scripts/migrate/attachments.ts <boxRoot>             # dry-run
+ *   pnpm exec tsx src/scripts/migrate/attachments.ts <boxRoot> --apply     # execute
+ *   pnpm exec tsx src/scripts/migrate/attachments.ts <boxRoot> --apply --no-commit
  *
  * Requires a clean git tree (unless --apply is omitted). After --apply the
  * tree is left staged; run a git commit yourself or pass --commit.

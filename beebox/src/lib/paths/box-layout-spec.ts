@@ -11,7 +11,7 @@
  *   - `directoryLayoutRows()` (agent-guide/box-shape.ts) looks up entries
  *     by key for its path/description text.
  *   - `docs/box-layout.md`'s per-area tables are checked against this spec by
- *     `test/cli/lib/box-layout-spec.doctest.md` (a doc that drifts fails the
+ *     `test/lib/paths/box-layout-spec.doctest.md` (a doc that drifts fails the
  *     test rather than silently going stale).
  *
  * shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`):

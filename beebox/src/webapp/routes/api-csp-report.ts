@@ -39,7 +39,7 @@ const MAX_REPORTS_PER_REQUEST = 20;
 
 /**
  * Absolute path of the CSP report log under a box. The sink writes here and the
- * digest tool (`src/dev/csp-digest.ts`) reads from the same place — keep both
+ * digest tool (`src/dev/csp-report/digest.ts`) reads from the same place — keep both
  * going through this helper so they never drift.
  */
 export function cspReportLogPath(boxRoot: string): string {

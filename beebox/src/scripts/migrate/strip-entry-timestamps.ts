@@ -18,8 +18,8 @@
  * with no guide/personality cards is a no-op.
  *
  * Registered in src/core/migrations.ts. Also runnable directly:
- *   pnpm exec tsx scripts/migrate/strip-entry-timestamps.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/strip-entry-timestamps.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/strip-entry-timestamps.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/strip-entry-timestamps.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile } from "node:fs/promises";

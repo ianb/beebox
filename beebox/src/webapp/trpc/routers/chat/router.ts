@@ -1,7 +1,7 @@
 /**
  * tRPC router for chat session metadata — directory associations,
  * lookup helpers, and the landmark-grouped picker. Streaming send +
- * history live as raw Fastify routes (see src/webapp/routes/chat.ts)
+ * history live as raw Fastify routes (see src/webapp/routes/chat/register.ts)
  * since they don't fit tRPC's shape.
  */
 

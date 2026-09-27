@@ -1,6 +1,6 @@
 # Migration: split person `contact` into email/phone/address
 
-`scripts/migrate/person-contact-split.ts` splits the person card's freeform
+`src/scripts/migrate/person-contact-split.ts` splits the person card's freeform
 `contact:` string into structured `email:` / `phone:` / `address:` scalars.
 `rewritePersonContact(fileName, raw)` returns `{ text, residual }` (or `null`
 when there's nothing to do). It is **conservative and noisy**: only confidently

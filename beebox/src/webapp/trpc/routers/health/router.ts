@@ -72,7 +72,7 @@ export interface VersionInfo {
 }
 
 // deploy-info.json sits at the beebox repo root. From this file
-// (src/webapp/trpc/routers/health.ts) that's four levels up.
+// (src/webapp/trpc/routers/health/router.ts) that's four levels up.
 const DEPLOY_INFO_PATH = path.join(PACKAGE_ROOT, "deploy-info.json");
 
 const PROCESS_STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();

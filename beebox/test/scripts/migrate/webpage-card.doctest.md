@@ -1,6 +1,6 @@
 # Migration: split commentary + converge records onto `.webpage.card`
 
-`scripts/migrate/webpage-card.ts` performs two conversions toward the
+`src/scripts/migrate/webpage-card.ts` performs two conversions toward the
 `.webpage.card` type. `convertFile(absPath)` is the per-card entry the CLI
 harness drives; this doctest exercises it directly on fixture boxes.
 

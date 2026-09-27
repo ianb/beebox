@@ -7,7 +7,7 @@ created: [], updated: [] }`, and Drive returned a `success: false` — so a call
 could not tell "nothing changed" from "nothing was attempted", and the three
 connectors disagreed about which it even was.
 
-`SyncResult.skipped` (`src/connectors/index.ts`) carries the distinction:
+`SyncResult.skipped` (`src/connector.ts`) carries the distinction:
 `not-allowed` for the policy switch, `not-configured` for the missing credential,
 each with a `detail` written for the box agent to relay to the boxholder.
 

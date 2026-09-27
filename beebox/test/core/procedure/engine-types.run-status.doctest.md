@@ -1,7 +1,7 @@
 # Procedure run-status transitions
 
 The run card's overall status follows a fixed lifecycle. `updateRunCardStatus`
-(`src/core/procedure/engine-run-card.ts`) asserts the transition at the write
+(`src/core/procedure/engine/run-card.ts`) asserts the transition at the write
 boundary so a caller bug can't persist a corrupt lifecycle. The pure predicates
 that back that assertion live in `engine-types.ts` and are the test seam.
 

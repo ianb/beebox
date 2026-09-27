@@ -1,7 +1,7 @@
 // Non-JSX helpers for <SketchFigure>: value resolution and the display-size
 // math. The DOM-facing lifecycle pieces (runtime attach, input wiring, default
-// canvas size) live in browser/mount.ts, shared with the imperative
-// `mountSketch`; the figure stylesheet is browser/figure.css, imported by the
+// canvas size) live in src/browser/mount.ts, shared with the imperative
+// `mountSketch`; the figure stylesheet is src/browser/figure.css, imported by the
 // consumer (no runtime <style> injection — CSP). Nothing here runs at import
 // time, so importing this module is SSR-safe.
 import type { CanvasSize, ParamsDecl, ParamValues } from "../../core/tea.js";

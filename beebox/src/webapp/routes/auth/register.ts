@@ -49,7 +49,7 @@ export interface AuthRoutesOptions {
   /**
    * Fallback base URL for `getPublicUrl()` when neither `BBX_PUBLIC_URL` nor
    * `PUBLIC_URL` is set — defaults to the standalone box server's own
-   * default port (3210). The hub (`src/hub/hub-server.ts`, Track D chunk D2)
+   * default port (3210). The hub (`src/hub/server/core.ts`, Track D chunk D2)
    * passes ITS OWN `host:port` here instead: without this, an unconfigured
    * hub's OAuth redirect URI would name port 3210 (the dev-router default,
    * not the hub's own default of 4310 or whatever `hub.json` configures),
@@ -83,7 +83,7 @@ export interface AuthRoutesOptions {
  *   with auth required answers `401`.
  *
  * Factored out so both the standalone box server (`server.ts`) and the hub
- * (`src/hub/hub-server.ts`) get identical behavior from one place — the hub
+ * (`src/hub/server/core.ts`) get identical behavior from one place — the hub
  * hosts login for the whole fleet, and reusing this exact function is what keeps
  * that from becoming a second, drifting copy of the login flow.
  */

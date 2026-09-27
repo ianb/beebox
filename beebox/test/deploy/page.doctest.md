@@ -80,7 +80,7 @@ text(3 * 60 * minute, 228).detail
 
 ## The built page
 
-`scripts/build-deploy-page.ts` bundles the browser code into one
+`src/scripts/build-deploy-page.ts` bundles the browser code into one
 self-contained HTML template. The server helper fills its placeholders with
 `sed`, so the helper must use the same three names.
 

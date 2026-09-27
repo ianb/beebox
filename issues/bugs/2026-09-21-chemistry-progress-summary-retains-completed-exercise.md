@@ -39,7 +39,7 @@ Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry
 ## Candidate authoring guidance
 
 `beebox/src/schemas/progress.ts:87–89` calls the body a short running summary;
-`beebox/src/core/box/skills-content.ts:111–113` asks the course runner to update
+`beebox/src/core/box/guidance-sync/skills-content.ts:111–113` asks the course runner to update
 progress with evidence. A focused remedy to evaluate is making the body/entry
 synchronization requirement explicit when an assessment changes. These are
 locatable guidance surfaces, not proof that their wording caused this failure

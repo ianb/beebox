@@ -1,6 +1,6 @@
 # Migration: a landmark's `links:` targets pick up `prominence: primary`
 
-`scripts/migrate/landmark-links-prominence.ts` gives every `navigation.links[]`
+`src/scripts/migrate/landmark-links-prominence-run/prominence.ts` gives every `navigation.links[]`
 target inside a landmark's own pruned subtree `prominence: primary` when the
 target has none yet. `migrateBox(absRoot, apply)` runs the whole migration
 against a real directory tree and returns the report; the landmark card

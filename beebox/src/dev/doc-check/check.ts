@@ -142,7 +142,7 @@ function issuesUniquenessProblems(tracked: string[]): string[] {
 
 // HARD invariant, lexical and independent of filesystem resolution: a
 // tracked (public) file — including doctest fixtures — must never link into
-// private-issues/ — see src/dev/private-link-check.ts and
+// private-issues/ — see src/dev/doc-check/private-link.ts and
 // docs/implemented-plans/private-issues-shadow-repo.md section I. Deliberately not fed
 // through --fix: these are never a heal-by-basename case, they must stay a
 // hard error. Scans its own file list (rather than taking `tracked`) because

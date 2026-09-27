@@ -1,6 +1,6 @@
 # Git Utilities
 
-Tests for the git helper functions in `src/lib/git.ts`.
+Tests for the git helper functions in `src/lib/git/core.ts`.
 
 ```ts setup
 import {

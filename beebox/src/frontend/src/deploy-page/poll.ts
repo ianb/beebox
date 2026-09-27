@@ -1,6 +1,6 @@
 /**
  * Browser entry for the deploy page. Not part of the SPA: the page is served
- * by nginx while the hub is stopped, so `scripts/build-deploy-page.ts` bundles
+ * by nginx while the hub is stopped, so `src/scripts/build-deploy-page.ts` bundles
  * this file on its own and inlines it into `dist/deploy-page.html`.
  *
  * It rewrites the server-rendered UTC text in the reader's local time, keeps

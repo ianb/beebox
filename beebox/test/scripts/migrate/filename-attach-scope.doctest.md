@@ -1,6 +1,6 @@
 # Migration: media files move into their card's attach scope
 
-`scripts/migrate/filename-attach-scope.ts` repairs legacy media cards whose
+`src/scripts/migrate/filename-attach-scope.ts` repairs legacy media cards whose
 `filename.ref` names a flat file by path instead of `attach/<file>`. It moves
 the file into `<card name>.attach/` and rewrites the ref. It repairs a card
 only when the file is certain; every other card is reported and left alone.

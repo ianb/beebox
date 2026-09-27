@@ -1,7 +1,7 @@
 # The `configure` subcommand's core logic
 
-Exercises `configure()` (`src/configure.ts`) directly — argv parsing and
-interactive TTY prompting live in `src/configure-cli.ts` and aren't
+Exercises `configure()` (`src/cli/configure.ts`) directly — argv parsing and
+interactive TTY prompting live in `src/cli/configure-cli.ts` and aren't
 exercised here (the TTY-prompt path isn't practical to doctest: it needs a
 real TTY; the non-TTY `requireFolderFlag` fail-closed path below covers the
 same logic `configure-cli.ts` actually depends on).

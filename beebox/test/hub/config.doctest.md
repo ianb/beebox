@@ -3,7 +3,7 @@
 `hub.json` is the fleet's routing table, so it's validated fail-closed:
 unknown top-level keys, an unknown per-box key, a malformed or reserved
 slug, and two slugs claiming the same box path are all load errors, not
-warnings. See `src/hub/hub-config.ts`.
+warnings. See `src/hub/config.ts`.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -120,7 +120,7 @@ dupeErr.message.includes("test1-again")
 Without canonicalizing to the actual box root first, two differently-spelled
 paths to the same box could compare as different strings and both pass the
 check -- exactly the "two engines on one `events.db`" hazard above.
-`resolveBoxRoot` (the same resolution `src/hub/supervisor.ts` uses at boot)
+`resolveBoxRoot` (the same resolution `src/hub/supervisor/core.ts` uses at boot)
 resolves both, and `fs.realpath` catches a symlinked alias, before the
 duplicate check runs.
 

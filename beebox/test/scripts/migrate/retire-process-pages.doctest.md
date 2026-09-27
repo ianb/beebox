@@ -1,6 +1,6 @@
 # Migration: retire the process-pages procedure
 
-`scripts/migrate/retire-process-pages.ts` removes the retired `process-pages`
+`src/scripts/migrate/retire-process-pages/run.ts` removes the retired `process-pages`
 procedure from a box (`installProcedures` never prunes). Nothing has written
 its input, `*.record.card` pages in `pages-saved/`, since the clerk's Save
 Page action was removed. As in `retire-process-captures`, only a

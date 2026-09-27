@@ -69,7 +69,7 @@ Right-sized: defense concentrates at real boundaries; interior code trusts its t
 4. UI polling is not exempt — a silent `.catch(() => {})` on a poll turns a dead backend into a frozen UI. Retry-resilience and observability are different properties; log even when the poll retries.
 5. User-initiated actions never silently no-op: a toast/inline error, or at minimum a logged error.
 6. Discriminated-union dispatch uses `assertNever`, never an invented `default` fallback.
-7. Process-supervision code keeps the biggest defensive budget — each catch commented with the race it absorbs (`workstreams-app/src/router/router.ts` is the model).
+7. Process-supervision code keeps the biggest defensive budget — each catch commented with the race it absorbs (`workstreams-app/src/router/server/listener.ts` is the model).
 8. Before adding a check, ask what produced the value: same-repo typed code → an assertion or nothing; disk/network/another process → keep the check.
 
 ### Lint rule suppression
@@ -113,5 +113,5 @@ Every rule in `@ianbicking/personal-vibe-check` is a deliberate choice, and the 
 - **Only export what's needed**: don't export functions/constants only used within their own file. Knip-enforced — `pnpm lint:knip` reports unused exports, and the backlog it was excluded for is cleared. It's a periodic sweep, not a commit gate (`docs/development/maintenance.md`), so a dead export surfaces in review rather than blocking you.
   - **A missing `export` is not a decision to respect — it's just the current call count.** Nothing here is private by design; a symbol lacks the keyword only because no second file has needed it yet. So when you need one elsewhere, add `export` and import it. You never have to justify that, work around it with a copy, or check whether it was exported before — the rule is about not exporting *speculatively*, for a caller that doesn't exist, and it says nothing about a caller that now does.
   - This applies to error classes too. One that's only thrown inside its own file carries no `export`; add it the moment a caller wants `instanceof`.
-  - knip reads the doctest suite through a markdown compiler (`scripts/knip-doctest-imports.ts`), so an export whose only consumer is a `.doctest.md` fence counts as used — static and `await import(...)` forms alike.
+  - knip reads the doctest suite through a markdown compiler (`src/scripts/knip-doctest-imports.ts`), so an export whose only consumer is a `.doctest.md` fence counts as used — static and `await import(...)` forms alike.
 - **No barrels** (boxholder decision, 2026-07-12): no `index.ts` re-export files — import from the module that defines the thing. Barrels are indirection: they blur what's public (fighting the export-what's-needed rule), invite import cycles, and fuzz dead-export detection. Directory grouping already carries discoverability.

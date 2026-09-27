@@ -12,7 +12,7 @@ priority: backlog
 ## Recovery assessment (2026-09-21)
 
 Current code still passes the unrestricted future delay to `setTimeout` in
-`beebox/src/core/chat/schedules.ts:290-301`. Missing or invalid `in` attributes
+`beebox/src/core/chat/schedules/core.ts:290-301`. Missing or invalid `in` attributes
 still log and skip in `schedule-tags.ts:23-33`. Both mechanisms remain present;
 no new live timer was scheduled during recovery. The documentation attribute
 correction from the old branch is recovered with this evidence.

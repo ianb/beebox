@@ -1,7 +1,7 @@
 /**
  * Quick test: create a new event on a specified Google Calendar.
  *
- * Usage: pnpm exec tsx scripts/test-calendar-create.ts <boxRoot> <calendarId> <summary> [date]
+ * Usage: pnpm exec tsx src/scripts/test-calendar-create.ts <boxRoot> <calendarId> <summary> [date]
  *
  * Creates a transparent (free/not-busy) all-day event.
  * Default date is tomorrow.
@@ -18,7 +18,7 @@ async function main() {
 
   if (!boxRoot || !calendarId || !summary) {
     console.error(
-      "Usage: pnpm exec tsx scripts/test-calendar-create.ts <boxRoot> <calendarId> <summary> [YYYY-MM-DD]"
+      "Usage: pnpm exec tsx src/scripts/test-calendar-create.ts <boxRoot> <calendarId> <summary> [YYYY-MM-DD]"
     );
     process.exit(1);
   }

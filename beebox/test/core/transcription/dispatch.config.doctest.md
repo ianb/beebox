@@ -1,6 +1,6 @@
 # Transcription config: realtime + HQ
 
-`src/core/transcription/index.ts` owns the per-box transcription config. Two
+`src/core/transcription/dispatch/core.ts` owns the per-box transcription config. Two
 independent settings: `service` (realtime/batch — voxtral/deepgram/whisper)
 and `hqService` (narration-mode checkpoint HQ pass — whisper/voxtral).
 Stored at `_config/transcription.json`.

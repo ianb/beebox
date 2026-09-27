@@ -1,7 +1,7 @@
 /**
  * `bbx intake` — run one pass of the intake stage.
  *
- * The work itself lives in `src/core/intake.ts`; this module wraps it
+ * The work itself lives in `src/core/commands/intake/run.ts`; this module wraps it
  * in the command-runner contract so the CLI and the wakeup cycle can
  * both invoke it through the same surface.
  */

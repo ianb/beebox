@@ -3,7 +3,7 @@
 `docs/implemented-plans/todo-annotation.md` Track 4 pins the box-wide plate as
 **provisioned, not just templated**: `_content/plate.todo-view.card`, explicit
 `glob: "**"`, installed by `bbx init`'s stock-template pass
-(`installTodoView`, `src/core/box/defaults.ts`) and tracked in
+(`installTodoView`, `src/core/box/structure/defaults.ts`) and tracked in
 `_config/template-versions.json` exactly like the other `installTemplateFile`-backed
 stock cards (procedures, guides, personality, briefing, root landmark) —
 same mechanism, same `fresh`/`unchanged` idempotence, no bespoke seeding path.

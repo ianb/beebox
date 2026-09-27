@@ -19,8 +19,8 @@
  * Nothing is dropped: every card that produced a warning kept its unmapped text
  * in the body. Idempotent: a card with no `contact:` key is left untouched.
  * Registered in src/core/migrations.ts. Also:
- *   pnpm exec tsx scripts/migrate/person-contact-split.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/person-contact-split.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/person-contact-split.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/person-contact-split.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile } from "node:fs/promises";

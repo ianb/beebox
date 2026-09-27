@@ -177,7 +177,7 @@ export function viewStateSearchValue(state: ViewState | null): ViewState | undef
  * against the base card's attach scope (`<basename>.attach/`) instead of the
  * base's directory.
  *
- * Thin wrapper over the shared ref algebra (`src/shared/ref-path.ts`) — the one
+ * Thin wrapper over the shared ref algebra (`src/shared/ref-path/core.ts`) — the one
  * home for these rules, backend and frontend alike. Returns `null` when the
  * path climbs out of the box root: fail-closed, never clamped to the root as
  * this function did until 2026-07-30 (clamping silently rendered a *different*

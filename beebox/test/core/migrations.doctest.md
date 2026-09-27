@@ -47,7 +47,7 @@ MIGRATIONS.length === new Set(MIGRATIONS.map((m) => m.name)).size
 The list is append-only: a box's `config/migrations.jsonl` records names, so
 reordering or removing an entry changes which migrations a box believes it has
 applied. Retired migrators stay registered as no-ops or hard failures rather
-than disappearing (`scripts/migrate/box-packageify.ts`, `bill.ts`).
+than disappearing (`src/scripts/migrate/box-packageify.ts`, `bill.ts`).
 
 ```ts
 MIGRATIONS[0].name

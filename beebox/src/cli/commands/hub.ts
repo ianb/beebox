@@ -40,7 +40,7 @@ function describeError(e: unknown): string {
 /**
  * `bbx hub add-box <slug> <path>` — register a box with the hub's routing
  * table. This is the supported alternative to hand-editing `hub.json`; see
- * `src/hub/hub-config-edit.ts` for why the edit is planned-then-written.
+ * `src/hub/config-edit.ts` for why the edit is planned-then-written.
  * `deploy/add-box.sh` drives it (twice: `--dry-run` as a preflight before it
  * clones anything, then for real).
  */

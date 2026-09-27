@@ -1,6 +1,6 @@
 # Release manifest consistency
 
-`package.json`'s `files` allowlist (Track F, `scripts/release.ts` — see
+`package.json`'s `files` allowlist (Track F, `src/scripts/release.ts` — see
 "Distribution (decision 2)" in `docs/implemented-plans/boxes-as-packages-v2.md`) is what
 `pnpm pack` ships. This is a cheap, no-build static check that every target
 the `exports` map and `bin` field point at is actually covered by `files` —

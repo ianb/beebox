@@ -7,7 +7,7 @@ run it by hand (or drive it with `bin/browse`) when touching the feature.
 
 The pure pieces *are* covered automatically — see
 `src/frontend/test/lib/selection/position.selection-position.doctest.md` (`formatPosition`) and
-`test/shared/markdoc-headings.doctest.md` (heading ids / `data-line`). The DOM-walk
+`test/shared/markdoc-config.headings.doctest.md` (heading ids / `data-line`). The DOM-walk
 (`extractSelection`) was validated against the real rendered DOM via
 `bin/browse eval` (see commit notes); the steps below re-confirm it
 end-to-end through the actual UI.

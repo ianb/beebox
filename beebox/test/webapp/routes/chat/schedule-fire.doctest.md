@@ -1,6 +1,6 @@
 # Firing a chat schedule into its originating session
 
-`fireChatSchedule` (`src/webapp/routes/chat-schedule-fire.ts`) injects a fired
+`fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`) injects a fired
 `<schedule>` reminder back into the session that created it — not whatever chat
 was last active. It resolves the target from `schedule.sessionId`, falls back to
 the most-active session for a legacy entry that has none, and re-sends into a

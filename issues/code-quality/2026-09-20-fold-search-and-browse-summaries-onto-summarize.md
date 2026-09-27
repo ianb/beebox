@@ -12,7 +12,7 @@ A card type now owns its summary: `cardSchema`'s `summarize(card, base)` hook
 (`beebox/src/cards/schema.ts`), resolved by `beebox/src/core/loader-registry.ts`.
 Two older mechanisms still describe a card per type, by hand, outside the type:
 
-- `foldFields` in `beebox/src/core/search/extract.ts` — a `switch` over nine
+- `foldFields` in `beebox/src/core/search/extract/core.ts` — a `switch` over nine
   kinds that picks the fields worth indexing. Its `default` returns nothing, so
   a box-local type contributes only its title, `contains`, and body to search.
 - `buildBrowseCard` in `beebox/src/webapp/trpc/routers/status.ts` — reads

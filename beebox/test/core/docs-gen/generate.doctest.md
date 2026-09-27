@@ -1,6 +1,6 @@
 # `generateDocs`'s template-sync commit
 
-`commitTemplateSyncChanges` (in `src/core/docs-gen/index.ts`) runs at the box
+`commitTemplateSyncChanges` (in `src/core/docs-gen/generate/core.ts`) runs at the box
 root and filters `git status` output through `isTemplateManagedPath`
 (`src/core/install-template-file.ts`) before committing — so only files the
 `install*`/`generateRules` helpers actually manage get swept up, leaving any

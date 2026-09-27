@@ -43,7 +43,7 @@ idempotent, with an ingestion-scoped token). An email version would be:
 1. The Email Worker writes the raw `.eml` to an ingestion bucket (and forwards
    to the verified addresses).
 2. A connector pulls new objects on wakeup, parses them (the Gmail connector
-   already has MIME handling in `beebox/src/connectors/gmail-mime.ts`), and
+   already has MIME handling in `beebox/src/connectors/gmail/mime.ts`), and
    lands `email-message` cards (`beebox/src/schemas/email-message.tsx`),
    threading like the Gmail path does.
 

@@ -8,7 +8,7 @@ symlink so the supervisor's own "spawn the box's own installed `bbx`" path
 has something to spawn), start the hub against it for real, wait for
 `/healthz` to report the box running, fetch through the hub, then SIGTERM
 the hub and assert the child actually died (no orphans — this repo cares
-about that specifically, see `workstreams-app/src/router/router.ts`'s orphan-resistance
+about that specifically, see `workstreams-app/src/router/server/listener.ts`'s orphan-resistance
 doc).
 
 Spawns a real `bbx hub` subprocess and a real `bbx serve` grandchild, so this

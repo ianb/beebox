@@ -1,4 +1,4 @@
-// A fjord with tides — a port of gallery/fjord-tides/sketch-tea.ts to the View
+// A fjord with tides — a port of src/gallery/fjord-tides/sketch-tea.ts to the View
 // drawing primitives (polygon/path/gradient/clip/arc), with ZERO `v.ctx` use.
 // The scene is identical: layered jagged cliff walls receding to a hazy
 // horizon, water filling the channel between them, a `timeOfDay` palette swap,

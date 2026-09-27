@@ -4,7 +4,7 @@ A Google event id is unique within ONE calendar, not across calendars, so a box
 syncing two calendars can hold two different events with the same id. The
 connector's index (`eventFiles` in
 `_bookkeeping/connectors/google-calendar-state.json`) is therefore keyed
-`<eventId> <calendarId>` — see `src/connectors/google-calendar-event-index.ts`
+`<eventId> <calendarId>` — see `src/connectors/google-calendar/event-index.ts`
 for why the separator is a space and why the calendar id comes last.
 
 ```ts setup

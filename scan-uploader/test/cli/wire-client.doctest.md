@@ -1,7 +1,7 @@
 # Wire client — direct contract exercise
 
 Exercises `checkHashes`/`putFile` against a real HTTP server (the fake in
-`test/fake-scan-server.ts`), covering the parts of
+`test/cli/fake-scan-server.ts`), covering the parts of
 `docs/scan-upload-contract.md` that `run-target.doctest.md`'s higher-level
 flow doesn't isolate on its own: the batch check response shapes, and a PUT
 retrying through a 429 before succeeding.

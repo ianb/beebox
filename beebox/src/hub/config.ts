@@ -62,7 +62,7 @@ const hubConfigFileSchema = z.strictObject({
    * boot. The first HTTP request (never a WS upgrade — see
    * `hub-server.ts`'s WS-refusal comment) for a slug spawns it on demand,
    * the same semantics the monorepo dev router already has for whole
-   * worktrees (`workstreams-app/src/router/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
+   * worktrees (`workstreams-app/src/router/server/listener.ts`'s `ensureRunning`). Idle boxes (only HTTP
    * request traffic counts as activity) get SIGTERM'd back to "stopped"
    * after `idleMs`. Defaults to `false` — production hubs stay resident
    * (schedulers/webhooks want the process up) unless a config opts in.
@@ -177,7 +177,7 @@ export async function canonicalBoxKey(resolvedPath: string): Promise<string> {
  * async (it reads the file from disk), so making this one check async too
  * doesn't change the function's shape -- it stays the one place that
  * validates `hub.json`, which is what keeps this module's doctests
- * (`test/hub/hub-config.doctest.md`) meaningful as pure-ish validation
+ * (`test/hub/config.doctest.md`) meaningful as pure-ish validation
  * tests rather than needing supervisor/process machinery.
  */
 export async function loadHubConfig(configPath: string): Promise<HubConfig> {

@@ -18,8 +18,8 @@
  *
  * Idempotent: a box with no `*.sheet.card` (already renamed) is a no-op.
  * Registered in src/core/migrations.ts. Also:
- *   pnpm exec tsx scripts/migrate/gsheet-rename.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/gsheet-rename.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/gsheet-rename.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/gsheet-rename.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";

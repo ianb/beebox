@@ -81,7 +81,7 @@ one in this table; see "Google client credentials" below.
 **One deliberate reuse outside this table.** The dev repo's document-comment
 surface transcribes spoken comments with `BBX_OPENAI_API_KEY` — the
 `openai` (embeddings) variable above — rather than minting a third name
-(`workstreams-app/src/server/transcribe-openai.ts`). That is a **boxholder
+(`workstreams-app/src/server/main/transcribe-openai.ts`). That is a **boxholder
 decision, 2026-08-22**, on the grounds that a dev-surface key on the developer's
 own machine did not earn its own name.
 

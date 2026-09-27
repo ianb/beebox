@@ -20,8 +20,8 @@
  *
  * Registered in src/core/migrations.ts, so `bbx migrate --apply` runs it
  * against any box that hasn't recorded it. Also runnable directly:
- *   pnpm exec tsx scripts/migrate/record-measurements.ts <boxRoot>           # dry-run
- *   pnpm exec tsx scripts/migrate/record-measurements.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/record-measurements.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx src/scripts/migrate/record-measurements.ts <boxRoot> --apply
  */
 
 import { readFile, writeFile } from "node:fs/promises";

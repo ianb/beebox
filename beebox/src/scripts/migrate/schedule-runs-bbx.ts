@@ -21,7 +21,7 @@
  * --sweep` commits it as "Apply migration: schedule-runs-bbx-2026-09".
  *
  * Usage (invoked by `bbx migrate`):
- *   pnpm exec tsx scripts/migrate/schedule-runs-bbx.ts <boxRoot> --apply
+ *   pnpm exec tsx src/scripts/migrate/schedule-runs-bbx.ts <boxRoot> --apply
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

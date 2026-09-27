@@ -22,8 +22,8 @@ nothing in the repo sets:
   `BBX_STRICT_FETCH` is set.
 - `ensureEnvStubs()` reads `BBX_STUBS_FILE`. The `after` gate on each stub
   reads `BBX_SCENARIO_START_TIME`.
-- All three variables are passed through by `beebox/src/hub/child-env.ts` and
-  `beebox/src/core/script-env-allowlist.ts`, and `beebox/src/lib/env.ts`
+- All three variables are passed through by `beebox/src/hub/supervisor/child-env.ts` and
+  `beebox/src/core/script-env/allowlist.ts`, and `beebox/src/lib/env.ts`
   mentions `BBX_STRICT_FETCH` in a comment.
 
 No test, script, or doc sets any of these variables. `src/field-test/`

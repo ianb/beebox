@@ -13,7 +13,7 @@
  * compares a content fingerprint with the one on disk, and rewrites the directory
  * atomically when they differ. A checkout (dev or deploy) is writable, so this
  * is the whole mechanism there; a release tarball gets the directory from
- * `scripts/build-box-docs.ts`, which calls the same writer before `pnpm pack`.
+ * `src/scripts/build-box-docs.ts`, which calls the same writer before `pnpm pack`.
  * An unwritable package with no docs is reported (`unwritable`) so the caller
  * can make it visible — the agent guide points here on every turn.
  *
@@ -154,7 +154,7 @@ export interface EngineDocEntry {
 
 /**
  * Every engine doc except the index, each with its index row. The public
- * agent-docs corpus (`site/`) consumes this through `scripts/export-box-docs.ts`
+ * agent-docs corpus (`site/`) consumes this through `src/scripts/export-box-docs.ts`
  * and builds its own index; the package writer adds `README.md` via `engineDocs`.
  */
 export function engineDocEntries(options?: { packageRoot?: string }): EngineDocEntry[] {

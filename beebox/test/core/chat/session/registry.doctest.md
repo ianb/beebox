@@ -1,6 +1,6 @@
 # ChatSessionRegistry — LRU cap, pins, and the idle sweep
 
-`ChatSessionRegistry` (`src/core/chat/session/registry.ts`) pools `ChatSession`
+`ChatSessionRegistry` (`src/core/chat/session/registry/core.ts`) pools `ChatSession`
 instances by session id: subprocesses are capped (`enforceLiveCap` stops the
 LRU one), SSE listeners pin entries against eviction, and an idle sweep drops
 entries untouched past `idleTimeoutMs`.

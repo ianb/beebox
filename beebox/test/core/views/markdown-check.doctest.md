@@ -1,6 +1,6 @@
 # Box views render card text only through `Markdown`
 
-`checkViewMarkdown(source)` (`src/core/views/markdown-check.ts`) is the
+`checkViewMarkdown(source)` (`src/core/views/markdown-check/core.ts`) is the
 edit-time check that makes hand-rolled Markdown in a box view an error
 (`docs/plans/todos-ui.md`, Track 6). The validation hooks run it after the
 compile check. It reports each problem with its line; the hook message ends
@@ -109,7 +109,7 @@ const load = () => import("micromark");`)
 ## The view guide passes its own check
 
 Every `tsx` example in the generated view guide (`generateViewsDoc`,
-`src/core/views/doc.ts`) passes, so the guide cannot teach the form the
+`src/core/views/doc/core.ts`) passes, so the guide cannot teach the form the
 check rejects:
 
 ```ts
