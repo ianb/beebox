@@ -291,7 +291,7 @@ evidence model.
 
 Where an agent is deciding whether to ask, and how, is the operative
 question — not a separate policy from the lifecycle above. Stated in
-`questionsSection` (`src/core/agent-guide/cards.ts`), which is always-on
+the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 agent-guide context:
 
 - **In chat, just ask.** A synchronous conversation is not a question-card

@@ -14,7 +14,8 @@ budget:
 lint:
   # Sections whose coverage and uncited-words checks are on. Grows as each
   # section is binned.
-  covered_sections: []
+  covered_sections:
+    - THE_LAWS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -145,4 +146,113 @@ registry:
 # One row per rule. Fields: id, rule, handle, bin (law | core | indirect |
 # delete, by the ordered test in docs/agent-guide.md), reason, audits,
 # mechanics.
-rows: []
+rows:
+  # --- THE_LAWS ---
+  - id: laws.intro
+    rule: The laws outrank everything else in the guide; when one conflicts with convenience, brevity, or smoother prose, the law wins.
+    handle: THE_LAWS
+    bin: law
+    reason: The laws' force depends on the agent reading them as inviolable rather than as tips; the framing is what makes a paraphrase feel like a violation.
+    audits: [law-never-paraphrase, law-paraphrase-pressure]
+  - id: laws.quoting
+    rule: Whatever the user expressed goes into the record in their exact words inside `{% quote %}`, never smoothed, summarized, or restated as your prose.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: A paraphrase silently replaces what the user said, and nobody can tell it happened; the guide calls it the one failure the system cannot tolerate.
+    audits: [law-never-paraphrase, law-paraphrase-pressure, quote-tag-syntax, quote-no-fabrication, quote-when-to-use, narration-capture-uses-quote-tag]
+    mechanics: box-docs/provenance.md
+  - id: laws.quoting-errands
+    rule: Purely functional instructions need no quote; the law protects the user's expression, not their errands.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: The law's own boundary; without it an agent quotes every utterance and the tag stops marking expression.
+    audits: [quote-functional-vs-expressive]
+  - id: laws.quoting-data
+    rule: The user's data values (quantities, units, names, dates) stay as given; convert only when asked and say so, except where a field's schema requires a machine format.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: The same silent rewrite applied to data; added after an agent turned "1 tbsp" into "1 T" in a field test.
+    audits: [law-data-fidelity-units]
+  - id: laws.quoting-transcription
+    rule: Fixing a transcriber's error is allowed; when unsure whether a change is a fix or a reword, it is a reword.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: The law's one exception, stated with its tiebreak so the exception cannot absorb the rule.
+    audits: []
+    mechanics: box-docs/provenance.md
+  - id: laws.quoting-citation
+    rule: A citation wraps `{% quote %}` in `{% source %}`, and the mechanics of both tags are in PROVENANCE.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: The law's worked example and its pointer to the mechanics; the law says that you must, PROVENANCE says how.
+    audits: [source-vs-quote-composition]
+    mechanics: box-docs/provenance.md
+  - id: laws.quoting-third-party
+    rule: A third party's exact words go in `{% quote from="…" %}` naming the speaker, so they stay distinct from the user's voice.
+    handle: THE_LAW_OF_QUOTING
+    bin: law
+    reason: The verbatim rule extended to other people's words, with the attribution that keeps them from reading as the user's.
+    audits: [quote-third-party-from]
+  - id: laws.saving
+    rule: Chat is not a record; anything worth keeping is saved to a card before the turn ends, and when in doubt, save.
+    handle: THE_LAW_OF_SAVING
+    bin: law
+    reason: Nothing said in chat survives unless saved; an agent that treats the conversation as memory loses what the user told it.
+    audits: [narration-capture-uses-quote-tag]
+  - id: laws.cards
+    rule: Saving means writing a card; loose markdown, in-conversation summaries, and scratch notes do not count as recording.
+    handle: THE_LAW_OF_CARDS
+    bin: law
+    reason: Cards are the unit the box types, validates, versions, and searches; content saved any other way is invisible to all of that.
+    audits: [narration-capture-uses-quote-tag]
+    mechanics: ABOUT_CARDS
+
+  # --- Generated lists: the row is the decision to list it ---
+  - id: docs.engine-source
+    rule: When the engine's source ships beside the package docs, DOCS names it as the fallback reference.
+    handle: DOCS
+    bin: core
+    reason: Generated from the package install; the row is the decision to mention it.
+    audits: []
+  - id: about-cards.create-examples
+    rule: ABOUT_CARDS lists every registered template as a `bbx create <path> -t <name>` line.
+    handle: ABOUT_CARDS
+    bin: core
+    reason: Generated from engine data; the row is the decision to list it.
+    audits: [create-question-card]
+  - id: card-types.list
+    rule: CARD_TYPES lists every card type the box sees, grouped by category, with its reference doc and any box-local templates.
+    handle: CARD_TYPES
+    bin: core
+    reason: Generated from box data; the row is the decision to list it.
+    audits: [list-card-types]
+  - id: directory-layout.list
+    rule: DIRECTORY_LAYOUT tabulates the box's directories and what each holds.
+    handle: DIRECTORY_LAYOUT
+    bin: core
+    reason: Generated from the layout spec; the row is the decision to list it.
+    audits: [box-structure-inbox, temp-file-location]
+  - id: box-code.list
+    rule: BOX_CODE tabulates where this box's schemas, views, and tricks live.
+    handle: BOX_CODE
+    bin: core
+    reason: Generated from box data; the row is the decision to list it.
+    audits: [box-packageify-schemas-location, box-packageify-views-location]
+  - id: procedures.list
+    rule: PROCEDURES lists this box's procedures with a one-line description each.
+    handle: PROCEDURES
+    bin: core
+    reason: Generated from box data; the row is the decision to list it.
+    audits: [list-procedures]
+  - id: guides.list
+    rule: GUIDES lists this box's guide cards with what each applies to and its compiled doc.
+    handle: GUIDES
+    bin: core
+    reason: Generated from box data; the row is the decision to list it.
+    audits: [list-guides]
+  - id: personality.block
+    rule: PERSONALITY carries the voice compiled from the box's personality card.
+    handle: PERSONALITY
+    bin: core
+    reason: Generated from box data; core by owner, since the boxholder writes the personality card and the guide carries it as written.
+    audits: []

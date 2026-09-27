@@ -1,8 +1,9 @@
 # Agent guide — Card Types section
 
-`cardTypesSection` builds the "## CARD_TYPES" catalogue in the generated agent
-guide from the box's frontmatter card schemas: grouped by `category`
-(authored / synced / system), each type with its one-line `description`.
+`cardTypesList` fills the `{{card_types}}` placeholder of the "## CARD_TYPES"
+section (`guide.md`) from the box's frontmatter card schemas: grouped by
+`category` (authored / synced / system), each type with its one-line
+`description`.
 
 It takes `CardSchema[]` and lists each by its `.type`. This regressed once: it
 took the legacy XML `ElementSchema[]` (`.tagName`), which is empty since every
@@ -10,7 +11,8 @@ schema became frontmatter — so the agent guide's Card Types section rendered
 empty.
 
 ```ts setup
-import { cardTypesSection } from "../../src/core/agent-guide/cards.js";
+import { cardTypesList } from "../../src/core/agent-guide/cards.js";
+import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
 import { cardSchema, type CardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 ```
@@ -30,11 +32,8 @@ const system: CardSchema = cardSchema("chat-job", {
   fields: { status: z.string() },
 });
 
-const text = cardTypesSection({ allCardSchemas: [authored, system] });
+const text = cardTypesList({ allCardSchemas: [authored, system] });
 const lines = text.split("\n");
-lines.includes("## CARD_TYPES")
-=> true
-
 // A built-in type with instructions links its doc in the package
 lines.includes("- **memo** — a captured note → `node_modules/beebox/box-docs/card-memo.md`")
 => true
@@ -78,7 +77,7 @@ const boxOnly: CardSchema = cardSchema("widget", {
   instructions: "How to widget.",
 });
 
-const text = cardTypesSection({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
+const text = cardTypesList({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
 const lines = text.split("\n");
 lines.filter((l) => l.startsWith("- **memo**")).join(" | ")
 => - **memo** — this box's memo → `_content/docs/generated/card-memo.md`
@@ -92,7 +91,7 @@ lines.includes("- **widget** — a box-local type → `_content/docs/generated/c
 ```ts
 const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
-const text = cardTypesSection({ allCardSchemas: [bare] });
+const text = cardTypesList({ allCardSchemas: [bare] });
 const lines = text.split("\n");
 lines.includes("- **widget**")
 => true
@@ -101,11 +100,18 @@ lines.some((l) => l.startsWith("**Types you create"))
 => true
 ```
 
-## An empty schema list still renders the header (no crash)
+## An empty schema list still renders the section (no crash)
+
+With no schemas the list is empty, and the section keeps its heading and
+prose with one blank line between paragraphs.
 
 ```ts
-const text = cardTypesSection({ allCardSchemas: [] });
-const lines = text.split("\n");
-lines[0]
-=> ## CARD_TYPES
+JSON.stringify(cardTypesList({ allCardSchemas: [] }))
+=> ""
+
+const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, allCardSchemas: [] });
+const lines = guide.split("\n");
+const at = lines.indexOf("## CARD_TYPES");
+[lines[at + 1], lines[at + 2]?.startsWith("Each type with handling instructions"), lines[at + 3], lines[at + 4]?.startsWith("A new kind of thing")].join("|")
+=> |true||true
 ```

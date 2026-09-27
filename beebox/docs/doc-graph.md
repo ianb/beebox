@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-27T00:38:44Z
-Total documents: 447
+Generated: 2026-09-27T01:03:26Z
+Total documents: 448
 
 ## Issues
 
@@ -717,7 +717,7 @@ References:
 
 #### docs/agent-guide.md
 
-Title: "Agent guide" | 120 lines | current reference
+Title: "Agent guide" | 187 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:3 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md` in every box), the
@@ -735,6 +735,7 @@ Referenced by:
 - docs/prompts/logging.md:10 (mention) — - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
 - docs/testing/knowledge-audits.md:36 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:232 (mention) — The scaffold provides `package.json` (with `beebox` pinned), `tsconfig.json`, the standard data directories (`box/`, `st
+- src/core/agent-guide/guide.md:5 (mention) — comment and every rules comment. Spec: docs/agent-guide.md. Ledger: ledger.yaml.
 - user-stories/catalog/2026-08-21.md:6005 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:10 (mention) — **What is wrong.** Box-local card types are loaded only from the package root's `src/schemas/`. `schemas/registry.ts` re
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:23 (mention) — `.beebox/agent-guide.md:103`):
@@ -749,6 +750,7 @@ References:
 - → docs/agent-guide.md (mention)
 - → docs/box-guidance.md (link)
 - → CLAUDE.md (mention)
+- → src/core/agent-guide/guide.md (mention)
 
 #### docs/attribution.md
 
@@ -924,6 +926,7 @@ Referenced by:
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:143 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
+- src/core/agent-guide/guide.md:455 (mention) — - **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during the wakeup cycle (forc
 - user-stories/catalog/2026-08-21.md:6005 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:57 (mention) — > has 64 files and none in the USE genre — `connectors.md` explains the
@@ -1191,6 +1194,7 @@ Referenced by:
 - ../research/opencode/inspiration.md:13 (mention) — - *The form.* `beebox/docs/glossary.md` is 58 lines and carried two conflicting
 
 References:
+- → src/core/agent-guide/guide.md (mention)
 - → docs/implemented-plans/vocab-glossary-sweep.md (mention)
 - → ../issues/decisions/2026-05-21-glossary-proper-nouns.md (link)
 - → docs/box-layout.md (mention)
@@ -1544,6 +1548,7 @@ References:
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → CLAUDE.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
+- → src/core/agent-guide/guide.md (mention)
 
 #### docs/README.md
 
@@ -1926,6 +1931,7 @@ Referenced by:
 - docs/reports/plan-directory-migration-history-2026-09-13.md:23 (mention) — operation is in `docs/triage.md` and the mixed design record is in
 - docs/reports/triage-design-2026-09-13.md:4 (link) — instructions, see [the triage guide](../triage.md).
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
+- src/core/agent-guide/guide.md:463 (mention) — - **The intake → triage → handle pipeline** — runs when invoked directly (`bbx intake` / `bbx triage` / `bbx handle`), m
 - user-stories/catalog/2026-06-26.md:1669 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
 - user-stories/catalog/2026-08-21.md:6005 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
 - ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:40 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
@@ -2050,6 +2056,7 @@ Title: "Landmark Curation" | 51 lines | current reference
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:190 (mention) — Two flagged cases: `landmark-curation.md` is written as second-person
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:261 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
+- src/core/agent-guide/guide.md:448 (mention) — Landmarks earn their spot. If the same kind of thing comes up over and over in chat — recipes, an ongoing project, a tod
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:12 (mention) — > Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/b
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:33 (mention) — - **Landmark curation** (`beebox/docs/box/landmark-curation.md`) — curates the *navigation
 - ../research/openclaw-hermes/compare-skills-tools.md:56 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
@@ -2070,6 +2077,7 @@ Title: "Quotes and provenance" | 167 lines | current reference
 Referenced by:
 - docs/box-guidance.md:133 (link) — [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
 - docs/implemented-plans/doc-structure-box-guidance.md:440 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
+- src/core/agent-guide/guide.md:618 (mention) — `{% quote %}` holds a person's exact words: the user's with no attributes, a third party's with `from="…"` naming them (
 
 References:
 - → docs/plans/narration-mode.md (mention)
@@ -2107,6 +2115,7 @@ Title: "Todos" | 88 lines | current reference
 Referenced by:
 - docs/box-guidance.md:135 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
 - docs/implemented-plans/doc-structure-box-guidance.md:441 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
+- src/core/agent-guide/guide.md:404 (mention) — them with `bbx query todos`, read `node_modules/beebox/box-docs/todos.md`: the
 
 #### docs/box/tricks.md
 
@@ -2115,6 +2124,7 @@ Title: "Tricks" | 122 lines | current reference
 Referenced by:
 - docs/box-guidance.md:124 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
 - docs/implemented-plans/doc-structure-box-guidance.md:392 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
+- src/core/agent-guide/guide.md:606 (mention) — - **Using one from a trick** — declare it in the trick's `secrets.json`; how `bbx trick` resolves and injects it is in `
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:12 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
 #### docs/box/what-you-could-do.md
@@ -5913,6 +5923,7 @@ References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
 - → docs/prompts/review.md (mention)
 - → CLAUDE.md (mention)
+- → src/core/agent-guide/guide.md (mention)
 - → docs/box-guidance.md (mention)
 
 #### docs/plans/agent-points-at-ui.md
@@ -7955,6 +7966,27 @@ Referenced by:
 
 References:
 - → src/services/CLAUDE.md (mention)
+
+### src/core/agent-guide/
+
+#### src/core/agent-guide/guide.md
+
+Title: "Bee Box Agent Guide" | 703 lines
+
+Referenced by:
+- docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
+- docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
+- docs/plans/agent-guide-spec.md:168 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
+
+References:
+- → docs/agent-guide.md (mention)
+- → docs/box/todos.md (mention)
+- → docs/box/landmark-curation.md (mention)
+- → docs/connectors.md (mention)
+- → docs/triage.md (mention)
+- → docs/box/tricks.md (mention)
+- → docs/box/provenance.md (mention)
 
 ### src/core/reactor/
 

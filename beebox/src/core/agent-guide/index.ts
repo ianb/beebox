@@ -1,46 +1,52 @@
 /**
- * Compose the compact agent guide (`.beebox/agent-guide.md`,
- * always loaded into context via @-include).
+ * Compose the agent guide (`.beebox/agent-guide.md`, always loaded into
+ * context via @-include) from its hand-written source, `guide.md`.
  *
- * Each section is a small file in this directory; the orchestrator below just
- * concatenates them in the order they appear in the rendered guide. Adding or
- * editing prose: pick the right section file. Adding a section: write a new
- * file and slot it into the array below.
+ * The prose lives in `guide.md`; this file maps each placeholder there to the
+ * filler that builds it from box data, and renders through `render.ts`. To
+ * change what the guide says, edit `guide.md` and its ledger row
+ * (`ledger.yaml`); the procedure is in docs/agent-guide.md.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CardSchema } from "../../cards/index.js";
 import type { TemplateDefinition } from "../../schemas/templates.js";
 import { cardSchemas } from "../../schemas/registry.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 import type { BoxShape } from "../../lib/box-shape.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
-import { directoryLayoutSection, howItemsEnterSection, boxCodeLocationSection } from "./box-shape.js";
-import { keyCommandsSection } from "./commands.js";
-import { proceduresSection, guidesSection } from "./extensibility.js";
-import { externalToolsSection } from "./chat.js";
-import {
-  aboutCardsSection,
-  cardTypesSection,
-  questionsSection,
-} from "./cards.js";
-import { todosSection } from "./todos.js";
-import { gitHistorySection, speakingToUserSection, whereToRecordSection } from "./behavior.js";
-import { landmarksSection } from "./landmarks.js";
-import { secretsSection } from "./secrets.js";
-import { lawsSection } from "./laws.js";
-import { sourceSection } from "./source.js";
-import { searchSection } from "./search.js";
-import { whereTheDocsAreSection } from "./where-docs.js";
-import { section } from "./sections.js";
+import { directoryLayoutRows, boxCodeRows } from "./box-shape.js";
+import { procedureList, guideList } from "./extensibility.js";
+import { createExamples, cardTypesList } from "./cards.js";
+import { engineSourceNote } from "./where-docs.js";
+import { renderGuideLines, strippedText, type Filler, type GuideLine } from "./render.js";
 
-/** The heading `compilePersonality` writes; the guide shows it under its handle. */
-const PERSONALITY_HEADING = "## Personality";
+/** The guide's source; read at runtime, so the package ships it. */
+export const GUIDE_SOURCE_PATH = join(PACKAGE_ROOT, "src", "core", "agent-guide", "guide.md");
 
-/** The compiled personality section with its heading carrying the PERSONALITY handle. */
-function withPersonalityHandle(compiled: string): string {
-  if (!compiled.startsWith(`${PERSONALITY_HEADING}\n`)) throw new PersonalityHeadingError();
-  return `## ${section("PERSONALITY")} — Personality${compiled.slice(PERSONALITY_HEADING.length)}`;
+export interface AgentGuideOptions {
+  procedures: ProcedureSummary[];
+  /** This box's physical layout; decides the BOX_CODE table's paths. */
+  shape: BoxShape;
+  allCardSchemas?: CardSchema[];
+  /** The box-local schemas (a subset of `allCardSchemas`); their docs live in
+   *  the box rather than the package. */
+  boxCardSchemas?: CardSchema[];
+  /** Templates this box's own schemas registered (see `cardTypesList`). */
+  boxTemplates?: TemplateDefinition[];
+  /** Whether the engine's TypeScript source is present beside the package
+   *  docs (a checkout) — a packed install ships only `dist`. Decides whether
+   *  the guide offers the source as the fallback reference. */
+  engineSourcePresent?: boolean;
+  /** The compiled personality section (`compilePersonality`), heading included. */
+  personalitySection?: string | undefined;
+  guides?: GuideSummary[];
 }
+
+/** The heading `compilePersonality` writes; the guide's own heading replaces it. */
+const PERSONALITY_HEADING = "## Personality";
 
 class PersonalityHeadingError extends Error {
   constructor() {
@@ -49,27 +55,15 @@ class PersonalityHeadingError extends Error {
   }
 }
 
-export interface AgentGuideOptions {
-  procedures: ProcedureSummary[];
-  /** This box's physical layout. Determines whether the guide teaches the
-   * package-layout code-location rules (shape 2+) or omits them entirely
-   * (legacy shape 1, unchanged from before shape-awareness existed). */
-  shape: BoxShape;
-  allCardSchemas?: CardSchema[];
-  /** The box-local schemas (a subset of `allCardSchemas`); their docs live in
-   *  the box rather than the package. */
-  boxCardSchemas?: CardSchema[];
-  /** Templates this box's own schemas registered (see `cardTypesSection`). */
-  boxTemplates?: TemplateDefinition[];
-  /** Whether the engine's TypeScript source is present beside the package
-   *  docs (a checkout) — a packed install ships only `dist`. Decides whether
-   *  the guide offers the source as the fallback reference. */
-  engineSourcePresent?: boolean;
-  personalitySection?: string | undefined;
-  guides?: GuideSummary[];
+/** PERSONALITY's body: the compiled section without its heading, or null to omit the section. */
+function personalityBody(compiled: string | undefined): string | null {
+  if (compiled === undefined || compiled === "") return null;
+  if (!compiled.startsWith(`${PERSONALITY_HEADING}\n`)) throw new PersonalityHeadingError();
+  return compiled.slice(PERSONALITY_HEADING.length).replace(/^\n+/, "").replace(/\n+$/, "");
 }
 
-export function generateAgentGuide(options: AgentGuideOptions): string {
+/** Each placeholder in `guide.md` and the filler that builds it. */
+function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
   const {
     procedures,
     shape,
@@ -80,61 +74,25 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     personalitySection,
     guides = [],
   } = options;
+  return {
+    engine_source_note: () => engineSourceNote(engineSourcePresent),
+    create_examples: () => createExamples(),
+    card_types: () => cardTypesList({ allCardSchemas, boxCardSchemas, boxTemplates }),
+    directory_layout: () => directoryLayoutRows(),
+    box_code_dirs: () => boxCodeRows(shape),
+    procedures: () => procedureList(procedures),
+    guides: () => guideList(guides),
+    personality: () => personalityBody(personalitySection),
+  };
+}
 
-  const intro = `# Bee Box Agent Guide
+/** The guide's lines with placeholders filled and comments kept, tagged for the linter. */
+export function renderAgentGuideLines(options: AgentGuideOptions & { source?: string }): GuideLine[] {
+  const source = options.source ?? readFileSync(GUIDE_SOURCE_PATH, "utf-8");
+  return renderGuideLines({ source, fillers: guideFillers(options) });
+}
 
-This guide is for every agent working in this box — chat, background jobs, and procedure runs alike. A box is a personal workspace you operate on the user's behalf: the filesystem is the state, Git is the history, and cards are the record. The user teaches by asking, answering, and correcting; your job is to do the work and keep the record true.
-
-(This guide is generated by \`bbx engine init\` — if it seems stale, re-run it.)`;
-
-  // Sections follow one axis, the aspects of working in a box: laws → how to
-  // speak → cards → where things are → how to act → how to cite → where to
-  // record → who you are. sections.ts groups the named sections the same way.
-  // A section whose facts only some runs need belongs in a package doc
-  // (`docs/box/`) with a pointer left here; see docs/box-guidance.md.
-  const sections: string[] = [
-    intro,
-    // Laws
-    lawsSection(),
-    // Where things are (out of axis order): the package-docs pointer comes
-    // right after the laws so every later section can point into those docs.
-    whereTheDocsAreSection({ engineSourcePresent }),
-    // How to speak
-    speakingToUserSection(),
-    // Cards
-    aboutCardsSection(),
-    cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates }),
-    questionsSection(),
-    todosSection(),
-    // Where things are
-    directoryLayoutSection(),
-    boxCodeLocationSection(shape),
-    landmarksSection(),
-    howItemsEnterSection(),
-    // How to act
-    keyCommandsSection(),
-    searchSection(),
-    proceduresSection(procedures),
-    guidesSection(guides),
-    secretsSection(),
-    externalToolsSection(),
-    // How to cite
-    sourceSection(),
-    // Where to record
-    gitHistorySection(),
-    whereToRecordSection(),
-  ];
-
-  // Who you are
-  if (personalitySection) {
-    sections.push(withPersonalityHandle(personalitySection));
-  }
-
-  // Each section is a self-contained markdown block; normalize any trailing
-  // blank line and drop empty (omitted) sections, so blocks are separated by
-  // exactly one blank line.
-  return sections
-    .map((s) => s.replace(/\n+$/, ""))
-    .filter((s) => s.length > 0)
-    .join("\n\n");
+/** The guide a box gets (before `withDocId` adds its marker line). */
+export function generateAgentGuide(options: AgentGuideOptions): string {
+  return strippedText(renderAgentGuideLines(options));
 }

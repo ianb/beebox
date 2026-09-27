@@ -1,12 +1,11 @@
 # Agent guide — box-shape section
 
-`boxCodeLocationSection` teaches the operating agent where box-authored code
+The BOX_CODE section teaches the operating agent where box-authored code
 (schemas/views/tricks) actually lives, for a shapeVersion 3 (one-root) box:
 the code lives at `src/...`, right at the box root the agent is already
 sitting in — no climb needed.
 
 ```ts setup
-import { boxCodeLocationSection } from "../../src/core/agent-guide/box-shape.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
 import type { BoxShape } from "../../src/lib/box-shape.js";
 
@@ -27,7 +26,8 @@ layout.includes("| `_tmp/` | General scratch space for temporary files. Use this
 ## A shapeVersion-3 box is told code lives right here, under `src/...`
 
 ```ts
-const text = boxCodeLocationSection(v3Shape);
+const full = generateAgentGuide({ procedures: [], shape: v3Shape });
+const text = full.slice(full.indexOf("## BOX_CODE"), full.indexOf("\n## ", full.indexOf("## BOX_CODE")));
 const lines = text.split("\n");
 lines[0]
 => ## BOX_CODE — Box-Owned Code

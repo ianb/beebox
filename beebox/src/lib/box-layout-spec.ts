@@ -8,7 +8,7 @@
  *
  *   - `BOX_DIRS` (paths.ts) is derived from the entries below that carry a
  *     `boxDirsKey`.
- *   - `directoryLayoutSection()` (agent-guide/box-shape.ts) looks up entries
+ *   - `directoryLayoutRows()` (agent-guide/box-shape.ts) looks up entries
  *     by key for its path/description text.
  *   - `docs/box-layout.md`'s per-area tables are checked against this spec by
  *     `test/cli/lib/box-layout-spec.doctest.md` (a doc that drifts fails the

@@ -17,7 +17,7 @@ Most of these terms are for operating the system, not for showing to users.
 Each entry below carries a **User-facing:** line saying what a user-visible
 surface (UI label, agent reply) says instead: the same word, a different word,
 or *internal — never shown*. UI copy and the agent guide's "Speak the User's
-Language" section (`src/core/agent-guide/behavior.ts`) defer to these lines;
+Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 to change a user-facing word, change it here first. Decisions recorded
 2026-09-02 (`docs/implemented-plans/vocab-glossary-sweep.md`).
 

@@ -19,7 +19,6 @@ const ROW_ID_PATTERN = /^[\da-z]+(?:-[\da-z]+)*(?:\.[\da-z]+(?:-[\da-z]+)*)+$/;
 const handleSchema = z.string().regex(HANDLE_PATTERN, { message: "a handle is ALL_CAPS words joined by underscores" });
 
 const binSchema = z.enum(["law", "core", "indirect", "delete"]);
-export type Bin = z.infer<typeof binSchema>;
 
 const rowSchema = z.object({
   id: z.string().regex(ROW_ID_PATTERN, { message: "a row id is <section>.<slug> in lowercase-hyphen words" }),
@@ -44,7 +43,6 @@ const registryEntrySchema = z.object({
   /** Who names the handle: another handle, or a path relative to the beebox package. */
   referrers: z.array(z.string()),
 }).strict();
-export type RegistryEntry = z.infer<typeof registryEntrySchema>;
 
 const ledgerSchema = z.object({
   budget: z.object({
@@ -83,7 +81,7 @@ const ledgerSchema = z.object({
 export type Ledger = z.infer<typeof ledgerSchema>;
 
 /** Where the ledger lives in the package; read at runtime, so the package ships it. */
-export const LEDGER_PATH = join(PACKAGE_ROOT, "src", "core", "agent-guide", "ledger.yaml");
+const LEDGER_PATH = join(PACKAGE_ROOT, "src", "core", "agent-guide", "ledger.yaml");
 
 /** Parse and validate ledger text (throws a zod error naming the bad field). */
 export function parseLedger(text: string): Ledger {
