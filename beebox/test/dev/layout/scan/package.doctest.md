@@ -30,9 +30,10 @@ await write(
   `import { build } from "esbuild";\nimport { join } from "node:path";\nconst root = join(import.meta.dirname, "..");\nconst distDir = join(root, "dist");\nawait build({\n  entryPoints: [join(root, "src/a.ts")],\n  outfile: join(distDir, "main.js"),\n});\n`,
 );
 await write("pkg/src/b.ts", "export const b = 1;\n");
+await write("pkg/src/lib/registry.ts", "export function defineRegistry(spec: unknown): unknown { return spec; }\n");
 await write(
   "pkg/src/a.ts",
-  `import { b } from "./b.js";\nimport { missing } from "./missing.js";\n\nexport const registry = defineRegistry({\n  directory: "./commands",\n  ordered: false,\n  members: [b],\n});\n\nexport const a = 1;\n`,
+  `import { b } from "./b.js";\nimport { missing } from "./missing.js";\nimport { defineRegistry } from "./lib/registry.js";\n\nexport const registry = defineRegistry<number>({\n  directory: "./commands",\n  ordered: false,\n  members: [b],\n});\n\nexport const a = 1;\n`,
 );
 await write(
   "pkg/test/x.doctest.md",
@@ -60,7 +61,7 @@ JSON.stringify(a?.imports.find((i) => i.specifier === "./b.js"))
 => {"specifier":"./b.js","target":"pkg/src/b.ts","external":false,"typeOnly":false,"names":["b"],"dynamic":false}
 
 JSON.stringify(a?.kind === "module" ? a.registries[0] : null)
-=> {"directory":"pkg/src/commands","entry":null,"ordered":false,"form":"list","members":[{"expression":"b","source":"pkg/src/b.ts","key":null}],"line":4}
+=> {"directory":"pkg/src/commands","entry":null,"ordered":false,"form":"list","members":[{"expression":"b","source":"pkg/src/b.ts","key":null}],"line":5}
 ```
 
 ## An unresolved import is a scan finding
