@@ -8,7 +8,7 @@
 
 import { BOX_PACKAGE_DOCS } from "./shared.js";
 import { z } from "zod";
-import { getBuiltinTemplates } from "../../schemas/templates.js";
+import { getBuiltinTemplates } from "../../templates-registry.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
 import { bbxCommandsSearch } from "./bbx-commands-search.js";

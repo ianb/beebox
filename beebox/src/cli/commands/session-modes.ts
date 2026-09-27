@@ -16,8 +16,8 @@ import {
   parseSessionLog,
 } from "../lib/session.js";
 import { listSessionRoots } from "../../core/chat/session/history.js";
-import { writeSessionReport } from "../../dev/lib/session-report.js";
-import { parseDuration } from "../../schemas/scheduled-script.js";
+import { writeSessionReport } from "../../dev/lib/session-report/report.js";
+import { parseDuration } from "../../schemas/scheduled-script/schema.js";
 import {
   printListRow,
   sessionDivider,

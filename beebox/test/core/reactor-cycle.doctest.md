@@ -12,7 +12,7 @@ import { runReactor } from "../../src/core/reactor/index.js";
 import { finishJob } from "../../src/core/finish-job.js";
 import { createFakeAgent } from "../helpers/fake-agent.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createIntakeJobTemplate } from "../../src/schemas/index.js";
+import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createTodoReviewJobTemplate } from "../../src/schemas/todo-review-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

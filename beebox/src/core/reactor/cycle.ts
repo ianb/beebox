@@ -20,7 +20,7 @@ import { processChatJobs } from "./chat-jobs.js";
 import type { runSync as realRunSync } from "./subprocess.js";
 import type { JobWithContent, ProcessJobsOptions } from "./types.js";
 import type { ReactorResult } from "./engine.js";
-import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 
 export interface RunCycleParams {
   boxRoot: string;

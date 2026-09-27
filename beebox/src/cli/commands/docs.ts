@@ -1,6 +1,6 @@
 /** Explicit generated-guidance convergence, sharing migration admission and Git recovery. */
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { refreshGeneratedDocs } from "../../core/docs-refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 

@@ -16,7 +16,7 @@
  */
 
 import { simpleGit } from "simple-git";
-import { gitBoxPrefix } from "../../lib/git.js";
+import { gitBoxPrefix } from "../../lib/git/core.js";
 import { isIgnored, joinChildPath } from "./precheck-ignore.js";
 import { ok, err, type Result } from "../../lib/result.js";
 

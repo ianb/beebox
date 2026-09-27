@@ -10,7 +10,7 @@ import { runPhotoMode } from "../../../src/core/commands/scan-import.js";
 import { createFakeScanVision } from "../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { parseCardText } from "../../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";

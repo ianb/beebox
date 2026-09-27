@@ -40,7 +40,7 @@ account for 123 of the 128 uses.
 The 95 `tsx` calls are overwhelmingly `pnpm exec tsx <one of our scripts>`, so
 the local thing in each line is the script path, already visible. The largest
 documented cluster is the user-stories pipeline
-(`beebox/user-stories/README.md`, `journeys/README.md` — 9 lines invoking
+(`beebox/docs/user-stories/README.md`, `journeys/README.md` — 9 lines invoking
 `validate-discovery.ts`, `apply-consolidation.ts`, `make-batches.ts`,
 `freeze.ts`, `render.ts`, `stale.ts`, `apply-recheck.ts`, `prepare.ts`,
 `collect.ts`). That is one pipeline's many steps rather than a tool reached for

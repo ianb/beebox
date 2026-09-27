@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 
 /** How much of a sidecar is printed; the trial's 400 was too short to judge on (2026-09-26). */
 export const BODY_FILE_CAP = 4000;

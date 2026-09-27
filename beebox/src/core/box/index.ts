@@ -9,8 +9,8 @@ import { REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from ".
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths.js";
-import { initRepo, isRepo } from "../../lib/git.js";
+import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths/core.js";
+import { initRepo, isRepo } from "../../lib/git/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript-paths.js";

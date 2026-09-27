@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 import { z } from "zod";
 
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 
 /** Matches the Worker's expectation: a full team origin, no trailing slash. */
 export const TEAM_DOMAIN_PATTERN = /^https:\/\/[\da-z-]+\.cloudflareaccess\.com$/;

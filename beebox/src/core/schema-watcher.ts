@@ -22,7 +22,7 @@
  */
 
 import { watch, type FSWatcher } from "chokidar";
-import { invalidateBoxSchemas } from "../schemas/registry.js";
+import { invalidateBoxSchemas } from "../schemas.js";
 import { getBoxShape, boxCodePaths } from "../lib/box-shape.js";
 
 const watchers = new Map<string, FSWatcher>();

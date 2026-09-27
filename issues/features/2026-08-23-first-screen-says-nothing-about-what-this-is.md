@@ -54,7 +54,7 @@ obvious and they already had a concrete goal; this run does not establish what
 a person without a goal would do. The generated journey slug in the header is
 fixture naming, not a new product vocabulary finding.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 1-3. No onboarding implementation attempted.
 
 
@@ -107,6 +107,6 @@ which redirects to `/chat`; it did not supply an existing session. The synthetic
 run slug is fixture naming, not a product vocabulary defect. Asking chat still
 produced useful examples and ultimately valued Spanish practice.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 The [concrete reservation regression](../bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
 is tracked separately from this broader orientation design question.

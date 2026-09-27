@@ -11,7 +11,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
 import { formatAnnexDoctor, runAnnexDoctor } from "../../core/annex/doctor.js";

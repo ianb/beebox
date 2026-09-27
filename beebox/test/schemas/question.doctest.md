@@ -338,8 +338,8 @@ through to the builders. Validation is strict: a bad `expires-after` or a
 `learning` missing its `proposal` is rejected at the args boundary.
 
 ```ts setup
-import { getTemplate } from "../../src/schemas/templates-registry.js";
-import "../../src/schemas/templates-builtins.js";
+import { getTemplate } from "../../src/templates-registry.js";
+import "../../src/templates/builtins/templates.js";
 
 // Parse raw args through the template's own schema, then generate — exercising
 // both the argsSchema (accepts the contract fields) and the passthrough.

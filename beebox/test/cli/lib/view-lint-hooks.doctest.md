@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { spawn } from "node:child_process";
-import { isViewFile, isViewSourceFile } from "../../../src/lib/paths.js";
+import { isViewFile, isViewSourceFile } from "../../../src/lib/paths/core.js";
 import { lintViewFile } from "../../../src/webapp/views/compiler.js";
 import { cardValidatorHook } from "../../../src/core/sdk-hooks.js";
 

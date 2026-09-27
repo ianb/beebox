@@ -32,4 +32,4 @@ store merely to make raw hard deletion override a folder mount.
 
 ## User-story catalog recheck
 
-The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-syncing-something-by-trashing-its-card`](../../../beebox/user-stories/catalog/2026-08-21.md). An independent adversarial source recheck marked it accurate on 2026-08-23, and the old ID remains an alias.
+The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-syncing-something-by-trashing-its-card`](../../../beebox/docs/user-stories/catalog/2026-08-21.md). An independent adversarial source recheck marked it accurate on 2026-08-23, and the old ID remains an alias.

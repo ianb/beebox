@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { attachDirFor } from "../shared/attach-path.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "./list-cards.js";
 import { countReferrerRefs, rewriteViewRefs, type Remap } from "./rewrite-card-refs.js";
-import { isTrashedCard } from "../lib/paths.js";
+import { isTrashedCard } from "../lib/paths/core.js";
 import { loadValidationIgnore } from "./validation-ignore.js";
 
 export interface InboundCardRef {

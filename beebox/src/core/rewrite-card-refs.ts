@@ -40,7 +40,7 @@
 
 import * as path from "node:path";
 import { isAttachRef } from "../shared/attach-path.js";
-import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { formatLinkDestination, inlineLinkPattern, linkTarget } from "./body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./rewrite-frontmatter-refs.js";
 import { invariant } from "../lib/invariant.js";

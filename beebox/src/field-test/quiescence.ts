@@ -29,7 +29,7 @@ import { isBulkSession } from "../core/capture/staging-schema.js";
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
 import { sleep } from "../lib/sleep.js";
 import { errorMessage } from "../lib/error-guards.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 
 /** Bulk-upload states that mean the box still owes the batch work. `open` is
  *  deliberately excluded: an open batch is waiting on the *uploader*, and an

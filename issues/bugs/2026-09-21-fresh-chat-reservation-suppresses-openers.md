@@ -11,7 +11,7 @@ priority: normal
 Opening a fresh box through its ordinary root URL showed only “Start a
 conversation.” The fixture briefing already contained two valid openers,
 including “What can you do?”. Screenshot 01 of the
-[journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
+[journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 shows neither suggestion before the first message.
 
 ## Verified mechanism

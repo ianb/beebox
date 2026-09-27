@@ -13,7 +13,7 @@ import {
   evaluateTaskHealth,
   findMissedOccurrence,
 } from "../../src/core/schedule/health.js";
-import { parseScheduledScript } from "../../src/schemas/scheduled-script.js";
+import { parseScheduledScript } from "../../src/schemas/scheduled-script/schema.js";
 import { normalizeScriptState } from "../../src/core/schedule/state.js";
 import {
   summarizeScheduleHealth,

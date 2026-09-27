@@ -3,7 +3,7 @@
  * from audit results for manual evaluation.
  */
 
-import type { TestResult } from "./test-runner.js";
+import type { TestResult } from "./test-runner/runner.js";
 import type { ContextHistoryEntry } from "./context-history.js";
 import { invariant } from "../../lib/invariant.js";
 

@@ -22,8 +22,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile, isMarkdownFile } from "../../lib/paths.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { isCardFile, isMarkdownFile } from "../../lib/paths/core.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 import { errorMessage } from "../../lib/error-guards.js";

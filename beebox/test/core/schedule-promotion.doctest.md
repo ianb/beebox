@@ -12,7 +12,7 @@ import { runTick } from "../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../src/core/schedule/state.js";
 import { readRecent } from "../../src/core/notification/log.js";
 import { checkRequiredConnectors } from "../../src/core/schedule/promotion.js";
-import { parseScheduledScript } from "../../src/schemas/scheduled-script.js";
+import { parseScheduledScript } from "../../src/schemas/scheduled-script/schema.js";
 import { syncConnector, addDays } from "../../src/connectors/activity.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

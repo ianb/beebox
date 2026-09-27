@@ -5,12 +5,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import {
-  describeScheduleAction,
-  isDue,
-  isWithinBudget,
-} from "../../schemas/scheduled-script.js";
-import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
+import { describeScheduleAction } from "../../schemas/scheduled-script/schema.js";
+import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
+import { isDue, isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   saveScriptState,
@@ -27,7 +24,7 @@ import type {
 import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
 import { loadRunningProcedures } from "../../core/schedule/running-procedures.js";
 import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
-import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
+import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git/core.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";

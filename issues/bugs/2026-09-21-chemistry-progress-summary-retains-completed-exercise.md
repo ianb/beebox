@@ -34,7 +34,7 @@ exercise that the detailed record says is complete. The summary should agree
 with the structured entries while preserving the separate warning that all
 ratings are same-session evidence and that delayed recall remains untested.
 
-Evidence: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
+Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
 
 ## Candidate authoring guidance
 

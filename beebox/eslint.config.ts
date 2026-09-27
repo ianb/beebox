@@ -53,7 +53,7 @@ export default [
   // harsher unreviewed base, whose extra bans (`??`, inline unions,
   // process.env["X"], fs-filename) are NOT house style and made per-edit hook
   // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
-  ...vibeCheck({ react: false, roots: ["src", "scripts", "test", "user-stories"], ignores: ["src/frontend/**", "**/*.mjs"] }),
+  ...vibeCheck({ react: false, roots: ["src", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   // The React profile, scoped to list components (see LIST_ENTRY_GLOB above).
   // Every entry is re-scoped to the glob so nothing else in this package picks
   // up React rules.
@@ -113,9 +113,26 @@ export default [
     // that keeps growing still has to answer for it. Every other rule applies in
     // full — the six generic-Error throws these files used to carry were fixed, not
     // exempted (boxholder decision, 2026-08-24).
-    files: ["user-stories/pipeline/*.workflow.ts"],
+    //
+    // `@typescript-eslint/no-misused-promises` is off for the same files for an
+    // unrelated reason: every workflow ends in a literal top-level `return`
+    // (see workflow-globals.d.ts — the runtime wraps the body in an async
+    // function, so TS's grammar error TS1108 is silenced with `@ts-expect-error`
+    // on that one line). That return statement has no enclosing function in the
+    // AST, and the rule's `checkReturnStatement` unconditionally dereferences
+    // one, crashing ESLint entirely (`Non-null Assertion Failed: Expected node
+    // to have a parent`) rather than reporting a normal finding — reproduced
+    // 2026-09-27 on all five workflow files, including under the file's
+    // previous, narrower tsconfig.user-stories.json program, so this is a
+    // long-standing crash the fold surfaced by staging these files for the
+    // first time, not something the fold introduced. No workaround at the
+    // source level exists without breaking the runtime's contract (the literal
+    // top-level `return` is what it requires), so the rule is carved out here
+    // exactly as `max-lines` is above, rather than weakened project-wide.
+    files: ["src/scripts/user-stories/*.workflow.ts"],
     rules: {
       "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
+      "@typescript-eslint/no-misused-promises": "off",
     },
   },
   {
@@ -157,7 +174,7 @@ export default [
   {
     // Nothing but the frontend registry imports a list component, and it does
     // so through the `@schemas/*.list-entry` Vite alias.
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "test/**/*.ts"],
+    files: ["src/**/*.{ts,tsx}", "test/**/*.ts"],
     ignores: [LIST_ENTRY_GLOB],
     rules: {
       "no-restricted-imports": "off",

@@ -24,7 +24,7 @@ import {
   type Connector,
   type SyncResult,
 } from "./index.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
 import { getBoxTimeISO } from "../lib/time.js";

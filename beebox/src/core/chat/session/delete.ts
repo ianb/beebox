@@ -1,4 +1,4 @@
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 import type { commitTrashReceipt, moveCardsToTrash } from "../../commands/trash.js";
 import type { recoverTrashReceipt } from "../../commands/trash-recovery.js";
 import { listChatHusks, listChatHusksUnder, type ChatHuskEntry } from "../husk-read.js";

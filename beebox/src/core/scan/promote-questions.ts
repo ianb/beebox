@@ -16,8 +16,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
 import { updateQuarantineState, type ScanQuarantineEntry } from "./quarantine.js";

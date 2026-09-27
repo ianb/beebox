@@ -20,13 +20,13 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageAndCommitPaths, unstageFiles } from "../../lib/git.js";
-import { toRelativePath, isCardFile } from "../../lib/paths.js";
+import { stageAndCommitPaths, unstageFiles } from "../../lib/git/core.js";
+import { toRelativePath, isCardFile } from "../../lib/paths/core.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { errorMessage, errnoCode } from "../../lib/error-guards.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import {
   QuestionSchema,
   type QuestionFields,

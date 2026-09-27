@@ -14,7 +14,7 @@ import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
-import { resolveRefPath } from "../shared/ref-path.js";
+import { resolveRefPath } from "../shared/ref-path/core.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 

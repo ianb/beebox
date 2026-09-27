@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { wordCount } from "./lib/context-assembly.js";
+import { wordCount } from "./lib/context-assembly/assembly.js";
 import { collectPrompts, type PromptEntry } from "./lib/prompt-inventory.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────

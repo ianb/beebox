@@ -30,7 +30,7 @@ output and the renderer without assuming a particular math library.
 Evidence: `beebox/user-stories/work/journeys/D-chemistry-2026-09-21/shots/20-balancing-question.png`
 and `21-water-exercise.png`.
 
-Evidence and limits: [journey D report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
+Evidence and limits: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
 
 The smallest option to evaluate is authoring guidance to emit readable plain
 Unicode formulas (for example `H₂ + Cl₂ → 2 HCl`) in this chat renderer.

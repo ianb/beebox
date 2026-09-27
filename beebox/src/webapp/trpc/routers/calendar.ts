@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import {
   availableCalendarsWithSyncing,
   loadCalendarConfig,
@@ -9,7 +9,7 @@ import {
 } from "../../../connectors/calendar-config.js";
 import { resolveCalendarService } from "../../../connectors/google-access.js";
 import { googleService } from "../google-service.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 import * as path from "node:path";
 
 export const calendarRouter = router({

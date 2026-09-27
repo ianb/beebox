@@ -24,7 +24,7 @@
 import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
+import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config/core";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";

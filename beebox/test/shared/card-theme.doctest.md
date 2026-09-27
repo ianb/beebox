@@ -10,7 +10,7 @@ import {
   resolveChromeTheme,
   themePatternMatches,
   validateThemePattern,
-} from "../../src/shared/card-theme.js";
+} from "../../src/shared/card-theme/core.js";
 import { cardSchema } from "../../src/cards/schema.js";
 import { z } from "zod";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";

@@ -8,7 +8,7 @@ A miss here is expensive in one direction: an import this function fails to
 report makes a live export look dead, and the `exports` check deletes it.
 
 ```ts setup
-import { doctestImports } from "../../scripts/knip-doctest-imports.js";
+import { doctestImports } from "../../src/scripts/knip-doctest-imports.js";
 import { readFile, glob } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 

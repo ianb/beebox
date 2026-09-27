@@ -7,7 +7,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { listViews } from "../../webapp/views/compiler.js";
 import { errorMessage } from "../../lib/error-guards.js";
 

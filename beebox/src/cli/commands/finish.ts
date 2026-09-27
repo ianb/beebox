@@ -7,7 +7,7 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
-import { requireBoxRoot, toRelativePath } from "../../lib/paths.js";
+import { requireBoxRoot, toRelativePath } from "../../lib/paths/core.js";
 import { finishJob } from "../../core/finish-job.js";
 import { errorMessage } from "../../lib/error-guards.js";
 

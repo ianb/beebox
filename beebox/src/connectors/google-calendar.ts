@@ -36,7 +36,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import {
   buildNarrativeCommitMessage,
   formatCalendarSyncFailure,

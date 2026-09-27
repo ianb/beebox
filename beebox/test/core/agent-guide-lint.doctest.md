@@ -20,7 +20,7 @@ import { lintGuide } from "../../src/core/agent-guide/lint.js";
 import { parseLedger } from "../../src/core/agent-guide/ledger-schema.js";
 import { GUIDE_SOURCE_PATH, generateAgentGuide } from "../../src/core/agent-guide/index.js";
 import { renderGuideLines, strippedText, annotatedText } from "../../src/core/agent-guide/render.js";
-import { createInitialGuideTemplate } from "../../src/schemas/guide-templates.js";
+import { createInitialGuideTemplate } from "../../src/schemas/guide/templates.js";
 
 // A three-row ledger with one covered section, for the failure cases below.
 const tinyLedger = parseLedger(`

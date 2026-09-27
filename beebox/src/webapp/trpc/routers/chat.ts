@@ -10,7 +10,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import { BriefingSchema } from "../../../schemas/briefing.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";

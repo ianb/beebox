@@ -16,7 +16,7 @@
  * and the truncation flag are all printed when they are non-zero.
  */
 
-import type { UiScanEntry, UiScanPayload } from "../../shared/ui-scan.js";
+import type { UiScanEntry, UiScanPayload } from "../../shared/ui-scan/core.js";
 import { assertNever } from "../../lib/invariant.js";
 
 /** Column the `(no address)` marker is padded out to, so the addressless read as a column. */

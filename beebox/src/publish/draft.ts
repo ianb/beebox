@@ -26,8 +26,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { boxSlug } from "../lib/box-slug.js";
 
-import { stageAndCommitPaths } from "../lib/git.js";
-import { getBoxDir } from "../lib/paths.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { renderDocsPublication } from "./render-docs.js";
 import { scanBundle, type LeakFinding, type LeakScanResult } from "./leak-scan.js";
 import {

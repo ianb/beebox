@@ -12,7 +12,7 @@ import { countNonCanonicalRefs, type LintSummary } from "../../cards/index.js";
 import { formatCanonicalSummary } from "../../core/canonical-refs.js";
 import { canonicalizeBox, formatCanonicalizeReport } from "../../core/canonicalize-refs.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 
 /** The three surfaces the canonical report draws its two buckets from. */
 export interface CanonicalBuckets {

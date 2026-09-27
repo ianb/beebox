@@ -24,7 +24,7 @@
 
 import * as fs from "node:fs/promises";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../core/notify-boxholder.js";
 import { describeRoute, notifyRoute, onServer, type NotifyRoute } from "./notify-route.js";

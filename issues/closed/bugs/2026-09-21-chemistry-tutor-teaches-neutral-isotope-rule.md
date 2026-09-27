@@ -12,7 +12,7 @@ resolution: wontfix
 
 A learner confused isotopes with ions. The tutor gave them a memorable but
 false rule: “isotopes are neutral, ions are not.” It also said “an isotope
-has no charge.” Screenshot 05 in the [journey D report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
+has no charge.” Screenshot 05 in the [journey D report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md)
 independently shows both sentences. The learner latched onto this as a useful
 rule before the tutor corrected it in its next response.
 

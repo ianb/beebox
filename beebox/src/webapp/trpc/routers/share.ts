@@ -7,13 +7,13 @@ import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { listBoxCardFiles } from "../../../core/list-cards.js";
 import { parseCardText } from "../../../core/card-io.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { createDocTemplate } from "../../../schemas/doc.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { router, authedProcedure } from "../trpc.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 import { saveTextualInput, saveTextualOutput, shareDestinationsOutput } from "./share-contract.js";
 
 const INBOX_DIR = BOX_DIRS.inbox;

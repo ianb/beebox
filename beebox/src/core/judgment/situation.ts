@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
-import { resolveRefPath } from "../../shared/ref-path.js";
+import { resolveRefPath } from "../../shared/ref-path/core.js";
 
 /** The root briefing, box-relative (`core/docs-gen/compile.ts` reads the same file). */
 export const ROOT_BRIEFING_PATH = "_content/briefing.briefing.card";

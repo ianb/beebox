@@ -20,7 +20,7 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../cards/index.js";
 import { isRecord } from "../lib/is-record.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 
 /** The seeded hourly Drive sync, by the name its card and `--script` use. */
 export const CHECK_DRIVE_SCHEDULE = "check-drive";

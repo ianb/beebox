@@ -13,7 +13,7 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { glob } from "glob";
 import { parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import { DEFAULT_PLACE_RADIUS_M, type PlaceCircle } from "./geo.js";
 
 function num(value: unknown): number | null {

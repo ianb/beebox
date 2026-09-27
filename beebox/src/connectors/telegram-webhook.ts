@@ -6,7 +6,7 @@
  */
 
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { updateTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
 import { processUpdateToThread, type IngestResult } from "./telegram-ingest.js";

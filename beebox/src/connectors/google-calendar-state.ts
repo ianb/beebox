@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";

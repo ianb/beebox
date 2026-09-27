@@ -22,7 +22,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { spawnProfile } from "../../lib/spawn-profile.js";
 
 // Ensure handlers are registered

@@ -5,7 +5,7 @@
  * and the explicit stack experiment become richer as those surfaces land.
  */
 
-import { tour, type TourContext } from "./tour-lib/index.js";
+import { tour, type TourContext } from "./tour-lib/registry.js";
 
 const CARD = "/views/_content/theme-tour/";
 

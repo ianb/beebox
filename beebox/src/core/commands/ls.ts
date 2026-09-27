@@ -16,7 +16,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths/core.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 

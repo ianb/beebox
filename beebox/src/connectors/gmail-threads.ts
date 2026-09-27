@@ -7,7 +7,7 @@ import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { invariant } from "../lib/invariant.js";
 import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./gmail-mime.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";

@@ -11,10 +11,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS } from "../../lib/paths.js";
-import { createInitialGuideTemplate } from "../../schemas/guide.js";
-import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../../schemas/scheduled-script.js";
-import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
+import { createInitialGuideTemplate } from "../../schemas/guide/templates.js";
+import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../../schemas/scheduled-script/schema.js";
+import { createInitialPersonalityTemplate } from "../../schemas/personality/schema.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { PLATE_CARD_PATH } from "../../shared/todo-model.js";

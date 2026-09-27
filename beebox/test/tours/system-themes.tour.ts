@@ -1,5 +1,5 @@
 /** System appearance is selectable independently of a landmark card's theme. */
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour({ name: "system-themes", description: "Box and landmark system-theme swatches." }, async (t) => {
   await t.go("/settings");

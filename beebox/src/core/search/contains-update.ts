@@ -10,7 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import { getSearchableTypes } from "../../schemas/registry.js";
+import { getSearchableTypes } from "../../schemas.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
 import { isRecord } from "../card-io.js";

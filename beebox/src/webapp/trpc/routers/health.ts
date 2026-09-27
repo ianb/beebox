@@ -19,7 +19,7 @@ import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
-import { getBoxDir } from "../../../lib/paths.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";

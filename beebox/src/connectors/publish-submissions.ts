@@ -33,11 +33,11 @@ import { z } from "zod";
 
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
 import { renderFrontmatterBlock } from "../cards/index.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { fileExists } from "../lib/file-exists.js";
 import { getBoxTime } from "../lib/time.js";
 import { errorMessage } from "../lib/error-guards.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { submissionSchema } from "../publish/submission.js";
 import { createPubSubmissionCard } from "../schemas/pub-submission.js";
 import {

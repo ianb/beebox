@@ -36,7 +36,7 @@ import {
   createPendingBrowserRequests,
   type PendingOutcome,
 } from "../../core/pending-browser-request.js";
-import { uiScanAnswerSchema, type UiScanPayload } from "../../shared/ui-scan.js";
+import { uiScanAnswerSchema, type UiScanPayload } from "../../shared/ui-scan/core.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 
 const DEFAULT_TIMEOUT_MS = 20_000;

@@ -30,7 +30,7 @@
 
 import { Command } from "commander";
 import { boxSlug } from "../../lib/box-slug.js";
-import { findBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot } from "../../lib/paths/core.js";
 import {
   boxSecretStatus,
   declareSecret,

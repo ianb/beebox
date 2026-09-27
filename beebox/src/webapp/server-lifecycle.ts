@@ -5,7 +5,7 @@
 
 import { boxSlug } from "../lib/box-slug.js";
 import * as fs from "node:fs";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../lib/paths/core.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
 
 /**

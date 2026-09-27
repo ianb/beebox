@@ -5,7 +5,7 @@
  */
 
 import type { LoadCardContext } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 
 export async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
   return { cardSchemas: await createCardSchemaMap(boxRoot) };

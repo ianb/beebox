@@ -23,8 +23,8 @@ import {
 import { getBoxGoogleClientCreds } from "./google-auth.js";
 import { loadSecretStore } from "../core/secrets/store.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { getBoxDir } from "../lib/paths.js";
-import type { ScheduleRequirements } from "../schemas/scheduled-script.js";
+import { getBoxDir } from "../lib/paths/core.js";
+import type { ScheduleRequirements } from "../schemas/scheduled-script/schema.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;
 

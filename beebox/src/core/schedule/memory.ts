@@ -21,7 +21,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
-import { getHead, hasCommits } from "../../lib/git.js";
+import { getHead, hasCommits } from "../../lib/git/core.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { saveScriptState, type ScriptState } from "./state.js";
 import { DEFER_REASONS, type DeferReason } from "./defer-reason.js";

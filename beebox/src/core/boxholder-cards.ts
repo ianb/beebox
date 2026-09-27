@@ -18,8 +18,8 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { glob } from "glob";
 import { parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
-import type { Boxholder } from "../schemas/personality-fields.js";
+import { createCardSchemaMap } from "../schemas.js";
+import type { Boxholder } from "../personality-fields.js";
 
 export async function loadBoxholders(boxRoot: string): Promise<Boxholder[]> {
   const matches = await glob("people/*.person.card", {

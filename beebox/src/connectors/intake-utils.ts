@@ -24,7 +24,7 @@ import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";

@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { syncUsage, queryUsage, USAGE_SCHEMA_DESCRIPTION } from "../../core/usage.js";
 import { invariant } from "../../lib/invariant.js";
 import { isRecord } from "../../lib/is-record.js";

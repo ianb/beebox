@@ -7,7 +7,8 @@
  * (generate-docs-bbx-commands.ts, generate-docs-procedure-guide.ts).
  */
 
-import { describeTemplate, type TemplateDefinition } from "../../schemas/templates.js";
+import { describeTemplate } from "../../templates-describe.js";
+import type { TemplateDefinition } from "../../templates-registry.js";
 
 /**
  * Static connector metadata. Connectors register at runtime with a boxRoot,

@@ -30,7 +30,7 @@ import {
   HQ_TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
 } from "../../core/transcription/index.js";
-import { findBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot } from "../../lib/paths/core.js";
 import {
   audioExtension,
   audioMimeType,

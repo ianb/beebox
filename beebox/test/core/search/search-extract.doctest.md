@@ -13,7 +13,7 @@ import {
   SECTION_SPLIT_THRESHOLD,
 } from "../../../src/core/search/extract.js";
 import { splitMarkdownSections } from "../../../src/core/search/markdown-sections.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 
 const ctx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),

@@ -17,7 +17,7 @@ import * as readline from "node:readline";
 import { errnoCode } from "../lib/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 
 const DB_REL_PATH = ".beebox/usage.db";
 const MANIFEST_REL_PATH = `${BOX_DIRS.usage}/session-manifest.jsonl`;

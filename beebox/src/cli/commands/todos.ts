@@ -20,7 +20,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runTodoQuery } from "../../core/todo/query.js";
 import type { DerivedTodo } from "../../core/todo/collection.js";
 import { isTodoStatus, type TodoPlateState } from "../../shared/todo-model.js";

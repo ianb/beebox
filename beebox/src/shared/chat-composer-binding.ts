@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseRef, resolveRefPath } from "./ref-path.js";
+import { parseRef, resolveRefPath } from "./ref-path/core.js";
 
 const identity = z.string().trim().min(1).max(1024);
 const contextDir = z.string().max(4096);

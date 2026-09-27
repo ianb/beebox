@@ -18,9 +18,9 @@ import * as path from "node:path";
 import {
   parseScheduledScript,
   ScheduledScriptSchema,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
@@ -28,7 +28,7 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
 import { parkedUpdatesForTask } from "./parked-templates.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 const HEARTBEAT_FILE = ".beebox/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;

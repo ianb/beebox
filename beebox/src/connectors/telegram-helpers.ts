@@ -10,13 +10,13 @@ import { parseJsonSecret } from "../core/secrets/json-secret.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   parseDuration as parseScheduledDuration,
   InvalidDurationError,
   UnknownDurationUnitError,
-} from "../schemas/scheduled-script-duration.js";
+} from "../scheduled-script-duration.js";
 import type {
   TelegramConfig,
   TelegramMessageObj,

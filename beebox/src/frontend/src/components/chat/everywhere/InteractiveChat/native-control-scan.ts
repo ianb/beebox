@@ -29,7 +29,7 @@ import {
   createNativeScanControlsCommand,
   type NativeControlEntry,
 } from "../../native-composer-command";
-import type { UiScanEntry } from "@shared/ui-scan";
+import type { UiScanEntry } from "@shared/ui-scan/core";
 
 export const NATIVE_SCAN_TIMEOUT_MS = 1500;
 

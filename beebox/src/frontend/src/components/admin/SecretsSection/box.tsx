@@ -12,7 +12,7 @@ import { trpc, type RouterOutput } from "../../../lib/trpc/client";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Accordion } from "../../ui/Accordion";
-import { controlAddress } from "@shared/control-address";
+import { controlAddress } from "@shared/ui-scan/control-address";
 import { Card } from "../../ui/Card";
 import { Row } from "../../ui/Row";
 import { Stack } from "../../ui/Stack";

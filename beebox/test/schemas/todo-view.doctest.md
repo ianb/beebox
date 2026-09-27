@@ -9,9 +9,10 @@ this schema.
 
 ```ts setup
 import { TodoViewSchema, createTodoViewTemplate } from "../../src/schemas/todo-view.js";
-import { getCardTypes, getDefaultTemplate } from "../../src/schemas/index.js";
+import { getCardTypes } from "../../src/schemas.js";
+import { getDefaultTemplate } from "../../src/templates-registry.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const schemas = await createCardSchemaMap();
 ```

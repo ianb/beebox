@@ -10,7 +10,7 @@
 import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/capture/sweep.js";
 import { findJobCards } from "../../../core/reactor/job-discovery.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { getBoxDir } from "../../../lib/paths.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 import type { HealthCheck } from "./health.js";
 
 /**

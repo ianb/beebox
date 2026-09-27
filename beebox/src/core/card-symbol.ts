@@ -14,7 +14,7 @@
  * (see the history in `core/landmark/symbol.ts`).
  */
 
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 
 export function readCardSymbol(value: unknown, { cardPath }: { cardPath: string }): CardSymbolData | null {

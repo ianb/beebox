@@ -9,7 +9,7 @@ string.
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { writeSessionReport } from "../../../src/dev/lib/session-report.js";
+import { writeSessionReport } from "../../../src/dev/lib/session-report/report.js";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "session-report-"));
 const logPath = path.join(dir, "session.jsonl");

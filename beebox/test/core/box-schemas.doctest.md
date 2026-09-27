@@ -11,8 +11,8 @@ covers native resolution and stray-file detection.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas/registry.js";
-import { getTemplate } from "../../src/schemas/templates.js";
+import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas.js";
+import { getTemplate } from "../../src/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 

@@ -3,7 +3,7 @@ import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
 import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";

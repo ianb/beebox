@@ -18,7 +18,7 @@ import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling.js";
 import { extractPdf } from "../../../src/core/commands/pdf-extract.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";

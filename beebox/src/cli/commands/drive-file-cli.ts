@@ -10,7 +10,7 @@
 
 import { Command } from "commander";
 import { isRecord } from "../../lib/is-record.js";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { addDriveFile, type AddDriveFileResult } from "../../connectors/drive-add-file.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../connectors/drive-inspect.js";
 import { jsonFlag, runCredentialedVerb } from "../lib/credentialed-verb.js";

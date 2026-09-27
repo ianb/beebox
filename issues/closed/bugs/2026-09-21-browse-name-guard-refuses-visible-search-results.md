@@ -95,7 +95,7 @@ Retain real stale-ref and occlusion protections while making this name check
 agree with the accessible target. A regression should use adjacent title/badge/
 path/snippet elements, not merely a plain text button.
 
-Evidence: [journey C report](../../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 45–47, screenshot 25. Related historical guard introduction:
 [click reported success without dispatch](2026-08-21-browse-click-on-a-ref-does-not-dispatch.md).
 The old silent-dispatch defect and this false refusal are different failures.

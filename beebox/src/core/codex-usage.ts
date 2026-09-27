@@ -4,7 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../lib/error-guards.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 
 export const CODEX_USAGE_REL_PATH = `${BOX_DIRS.usage}/codex-turns.jsonl`;
 

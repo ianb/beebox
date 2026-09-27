@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { triggeredByTrailer } from "../shared/commit-trailers.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../core/commands/trash.js";
 import { createCliContext } from "../core/command-runner.js";

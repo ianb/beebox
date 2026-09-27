@@ -19,7 +19,7 @@ import { undismissedEpisodes } from "../../connectors/activity-episodes.js";
 import { describeVerdict } from "../../connectors/activity-verdict.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { assertNever } from "../../lib/invariant.js";
-import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
+import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
 import { formatRetryAt } from "../agent/engine-unavailability.js";
 import type { Target } from "../notification/target.js";
 import { notifyBoxholder, type NotifyServices } from "../notify-boxholder.js";

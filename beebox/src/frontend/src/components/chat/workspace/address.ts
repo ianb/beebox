@@ -12,7 +12,7 @@
  * open document.
  */
 
-import { controlAddress } from "@shared/control-address";
+import { controlAddress } from "@shared/ui-scan/control-address";
 
 export function workspaceTabId(path: string): string {
   return controlAddress("bbx-workspace-tab", path);

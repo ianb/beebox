@@ -1,6 +1,6 @@
 /** Automated knowledge-audit checks over normalized agent behavior. */
 
-import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner.js";
+import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner/runner.js";
 import type { SearchWhere } from "./test-suite-schema.js";
 
 interface RunChecksContext {

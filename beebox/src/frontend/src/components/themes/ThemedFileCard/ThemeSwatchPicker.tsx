@@ -1,4 +1,4 @@
-import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme";
+import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme/core";
 import { trpc } from "../../../lib/trpc/client";
 import { useBoxPresentation } from "../BoxPresentationProvider";
 import { Button } from "../../ui/Button";

@@ -35,4 +35,4 @@ The fix could change the authored guidance to match the current interaction or
 make the controls real. Do not clear the broader todo rendering manual-test
 gate based on this report.
 
-Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

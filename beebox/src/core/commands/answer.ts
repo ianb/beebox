@@ -22,7 +22,7 @@ import { assertNever } from "../../lib/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 const AnswerVia = z.enum(["web", "cli"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;

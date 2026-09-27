@@ -15,7 +15,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
-import { namedEntityFields } from "./named-entity-fields.js";
+import { namedEntityFields } from "../named-entity-fields.js";
 
 const PlaceStatus = z.enum(["active", "inactive", "archived"]);
 export type PlaceStatusType = z.infer<typeof PlaceStatus>;

@@ -3,7 +3,7 @@
 `src/shared/ref-path.ts` is THE home for turning a ref — an in-box pointer written in a card, a view, or a markdown link — into a box-relative path. Backend (`core/ref-exists.ts`) and frontend (`frontend/src/lib/view-url.ts`) share this one implementation, so a ref means the same thing on both sides.
 
 ```ts setup
-import { parseRef, resolveRefPath } from "../../src/shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../../src/shared/ref-path/core.js";
 ```
 
 ## parseRef

@@ -27,8 +27,8 @@ import { parseFrontmatterObject, splitCardContent } from "../../cards/frontmatte
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { cardSchemas } from "../../schemas/registry.js";
-import { getBuiltinTemplates } from "../../schemas/templates.js";
+import { cardSchemas } from "../../schemas.js";
+import { getBuiltinTemplates } from "../../templates-registry.js";
 import { generateViewsDoc } from "../views/doc.js";
 import { generateChatVoiceDoc } from "../chat/voice-doc.js";
 import { generateNarrationModeDoc } from "../narration-mode-doc.js";
@@ -107,7 +107,7 @@ export function cardDocInstructions(schema: { instructions?: string | undefined;
 function builtinCardDocs(): { doc: EngineDoc; readWhen: string }[] {
   const templates = getBuiltinTemplates();
   const out: { doc: EngineDoc; readWhen: string }[] = [];
-  for (const schema of cardSchemas) {
+  for (const schema of cardSchemas.list) {
     const instructions = cardDocInstructions(schema);
     if (instructions === undefined) continue;
     out.push({

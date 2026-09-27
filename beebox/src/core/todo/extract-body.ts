@@ -32,7 +32,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../../shared/markdoc-config.js";
+import { markdocConfig } from "../../shared/markdoc-config/core.js";
 import { collectTagSpans, tagNameFor } from "../body-markdoc-lint.js";
 import { isTodoStatus } from "../../shared/todo-model.js";
 import { assignLocators, isTodoTag } from "../../shared/todo-locators.js";

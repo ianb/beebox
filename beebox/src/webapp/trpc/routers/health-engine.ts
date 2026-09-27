@@ -15,8 +15,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { getInstalledEngineVersion } from "../../../core/engine-version.js";
-import { loadBoxSchemas } from "../../../schemas/registry.js";
-import { listSchemaLoadFailures } from "../../../schemas/schema-load-status.js";
+import { loadBoxSchemas } from "../../../schemas.js";
+import { listSchemaLoadFailures } from "../../../schema-load-status.js";
 import type { HealthCheck } from "./health.js";
 
 const MAX_FAILURES_SHOWN = 3;

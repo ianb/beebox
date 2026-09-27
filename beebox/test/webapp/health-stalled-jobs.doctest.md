@@ -12,7 +12,7 @@ failure is visible even when a future one has a cause we haven't met yet.
 ```ts setup
 import { stalledJobsCheck } from "../../src/webapp/trpc/routers/health-stale.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createIntakeJobTemplate } from "../../src/schemas/index.js";
+import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 
 const job = (description: string) =>
   createIntakeJobTemplate({ source: "test", description, items: [] });

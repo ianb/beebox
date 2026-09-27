@@ -14,7 +14,7 @@
 import * as path from "node:path";
 import { readLandmarkCard } from "./landmark/card-cache.js";
 import { prunedSubtree } from "./landmark/prominence-index.js";
-import { resolveRefPath } from "../shared/ref-path.js";
+import { resolveRefPath } from "../shared/ref-path/core.js";
 import type { ProminenceLintWarning } from "./lint-prominence.js";
 
 interface LandmarkRecord {

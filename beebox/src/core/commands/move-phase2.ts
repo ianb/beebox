@@ -17,7 +17,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { isCardFile } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths/core.js";
 
 class AttachDirRenameError extends Error {
   readonly from: string;

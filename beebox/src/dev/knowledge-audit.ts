@@ -13,7 +13,7 @@ import { Command, InvalidArgumentError } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
+import { loadTests, getTestsPath, runTest } from "./lib/test-runner/runner.js";
 import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
@@ -22,7 +22,7 @@ import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-histo
 import { generateDocs } from "../core/docs-gen/index.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { AgentEngine } from "../core/box/config.js";
-import type { AuditTest } from "./lib/test-runner.js";
+import type { AuditTest } from "./lib/test-runner/runner.js";
 
 const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");

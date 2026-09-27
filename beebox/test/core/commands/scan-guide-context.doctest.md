@@ -15,7 +15,7 @@ import {
   readScanContextFile,
   SCAN_GUIDE_REL_PATH,
 } from "../../../src/core/commands/scan-guide-context.js";
-import { createInitialGuideTemplate } from "../../../src/schemas/guide.js";
+import { createInitialGuideTemplate } from "../../../src/schemas/guide/templates.js";
 
 async function makeBoxDir(): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "scan-guide-"));

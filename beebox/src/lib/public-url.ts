@@ -18,7 +18,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "./error-guards.js";
-import { getBoxDir } from "./paths.js";
+import { getBoxDir } from "./paths/core.js";
 
 /**
  * Resolve the public base URL from the environment, falling back to a

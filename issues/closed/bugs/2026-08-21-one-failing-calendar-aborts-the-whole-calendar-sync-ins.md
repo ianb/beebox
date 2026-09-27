@@ -50,4 +50,4 @@ Read the loop and the error path in full. The 410 branch was confirmed to do wha
 
 ## User-story catalog recheck
 
-An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../../beebox/user-stories/catalog/2026-08-21.md) accurate on 2026-08-23. The rendered catalog now shows the story as verified.
+An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../../beebox/docs/user-stories/catalog/2026-08-21.md) accurate on 2026-08-23. The rendered catalog now shows the story as verified.

@@ -10,7 +10,7 @@
 // Relative (not the `@shared` alias) so this lib resolves under the doctest
 // runner's Node resolution too — view-url is unit-doctested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { resolveRefPath } from "../../../shared/ref-path.js";
+import { resolveRefPath } from "../../../shared/ref-path/core.js";
 import type { ControlAction } from "./ui-scan/types.js";
 import { assertViewState, validateViewState, type ViewState } from "@shared/view-state";
 

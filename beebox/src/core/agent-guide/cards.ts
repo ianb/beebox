@@ -4,7 +4,7 @@
  */
 
 import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
-import type { TemplateDefinition } from "../../schemas/templates.js";
+import type { TemplateDefinition } from "../../templates-registry.js";
 import type { CardSchema } from "../../cards/index.js";
 
 const CARD_CATEGORY_GROUPS = [
@@ -27,7 +27,7 @@ export interface CardTypesInput {
    *  that shares a built-in's type shadows it (last write wins, as in
    *  `createCardSchemaMap`), so the list is deduplicated by type with the
    *  box-local entry kept. */
-  allCardSchemas: CardSchema[];
+  allCardSchemas: readonly CardSchema[];
   /** The box-local subset. Their docs are compiled into the box; every other
    *  type's doc is in the package. */
   boxCardSchemas?: CardSchema[];
@@ -43,7 +43,7 @@ function cardDocPath(type: string, boxTypes: Set<string>): string {
 }
 
 /** Deduplicate by type, keeping the LAST schema with that type (box-local shadows built-in). */
-function effectiveSchemas(allCardSchemas: CardSchema[]): CardSchema[] {
+function effectiveSchemas(allCardSchemas: readonly CardSchema[]): CardSchema[] {
   const byType = new Map<string, CardSchema>();
   for (const s of allCardSchemas) byType.set(s.type, s);
   return [...byType.values()];

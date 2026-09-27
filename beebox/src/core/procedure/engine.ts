@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun, type ProcedureRunFields } from "../../schemas/procedure-run.js";
-import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
+import { stageAll, commit, withBoxGitLock } from "../../lib/git/core.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import { ok, err, type Result } from "../../lib/result.js";
@@ -28,7 +28,7 @@ import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
 import { resolveRunDir } from "./engine-query.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 
 export type { AgentFactory } from "./engine-types.js";
 export type {

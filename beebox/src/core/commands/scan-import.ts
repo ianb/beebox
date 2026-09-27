@@ -50,8 +50,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { createCardSchemaMap } from "../../schemas.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { resolveScanPages, bundleResolvedPages } from "./scan-import-helpers.js";

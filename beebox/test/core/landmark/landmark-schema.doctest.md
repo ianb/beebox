@@ -13,8 +13,8 @@ import {
   LandmarkSchema,
   createLandmarkTemplate,
   parseLandmarkFields,
-  getCardTypes,
-} from "../../../src/schemas/index.js";
+} from "../../../src/schemas/landmark.js";
+import { getCardTypes } from "../../../src/schemas.js";
 import { resolveLandmark } from "../../../src/core/landmark/resolve.js";
 import { findDestination } from "../../../src/core/landmark/destination.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";

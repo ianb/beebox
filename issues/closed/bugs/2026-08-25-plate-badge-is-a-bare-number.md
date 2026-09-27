@@ -74,7 +74,7 @@ Plate row exposes the `agent` assignment, but the badge does not explain the
 different ownership scope. The count is not wrong; the visible badge still
 needs wording that makes its scope clear.
 
-Evidence: [D chemistry report](../../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [D chemistry report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 screenshot 16 and independently inspected saved task assignments; mechanism in `beebox/src/core/todo/count.ts:2-13`
 and `beebox/src/frontend/src/components/TodoViewCard.tsx:174-191`.
 

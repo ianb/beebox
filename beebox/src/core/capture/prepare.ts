@@ -28,9 +28,9 @@ import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import { buildLoadContext } from "../load-context.js";
 import { lintCardsDispatch } from "../card-lint.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import {
   readStagingSession,
   setStagingState,

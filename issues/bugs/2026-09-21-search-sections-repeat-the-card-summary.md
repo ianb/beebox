@@ -26,6 +26,6 @@ summary. This is a preview/relevance problem independent of the section-target
 navigation defect. A summary result may legitimately show `contains`; a section
 result needs a preview that distinguishes its matching content.
 
-Evidence: [journey C report](../../beebox/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37 and 44, screenshots 20 and 25. Related:
 [section navigation](2026-09-21-search-section-results-drop-their-destination.md).

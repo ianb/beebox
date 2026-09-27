@@ -30,9 +30,9 @@ import {
   UserMessageDeliveryError,
 } from "../chat/session/deliver-user-message.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "./prepare.js";
 import { bulkBatchHasNothingToReport } from "./batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";

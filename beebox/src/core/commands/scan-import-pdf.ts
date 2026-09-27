@@ -16,7 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { type CommandContext, type CommandResult } from "../command-runner.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createPdfTemplate, type PdfTemplateOptions } from "../../schemas/pdf.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";

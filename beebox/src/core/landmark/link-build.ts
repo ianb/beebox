@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { titleFromFilename } from "../file-summary.js";
 import type { ProminenceLevel } from "../../shared/prominence.js";
 import type { PrunedSubtree } from "./prominence-index.js";

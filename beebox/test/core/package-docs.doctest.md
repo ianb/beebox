@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { engineDocs, ensurePackageDocs, engineDocFilenames, replaceDirContents } from "../../src/core/docs-gen/package-docs.js";
 import { BOX_PACKAGE_DOCS } from "../../src/core/docs-gen/shared.js";
-import { cardSchemas } from "../../src/schemas/registry.js";
+import { cardSchemas } from "../../src/schemas.js";
 
 const docs = engineDocs();
 const byName = new Map(docs.map((d) => [d.filename, d.content]));
@@ -26,7 +26,7 @@ const byName = new Map(docs.map((d) => [d.filename, d.content]));
 ## Every built-in schema with instructions has a doc, and the index lists every doc
 
 ```ts
-const withInstructions = cardSchemas.filter((s) => s.instructions !== undefined);
+const withInstructions = cardSchemas.list.filter((s) => s.instructions !== undefined);
 withInstructions.every((s) => byName.has(`card-${s.type}.md`))
 => true
 
@@ -63,7 +63,7 @@ const memo = byName.get("card-memo.md") ?? "";
 memo.startsWith("# memo Card")
 => true
 
-const searchable = cardSchemas.find((s) => s.searchable && s.instructions !== undefined);
+const searchable = cardSchemas.list.find((s) => s.searchable && s.instructions !== undefined);
 (byName.get(`card-${searchable?.type}.md`) ?? "").includes("## The `contains:` field")
 => true
 ```

@@ -7,14 +7,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   parseScheduledScript,
-  isDueForWakeup,
-  isWithinBudget,
   ScheduledScriptSchema,
   type ParsedScheduledScript,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
+import { isDueForWakeup, isWithinBudget } from "../../schemas/scheduled-script/due.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   loadScriptState,
@@ -27,17 +26,17 @@ import {
 } from "../../core/schedule/state.js";
 import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
-import { parseCardName, getBoxDir } from "../../lib/paths.js";
-import { resolveRefPath } from "../../shared/ref-path.js";
+import { parseCardName, getBoxDir } from "../../lib/paths/core.js";
+import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
-import { getDefaultTemplate } from "../../schemas/templates.js";
+import { getDefaultTemplate } from "../../templates-registry.js";
 import {
   boxEngineUnavailability,
   classifyScheduleFailure,
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
 import { getBoxTime } from "../../lib/time.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 
 /**
  * Run all on-wakeup scheduled scripts that are due.

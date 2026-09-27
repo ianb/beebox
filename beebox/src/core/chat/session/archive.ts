@@ -23,7 +23,7 @@ import { loadDeadHusks } from "./list.js";
 import { parseSdkSessionId } from "./session-id.js";
 import { resolveSessionAvailability, type TranscriptState } from "./availability.js";
 import type { ChatSessionRegistry } from "./registry.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 
 /** Where archived husks live. Outside `_content/chat/web/`, which is the point. */
 const CHAT_ARCHIVE_DIR = `${BOX_DIRS.chat}/archive`;

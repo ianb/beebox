@@ -10,7 +10,7 @@ that failed to load (keep-last-good otherwise hides them).
 ```ts setup
 import { mkdir, symlink, rm, unlink, writeFile } from "node:fs/promises";
 import { engineHealthChecks } from "../../src/webapp/trpc/routers/health-engine.js";
-import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
+import { invalidateBoxSchemas } from "../../src/schemas.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 // Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json

@@ -17,7 +17,7 @@
 
 import { access } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { BOX_ROOT_VOCABULARY } from "../lib/box-root-vocabulary.js";

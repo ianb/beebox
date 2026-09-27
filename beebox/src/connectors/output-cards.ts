@@ -15,9 +15,9 @@ import * as path from "node:path";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import type { CardSchema } from "../cards/index.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
-import { stageAndCommitPaths } from "../lib/git.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { createCardSchemaMap } from "../schemas.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 
 const OUTPUT_DIR = BOX_DIRS.output;
 

@@ -15,7 +15,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
-import { getSearchableTypes } from "../../schemas/registry.js";
+import { getSearchableTypes } from "../../schemas.js";
 import { buildLoadContext } from "../load-context.js";
 import { walkCardFiles, cardTypeFromPath } from "./walk.js";
 import { loadManifest, saveManifest, emptyManifest, type SearchManifest } from "./manifest.js";

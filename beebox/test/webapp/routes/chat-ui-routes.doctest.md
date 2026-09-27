@@ -11,7 +11,7 @@ because this flow has no consent prompt.
 ```ts setup
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan.js";
+import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan/core.js";
 
 /** A syntactically-valid (but not pending) request id — real ids are UUIDs. */
 const VALID_ID = "00000000-0000-0000-0000-000000000000";

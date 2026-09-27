@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { LedgerEntry } from "./ledger.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 
 const RETRO_REPORTS_DIR = BOX_DIRS.retroReports;
 

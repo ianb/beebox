@@ -13,7 +13,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { TodoParamsSchema } from "../../core/todo/collection.js";
 import { runTodoQuery, type TodoQueryResult } from "../../core/todo/query.js";
 import { errorMessage } from "../../lib/error-guards.js";

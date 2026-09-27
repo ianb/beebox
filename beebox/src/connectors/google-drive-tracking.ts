@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseFrontmatterObject } from "../cards/frontmatter.js";
 import { isRecord } from "../lib/is-record.js";
-import { BOX_DIRS, getBoxDir } from "../lib/paths.js";
+import { BOX_DIRS, getBoxDir } from "../lib/paths/core.js";
 import { invariant } from "../lib/invariant.js";
 import { getAllDriveHandlers } from "./drive-types.js";
 // The handler registry is populated by importing the handlers, and this module

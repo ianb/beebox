@@ -27,7 +27,7 @@ import {
   VOICE_MODELS,
   CompiledSpeakingVoiceSchema,
   type CompiledSpeakingVoice,
-} from "../../schemas/personality.js";
+} from "../../schemas/personality/schema.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { HTTPError, TimeoutError } from "ky";
 import { serveMockTts } from "../tts-mock.js";

@@ -20,7 +20,7 @@ import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
 import { busEventData } from "../lib/bus-events";
 import { boxRelativePath } from "@shared/box-path";
 import type { CardSymbolData } from "@shared/card-symbol";
-import type { ThemeChoice } from "@shared/card-theme";
+import type { ThemeChoice } from "@shared/card-theme/core";
 
 export interface CardIdentity {
   title: string;

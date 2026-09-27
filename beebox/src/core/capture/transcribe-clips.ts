@@ -19,7 +19,7 @@ import { readAssetContent } from "../../lib/asset-content.js";
 import { describeAbsentContent } from "../../lib/annex-pointer.js";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import { transcribeAudio } from "../transcription/index.js";
 import { attachDirFor, resolveAttachRef } from "../../shared/attach-path.js";

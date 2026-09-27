@@ -28,7 +28,7 @@ import { compileGuides } from "../../src/core/docs-gen/compile.js";
 import { readDocId, withDocId } from "../../src/core/docs-gen/shared.js";
 import { commitTemplateSyncChanges } from "../../src/core/docs-gen/index.js";
 import { execFileSync } from "node:child_process";
-import { getStatus } from "../../src/lib/git.js";
+import { getStatus } from "../../src/lib/git/core.js";
 
 const exists = async (root: string, rel: string): Promise<boolean> => {
   try {

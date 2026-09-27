@@ -18,7 +18,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths/core.js";
 import {
   availableCalendarsWithSyncing,
   loadCalendarConfig,

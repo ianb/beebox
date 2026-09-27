@@ -17,14 +17,14 @@ import { Command } from "commander";
 import * as fs from "node:fs";
 import { pipeline } from "node:stream/promises";
 import * as path from "node:path";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import {
   findSessionLog,
   listSessions,
   MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
-import { writeSessionReport } from "../../dev/lib/session-report.js";
+import { writeSessionReport } from "../../dev/lib/session-report/report.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import {
   partitionByAffinity,

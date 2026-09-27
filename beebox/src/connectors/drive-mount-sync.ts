@@ -12,7 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { parseFrontmatterObject } from "../cards/frontmatter.js";
 import { errnoCode } from "../lib/error-guards.js";
 import type { GoogleDriveService } from "../services/google-drive.js";

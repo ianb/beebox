@@ -40,4 +40,4 @@ pnpm exec tsx beebox/user-stories/pipeline/render.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../../beebox/user-stories/README.md).
+[the pipeline README](../../../beebox/docs/user-stories/README.md).

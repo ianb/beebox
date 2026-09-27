@@ -3,7 +3,7 @@ import { glob } from "glob";
 import { parse as parseYaml } from "yaml";
 import { nearestDirFromDirs } from "./landmark/nearest.js";
 import { normalizeLandmarkDir } from "./landmark/root-dir.js";
-import { resolveChromeTheme, validateSystemThemeChoice, type PresentationConfigResult, type ResolvedChromeTheme, type ThemeChoice } from "../shared/card-theme.js";
+import { resolveChromeTheme, validateSystemThemeChoice, type PresentationConfigResult, type ResolvedChromeTheme, type ThemeChoice } from "../shared/card-theme/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
 import { splitCardContent } from "../cards/index.js";
 import { isRecord } from "../lib/is-record.js";

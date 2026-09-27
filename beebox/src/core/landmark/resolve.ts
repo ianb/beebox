@@ -14,9 +14,9 @@ import type {
   LandmarkNavigationData,
   LandmarkOrderType,
 } from "../../schemas/landmark.js";
-import { isCardFile } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
-import { resolveRefPath } from "../../shared/ref-path.js";
+import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
 import { resolveDerivedTiers } from "./derived-links.js";

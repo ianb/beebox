@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { boxSlug } from "../../lib/box-slug.js";
-import { findBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot } from "../../lib/paths/core.js";
 import { requireBoxRoot, BoxShapeError } from "../../lib/box-shape.js";
 import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 

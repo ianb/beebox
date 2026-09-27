@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { cardSchemas } from "../../schemas/registry.js";
+import { cardSchemas } from "../../schemas.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../../core/reactor/prompts.js";
 import { CHAT_SYSTEM_PROMPT } from "../../core/chat/session/index.js";
 import { buildThreadSystemPrompt } from "../../core/chat/session/thread.js";
@@ -109,7 +109,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   // ── 2. Schema instructions ───────────────────────────────────────
 
-  for (const schema of cardSchemas) {
+  for (const schema of cardSchemas.list) {
     if (!schema.instructions) continue;
     entries.push({
       title: `Schema: ${schema.type}`,

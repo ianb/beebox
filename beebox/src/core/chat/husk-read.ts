@@ -17,7 +17,7 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { AGENT_ENGINES, type AgentEngine } from "../../shared/agent-models.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 
 /** Husk cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;

@@ -18,7 +18,7 @@ import { glob } from "glob";
 import { loadCardFromText } from "../card-io.js";
 import { splitCardContent } from "../../cards/index.js";
 import { buildLoadContext } from "../load-context.js";
-import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git.js";
+import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git/core.js";
 import { fileEtag } from "../../webapp/file-etag.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { isInBoxNamespace } from "../../lib/box-namespace.js";

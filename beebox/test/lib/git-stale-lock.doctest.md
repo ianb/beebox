@@ -14,7 +14,7 @@ import { open, utimes, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { stageAndCommitPaths } from "../../src/lib/git.js";
+import { stageAndCommitPaths } from "../../src/lib/git/core.js";
 import {
   inspectIndexLock,
   recoverStaleIndexLock,

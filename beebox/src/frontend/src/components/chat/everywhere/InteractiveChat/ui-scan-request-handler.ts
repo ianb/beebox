@@ -34,8 +34,8 @@ import {
 } from "./native-control-scan";
 import type { NativeControlEntry } from "../../native-composer-command";
 import { isRequestExpired, matchesRequestSession } from "./screenshot-request-logic";
-import { MAX_SCAN_ENTRIES } from "@shared/ui-scan";
-import type { UiScanCoverage, UiScanEntry, UiScanPayload } from "@shared/ui-scan";
+import { MAX_SCAN_ENTRIES } from "@shared/ui-scan/core";
+import type { UiScanCoverage, UiScanEntry, UiScanPayload } from "@shared/ui-scan/core";
 
 /** A live UI-scan request for this tab — the transient `ui-scan-request` payload. */
 export interface UiScanRequest {

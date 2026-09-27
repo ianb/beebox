@@ -14,7 +14,7 @@
  *   - the procedure it runs, when `runs` is a `bbx procedure run <name>` command
  */
 
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 
 /**
  * The box-relative procedure card a `runs` command executes, or null when the

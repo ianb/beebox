@@ -14,8 +14,8 @@
  */
 
 import { performance } from "node:perf_hooks";
-import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
-import type { ScheduleNotify } from "../../schemas/scheduled-script-fields.js";
+import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
+import type { ScheduleNotify } from "../../scheduled-script-fields.js";
 import { CommandError, CommandFailedError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
 import { CHECK_SKIP_CODE } from "../procedure/shell.js";
 import { buildToolingScriptEnv } from "../script-env.js";

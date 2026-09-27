@@ -5,7 +5,7 @@ import { router, publicProcedure, ownerProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
 import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
@@ -15,10 +15,10 @@ import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/tra
 import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
 import { createCollectorContext } from "../../../core/commands/index.js";
 import * as path from "node:path";
-import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-theme.js";
+import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-theme/core.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { MovedCardRecoveryCauseError } from "../../../core/moved-card-recovery.js";
 import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
 

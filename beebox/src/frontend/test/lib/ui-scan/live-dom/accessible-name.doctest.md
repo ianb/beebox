@@ -15,7 +15,7 @@ nothing but a placeholder.
 ```ts setup
 import { computeAccessibleName } from "../../../../src/lib/ui-scan/live-dom/accessible-name.js";
 import type { ScanElement } from "../../../../src/lib/ui-scan/types.js";
-import { fixtureRoot } from "../../../../../../test/helpers/ui-scan-fixture.js";
+import { fixtureRoot } from "../../../../../../test/frontend/lib/ui-scan/fixture.js";
 
 function indexIds(root: ScanElement, index: Map<string, ScanElement>): void {
   const id = root.attributes["id"];

@@ -12,7 +12,7 @@ import { Command } from "commander";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
 import { getOwnerEmail } from "../../webapp/auth.js";
 import { errorMessage } from "../../lib/error-guards.js";

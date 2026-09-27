@@ -16,7 +16,7 @@ import {
   rebaseContains,
   saveContainsState,
 } from "../../../src/core/search/contains-state.js";
-import { createCardSchemaMap } from "../../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../../src/schemas.js";
 import type { LoadCardContext } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 

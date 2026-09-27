@@ -9,7 +9,7 @@
  * archive; git history retains everything.
  */
 
-import { parseDuration } from "../../schemas/scheduled-script-duration.js";
+import { parseDuration } from "../../scheduled-script-duration.js";
 import type { ParsedProcedure } from "./engine-types.js";
 
 /** Default expiry for completed runs. */

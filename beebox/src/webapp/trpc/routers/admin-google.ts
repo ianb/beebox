@@ -15,7 +15,7 @@ import { createGoogleOAuthState } from "../../../connectors/google-oauth-state.j
 import { loadBoxConfig } from "../../../core/box/config.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
-import { getBoxDir } from "../../../lib/paths.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {

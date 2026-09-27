@@ -26,7 +26,7 @@ import {
   loadDriveState,
   type DriveTransientState,
 } from "./google-drive-state.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import { createGoogleDriveService } from "../services/google-drive.js";
 import type { GoogleDriveService } from "../services/google-drive.js";

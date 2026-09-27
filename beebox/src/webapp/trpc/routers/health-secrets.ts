@@ -7,7 +7,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { getBoxDir } from "../../../lib/paths.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 import type { HealthCheck } from "./health.js";
 
 /**

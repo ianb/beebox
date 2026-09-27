@@ -1,5 +1,5 @@
 /** Cards opened from links retain their theme and edges in the workspace. */
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "card-theme-previews", description: "Inspect linked cards in the workspace, including long content." },

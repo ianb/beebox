@@ -10,7 +10,7 @@
 import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
-import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
+import { stageAll, commit, initRepo, isRepo } from "../../lib/git/core.js";
 import { generateDocs } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor.js";

@@ -23,7 +23,7 @@ import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { sanitizeFilenameStem } from "../shared/filename.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { isRecord } from "../lib/is-record.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
 
 class MissingFrontmatterError extends Error {

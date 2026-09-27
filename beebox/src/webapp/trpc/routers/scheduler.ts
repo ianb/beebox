@@ -11,15 +11,15 @@ import { renderFrontmatterBlock, splitCardContent } from "../../../cards/index.j
 import {
   parseScheduledScript,
   ScheduledScriptSchema,
-} from "../../../schemas/scheduled-script.js";
+} from "../../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { createCardSchemaMap } from "../../../schemas.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { isRecord } from "../../../lib/is-record.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 
 export type { ScheduleEntry };
 

@@ -38,7 +38,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { isRecord } from "../../lib/is-record.js";
 import { precheck, type MapBrief, type MapTask } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";

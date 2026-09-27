@@ -19,7 +19,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
-import { markdocConfig } from "../shared/markdoc-config.js";
+import { markdocConfig } from "../shared/markdoc-config/core.js";
 import type { LintIssue } from "../cards/index.js";
 import { errorMessage } from "../lib/error-guards.js";
 

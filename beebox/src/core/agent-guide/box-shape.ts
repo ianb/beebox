@@ -11,7 +11,7 @@
  * `_tmp/` row is the document's own text.
  */
 
-import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
+import { boxLayoutEntry, type BoxDirs } from "../../lib/paths/core.js";
 import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../lib/box-shape.js";
 
 /** One row of the agent-facing directory table: its spec path (unless `path` overrides it) and description. */

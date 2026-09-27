@@ -10,7 +10,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
-import { parseCardName } from "../../lib/paths.js";
+import { parseCardName } from "../../lib/paths/core.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";

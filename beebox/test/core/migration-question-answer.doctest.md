@@ -15,7 +15,7 @@ import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, boxMaintena
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
 import { repairMigration, finishMigrationRepair } from "../../src/core/migration-repair.js";
 import { createTextQuestionTemplate } from "../../src/schemas/question.js";
-import { getBoxDir } from "../../src/lib/paths.js";
+import { getBoxDir } from "../../src/lib/paths/core.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 const exec = promisify(execFile);
 ```

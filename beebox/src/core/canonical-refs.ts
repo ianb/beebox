@@ -33,7 +33,7 @@ import {
   parseRef,
   resolveRefPath,
   type RefKind,
-} from "../shared/ref-path.js";
+} from "../shared/ref-path/core.js";
 import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";

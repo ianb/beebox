@@ -4,9 +4,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { cardFields, parseCardText } from "../core/card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import { EmailThreadSchema } from "../schemas/email-thread.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 
 const TRACKED_THREAD_GLOB = "**/*.email-thread.card";
 const TRACKED_THREAD_IGNORE = [

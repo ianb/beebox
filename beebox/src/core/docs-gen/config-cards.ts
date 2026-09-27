@@ -7,14 +7,15 @@
 
 import { join } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
-import { parseGuide, parseGuideCard, compileGuide } from "../../schemas/guide.js";
-import { compilePersonality, type PersonalityFields } from "../../schemas/personality.js";
+import { parseGuide, parseGuideCard } from "../../schemas/guide/parse.js";
+import { compileGuide } from "../../schemas/guide/compile.js";
+import { compilePersonality, type PersonalityFields } from "../../schemas/personality/schema.js";
 import { loadBoxholders } from "../boxholder-cards.js";
 import { parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { DOCS_DIR } from "./shared.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 
 /**
  * Summary of a compiled guide, for inclusion in the agent guide.

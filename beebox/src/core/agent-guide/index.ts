@@ -11,8 +11,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CardSchema } from "../../cards/index.js";
-import type { TemplateDefinition } from "../../schemas/templates.js";
-import { cardSchemas } from "../../schemas/registry.js";
+import type { TemplateDefinition } from "../../templates-registry.js";
+import { cardSchemas } from "../../schemas.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 import type { BoxShape } from "../../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -31,7 +31,7 @@ export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
   /** This box's physical layout; decides the BOX_CODE table's paths. */
   shape: BoxShape;
-  allCardSchemas?: CardSchema[];
+  allCardSchemas?: readonly CardSchema[];
   /** The box-local schemas (a subset of `allCardSchemas`); their docs live in
    *  the box rather than the package. */
   boxCardSchemas?: CardSchema[];
@@ -68,7 +68,7 @@ function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
   const {
     procedures,
     shape,
-    allCardSchemas = cardSchemas,
+    allCardSchemas = cardSchemas.list,
     boxCardSchemas = [],
     boxTemplates = [],
     engineSourcePresent = false,

@@ -24,7 +24,7 @@ import {
   buildViewerData,
   relativizeHome,
   type LedgerLine,
-} from "./lib/prompt-viewer-data.js";
+} from "./lib/prompt-viewer-data/data.js";
 
 function expandHome(path: string): string {
   if (path === "~") return homedir();

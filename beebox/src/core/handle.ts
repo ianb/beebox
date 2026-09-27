@@ -18,8 +18,8 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { getBoxDir } from "../lib/paths.js";
-import { resolveRefPath } from "../shared/ref-path.js";
+import { getBoxDir } from "../lib/paths/core.js";
+import { resolveRefPath } from "../shared/ref-path/core.js";
 import {
   compileTriageInstructions,
   type TriageCategory,
@@ -28,7 +28,7 @@ import { startProcedure, type ProcedureInconclusive } from "./procedure/engine.j
 import type { CommandContext } from "./command-runner.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
-import { BOX_DIRS } from "../lib/paths.js";
+import { BOX_DIRS } from "../lib/paths/core.js";
 
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";

@@ -15,14 +15,14 @@ import {
   formatMarkdownResults,
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile } from "../../lib/paths.js";
+import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile } from "../../lib/paths/core.js";
 import { listStagedCards } from "../../lib/staged-files.js";
 import { runPreCommitChecks, rejectUnsupportedPreCommitScope } from "./validate-pre-commit.js";
 import { collectDossierCanonicalWarnings, collectViewCanonicalWarnings } from "../../core/canonical-refs.js";
 import { canonicalCounts, formatCanonicalReport, rejectUnsupportedCanonicalScope, runCanonicalFix, type CanonicalBuckets } from "./validate-canonical.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/views/refs.js";
-import { getStatus } from "../../lib/git.js";
+import { getStatus } from "../../lib/git/core.js";
 import { lintAttachLayout, formatAttachLintErrors, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintProminenceBudget, formatProminenceLintWarnings, type ProminenceLintWarning } from "../../core/lint-prominence.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";

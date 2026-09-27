@@ -53,7 +53,7 @@ import {
   rewriteViewRefTokens,
 } from "./rewrite-card-refs.js";
 import { assertNever } from "../lib/invariant.js";
-import { isTrashedCard } from "../lib/paths.js";
+import { isTrashedCard } from "../lib/paths/core.js";
 import type { ValidationIgnore } from "./validation-ignore.js";
 import { formatLinkDestination } from "./body-refs.js";
 

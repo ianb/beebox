@@ -32,7 +32,7 @@ import { routeVia } from "../openrouter.js";
 import { checkClaudeAuth, ClaudeAuthError } from "../agent/auth-preflight.js";
 import { ScanVisionBatchError } from "../../services/scan-vision.js";
 import { runScanBatches, type RunScanBatchesResult } from "./scan-import-helpers.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 
 export interface SessionLayout {
   sessionId: string;

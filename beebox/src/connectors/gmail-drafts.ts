@@ -21,9 +21,9 @@ import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
 import { parseFrontmatterObject } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import { containWithinBox, realpathContained } from "../lib/box-containment.js";
-import { getBoxDir } from "../lib/paths.js";
+import { getBoxDir } from "../lib/paths/core.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 import {
   DRAFT_ERROR_FIELD,

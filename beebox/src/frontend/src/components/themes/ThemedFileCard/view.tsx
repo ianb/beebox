@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../../api";
 import { ExternalIconLink } from "../../ui/ExternalIconLink";
-import { resolveCardTheme } from "@shared/card-theme";
+import { resolveCardTheme } from "@shared/card-theme/core";
 import { CardThemeSurface } from "./CardThemeSurface";
 import { useBoxPresentation } from "../BoxPresentationProvider";
 import { themeOriginLabel } from "../../../themes/registry";

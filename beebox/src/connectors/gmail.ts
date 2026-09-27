@@ -5,8 +5,8 @@ import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { truncateTitle } from "../core/file-summary.js";
 import { errorMessage, errnoCode } from "../lib/error-guards.js";
-import { stageAndCommitPaths } from "../lib/git.js";
-import { BOX_DIRS, getBoxDir } from "../lib/paths.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
+import { BOX_DIRS, getBoxDir } from "../lib/paths/core.js";
 import { getBoxTime } from "../lib/time.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import {

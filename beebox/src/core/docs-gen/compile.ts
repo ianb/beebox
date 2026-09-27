@@ -10,16 +10,17 @@
 import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { loadCardFrontmatter } from "../frontmatter-field.js";
-import { parseGuide, parseGuideCard, compileGuide } from "../../schemas/guide.js";
-import { compileSpeakingVoice } from "../../schemas/personality.js";
+import { parseGuide, parseGuideCard } from "../../schemas/guide/parse.js";
+import { compileGuide } from "../../schemas/guide/compile.js";
+import { compileSpeakingVoice } from "../../schemas/personality/schema.js";
 import { compileBriefing, BriefingSchema } from "../../schemas/briefing.js";
 import { cardFields, parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 import { pruneGuideRules } from "./guide-rules-prune.js";
 import { readConfigGuides, readPersonality, type GuideSummary } from "./config-cards.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 
 /**
  * Scan procedure cards and extract name + first-line description.

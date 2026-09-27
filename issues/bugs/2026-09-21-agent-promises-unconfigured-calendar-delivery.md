@@ -14,7 +14,7 @@ The person had already seen that Calendar was disabled and Google OAuth was
 unconfigured, so they challenged the promise. The assistant then checked and
 explicitly withdrew it. No event or reminder was created.
 
-Screenshots 20 and 21 in the [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
+Screenshots 20 and 21 in the [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 show the promise and correction. The fresh fixture's `_config/box.json` has
 only `agentBrowsing: owner`; no Google services are enabled. Missing services
 default to disabled in `beebox/src/core/box/config.ts`. The Settings and Admin

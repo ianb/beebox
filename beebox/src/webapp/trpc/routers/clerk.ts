@@ -23,12 +23,12 @@ import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
 import { parseFrontmatterObject } from "../../../cards/index.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { BOX_DIRS } from "../../../lib/paths.js";
+import { BOX_DIRS } from "../../../lib/paths/core.js";
 
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = BOX_DIRS.inbox;

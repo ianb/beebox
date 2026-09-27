@@ -10,7 +10,7 @@
  * put the photos in — impossible.
  */
 
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "new-chat", description: "Open a brand-new chat and check it is addressable before its first message." },

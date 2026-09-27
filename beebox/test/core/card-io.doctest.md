@@ -17,7 +17,7 @@ import {
   loadCardFromText,
   type LoadCardContext,
 } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 
 const docSchema: CardSchema = cardSchema("doc", {

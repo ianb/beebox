@@ -31,4 +31,4 @@ which calendar is selected, or which operator must configure the host.
 This report does not claim that scheduled work cannot run while the page is
 closed. It records the setup and explanation gap only.
 
-Evidence: [journey F report](../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

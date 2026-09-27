@@ -49,7 +49,7 @@ import { symbolIssues } from "./lint-symbol.js";
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { isAttachRef } from "../shared/attach-path.js";
-import { parseRef, formatRefSuffix, isUrlRef } from "../shared/ref-path.js";
+import { parseRef, formatRefSuffix, isUrlRef } from "../shared/ref-path/core.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { brokenRefReason, resolveRefExists } from "./ref-exists.js";
 import {
@@ -65,7 +65,7 @@ import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
 import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
-import { validateThemeChoice } from "../shared/card-theme.js";
+import { validateThemeChoice } from "../shared/card-theme/core.js";
 
 export interface LintDispatchOptions {
   /**

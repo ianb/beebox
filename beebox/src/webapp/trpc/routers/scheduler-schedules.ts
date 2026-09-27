@@ -3,11 +3,11 @@ import * as path from "node:path";
 import {
   describeScheduleAction,
   parseScheduledScript,
-  isWithinBudget,
   ScheduledScriptSchema,
-} from "../../../schemas/scheduled-script.js";
+} from "../../../schemas/scheduled-script/schema.js";
+import { isWithinBudget } from "../../../schemas/scheduled-script/due.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
-import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { createCardSchemaMap } from "../../../schemas.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
   loadScriptState,
@@ -15,7 +15,7 @@ import {
   type ScriptState,
 } from "../../../core/schedule/state.js";
 import { describeCadence } from "../../../core/schedule/describe.js";
-import { getBoxDir } from "../../../lib/paths.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 
 export interface ScheduleEntry {
   name: string;

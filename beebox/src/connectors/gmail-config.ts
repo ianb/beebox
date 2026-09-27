@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { parseDuration } from "../schemas/scheduled-script-duration.js";
+import { parseDuration } from "../scheduled-script-duration.js";
 import { assertNever } from "../lib/invariant.js";
 import { errorMessage } from "../lib/error-guards.js";
 import type { AutomaticTrackingBudget } from "./gmail-tracking.js";

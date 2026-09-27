@@ -12,7 +12,7 @@ an injected `commit` stub, so no live Cloudflare account is needed.
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createPublishSubmissionsConnector } from "../../src/connectors/publish-submissions.js";
 import { createFakePublishStore } from "../../src/services/publish-remote-store.js";
-import { getBoxDir } from "../../src/lib/paths.js";
+import { getBoxDir } from "../../src/lib/paths/core.js";
 import { relative } from "node:path";
 import { readdir } from "node:fs/promises";
 

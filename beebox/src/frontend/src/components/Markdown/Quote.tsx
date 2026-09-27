@@ -18,7 +18,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { QuoteTreatment } from "@shared/quote-treatment";
+import type { QuoteTreatment } from "@shared/markdoc-config/quote-treatment";
 import { isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 

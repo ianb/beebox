@@ -14,8 +14,8 @@ import {
 } from "../../../connectors/gmail-config.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
-import { getBoxDir, BOX_DIRS } from "../../../lib/paths.js";
+import { stageAndCommitPaths } from "../../../lib/git/core.js";
+import { getBoxDir, BOX_DIRS } from "../../../lib/paths/core.js";
 import { ownerProcedure } from "../trpc.js";
 
 /** Shape of `_config/connectors/gmail.json`, validated on read. */

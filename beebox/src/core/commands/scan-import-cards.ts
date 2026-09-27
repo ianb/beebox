@@ -26,7 +26,7 @@ import * as path from "node:path";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { invariant } from "../../lib/invariant.js";
 import { type CardSchema } from "../../cards/index.js";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
 import { SCAN_GUIDE_REL_PATH } from "./scan-guide-context.js";

@@ -5,7 +5,7 @@
  */
 
 import { search, type TypedDocument } from "@orama/orama";
-import { getSearchableTypes } from "../../schemas/registry.js";
+import { getSearchableTypes } from "../../schemas.js";
 import { invariant } from "../../lib/invariant.js";
 import { getOpenAiEmbeddingsKey } from "./embeddings-key.js";
 import { routeVia } from "../openrouter.js";

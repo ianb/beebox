@@ -1,4 +1,4 @@
-import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme";
+import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme/core";
 import { useId, useState } from "react";
 import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";

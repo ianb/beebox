@@ -22,7 +22,7 @@ import { concatSegmentChunks } from "./audio-concat.js";
 import type { StagingSession, StagingSegment, StagingPhoto, StagingFile } from "./staging-store.js";
 import { M4ASegmentFileCountError } from "./audio-format.js";
 import { CardIOError, parseCardText, serializeCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { withCardLock } from "../../lib/card-lock.js";
 
 /**

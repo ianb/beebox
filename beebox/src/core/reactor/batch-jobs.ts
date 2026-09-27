@@ -12,7 +12,7 @@ import {
   RefEscapesBoxError,
 } from "../../lib/box-containment.js";
 import { fenceForPrompt } from "../../lib/prompt-fence.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { parseCardText, CardIOError } from "../card-io.js";
 import { collectInlineRefs } from "../../cards/index.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent/index.js";

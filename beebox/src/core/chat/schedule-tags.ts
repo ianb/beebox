@@ -1,4 +1,4 @@
-import { parseDuration } from "../../schemas/scheduled-script.js";
+import { parseDuration } from "../../schemas/scheduled-script/schema.js";
 import { parseAttrs } from "../../shared/parse-attrs.js";
 
 function log(...args: unknown[]): void {

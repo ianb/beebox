@@ -13,7 +13,7 @@
 import { Command } from "commander";
 import Fastify from "fastify";
 import open from "open";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { isRecord } from "../../lib/is-record.js";
 import {
   getBoxGoogleClientCreds,

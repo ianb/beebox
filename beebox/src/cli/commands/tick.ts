@@ -5,15 +5,15 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths/core.js";
 import { getBoxTime } from "../../lib/time.js";
 import {
   describeScheduleAction,
   parseScheduledScript,
   ScheduledScriptSchema,
-} from "../../schemas/scheduled-script.js";
+} from "../../schemas/scheduled-script/schema.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { loadScriptState, loadRunningScripts } from "../../core/schedule/state.js";
 import {
   readScheduleFiles,

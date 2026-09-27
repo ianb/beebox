@@ -12,10 +12,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { commitPaths, pathsHaveChanges } from "../../lib/git.js";
-import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
+import { commitPaths, pathsHaveChanges } from "../../lib/git/core.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
 import { fmt } from "../../lib/format.js";
-import { parseDuration } from "../../schemas/scheduled-script-duration.js";
+import { parseDuration } from "../../scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule/running-procedures.js";
 import { ok, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";

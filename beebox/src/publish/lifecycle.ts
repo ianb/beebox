@@ -26,8 +26,8 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getBoxDir } from "../lib/paths.js";
-import { stageAndCommitPaths } from "../lib/git.js";
+import { getBoxDir } from "../lib/paths/core.js";
+import { stageAndCommitPaths } from "../lib/git/core.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 import {

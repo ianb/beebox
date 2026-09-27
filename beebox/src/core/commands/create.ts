@@ -13,14 +13,14 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { parseCardName, isCardFile } from "../../lib/paths.js";
+import { parseCardName, isCardFile } from "../../lib/paths/core.js";
 import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import {
   getTemplate,
   getDefaultTemplate,
   getTemplateNames,
-} from "../../schemas/index.js";
+} from "../../templates-registry.js";
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";

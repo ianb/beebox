@@ -19,13 +19,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { getBoxTime } from "../../lib/time.js";
-import { resolveRefPath } from "../../shared/ref-path.js";
+import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
-import { JudgmentSchema, judgmentQuestions, type JudgmentFields } from "../../schemas/judgment.js";
+import { createCardSchemaMap } from "../../schemas.js";
+import { JudgmentSchema, judgmentQuestions, type JudgmentFields } from "../../schemas/judgment/schema.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { MEMORY_ENV, readDeferMarker, writeDeferMarker } from "../../core/schedule/memory.js";
 import type { DeferReason } from "../../core/schedule/defer-reason.js";

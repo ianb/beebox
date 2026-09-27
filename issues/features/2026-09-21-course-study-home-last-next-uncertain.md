@@ -34,5 +34,5 @@ questions. The person did not ask the assistant to build a custom study-home
 page, so this is a discoverability and default-surface request, not proof that
 such a page cannot be authored.
 
-Evidence: [D chemistry report](../../beebox/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+Evidence: [D chemistry report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
 especially entries 8-14 and 18-20; screenshots 08, 11-13, 16-19, 22, and 24.

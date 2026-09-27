@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AttentionSnapshot, ConversationSelection, ConversationTarget, SendBinding } from "@shared/chat-composer-binding";
-import { parseRef } from "@shared/ref-path";
+import { parseRef } from "@shared/ref-path/core";
 import { acceptEmission, applyRestorePlan, planRestore } from "../../../../input/targets/chat-target";
 import type { ChatWitness } from "../../../../input/targets/chat-assemble";
 import type { Emission } from "../../../../input/emission";

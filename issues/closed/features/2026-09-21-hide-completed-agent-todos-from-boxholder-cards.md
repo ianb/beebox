@@ -32,4 +32,4 @@ annotations should be hidden, collapsed, or separated from user content.
   ([chat bookkeeping](../docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md)):
   the current problem is card-view visibility, not prose about the edit in chat.
 
-Evidence: [journey F report](../../../beebox/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).

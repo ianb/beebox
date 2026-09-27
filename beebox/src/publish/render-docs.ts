@@ -34,7 +34,7 @@ import { parseAnnexPointer } from "../lib/annex-pointer.js";
 import Markdoc from "@markdoc/markdoc";
 import type { Config } from "@markdoc/markdoc";
 
-import { markdocConfig, makeHeadingNode } from "../shared/markdoc-config.js";
+import { markdocConfig, makeHeadingNode } from "../shared/markdoc-config/core.js";
 import { extensionToMimetype } from "../lib/mimetype.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from

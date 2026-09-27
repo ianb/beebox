@@ -12,7 +12,7 @@
 
 import { Command } from "commander";
 
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { assertNever } from "../../lib/invariant.js";
 import { resolveCloudflareAuth } from "../../publish/cloudflare-auth.js";

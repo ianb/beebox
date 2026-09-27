@@ -25,7 +25,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Dirent } from "node:fs";
-import { getBoxDir, isCardFile } from "../lib/paths.js";
+import { getBoxDir, isCardFile } from "../lib/paths/core.js";
 import { errnoCode } from "../lib/error-guards.js";
 
 /**

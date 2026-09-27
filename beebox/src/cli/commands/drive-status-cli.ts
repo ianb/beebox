@@ -7,7 +7,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { folderProblemCounts } from "../../connectors/drive-mount-list.js";
 import {
   driveCardSummary,

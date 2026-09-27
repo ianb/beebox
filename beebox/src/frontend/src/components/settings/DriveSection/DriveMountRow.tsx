@@ -27,7 +27,7 @@ import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { bbxSource } from "../../../lib/source-tag";
-import { controlAddress } from "@shared/control-address";
+import { controlAddress } from "@shared/ui-scan/control-address";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 

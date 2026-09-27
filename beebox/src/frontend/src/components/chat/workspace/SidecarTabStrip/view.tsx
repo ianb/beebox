@@ -13,7 +13,7 @@ import { prefersReducedMotion } from "../../../../lib/reduced-motion";
 import { displayName } from "../../../../lib/display-name";
 import { CardMark } from "../../../ui/CardMark";
 import { useBoxPresentation } from "../../../themes/BoxPresentationProvider";
-import { resolveCardTheme, type ResolvedThemeChoice } from "@shared/card-theme";
+import { resolveCardTheme, type ResolvedThemeChoice } from "@shared/card-theme/core";
 import type { CardIdentity } from "../../../../hooks/useCardIdentities";
 import { ambiguousMarks, pinnedFace } from "./tab-identity";
 import type { PanelTab } from "../../InteractiveChat-controls";

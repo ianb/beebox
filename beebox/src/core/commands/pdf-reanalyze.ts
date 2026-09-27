@@ -27,9 +27,9 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { splitCardContent } from "../../cards/index.js";
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { isRecord } from "../../lib/is-record.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling.js";
 import { clearExtractionAssets, extractPdf } from "./pdf-extract.js";

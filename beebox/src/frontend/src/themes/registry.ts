@@ -1,4 +1,4 @@
-import type { ThemeOrigin } from "@shared/card-theme";
+import type { ThemeOrigin } from "@shared/card-theme/core";
 
 export function themeOriginLabel(origin: ThemeOrigin): string {
   switch (origin.kind) {

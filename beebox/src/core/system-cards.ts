@@ -1,12 +1,12 @@
 /** Host invariants for the canonical interface cards. */
-import { systemCardTemplate } from "../schemas/system-card-templates.js";
+import { systemCardTemplate } from "../templates/system-cards.js";
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { simpleGit } from "simple-git";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
-import { isTrashedCard } from "../lib/paths.js";
+import { isTrashedCard } from "../lib/paths/core.js";
 import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION, isSystemCardMigration, isSystemCardType, systemCardLocationError, type SystemCardMigration, type SystemCardType } from "../shared/system-card-paths.js";
 import { DashboardSchema } from "../schemas/dashboard.js";
 import { SettingsSchema } from "../schemas/settings.js";

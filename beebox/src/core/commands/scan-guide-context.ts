@@ -17,9 +17,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
-import { GuideObject } from "../../schemas/guide-elements.js";
-import { parseGuide } from "../../schemas/guide-parse.js";
-import { compileGuide } from "../../schemas/guide-compile.js";
+import { GuideObject } from "../../schemas/guide/schema.js";
+import { parseGuide } from "../../schemas/guide/parse.js";
+import { compileGuide } from "../../schemas/guide/compile.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export const SCAN_GUIDE_REL_PATH = "_config/scan.guide.card";

@@ -19,7 +19,7 @@ below.
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
+import { invalidateBoxSchemas } from "../../src/schemas.js";
 
 // Box-local schemas live at `<boxRoot>/src/schemas/` — resolved natively
 // through the box's own `node_modules/beebox` (the test server scaffolds it).

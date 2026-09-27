@@ -4,7 +4,7 @@
 
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
-import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { linkTarget, matchReferenceDefinitionAt } from "./body-refs.js";

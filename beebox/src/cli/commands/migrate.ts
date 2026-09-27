@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
 import { Command, Option } from "commander";
-import { findBoxRoot, NotInBoxError, getBoxDir } from "../../lib/paths.js";
+import { findBoxRoot, NotInBoxError, getBoxDir } from "../../lib/paths/core.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,

@@ -8,8 +8,8 @@ accepting and whether a batch is valid.
 ```ts setup
 import { BrowserTaskSchema, createBrowserTaskTemplate } from "../../src/schemas/browser-task.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
-import { getTemplate } from "../../src/schemas/templates.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
+import { getTemplate } from "../../src/templates.js";
 
 const schemas = await createCardSchemaMap();
 const recordSchema = JSON.stringify({

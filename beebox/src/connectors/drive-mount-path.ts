@@ -17,7 +17,7 @@
  */
 
 import * as path from "node:path";
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
 import { PathOutsideBoxError, SymlinkedMountTargetError } from "./drive-mount-errors.js";
 

@@ -18,7 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState } from "./state.js";
 import { cardFields, parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
+import { createCardSchemaMap } from "../schemas.js";
 import {
   QuestionSchema,
   parseIso8601DurationMs,

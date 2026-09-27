@@ -6,9 +6,9 @@ instructions in the body, no state (`src/schemas/judgment.ts`). Each question's
 type names the shape it needs. See docs/implemented-plans/notifications.md (Track D).
 
 ```ts setup
-import { JudgmentSchema, judgmentQuestions } from "../../src/schemas/judgment.js";
+import { JudgmentSchema, judgmentQuestions } from "../../src/schemas/judgment/schema.js";
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 
 const issues = (fields) => {
   const parsed = JudgmentSchema.frontmatterSchema.safeParse({ type: "judgment", ...fields });

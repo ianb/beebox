@@ -8,7 +8,7 @@
  * root is `_content/`, which Browse labels "Content".
  */
 
-import { tour } from "./tour-lib/index.js";
+import { tour } from "./tour-lib/registry.js";
 
 tour(
   { name: "browse-walk", description: "Open the browse tree, drill down into _content/inbox, then into email/." },

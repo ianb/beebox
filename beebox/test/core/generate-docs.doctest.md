@@ -16,7 +16,7 @@ an unrelated hazard in a repo-in-a-repo dev/test environment).
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { commitTemplateSyncChanges } from "../../src/core/docs-gen/index.js";
-import { getStatus, getLog } from "../../src/lib/git.js";
+import { getStatus, getLog } from "../../src/lib/git/core.js";
 ```
 
 ## Template-managed files get committed; an unrelated dirty file doesn't

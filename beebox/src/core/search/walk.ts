@@ -11,7 +11,7 @@ import path from "node:path";
 import { isInsideAttachScope } from "../../shared/attach-path.js";
 import { cardTypeFromName } from "../../shared/card-name.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { BOX_DIRS } from "../../lib/paths.js";
+import { BOX_DIRS } from "../../lib/paths/core.js";
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 
 /** Directories never descended into. `_bookkeeping/trash` is handled by path. */

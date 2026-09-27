@@ -16,7 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { CommandContext } from "../command-runner.js";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { isCardFile } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths/core.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../list-cards.js";
 import {
   rewriteReferrerRefs,

@@ -21,7 +21,8 @@ import { fileExists } from "../../lib/file-exists.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
-import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
+import { cardSchemas, loadBoxSchemas } from "../../schemas.js";
+import type { CardSchema } from "../../cards/index.js";
 import { generateAgentGuide } from "../agent-guide/index.js";
 import {
   installProcedures,
@@ -34,10 +35,10 @@ import { syncBoxGuidance } from "../box/guidance-sync.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
-import { getBoxDir } from "../../lib/paths.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
+import { getBoxDir } from "../../lib/paths/core.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git/core.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
-import { getTemplatesOwnedBy, type TemplateDefinition } from "../../schemas/templates.js";
+import { getTemplatesOwnedBy, type TemplateDefinition } from "../../templates-registry.js";
 import { ensureEngineDocs, writeBoxCardDocs } from "./box-docs.js";
 import {
   scanProcedures,
@@ -306,8 +307,8 @@ async function canSkipGeneration(params: {
 interface DocWritePlan {
   boxRoot: string;
   procedures: ProcedureSummary[];
-  allCardSchemas: typeof cardSchemas;
-  boxCardSchemas: typeof cardSchemas;
+  allCardSchemas: CardSchema[];
+  boxCardSchemas: CardSchema[];
   boxTemplates: TemplateDefinition[];
   engineSourcePresent: boolean;
   personalitySection: string | undefined;
@@ -377,7 +378,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Load box-local frontmatter schemas alongside built-in ones.
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const boxCardSchemas = boxSchemas.cardSchemas;
-  const allCardSchemas = [...cardSchemas, ...boxCardSchemas];
+  const allCardSchemas = [...cardSchemas.list, ...boxCardSchemas];
   // loadBoxSchemas registered this box's `template` exports under its root.
   const boxTemplates = getTemplatesOwnedBy(boxRoot);
   const engineSourcePresent = await fileExists(join(PACKAGE_ROOT, "src", "cli", "index.ts"));

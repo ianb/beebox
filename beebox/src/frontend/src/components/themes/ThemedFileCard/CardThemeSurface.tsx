@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme";
-import { controlAddress } from "@shared/control-address";
+import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
+import { controlAddress } from "@shared/ui-scan/control-address";
 import type { FileViewMode } from "../../file-view-types";
 
 export interface CardThemeSurfaceProps {

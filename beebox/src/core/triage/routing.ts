@@ -12,7 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxDir } from "../../lib/paths.js";
+import { getBoxDir } from "../../lib/paths/core.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { createSelectQuestionTemplate } from "../../schemas/question.js";
 import type { TriageCategory } from "./instructions.js";

@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { parseDuration } from "../../schemas/scheduled-script.js";
+import { parseDuration } from "../../schemas/scheduled-script/schema.js";
 import { invariant } from "../../lib/invariant.js";
 
 export interface FetchStub {

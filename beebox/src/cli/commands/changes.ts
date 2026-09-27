@@ -26,12 +26,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getRangeChangedPaths, getRangeSubjects, getTreeFiles } from "../../lib/git-range.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { MEMORY_ENV, writeDeferMarker } from "../../core/schedule/memory.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { bodyFileSection } from "../lib/body-file-section.js";
 
 const KINDS = { added: "A", modified: "M", any: "AMR" } as const;

@@ -16,7 +16,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
 import { loopbackHeaders } from "./chat-audio.js";
 import { formatUiDump } from "../../core/chat/ui-dump.js";
-import { uiScanPayloadSchema } from "../../shared/ui-scan.js";
+import { uiScanPayloadSchema } from "../../shared/ui-scan/core.js";
 
 interface UiOptions {
   session?: string;

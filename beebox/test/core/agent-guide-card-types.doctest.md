@@ -13,7 +13,7 @@ empty.
 ```ts setup
 import { cardTypesList } from "../../src/core/agent-guide/cards.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
-import { cardSchemas } from "../../src/schemas/registry.js";
+import { cardSchemas } from "../../src/schemas.js";
 import { cardSchema, type CardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 ```
@@ -68,7 +68,7 @@ cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **memo** â€
 => true
 
 // Every built-in schema declares a brief of at most five words
-cardSchemas.filter((s) => s.brief === undefined || s.brief.split(/\s+/).length > 5).map((s) => s.type)
+cardSchemas.list.filter((s) => s.brief === undefined || s.brief.split(/\s+/).length > 5).map((s) => s.type)
 => []
 ```
 

@@ -18,7 +18,7 @@ is markup copied from `InteractiveChat-composer.tsx`,
 import { scanControls, MAX_ENTRIES } from "../../../../src/lib/ui-scan/live-dom/scan.js";
 import { controlAddress, resolveControl, resolveVisibleControl } from "../../../../src/lib/ui-scan/resolve.js";
 import type { ControlEntry, ScanResult } from "../../../../src/lib/ui-scan/types.js";
-import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../../../../test/helpers/ui-scan-fixture.js";
+import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../../../../test/frontend/lib/ui-scan/fixture.js";
 
 /** The default scope: everything on the page, which is what a driver reads. */
 function scan(html: string): ScanResult {

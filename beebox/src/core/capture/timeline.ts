@@ -20,7 +20,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { splitCardContent } from "../../cards/index.js";
 import { cardFields, parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { type ImageFields, ImageSchema } from "../../schemas/image.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import { attachDirFor } from "../../shared/attach-path.js";

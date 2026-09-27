@@ -8,7 +8,7 @@
  * side-effecting shell commands.
  */
 
-import { getHead } from "../../lib/git.js";
+import { getHead } from "../../lib/git/core.js";
 import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../lib/format.js";
 import type { ParsedStep } from "./engine-types.js";

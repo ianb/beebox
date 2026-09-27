@@ -9,7 +9,7 @@
 import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 import { attentionSnapshotSchema } from "../../shared/chat-composer-binding.js";
-import { parseRef } from "../../shared/ref-path.js";
+import { parseRef } from "../../shared/ref-path/core.js";
 import { AGENT_ENGINES } from "../../shared/agent-models.js";
 import { localUserName, type SessionUser } from "../auth.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";

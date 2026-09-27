@@ -7,7 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseCardText, cardFields } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas.js";
 import { BrowserTaskSchema, BROWSER_TASK_INBOX_DIR } from "../../schemas/browser-task.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { browserTaskState, type BrowserTaskState } from "../../shared/browser-task-state.js";

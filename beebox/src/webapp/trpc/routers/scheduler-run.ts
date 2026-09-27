@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { parseScheduledScript } from "../../../schemas/scheduled-script.js";
+import type { parseScheduledScript } from "../../../schemas/scheduled-script/schema.js";
 import {
   loadScriptState,
   acquireScriptLock,

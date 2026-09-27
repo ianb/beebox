@@ -2,7 +2,7 @@
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Pure accumulator runs in tap/tsx outside Vite, where @shared cannot resolve.
 import { ACTIVITY_KINDS } from "../../../../../shared/card-activity-kinds.js";
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Pure accumulator runs in tap/tsx outside Vite, where @shared cannot resolve.
-import { parseRef } from "../../../../../shared/ref-path.js";
+import { parseRef } from "../../../../../shared/ref-path/core.js";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import type { CardSendFields } from "../InteractiveChat-card-hooks";
 

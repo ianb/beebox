@@ -8,7 +8,7 @@ vocabulary, not two. Before `href` existed a web source was written as a URL in
 
 ```ts setup
 import { parseCardText } from "../../src/core/card-io.js";
-import { createCardSchemaMap } from "../../src/schemas/registry.js";
+import { createCardSchemaMap } from "../../src/schemas.js";
 import { errorMessage } from "../../src/lib/error-guards.js";
 
 const schemas = await createCardSchemaMap();
