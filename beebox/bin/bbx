@@ -44,6 +44,9 @@ run_bundle() {
 stamp_dev_bundle() {
   export BBX_DEV_BUNDLE_PATH="$BUNDLE"
   export BBX_DEV_BUNDLE_ID
+  # Single-quoted on purpose: this is the JS source for `node -e`, and its
+  # ${...} placeholders must reach node unexpanded by bash.
+  # shellcheck disable=SC2016
   BBX_DEV_BUNDLE_ID="$(node -e 'const fs=require("fs"); const s=fs.statSync(process.argv[1], {bigint:true}); process.stdout.write(`${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}`)' "$BUNDLE")"
 }
 
@@ -63,7 +66,7 @@ run_tsx() {
     --import "file://$PROJECT_DIR/tsx-preload.mjs" \
     --require "$tsx_dir/dist/preflight.cjs" \
     --import "file://$tsx_dir/dist/loader.mjs" \
-    "$PROJECT_DIR/src/cli/index.ts" "$@"
+    "$PROJECT_DIR/src/cli/entry/run.ts" "$@"
 }
 
 # Packed fast path: no scripts/build-cli.ts means this is an installed

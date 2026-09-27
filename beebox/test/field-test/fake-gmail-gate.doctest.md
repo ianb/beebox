@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
-import { runConnectors } from "../../src/cli/commands/wakeup-connectors.js";
+import { runConnectors } from "../../src/cli/commands/wakeup/connectors.js";
 import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../src/services/google-gmail-types.js";
 import { loadEmailFixture } from "../../src/field-test/email-fixture.js";

@@ -58,7 +58,7 @@ then `skipped: present` on every channel, and a `dot` still badges.
 
 ### Sources
 
-- **`bbx notify`** (`src/cli/commands/notify.ts`): an agent's call. From a
+- **`bbx notify`** (`src/cli/commands/notify/command.ts`): an agent's call. From a
   box-spawned shell it goes through the box server; otherwise it runs in
   process. `--check` sends nothing and exits 1 when no channel can reach the
   person; agents run it before promising a reminder or a watch. The body comes

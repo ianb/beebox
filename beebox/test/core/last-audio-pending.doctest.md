@@ -7,7 +7,7 @@ CLI long-poll to the browser tab holding the recording.
 ```ts setup
 import { createLastAudioPending } from "../../src/core/last-audio-pending.js";
 import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
-import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat-audio.js";
+import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat/audio.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createStagingSession, addAudioChunk } from "../../src/core/capture/staging-store/core.js";
 import { sealVoiceSession } from "../../src/core/voice-recording/voice-staging/core.js";

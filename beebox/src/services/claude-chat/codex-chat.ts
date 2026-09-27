@@ -13,7 +13,7 @@ import { ensureCodexPluginInstalled } from "../../core/agent/ensure-codex-plugin
 import { noteEngineUnavailability } from "../../core/agent/engine-unavailability-apply.js";
 import { expandClaudeIncludes } from "../../core/agent-context-includes.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
-import { validateHookPathsResult } from "../../cli/commands/validate-hook.js";
+import { validateHookPathsResult } from "../../cli/validate-hook/command.js";
 import {
   appendCodexTurnUsage,
   codexUsageDelta,

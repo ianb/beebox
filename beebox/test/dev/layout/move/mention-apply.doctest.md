@@ -66,10 +66,10 @@ JSON.stringify(replaceDirectoryToken({ text: globText, oldToken: "src/schemas", 
 const knipText = `export default {
   workspaces: {
     "beebox": {
-      entry: ["src/cli/index.ts"],
+      entry: ["src/cli/entry/run.ts"],
     },
     "canvas-loop": {
-      entry: ["src/cli/index.ts"],
+      entry: ["src/cli/entry/run.ts"],
     },
   },
 };
@@ -78,14 +78,14 @@ const range = knipWorkspaceBlockRange(knipText, "beebox")!;
 knipText.slice(range.start, range.end).includes("canvas-loop")
 => false
 
-const rewritten = replaceTokenInRange({ text: knipText, oldToken: "src/cli/index.ts", newToken: "src/cli/entry/run.ts", range });
+const rewritten = replaceTokenInRange({ text: knipText, oldToken: "src/cli/entry/run.ts", newToken: "src/cli/entry/run.ts", range });
 rewritten.count
 => 1
 
 rewritten.text.includes('"beebox": {\n      entry: ["src/cli/entry/run.ts"],')
 => true
 
-rewritten.text.includes('"canvas-loop": {\n      entry: ["src/cli/index.ts"],')
+rewritten.text.includes('"canvas-loop": {\n      entry: ["src/cli/entry/run.ts"],')
 => true
 
 knipWorkspaceBlockRange(knipText, "no-such-package")

@@ -30,7 +30,7 @@ import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import {
   canonicalCounts,
   formatCanonicalReport,
-} from "../../src/cli/commands/validate-canonical.js";
+} from "../../src/cli/commands/validate/canonical.js";
 
 const docSchema: CardSchema = cardSchema("doc", {
   fields: {

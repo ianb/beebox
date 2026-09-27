@@ -14,7 +14,7 @@ import {
 } from "../command-types.js";
 import { buildToolingScriptEnv } from "../script-env/core.js";
 import { runCollectedChild } from "../../lib/run-child.js";
-import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";
+import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/wakeup-outcome.js";
 import type { WakeupRunResult } from "../wakeup-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 

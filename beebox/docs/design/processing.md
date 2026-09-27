@@ -2,7 +2,7 @@
 
 ## What `bbx wakeup` actually does
 
-Verified against `src/cli/commands/wakeup.ts` (2026-07-04). One full
+Verified against `src/cli/commands/wakeup/command.ts` (2026-07-04). One full
 sync-and-process pass:
 
 1. **Preprocess** inbox items (transcription, etc.).

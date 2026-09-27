@@ -4,7 +4,7 @@
  *
  * Two exist, and they use DIFFERENT wakeups on purpose (they are not
  * interchangeable — `bbx wakeup --connector <name>` skips on-wakeup scripts by
- * design, `src/cli/commands/wakeup.ts`):
+ * design, `src/cli/commands/wakeup/command.ts`):
  *
  *   inject-email  append the fixture to the run's fake-Gmail state, then a
  *                 CONNECTOR-SCOPED wakeup: sync + intake for that connector
@@ -77,7 +77,7 @@ async function runBbx(opts: {
 
 /**
  * Drain the box's pending jobs to completion. A single wakeup runs only ONE
- * reactor cycle (`maxCycles: 1`, `src/cli/commands/wakeup.ts`), so a job the
+ * reactor cycle (`maxCycles: 1`, `src/cli/commands/wakeup/command.ts`), so a job the
  * arrival spawns — or a low-priority follow-up a connector-scoped cycle skips
  * (`src/core/reactor/cycle.ts`: an all-low-priority cycle is skipped under
  * `skipLowPriority`) — survives it and sits in `_bookkeeping/jobs`. That lone leftover

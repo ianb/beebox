@@ -8,7 +8,7 @@ import type { AgentResult } from "../types.js";
 import { ensureCodexPluginInstalled } from "../ensure-codex-plugin.js";
 import { checkCodexAuth } from "../auth-preflight.js";
 import { expandClaudeIncludes } from "../../agent-context-includes.js";
-import { validateHookPathsResult } from "../../../cli/commands/validate-hook.js";
+import { validateHookPathsResult } from "../../../cli/validate-hook/command.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./result.js";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 import { recordCodexAgentUsage } from "./usage.js";

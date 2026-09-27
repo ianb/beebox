@@ -25,7 +25,7 @@ import { runTodoQuery } from "../../core/todo/query.js";
 import type { DerivedTodo } from "../../core/todo/collection.js";
 import { isTodoStatus, type TodoPlateState } from "../../shared/todo-model.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { formatIssues, formatTodoRow } from "./query-format.js";
+import { formatIssues, formatTodoRow } from "../query-format.js";
 
 interface TodosCliOptions {
   status?: string;
@@ -54,7 +54,7 @@ export const todosCommand = new Command("todos")
 
 /**
  * The command's logic, taking `boxRoot` directly rather than resolving it
- * from `process.cwd()` — the seam doctests drive (`test/cli/todos.doctest.md`),
+ * from `process.cwd()` — the seam doctests drive (`test/cli/commands/todos.doctest.md`),
  * same approach as `auth.ts`'s exported `run*` functions.
  */
 export async function runTodosForBox(boxRoot: string, options: TodosCliOptions): Promise<void> {

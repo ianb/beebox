@@ -21,7 +21,7 @@ import {
   effectiveBusyBlockers,
   evaluateSkip,
   executeScript,
-} from "./tick-helpers.js";
+} from "../tick-helpers.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
 

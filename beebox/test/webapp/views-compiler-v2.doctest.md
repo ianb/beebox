@@ -22,7 +22,7 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
  * Build a v3 (one-root, package-shaped) fixture box: a root with its own
  * `node_modules/beebox` and `node_modules/react` — symlinked to the
  * real engine copies, the same temp-symlink trick `bbx view test` uses
- * (src/cli/commands/view.ts), adapted here to simulate what a real
+ * (src/cli/commands/view/command.ts), adapted here to simulate what a real
  * `pnpm install` of beebox would produce for a box's OWN node_modules.
  */
 async function makeV3Box() {

@@ -6,7 +6,7 @@
  * a *node* view host here — `useResolvedRef` derives a title from the ref's
  * filename (no fetch), `renderInline` emits a minimal block, `openCard` is a
  * no-op (there is no surface to navigate). `bbx view test` wraps the rendered
- * view in `NodeViewHostProvider` (see src/cli/commands/view.ts), and the view's
+ * view in `NodeViewHostProvider` (see src/cli/commands/view/command.ts), and the view's
  * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef/Markdown
  * here via the package `exports` map.
  *

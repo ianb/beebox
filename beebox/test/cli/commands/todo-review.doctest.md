@@ -21,7 +21,7 @@ import { todoReviewCommand } from "../../../src/cli/commands/todo-review.js";
 import { findJobCards } from "../../../src/core/reactor/job-discovery.js";
 import { createTodoReviewJobTemplate } from "../../../src/schemas/todo-review-job.js";
 import { unreviewedTodosCheck } from "../../../src/webapp/trpc/routers/health-todos.js";
-import { runHousekeeping } from "../../../src/cli/commands/wakeup-housekeeping.js";
+import { runHousekeeping } from "../../../src/cli/commands/wakeup/housekeeping.js";
 import { installProcedures, installSchedules } from "../../../src/core/box/structure/defaults.js";
 import { loadProcedureDefinition } from "../../../src/core/procedure/engine/parse.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";

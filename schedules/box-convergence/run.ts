@@ -45,7 +45,7 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<st
   // Direct entrypoints avoid the CLI launcher's rebuild and compile-cache writes
   // during dry-run. Production always uses this box's installed engine registry.
   const command = where === "local"
-    ? [process.execPath, "--import", import.meta.resolve("tsx"), path.join(REPO_ROOT, "beebox/src/cli/index.ts"), ...args].map(shellQuote).join(" ")
+    ? [process.execPath, "--import", import.meta.resolve("tsx"), path.join(REPO_ROOT, "beebox/src/cli/entry/run.ts"), ...args].map(shellQuote).join(" ")
     : ["node", path.join(root, "node_modules/beebox/dist/cli.mjs"), ...args].map(shellQuote).join(" ");
   const script = framedCommand(command);
   const remote = `set -a; source /home/beebox/.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd ${shellQuote(root)} || exit; timeout --kill-after=5s 1500s bash -c ${shellQuote(script)}`;

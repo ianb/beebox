@@ -57,7 +57,7 @@ agentPrompt.includes("Previous answered question") && agentPrompt.includes("Keep
 await owner.release();
 const cliQuestion = question.replace("-0.question.card", "-1.question.card");
 await writeFile(join(boxRoot, cliQuestion), createTextQuestionTemplate({ memo: "Migration attachments", askedAt: "2026-09-14T00:00:00Z", prompt: `Migration: attachments\nRecovery: ${snapshot.ref}`, directive: "Wait for migration repair" }));
-await exec(process.execPath, ["--import", import.meta.resolve("tsx"), join(PACKAGE_ROOT, "src/cli/index.ts"), "answer", cliQuestion, "Use the preserved copy"], { cwd: boxRoot });
+await exec(process.execPath, ["--import", import.meta.resolve("tsx"), join(PACKAGE_ROOT, "src/cli/entry/run.ts"), "answer", cliQuestion, "Use the preserved copy"], { cwd: boxRoot });
 (await readFile(join(boxRoot, cliQuestion), "utf8")).includes("Use the preserved copy")
 => true
 

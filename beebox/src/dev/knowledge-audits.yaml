@@ -1090,7 +1090,7 @@ tests:
     correct_contains_any: ["--since", "bbx session --help"]
     tags: [cli]
     notes: >
-      The agent should reach for bbx session --help (or read src/cli/commands/session.ts)
+      The agent should reach for bbx session --help (or read src/cli/commands/session/command.ts)
       to discover --since and --dialogue-only rather than guessing flags.
       A good answer lands on something like "bbx session --since 1d --dialogue-only".
 

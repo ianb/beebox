@@ -30,7 +30,7 @@ const config: KnipConfig = {
         "src/webapp/server.ts",
         "src/schemas/index.ts",
         "src/connectors.ts",
-        "src/cli/index.ts",
+        "src/cli/entry/run.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
         // The box-facing specifiers (beebox/cards, ./schema, ./server)

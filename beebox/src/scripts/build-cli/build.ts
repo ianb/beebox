@@ -1,4 +1,4 @@
-// Bundles the CLI (src/cli/index.ts) into a single dist/cli.mjs for fast
+// Bundles the CLI (src/cli/entry/run.ts) into a single dist/cli.mjs for fast
 // cold starts — collapsing our ~hundreds of source modules into one file
 // removes the per-module ESM loader-hook overhead that dominates tsx startup.
 //
@@ -22,7 +22,7 @@ const tmpDir = join(distDir, `.build-${process.pid}`);
 
 const t = process.hrtime.bigint();
 await build({
-  entryPoints: [join(root, "src/cli/index.ts")],
+  entryPoints: [join(root, "src/cli/entry/run.ts")],
   // Build "cli.mjs" inside a temp dir so the emitted //# sourceMappingURL is
   // the relative "cli.mjs.map", which stays correct after we move both into dist/.
   outfile: join(tmpDir, "cli.mjs"),
@@ -101,7 +101,7 @@ await build({
 // export) to dist/view-widgets/index.js. Box-authored views import this
 // specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view test` resolves it via the
 // package `exports` map (the temp-dir node_modules/beebox symlink in
-// src/cli/commands/view.ts), and wraps the rendered view in the bundle's
+// src/cli/commands/view/command.ts), and wraps the rendered view in the bundle's
 // NodeViewHostProvider. Only React (incl. its runtime entry points) stays
 // external, so it shares the one instance react-dom/server uses — everything
 // else this graph touches (tailwind-merge, clsx, the UI primitives it pulls

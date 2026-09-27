@@ -13,7 +13,7 @@
 import { Command } from "commander";
 import { loadBoxesConfig } from "../../core/box/boxes-config.js";
 import { loadRunningScripts } from "../../core/schedule/state.js";
-import { findBusyBlockers } from "./tick-helpers.js";
+import { findBusyBlockers } from "../tick-helpers.js";
 
 export const activityCommand = new Command("activity")
   .description("Report in-flight work across all boxes (exit 1 if busy); gates restarts/recycles")

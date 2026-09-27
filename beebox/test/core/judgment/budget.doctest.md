@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { JEV_DAILY_CAP, jevBudgetHealthCheck, reserveJevCalls } from "../../../src/core/judgment/budget.js";
-import { runJudge } from "../../../src/cli/commands/judge.js";
+import { runJudge } from "../../../src/cli/commands/judge/command.js";
 import { createFakeJev } from "../../../src/services/jev.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 

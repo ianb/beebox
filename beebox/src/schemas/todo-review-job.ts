@@ -113,7 +113,7 @@ export const TodoReviewJobSchema = cardSchema("todo-review-job", {
     status: z.string().default("pending"),
     source: z.string().default("todo-review"),
     // `normal`, not `low`: `bbx wakeup` always runs the reactor with
-    // `skipLowPriority: true` (src/cli/commands/wakeup.ts), which skips a
+    // `skipLowPriority: true` (src/cli/commands/wakeup/command.ts), which skips a
     // cycle when every pending job is low-priority and none has passed the
     // 24h wait deadline. A `low` review job on an otherwise-idle box would
     // then wait up to a day, and — being pending — suppress the next

@@ -6,7 +6,7 @@
  * registration side of that module.
  */
 
-import type { WakeupOutcomeReport } from "../cli/commands/wakeup-outcome.js";
+import type { WakeupOutcomeReport } from "../cli/wakeup-outcome.js";
 
 export interface WakeupRunResult {
   /** The child exited zero. Says nothing about which step did what — read

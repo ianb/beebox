@@ -94,7 +94,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_INIT_BEEBOX_SPEC", // src/core/box/package.ts -- which Bee Box spec `bbx init` installs.
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- photo-analysis backend selection.
   "BBX_LOG_PROMPTS", // src/core/agent/run.ts -- prompt-logging debug flag.
-  "TSX_TSCONFIG_PATH", // set by src/cli/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
+  "TSX_TSCONFIG_PATH", // set by src/cli/entry/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
 
   // --- Schedule memory (src/core/schedule/memory.ts): set by the tick on a
   //     scheduled `runs:` command, and listed here so a `bbx procedure run` it
@@ -113,7 +113,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
   "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
   "BBX_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
-  "BBX_STRICT_FETCH", // src/cli/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
+  "BBX_STRICT_FETCH", // src/cli/entry/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
   "BBX_AUTH_SCRYPT_N", // src/webapp/local-users-scrypt.ts -- test-only work-factor override.
   "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- every notification channel through its fake.
   "BBX_JEV_FAKE", // src/core/judgment/service.ts -- `bbx judge` answers through a fixed fake (1 yes, 0 no).

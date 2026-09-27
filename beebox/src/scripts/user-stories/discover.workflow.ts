@@ -385,7 +385,7 @@ const critics = await parallel([
 ## Your enumeration: CLI commands
 
 List every command in \`beebox/src/cli/commands/\` and every subcommand registered in
-\`beebox/src/cli/index.ts\`. For each, check the catalog covers what it does.`,
+\`beebox/src/cli/entry/run.ts\`. For each, check the catalog covers what it does.`,
     { label: "critic:cli", phase: "Critics", schema: CRITIC_SCHEMA, effort: "high" },
   ),
   () => agent<CriticReport>(

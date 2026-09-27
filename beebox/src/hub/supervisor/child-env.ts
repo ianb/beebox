@@ -60,7 +60,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path, not a credential. A child that missed it would read the DEFAULT store while the hub read the override, so every grant would silently vanish for served boxes.
   "BBX_SECRETS_STORE_ISOLATED", // src/core/secrets/store.ts -- the dev router's assertion that BBX_SECRETS_FILE is a throwaway store; a child that missed it would refuse agent browsing on a Secrets panel the router meant to be drivable.
   "BBX_LOG_PROMPTS", // src/core/agent-run.ts -- debug flag.
-  "BBX_STRICT_FETCH", // src/cli/bootstrap.ts -- test/scenario harness flag.
+  "BBX_STRICT_FETCH", // src/cli/entry/bootstrap.ts -- test/scenario harness flag.
   "BBX_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
   "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
