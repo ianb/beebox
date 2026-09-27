@@ -543,6 +543,123 @@ fixtures; the middle design is named in Could this be simpler; package-doc
 edits moved into Track 3's scope; and the chat-prompt track was cut to a
 follow-on plan since that prompt is a chat-only surface.
 
+## Implementation record (2026-09-27)
+
+All four tracks landed in the worktree in 27 commits (`94545e091..9b425b850`
+plus the review-fix commits), each with typecheck, `lint:changed`,
+`lint:guide`, doc-check, and `test:changed` green. Size: source and tests
+5,301 added / 1,234 deleted (the guide's prose moving from nine TypeScript
+files into `guide.md` is most of both numbers); authored docs 457 / 61.
+Four Codex diff reviews ran (Tracks 1 and 2; part A; part B; part C), each
+adjudicated below.
+
+### What shipped
+
+- **The spec and ledger.** `docs/agent-guide.md`; `src/core/agent-guide/ledger.yaml`
+  with 128 rows (11 law, 74 core, 27 indirect, 16 delete), the registry of
+  25 handles (15 sections gained one), and the budget header. `section()`
+  and `xref()` read the registry; the old `SECTION` object is gone.
+- **The document.** `src/core/agent-guide/guide.md`, hand-written, with
+  eight placeholders for generated parts, a header comment carrying the
+  editing rules, and `<!-- rules: ... -->` annotations on every passage.
+  Every section is in `covered_sections`.
+- **The renderer and linter.** One pass fills placeholders and strips
+  comments before the DOCID wrap; fenced examples are one passage.
+  `pnpm lint:guide` checks cited ids, coverage of law and core rows,
+  uncited words per section (allowance 60), leaks, DOCID, and the budget,
+  on a bare fixture (asserted) and a rich one (reported).
+- **The rewrite.** Every section binned and rewritten to the skeleton.
+  Indirect text moved verbatim to package docs (new `prominence.md`,
+  `history.md`; `bbx-commands.md` gained `bbx search`, `bbx session`,
+  `bbx secrets`, `bbx host install`, and corrected `bbx create` and
+  `bbx validate` entries), card-rule instructions, and existing docs.
+  CARD_TYPES lists each type with a new five-word `brief` field on
+  `cardSchema`, declared by all 62 built-in schemas.
+- **The laws.** THE_LAW_OF_CARDS sharpened (a card, never an ad hoc `.md`;
+  `.doc.card` for prose); THE_LAW_OF_CHECKING added (check the box, the
+  docs, the web before answering; box agents do have web tools);
+  `laws.quoting-citation` rebinned law → core by the ordered test.
+  HONESTY, AUTHORITY, KEYS, KEEPING recorded as considered and dropped.
+- **QUESTIONS** rewritten from the code: mechanics were current; the
+  `learning:`/`directive:` block moved to the card doc; the alert and the
+  aging defaults gained one sentence each.
+- **The audit runner** records WebSearch and WebFetch and gained a
+  `should_search: web | box | any` assertion.
+
+### Measurement
+
+| Layer (test1 clone) | Before Track 1 | After |
+|---|---|---|
+| Agent guide | 9,508 words / 1,036 lines | 5,339 / 599 |
+| Always-loaded total (`agent-context chat`) | 14,300 | 10,131 |
+
+Per section after: THE_LAWS 885, CARD_TYPES 731, ABOUT_CARDS 668,
+DIRECTORY_LAYOUT 312, PERSONALITY 276, RECORDING 239, SPEAKING 232,
+QUESTIONS 222, COMMANDS 200, BOX_CODE 169, TODOS 157, INTAKE 155,
+PROCEDURES 138, SECRETS 137, LANDMARKS 131, SEARCHING 111, DOCS 96,
+PROVENANCE 93, TOOLS 77, GUIDES 60, HISTORY 52. The budget header holds
+5,339 / 10,131; the boxholder's rule is "the rules, not the number, are the
+discipline", so the linter now asserts no growth without a row.
+
+**Knowledge audits.** About 120 run on the clone across the tracks; all
+pass at the end. Written: 24 new (8 in part A, 11 in part B, 5 in part C,
+including four pressure audits for the two law changes). Re-leveled to
+`knows_about` with the new home named: 15. Check fixes on correct answers
+that failed a literal check: 13, of which three were reverted or tightened
+after Codex review found them looser than equivalence. `capture-message-meaning`
+fails on its phrase list; it tests the chat prompt, not the guide, and is
+flagged in its status comment.
+
+**Find-the-fact, after** (name-only walk from the box root, fresh Sonnet
+navigator, 15-step cap; ten questions, five repeated from phase two):
+
+| Question | Steps | Cited | Phase two |
+|---|---|---|---|
+| trick auto-commit and trailer | 6 | `tricks.md` | 5 |
+| forty recipes: which is primary | 7 | `prominence.md` | new |
+| `contains:` rules and stale list | 7 | ABOUT_CARDS + `bbx-commands.md` | new |
+| list templates, array values | 8 | `bbx-commands.md` | new |
+| check before asking; dismissed/expired | 3 | QUESTIONS | new |
+| commits by one procedure; trick trailer | 4 | `history.md` | new |
+| scheduled script gets a granted key | 7 | `connectors.md` Credentials | 17, gave up |
+| vague-recall search phrasing, keyword flag | 5 | `bbx-commands.md` | new |
+| mount a Drive folder | 7 | `bbx-commands.md` | 10 |
+| a quick `.md` in `_content/`? | 3 | THE_LAW_OF_CARDS | new |
+
+No name failures in ten walks; every fact was found. The two walks that
+were slow or failed in phase two (17 and 10 steps) are 7 and 7.
+
+### Codex adjudication
+
+- **Tracks 1 and 2** (two findings): fenced examples split by blank lines
+  and rules-shaped lines inside fences were mishandled; fixed (`5ebcddda6`).
+- **Part A** (seven): the `bbx create` doc listed options the command lacks,
+  the guide lost "you rarely run `bbx validate` yourself" while the doc said
+  the opposite, the duplicate-basename rule had no general home, three audit
+  checks were loosened past equivalence: all fixed (`012067162`); the
+  `--list-templates` substitute verified to exist; the prominence audit's
+  premise made explicit and `prominence.md` gained the singled-out-recipe
+  exception the implemented plan states.
+- **Part B** (two): `landmarks.read-first` rebinned indirect (fixed,
+  `9b425b850`); the `history.md` trailer catalogue was judged over- and
+  under-inclusive against `commit-trailers.ts`, but that file lists what the
+  browse filters group, and every `-By` key the doc names has a writer in the
+  engine; the doc gained the legacy `Workflow:` key and the two filter axes.
+- **Part C**: recorded below when the review returns.
+
+### Deviations and residuals
+
+- The chat prompt is a follow-on plan, per Codex's plan review.
+- The audit summary line counts Grep/Glob/shell searches and not `bbx search`,
+  so a box-search audit prints "0 searches" while its `should_search` check
+  passes.
+- `law-cards-tmp-is-not-a-record` checks the response, not where the card
+  landed; read the report's card list by eye.
+- `src/cards/schema.ts` was over the 300-line limit before the `brief` field
+  and lint does not flag it.
+- Two timing doctests (`migration-timeout`, `load-history`) failed once each
+  under `test:changed` load and pass alone.
+
 ## Rollout shape
 
 Tests first: the Track 2 doctest is written against the current guide with
