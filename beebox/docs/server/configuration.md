@@ -54,8 +54,11 @@ After editing `.env`, restart services: `systemctl restart beebox-hub beebox-sch
 
 ### Web Push (VAPID) keys
 
-Push notifications need a single server-wide VAPID keypair (not per-box). The setup
-script does **not** seed these — add them as an explicit step:
+Push notifications need a single server-wide VAPID keypair (not per-box).
+`deploy/deploy.sh` generates one on the first deploy that finds none in
+`/home/beebox/.env` and appends it there, before the restart; it never
+regenerates (a new keypair invalidates every browser subscription). To set the
+keys by hand instead, or on a server the deploy script does not manage:
 
 1. Generate once: `npx web-push generate-vapid-keys`
 2. Add `BBX_VAPID_PUBLIC_KEY` and `BBX_VAPID_PRIVATE_KEY` to `/home/beebox/.env`
