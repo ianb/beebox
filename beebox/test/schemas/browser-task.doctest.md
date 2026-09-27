@@ -10,7 +10,6 @@ import { BrowserTaskSchema, createBrowserTaskTemplate } from "../../src/schemas/
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 import { getTemplate } from "../../src/templates-registry.js";
-import "../../src/templates.js";
 
 const schemas = await createCardSchemaMap();
 const recordSchema = JSON.stringify({

@@ -13,7 +13,6 @@ import * as path from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas.js";
 import { getTemplate } from "../../src/templates-registry.js";
-import "../../src/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 

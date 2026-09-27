@@ -21,11 +21,6 @@ import {
   getDefaultTemplate,
   getTemplateNames,
 } from "../../templates-registry.js";
-// Side-effect import: registers every built-in template. `create` is the one
-// module both the CLI and the web API funnel through, so this is where that
-// registration is guaranteed to run (there is no other shared bootstrap point
-// since the `schemas/index.ts` barrel that used to carry it was removed).
-import "../../templates.js";
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";

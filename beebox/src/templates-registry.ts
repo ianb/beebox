@@ -1,37 +1,21 @@
 /**
  * Template registry core — the in-memory map of template definitions and the
- * accessors used to register and look them up. Kept as a leaf module so that
- * the built-in registrations and the describe helpers can both depend on it
- * without forming an import cycle.
+ * accessors used to register and look them up. Imports `templateGroups` (the
+ * built-in template groups, plain data) from `templates.ts` and registers
+ * every member at this module's own load, so importing any lookup below
+ * (`getTemplate`, `getAllTemplates`, ...) is what loads the built-ins — no
+ * consumer needs a bare side-effect `import "./templates.js"`. `templates.ts`
+ * and the built-in template group files (`templates/*.ts`) depend on
+ * `templates-shape.ts`, not this module, so this is a one-directional value
+ * import, not a cycle; `TemplateDefinition` is re-exported below for this
+ * module's existing consumers.
  */
 
-import { type z, type ZodObject, type ZodRawShape } from "zod";
 import { invariant } from "./lib/invariant.js";
+import { type TemplateDefinition } from "./templates-shape.js";
+import { templateGroups } from "./templates.js";
 
-/**
- * Template definition with typed arguments.
- */
-export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
-  /** Unique template name */
-  name: string;
-  /** Human-readable description */
-  description: string;
-  /** Zod schema for arguments */
-  argsSchema: ZodObject<T>;
-  /** Function to generate card content */
-  generate: (args: z.infer<ZodObject<T>>) => string;
-  /**
-   * Optional starter files written into the new card's attach scope. Each
-   * `relPath` is relative to `<basename>.attach/` (e.g. "sketch.ts"). Used by
-   * card types whose body points at a runnable attachment (figures), so a
-   * single `bbx create` scaffolds a working card + its source.
-   */
-  attachments?: (args: z.infer<ZodObject<T>>) => Array<{ relPath: string; content: string }>;
-  /** Card types this template can create (e.g., "memo", "question") */
-  cardTypes: string[];
-  /** If set, this template is the default when creating cards of these types */
-  defaultForTypes?: string[];
-}
+export type { TemplateDefinition } from "./templates-shape.js";
 
 /**
  * Owner sentinel for the process's built-in templates. A box owner is always
@@ -55,6 +39,10 @@ interface Registration {
  */
 const registrations = new Map<string, Registration[]>();
 
+for (const group of templateGroups.list) {
+  for (const def of group) register(def, BUILTIN_OWNER);
+}
+
 function register(def: TemplateDefinition, owner: string): void {
   const list = registrations.get(def.name) ?? [];
   // Re-registering under the same owner replaces that owner's prior entry and
@@ -70,30 +58,6 @@ function effective(list: Registration[]): TemplateDefinition {
   // least the registration that created it.
   invariant(last !== undefined, "templates-registry: registration list is empty");
   return last.def;
-}
-
-/**
- * Register a built-in template (process-global, never dropped by box reloads).
- */
-export function registerTemplate<T extends ZodRawShape>(
-  definition: TemplateDefinition<T>
-): void {
-  register(eraseTemplateArgs(definition), BUILTIN_OWNER);
-}
-
-/**
- * Type-erase one template definition's concrete argument shape so a set of
- * definitions with different `T`s can share one `TemplateDefinition[]` list
- * (a builtins catalogue file, this registry's own storage). Same variance
- * bridge `registerTemplate` used to inline: `generate`/`attachments` are
- * contravariant in the arg type, so a concrete-shape definition isn't
- * assignable to the erased `TemplateDefinition<ZodRawShape>` a list of them
- * is typed as. Sound because an erased definition is only ever read back and
- * invoked with the args its own `argsSchema` parsed, never another member's.
- */
-export function eraseTemplateArgs<T extends ZodRawShape>(definition: TemplateDefinition<T>): TemplateDefinition {
-  // eslint-disable-next-line no-restricted-syntax -- variance bridge, see doc comment above
-  return definition as unknown as TemplateDefinition;
 }
 
 /**

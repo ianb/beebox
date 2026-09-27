@@ -6,7 +6,7 @@ The schema system registers card types, provides template generators, and valida
 import { MemoSchema, createMemoTemplate } from "../src/schemas/memo.js";
 import { QuestionSchema, createSelectQuestionTemplate } from "../src/schemas/question.js";
 import { getCardTypes } from "../src/schemas.js";
-import { getDefaultTemplate } from "../src/templates-registry.js";
+import { getDefaultTemplate, getTemplate } from "../src/templates-registry.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate } from "../src/schemas/figure.js";
@@ -75,6 +75,19 @@ WebpageSchema.type
 ## Templates
 
 Template generators produce frontmatter card content for the core card types.
+
+Looking a template up (`getTemplate`/`getDefaultTemplate`, imported above with
+no side-effect `import "../src/templates.js"` alongside them) is sufficient to
+have every built-in registered — the store module loads the built-in groups
+itself:
+
+```ts
+getTemplate("memo")?.name
+=> memo
+
+getDefaultTemplate("recipe")?.name
+=> recipe
+```
 
 ## Memo
 

@@ -17,7 +17,7 @@ import {
   type QuestionLearningFields,
 } from "../schemas/question.js";
 import { getBoxTimeISO } from "../lib/time.js";
-import { eraseTemplateArgs, type TemplateDefinition } from "../templates-registry.js";
+import { eraseTemplateArgs, type TemplateDefinition } from "../templates-shape.js";
 
 // The optional answer-contract fields every question template accepts, passed
 // straight through to the builders. Kept as one fragment so the three question

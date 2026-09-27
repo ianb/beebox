@@ -1,5 +1,5 @@
 import { REMAINING_SYSTEM_CARD_MIGRATION, SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, type SystemCardType } from "../shared/system-card-paths.js";
-import { eraseTemplateArgs, type TemplateDefinition } from "../templates-registry.js";
+import { eraseTemplateArgs, type TemplateDefinition } from "../templates-shape.js";
 import { z } from "zod";
 
 export function systemCardTemplate(type: SystemCardType): string {

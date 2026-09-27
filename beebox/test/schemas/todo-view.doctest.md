@@ -11,7 +11,6 @@ this schema.
 import { TodoViewSchema, createTodoViewTemplate } from "../../src/schemas/todo-view.js";
 import { getCardTypes } from "../../src/schemas.js";
 import { getDefaultTemplate } from "../../src/templates-registry.js";
-import "../../src/templates.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 

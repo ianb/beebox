@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { eraseTemplateArgs, type TemplateDefinition } from "../../templates-registry.js";
+import { eraseTemplateArgs, type TemplateDefinition } from "../../templates-shape.js";
 import {
   createMemoTemplate,
   createVoiceMemoTemplate,

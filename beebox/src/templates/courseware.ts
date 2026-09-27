@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { eraseTemplateArgs, type TemplateDefinition } from "../templates-registry.js";
+import { eraseTemplateArgs, type TemplateDefinition } from "../templates-shape.js";
 import { createConceptMapTemplate } from "../schemas/concept-map.js";
 import { createCourseTemplate } from "../schemas/course.js";
 import { createExpositionPlanTemplate } from "../schemas/exposition-plan.js";
