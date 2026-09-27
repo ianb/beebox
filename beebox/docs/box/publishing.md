@@ -5,8 +5,10 @@ read-when: Creating, preparing, reviewing, or changing a static site published f
 # Publishing a site from this box
 
 This guide covers sites authored under `src/publications/` and served as
-static files from an isolated publication origin. Read it before preparing or
-changing a publication. Shared authoring notes are in
+static files from this box's shared publishing hostname. Read it before
+preparing or changing a publication. Pages published by one box share a
+browser origin, storage, and script access by the boxholder's choice; treat
+them as mutually trusting. Shared authoring notes are in
 `src/publications/NOTES.md`; use the scope headings there when adding a lesson.
 
 ## Start with a publication folder
@@ -26,22 +28,24 @@ src/publications/
 ```
 
 For a new site, run `bbx pub id` to generate a fresh secure `pubId`; preserve
-that value in the definition across every refresh. Before writing the
-`connection` field, run `bbx pub connections` and use an active connection
-name listed as granted to this box. Do not guess a name, inspect machine
-secrets, or search private server configuration. If no connection is listed,
-ask the boxholder or Cloudflare administrator to grant one. `bbx pub prepare
-<name>` prepares the named folder. `bbx pub connections` lists active
-connections granted to this box; it never prints credentials. `bbx pub status`
-shows managed publication state and the box's connections; `bbx pub status
---legacy` explicitly requests the old Wrangler diagnostic. Without configured
-box-server credentials, managed status returns an error; run it through the
-configured box agent. Wrangler credentials are used only when the agent
-explicitly requests the legacy diagnostic. Server query errors do not fall
-back.
+that value in the definition across every refresh. Before creating sites,
+check `bbx pub connections` to see which Cloudflare connections are granted to
+this box. The boxholder or administrator selects one connection and one
+hostname for the box in **Admin → Cloudflare publishing**. This is a one-time
+box setup that can happen before the first site. Use the selected connection
+name in each new site's definition. Do not guess a name, inspect machine
+secrets, or search private server configuration. If there is no selected
+connection and hostname, ask for Admin setup. `bbx pub connections` lists
+active connections granted to this box; it never prints credentials.
+`bbx pub status` shows managed publication state and the box's connections;
+`bbx pub status --legacy` explicitly requests the old Wrangler diagnostic.
+Without configured box-server credentials, managed status returns an error;
+run it through the configured box agent. Wrangler credentials are used only
+when the agent explicitly requests the legacy diagnostic. Server query errors
+do not fall back.
 
 The definition chooses a content mode and requested audience. The server
-derives the source root, owning box, publication Worker, storage location, and
+derives the source root, owning box, shared Worker, storage location, and
 release id from trusted server state. Never add a bucket name, Worker name,
 host name, output path, access credential, arbitrary build command, or another
 box's id to the definition.
@@ -51,7 +55,7 @@ Example public static definition:
 ```json
 {
   "pubId": "abcdefghijklmnop2345672345",
-  "connection": "replace-with-a-name-from-bbx-pub-connections",
+  "connection": "replace-with-the-box-admin-selected-connection",
   "content": "static",
   "title": "Field guide",
   "tier": "public",
@@ -59,20 +63,22 @@ Example public static definition:
 }
 ```
 
-Replace the connection placeholder with the exact active granted name printed
-by `bbx pub connections`; the example value is not a configured connection.
-`pubId` is a stable, random base32 id assigned once; preserve it on every
-refresh and never copy the example id. `connection` must name a connection
-already granted to this box by a Cloudflare publishing administrator. It does
-not contain or grant credentials. The requested `tier` may be `public`,
-`secret`, `accounts`, or `any-account`. Public definitions may request a
-`slug`. Account-restricted definitions must list at least one normalized email
-in `emails`. Secret and any-account definitions do not take a slug or email
-list. A box member approves the actual audience and destination in the
-Publications area of the app.
+Replace the connection placeholder with the exact active name printed by
+`bbx pub connections` that the boxholder selected in Admin; the example value
+is not a configured connection. `pubId` is a stable, random base32 id assigned
+once; preserve it on every refresh and never copy the example id. `connection`
+must match this box's selected publishing connection. It does not contain or
+grant credentials. New managed account-restricted tiers remain disabled until
+a separate consent and security design. The requested `tier` may be `public`,
+`secret`, `accounts`, or `any-account`. Public definitions require an explicit
+`slug`. Secret definitions use the stable `pubId` path and do not take a slug
+or email list. A box member approves the actual audience and destination in
+the Publications area of the app.
 
 An incomplete or ungranted connection is an actionable setup error. Do not
-copy a credential from another box or work around a missing grant.
+copy a credential from another box or work around a missing grant. After
+preparing a new publication, give the boxholder the direct approval link
+printed by the CLI. A signed-in box member reviews and approves it in the app.
 
 ## Choose static files or a site project
 
@@ -84,10 +90,15 @@ does not need a `package.json`, lockfile, install, or build. The publisher
 copies the finished folder, scans it, and stages it for server-side upload.
 
 Use ordinary relative paths such as `./styles.css`, `./assets/logo.svg`, and
-`./details/`. These stay within the publication's release when its entry page
-is refreshed. A directory URL works only when that directory contains a
-published `index.html`; there is no SPA catch-all. Avoid root-absolute asset
-paths (`/assets/...`) because a publication can be mounted below a route prefix.
+`./details/`. Each page and asset request resolves to the active release at
+request time, so publishing an update can change what a later request returns.
+A directory URL works only when that directory contains a published
+`index.html`; there is no SPA catch-all. Each public site has its own
+explicit slug and URL at `https://<box-host>/<slug>/`; secret sites use
+`https://<box-host>/s/<pubId>/`. The `/s`, `/p`, `/a`, and Worker-owned
+`/__*` paths are reserved. Builds should use relative URLs or their explicit
+publication path prefix. Do not use a site root path such as `/assets/logo.svg`
+unless the site deliberately includes its publication prefix.
 
 ### Site project
 
@@ -219,7 +230,7 @@ export default defineConfig({
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>
 ```
@@ -524,72 +535,86 @@ box member to enable the site.
    capability, and shortening it makes the link unusable. Share a secret URL
    privately with its intended recipient; do not write it into shared notes,
    a public page, or a public issue. The output also prints a direct
-   Publications link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
-   available. Otherwise the line says to open this box's Publications page from
-   the app menu. Tell the boxholder to sign in to this box, open **Publications**
-   using the returned link or profile menu, select the named site, review its
-   requested audience and file/scan summary, then choose **Enable** or
-   **Approve**. The member's app action is required; no CLI command can enable
+   publication-card approval link when `BBX_SERVER_URL` and `BBX_BOX_NAME` are
+   available. Otherwise the line says to open this box's Publications area from
+   the app menu and choose the publication card. Tell the boxholder to sign in
+   to this box, open the linked publication card, review its requested audience
+   and file/scan summary, then choose **Enable** or **Approve**. The Publications
+   area links to existing cards and can create a missing reference card when
+   the member explicitly chooses that action. The member's app action is required; no CLI command can enable
    or approve it.
-3. For a first enable or scope change, the boxholder must review the title,
+2. For a first enable or scope change, the boxholder must review the title,
    destination, requested audience, emitted file summary, and leak-scan findings
    in the app. If a scan
    finding is real, remove the exposed material and prepare again. Do not wave
    through a suspected secret. An ordinary same-scope content refresh does not
    require a separate snapshot approval.
-4. A signed-in member of this box enables the publication in the app. That
+3. A signed-in member of this box enables the publication in the app. That
    action authorizes the requested audience and destination. Global
    administrators manage Cloudflare connections and per-box grants; they do
    not need to be the member who approves a site.
-5. After enablement, you may refresh content within the approved audience and
+4. After enablement, you may refresh content within the approved audience and
    destination. Any audience or destination change, including narrowing or
    widening recipients or changing a public slug, needs fresh approval from a
    signed-in member. A local build or scan failure before promotion leaves the
    current release active. If a remote write may have succeeded but its
    read-back/activation check fails, inspect `bbx pub status` and treat serving
    state as unknown; the publisher does not promise rollback.
-6. A signed-in box member can disable the publication in the app. Disablement
+5. A signed-in box member can disable the publication in the app. Disablement
    stops every release at the serving edge. Revocation is terminal; a disabled
    publication may be enabled again after its approval state is still valid.
 
 The app's safe summary/preview is text and metadata only; it never executes
-published JavaScript on the authenticated Bee Box origin. Content updates
-within an already-approved scope are allowed without a new member click. To
-inspect the actual site, use a local isolated preview or visit its separate
-published origin after enablement. If approval changes the destination or
-audience, old release URLs lose reachability under the previous approval.
+published JavaScript on the authenticated Bee Box origin. On the box's shared
+publishing hostname, however, every published page has the same browser
+origin. A page's scripts can read or change that origin's web storage and can
+make same-origin requests to other published paths, including secret-link
+paths whose PubId is known. The boxholder has explicitly chosen mutual trust
+among publications in one box. Do not put sensitive data in shared browser
+storage or rely on CORS to separate sites. Content updates within an
+already-approved scope are allowed without a new member click. To inspect the
+actual site, use a local preview or visit its published URL after enablement.
+If approval changes the destination or audience, the old route is no longer
+approved.
 
-## Custom hostnames
+## Shared hostname for this box
 
-A custom hostname is assigned by the authenticated Bee Box owner in **Admin →
-Cloudflare publishing → Assign a custom hostname**. Do not add a hostname to
-`publication.json` or try to assign one from the CLI. The form selects an
-existing disabled, prepared public or secret publication and uses its existing
-server-side Cloudflare connection. Assignment begins Cloudflare DNS and
-certificate changes immediately, even though the site remains disabled; it
-cannot be detached or changed in Bee Box v1. Bee Box also has no hostname
-reservation-release path: manually detaching the Cloudflare mapping does not
-free that hostname for another publication. If assignment becomes stuck,
-inspect the mapping and choose a different hostname for any new publication;
-do not promise that the reserved hostname can be reused.
-Before assignment, ask the owner to review existing DNS records and Workers
-Routes for that host. Bee Box checks for conflicting Worker Custom Domain
-assignments but does not inspect DNS records or Workers Routes.
+The authenticated Bee Box owner configures one hostname for the current box
+in **Admin → Cloudflare publishing** before the first site is prepared. The
+owner selects one active Cloudflare publishing connection already granted to
+this box and enters an exact hostname in a zone owned by that account. Setup
+creates or reuses this box and connection's R2 bucket, deploys the shared
+Worker, and attaches the hostname. The hostname serves paths for this box
+only; Bee Box does not route several boxes through one host. This hostname and
+connection cannot be changed from Admin in this version. Cloudflare DNS and
+certificate changes start when the owner submits the assignment, before any
+site is enabled. The owner should review existing DNS and Workers Routes
+first. A successful API mapping does not prove HTTPS is ready.
 
-The new destination is a candidate until a signed-in member of this box
-approves it in **Publications**. After approval, the agent can report the
-custom URL from `bbx pub status` or `bbx pub sites`; a member can also see it in
-**Publications**. Workers.dev remains an alternate. Preserve
-the whole secret URL including `/s/<pubId>/`. Do not treat the Admin
-assignment confirmation as proof that HTTPS is ready: Cloudflare may still be
-provisioning its certificate. If Cloudflare attachment is still marked
-pending, the publication stays disabled and the member cannot approve it yet.
-Tell the authenticated owner to retry the same reserved hostname from the Admin
-section; do not suggest another hostname on this publication or attempt to
-enable it from the CLI. If the reservation cannot be recovered, Bee Box v1 has
-no release path; a different hostname requires a different publication. If
-Cloudflare mapping must be inspected, ask the owner to do so; the box agent
-does not have Cloudflare access.
+The agent does not run CLI setup or assign a host. It checks
+`bbx pub connections`, uses the selected connection name in publication
+definitions, prepares the site, and gives the boxholder the `approval:` link
+printed by the CLI. A signed-in member reviews and approves the publication
+card opened by that link. Public sites require an explicit slug and use
+`https://<box-host>/<slug>/`; secret sites use
+`https://<box-host>/s/<pubId>/`. Preserve the complete secret path and share it
+privately. `/s`, `/p`, `/a`, and Worker-owned `__*` routes are reserved and
+cannot be public slugs.
+
+Existing per-publication `workers.dev` URLs and custom hostnames continue to
+serve their old routes. A publication can join the shared hostname only after
+the agent prepares it against this box's selected connection and a signed-in
+member approves the new destination. Publications on another granted
+connection remain on their current URLs; they are not silently moved. New
+publications use the per-box shared Worker and do not create a Worker per site.
+An existing public publication without a slug stays on its legacy Worker URL
+until you choose a slug and prepare it for the shared host; public shared-host
+routes require an explicit slug. Preparing a changed slug creates a candidate:
+the currently approved destination remains live until a signed-in member
+approves the candidate. Keep the current approved URL and the candidate URL
+distinct while review is pending. If the old per-publication Worker still has
+an active URL, the app and status output identify it separately from the
+shared-host destination.
 
 ## Private publication notes
 

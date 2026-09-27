@@ -34,7 +34,7 @@ export function parseAdminCardState(value: ViewState | null | undefined): AdminC
 
 /** The same state with a different tab open; arrival keys are untouched. */
 export function adminTabViewState(value: ViewState | null | undefined, tab: AdminTab): ViewState {
-  return { ...(value ?? {}), tab };
+  return { ...value, tab };
 }
 
 export function adminArrivalViewState(search: Record<string, unknown>): ViewState | null {

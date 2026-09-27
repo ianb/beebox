@@ -153,7 +153,7 @@ the manifest halves of `attachments-gitignore.ts`, `attachments.ts`,
 `to-annex.ts`, `write-cards.ts`, and `prepare.ts`.
 
 Docs and the fixture-declaration sweep are reported separately, not counted
-against the budget: `docs/assets.md`, `docs/box-layout.md`, install docs, and
+against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 the removal of ~50 now-redundant `annex: true` fixture declarations across nine
 doctest files (mechanical deletions, no logic).
 
@@ -264,7 +264,7 @@ write a record that nothing verifies at commit time.
 
 One external premise matters: whether `git annex init` on an empty repository is
 safe to make unconditional. `to-annex.ts:367` already calls it on real boxes and
-`docs/assets.md` documents the resulting shape, so the premise is established
+`docs/media/assets.md` documents the resulting shape, so the premise is established
 *inside* this repo and does not need an external search. The one external fact
 worth stating is that git-annex must be installed to be initialized and there is
 no pure-git fallback — which is exactly why the preflight is chunk 1 rather than
@@ -323,7 +323,7 @@ only outcome a fresh box can get.
    LFS is retired per `src/core/box/index.ts:186-196` — and gets corrected.
 
 **Vocabulary lock-ins.** None new. "Annex-shaped" and "manifest scheme" are the
-existing terms (`is-annex-box.ts`, `docs/assets.md`) and this plan does not add
+existing terms (`is-annex-box.ts`, `docs/media/assets.md`) and this plan does not add
 a third.
 
 **First implementation chunk.** `requireGitAnnex` plus its call in `runInit`,
@@ -480,7 +480,7 @@ the plan would ship a fixture claiming a shape nothing verifies.
 - **git-annex in deploy/provisioning docs** — Track 1 makes the binary
   mandatory, and grepping every `.md`/`.sh`/`Dockerfile` finds git-annex only in
   tests, `bin/lib/worktree-create.sh:354,367`, and a failure-mode table in
-  `docs/assets.md`. The install-docs addition ships with this plan (reported
+  `docs/media/assets.md`. The install-docs addition ships with this plan (reported
   separately from the budget); a full provisioning review does not.
 
 ## Open design questions
@@ -610,7 +610,7 @@ to guard against, and it is why the conversion came first this session. The
 residual case is a box arriving from outside the fleet. That meets the
 `invariant()` from step 6 — a hard failure, not a fallback — which is the
 whole point of deleting the scheme rather than accommodating it.
-9. **Docs: DONE.** `docs/assets.md` rewritten; historical docs that describe
+9. **Docs: DONE.** `docs/media/assets.md` rewritten; historical docs that describe
    the manifest scheme carry a per-document warning naming what is misleading
    in each; `developer-install.md` lists git-annex as a prerequisite.
    `docs/box-layout.md` needed nothing — its "manifest" mentions are the

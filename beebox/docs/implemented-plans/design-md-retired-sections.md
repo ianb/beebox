@@ -9,7 +9,7 @@ issues: []
 > **⚠ One stale pointer** (full-embrace-annex, 2026-09-14): the attach-scope
 > design did *not* survive as `asset-manifests.md`, which is now historical —
 > the manifest scheme is deleted. `.attach/` scopes themselves are live, with
-> their contents held by git-annex. Current model: [`assets.md`](../assets.md).
+> their contents held by git-annex. Current model: [`assets.md`](../media/assets.md).
 
 ---
 

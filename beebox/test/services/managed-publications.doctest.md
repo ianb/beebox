@@ -14,16 +14,14 @@ import { releaseIdForFiles, siteEdgeManifestSchema } from "../../src/publish/man
 import { publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { defaultManagedPublicationRuntime } from "../../src/services/managed-publication-runtime.js";
 import { prepareManagedPublication, readCandidate } from "../../src/publish/managed-publications.js";
-import { assignManagedPublicationHostname } from "../../src/publish/managed-publication-custom-domain.js";
 import { approveManagedPublication, disableManagedPublication, enableManagedPublication } from "../../src/publish/managed-publication-actions.js";
-import { previewManagedPublicationFile } from "../../src/publish/managed-publication-queries.js";
+import { listManagedPublications, previewManagedPublicationFile } from "../../src/publish/managed-publication-queries.js";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { publicationsRouter } from "../../src/webapp/trpc/routers/publications.js";
-import { withFileLock } from "../../src/lib/file-lock.js";
 import type { CloudflarePublishConnectionSummary } from "../../src/core/secrets/cloudflare-publish.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-const pubId = "abcdefghijklmnopqrstuvwxyz";
+let pubId = "abcdefghijklmnopqrstuvwxyz";
 const box = await makeTmpBox();
 const boxRoot = box.root;
 const releaseDir = path.join(boxRoot, "staged");
@@ -32,8 +30,11 @@ let source = "<h1>First</h1>";
 const store = createFakePublishStore();
 const provisioning = createFakeProvisioningClient({ accountSubdomain: "example-account" });
 let binding = null;
+const boxHost = { boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-test-host", hostHandle: "bbx-test-host", hostname: "sites.example.com", status: "attached", createdAt: "2026-09-24T00:00:00.000Z" };
 let connectionRows: CloudflarePublishConnectionSummary[] = [];
 let tier = "public";
+let slug = "demo";
+let includeSlug = true;
 const runtime = {
   ...defaultManagedPublicationRuntime,
   now: () => new Date(Date.UTC(2026, 8, 24, 0, 0)),
@@ -41,20 +42,24 @@ const runtime = {
   getBinding: async () => binding,
   reserveBinding: async (input) => (binding = { ...(binding ?? {}), ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
   listBindings: async () => binding === null ? [] : [{ ...binding, pubId }],
-  reserveHostname: async ({ hostname }) => (binding = { ...binding, customHostname: hostname, customHostnameStatus: "pending" }),
-  assignHostname: async ({ hostname }) => (binding = { ...binding, customHostname: hostname, customHostnameStatus: "attached" }),
-  findHostnameOwner: async (hostname) => binding?.customHostname === hostname ? { ...binding, pubId } : null,
+  getBoxHost: async () => boxHost,
   listConnections: async () => connectionRows,
   resolveCredential: async () => ({ accountId: "0123456789abcdef0123456789abcdef", apiToken: "placeholder" }),
   markCapability: async () => undefined,
   createStore: () => store,
   createProvisioning: () => provisioning,
   createWorkerDeployer: () => ({
-    deploy: async ({ scriptName, bucketName, pubId: deployedPubId, hostHandle, workerVersion }) => {
+    deploy: async ({ mode, scriptName, bucketName, pubId: deployedPubId, hostHandle, hostname, workerVersion }) => {
       provisioning.scripts.set(scriptName, { bindings: [
         { type: "r2_bucket", name: "PUB_STORE", bucketName },
-        { type: "plain_text", name: "PUB_ID", text: deployedPubId },
-        { type: "plain_text", name: "HOST_HANDLE", text: hostHandle },
+        ...(mode === "shared" ? [
+          { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
+          { type: "plain_text", name: "PUB_BOX_HANDLE", text: hostHandle },
+          { type: "plain_text", name: "PUB_HOSTNAME", text: hostname },
+        ] : [
+          { type: "plain_text", name: "PUB_ID", text: deployedPubId },
+          { type: "plain_text", name: "HOST_HANDLE", text: hostHandle },
+        ]),
         { type: "plain_text", name: "PUB_WORKER_VERSION", text: workerVersion },
       ] });
     },
@@ -65,7 +70,7 @@ const runtime = {
     await writeFile(path.join(releaseDir, "index.html"), bytes);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const files = { "index.html": { bytes: bytes.length, sha256 } };
-    const definition = publicationDefinitionSchema.parse({ pubId, connection: "main", content: "static", title: name, tier, ...(tier === "public" ? { slug: "demo" } : {}), ...(tier === "accounts" ? { emails: ["member@example.com"] } : {}) });
+    const definition = publicationDefinitionSchema.parse({ pubId, connection: "main", content: "static", title: name, tier, ...(tier === "public" && includeSlug ? { slug } : {}), ...(tier === "accounts" ? { emails: ["member@example.com"] } : {}) });
     return { ok: true, prepared: {
       definition, pubId, contentHash: await releaseIdForFiles(files), stagedDir: releaseDir,
       files: [{ path: "index.html", bytes: bytes.length, sha256 }],
@@ -75,14 +80,22 @@ const runtime = {
     } };
   },
 };
+const sharedWorkerVersion = createHash("sha256").update(await runtime.workerBundle()).digest("hex");
+provisioning.scripts.set("bbx-test-host", { bindings: [
+  { type: "r2_bucket", name: "PUB_STORE", bucketName: "box-bucket" },
+  { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
+  { type: "plain_text", name: "PUB_BOX_HANDLE", text: "bbx-test-host" },
+  { type: "plain_text", name: "PUB_HOSTNAME", text: "sites.example.com" },
+  { type: "plain_text", name: "PUB_WORKER_VERSION", text: sharedWorkerVersion },
+] });
 const noBus = { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} };
-function publicationCaller(actor, authenticatedOwner = actor === "user") {
+function publicationCaller(actor, authenticatedOwner = actor === "user", boxSlug = "box-a", injectedRuntime = runtime) {
   const user = actor === "user" ? { email: "member@example.com", name: "Member" } : null;
   return appRouter.createCaller({
     boxRoot,
-    boxSlug: "box-a",
+    boxSlug,
     eventBus: noBus,
-    services: { managedPublicationRuntime: runtime },
+    services: { managedPublicationRuntime: injectedRuntime },
     user,
     authed: true,
     isOwner: actor === "user",
@@ -131,6 +144,51 @@ JSON.stringify({ stale, disabled: disabled.status, enabled: enabled.status })
 => {"stale":true,"disabled":"disabled","enabled":"live"}
 ```
 
+The explicit card ensure action is member-only, idempotent, and returns the
+canonical card route. Listing detects the card without creating it.
+
+```ts continue
+const beforeCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
+const firstCard = await publicationCaller("user").publications.ensureCard({ pubId });
+const secondCard = await publicationCaller("user").publications.ensureCard({ pubId });
+const agentCard = await Promise.resolve()
+  .then(() => publicationCaller("agent").publications.ensureCard({ pubId }))
+  .then(() => "allowed", (error) => error.code);
+const afterCard = await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime);
+JSON.stringify({
+  before: beforeCard.sites[0]?.hasCard,
+  created: firstCard.created,
+  repeated: secondCard.created,
+  path: firstCard.cardPath,
+  url: firstCard.approvalUrl,
+  listed: afterCard.sites[0]?.hasCard,
+  agentCard,
+})
+=> {"before":false,"created":true,"repeated":false,"path":"_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","url":"/box-a/views/_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card","listed":true,"agentCard":"FORBIDDEN"}
+```
+
+A mismatched reference card fails before binding reservation or remote writes.
+
+```ts continue
+const collisionCardPath = `_content/publications/${pubId}.publication.card`;
+await writeFile(box.path(collisionCardPath), "---\ntitle: Wrong publication\npubId: bcdefghijklmnopqrstuvwxyz2\n---\n");
+let bindingReserved = false;
+const collisionRuntime = {
+  ...runtime,
+  getBinding: async () => null,
+  reserveBinding: async (input) => {
+    bindingReserved = true;
+    return { ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt };
+  },
+};
+const putsBeforeCollision = store.puts.length;
+const collisionError = await Promise.resolve()
+  .then(() => publicationCaller("user", true, "box-a", collisionRuntime).publications.prepare({ name: "home" }))
+  .then(() => "prepared", (error) => error.message);
+JSON.stringify({ actionable: collisionError.includes(collisionCardPath) && collisionError.includes("Move or rename"), bindingReserved, remoteWrites: store.puts.length - putsBeforeCollision })
+=> {"actionable":true,"bindingReserved":false,"remoteWrites":0}
+```
+
 Agent and open contexts cannot change serving state; a signed-in member can.
 
 ```ts continue
@@ -174,10 +232,23 @@ manifest until a member approves that exact candidate.
 
 ```ts continue
 tier = "secret";
+connectionRows = [{ name: "main", accountId: "0123456789abcdef0123456789abcdef", credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] }];
 const changed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
 const remainsPublic = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
 JSON.stringify({ approvedTier: remainsPublic.tier, approvedReleaseStillLive: remainsPublic.activeRelease.id === candidate.releaseId, pendingTier: changed.requestedScope.tier })
 => {"approvedTier":"public","approvedReleaseStillLive":true,"pendingTier":"secret"}
+```
+
+Enabling follows the active manifest's approved route even while a pending
+candidate requests a different tier and path.
+
+```ts continue
+await enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
+const activeWithOtherCandidate = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
+const activeMarker = JSON.parse(new TextDecoder().decode(await store.get(`shared-routes/${pubId}/route.json`)));
+const listedWithOtherCandidate = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
+JSON.stringify({ status: activeWithOtherCandidate.status, tier: activeWithOtherCandidate.tier, markerPath: activeMarker.path, reportedRoute: listedWithOtherCandidate.sharedRoute, pendingTier: listedWithOtherCandidate.pending.requestedScope.tier })
+=> {"status":"live","tier":"public","markerPath":"/demo/","reportedRoute":{"hostname":"sites.example.com","path":"/demo/"},"pendingTier":"secret"}
 ```
 
 Account approval fails closed until Access is actually verified.
@@ -262,104 +333,205 @@ JSON.stringify({ writeFailure, stillLive: afterFailedWrite.status === "live" })
 => {"writeFailure":true,"stillLive":true}
 ```
 
-Hostname assignment is owner-only and remains disabled if Cloudflare's attach
-response is lost. Retrying the same host reads back the exact mapping before
-the candidate can be approved.
+Shared-host approval enrolls the publication with an exact route marker and, for
+public sites, a slug pointer. Every refresh remains gated by the approved marker.
 
 ```ts continue
+const marker = JSON.parse(new TextDecoder().decode(await store.get(`shared-routes/${pubId}/route.json`)));
+const slugPointer = new TextDecoder().decode(await store.get("slugs/demo"));
+JSON.stringify({ markerVersion: marker.schemaVersion, markerPub: marker.pubId, markerHost: marker.hostname, markerPath: marker.path, markerManifestHost: marker.manifestHostHandle, slugPointer })
+=> {"markerVersion":1,"markerPub":"abcdefghijklmnopqrstuvwxyz","markerHost":"sites.example.com","markerPath":"/demo/","markerManifestHost":"bbx-test-host","slugPointer":"abcdefghijklmnopqrstuvwxyz"}
+```
+
+A public-path collision blocks approval before changing the live manifest. Disable
+keeps the routing marker and pointer; the live manifest controls whether they
+serve.
+
+```ts continue
+const beforeCollision = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
+await store.put("pubs/zyxwvutsrqponmlkjihgfedcba/manifest.json", { body: JSON.stringify({ ...beforeCollision, hostHandle: "bbx-other-host", status: "live" }) });
+await store.put("slugs/demo", { body: "zyxwvutsrqponmlkjihgfedcba" });
+const collisionRejected = await Promise.resolve()
+  .then(() => approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: afterDisable.revision }, runtime))
+  .then(() => false, (error) => error.message.includes("already assigned"));
+const afterCollision = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
+await store.put("slugs/demo", { body: pubId });
+await store.delete("pubs/zyxwvutsrqponmlkjihgfedcba/manifest.json");
 await disableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
-provisioning.zones.push({ id: "zone-1", name: "example.com", status: "active", accountId: "0123456789abcdef0123456789abcdef" });
-const unauthorizedAssignment = await Promise.resolve()
-  .then(() => publicationCaller("user", false).publications.assignCustomHostname({ pubId, hostname: "site.example.com" }))
-  .then(() => "allowed", (error) => error.code);
-const agentAssignment = await Promise.resolve()
-  .then(() => publicationCaller("agent").publications.assignCustomHostname({ pubId, hostname: "site.example.com" }))
-  .then(() => "allowed", (error) => error.code);
-provisioning.zones.push({ id: "zone-specific", name: "site.example.com", status: "active", accountId: "0123456789abcdef0123456789abcdef" });
-const rejectedHostnames = [];
-for (const hostname of ["no-zone.invalid", "site.inactive.test", "site.other.net"]) {
-  if (hostname === "site.inactive.test") provisioning.zones.push({ id: "zone-inactive", name: "inactive.test", status: "pending", accountId: "0123456789abcdef0123456789abcdef" });
-  if (hostname === "site.other.net") provisioning.zones.push({ id: "zone-other", name: "other.net", status: "active", accountId: "ffffffffffffffffffffffffffffffff" });
-  rejectedHostnames.push(await Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname }, runtime)).then(() => false, () => binding.customHostname === undefined));
-}
-provisioning.workerDomains.push({ id: "conflict", hostname: "conflict.example.com", service: "another-worker", environment: "production", zoneId: "zone-1", zoneName: "example.com" });
-const customDomainConflictRejected = await Promise.resolve()
-  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "conflict.example.com" }, runtime))
-  .then(() => false, (error) => error.message.includes("another Worker")) && binding.customHostname === undefined;
-provisioning.workerDomains.pop();
-const scriptBindingChecks = ["PUB_ID", "HOST_HANDLE", "PUB_STORE"].map((name) => {
-  const item = provisioning.scripts.get("bbx-test-host").bindings.find((row) => row.name === name);
-  const original = item.text ?? item.bucketName;
-  if (name === "PUB_STORE") item.bucketName = "another-bucket";
-  else item.text = "another-publication";
-  return Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime))
-    .then(() => false, () => binding.customHostname === undefined)
-    .finally(() => { if (name === "PUB_STORE") item.bucketName = original; else item.text = original; });
-});
-const identityMismatchesRejected = (await Promise.all(scriptBindingChecks)).every(Boolean);
-let racingEnableResult;
-let racingBindingReads = 0;
-const racingRuntime = { ...runtime, getBinding: async () => { racingBindingReads += 1; return binding; } };
-const pubLockPath = path.join(boxRoot, ".beebox", "publish-locks", `${pubId}.lock`);
-await withFileLock({ lockPath: pubLockPath, metadata: { purpose: "doctest-enable-race", pubId }, waitMs: 1_000 }, async () => {
-  racingEnableResult = enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, racingRuntime)
-    .then(() => "allowed", (error) => error.message);
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  binding = { ...binding, customHostname: "site.example.com", customHostnameStatus: "pending" };
-});
-const staleEnable = await racingEnableResult;
-binding = { ...binding, customHostname: undefined, customHostnameStatus: undefined };
-const deployedScript = provisioning.scripts.get("bbx-test-host");
-const versionBinding = deployedScript.bindings.find((item) => item.name === "PUB_WORKER_VERSION");
-const currentWorkerVersion = versionBinding.text;
-versionBinding.text = "old-worker-version";
-const staleWorkerRejected = await Promise.resolve()
-  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime))
-  .then(() => false, () => true);
-versionBinding.text = currentWorkerVersion;
-const staleWorkerHadNoSideEffects = binding.customHostname === undefined && provisioning.ops.every((op) => !op.startsWith("attach-domain:"));
-const originalAttach = provisioning.attachWorkerDomain.bind(provisioning);
-let loseAttachResponse = true;
-provisioning.attachWorkerDomain = async (args) => {
-  const result = await originalAttach(args);
-  if (loseAttachResponse) { loseAttachResponse = false; throw new Error("response timed out"); }
-  return result;
+JSON.stringify({ collisionRejected, manifestUnchanged: afterCollision.status === beforeCollision.status, markerRetained: (await store.get(`shared-routes/${pubId}/route.json`)) !== null, pointerRetained: new TextDecoder().decode(await store.get("slugs/demo")) === pubId, disabled: siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`)))).status })
+=> {"collisionRejected":true,"manifestUnchanged":true,"markerRetained":true,"pointerRetained":true,"disabled":"disabled"}
+```
+
+After an approved slug changes, its old pointer is harmless because the live
+manifest no longer claims that path. A second publication can then claim it.
+
+```ts continue
+slug = "moved";
+const moved = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
+await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: moved.revision }, runtime);
+const oldPointerRemains = new TextDecoder().decode(await store.get("slugs/demo")) === pubId;
+const movedManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
+const oldPathInert = movedManifest.slug !== "demo";
+pubId = "zyxwvutsrqponmlkjihgfedcba";
+binding = null;
+slug = "demo";
+const reclaimed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "other", ownerEmail: null }, runtime);
+await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: reclaimed.revision }, runtime);
+JSON.stringify({ oldPointerRemains, oldPathInert, reclaimedBy: new TextDecoder().decode(await store.get("slugs/demo")) })
+=> {"oldPointerRemains":true,"oldPathInert":true,"reclaimedBy":"zyxwvutsrqponmlkjihgfedcba"}
+```
+
+The old per-publication hostname assignment procedure is no longer available;
+legacy hostname fields remain readable for existing bindings and Worker URLs.
+
+Admin shared-host setup is owner-only. It reserves the mapping, creates a fresh
+bucket, deploys a versioned Worker with disabled aliases, attaches the hostname,
+and verifies Cloudflare readback. Retrying an attached mapping is idempotent;
+renaming it is refused before another provider mutation.
+
+```ts continue
+const adminProvisioning = createFakeProvisioningClient({ zones: [{ id: "config-zone", name: "example.org", status: "active", accountId: "0123456789abcdef0123456789abcdef" }] });
+let adminMapping = null;
+let adminDeploys = 0;
+const configRuntime = {
+  ...runtime,
+  getBoxHost: async (requestedBox) => requestedBox === "box-config" ? adminMapping : null,
+  listBindings: async () => [],
+  reserveBoxHost: async (input) => {
+    if (adminMapping !== null && (adminMapping.hostname !== input.hostname || adminMapping.connectionName !== input.connectionName)) throw new Error("This box already has a shared publishing hostname and connection. Bee Box cannot rename or move it.");
+    adminMapping ??= { ...input, accountId: "0123456789abcdef0123456789abcdef", status: "pending" };
+    return { boxSlug: input.boxSlug, ...adminMapping };
+  },
+  attachBoxHost: async (input) => {
+    if (adminMapping === null || adminMapping.hostname !== input.hostname) throw new Error("mapping changed");
+    adminMapping.status = "attached";
+    return { boxSlug: input.boxSlug, ...adminMapping };
+  },
+  createProvisioning: () => adminProvisioning,
+  createWorkerDeployer: () => ({ deploy: async (input) => {
+    adminDeploys += 1;
+    adminProvisioning.scripts.set(input.scriptName, { bindings: [
+      { type: "r2_bucket", name: "PUB_STORE", bucketName: input.bucketName },
+      { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
+      { type: "plain_text", name: "PUB_BOX_HANDLE", text: input.hostHandle },
+      { type: "plain_text", name: "PUB_HOSTNAME", text: input.hostname },
+      { type: "plain_text", name: "PUB_WORKER_VERSION", text: input.workerVersion },
+    ] });
+  } }),
 };
-const hostnameRaceOriginalBundle = runtime.workerBundle;
-let assignmentDuringPrepare = false;
-const racingPrepareRuntime = { ...runtime, workerBundle: async () => {
-  if (!assignmentDuringPrepare) {
-    assignmentDuringPrepare = true;
-    await Promise.resolve().then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "site.example.com" }, runtime)).catch(() => undefined);
-  }
-  return hostnameRaceOriginalBundle();
-} };
-const prepareAssignmentRace = await Promise.resolve()
-  .then(() => prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, racingPrepareRuntime))
-  .then(() => false, () => true);
-const pendingCandidate = await readCandidate(store, pubId);
-const pendingStatus = binding.customHostnameStatus;
-const prepareRacePreservedHostname = pendingCandidate.requestedScope.customHostname === "site.example.com";
-const secondPubId = "zyxwvutsrqponmlkjihgfedcba";
-const secondBinding = { ...binding, pubId: secondPubId, boxSlug: "box-b", hostHandle: "bbx-second-host", workerName: "bbx-second-host", customHostname: undefined, customHostnameStatus: undefined };
-const duplicateRuntime = { ...runtime, getBinding: async ({ pubId: requestedPubId }) => requestedPubId === secondPubId ? secondBinding : binding };
-const crossPublicationDuplicateRejected = await Promise.resolve()
-  .then(() => assignManagedPublicationHostname({ boxRoot, boxSlug: "box-b", pubId: secondPubId, hostname: "site.example.com" }, duplicateRuntime))
-  .then(() => false, (error) => error.message.includes("already assigned to another"));
-const pendingApproval = await Promise.resolve()
-  .then(() => approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: pendingCandidate.revision }, runtime))
+const adminCaller = (actor, authenticatedOwner = actor === "user") => publicationCaller(actor, authenticatedOwner, "box-config", configRuntime);
+const unauthorizedSetup = await Promise.resolve()
+  .then(() => adminCaller("user", false).publications.configureSharedHost({ connectionName: "main", hostname: "sites.example.org" }))
+  .then(() => "allowed", (error) => error.code);
+const setup = await adminCaller("user").publications.configureSharedHost({ connectionName: "main", hostname: "Sites.Example.org." });
+const retriedSetup = await adminCaller("user").publications.configureSharedHost({ connectionName: "main", hostname: "sites.example.org" });
+const renamedHost = await Promise.resolve()
+  .then(() => adminCaller("user").publications.configureSharedHost({ connectionName: "main", hostname: "other.example.org" }))
   .then(() => "allowed", (error) => error.message);
-const pendingEnable = await Promise.resolve()
-  .then(() => enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime))
+JSON.stringify({ unauthorizedSetup, setup, retryStatus: retriedSetup.status, renameRejected: renamedHost.includes("cannot rename"), deploys: adminDeploys, attachments: adminProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length, aliases: adminProvisioning.scriptSubdomains.get("bbx-test-host") })
+=> {"unauthorizedSetup":"FORBIDDEN","setup":{"hostname":"sites.example.org","connectionName":"main","status":"attached"},"retryStatus":"attached","renameRejected":true,"deploys":1,"attachments":1,"aliases":{"enabled":false,"previewsEnabled":false}}
+```
+
+Shared-host setup fails closed on a conflicting route or missing readback. A
+retry after Cloudflare attached the exact route but its response was lost
+recognizes that route without attaching it twice.
+
+```ts continue
+function setupScenario(boxSlug, provisioning) {
+  let mapping = null;
+  let deploys = 0;
+  const scenarioRuntime = {
+    ...configRuntime,
+    newHostHandle: () => `${boxSlug}-host`,
+    getBoxHost: async (requestedBox) => requestedBox === boxSlug ? mapping : null,
+    reserveBoxHost: async (input) => {
+      mapping ??= { ...input, accountId: "0123456789abcdef0123456789abcdef", status: "pending" };
+      return { boxSlug: input.boxSlug, ...mapping };
+    },
+    attachBoxHost: async (input) => {
+      if (mapping === null || mapping.hostname !== input.hostname) throw new Error("mapping changed");
+      mapping.status = "attached";
+      return { boxSlug: input.boxSlug, ...mapping };
+    },
+    createProvisioning: () => provisioning,
+    createWorkerDeployer: () => ({ deploy: async (input) => {
+      deploys += 1;
+      provisioning.scripts.set(input.scriptName, { bindings: [
+        { type: "r2_bucket", name: "PUB_STORE", bucketName: input.bucketName },
+        { type: "plain_text", name: "PUB_WORKER_MODE", text: "shared-v1" },
+        { type: "plain_text", name: "PUB_BOX_HANDLE", text: input.hostHandle },
+        { type: "plain_text", name: "PUB_HOSTNAME", text: input.hostname },
+        { type: "plain_text", name: "PUB_WORKER_VERSION", text: input.workerVersion },
+      ] });
+    } }),
+  };
+  return { mapping: () => mapping, deploys: () => deploys, caller: () => publicationCaller("user", true, boxSlug, scenarioRuntime) };
+}
+const zones = [{ id: "config-zone", name: "example.org", status: "active", accountId: "0123456789abcdef0123456789abcdef" }];
+const conflictProvisioning = createFakeProvisioningClient({ zones, workerDomains: [{ id: "foreign", hostname: "conflict.example.org", service: "another-worker", environment: "production", zoneId: "config-zone", zoneName: "example.org" }] });
+const conflictSetup = setupScenario("box-conflict", conflictProvisioning);
+const conflictError = await Promise.resolve()
+  .then(() => conflictSetup.caller().publications.configureSharedHost({ connectionName: "main", hostname: "conflict.example.org" }))
   .then(() => "allowed", (error) => error.message);
-const retried = await assignManagedPublicationHostname({ boxRoot, boxSlug: "box-a", pubId, hostname: "SITE.example.com." }, runtime);
-const attachedCandidate = await readCandidate(store, pubId);
-await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: attachedCandidate.revision }, runtime);
-const approvedHostname = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`)))).customHostname;
-source = "<h1>Refreshed</h1>";
-const refreshedWithHostname = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "home", ownerEmail: null }, runtime);
-JSON.stringify({ unauthorizedAssignment, agentAssignment, rejectedHostnames, customDomainConflictRejected, identityMismatchesRejected, crossPublicationDuplicateRejected, staleWorkerRejected, staleWorkerHadNoSideEffects, racingEnableBlocked: staleEnable !== "allowed", readsAfterLock: racingBindingReads, prepareAssignmentRace, prepareRacePreservedHostname, pending: pendingStatus, candidateHost: "customHostname" in pendingCandidate.requestedScope ? pendingCandidate.requestedScope.customHostname : null, approvalBlocked: pendingApproval.includes("not confirmed"), enableBlocked: pendingEnable !== "allowed", retried: retried.hostname, attached: binding.customHostnameStatus, approvedHostname, refreshRetainsHostname: refreshedWithHostname.requestedScope.customHostname === "site.example.com", assignedZone: provisioning.workerDomains.find((item) => item.hostname === "site.example.com").zoneId, attachCalls: provisioning.ops.filter((op) => op.startsWith("attach-domain:")).length })
-=> {"unauthorizedAssignment":"FORBIDDEN","agentAssignment":"FORBIDDEN","rejectedHostnames":[true,true,true],"customDomainConflictRejected":true,"identityMismatchesRejected":true,"crossPublicationDuplicateRejected":true,"staleWorkerRejected":true,"staleWorkerHadNoSideEffects":true,"racingEnableBlocked":true,"readsAfterLock":1,"prepareAssignmentRace":true,"prepareRacePreservedHostname":true,"pending":"pending","candidateHost":"site.example.com","approvalBlocked":true,"enableBlocked":true,"retried":"site.example.com","attached":"attached","approvedHostname":"site.example.com","refreshRetainsHostname":true,"assignedZone":"zone-specific","attachCalls":1}
+
+const missingReadbackProvisioning = createFakeProvisioningClient({ zones });
+missingReadbackProvisioning.listWorkerDomains = async () => [];
+missingReadbackProvisioning.attachWorkerDomain = async (input) => ({ id: "not-readable", ...input, environment: "production" });
+const missingReadback = setupScenario("box-readback", missingReadbackProvisioning);
+const missingReadbackError = await Promise.resolve()
+  .then(() => missingReadback.caller().publications.configureSharedHost({ connectionName: "main", hostname: "readback.example.org" }))
+  .then(() => "allowed", (error) => error.message);
+
+const lostResponseProvisioning = createFakeProvisioningClient({ zones });
+const attachDomain = lostResponseProvisioning.attachWorkerDomain.bind(lostResponseProvisioning);
+let loseResponse = true;
+lostResponseProvisioning.attachWorkerDomain = async (input) => {
+  const attached = await attachDomain(input);
+  if (loseResponse) { loseResponse = false; throw new Error("provider response lost"); }
+  return attached;
+};
+const lostResponse = setupScenario("box-lost-response", lostResponseProvisioning);
+const firstAttempt = await Promise.resolve()
+  .then(() => lostResponse.caller().publications.configureSharedHost({ connectionName: "main", hostname: "lost-response.example.org" }))
+  .then(() => "attached", () => "pending");
+const secondAttempt = await lostResponse.caller().publications.configureSharedHost({ connectionName: "main", hostname: "lost-response.example.org" });
+
+const legacyScript = { bindings: [{ type: "plain_text", name: "PUB_ID", text: "legacy-publication" }] };
+adminProvisioning.scripts.set("legacy-worker-sentinel", legacyScript);
+const beforeRepairAttachments = adminProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length;
+const changedBundleRuntime = { ...configRuntime, workerBundle: async () => new TextEncoder().encode("updated shared worker") };
+await publicationCaller("user", true, "box-config", changedBundleRuntime).publications.configureSharedHost({ connectionName: "main", hostname: "sites.example.org" });
+JSON.stringify({
+  conflictRefused: conflictError.includes("routes this hostname to another Worker"), conflictAttaches: conflictProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length,
+  missingReadbackFailed: missingReadbackError.includes("did not confirm"), missingReadbackStatus: missingReadback.mapping().status,
+  lostResponseFirstAttempt: firstAttempt, retryStatus: secondAttempt.status, retryAttaches: lostResponseProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length,
+  staleBundleRedeployed: adminDeploys === 2, repairDidNotReattach: adminProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length === beforeRepairAttachments,
+  legacyScriptUnchanged: JSON.stringify(adminProvisioning.scripts.get("legacy-worker-sentinel")) === JSON.stringify(legacyScript),
+})
+=> {"conflictRefused":true,"conflictAttaches":0,"missingReadbackFailed":true,"missingReadbackStatus":"pending","lostResponseFirstAttempt":"pending","retryStatus":"attached","retryAttaches":1,"staleBundleRedeployed":true,"repairDidNotReattach":true,"legacyScriptUnchanged":true}
+```
+
+A selected-connection legacy public publication without a slug can still
+refresh and receive member approval on its existing Worker URL. It does not
+silently join the shared host until the definition opts in with a slug.
+
+```ts continue
+const legacyPubId = "234567abcdefghijklmnopqrst";
+pubId = legacyPubId;
+includeSlug = false;
+const legacyBinding = { pubId: legacyPubId, boxSlug: "box-a", connectionName: "main", accountId: "0123456789abcdef0123456789abcdef", bucketName: "box-bucket", workerName: "bbx-legacy-worker", hostHandle: "bbx-legacy-host", createdAt: "2026-09-24T00:00:00.000Z" };
+const legacyRuntime = {
+  ...runtime,
+  getBinding: async () => legacyBinding,
+  reserveBinding: async () => legacyBinding,
+  listBindings: async () => [legacyBinding],
+};
+const legacyCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", name: "legacy", ownerEmail: null }, legacyRuntime);
+const legacyScope = legacyCandidate.requestedScope;
+await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId: legacyPubId, expectedRevision: legacyCandidate.revision }, legacyRuntime);
+const legacySite = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, legacyRuntime)).sites[0];
+JSON.stringify({ hasSharedScope: "sharedHost" in legacyScope, status: legacySite.approved?.status ?? null, legacyAlias: legacySite.hostname })
+=> {"hasSharedScope":false,"status":"live","legacyAlias":"bbx-legacy-host.example-account.workers.dev"}
 ```
 
 ```ts teardown

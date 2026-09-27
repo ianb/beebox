@@ -17,13 +17,18 @@
  * heading and every pointer to it through this constant.
  */
 export const SECTION = {
-  // The Laws — inviolable, first in the guide.
+  // Grouped by the guide's axis (index.ts): laws → how to speak → cards →
+  // where things are → how to act → how to cite → where to record → who you
+  // are. Groups with no named section yet (how to speak, where things are,
+  // how to act, where to record, who you are) have no entries here.
+
+  // Laws — inviolable, first in the guide.
   LAWS: "THE_LAWS",
   LAW_OF_QUOTING: "THE_LAW_OF_QUOTING",
   LAW_OF_SAVING: "THE_LAW_OF_SAVING",
   LAW_OF_CARDS: "THE_LAW_OF_CARDS",
 
-  // Cards — the canonical concept surface, its catalogue, and asking the user.
+  // Cards — the canonical concept surface, its catalogue, asking the user, and todos.
   ABOUT_CARDS: "ABOUT_CARDS",
   CARD_TYPES: "CARD_TYPES",
   QUESTIONS: "QUESTIONS",
@@ -34,6 +39,8 @@ export const SECTION = {
 
   // Output vocabulary — verbatim quotes and provenance (the `ref`/`href` home).
   DIRECT_QUOTES: "DIRECT_QUOTES",
+
+  // How to cite — the `{% quote %}` / `{% source %}` pointer (mechanics in box-docs/provenance.md).
   PROVENANCE: "PROVENANCE",
 } as const;
 

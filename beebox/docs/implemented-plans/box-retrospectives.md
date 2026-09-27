@@ -416,7 +416,7 @@ the procedure does — purely infrastructural).
    card escalation, body-rewrite rule, report "Actions" section), validate
    phase. Install into test1; first real runs.
 4. **Trigger + docs + audits** — scheduled-script template
-   (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+   (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
    glossary entries, the two knowledge-audit entries, `src/dev/CLAUDE.md`
    untouched (this is runtime, not a dev script).
 

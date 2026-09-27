@@ -11,7 +11,7 @@ issues: []
 > stages the bytes and git-annex holds them. The `tmp-capture` ignore glob and
 > its `!…/manifest.json` negation still exist in the box `.gitignore`, so the
 > rules quoted below are real, but the manifest they exempt is never written.
-> Current model: [`../assets.md`](../assets.md).
+> Current model: [`../assets.md`](../media/assets.md).
 
 Status: PROPOSAL (measurement done; Codex-reviewed 2026-08-04 — this revision
 incorporates its findings; design awaiting boxholder review)

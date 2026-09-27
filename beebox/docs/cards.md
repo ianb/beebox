@@ -17,4 +17,4 @@ frontmatter and, when its schema allows, a markdown body. One page per member.
 - Where cards live on disk: [box layout](box-layout.md).
 - What each built-in card type means to a box agent: the generated `card-<type>.md` docs a box installs; sources are each schema's `instructions`.
 - Rules for editing schemas: `src/schemas/CLAUDE.md`, the agent file beside them.
-- Media that cards attach: [assets](assets.md).
+- Media that cards attach: [assets](media/assets.md).

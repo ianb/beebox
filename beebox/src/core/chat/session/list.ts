@@ -147,11 +147,17 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
  */
 async function readCodexThreads(
   boxRoot: string,
-  cwds: string[],
+  codexHusks: ChatHuskEntry[],
 ): Promise<Map<string, CodexThreadMetadata> | null> {
-  if (cwds.length === 0) return new Map();
+  if (codexHusks.length === 0) return new Map();
+  // Contained, like every other resolution of a husk's `context-dir`: the
+  // field is a card value, and an escaping one reads from the box root.
+  const cwds = new Set(codexHusks.map((husk) => containedSessionCwd(boxRoot, husk.contextDir)));
   try {
-    return await listCodexThreadMetadata(boxRoot, [...new Set(cwds)]);
+    return await listCodexThreadMetadata(boxRoot, {
+      cwds: [...cwds],
+      expectedIds: codexHusks.map((husk) => husk.session),
+    });
   } catch (error) {
     console.warn("[chat] codex thread metadata unavailable; omitting this box's codex chats:", error);
     return null;
@@ -173,12 +179,10 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
       historyEngine: historyById.get(husk.session)?.engine ?? null,
     })] as const,
   }));
-  const codexCwds = husks
-    .filter((husk) => engines.get(husk.session) === "codex")
-    // Contained, like every other resolution of a husk's `context-dir`: the
-    // field is a card value, and an escaping one reads from the box root.
-    .map((husk) => containedSessionCwd(boxRoot, husk.contextDir));
-  const codexThreads = await readCodexThreads(boxRoot, codexCwds);
+  const codexThreads = await readCodexThreads(
+    boxRoot,
+    husks.filter((husk) => engines.get(husk.session) === "codex"),
+  );
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
     map: (husk) => resolveHusk({

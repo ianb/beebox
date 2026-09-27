@@ -117,7 +117,7 @@ subsection).
    by one member: that member's file. About choosing among members: the
    parent. Used across subjects: its own subject, pointed to by the others.
    Tie-breaker between a subject owner and a cross-cutting catalog
-   ([maintenance](maintenance.md), `schedules/`): the subject owns *what* and
+   ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
    *how*; the catalog owns *when* and is an index of pointers; when the catalog
    is derived from code (`bin/schedules list`), the code is the home.
 8. **The parent is an index plus what is true of the whole.** Scope, the axis,

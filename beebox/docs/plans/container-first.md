@@ -152,7 +152,7 @@ Reused as is:
   `pandoc`, `magick`, `poppler-utils`, `xlsx2csv`/`openpyxl`, and `fclones`
   are *"Always available on the box host"*. Both image architectures must
   honor it.
-- **git-annex, not LFS.** `docs/assets.md:10` (*"no LFS, `annex.thin=false`"*)
+- **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
   and `:193` (the shipped attributes file *"carries no `filter=lfs` rules at
   all"*). Any rollback text is written against annex.
 
@@ -514,7 +514,7 @@ Rebuilt, with reason:
   - Refusal text (exit 3): both versions, and the two ways out with exact
     commands: `./update <recorded version>`, or
     `git -C data/box reset --hard <snapshot>` followed by
-    `git -C data/box annex fix` (the repair `docs/assets.md:168` names for a
+    `git -C data/box annex fix` (the repair `docs/media/assets.md:168` names for a
     box whose unlocked files need re-pointing). Whether the second command
     is needed after a plain reset is settled by the harness (Track F,
     scenario 3 seeds an annexed file), and the printed text follows what the

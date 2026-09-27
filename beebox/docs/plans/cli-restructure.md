@@ -138,7 +138,7 @@ Already exists (`bbx chat self-note`). Keep as is.
 
 ## Side issues surfaced during the audit
 
-- **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML). We still want *some* way to keep cards normalized — open question on the right shape: a pre-commit hook that auto-formats on stage? A library function called by `bbx create` / `bbx mv` so cards are always written normalized in the first place? A periodic `npm run`-style sweep added to `docs/maintenance.md`? Decide before this becomes a noticeable drift problem.
+- **Card normalization story.** `bbx format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML). We still want *some* way to keep cards normalized — open question on the right shape: a pre-commit hook that auto-formats on stage? A library function called by `bbx create` / `bbx mv` so cards are always written normalized in the first place? A periodic `npm run`-style sweep added to `docs/development/maintenance.md`? Decide before this becomes a noticeable drift problem.
 
 ## Open questions / not-yet-decided
 

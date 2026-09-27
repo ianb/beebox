@@ -205,7 +205,7 @@ ssh root@<server> 'journalctl -t claude-update --since "-7 days" --no-pager'
 ## Git-annex health
 
 The current annex model, checks, and repair commands are in
-[`assets.md`](../assets.md). Periodic operational checks belong in
+[`assets.md`](../media/assets.md). Periodic operational checks belong in
 [`health-checks.md`](health-checks.md). The production conversion and its
 one-time cutover procedure are retained only as a
 [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not

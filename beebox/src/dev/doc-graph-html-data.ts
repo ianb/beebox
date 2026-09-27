@@ -109,7 +109,7 @@ export const PILLARS: Pillar[] = [
     supporting: [
       { path: ".claude/rules/doctest.md", note: "Conditional pointer to the doctest syntax reference." },
       { path: "docs/testing/knowledge-audits.md", note: "Periodic 'does the agent still know what we think it knows?' tests." },
-      { path: "docs/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
+      { path: "docs/development/maintenance.md", note: "The meta-tools: doc-graph, prompt-report — including the thing rendering this page." },
     ],
     code: ["test/", "test/helpers/"],
   },
@@ -123,6 +123,7 @@ export const PILLARS: Pillar[] = [
     entryNote: "What a box's filesystem actually looks like, top to bottom.",
     supporting: [
       { path: "docs/server/boxes.md", note: "Procedure for spinning up a new one." },
+      { path: "docs/box-guidance.md", note: "Every instruction file a box agent reads, and who writes it." },
     ],
     code: ["~/src/boxes/"],
   },

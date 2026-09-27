@@ -250,7 +250,7 @@ without loss; `--setting-sources user` and `--disable-slash-commands` are
 always passed (the former is load-bearing: `.claude/skills/cross-model` records
 that a nested `claude -p` without it fires the repo's SessionEnd hook).
 
-**Why this needs to change.** Today the catalog (`docs/maintenance.md`
+**Why this needs to change.** Today the catalog (`docs/development/maintenance.md`
 "At a glance" table) is hand-maintained prose and the two runnable jobs each
 embed their own cadence in a plist. Nothing lists what is scheduled.
 
@@ -534,7 +534,7 @@ executable/shebang/dry-run checks; the pre-commit hook; shellcheck wired.
 
 Then delete `bin/update-agent-sdk-scheduled.sh`,
 `bin/manual-tests-scheduled.sh`, their plists (`bin/schedules install`
-boots the old labels out), and `logs/manual-tests/`. `docs/maintenance.md`'s
+boots the old labels out), and `logs/manual-tests/`. `docs/development/maintenance.md`'s
 table becomes a pointer to `bin/schedules list`.
 
 **Why this needs to change.** Two mechanisms for one job kind is the drift
@@ -678,7 +678,7 @@ decision noted in Track E and NOT in scope.
 None open. Settled by the boxholder on 2026-08-24: runner-started sessions
 are headless and `resume` is the way in; `sdk-update` keeps a persistent
 session; `schedule.yaml` is the canonical cadence and
-`docs/maintenance.md` shrinks to a pointer at `bin/schedules list`.
+`docs/development/maintenance.md` shrinks to a pointer at `bin/schedules list`.
 
 ## Knowledge audits
 
@@ -703,7 +703,7 @@ document, and its worked examples are the recall mechanism.
    (the last waits for the `knip-exports` branch to land its noise fix).
 8. Track D chunk 2 — the browser section.
 9. Track G — the skill, with real examples.
-10. `docs/maintenance.md` rewrite; `bin/CLAUDE.md` section.
+10. `docs/development/maintenance.md` rewrite; `bin/CLAUDE.md` section.
 
 ## Rollout shape
 

@@ -6,7 +6,7 @@ created for a fresh box, then survive later initialization unchanged.
 ```ts setup
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { installPublicationsGuidance } from "../../src/core/box/templates.js";
+import { syncBoxGuidance } from "../../src/core/box/guidance-sync.js";
 import { initBox } from "../../src/core/box/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 const box = await makeTmpBox();
-await installPublicationsGuidance(box.root);
+await syncBoxGuidance(box.root, { generators: false });
 const guide = await readFile(path.join(box.root, "src/publications/CLAUDE.md"), "utf-8");
 const notes = await readFile(path.join(box.root, "src/publications/NOTES.md"), "utf-8");
 

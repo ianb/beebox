@@ -1,25 +1,47 @@
 import { z } from "zod";
 
-import { ProvisioningRequestError } from "./cloudflare-provisioning.js";
+import { ProvisioningRequestError } from "./cloudflare-provisioning-error.js";
 
 export interface CloudflareZone { id: string; name: string; status: string; accountId: string }
 export interface WorkerDomain { id: string; hostname: string; service: string; environment: string; zoneId: string; zoneName: string }
 type Request = (url: string, init: { method: string; headers?: Record<string, string>; body?: string }) => Promise<Response>;
 
-const envelope = z.object({ success: z.boolean(), errors: z.array(z.object({ code: z.number(), message: z.string() })).optional(), result: z.unknown().optional() });
+const providerError = z.object({ code: z.number(), message: z.string() });
+const envelope = z.object({
+  success: z.boolean(),
+  errors: z.array(providerError).nullable().optional(),
+  result: z.unknown().optional(),
+});
 const zoneSchema = z.object({ id: z.string(), name: z.string(), status: z.string(), account: z.object({ id: z.string() }) });
 const domainSchema = z.object({ id: z.string(), hostname: z.string(), service: z.string(), environment: z.string(), zone_id: z.string(), zone_name: z.string() });
 
 async function responseBody(op: string, res: Response): Promise<{ result: unknown; pages?: number }> {
-  if (!res.ok) throw new ProvisioningRequestError({ op, status: res.status, statusText: res.statusText });
-  const body: unknown = await res.json();
+  let body: unknown;
+  try { body = await res.json(); } catch (error) {
+    void error;
+    throw new ProvisioningRequestError({ op, status: res.status, statusText: res.ok ? "malformed response body" : res.statusText });
+  }
   const parsed = envelope.safeParse(body);
-  if (!parsed.success || !parsed.data.success || parsed.data.result === undefined) {
-    throw new ProvisioningRequestError({ op, status: res.status, statusText: "malformed or unsuccessful response envelope" });
+  const cfErrors = parsed.success ? (parsed.data.errors ?? []).slice(0, 5).map((error) => ({ code: error.code, message: sanitizeProviderMessage(error.message) })) : [];
+  if (!res.ok || !parsed.success || !parsed.data.success || parsed.data.result === undefined) {
+    throw new ProvisioningRequestError({
+      op,
+      status: res.status,
+      statusText: parsed.success && !parsed.data.success ? "Cloudflare rejected the request" : res.ok ? "malformed or unsuccessful response envelope" : res.statusText,
+      cfErrors,
+    });
   }
   const pageInfo = z.object({ result_info: z.object({ total_pages: z.number().int().nonnegative().optional() }).optional() }).passthrough().safeParse(body);
   const pages = pageInfo.success ? pageInfo.data.result_info?.total_pages : undefined;
   return { result: parsed.data.result, ...(pages === undefined ? {} : { pages }) };
+}
+
+function sanitizeProviderMessage(message: string): string {
+  return Array.from(message, (character) => character.codePointAt(0) ?? 0)
+    .map((codePoint) => codePoint < 32 || codePoint === 127 ? 32 : codePoint)
+    .map((codePoint) => String.fromCodePoint(codePoint))
+    .join("")
+    .slice(0, 240);
 }
 
 export function createCloudflareDomainMethods(args: { accountId: string; base: string; request: Request }) {

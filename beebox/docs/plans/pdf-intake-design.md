@@ -11,7 +11,7 @@ issues: []
 > figures are "committed via manifest, not git", that is inverted now: they are
 > committed to git, which records annex pointers, and the annex holds the bytes.
 > There is no `manifest.json` in the layout below. The extraction and card
-> design are live. Current model: [`../assets.md`](../assets.md).
+> design are live. Current model: [`../assets.md`](../media/assets.md).
 
 **Lifecycle:** partial historical plan. Current behavior is owned by
 `src/schemas/pdf.ts`, `src/core/commands/scan-import-pdf.ts`,

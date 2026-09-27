@@ -128,11 +128,11 @@ step([failedOnce], { now: 6000, lastOutcome })
 
 ## Steady-state delay once the backoff schedule runs out
 
-`MAX_RETRIES` is 7; past that, the wait is a steady 30s rather than the
+`MAX_RETRIES` is 11; past that, the wait is a steady 30s rather than the
 schedule's last (30s-capped) entry running out immediately.
 
 ```ts
-const exhausted = op({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 8 });
+const exhausted = op({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 12 });
 const justFailed: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "transient" };
 
 step([exhausted], { now: 34_000, lastOutcome: justFailed })

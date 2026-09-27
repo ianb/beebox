@@ -172,5 +172,5 @@ that is zero.
   by design? (`monitor` names the job, not the workstream kind.)
 - Should confirming an ask *trigger* the resume from the asks page, or stay
   a two-step (answer, then resume from a session)?
-- Cadence declared in the registry (this read) vs in `docs/maintenance.md`
+- Cadence declared in the registry (this read) vs in `docs/development/maintenance.md`
   (the catalog that exists) — one place, which?

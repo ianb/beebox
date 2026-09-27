@@ -11,7 +11,7 @@ issues: []
 > system": that scheme and its SHA-256 `manifest.json` tracking are deleted, and
 > `docs/asset-manifests.md` is historical rather than "the living doc". Attach
 > scopes now hold their bytes in git-annex. Current model:
-> [`assets.md`](../assets.md).
+> [`assets.md`](../media/assets.md).
 
 **Shipped differently than this draft describes.** The `.attach/` convention landed, but as part of the asset-manifest system rather than this XML/cardworks-era design (which predates the Markdown card format and the manifest's SHA-256 tracking). See `docs/asset-manifests.md` for the living doc.
 

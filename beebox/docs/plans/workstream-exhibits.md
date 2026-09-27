@@ -59,7 +59,7 @@ satellite-storage patterns the repo already shipped.
 
 - **Exhibit** — one presented item: a directory in the store holding a
   manifest, content files, and captured interactions. Chosen over "asset"
-  (collides with box media assets, `docs/assets.md`) and "artifact" (collides
+  (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
   with Claude Artifacts). Rendered items carry short **labels** (`A1`, `B3`)
   for figures so feedback can address them.
 - **Ask** — the manifest field stating what the developer should do:

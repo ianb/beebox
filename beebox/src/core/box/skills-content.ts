@@ -426,7 +426,7 @@ source: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 
-They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`${BOX_PACKAGE_DOCS}/card-scheduled-script.md\`.
+They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) with \`once: true\` instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`${BOX_PACKAGE_DOCS}/card-scheduled-script.md\`.
 
 (This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
 `;
@@ -446,7 +446,7 @@ description: Formalize a repeated operation as a reusable script you can rerun w
 
 A **trick** is a reusable script — you package a useful operation once and rerun it with \`bbx trick <name>\`, instead of redoing it by hand each time. The signal to make one is *repetition*: the second time you find yourself running the same multi-step task, that's when it's worth formalizing.
 
-Each trick lives in \`src/tricks/scripts/<name>/\` with an \`index.ts\`. Read \`src/tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one. If it needs a credential, declare it in a \`secrets.json\` beside \`index.ts\`; the normal \`bbx trick <name>\` runner supplies granted values to that process.
+Each trick lives in \`src/tricks/scripts/<name>/\` with an \`index.ts\`. \`bbx trick\` lists the box's tricks; \`bbx trick <name>\` runs one. Read \`${BOX_PACKAGE_DOCS}/tricks.md\` before writing one: it covers the script interface, how the engine runs and commits a trick, secrets, and dependencies.
 
 Tricks are box-local by default, but the operation itself needn't be box-specific — a general utility (an image generation, a format conversion) is a fine trick if it's something this box does repeatedly.
 `;
@@ -465,7 +465,7 @@ description: Give a card type a custom interface — a React component that rend
 
 Views are React (\`.tsx\`) components that render box data in the browser. **Read \`${BOX_PACKAGE_DOCS}/views.md\` before creating or modifying one** — it carries the full API, including cached \`imageUrl\` variants for image displays, the view-host context, and how to test a view.
 
-A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
+A view always gives a **card type** a custom interface; there is no card-less standalone view.
 
 When the user says a view "looks wrong" and the source doesn't tell you why — a broken layout, a visual glitch, something rendering unexpectedly — run \`bbx chat screenshot\` to see what's actually on their screen right now instead of guessing from the code. It asks the user's browser, so it may come back declined or unavailable; reach for it when appearance is genuinely the question, not by reflex. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
 `;

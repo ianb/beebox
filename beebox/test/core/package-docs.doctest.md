@@ -184,7 +184,7 @@ const boxMemo = cardSchema("memo", {
   fields: { status: z.string() },
   instructions: "How THIS box memos.",
 });
-await writeBoxCardDocs({ boxRoot, debug: false, boxCardSchemas: [boxMemo], boxTemplates: [] });
+await writeBoxCardDocs({ boxRoot, boxCardSchemas: [boxMemo], boxTemplates: [] });
 
 (await readdir(docsDir)).sort().join(",")
 => card-memo.md,intake-guide.md

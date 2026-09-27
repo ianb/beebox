@@ -16,13 +16,13 @@ backend+frontend), tested across all eight EXIF orientation values and both TIFF
 with an `<img>` fallback) instead of relying on the implicit CSS default. Added a server ingress
 guard `warnOnUnnormalizedImageOrientation` (chat send) that logs a contract violation when a JPEG
 arrives non-normalized (`test/webapp/routes/chat-image-orientation.doctest.md`). Full inventory +
-what's normalized vs. left: `docs/image-orientation.md`.
+what's normalized vs. left: `docs/media/image-orientation.md`.
 
 **Left (needs a boxholder decision / manual work):** the server has no image codec (`sharp`/`jimp`),
 so it can only detect, not re-render — pre-existing stored files that carry EXIF orientation and are
 sent to the model as raw bytes remain un-normalized (needs a server-side intake transcode; pairs with
 the PNG→WebP archival idea), and real-browser / physical-iPhone coverage of all eight values through
-the live canvas is manual. See `docs/image-orientation.md` § "What is deliberately left".
+the live canvas is manual. See `docs/media/image-orientation.md` § "What is deliberately left".
 
 A photo taken in the iOS companion app arrived in chat with the wrong
 orientation. The immediate native-camera path now redraws the `UIImage` into an

@@ -1,5 +1,5 @@
 /**
- * Requirement checks for scheduled-script `<requires><connector>` declarations.
+ * Requirement checks for a scheduled script's `requires: {connectors: [...]}` field.
  *
  * Different connectors hold credentials differently:
  *   - The machine secret store: a grant to this box's slug, with a value

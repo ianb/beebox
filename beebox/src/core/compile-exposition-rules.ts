@@ -17,6 +17,7 @@ import { listBoxCardFiles } from "./list-cards.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
+import { withDocId } from "./docs-gen/shared.js";
 
 const RULE_PREFIX = "exposition-";
 
@@ -100,7 +101,8 @@ export async function compileExpositionRules(boxRoot: string): Promise<string[]>
     if (rules.length === 0) continue;
     const courseDir = relative(boxRoot, dirname(abs));
     const filename = `${RULE_PREFIX}${slugFor(courseDir)}.md`;
-    await writeFile(join(rulesDir, filename), renderRule({ courseDir, rules }));
+    await writeFile(join(rulesDir, filename),
+      withDocId({ relativePath: `.claude/rules/${filename}`, content: renderRule({ courseDir, rules }) }));
     written.push(filename);
   }
   return written;

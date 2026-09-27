@@ -54,7 +54,7 @@ against the repository and against what the cited documents say.
   `pnpm-lock.yaml:8346` is `semver@7.8.1:` as cited. The claim holds.
 - **`git tag | wc -l` = 0** and `scripts/release.ts` never writes `version`.
   Both confirmed.
-- **git-lfs prior art is aimed at the wrong mechanism.** `docs/assets.md:6-21`
+- **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
   says all twelve local boxes were converted to **git-annex** on 2026-07-31,
   "738 Git LFS files taken over", and `:193` says the shipped attributes file
   "carries no `filter=lfs` rules at all, so every box gets the same LFS-free
@@ -609,7 +609,7 @@ content left as pointers".
 pointers; `git lfs checkout` resolves them. The rollback text says so."* and the
 refusal text *"`git -C data/box reset --hard <snapshot> && git -C data/box lfs
 checkout`"*.
-**Issue:** `beebox/docs/assets.md:6-21` records that all twelve local boxes were
+**Issue:** `beebox/docs/media/assets.md:6-21` records that all twelve local boxes were
 migrated to **git-annex** on 2026-07-31 ("738 Git LFS files taken over"), and
 `:193` that the shipped attributes file "carries no `filter=lfs` rules at all,
 so every box gets the same LFS-free file." A box created by today's `bbx init`

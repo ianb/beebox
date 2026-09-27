@@ -49,6 +49,7 @@ import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliverie
 import { quiesceChatThreads, chatThreadsAreIdle } from "../core/chat/session/thread.js";
 import { getChatRuntime } from "./chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";
+import { TRPC_MAX_URL_LENGTH } from "../shared/trpc-url-limit.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
@@ -97,9 +98,10 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
       level: "warn",
     },
     trustProxy: true,
-    // tRPC batch requests encode multiple procedure names in the URL path,
-    // which can exceed Fastify's default 100-char param length limit.
-    routerOptions: { maxParamLength: 500 },
+    // tRPC batch requests encode multiple procedure names in the URL path.
+    // The procedure list is shorter than the whole URL, so the client's URL
+    // limit bounds it: every batch the client sends must route.
+    routerOptions: { maxParamLength: TRPC_MAX_URL_LENGTH },
     // Raise the JSON body limit well above Fastify's 1 MB default: the clerk
     // extension POSTs frozen web-page snapshots (single-file HTML with inlined
     // CSS/images) that routinely exceed 1 MB. At the default, those 413'd and

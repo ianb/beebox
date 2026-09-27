@@ -62,6 +62,12 @@ JSON.stringify(clearAdminArrivalState({ panel: "future" }))
 
 JSON.stringify(adminTabViewState({ google: "connected" }, "people"))
 => {"google":"connected","tab":"people"}
+
+JSON.stringify(adminTabViewState(null, "people"))
+=> {"tab":"people"}
+
+JSON.stringify(adminTabViewState(undefined, "people"))
+=> {"tab":"people"}
 ```
 
 A hidden retained Admin card and an in-flight status request cannot consume the

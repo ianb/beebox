@@ -13,7 +13,7 @@ issues: []
 > deleted, and every box is annex-shaped from its first commit rather than
 > converted later. Its command surface, its `isAnnexBox`-as-a-choice framing,
 > and every "boxes that have not migrated" clause are all stale. What survives
-> is the storage design itself. Current model: [`../assets.md`](../assets.md).
+> is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
 
 Move box assets (photos, scans, audio, video — the binary subset of
 attachments) from the hand-rolled manifest system onto git-annex, with
@@ -543,7 +543,7 @@ One predicate, one error type, six call sites (#8). A per-route fix
 would leave transcription silently shipping 101 bytes of pointer text
 to a speech API and publishing embedding it as an image.
 
-The agent row has no code fix. It gets a `docs/assets.md` sentence and
+The agent row has no code fix. It gets a `docs/media/assets.md` sentence and
 a knowledge audit (Track H) — an agent that reads a pointer should
 recognize it, which is exactly what the `asset-content-absent` audit
 tests.
@@ -640,7 +640,7 @@ asset bytes are gitignored. If `annex.largefiles` simply matched
 which is wrong in two ways:
 
 - **It stores superseded content permanently.** Captures are triaged,
-  renamed, re-encoded, and EXIF-rotated (`docs/image-orientation.md`)
+  renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
   before reaching their final home. Annexing at arrival mints an
   immutable object for each intermediate version; the annex accumulates
   content nothing references.
@@ -756,7 +756,7 @@ this was invisible.
 
 ### Track H — docs and knowledge audits
 
-`docs/asset-manifests.md` is rewritten as `docs/assets.md` describing
+`docs/asset-manifests.md` is rewritten as `docs/media/assets.md` describing
 the annex model; the manifest doc moves to `docs/implemented-plans/`
 since it accurately records a system that existed. `docs/cards/migrations.md`
 gets the Track B runbook. Knowledge audits below.
@@ -827,7 +827,7 @@ rather than let "on git-annex" read as "safe".
   (`docs/asset-manifests.md:220`). Under annex it is *accepted*: the
   clean filter ingests the new content as a new key on `git add`. That
   is better — it is a version, not an error — but it is a change, and
-  `docs/assets.md` must say so.
+  `docs/media/assets.md` must say so.
 - **Fabricated free-form value** — **N/A.** Every value is
   machine-computed (a key, a size, a hash). No free-form field exists
   for an agent to invent.

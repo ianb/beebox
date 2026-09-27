@@ -160,7 +160,7 @@
   description: "The background daemon that wakes boxes on a schedule."
 
 
-- source: beebox/docs/assets.md
+- source: beebox/docs/media/assets.md
   publish: contracts/assets.md
   description: "How media stays tracked by git without its bytes (git-annex)."
 
@@ -170,19 +170,19 @@
   publish: dev/contributing.md
   description: "How a change is made and lands: setup, tests, lint, docs, where things live."
 
-- source: beebox/docs/development-process.md
+- source: beebox/docs/development.md
   publish: dev/development-process.md
   description: "How development happens here: one maintainer directing coding agents; workstreams, issues, plans, skills, verification, schedules, and what it is like."
 
-- source: beebox/docs/agent-coding.md
+- source: beebox/docs/development/agent-coding.md
   publish: dev/agent-coding.md
   description: "Entirely agent-coded under one maintainer's direction, and the strictness and checks around that."
 
-- source: beebox/docs/development-workflow.md
+- source: beebox/docs/development/workflow.md
   publish: dev/development-workflow.md
   description: "Workstreams in their own worktrees and sessions, the issue queue, planning, recurring work, document comments, and exhibits."
 
-- source: beebox/docs/technologies.md
+- source: beebox/docs/development/technologies.md
   publish: dev/technologies.md
   description: "The stack, and every outside AI service the system can be configured to use."
 
@@ -258,7 +258,7 @@
   publish: dev/testing/tours.md
   description: "Browser walk-throughs for UI and accessibility review."
 
-- source: beebox/docs/maintenance.md
+- source: beebox/docs/development/maintenance.md
   publish: dev/maintenance.md
   description: "Periodic code cleanup: dead code, circular deps."
 
@@ -314,11 +314,11 @@
   publish: dev/composer.md
   description: "The chat composer: its coordination machine and a map of its rendered states."
 
-- source: beebox/docs/image-orientation.md
+- source: beebox/docs/media/image-orientation.md
   publish: dev/image-orientation.md
   description: "The EXIF orientation contract."
 
-- source: beebox/docs/image-transforms.md
+- source: beebox/docs/media/image-transforms.md
   publish: dev/image-transforms.md
   description: "Image transform operations."
 

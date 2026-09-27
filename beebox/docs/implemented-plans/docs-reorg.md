@@ -387,7 +387,7 @@ design sections are written)*
 
 **Critical gap:** orphan/broken-link creation is silent between manual
 doc-graph runs — track 7 is the fix; until it lands, `pnpm doc-graph`
-belongs in the maintenance cadence (it is listed in docs/maintenance.md).
+belongs in the maintenance cadence (it is listed in docs/development/maintenance.md).
 
 ## NOT in scope
 

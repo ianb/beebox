@@ -17,6 +17,7 @@ import { loadBoxholders } from "../boxholder-cards.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
+import { pruneGuideRules } from "./guide-rules-prune.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
@@ -73,7 +74,7 @@ export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[
  * Returns the list of compiled briefing paths (relative to box root)
  * so CLAUDE.md can include them.
  */
-export async function compileBriefings(boxRoot: string, debug: boolean): Promise<string[]> {
+export async function compileBriefings(boxRoot: string): Promise<string[]> {
   const compiledPaths: string[] = [];
 
   // Check root briefing
@@ -88,7 +89,7 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
     const mdPath = join(boxRoot, "_content/briefing.md");
     await writeFile(
       mdPath,
-      withDocId({ relativePath: "_content/briefing.md", content: compiled, debug })
+      withDocId({ relativePath: "_content/briefing.md", content: compiled })
     );
     compiledPaths.push("_content/briefing.md");
   } catch (e) {
@@ -110,20 +111,23 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
  * Also scan per-chat guide cards in `_content/chat/` directories.
  * Returns summaries of config-level guides (for inclusion in agent guide).
  */
-export async function compileGuides(boxRoot: string, debug: boolean): Promise<GuideSummary[]> {
+export async function compileGuides(boxRoot: string): Promise<GuideSummary[]> {
   const rulesDir = join(boxRoot, ".claude/rules");
   await mkdir(rulesDir, { recursive: true });
 
-  const ctx = { boxRoot, rulesDir, debug };
+  const written = new Set<string>();
+  const ctx = { boxRoot, rulesDir, written };
   const guides = await compileConfigGuides(ctx);
   await compileChatGuides(ctx);
+  await pruneGuideRules(ctx);
   return guides;
 }
 
 interface GuideCompileContext {
   boxRoot: string;
   rulesDir: string;
-  debug: boolean;
+  /** Rule filenames this run wrote; anything else in its families is an orphan. */
+  written: Set<string>;
 }
 
 /**
@@ -142,7 +146,7 @@ export interface GuideSummary {
  * Returns summaries of all compiled guides.
  */
 async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSummary[]> {
-  const { boxRoot, rulesDir, debug } = ctx;
+  const { boxRoot, rulesDir } = ctx;
   const configDir = getBoxDir(boxRoot, "config");
   let files: string[];
   try {
@@ -179,7 +183,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 
       await writeFile(
         join(boxRoot, compiledPath),
-        withDocId({ relativePath: compiledPath, content: compiled, debug })
+        withDocId({ relativePath: compiledPath, content: compiled })
       );
 
       allGuides.push({
@@ -229,7 +233,9 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
     }
     lines.push("");
 
-    await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
+    await writeFile(join(rulesDir, ruleFilename),
+      withDocId({ relativePath: `.claude/rules/${ruleFilename}`, content: lines.join("\n") }));
+    ctx.written.add(ruleFilename);
   }
 
   return allGuides;
@@ -240,7 +246,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
  * Each guide compiles to a rule that loads when accessing files in that chat directory.
  */
 async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
-  const { boxRoot, rulesDir, debug } = ctx;
+  const { boxRoot, rulesDir } = ctx;
   const chatRoot = getBoxDir(boxRoot, "chat");
   let connectors: string[];
   try {
@@ -270,7 +276,7 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
     }
 
     for (const slug of chatSlugs) {
-      await compileChatGuide({ connectorDir, connector, slug, rulesDir, debug, boxRoot });
+      await compileChatGuide({ connectorDir, connector, slug, rulesDir, boxRoot, written: ctx.written });
     }
   }
 }
@@ -280,15 +286,15 @@ interface ChatGuideParams {
   connector: string;
   slug: string;
   rulesDir: string;
-  debug: boolean;
   boxRoot: string;
+  written: Set<string>;
 }
 
 /**
  * Compile a single per-chat guide card to its doc + scoped rule file.
  */
 async function compileChatGuide(params: ChatGuideParams): Promise<void> {
-  const { connectorDir, connector, slug, rulesDir, debug, boxRoot } = params;
+  const { connectorDir, connector, slug, rulesDir, boxRoot } = params;
   const guideFile = join(connectorDir, slug, "chat.guide.card");
   let content: string;
   try {
@@ -308,7 +314,7 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
 
     await writeFile(
       join(boxRoot, compiledPath),
-      withDocId({ relativePath: compiledPath, content: compiled, debug })
+      withDocId({ relativePath: compiledPath, content: compiled })
     );
 
     // Generate a rule file scoped to this chat directory
@@ -327,7 +333,9 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
       "",
     ];
 
-    await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
+    await writeFile(join(rulesDir, ruleFilename),
+      withDocId({ relativePath: `.claude/rules/${ruleFilename}`, content: lines.join("\n") }));
+    params.written.add(ruleFilename);
   } catch (e) {
     // Skip unparseable chat guide cards, but surface them so malformed cards aren't silent.
     console.warn(`[generate-docs] could not compile chat guide ${guideFile}:`, e);
@@ -338,7 +346,7 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
  * Scan `_config/*.personality.card`, compile each, and return the compiled markdown
  * and speaking-voice JSON.
  */
-export async function compilePersonalities(boxRoot: string, debug: boolean): Promise<string | undefined> {
+export async function compilePersonalities(boxRoot: string): Promise<string | undefined> {
   const configDir = getBoxDir(boxRoot, "config");
   let files: string[];
   try {
@@ -375,7 +383,7 @@ export async function compilePersonalities(boxRoot: string, debug: boolean): Pro
 
     await writeFile(
       join(boxRoot, compiledPath),
-      withDocId({ relativePath: compiledPath, content: compiled, debug })
+      withDocId({ relativePath: compiledPath, content: compiled })
     );
 
     // Write speaking-voice JSON for Electron consumption

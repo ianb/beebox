@@ -47,6 +47,8 @@ import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { JudgmentSchema } from "./judgment.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { PubSubmissionSchema } from "./pub-submission.js";
+import { PublicationSchema } from "./publication.js";
+import { WebPushSchema } from "./web-push.js";
 import { ChatSchema } from "./chat.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
@@ -130,6 +132,8 @@ export const cardSchemas: CardSchema[] = [
   EmailMessageSchema,
   TelegramMessageSchema,
   PubSubmissionSchema,
+  PublicationSchema,
+  WebPushSchema,
   GdocSchema,
   GsheetSchema,
   GfolderSchema,

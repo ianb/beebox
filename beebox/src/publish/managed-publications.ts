@@ -3,14 +3,14 @@ import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { filesSchema, releaseIdForFiles, siteEdgeManifestSchema, type SiteEdgeManifest } from "./manifest-edge.js";
+import { filesSchema, releaseIdForFiles, sharedMarkerMatchesScope, sharedPublicSlugSchema, sharedRouteMarkerKey, sharedRouteMarkerSchema, siteEdgeManifestSchema, type SharedRouteMarker, type SiteEdgeManifest } from "./manifest-edge.js";
 import type { PreparedPublication } from "./prepare.js";
-import { staticBearer } from "../services/cloudflare-bearer.js";
-import type { DeployedBinding } from "../services/cloudflare-provisioning.js";
 import type { ManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
 import { defaultManagedPublicationRuntime } from "../services/managed-publication-runtime.js";
 import type { PublishRemoteStore } from "../services/publish-remote-store.js";
+import { staticBearer } from "../services/cloudflare-bearer.js";
 import { withFileLock } from "../lib/file-lock.js";
+import { ensureWorkerDeployment } from "./managed-publication-workers.js";
 
 const SCAN_SAMPLE_LIMIT = 100;
 const PREVIOUS_RELEASE_MS = 10 * 60 * 1000;
@@ -25,10 +25,11 @@ class ManagedPublicationError extends Error {
 export function publicationError(message: string): ManagedPublicationError {
   return new ManagedPublicationError(message);
 }
+
 const scanFindingSchema = z.object({ id: z.string(), kind: z.enum(["home-path", "email", "credential", "external-url"]), file: z.string(), match: z.string(), detail: z.string(), line: z.number().int().positive() }).strict();
 const candidateScopeSchema = z.discriminatedUnion("tier", [
-  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("public"), expiresAt: z.null(), slug: z.string().optional(), customHostname: z.string().optional() }).strict(),
-  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("secret"), expiresAt: z.null(), customHostname: z.string().optional() }).strict(),
+  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("public"), expiresAt: z.null(), slug: z.string().optional(), customHostname: z.string().optional(), sharedHost: z.object({ hostname: z.string(), hostHandle: z.string(), path: z.string() }).strict().optional() }).strict(),
+  z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("secret"), expiresAt: z.null(), customHostname: z.string().optional(), sharedHost: z.object({ hostname: z.string(), hostHandle: z.string(), path: z.string() }).strict().optional() }).strict(),
   z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("accounts"), expiresAt: z.null(), allowedEmails: z.array(z.string().email()) }).strict(),
   z.object({ kind: z.literal("site"), hostHandle: z.string(), tier: z.literal("any-account"), expiresAt: z.null() }).strict(),
 ]);
@@ -57,19 +58,34 @@ export function stable(value: unknown): string {
   if (!isObjectRecord(value)) return JSON.stringify(value);
   return `{${Object.keys(value).toSorted().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
 }
+
 function isObjectRecord(value: object): value is Record<string, unknown> { return !Array.isArray(value); }
 
-function requestedScope(prepared: PreparedPublication, routing: { hostHandle: string; customHostname?: string }) {
-  const { hostHandle, customHostname } = routing;
+function requestedScope(prepared: PreparedPublication, routing: { hostHandle: string; customHostname?: string; sharedHost?: { hostname: string; hostHandle: string } }) {
+  const { hostHandle, customHostname, sharedHost } = routing;
   const definition = prepared.definition;
-  if (definition.tier === "public") return { kind: "site" as const, hostHandle, tier: "public" as const, expiresAt: null, ...(definition.slug === undefined ? {} : { slug: definition.slug }), ...(customHostname === undefined ? {} : { customHostname }) };
-  if (definition.tier === "secret") return { kind: "site" as const, hostHandle, tier: "secret" as const, expiresAt: null, ...(customHostname === undefined ? {} : { customHostname }) };
+  const sharedPath = definition.tier === "public" ? (sharedHost === undefined ? undefined : sharedPublicPath(definition.slug)) : `/s/${prepared.pubId}/`;
+  const sharedDestination = sharedHost === undefined || sharedPath === undefined ? undefined : { hostname: sharedHost.hostname, hostHandle: sharedHost.hostHandle, path: sharedPath };
+  if (definition.tier === "public") return { kind: "site" as const, hostHandle, tier: "public" as const, expiresAt: null, ...(definition.slug === undefined ? {} : { slug: definition.slug }), ...(customHostname === undefined ? {} : { customHostname }), ...(sharedDestination === undefined ? {} : { sharedHost: sharedDestination }) };
+  if (definition.tier === "secret") return { kind: "site" as const, hostHandle, tier: "secret" as const, expiresAt: null, ...(customHostname === undefined ? {} : { customHostname }), ...(sharedDestination === undefined ? {} : { sharedHost: sharedDestination }) };
   if (definition.tier === "accounts") return { kind: "site" as const, hostHandle, tier: "accounts" as const, expiresAt: null, allowedEmails: definition.emails };
   return { kind: "site" as const, hostHandle, tier: "any-account" as const, expiresAt: null };
 }
 
+function withoutSharedHost(scope: ReturnType<typeof requestedScope>) {
+  if (!("sharedHost" in scope)) return scope;
+  const { sharedHost: _sharedHost, ...manifestScope } = scope;
+  return manifestScope;
+}
+
+export function sharedPublicPath(slug: string | undefined): string {
+  if (slug === undefined) throw publicationError("A public publication on the shared hostname needs an explicit slug. Add a slug such as 'hello' to its publication definition and prepare it again.");
+  if (!sharedPublicSlugSchema.safeParse(slug).success) throw publicationError(`The public slug '${slug}' cannot be used at the shared-host root. Use a lowercase slug of at most 63 characters other than s, p, or a.`);
+  return `/${slug}/`;
+}
+
 function sameScope(a: SiteEdgeManifest, scope: ReturnType<typeof requestedScope>): boolean {
-  return stable({ ...a, status: undefined, activeRelease: undefined, previousRelease: undefined }) === stable({ ...scope, status: undefined, activeRelease: undefined, previousRelease: undefined });
+  return stable({ ...a, status: undefined, activeRelease: undefined, previousRelease: undefined }) === stable({ ...withoutSharedHost(scope), status: undefined, activeRelease: undefined, previousRelease: undefined });
 }
 async function hasObject(store: PublishRemoteStore, key: string): Promise<boolean> {
   return (await store.list(key)).includes(key);
@@ -79,6 +95,16 @@ export async function readSiteManifest(store: PublishRemoteStore, pubId: string)
   const raw = await store.get(key);
   const parsed = siteEdgeManifestSchema.safeParse(JSON.parse(new TextDecoder().decode(raw)));
   if (!parsed.success) throw publicationError("The publication edge manifest is invalid; refusing to replace it.");
+  return parsed.data;
+}
+
+export async function readSharedRouteMarker(store: PublishRemoteStore, pubId: string): Promise<SharedRouteMarker | null> {
+  const key = sharedRouteMarkerKey(pubId);
+  if (!(await hasObject(store, key))) return null;
+  let json: unknown;
+  try { json = JSON.parse(new TextDecoder().decode(await store.get(key))); } catch (_error) { throw publicationError("The shared publication route marker is invalid JSON."); }
+  const parsed = sharedRouteMarkerSchema.safeParse(json);
+  if (!parsed.success || parsed.data.pubId !== pubId) throw publicationError("The shared publication route marker is malformed or bound to another publication.");
   return parsed.data;
 }
 export type PublicationCandidate = z.infer<typeof candidateSchema>;
@@ -136,56 +162,6 @@ async function uploadReleaseFiles(args: {
   });
 }
 
-async function ensureWorkerDeployment(args: {
-  runtime: ManagedPublicationRuntime;
-  boxRoot: string;
-  credential: { accountId: string; apiToken: string };
-  provisioning: ReturnType<ManagedPublicationRuntime["createProvisioning"]>;
-  pubId: string;
-  reserved: Awaited<ReturnType<ManagedPublicationRuntime["reserveBinding"]>>;
-  connectionName: string;
-}): Promise<void> {
-  const bundle = await args.runtime.workerBundle();
-  const workerVersion = createHash("sha256").update(bundle).digest("hex");
-  const deployer = args.runtime.createWorkerDeployer({ accountId: args.credential.accountId, bearer: staticBearer(args.credential.apiToken) });
-  const scriptSettings = await args.provisioning.getScriptSettings(args.reserved.workerName);
-  const bindings = new Map((scriptSettings?.bindings ?? []).map((workerBinding) => [workerBinding.name, workerBinding]));
-  if (scriptSettings !== null && !workerIdentityMatches({ bindings, pubId: args.pubId, hostHandle: args.reserved.hostHandle, bucketName: args.reserved.bucketName })) {
-    throw publicationError("The existing Cloudflare Worker name is bound to a different publication or bucket; refusing to replace it.");
-  }
-  if (scriptSettings === null || bindings.get("PUB_WORKER_VERSION")?.text !== workerVersion) {
-    await deployer.deploy({
-      scriptName: args.reserved.workerName,
-      bucketName: args.reserved.bucketName,
-      pubId: args.pubId,
-      hostHandle: args.reserved.hostHandle,
-      workerVersion,
-      bundle,
-    });
-    const verified = await args.provisioning.getScriptSettings(args.reserved.workerName);
-    const verifiedBindings = new Map((verified?.bindings ?? []).map((workerBinding) => [workerBinding.name, workerBinding]));
-    if (!workerIdentityMatches({ bindings: verifiedBindings, pubId: args.pubId, hostHandle: args.reserved.hostHandle, bucketName: args.reserved.bucketName })
-      || verifiedBindings.get("PUB_WORKER_VERSION")?.text !== workerVersion) {
-      throw publicationError("Cloudflare did not confirm the deployed Worker identity and binding settings.");
-    }
-  }
-  await args.runtime.markCapability({
-    name: args.connectionName,
-    capability: "workerDeploy",
-    verifiedAt: args.runtime.now(args.boxRoot).toISOString(),
-  });
-  const subdomain = await args.provisioning.getScriptSubdomain(args.reserved.workerName);
-  if (subdomain === null || !subdomain.enabled || subdomain.previewsEnabled) {
-    await args.provisioning.setScriptSubdomain(args.reserved.workerName, { enabled: true, previewsEnabled: false });
-  }
-}
-
-function workerIdentityMatches(args: { bindings: Map<string, DeployedBinding>; pubId: string; hostHandle: string; bucketName: string }): boolean {
-  return args.bindings.get("PUB_ID")?.text === args.pubId
-    && args.bindings.get("HOST_HANDLE")?.text === args.hostHandle
-    && args.bindings.get("PUB_STORE")?.bucketName === args.bucketName;
-}
-
 async function persistPreparedCandidate(args: {
   boxRoot: string;
   boxSlug: string;
@@ -210,32 +186,28 @@ async function persistPreparedCandidate(args: {
     if (latest !== null && latest.hostHandle !== args.scope.hostHandle) throw publicationError("Remote publication state belongs to a different Worker host; refusing to replace it.");
     if (latest?.status === "revoked") throw publicationError("This publication was revoked during preparation; no live change was made.");
     await args.store.put(`pubs/${args.pubId}/pending.json`, { body: JSON.stringify(args.candidate) });
-    if (latest?.status === "disabled") return;
-    if (latest !== null && !sameScope(latest, args.scope)) return;
+    if (!await shouldAutoRefreshManifest({ latest, scope: args.scope, store: args.store, pubId: args.pubId })) return;
     const next = siteEdgeManifestSchema.parse({
-      ...args.scope,
+      ...withoutSharedHost(args.scope),
       status: latest === null ? "disabled" : "live",
       activeRelease: { id: args.candidate.releaseId, files: args.candidate.files },
       ...(latest !== null && latest.activeRelease.id !== args.candidate.releaseId ? {
         previousRelease: { ...latest.activeRelease, expiresAt: new Date(args.runtime.now(args.boxRoot).getTime() + PREVIOUS_RELEASE_MS).toISOString() },
       } : {}),
     });
-    await args.store.put(`pubs/${args.pubId}/manifest.json`, { body: JSON.stringify(next) });
+      await args.store.put(`pubs/${args.pubId}/manifest.json`, { body: JSON.stringify(next) });
     const confirmed = await readSiteManifest(args.store, args.pubId);
     if (confirmed === null || stable(confirmed) !== stable(next)) throw publicationError("Cloudflare R2 did not confirm the publication state update.");
   });
 }
 
-export interface ManagedPublicationCandidate {
-  pubId: string;
-  name: string;
-  title: string;
-  revision: string;
-  releaseId: string;
-  requestedScope: ReturnType<typeof requestedScope>;
-  preparedAt: string;
-  preview: PreparedPublication["preview"];
-  scan: ReturnType<typeof scanSummary>;
+async function shouldAutoRefreshManifest(args: { latest: SiteEdgeManifest | null; scope: ReturnType<typeof requestedScope>; store: PublishRemoteStore; pubId: string }): Promise<boolean> {
+  if (args.latest === null) return true;
+  if (args.latest.status === "disabled" || !sameScope(args.latest, args.scope)) return false;
+  const host = "sharedHost" in args.scope ? args.scope.sharedHost : undefined;
+  if (host === undefined) return true;
+  const marker = await readSharedRouteMarker(args.store, args.pubId);
+  return sharedMarkerMatchesScope(marker, { schemaVersion: 1, pubId: args.pubId, boxHostHandle: host.hostHandle, hostname: host.hostname, path: host.path, manifestHostHandle: args.scope.hostHandle });
 }
 
 export async function prepareManagedPublication(args: {
@@ -243,12 +215,14 @@ export async function prepareManagedPublication(args: {
   boxSlug: string;
   name: string;
   ownerEmail: string | null;
-}, injectedRuntime?: ManagedPublicationRuntime): Promise<ManagedPublicationCandidate> {
+  ensureReferenceCard?: (identity: { boxRoot: string; pubId: string; title: string }) => Promise<{ cardPath: string; created: boolean }>;
+}, injectedRuntime?: ManagedPublicationRuntime) {
   const runtime = injectedRuntime ?? defaultManagedPublicationRuntime;
   const result = await runtime.prepare({ boxRoot: args.boxRoot, name: args.name }, { ownerEmail: args.ownerEmail });
   if (!result.ok) throw publicationError(result.message);
   const prepared = result.prepared;
   try {
+    await ensurePreparedReferenceCard(args.ensureReferenceCard, { boxRoot: args.boxRoot, pubId: prepared.pubId, title: prepared.definition.title });
     const binding = await reservePublicationBinding({ prepared, args, runtime });
     const connection = await runtime.resolveCredential({ name: prepared.definition.connection, boxSlug: args.boxSlug, purpose: "publish-prepare", at: runtime.now(args.boxRoot).toISOString() });
     if (connection.accountId !== binding.accountId) throw publicationError("The publication binding is pinned to another Cloudflare account.");
@@ -256,7 +230,15 @@ export async function prepareManagedPublication(args: {
     const store = runtime.createStore({ accountId: connection.accountId, bucket: binding.bucketName, bearer });
     const provisioning = runtime.createProvisioning({ accountId: connection.accountId, bearer });
     await provisioning.createBucket(binding.bucketName);
-    if (await provisioning.getAccountSubdomain() === null) throw publicationError("This Cloudflare account has no workers.dev subdomain configured.");
+    const boxHost = await runtime.getBoxHost(args.boxSlug);
+    const attachedHost = attachedHostForConnection(boxHost, binding.connectionName);
+    const sameConnectionHost = attachedHost !== null;
+    const alreadyUsesSharedWorker = attachedHost !== null && attachedHost.workerName === binding.workerName && attachedHost.hostHandle === binding.hostHandle && attachedHost.bucketName === binding.bucketName;
+    const unscopedLegacyPublic = prepared.definition.tier === "public" && prepared.definition.slug === undefined && !alreadyUsesSharedWorker;
+    const useSharedHost = sameConnectionHost && !unscopedLegacyPublic;
+    const sharedHost = useSharedHost ? attachedHost : null;
+    if (!useSharedHost && await provisioning.getAccountSubdomain() === null) throw publicationError("This Cloudflare account has no workers.dev subdomain configured.");
+    if (useSharedHost && prepared.definition.tier === "public") sharedPublicPath(prepared.definition.slug);
     const files = Object.fromEntries(prepared.files.map((file) => [file.path, { bytes: file.bytes, sha256: file.sha256 }]));
     const releaseId = await releaseIdForFiles(files);
     if (releaseId !== prepared.contentHash) throw publicationError("Prepared release inventory changed before upload.");
@@ -264,11 +246,15 @@ export async function prepareManagedPublication(args: {
     const existing = await readSiteManifest(store, prepared.pubId);
     await assertRemoteOwnership({ existing, store, pubId: prepared.pubId, hostHandle: binding.hostHandle });
     if (existing?.status === "revoked") throw publicationError("This publication is revoked and cannot be refreshed. Create a new publication id.");
-    await ensureWorkerDeployment({ runtime, boxRoot: args.boxRoot, credential: connection, provisioning, pubId: prepared.pubId, reserved: binding, connectionName: prepared.definition.connection });
+    await ensureWorkerDeployment({ runtime, boxRoot: args.boxRoot, credential: connection, provisioning, pubId: prepared.pubId, reserved: binding, connectionName: prepared.definition.connection, fail: publicationError });
     if (binding.customHostname !== undefined && prepared.definition.tier !== "public" && prepared.definition.tier !== "secret") {
       throw publicationError("Custom hostnames are supported only for public or secret publications.");
     }
-    const scope = requestedScope(prepared, { hostHandle: binding.hostHandle, ...(binding.customHostname === undefined ? {} : { customHostname: binding.customHostname }) });
+    const scope = requestedScope(prepared, {
+      hostHandle: binding.hostHandle,
+      ...(binding.customHostname === undefined ? {} : { customHostname: binding.customHostname }),
+      ...(sharedHost === null ? {} : { sharedHost: { hostname: sharedHost.hostname, hostHandle: sharedHost.hostHandle } }),
+    });
     const candidateBody = {
       schemaVersion: 1 as const,
       pubId: prepared.pubId,
@@ -289,19 +275,37 @@ export async function prepareManagedPublication(args: {
   }
 }
 
+function attachedHostForConnection(
+  boxHost: Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>,
+  connectionName: string,
+): NonNullable<Awaited<ReturnType<ManagedPublicationRuntime["getBoxHost"]>>> | null {
+  return boxHost !== null && boxHost.status === "attached" && boxHost.connectionName === connectionName ? boxHost : null;
+}
+
+async function ensurePreparedReferenceCard(
+  ensureReferenceCard: Parameters<typeof prepareManagedPublication>[0]["ensureReferenceCard"],
+  identity: { boxRoot: string; pubId: string; title: string },
+): Promise<{ cardPath: string; created: boolean } | undefined> {
+  return ensureReferenceCard?.(identity);
+}
+
 async function reservePublicationBinding(args: {
   prepared: PreparedPublication;
   args: { boxRoot: string; boxSlug: string };
   runtime: ManagedPublicationRuntime;
 }): Promise<Awaited<ReturnType<ManagedPublicationRuntime["reserveBinding"]>>> {
   const existing = await args.runtime.getBinding({ pubId: args.prepared.pubId, boxSlug: args.args.boxSlug });
-  const hostHandle = existing?.hostHandle ?? args.runtime.newHostHandle();
+  const boxHost = await args.runtime.getBoxHost(args.args.boxSlug);
+  if (existing === null && boxHost === null) throw publicationError("Set up this box's shared publishing hostname in Admin before preparing its first managed publication.");
+  if (existing === null && boxHost?.status !== "attached") throw publicationError("Shared-host setup is still pending. Finish it in Admin before preparing this publication.");
+  if (existing === null && boxHost?.connectionName !== args.prepared.definition.connection) throw publicationError(`This new publication must use the box's shared publishing connection '${boxHost?.connectionName ?? ""}'.`);
+  const hostHandle = existing?.hostHandle ?? boxHost?.hostHandle ?? args.runtime.newHostHandle();
   return args.runtime.reserveBinding({
     pubId: args.prepared.pubId,
     boxSlug: args.args.boxSlug,
     connectionName: args.prepared.definition.connection,
-    bucketName: existing?.bucketName ?? args.runtime.newBucketName(),
-    workerName: existing?.workerName ?? hostHandle,
+    bucketName: existing?.bucketName ?? boxHost?.bucketName ?? args.runtime.newBucketName(),
+    workerName: existing?.workerName ?? boxHost?.workerName ?? hostHandle,
     hostHandle,
     createdAt: args.runtime.now(args.args.boxRoot).toISOString(),
   });

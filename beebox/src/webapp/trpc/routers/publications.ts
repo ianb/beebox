@@ -14,12 +14,18 @@ import {
   revokeManagedPublication,
 } from "../../../publish/managed-publication-actions.js";
 import { listManagedPublications, previewManagedPublicationFile } from "../../../publish/managed-publication-queries.js";
-import { assignManagedPublicationHostname } from "../../../publish/managed-publication-custom-domain.js";
+import { configureManagedPublicationSharedHost } from "../../../publish/managed-publication-shared-host.js";
+import { ensurePublicationReferenceCard } from "../../../publish/publication-reference-card.js";
+import { publicationCardUrl } from "../../../shared/publication-card.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
+import { errorMessage } from "../../../lib/error-guards.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
 
 const pubIdInput = pubIdSchema;
 
 function publicationError(error: unknown): never {
+  if (error instanceof TRPCError) throw error;
   if (error instanceof Error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
   throw new TRPCError({ code: "BAD_REQUEST", message: "Publication operation failed." });
 }
@@ -55,7 +61,7 @@ export const publicationsRouter = router({
 
   list: publicationReadProcedure.query(async ({ ctx }) => {
     try {
-      return { sites: await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime) };
+      return await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime);
     } catch (error) { publicationError(error); }
   }),
 
@@ -63,15 +69,54 @@ export const publicationsRouter = router({
     .input(z.object({ name: z.string().regex(/^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/) }).strict())
     .mutation(async ({ ctx, input }) => {
       try {
-        return await prepareManagedPublication({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, name: input.name, ownerEmail: getOwnerEmail() }, ctx.services.managedPublicationRuntime);
+        let reference: { cardPath: string; created: boolean } | undefined;
+        const candidate = await prepareManagedPublication({
+          boxRoot: ctx.boxRoot,
+          boxSlug: ctx.boxSlug,
+          name: input.name,
+          ownerEmail: getOwnerEmail(),
+          ensureReferenceCard: async (identity) => {
+            reference = await ensurePublicationReferenceCard(identity);
+            return reference;
+          },
+        }, ctx.services.managedPublicationRuntime);
+        if (reference === undefined) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Publication reference card was not prepared." });
+        const commitWarning = reference.created ? await commitReferenceCard(ctx.boxRoot, reference.cardPath) : null;
+        if (reference.created) ctx.eventBus.emitTransient("file-change", { event: "add", path: reference.cardPath, timestamp: getBoxTimeISO(ctx.boxRoot) });
+        return {
+          ...candidate,
+          cardPath: reference.cardPath,
+          approvalUrl: publicationCardUrl(ctx.boxSlug, reference.cardPath),
+          commitWarning,
+        };
       } catch (error) { publicationError(error); }
     }),
 
-  assignCustomHostname: authenticatedOwnerProcedure
-    .input(z.object({ pubId: pubIdInput, hostname: z.string().min(1).max(253) }).strict())
+  /** Explicitly create/open the reference card for an existing server binding. */
+  ensureCard: publicationHumanProcedure
+    .input(z.object({ pubId: pubIdInput }).strict())
     .mutation(async ({ ctx, input }) => {
       try {
-        return await assignManagedPublicationHostname({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
+        const { sites } = await listManagedPublications({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug }, ctx.services.managedPublicationRuntime);
+        const site = sites.find((candidate) => candidate.pubId === input.pubId);
+        if (site === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "This publication is not registered to this box." });
+        const reference = await ensurePublicationReferenceCard({ boxRoot: ctx.boxRoot, pubId: input.pubId, title: site.title });
+        const commitWarning = reference.created ? await commitReferenceCard(ctx.boxRoot, reference.cardPath) : null;
+        if (reference.created) ctx.eventBus.emitTransient("file-change", { event: "add", path: reference.cardPath, timestamp: getBoxTimeISO(ctx.boxRoot) });
+        return {
+          cardPath: reference.cardPath,
+          approvalUrl: publicationCardUrl(ctx.boxSlug, reference.cardPath),
+          created: reference.created,
+          commitWarning,
+        };
+      } catch (error) { publicationError(error); }
+    }),
+
+  configureSharedHost: authenticatedOwnerProcedure
+    .input(z.object({ connectionName: z.string().regex(/^[a-z][\da-z-]{0,39}$/), hostname: z.string().min(1).max(253) }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await configureManagedPublicationSharedHost({ boxRoot: ctx.boxRoot, boxSlug: ctx.boxSlug, ...input }, ctx.services.managedPublicationRuntime);
       } catch (error) { publicationError(error); }
     }),
 
@@ -119,3 +164,16 @@ export const publicationsRouter = router({
       } catch (error) { publicationError(error); }
     }),
 });
+
+async function commitReferenceCard(boxRoot: string, cardPath: string): Promise<string | null> {
+  try {
+    await stageAndCommitPaths(boxRoot, {
+      paths: [cardPath],
+      message: `Create publication card: ${cardPath}`,
+      trailers: { "Created-By": "publication-prepare" },
+    });
+    return null;
+  } catch (error) {
+    return `Publication card was created but could not be committed: ${errorMessage(error)}`;
+  }
+}
