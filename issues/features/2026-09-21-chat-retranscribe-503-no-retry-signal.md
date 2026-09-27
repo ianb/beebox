@@ -9,9 +9,9 @@ discovered-in: main — production box feedback triage (bbx feedback)
 
 `bbx chat retranscribe` re-runs a voice recording through the HQ transcriber
 via a loopback long-poll to the connected client
-(`beebox/src/cli/commands/chat-audio.ts`, `chat-audio-fetch.ts`). On failure it
+(`beebox/src/cli/commands/chat/audio.ts`, `chat-audio-fetch.ts`). On failure it
 reports a flat error line — `` `${commandLabel}: ${message} (HTTP ${res.status})` ``
-(`beebox/src/cli/commands/chat-audio-fetch.ts:141`) — with no indication of
+(`beebox/src/cli/commands/chat/audio-fetch.ts:141`) — with no indication of
 whether the failure is transient (e.g. the dev server reloading, HTTP 503) or
 terminal, and no suggested wait time before retrying.
 

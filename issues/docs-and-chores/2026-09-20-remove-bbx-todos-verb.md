@@ -22,8 +22,8 @@ defaults to `--status open`, and `bbx query todos` defaults to open plus parked.
 
 - `beebox/src/cli/commands/todos.ts` and its registration.
 - The smoke entry in `beebox/src/cli/surface-data.ts` and
-  `beebox/test/cli/surface.doctest.md`.
-- `beebox/test/cli/todos.doctest.md`.
+  `beebox/test/cli/entry.surface.doctest.md`.
+- `beebox/test/cli/commands/todos.doctest.md`.
 - Comments in `beebox/src/core/todo/` and `beebox/src/shared/todo-model.ts`.
 - `beebox/src/schemas/todo-review-job.ts` instructions, if they still name it.
 - `beebox/docs/cards/format.md` and the implemented todo-annotation plan
@@ -34,7 +34,7 @@ list.
 
 ## What to decide
 
-The CLI has no hint for a retired verb. `beebox/src/cli/legacy-argv.ts`
+The CLI has no hint for a retired verb. `beebox/src/cli/entry/legacy-argv.ts`
 rewrites only the `migrate`/`init` handoff. Either remove the verb outright and
 let the unknown-command error stand, or add a small retired-verb table that
 answers "use `bbx query todos`". The table is reusable for the next rename. A

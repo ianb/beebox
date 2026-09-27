@@ -17,7 +17,7 @@ app's chrome.
 
 ## Mechanism
 
-`bbx chat ui` (`beebox/src/cli/commands/chat-ui.ts`) POSTs to
+`bbx chat ui` (`beebox/src/cli/commands/chat/ui.ts`) POSTs to
 `/api/chat/ui/request`, which parks the request and broadcasts a transient
 `ui-scan-request` bus event, waiting for the browser tab holding that chat
 session to answer (`beebox/src/webapp/routes/chat-ui-routes.ts`). The answer

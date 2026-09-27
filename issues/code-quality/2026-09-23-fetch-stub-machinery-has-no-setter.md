@@ -18,7 +18,7 @@ The knip sweep deleted the three exports whose only caller was the runner:
 the code is still reachable, but only through environment variables that
 nothing in the repo sets:
 
-- `beebox/src/cli/bootstrap.ts` calls `installStrictFetch()` when
+- `beebox/src/cli/entry/bootstrap.ts` calls `installStrictFetch()` when
   `BBX_STRICT_FETCH` is set.
 - `ensureEnvStubs()` reads `BBX_STUBS_FILE`. The `after` gate on each stub
   reads `BBX_SCENARIO_START_TIME`.

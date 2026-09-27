@@ -12,7 +12,7 @@ The publish "drop box" (Track F of `beebox/docs/plans/publish-pages.md`) is comp
 **What is wrong**
 
 - `pub-worker/src/submit.ts` `handleSubmit` refuses with 403 unless the fetched manifest has a non-null `submit` block (lines 100-105).
-- Nothing ever writes that block. `draftPublication` (`beebox/src/publish/draft.ts`, the rawManifest at ~lines 202-217) has no `submit` key, and `bbx pub draft` (`beebox/src/cli/commands/pub.ts`) exposes no flag or card field for one. Grepping `submit:` across `src` and `pub-worker/src` finds it only as a zod field in `src/publish/manifest.ts` / `manifest-edge.ts` (and `toEdgeManifest`'s pass-through at manifest.ts:176-189).
+- Nothing ever writes that block. `draftPublication` (`beebox/src/publish/draft.ts`, the rawManifest at ~lines 202-217) has no `submit` key, and `bbx pub draft` (`beebox/src/cli/commands/pub/command.ts`) exposes no flag or card field for one. Grepping `submit:` across `src` and `pub-worker/src` finds it only as a zod field in `src/publish/manifest.ts` / `manifest-edge.ts` (and `toEdgeManifest`'s pass-through at manifest.ts:176-189).
 - No form is rendered either: `src/publish/render-docs.ts` emits Markdoc HTML with no `<form>`, and `grep -rn '<form' src/publish pub-worker/src` returns nothing. The plan specifies plain HTML form POSTs (`form-action 'self'` is already in the Worker CSP, `pub-worker/src/headers.ts:28`).
 
 **User-visible consequence**
@@ -22,7 +22,7 @@ A boxholder cannot publish a page that collects replies, and a reader has no for
 **Files involved**
 
 - `beebox/src/publish/draft.ts` (manifest assembly — no `submit`)
-- `beebox/src/cli/commands/pub.ts` (`bbx pub draft` — no flag)
+- `beebox/src/cli/commands/pub/command.ts` (`bbx pub draft` — no flag)
 - `beebox/src/publish/render-docs.ts` (renderer — no form)
 - `beebox/pub-worker/src/submit.ts`, `beebox/src/publish/submission.ts`, `beebox/src/connectors/publish-submissions.ts` (the built, unreachable half)
 
