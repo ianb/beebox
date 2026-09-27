@@ -333,6 +333,7 @@ The area names are reserved words: never create a nested `_content`, `_config`, 
 
 ## BOX_CODE — Box-Owned Code
 
+<!-- rules: box-code.where, box-code.list -->
 This box root also holds `package.json`, `node_modules/`, and the box's source code — box-authored code (schemas, views, tricks) lives right here, under `src/`:
 
 <!-- rules: box-code.list -->
@@ -340,13 +341,11 @@ This box root also holds `package.json`, `node_modules/`, and the box's source c
 |------|------------------------|
 {{box_code_dirs}}
 
-**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart.
+<!-- rules: box-code.where -->
+**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart. A `CLAUDE.md` under each says what to read before writing there; published sites live under `src/publications/`, whose `CLAUDE.md` does the same.
 
-**Published sites are a separate kind of source.** Sites and their private shared notes live under `src/publications/`. Read `node_modules/beebox/box-docs/publishing.md` before working there; its site-local `project/package.json` is separate from the box-root engine package and builds only static files. Do not import Bee Box frontend components into a published site.
-
+<!-- rules: box-code.not-yours -->
 **Not yours to edit.** `package.json`, `node_modules/`, lockfiles, `tsconfig.json`, and anything else at the box root outside the underscore-prefixed content areas (`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) and `src/` belong to the boxholder, not to you. Upgrading the engine — bumping the `beebox` dependency and everything that comes with it — is done with `bbx engine upgrade`, run by the boxholder from outside this session. Don't run `bbx engine upgrade` yourself unless explicitly asked to.
-
-**Imports.** Box code may only import from the beebox library surface: `beebox/cards` (card/schema primitives), `beebox/schema` (Zod and YAML, version-pinned to the engine), and `beebox/view-widgets` (view components). Don't add other dependencies to `package.json` — that file isn't yours to edit.
 
 ## LANDMARKS — Landmarks
 

@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after DIRECTORY_LAYOUT.
-  guide_words: 7158
-  always_loaded_words: 11950
+  # 2026-09-26, after BOX_CODE.
+  guide_words: 7092
+  always_loaded_words: 11884
   uncited_words_per_section: 60
 
 lint:
@@ -22,6 +22,7 @@ lint:
     - COMMANDS
     - INTAKE
     - DIRECTORY_LAYOUT
+    - BOX_CODE
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -564,6 +565,34 @@ rows:
     audits: [triage-rules-location]
     mechanics: box-docs/triage.md
 
+  # --- BOX_CODE ---
+  - id: box-code.where
+    rule: Box-authored code lives under `src/` at the box root (schemas, views, tricks), is the agent's to edit, and hot-reloads without a restart; a `CLAUDE.md` under each directory, and under `src/publications/` for sites, says what to read first.
+    handle: BOX_CODE
+    bin: core
+    reason: An agent asked to add a type or a view needs to know where it goes and that it can just edit; the nested CLAUDE.md files carry the rest, and load when the agent works there.
+    audits: [box-packageify-views-location, box-packageify-schemas-location]
+  - id: box-code.not-yours
+    rule: The root `package.json`, `node_modules/`, lockfiles, `tsconfig.json`, and anything at the root outside the underscore areas and `src/` belong to the boxholder; `bbx engine upgrade` is theirs to run.
+    handle: BOX_CODE
+    bin: core
+    reason: A guardrail an agent needs before it reaches for `pnpm add` or an engine upgrade to solve an unrelated task.
+    audits: [box-packageify-stance-b-off-limits, box-packageify-bbx-upgrade]
+  - id: box-code.publications
+    rule: Published sites live under `src/publications/`; a site project keeps its own `package.json`, builds only static files, and imports no Bee Box frontend components.
+    handle: BOX_CODE
+    bin: indirect
+    reason: Applies only when working on a site; `src/publications/CLAUDE.md` points at publishing.md, which had the rest; the frontend-components sentence moved there.
+    audits: [publishing-site-authoring]
+    mechanics: box-docs/publishing.md
+  - id: box-code.imports
+    rule: Schema and view code imports only `beebox/cards`, `beebox/schema`, and `beebox/view-widgets`, and adds no dependency to the root `package.json`.
+    handle: BOX_CODE
+    bin: indirect
+    reason: Applies only when writing a schema or view. Moved to schemas.md, and narrowed on the way, since tricks.md has tricks install their own packages, so "box code may only import" was wrong for tricks.
+    audits: [box-packageify-schemas-location]
+    mechanics: box-docs/schemas.md
+
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
     rule: When the engine's source ships beside the package docs, DOCS names it as the fallback reference.
@@ -588,7 +617,7 @@ rows:
     handle: BOX_CODE
     bin: core
     reason: Generated from box data; the row is the decision to list it.
-    audits: [box-packageify-schemas-location, box-packageify-views-location]
+    audits: [box-packageify-views-location]
   - id: procedures.list
     rule: PROCEDURES lists this box's procedures with a one-line description each.
     handle: PROCEDURES

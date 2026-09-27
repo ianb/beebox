@@ -5350,9 +5350,11 @@ tests:
   # dropped the `cardworks` section; test1's on-disk copy just hasn't been
   # refreshed (a `bbx init` re-run should fix it via the template tracker).
 
+  # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 3 reads, 1 searches, 40k ctx.
   - id: box-packageify-schemas-location
     prompt: "Where do this box's local card schemas live, and what do they import?"
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["schemas.md"]
     watch_for: >
       Names src/schemas/ at the box root (not _config/schemas/) and the
       real library imports — beebox/cards for cardSchema()/body, and
@@ -5363,6 +5365,7 @@ tests:
       Comes from the "Box-Owned Code" agent-guide section
       (agent-guide/box-shape.ts), which only renders for a package (v2) box.
 
+  # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 3 reads, 3 searches, 40k ctx.
   - id: box-packageify-views-location
     prompt: "You want to add a custom view. Where does the file go and what may it import?"
     expected_level: knows_directly
@@ -5377,6 +5380,7 @@ tests:
       ("Editable, hot-reloaded — no restart needed") is the part most likely
       to regress silently if the section is trimmed.
 
+  # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 0 reads, 0 searches, 40k ctx.
   - id: box-packageify-stance-b-off-limits
     prompt: "What parts of the box repository are off-limits to you during normal operation?"
     expected_level: knows_directly
@@ -5392,6 +5396,8 @@ tests:
       may edit the hot-reload surface (schemas/views/tricks) but not the rest
       of the package (deps, build config).
 
+  # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 5 reads, 5 searches, 40k ctx.
+  # The guide says `bbx engine upgrade`; this answer named both spellings, so the stale `bbx upgrade` literal passed. An answer naming only the guide's form would fail it.
   - id: box-packageify-bbx-upgrade
     prompt: "How does the boxholder upgrade this box's engine to a newer beebox version?"
     expected_level: knows_directly
@@ -6474,6 +6480,8 @@ tests:
   # prompt execution because the test box package-doc README is a symlink; no
   # agent knowledge result is claimed for this expectation.
 
+  # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 2 reads, 0 searches, 23k ctx.
+  # First agent result for this audit. should_read named node_modules/beebox/box-docs/publishing.md, which the runner refuses on a symlinked package (the earlier failures above); it now names the bare filename. The first run read the doc but left out the don't-inspect-credentials clause; an unchanged rerun passed.
   - id: publishing-site-authoring
     prompt: >
       The boxholder wants a small public field guide website. Explain where its
@@ -6487,7 +6495,7 @@ tests:
       or change files.
     context_dir: src/publications
     expected_level: knows_about
-    should_read: ["node_modules/beebox/box-docs/publishing.md"]
+    should_read: ["publishing.md"]
     watch_for: >
       Reads the installed guide, distinguishes finished static files from the
       site-local project, notes the separate package/lock for project mode,

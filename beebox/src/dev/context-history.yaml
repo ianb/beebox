@@ -3418,6 +3418,13 @@ test1:
       peak: 49739
       added: 4447
       turns: 7
+    - date: 2026-09-27T02:19:59.019Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 40210
+      peak: 44916
+      added: 4706
+      turns: 6
   box-packageify-views-location:
     - date: 2026-07-04T19:01:55.493Z
       boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
@@ -3426,12 +3433,26 @@ test1:
       peak: 54372
       added: 27844
       turns: 12
+    - date: 2026-09-27T02:19:59.019Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 40153
+      peak: 48255
+      added: 8102
+      turns: 6
   box-packageify-stance-b-off-limits:
     - date: 2026-07-04T19:01:55.493Z
       boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
       repoCommit: c30328c8ab7ffe56dc58f1d0f477ee104bb5b81b
       initial: 26528
       peak: 26528
+      added: 0
+      turns: 2
+    - date: 2026-09-27T02:19:59.019Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 40153
+      peak: 40153
       added: 0
       turns: 2
   box-packageify-bbx-upgrade:
@@ -3442,6 +3463,13 @@ test1:
       peak: 41776
       added: 15243
       turns: 14
+    - date: 2026-09-27T02:19:59.019Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 40157
+      peak: 48030
+      added: 7873
+      turns: 10
   question-dismissed-expired-meaning:
     - date: 2026-07-11T00:52:52.329Z
       boxCommit: 489b19a36205830d6c087441ab3415d5e96cd345
@@ -5604,6 +5632,21 @@ test1:
       peak: 40356
       added: 0
       turns: 2
+  publishing-site-authoring:
+    - date: 2026-09-27T02:19:59.019Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 22508
+      peak: 35423
+      added: 12915
+      turns: 4
+    - date: 2026-09-27T02:20:50.494Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: ee53cabbe84190242709b1f1d90386f4c66385ea
+      initial: 22568
+      peak: 35743
+      added: 13175
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
