@@ -18,8 +18,8 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { router, authedProcedure } from "../trpc.js";
-import { resolveCardPath } from "./card.js";
+import { router, authedProcedure } from "../procedures.js";
+import { resolveCardPath } from "../card-path.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";

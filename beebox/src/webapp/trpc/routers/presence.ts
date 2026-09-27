@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import { createPresenceRegistry } from "../../../core/notification/presence-registry/core.js";
 import { getBoxTime } from "../../../lib/time.js";
 

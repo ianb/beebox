@@ -2,7 +2,7 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";

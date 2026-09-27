@@ -18,7 +18,7 @@ import {
 } from "../../src/core/host-packages.js";
 import { wrapperBoxLabel } from "../../src/core/host-packages-system.js";
 import { runHostInstall, runHostSync } from "../../src/cli/commands/host.js";
-import { hostPackagesCheck } from "../../src/webapp/trpc/routers/health-host-packages.js";
+import { hostPackagesCheck } from "../../src/webapp/trpc/routers/health/checks/host-packages.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 /** A fake host: which packages are installed, and what the wrapper answers. */

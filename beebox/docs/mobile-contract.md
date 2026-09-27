@@ -183,7 +183,7 @@ cookie** minted from that token.
 | `src/core/mobile/request-auth.ts` — `resolveMobileRequestAuth(boxRoot, headers)` | **the one resolver every mobile gate uses** — cookie first, then bearer |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | box auth preHandler: accepts agent bearer or `resolveMobileRequestAuth`; renews the cookie |
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
-| `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
+| `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
 ### 2.3 Identity: a device acts as whoever paired it
 
@@ -749,7 +749,7 @@ The relay that lets a box agent retranscribe a message dictated in the **native*
   | side | anchor |
   |---|---|
   | web relay | `src/frontend/src/components/chat/native-last-audio-request.ts`; `src/frontend/src/lib/audio/last-audio.ts` — `fulfillLastAudioRequest` |
-  | box server | `src/webapp/routes/chat-last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
+  | box server | `src/webapp/routes/chat/last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
   | native decode, retention, answer | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeLastAudioRequest`; `Storage/VoiceAudioRetentionStore.swift`; `Services/ChatAPI.swift` — `answerLastAudio`; `Views/ChatWebView.swift` — `receiveLastAudioRequest`; `Views/RootView.swift` — `answerLastAudioRequest` |
 - **Drift:** QUIET — a phone that stops answering looks identical to a phone that is asleep, and the
   agent sees the same "no recording is cached" either way. The fixture family `last-audio-request`
@@ -880,7 +880,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized, service? }` |
-  | box handler | `src/webapp/routes/chat-audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
+  | box handler | `src/webapp/routes/chat/audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
 - **Drift:** LOUD for provider rejection (5xx surfaced). A provider HTTP 200 with unusable text would
   be SILENT. Float32 WAV compatibility was verified against every selectable HQ path on 2026-08-06.
 
@@ -892,7 +892,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.resolvedSession()`, `DefaultSessionResult { sessionId? }` |
-  | box handler | `src/webapp/routes/chat.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
+  | box handler | `src/webapp/routes/chat/register.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
 - **Drift:** LOUD (non-2xx `resolvedSession` throws; a transient 5xx does not silently fork a new
   session).
 
@@ -915,7 +915,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `uploadFile`, `uploadFileRequest` |
-  | box handler | `src/webapp/routes/chat-uploads.ts` — `registerChatUploadRoutes` |
+  | box handler | `src/webapp/routes/chat/uploads.ts` — `registerChatUploadRoutes` |
 - **Drift:** LOUD (non-2xx, malformed metadata, interruption, and timeout produce retryable native
   attachment failure; incomplete files block send).
 
@@ -944,7 +944,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | web caller | `src/frontend/src/api-chat.ts` (`chatTurnStartSchema`, `ChatImageAttachment`) |
-  | box handler | `src/webapp/routes/chat-send-routes.ts`; `src/webapp/routes/chat-helpers.ts` — `sendBodySchema`, `validateImages` |
+  | box handler | `src/webapp/routes/chat/send-routes.ts`; `src/webapp/routes/chat/helpers.ts` — `sendBodySchema`, `validateImages` |
 - **Drift:** LOUD (400) / SILENT dedup.
 
 ### 5.6 Bulk file-upload batch (`/api/bulk/...`)
@@ -1022,7 +1022,7 @@ See §1.3 (full request/response/errors).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
+  | box handler | `src/webapp/routes/bulk-upload/register.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
   | native caller | `Services/BulkUploadAPI.swift` — request shaping; `Services/BulkUploadCoordinator.swift` — bounded queue (3 in flight), per-item retry, resume via `GET /sessions/:id` |
 - **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
   missing list, which finalize reports).
@@ -1070,7 +1070,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | native caller | `Services/LogForwarder.swift` — `flushBox`/`send` |
-  | box handler | `src/webapp/trpc/routers/debugLog.ts` — `submit` |
+  | box handler | `src/webapp/trpc/routers/debug-log.ts` — `submit` |
   | box durability | `src/lib/rolling-log.ts` — `appendRollingLogStrict` |
 - **Drift:** fail-local. A forwarding failure must never break the feature it's logging — entries are
   retained client-side on any network failure or 5xx and simply wait for the next flush trigger; there
@@ -1162,7 +1162,7 @@ See §1.3 (full request/response/errors).
   | box device store | `src/core/mobile/pairing.ts` — `registerDevicePush`, `pruneDevicePush`, `listMobileDevices` |
 - **Fixtures:** `test/mobile-contract/fixtures/push-token/`, run through `PushTokenBody` by
   `src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`, posted at the route by
-  `test/webapp/routes/pairing-push-token.doctest.md`, and matched against the request iOS builds by
+  `test/webapp/routes/pairing.push-token.doctest.md`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
   Admin Notifications section shows (no device listed under Phones).
@@ -1226,7 +1226,7 @@ query-param-driven — there is **no user-agent gating** anywhere.
 | `src/webapp/server-box-scope.ts` — `isPairingRedeemUrl` | `POST` + redeem URL | box auth hook lets redeem through |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | `verifyMobileBearer` OR `verifyMobileToken(?mobileToken=)` | passes box auth preHandler |
 | `src/webapp/server-box-scope.ts` — `createContext` | `mobileBearerOk`/`mobileTokenOk` | `authed:true`; **`user` stays null, `isOwner:false`** (§2.3) |
-| `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
+| `src/webapp/server-root/root-routes.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
 | `src/core/mobile/pairing.ts` (whole module) | device store, tokens | source of truth |
 
 - **`User-Agent: BeeBox-iOS/0.1`** is sent on all four native HTTP calls but the server never
@@ -1454,7 +1454,7 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
   device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
   the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
-  `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
+  `resolveMobileSender` (`test/webapp/routes/chat/helpers.mobile-sender.doctest.md`); the context was the
   remaining piece.
 - **APNs payload names no box (CLOSED 2026-09-26).** §5.10's payload carries `box`, the box
   slug, and the iOS tap opens on the paired box with that slug. A payload without `box` still opens
@@ -1465,7 +1465,7 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   pairings live only in process memory (10-min TTL) and can be lost to a lazy 5-min box idle-stop
   mid-flow.
 - **`mobileTokenFromUrl` duplicated 3×** — a security-relevant parser copied verbatim across
-  `hub-server.ts` / `server-box-scope.ts` / `server-root.ts`.
+  `hub-server.ts` / `server-box-scope.ts` / `server-root/root-routes.ts`.
 - **Benign field drifts.** Redeem `{boxSlug,label,deviceId,deviceLabel}` ignored by iOS; receipt
   `deduplicated` ignored by iOS; `User-Agent: BeeBox-iOS/0.1` never branched on server-side.
 - **I8 — float WAV decoder compatibility (RESOLVED 2026-08-06).** Live calls with a 48 kHz mono
@@ -1541,12 +1541,12 @@ beebox/src/core/mobile/session.ts
 beebox/src/core/mobile/request-auth.ts
 beebox/src/webapp/mobile-cookie.ts
 beebox/src/webapp/routes/pairing.ts
-beebox/src/webapp/routes/chat-audio-routes.ts
-beebox/src/webapp/routes/chat-last-audio-routes.ts
-beebox/src/webapp/routes/chat-uploads.ts
-beebox/src/webapp/routes/bulk-upload.ts
+beebox/src/webapp/routes/chat/audio-routes.ts
+beebox/src/webapp/routes/chat/last-audio-routes.ts
+beebox/src/webapp/routes/chat/uploads.ts
+beebox/src/webapp/routes/bulk-upload/register.ts
 beebox/src/core/capture/staging-stream.ts
-beebox/src/webapp/trpc/routers/debugLog.ts
+beebox/src/webapp/trpc/routers/debug-log.ts
 beebox/src/core/notification/apns-channel/payload.ts
 beebox/src/core/notification/target.ts
 

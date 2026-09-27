@@ -12,7 +12,7 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import { getIntent, readRecent, type LoggedNotification } from "../../../core/notification/log.js";
 import { apnsConfigured } from "../../../core/notification/apns-channel/core.js";
 import { CHANNELS, LOUDNESS, targetStringSchema } from "../../../core/notification/intent.js";

@@ -10,7 +10,7 @@ step (below).
 - **`src/lib/csp.ts`** — `buildCspPolicy({ mode, reportPath })` is the single
   source of truth for the directive set. Prod and dev share it so they can't
   drift; only `script-src`/`style-src` and the report path differ by mode.
-- **Built webapp** — `registerCspReportingHeaders` (`src/webapp/server-root.ts`) adds an
+- **Built webapp** — `registerCspReportingHeaders` (`src/webapp/server-root/root-routes.ts`) adds an
   `onSend` hook that sets `Content-Security-Policy-Report-Only` +
   `Reporting-Endpoints` on `text/html` responses. It keys on content-type (API
   and asset responses get no CSP) and **yields to any route that already set a

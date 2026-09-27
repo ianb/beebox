@@ -100,7 +100,7 @@ tRPC procedures (from the app or a tRPC client), not a raw HTTP endpoint.
 
 - `src/frontend/src/components/DebugLog.tsx` — console patching, server forwarding, panel UI
 - `src/frontend/src/main/app-shell.tsx` — init capture, error badge, global panel rendering
-- `src/webapp/trpc/routers/debugLog.ts` — `submit`/`get`/`clear` procedures, ring buffer, log file writing
+- `src/webapp/trpc/routers/debug-log.ts` — `submit`/`get`/`clear` procedures, ring buffer, log file writing
 - `src/lib/rolling-log.ts` — `appendRollingLogStrict` (used by `submit`, rejects on filesystem
   failure so a mobile client doesn't clear a queued entry it never durably sent) vs. the lenient
   `appendRollingLog` (used elsewhere, best-effort)

@@ -275,7 +275,7 @@ const GUIDANCE_HTML = `
 <p>When the full log is clean across meaningful traffic, harden by changing the header name from
    <code>Content-Security-Policy-Report-Only</code> to <code>Content-Security-Policy</code> (keep
    <code>script-src 'self'</code>) in <code>registerCspReportingHeaders</code>
-   (<code>src/webapp/server-root.ts</code>). Propose only — the boxholder confirms and deploys.</p>
+   (<code>src/webapp/server-root/root-routes.ts</code>). Propose only — the boxholder confirms and deploys.</p>
 </section>`;
 
 function bannerHtml(

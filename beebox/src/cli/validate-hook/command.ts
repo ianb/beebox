@@ -17,7 +17,7 @@ import {
   isLintableMarkdown,
 } from "../validate-markdown.js";
 import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile, isViewSourceFile } from "../../lib/paths/core.js";
-import { lintViewFile } from "../../webapp/views/compiler.js";
+import { lintViewFile } from "../../webapp/views/compiler/compile.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintViewMarkdown } from "../../core/views/markdown-check/core.js";
 import { lintCardsDispatch } from "../../core/card-lint/core.js";

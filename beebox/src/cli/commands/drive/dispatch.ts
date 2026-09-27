@@ -18,7 +18,7 @@ import type { Result } from "../../../lib/result.js";
 import { DriveMountError } from "../../../connectors/google-drive/mount-errors.js";
 import { resolveDriveService } from "../../../google/access.js";
 import type { GoogleDriveService } from "../../../services/google-drive/core.js";
-import type { AppRouter } from "../../../webapp/trpc/router.js";
+import type { AppRouter } from "../../../webapp/trpc/routers.js";
 
 /**
  * The Drive service for an in-process run. Unlike the old

@@ -12,7 +12,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
 import { createGmailConnector } from "../../../src/connectors/gmail/connector.js";
-import { strandedDraftsHealthChecks } from "../../../src/webapp/trpc/routers/health-connectors.js";
+import { strandedDraftsHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/connectors.js";
 ```
 
 ## A new outbound (no thread) gets uploaded and stamped

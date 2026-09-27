@@ -7,7 +7,7 @@ itself reads `waiting: <reason>`.
 
 ```ts setup
 import { formatHealthText } from "../../../src/cli/commands/health.js";
-import { scheduledTasksCheck } from "../../../src/webapp/trpc/routers/health-schedules.js";
+import { scheduledTasksCheck } from "../../../src/webapp/trpc/routers/health/checks/schedules.js";
 
 const now = new Date("2026-09-26T12:00:00Z");
 const hourAgo = "2026-09-26T11:00:00Z";

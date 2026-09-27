@@ -7,7 +7,7 @@ audience or is waiting for a signed-in member.
 
 ```ts setup
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "../../../../src/webapp/trpc/router.js";
+import type { AppRouter } from "../../../../src/webapp/trpc/routers.js";
 import { pubCommand } from "../../../../src/cli/commands/pub/command.js";
 import { publicationApprovalUrl, publicationDestinationUrl, publicationPreparedLines, publicationSharedHostLines, publicationSiteLines } from "../../../../src/cli/commands/pub/managed.js";
 

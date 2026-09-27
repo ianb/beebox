@@ -23,7 +23,7 @@ that code, and structurally validates the families that are consumed only by the
 native clients (`location`, `pairing-url`, `redeem`) against their documented
 shapes. `push-token` and `apns-payload` run through the server's own body
 schema and payload builder. One family lives elsewhere on the web side: `debug-log-submit` is POSTed
-verbatim at the real route by `test/webapp/debug-log-submit.doctest.md`, because
+verbatim at the real route by `test/webapp/trpc/routers/debug-log.submit.doctest.md`, because
 its server-side consumer is an HTTP endpoint rather than a parser.
 
 ```ts setup
@@ -42,7 +42,7 @@ import { parseTarget } from "../../../../../../core/notification/target.js";
 
 // Shared cross-platform golden fixtures (also loaded by
 // test/core/notification/apns-payload.doctest.md and
-// test/webapp/debug-log-submit.doctest.md); stays at the package root per
+// test/webapp/trpc/routers/debug-log.submit.doctest.md); stays at the package root per
 // rule 3 (multiple areas' tests are users), even though this doctest itself
 // moved into the frontend's own test tree.
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../../../../test/mobile-contract/fixtures");
@@ -442,7 +442,7 @@ runFamily("redeem", validateRedeem)
 `POST /api/pairing/push-token` bodies run through the route's own schema: a
 sandbox and a production registration (an uppercase token is stored
 lowercase), two bodies it refuses with 400, and the 401 error body.
-`test/webapp/routes/pairing-push-token.doctest.md` posts the same request
+`test/webapp/routes/pairing.push-token.doctest.md` posts the same request
 fixtures at the real route.
 
 ```ts

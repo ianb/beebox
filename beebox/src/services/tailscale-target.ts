@@ -29,7 +29,7 @@ export type AuthPosture = "enforced" | "open" | "unreachable" | "ambiguous";
 
 /**
  * Classify a loopback `/auth/me` probe against the EXACT shapes beebox's
- * `/auth/me` produces (`src/webapp/routes/auth.ts`):
+ * `/auth/me` produces (`src/webapp/routes/auth/register.ts`):
  *   - open mode → `200 {"open":true}` ⇒ `open` (must NOT be exposed);
  *   - authenticated → `200` with `{email:<string>, isOwner:<bool>, boxes:<array>}`
  *     ⇒ `enforced`;

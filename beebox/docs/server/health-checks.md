@@ -43,7 +43,7 @@ cases — see `docs/procedure-implementation.md` → Instructions.
 
 The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav card, engine) are deep and slow: a subprocess `claude auth status`, the git-annex doctor over the attachment trees, a `tmp-capture/` walk, a dozen serial fs probes. Measured 580–650 ms on prod, and they rode in the dashboard's tRPC batch, so every dashboard load waited on them.
 
-`GET /api/trpc/health.check` therefore answers from a **stale-while-revalidate snapshot** (`src/webapp/trpc/routers/health-snapshot.ts`), per box, per `bbx serve` process:
+`GET /api/trpc/health.check` therefore answers from a **stale-while-revalidate snapshot** (`src/webapp/trpc/routers/health/checks/snapshot.ts`), per box, per `bbx serve` process:
 
 - first call computes and caches;
 - calls within 60 s answer from the snapshot;

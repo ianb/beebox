@@ -12,7 +12,7 @@ priority: backlog
 
 ## Recovery assessment (2026-09-21)
 
-The binding mechanism remains: `beebox/src/webapp/trpc/routers/chat.ts:292-312`
+The binding mechanism remains: `beebox/src/webapp/trpc/routers/chat/router.ts:292-312`
 groups by exact `contextDir`; `core/chat/session/history.ts:237` fills only an
 undefined binding, and line 340 matches exact bindings. No fresh browser walk
 or rebind experiment was performed. No exact queue duplicate was found.

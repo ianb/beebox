@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, authedProcedure } from "../trpc.js";
+import { router, authedProcedure } from "../procedures.js";
 import type { TrpcContext } from "../context.js";
 import { loadRoutingCandidates, boundRoutingContexts, RoutingCatalogError } from "../../../core/chat/routing/catalog.js";
 import { routingCandidateSchema, selectRoutingDestination } from "../../../core/chat/routing/policy.js";

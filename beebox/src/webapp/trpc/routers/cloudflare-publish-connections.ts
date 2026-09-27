@@ -9,7 +9,7 @@ import {
   saveCloudflarePublishConnection,
 } from "../../../core/secrets/cloudflare-publish.js";
 import { CloudflarePublishTokenVerificationError, createCloudflarePublishTokenVerifier } from "../../../services/cloudflare-publish-token-verifier.js";
-import { authenticatedOwnerProcedure, router } from "../trpc.js";
+import { authenticatedOwnerProcedure, router } from "../procedures.js";
 
 const nameSchema = z.string().trim().regex(/^[a-z][\da-z-]{0,39}$/);
 const accountIdSchema = z.string().trim().regex(/^[\da-f]{32}$/i);

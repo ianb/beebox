@@ -5,7 +5,7 @@ import {
   capturedTabSet,
   tabArrangementProposal,
   tabTransferScope,
-} from "../webapp/trpc/routers/clerk-contract.js";
+} from "../webapp/trpc/clerk-contract.js";
 
 interface ArrangementFields {
   source: z.infer<typeof capturedTabSet>;

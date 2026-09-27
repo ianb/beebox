@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { scanBoxInventory, type BoxInventory } from "../../../core/box-inventory/core.js";
-import { authedProcedure, router } from "../trpc.js";
+import { authedProcedure, router } from "../procedures.js";
 
 const CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const inventoryCache = new Map<string, { inventory: BoxInventory; storedAt: number }>();

@@ -18,9 +18,9 @@ import { tracked } from "@trpc/server";
 import type { BusEvent } from "../../../core/event-bus/core.js";
 import type { ChatMessage } from "../../../core/chat/session/run/core.js";
 import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
-import { resolveViewsDir } from "../../views/compiler.js";
+import { resolveViewsDir } from "../../views/compiler/compile.js";
 import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 
 /**
  * The bus payload type map, surfaced at the `@backend` boundary for the

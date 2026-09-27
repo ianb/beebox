@@ -10,7 +10,7 @@ never learned to send) fails here instead of only in production.
 
 ```ts setup
 import { buildVoiceFinalizeBody } from "../../../../src/lib/audio/voice-staging-queue/voice-staging-transport.js";
-import { VoiceFinalizeBodySchema } from "../../../../../webapp/routes/capture-finalize-voice.js";
+import { VoiceFinalizeBodySchema } from "../../../../../webapp/routes/capture/finalize-voice.js";
 import type { VoiceFinalizeOp } from "../../../../src/lib/audio/voice-staging-queue-core.js";
 
 function parse(payload: VoiceFinalizeOp) {

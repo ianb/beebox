@@ -32,7 +32,7 @@ import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { compileView, listViews, resolveViewsDir } from "../../../webapp/views/compiler.js";
+import { compileView, listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
 import { viewLintCommand } from "./lint.js";
 import { loadViewCards } from "../../../core/views/cards.js";

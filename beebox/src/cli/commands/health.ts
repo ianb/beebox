@@ -28,7 +28,7 @@ import {
 } from "../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
-import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health.js";
+import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health/router.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",

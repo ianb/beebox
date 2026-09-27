@@ -20,7 +20,7 @@
 
 import { createTRPCClient, httpLink, type TRPCClient } from "@trpc/client";
 import { err, ok, type Result } from "../../lib/result.js";
-import type { AppRouter } from "../../webapp/trpc/router.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
 
 /** The env vars `core/script-env.ts` hands every box-spawned subprocess. */
 const REQUIRED_VARS = ["BBX_SERVER_URL", "BBX_BOX_NAME", "BBX_AGENT_TOKEN"] as const;

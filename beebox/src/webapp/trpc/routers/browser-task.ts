@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { Document, isMap, parseDocument } from "yaml";
-import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { listBrowserTasks } from "../../../core/browser-task/list.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { splitCardContent } from "../../../exports/cards.js";

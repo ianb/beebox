@@ -20,7 +20,7 @@ import { publicationCardUrl } from "../../../shared/publication-card.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { authenticatedOwnerProcedure, authedProcedure, router } from "../trpc.js";
+import { authenticatedOwnerProcedure, authedProcedure, router } from "../procedures.js";
 
 const pubIdInput = pubIdSchema;
 

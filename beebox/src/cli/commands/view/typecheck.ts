@@ -12,7 +12,7 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import type * as ts from "typescript";
-import { listViews, resolveViewsDir } from "../../../webapp/views/compiler.js";
+import { listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 
 /** Per-view outcome from `bbx view typecheck`. */

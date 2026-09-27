@@ -15,7 +15,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { driveServiceAvailable, resolveDriveService } from "../../../google/access.js";
 import { googleService } from "../google-service.js";
 import type { GoogleDriveService } from "../../../services/google-drive/core.js";

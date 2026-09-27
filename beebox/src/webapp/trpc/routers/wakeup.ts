@@ -20,7 +20,7 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { runBbxWakeup } from "../../../core/commands/wakeup.js";
 import type { WakeupRunResult } from "../../../core/wakeup-runner.js";
 

@@ -23,8 +23,8 @@ import { invariant } from "../lib/invariant.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any
- * box's own `/<slug>` scope) — see `src/webapp/server-root.ts`
- * (`/healthz`, `/api/...`), `src/webapp/routes/auth.ts` (`/auth/...`), and
+ * box's own `/<slug>` scope) — see `src/webapp/server-root/root-routes.ts`
+ * (`/healthz`, `/api/...`), `src/webapp/routes/auth/register.ts` (`/auth/...`), and
  * `src/webapp/server-box-scope.ts` (`/webhook/<slug>/...`, a SEPARATE
  * top-level prefix from the box's own `/<slug>`). A box slug colliding with
  * any of these would make some of the box's own routes unreachable through

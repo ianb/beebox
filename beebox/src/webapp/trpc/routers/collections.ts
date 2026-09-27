@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { isUnsafeGlobPattern } from "../../../core/collection/card-scope.js";
 import { TodoParamsSchema } from "../../../core/todo/collection.js";
 import { runTodoQuery, type TodoQueryResult } from "../../../core/todo/query.js";

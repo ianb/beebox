@@ -24,11 +24,14 @@ Older raw routes are tech debt — migrate when you touch the area.
 
 ### 1. Create or Edit a Router
 
-Routers live in `src/webapp/trpc/routers/<name>.ts`. Each router groups related procedures.
+Routers live in `src/webapp/trpc/routers/`, one member per router: a flat
+`<name>.ts` file, or `<name>/router.ts` beside that unit's own helpers when a
+router needs more than one file (e.g. `chat/router.ts`, `health/router.ts`).
+Each router groups related procedures.
 
 ```typescript
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { TRPCError } from "@trpc/server";
 
 export const myRouter = router({
@@ -64,15 +67,18 @@ export const myRouter = router({
 
 ### 2. Register the Router
 
-Add it to `src/webapp/trpc/router.ts`:
+Add it to the `routerMembers` object in `src/webapp/trpc/routers.ts`, keyed
+by the router's camelCase name (the layout check verifies the key matches
+the file or directory name in identifier form). That one object is passed to
+both `defineRegistry` (completeness) and `router(...)` (the actual `appRouter`):
 
 ```typescript
 import { myRouter } from "./routers/my.js";
 
-export const appRouter = router({
+const routerMembers = {
   // ... existing routers
   my: myRouter,
-});
+};
 ```
 
 ### 3. Use It in the Frontend

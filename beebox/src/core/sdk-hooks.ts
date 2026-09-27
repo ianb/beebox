@@ -16,7 +16,7 @@ import { lintCardsDispatch } from "./card-lint/core.js";
 import { buildLoadContext } from "./load-context.js";
 import { dirname } from "node:path";
 import { isViewFile, isViewSourceFile, findBoxRoot } from "../lib/paths/core.js";
-import { lintViewFile } from "../webapp/views/compiler.js";
+import { lintViewFile } from "../webapp/views/compiler/compile.js";
 import { lintViewMarkdown } from "./views/markdown-check/core.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";

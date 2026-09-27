@@ -10,14 +10,14 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure, authedProcedure } from "../trpc.js";
+import { router, publicProcedure, authedProcedure } from "../procedures.js";
 import {
   commentaryInput,
   commentaryOutput,
   commentaryDestinationsOutput,
   tabArrangementPayload,
   tabArrangementOutput,
-} from "./clerk-contract.js";
+} from "../clerk-contract.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";

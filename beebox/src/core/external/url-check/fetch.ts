@@ -7,7 +7,7 @@
  * and offline; only `checkUrl` touches the network.
  */
 
-import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../../../webapp/routes/proxy-image.js";
+import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../../../webapp/routes/api/proxy-image.js";
 import { invariant } from "../../../lib/invariant.js";
 
 /**

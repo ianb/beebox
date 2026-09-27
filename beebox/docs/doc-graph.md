@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-27T18:21:57Z
+Generated: 2026-09-27T19:00:22Z
 Total documents: 456
 
 ## Issues
@@ -703,7 +703,7 @@ References:
 
 #### docs/adding-api-endpoints.md
 
-Title: "Adding API Endpoints" | 244 lines | current reference
+Title: "Adding API Endpoints" | 250 lines | current reference
 
 Referenced by:
 - CLAUDE.md:39 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc

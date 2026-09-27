@@ -3,7 +3,7 @@
  * keep `createHubServer` under its line cap.
  *
  * Both require the `BBX_DIAG_API_KEY` bearer token, mirroring the box server's
- * own `/healthz` (`src/webapp/server-root.ts`). The hub's `/healthz` used to
+ * own `/healthz` (`src/webapp/server-root/root-routes.ts`). The hub's `/healthz` used to
  * be unauthenticated, publicly leaking slugs/PIDs/ports/error strings (nginx
  * proxies `/` straight to the hub), and reported a constant `status: "ok"`.
  *

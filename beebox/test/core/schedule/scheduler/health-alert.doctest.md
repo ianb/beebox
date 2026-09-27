@@ -13,7 +13,7 @@ relapse is a new episode.
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { recordScheduleEpisodes } from "../../../../src/core/schedule/scheduler/health-alert.js";
 import { loadScheduleHealth } from "../../../../src/core/schedule/health-box.js";
-import { engineQuotaChecks, scheduledTasksCheck } from "../../../../src/webapp/trpc/routers/health-schedules.js";
+import { engineQuotaChecks, scheduledTasksCheck } from "../../../../src/webapp/trpc/routers/health/checks/schedules.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import {
   loadScriptState,

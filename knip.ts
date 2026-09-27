@@ -27,12 +27,19 @@ const config: KnipConfig = {
     },
     "beebox": {
       entry: [
-        "src/webapp/server.ts",
+        "src/webapp/server/app.ts",
         "src/schemas/index.ts",
         "src/connectors.ts",
         "src/cli/entry/run.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
+        // Declarative-only `defineRegistry` completeness declarations
+        // (docs/plans/file-layout.md rule 1/4): callers import each member
+        // directly by its own path for invocation, so nothing ever imports
+        // the registry module itself.
+        "src/webapp/routes.ts",
+        "src/webapp/trpc/routers.ts",
+        "src/webapp/trpc/routers/health/checks.ts",
         // The box-facing specifiers (beebox/cards, ./schema, ./server)
         // need no entry: knip reads package.json "exports" and maps the dist
         // paths back through tsconfig. Same for the frontend's main.tsx, which

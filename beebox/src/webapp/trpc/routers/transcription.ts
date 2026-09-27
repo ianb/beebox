@@ -1,6 +1,6 @@
 import { z } from "zod";
 import ky, { HTTPError } from "ky";
-import { router, ownerProcedure, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,

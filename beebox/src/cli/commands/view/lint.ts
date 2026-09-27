@@ -8,7 +8,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { listViews } from "../../../webapp/views/compiler.js";
+import { listViews } from "../../../webapp/views/compiler/compile.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 
 export const viewLintCommand = new Command("lint")

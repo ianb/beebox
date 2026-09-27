@@ -22,7 +22,7 @@ import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { createServer } from "../../src/webapp/server.js";
+import { createServer } from "../../src/webapp/server/app.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus/core.js";
 import type { Services } from "../../src/services/container.js";

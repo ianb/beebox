@@ -33,7 +33,7 @@ The text content inside the tag is context passed back to the agent when the sch
 1. `chatSession.on("turn-text")` fires after each agent response
 2. `parseScheduleTags()` / `parseCancelScheduleTags()` extract tags from the response text
 3. `ChatScheduleManager` stores schedules in `.beebox/chat-schedules.json` and sets `setTimeout` timers. Each entry records the **originating session id** (`sessionId`) so the fire can land back in the conversation that created it.
-4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat-schedule-fire.ts`):
+4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`):
    - Broadcasts `schedule-fired` SSE event (alarm/announce data for the frontend), before any session work
    - Resumes the **originating session** (`schedule.sessionId`) and sends it a `<schedule-fired>` message, so the reply lands in the right thread rather than whatever chat was last active
    - Broadcasts updated history via SSE once the fired turn completes
@@ -79,9 +79,9 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 | `src/core/chat/session/run/core.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
 | `src/core/chat/session/pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
 | `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
-| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
-| `src/webapp/routes/chat-schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
-| `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
+| `src/webapp/routes/chat/register.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
+| `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
 | `src/frontend/src/components/chat/InteractiveChat-layout/view.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
 | `src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
 | `src/frontend/src/components/chat/message-parsing.ts` | `stripUserDisplayTags()`, hidden schedule-fired messages |

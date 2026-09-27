@@ -24,7 +24,7 @@ Decide one of three things:
 - **Real leak.** Fix it by reusing the existing containment helpers named in
   `static-sweep.ts`'s doc comment (`containWithinBox`, `resolveCardPath`, etc.
   — don't invent a new one unless none fits). Add a regression assertion to
-  `beebox/test/webapp/cross-box-probe.doctest.md` proving the fix (create it
+  `beebox/test/scenarios/cross-box-probe.doctest.md` proving the fix (create it
   with one such assertion if it doesn't exist yet — the run script's `probe`
   line means it's missing). Report at `important`.
 - **False positive.** The sweep's regex over-matched. Say concretely why the

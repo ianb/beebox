@@ -19,7 +19,7 @@ import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { ownerProcedure, publicProcedure, router } from "../trpc.js";
+import { ownerProcedure, publicProcedure, router } from "../procedures.js";
 
 const systemThemeInput = z.discriminatedUnion("scope", [
   z.object({ scope: z.literal("box"), theme: SystemThemeChoiceSchema.nullable() }),

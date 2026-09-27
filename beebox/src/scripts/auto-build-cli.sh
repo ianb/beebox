@@ -11,7 +11,7 @@
 # Every `bbx` invocation in a dev checkout rebuilds a stale bundle
 # (`beebox/bin/bbx`), and a running box child polls the bundle's stat
 # identity once a second and re-execs when it changes
-# (`src/webapp/server.ts`, `src/lib/dev-bundle-reload.ts`). Those two halves
+# (`src/webapp/server/app.ts`, `src/lib/dev-bundle-reload.ts`). Those two halves
 # never met: the poll had no producer. Nothing wrote a new bundle on its own,
 # so the only thing that closed the loop was somebody happening to run `bbx` (or
 # `pnpm test`) for an unrelated reason. Until then the box child kept serving

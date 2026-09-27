@@ -15,7 +15,7 @@
  *
  * Shared so the hub's fleet-wide root mount (`src/hub/server/core.ts`, which is
  * what serves `/assets/` in production) and the standalone box server's mount
- * (`src/webapp/server.ts`, used by local/docker installs) cannot drift.
+ * (`src/webapp/server/app.ts`, used by local/docker installs) cannot drift.
  */
 
 /**

@@ -1,5 +1,5 @@
 /** Disposable full-server process for lifecycle smoke; never prewarms an agent. */
-import { startServer } from "../../src/webapp/server.js";
+import { startServer } from "../../src/webapp/server/app.js";
 import { invariant } from "../../src/lib/invariant.js";
 
 const boxRoot = process.argv[2];

@@ -21,7 +21,7 @@ import { parse } from "yaml";
 
 import { errorMessage } from "../../../../src/lib/error-guards.ts";
 import { isRecord } from "../../../../src/lib/is-record.ts";
-import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health.ts";
+import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health/router.ts";
 import { assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
 
 const HERE = import.meta.dirname;

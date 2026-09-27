@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { searchBox } from "../../../core/search/query/core.js";
 
 const prefix = z.string().min(1).max(500).refine((value) => !value.startsWith("/"), "path prefixes must be box-relative");

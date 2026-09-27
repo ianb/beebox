@@ -11,7 +11,7 @@ behavior under test is the re-arming, not the duration.
 ```ts setup
 import { createPromoteDebouncer, SCAN_SETTLE_MS } from "../../../src/core/scan/promote-debounce.js";
 import Fastify from "fastify";
-import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-promote-lifecycle.js";
+import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
 import { sleep } from "../../../src/lib/sleep.js";
 
 function counting(opts) {

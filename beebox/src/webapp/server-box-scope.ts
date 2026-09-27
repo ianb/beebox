@@ -10,22 +10,22 @@ import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import { registerApiRoutes } from "./routes/api.js";
+import { registerApiRoutes } from "./routes/api/register.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerChatRoutes } from "./routes/chat.js";
+import { registerChatRoutes } from "./routes/chat/register.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js";
-import { registerCaptureRoutes } from "./routes/capture.js";
+import { registerCaptureRoutes } from "./routes/capture/register.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
-import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerBulkUploadRoutes } from "./routes/bulk-upload/register.js";
 import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
-import { registerScanUploadRoutes } from "./routes/scan-upload.js";
+import { registerScanUploadRoutes } from "./routes/scan-upload/register.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
-import { appRouter } from "./trpc/router.js";
+import { appRouter } from "./trpc/routers.js";
 import type { TrpcActor, TrpcContext } from "./trpc/context.js";
 import {
   isHubMode,

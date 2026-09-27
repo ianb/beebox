@@ -124,7 +124,7 @@ async function runProdHostAudit(): Promise<string[]> {
 
 async function checkProbeDoctest(): Promise<string[]> {
   if (await fileExists(PROBE_DOCTEST)) return [];
-  return ["probe  missing  beebox/test/webapp/cross-box-probe.doctest.md"];
+  return ["probe  missing  beebox/test/scenarios/cross-box-probe.doctest.md"];
 }
 
 /**

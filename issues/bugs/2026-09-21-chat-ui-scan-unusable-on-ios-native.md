@@ -20,7 +20,7 @@ app's chrome.
 `bbx chat ui` (`beebox/src/cli/commands/chat/ui.ts`) POSTs to
 `/api/chat/ui/request`, which parks the request and broadcasts a transient
 `ui-scan-request` bus event, waiting for the browser tab holding that chat
-session to answer (`beebox/src/webapp/routes/chat-ui-routes.ts`). The answer
+session to answer (`beebox/src/webapp/routes/chat/ui-routes.ts`). The answer
 comes from a listener in the web frontend bundle
 (`beebox/src/frontend/src/components/chat/ui-scan-request-handler.ts`, wired
 into `InteractiveChat-ws.ts:157`). Nothing in this path is channel-aware: it

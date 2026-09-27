@@ -120,7 +120,7 @@
     "reason": "The persisted-state migration recognizes the former package dependency."
   },
   {
-    "path": "beebox/test/cli/cb-tombstone.doctest.md",
+    "path": "beebox/test/bin/cb-tombstone.doctest.md",
     "occurrenceClass": "standalone-cli-token",
     "expectedCount": 9,
     "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work."

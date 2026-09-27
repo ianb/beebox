@@ -14,7 +14,7 @@
 import type { TRPCClient } from "@trpc/client";
 import { boxClient } from "../../lib/box-client.js";
 import { refusalFor } from "../../lib/credentialed-verb.js";
-import type { AppRouter } from "../../../webapp/trpc/router.js";
+import type { AppRouter } from "../../../webapp/trpc/routers.js";
 
 export type NotifyRoute =
   | { kind: "server"; client: TRPCClient<AppRouter> }

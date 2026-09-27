@@ -4,7 +4,7 @@ The optional view context describes presentation, independently of destination.
 An explicit snapshot replaces legacy companion context, including clearing it.
 
 ```ts setup
-import { sendBodySchema, extractCardFields, buildSendInput } from "../../../src/webapp/routes/chat-helpers.js";
+import { sendBodySchema, extractCardFields, buildSendInput } from "../../../src/webapp/routes/chat/helpers.js";
 import { composeChatAppSnapshot, parseChatAppDeltas } from "../../../src/core/chat/features.js";
 import { combineQueuedInputs } from "../../../src/core/chat/session/state.js";
 ```

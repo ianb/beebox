@@ -29,7 +29,7 @@ import { spawnProfile } from "../../lib/spawn-profile.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 import { err, ok, type Result } from "../../lib/result.js";
-import type { AppRouter } from "../../webapp/trpc/router.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
 
 /**
  * The `--json` flag, read off the command rather than off an action parameter.

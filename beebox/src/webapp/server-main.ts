@@ -16,7 +16,7 @@
  * has no side effects — only running THIS file starts a server.
  */
 import path from "node:path";
-import { startServer, type BoxSpec } from "./server.js";
+import { startServer, type BoxSpec } from "./server/app.js";
 import { loadEnv, serverEnvSchema } from "../lib/env.js";
 import { boxSlug } from "../lib/box-slug.js";
 

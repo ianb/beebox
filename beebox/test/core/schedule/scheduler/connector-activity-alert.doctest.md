@@ -13,8 +13,8 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { syncConnector, addDays, loadConnectorActivity } from "../../../../src/connector-activity/core.js";
 import { updateConnectorEpisodes } from "../../../../src/core/schedule/scheduler/connector-activity-alert.js";
-import { connectorActivityHealthChecks } from "../../../../src/webapp/trpc/routers/health-connectors.js";
-import { appRouter } from "../../../../src/webapp/trpc/router.js";
+import { connectorActivityHealthChecks } from "../../../../src/webapp/trpc/routers/health/checks/connectors.js";
+import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 
 async function seedBox() {
   const box = await makeTmpBox({ git: true });

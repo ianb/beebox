@@ -257,7 +257,7 @@ summary(unitsRule.check(setMembersLayout)) === ""
 Same set, but `util.ts` is used only by files inside `routes/chat/`, a
 member directory of the set. The candidate target `src/webapp/routes` is
 still the set directory, but this time every importer lies inside its one
-child `chat`, so descent continues and lands on `src/webapp/routes/chat`,
+child `chat`, so descent continues and lands on `src/webapp/routes/chat/register`,
 which is not itself a set directory: that is the finding.
 
 ```ts

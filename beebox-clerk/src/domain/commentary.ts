@@ -1,7 +1,7 @@
 /**
  * Payload shaping for the `clerk.commentary` mutation and helpers for the
  * "comment on this page" flow. The server contract (the zod leaf
- * beebox/src/webapp/trpc/routers/clerk-contract.ts, mirrored here by the
+ * beebox/src/webapp/trpc/clerk-contract.ts, mirrored here by the
  * generated `CommentaryPayload`) requires non-empty title and readableMarkdown;
  * optional fields must be omitted, not null. When extraction yields no readable
  * content we fall back to a markdown link — never silently drop the capture.

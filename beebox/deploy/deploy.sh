@@ -698,7 +698,7 @@ REMOTE
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
 # package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
 # react/react-dom/typescript direct deps (view-metadata compilation needs a
-# real, box-owned react — see src/webapp/views/compiler.ts and
+# real, box-owned react — see src/webapp/views/compiler/compile.ts and
 # src/core/box/package.ts) but deliberately don't install them (Track F of
 # docs/implemented-plans/boxes-as-packages-v2.md has no real registry yet for
 # the `beebox` dependency itself). Left uninstalled, every view in the
@@ -1030,7 +1030,7 @@ TOOLCHECK
 
     # (3) SPA fallback: the frontend build has to be ON the server.
     # `registerSpaFallback` is installed ONLY when src/frontend/dist/index.html
-    # exists (beebox/src/webapp/server.ts) — without it every page
+    # exists (beebox/src/webapp/server/app.ts) — without it every page
     # navigation 404s while /healthz and the canary above both stay green. That
     # is the 2026-08-25 escape verbatim
     # (issues/exploration/2026-08-26-post-test-economics-retro.md, incident 3),

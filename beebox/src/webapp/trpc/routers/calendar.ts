@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../procedures.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import {
   availableCalendarsWithSyncing,
