@@ -319,14 +319,16 @@ context.
 
 ## DIRECTORY_LAYOUT — Directory Layout
 
+<!-- rules: layout.location-is-state -->
 Location is state — a card's directory determines its lifecycle stage:
 
-<!-- rules: directory-layout.list -->
+<!-- rules: directory-layout.list, layout.tmp -->
 | Directory | Purpose |
 |-----------|---------|
 {{directory_layout}}
 | `_tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |
 
+<!-- rules: layout.reserved-names -->
 The area names are reserved words: never create a nested `_content`, `_config`, `_bookkeeping`, or `_publish` below the root (a nested `_tmp` scratch directory is fine — it is ignored at any depth).
 
 ## BOX_CODE — Box-Owned Code

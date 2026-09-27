@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after INTAKE.
-  guide_words: 7230
-  always_loaded_words: 12022
+  # 2026-09-26, after DIRECTORY_LAYOUT.
+  guide_words: 7158
+  always_loaded_words: 11950
   uncited_words_per_section: 60
 
 lint:
@@ -21,6 +21,7 @@ lint:
     - ABOUT_CARDS
     - COMMANDS
     - INTAKE
+    - DIRECTORY_LAYOUT
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -522,6 +523,47 @@ rows:
     reason: ABOUT_CARDS states it; the arrival paragraph keeps the clause that the agent creates cards only for its own work.
     audits: [create-question-card]
 
+  # --- DIRECTORY_LAYOUT ---
+  - id: layout.location-is-state
+    rule: A card's directory is its lifecycle stage; moving it is how its state changes.
+    handle: DIRECTORY_LAYOUT
+    bin: core
+    reason: The frame that makes the table a set of stages rather than a list of folders; an agent that misses it leaves processed items in the inbox.
+    audits: [card-after-processing, inbox-vs-store]
+  - id: layout.tmp
+    rule: Scratch goes in the box-root `_tmp/`, never the host `/tmp`; it is uncommitted and may be swept.
+    handle: DIRECTORY_LAYOUT
+    bin: core
+    reason: Every agent makes scratch files, and the host `/tmp` is the reflex; the table row is the document's own text, not the spec's.
+    audits: [temp-file-location]
+  - id: layout.reserved-names
+    rule: Never create a nested `_content`, `_config`, `_bookkeeping`, or `_publish` below the root; a nested `_tmp` is fine.
+    handle: DIRECTORY_LAYOUT
+    bin: core
+    reason: An agent organizing a project reaches for a `_config`-style subfolder, and the loader then misreads it as an area.
+    audits: [nested-area-name]
+  - id: layout.output-email-exception
+    rule: A reply draft's `email-outbound` card goes in its source thread's directory under `_content/inbox/email/`, not `_bookkeeping/output/`.
+    handle: DIRECTORY_LAYOUT
+    bin: indirect
+    reason: Applies only when drafting email. The email-outbound card rule already said it, more precisely (the thread's `.attach/`), so the cell sentence went and nothing moved.
+    audits: [draft-email-placement]
+    mechanics: box-docs/card-email-outbound.md
+  - id: layout.drive-verbs
+    rule: The `bbx drive` verbs work from the agent's shell.
+    handle: DIRECTORY_LAYOUT
+    bin: indirect
+    reason: Applies only to Drive work; the drive skill and connectors.md already say it, so the cell sentence went and nothing moved.
+    audits: [drive-mount-folder]
+    mechanics: drive skill
+  - id: layout.triage-category
+    rule: "A `triaged/<category>/` is one of this box's triage destinations, a landmark with a `for: [triage]` entry, not a fixed list."
+    handle: DIRECTORY_LAYOUT
+    bin: indirect
+    reason: Applies only to the triage pipeline; triage.md already states it and RECORDING points at destination landmarks, so the cell sentence went and nothing moved.
+    audits: [triage-rules-location]
+    mechanics: box-docs/triage.md
+
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
     rule: When the engine's source ships beside the package docs, DOCS names it as the fallback reference.
@@ -539,8 +581,8 @@ rows:
     rule: DIRECTORY_LAYOUT tabulates the box's directories and what each holds.
     handle: DIRECTORY_LAYOUT
     bin: core
-    reason: Generated from the layout spec; the row is the decision to list it.
-    audits: [box-structure-inbox, temp-file-location]
+    reason: Generated from the layout spec; the row is the decision to list it. Filing anything needs it, so each cell says one purpose; the long cells' extra mechanics went to their homes (the rows below).
+    audits: [box-structure-inbox, temp-file-location, inbox-vs-store, triage-pipeline-directories]
   - id: box-code.list
     rule: BOX_CODE tabulates where this box's schemas, views, and tricks live.
     handle: BOX_CODE
