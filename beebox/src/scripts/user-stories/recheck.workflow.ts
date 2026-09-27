@@ -196,5 +196,5 @@ return {
   stillFlagged,
   verifyFailures: failures,
   panelFailures,
-  next: `pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts ${DATE} --run ${RUN}`,
+  next: `pnpm exec tsx beebox/src/scripts/user-stories/apply-recheck.ts ${DATE} --run ${RUN}`,
 };

@@ -13,7 +13,7 @@
  * `var meta = {…}` with a trailing `export { meta }` in both bundle and transform modes. `tsc`
  * leaves the export declaration where it stands.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/build-workflows.ts
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/build-workflows.ts
  */
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -30,7 +30,7 @@ const HERE = import.meta.dirname;
  * that nobody edits the JavaScript. `dist/` already means "generated, gitignored,
  * rebuild it" here.
  */
-const OUT_DIR = resolve(HERE, "../../dist/workflows");
+const OUT_DIR = resolve(HERE, "../../../dist/workflows");
 
 // A workflow's body runs inside an async function the runtime wraps around it, so it ends in a
 // top-level `return` — a grammar error to a compiler reading the file as a module. The sources

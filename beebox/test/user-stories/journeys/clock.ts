@@ -11,7 +11,7 @@
  * scoped chats, other engines, and the wait after a preamble until completion.
  * It is a partial latency observation, not the person's total waiting time.
  *
- * Usage: pnpm exec tsx beebox/user-stories/journeys/clock.ts <box-root>
+ * Usage: pnpm exec tsx beebox/test/user-stories/journeys/clock.ts <box-root>
  */
 import { agentTiming } from "./agent-time.ts";
 

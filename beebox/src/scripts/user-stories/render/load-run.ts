@@ -11,8 +11,8 @@ import { join, resolve } from "node:path";
 
 import { parseJsonLine, readJson } from "../json-io.js";
 
-const BASE = resolve(import.meta.dirname, "../work");
-const CATALOG = resolve(import.meta.dirname, "../catalog");
+const BASE = resolve(import.meta.dirname, "../../../../user-stories/work");
+const CATALOG = resolve(import.meta.dirname, "../../../../docs/user-stories/catalog");
 
 export interface Story {
   id: string

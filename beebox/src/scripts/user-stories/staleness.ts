@@ -23,7 +23,7 @@ import { resolve } from "node:path";
 
 // Cited paths are monorepo-relative ("beebox/src/..."), so git has to run from the root
 // regardless of where the caller invoked this from.
-const MONO_ROOT = resolve(import.meta.dirname, "../../..");
+const MONO_ROOT = resolve(import.meta.dirname, "../../../..");
 
 export interface StaleInput {
   id: string

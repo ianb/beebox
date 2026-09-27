@@ -10,7 +10,7 @@ const output = path.resolve(process.argv[3] ?? path.join(root, "scratch/chat-scr
 // Standalone diagnostic switch, independent of application environment initialization.
 const traceEnabled = process.env.SCROLL_REPRO_TRACE !== "0";
 if (!url?.startsWith("/chat?session=")) {
-  console.error("Usage: node --import tsx beebox/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' [output-dir]");
+  console.error("Usage: node --import tsx beebox/src/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' [output-dir]");
   process.exit(2);
 }
 mkdirSync(output, { recursive: true });

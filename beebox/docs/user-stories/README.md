@@ -152,7 +152,7 @@ gives it no filesystem and no imports — which is also why each workflow is one
 file rather than sharing code with its neighbours.)
 
 1. `Workflow({scriptPath: "beebox/dist/workflows/discover.workflow.mjs", args: {root: ROOT}})`
-2. `pnpm exec tsx beebox/user-stories/pipeline/validate-discovery.ts` — **exits non-zero on a
+2. `pnpm exec tsx beebox/src/scripts/user-stories/validate-discovery.ts` — **exits non-zero on a
    partial discovery; do not proceed past a failure.** It checks every expected unit produced a
    file, every file parses, every id is unique, every field is present, and every cited path exists.
 3. `Workflow({… consolidate.workflow.mjs, args: {root: ROOT, groups: [...]}})` — groups come from
@@ -166,7 +166,7 @@ file rather than sharing code with its neighbours.)
    behind every verdict live only in `work/` until this runs, and `render.ts` prefers the frozen
    file — so rendering first on a re-run of an existing date quietly emits the *old* catalog.
    (`CATALOG_SOURCE=work` forces the other choice if you really want it.)
-8. `pnpm exec tsx …/render.ts > beebox/user-stories/catalog/<date>.md`
+8. `pnpm exec tsx …/render.ts > beebox/docs/user-stories/catalog/<date>.md`
 
 Every workflow takes `{root}` as an absolute path. They have no filesystem access and every
 subagent prompt needs absolute paths, so it cannot be derived inside the script.
@@ -182,7 +182,7 @@ Every story records the files that implement it, so git already knows which clai
 `stale.ts` intersects the two:
 
 ```
-pnpm exec tsx beebox/user-stories/pipeline/stale.ts 2026-08-21 --limit 20
+pnpm exec tsx beebox/src/scripts/user-stories/stale.ts 2026-08-21 --limit 20
 ```
 
 It ranks stories by how much their cited code has moved since each was last checked, worst first.

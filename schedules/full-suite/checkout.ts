@@ -70,7 +70,7 @@ async function installDeps(dir: string): Promise<void> {
  * `beebox`'s `pretest`, run explicitly.
  *
  * The tiers invoke the ledger wrapper directly rather than through `pnpm test`,
- * which means npm's `pretest` hook — `node scripts/build-cli.ts` — never fires.
+ * which means npm's `pretest` hook — `node src/scripts/build-cli/build.ts` — never fires.
  * A fresh detached worktree has no `dist/cli.mjs` at all, and every bisect
  * checkout leaves whatever the previous commit built, so the CLI the suite
  * exercises would be a different commit's. Running the package's own script

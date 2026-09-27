@@ -6,7 +6,7 @@
  * must not keep the panel notes explaining why it used to fail. Everything else in the file is
  * untouched, so the diff shows exactly the capabilities the fix affected.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts 2026-08-21
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/apply-recheck.ts 2026-08-21
  */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -14,8 +14,8 @@ import { join, resolve } from "node:path";
 import { parseJsonLine, readJson } from "./json-io.js";
 import { resolveId } from "./stable-id.js";
 
-const CATALOG = resolve(import.meta.dirname, "../catalog");
-const RECHECK_ROOT = resolve(import.meta.dirname, "../work/recheck");
+const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
+const RECHECK_ROOT = resolve(import.meta.dirname, "../../../user-stories/work/recheck");
 
 const argv = process.argv.slice(2);
 const date = argv.find((a) => /^\d{4}-\d{2}-\d{2}$/u.test(a));
@@ -124,4 +124,4 @@ if (unknown.length > 0) {
   for (const id of unknown) console.log(`  ${id}`);
   console.log("An id changes when a story's title is reworded — check the catalog for its new id.");
 }
-console.log(`\nNow re-render:\n  pnpm exec tsx beebox/user-stories/pipeline/render.ts > beebox/user-stories/catalog/${date}.md`);
+console.log(`\nNow re-render:\n  pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts > beebox/docs/user-stories/catalog/${date}.md`);

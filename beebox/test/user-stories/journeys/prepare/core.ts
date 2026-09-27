@@ -10,7 +10,7 @@
  * split here means the deterministic half can be re-run, diffed, and fixed without
  * spending an agent.
  *
- * Usage: pnpm exec tsx beebox/user-stories/journeys/prepare.ts <journey-id>
+ * Usage: pnpm exec tsx beebox/test/user-stories/journeys/prepare/core.ts <journey-id>
  */
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -217,4 +217,4 @@ console.log(`assets   ${assets.length}`);
 console.log(`run      ${runDir}`);
 console.log(`prompt   ${join(runDir, "prompt.md")}`);
 console.log("\nHand that prompt to an agent with browser access. Then:");
-console.log(`  pnpm exec tsx beebox/user-stories/journeys/collect.ts ${basename(runDir)}`);
+console.log(`  pnpm exec tsx beebox/test/user-stories/journeys/collect.ts ${basename(runDir)}`);

@@ -131,7 +131,7 @@ has passed when the app has kept you waiting four minutes. Someone doing this be
 For a limited measurement of how long the app takes to start responding, ask:
 
 ```
-pnpm exec tsx beebox/user-stories/journeys/clock.ts {{BOX_CONTENT}}
+pnpm exec tsx beebox/test/user-stories/journeys/clock.ts {{BOX_CONTENT}}
 ```
 
 This measures only Claude root-chat time until the first assistant text. A preamble may

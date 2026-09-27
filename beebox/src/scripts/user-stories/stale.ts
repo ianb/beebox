@@ -1,7 +1,7 @@
 /**
  * Report which catalogued capabilities are worth re-reading, ranked by how much their code moved.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/stale.ts 2026-08-21 [--ids] [--limit N]
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/stale.ts 2026-08-21 [--ids] [--limit N]
  *
  * `--ids` prints a JSON array shaped to paste straight into recheck.workflow.mjs's args.
  */
@@ -12,7 +12,7 @@ import { parseJsonLine } from "./json-io.js";
 import { staleStories } from "./staleness.js";
 import type { StaleInput } from "./staleness.js";
 
-const CATALOG = resolve(import.meta.dirname, "../catalog");
+const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
 
 const argv = process.argv.slice(2);
 const date = argv.find((a) => /^\d{4}-\d{2}-\d{2}$/u.test(a));
@@ -48,5 +48,5 @@ if (idsOnly) {
   console.log("\nThis ranks what is WORTH re-reading. A changed file does not prove the story is");
   console.log("wrong, and an unchanged one does not prove it is right — a story can break from a");
   console.log("file it never cited. Feed the top of the list to recheck.workflow.mjs:");
-  console.log(`  pnpm exec tsx beebox/user-stories/pipeline/stale.ts ${date} --ids --limit 20`);
+  console.log(`  pnpm exec tsx beebox/src/scripts/user-stories/stale.ts ${date} --ids --limit 20`);
 }

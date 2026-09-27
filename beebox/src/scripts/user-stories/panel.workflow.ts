@@ -386,7 +386,7 @@ is wrong, the user-visible consequence, the files involved, and how it was obser
 ## Updating the user-story catalog
 
 This issue is why \\\`<STORY-ID>\\\` is currently flagged ❌ in
-[the user-story catalog](../../beebox/user-stories/catalog/<DATE>.md) — a catalogue of what
+[the user-story catalog](../../beebox/docs/user-stories/catalog/<DATE>.md) — a catalogue of what
 beebox can actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a short agent
@@ -397,13 +397,13 @@ run over just the affected stories, not the full regeneration:
     Workflow({scriptPath: "beebox/dist/workflows/recheck.workflow.mjs",
               args: {root: "<repo root>", date: "<DATE>", ids: ["<STORY-ID>"]}})
 
-    pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts <DATE>
-    pnpm exec tsx beebox/user-stories/pipeline/render.ts \\
-      > beebox/user-stories/catalog/<DATE>.md
+    pnpm exec tsx beebox/src/scripts/user-stories/apply-recheck.ts <DATE>
+    pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts \\
+      > beebox/docs/user-stories/catalog/<DATE>.md
 
 The recheck is adversarial by design: it will not mark the story accurate just because this issue
 was closed — it re-reads the code. If it still refutes, that is worth knowing before you call the
-fix done. Details in [the pipeline README](../../beebox/user-stories/README.md).
+fix done. Details in [the pipeline README](../../beebox/docs/user-stories/README.md).
 \`\`\`
 - State the problem; do not propose an implementation plan.
 - Write in the queue's plain register. No drama, no "critical", no severity adjectives.

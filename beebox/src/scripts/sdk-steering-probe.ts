@@ -2,7 +2,7 @@
  * SDK steering-behavior probe. Run after every `@anthropic-ai/claude-agent-sdk`
  * bump (`pnpm update-agent-sdk` reminds you):
  *
- *   node --import tsx beebox/scripts/sdk-steering-probe.ts
+ *   node --import tsx beebox/src/scripts/sdk-steering-probe.ts
  *
  * The chat mid-turn steering design (see docs/chat/sessions.md) leans
  * on CLI behavior that is observable but NOT a documented SDK contract:

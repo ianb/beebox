@@ -10,7 +10,7 @@
  * about it, one capability per line so git can diff it. `render.ts` prefers that file and falls back to `work/`, so re-rendering a committed
  * catalog needs nothing but the repository.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/freeze.ts 2026-08-21
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/freeze.ts 2026-08-21
  */
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -18,8 +18,8 @@ import { join, resolve } from "node:path";
 import { readJson } from "./json-io.js";
 import { assignIds } from "./stable-id.js";
 
-const BASE = resolve(import.meta.dirname, "../work");
-const CATALOG = resolve(import.meta.dirname, "../catalog");
+const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
+const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
 
 const date = process.argv[2];
 if (date === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {

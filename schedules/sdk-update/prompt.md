@@ -102,7 +102,7 @@ all.
    window, run `pnpm update-agent-sdk` — it bumps whichever family is behind.
    Never install a prerelease.
 9. **After a bump**, run `pnpm -C beebox test`; for an SDK bump also
-   `node --import tsx beebox/scripts/sdk-steering-probe.ts`; for a Codex bump
+   `node --import tsx beebox/src/scripts/sdk-steering-probe.ts`; for a Codex bump
    also the deploy gate, on the workspace's pinned binary and never a bare
    `codex` from `PATH`: `CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin
    --help` from the repo root. Update the ledger's pin,

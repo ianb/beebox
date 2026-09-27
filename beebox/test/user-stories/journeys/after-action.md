@@ -22,7 +22,7 @@ So the rule this whole pass exists to enforce:
 ### 1. Collect before reading
 
 ```
-pnpm exec tsx beebox/user-stories/journeys/collect.ts <run-id>
+pnpm exec tsx beebox/test/user-stories/journeys/collect.ts <run-id>
 ```
 
 Do this first, before the notes colour your reading. It reads the box's own commits

@@ -6,7 +6,7 @@
  * it wrote — and none of that is visible in the rendered catalog. This walks every expected
  * artifact and refuses to let the pipeline proceed on a partial one.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/validate-discovery.ts
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/validate-discovery.ts
  * Exit 0 = complete and clean. Exit 1 = do not proceed to verification.
  */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -16,8 +16,8 @@ import { errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 
 
-const ROOT = resolve(import.meta.dirname, "../../..");
-const BASE = resolve(import.meta.dirname, "../work");
+const ROOT = resolve(import.meta.dirname, "../../../..");
+const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
 const AREAS_DIR = join(BASE, "areas");
 
 const GROUPS = new Set([

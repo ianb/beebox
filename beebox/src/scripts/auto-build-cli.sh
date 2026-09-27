@@ -38,7 +38,7 @@
 
 set -e
 
-REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 
 # What `scripts/build-cli.ts` actually bundles, as two pathspec groups.
 #
@@ -56,7 +56,7 @@ BACKEND=(
   beebox/src
   ':(exclude)beebox/src/frontend'
   beebox/package.json
-  beebox/scripts/build-cli.ts
+  beebox/src/scripts/build-cli
 )
 VIEW_WIDGETS=(beebox/src/frontend/src/components/view-widgets)
 
@@ -81,5 +81,5 @@ changed=$(
 # second, and a backgrounded build racing the box child's one-second poll would
 # offer it a half-written bundle to re-exec on.
 echo "[cli-build] beebox CLI sources changed; rebuilding dist/cli.mjs..."
-( cd "$REPO_DIR/beebox" && node scripts/build-cli.ts >/dev/null )
+( cd "$REPO_DIR/beebox" && node src/scripts/build-cli/build.ts >/dev/null )
 echo "[cli-build] Rebuilt — running box children reload themselves within ~1s (once their chats go idle)."

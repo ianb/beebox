@@ -212,7 +212,7 @@ repo file — the loader hard-codes both the admissible source prefixes (plus
 three individually admitted files: `beebox/CLAUDE.md`, `beebox/code-style.md`,
 `beebox/frontend.md`) and the admissible publish directories (including
 `dev/`), so a manifest entry outside either fails the build regardless);
-generated (`beebox/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
+generated (`beebox/src/scripts/export-box-docs.ts`, run via `pnpm --dir beebox
 exec tsx` on every build — no filesystem side effect, ~1s — producing
 `reference/` and `reference/cards/`).
 

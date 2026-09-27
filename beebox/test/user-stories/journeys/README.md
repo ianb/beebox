@@ -46,7 +46,7 @@ also means `collect.ts` can read exactly what the run changed.
 ## Running one
 
 ```
-pnpm exec tsx beebox/user-stories/journeys/prepare.ts B-inventory
+pnpm exec tsx beebox/test/user-stories/journeys/prepare/core.ts B-inventory
 ```
 
 That builds the box, registers it in `beebox/.env` so the router serves it,
@@ -61,7 +61,7 @@ anyway.
 Then:
 
 ```
-pnpm exec tsx beebox/user-stories/journeys/collect.ts B-inventory-<date>
+pnpm exec tsx beebox/test/user-stories/journeys/collect.ts B-inventory-<date>
 ```
 
 Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, the

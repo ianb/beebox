@@ -31,7 +31,6 @@ const ALLOWED_SOURCE_PREFIXES = [
   "callback-box/docs/",
   "research/",
   "beebox/docs/",
-  "beebox/user-stories/",
 ] as const;
 const ALLOWED_SOURCE_FILES: ReadonlySet<string> = new Set(["README.md"]);
 

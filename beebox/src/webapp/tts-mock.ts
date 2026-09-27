@@ -1,7 +1,7 @@
 /**
  * Dev-only mock for the /api/chat/tts endpoint.
  *
- * Serves pre-generated fixture mp3s (see scripts/gen-tts-fixtures.ts) instead
+ * Serves pre-generated fixture mp3s (see src/scripts/gen-tts-fixtures.ts) instead
  * of calling OpenAI, optionally streamed *slowly* — an initial delay before
  * the first byte plus a per-chunk delay. That lets the speech browser test
  * (dev-only /dev/speech route) observe playback timing deterministically:
@@ -58,7 +58,7 @@ export function serveMockTts(reply: FastifyReply, req: MockTtsRequest): FastifyR
   if (!existsSync(file)) {
     return reply
       .status(500)
-      .send({ error: "mock TTS fixture missing — run: pnpm tsx scripts/gen-tts-fixtures.ts" });
+      .send({ error: "mock TTS fixture missing — run: pnpm tsx src/scripts/gen-tts-fixtures.ts" });
   }
 
   const buf = readFileSync(file);

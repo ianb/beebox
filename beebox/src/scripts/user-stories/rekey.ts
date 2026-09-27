@@ -5,7 +5,7 @@
  * old-to-new mapping a future regeneration needs. The previous id is preserved as `discoveredAs`
  * so the run's own working files (`work/areas/*`, `work/verdicts/*`) can still be traced back.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/rekey.ts 2026-08-21
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/rekey.ts 2026-08-21
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -13,7 +13,7 @@ import { join, resolve } from "node:path";
 import { parseJsonLine } from "./json-io.js";
 import { assignIds } from "./stable-id.js";
 
-const CATALOG = resolve(import.meta.dirname, "../catalog");
+const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
 
 const date = process.argv[2];
 if (date === undefined || !/^\d{4}-\d{2}-\d{2}$/u.test(date)) {

@@ -7,7 +7,7 @@
  * These batches are STRATIFIED instead: each batch draws its three stories from three different
  * source units, by round-robin over units. Deterministic (no RNG — workflow scripts forbid it).
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/make-batches.ts
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/make-batches.ts
  * Writes user-stories/work/batches.json and prints a summary.
  */
 import { writeFileSync } from "node:fs";
@@ -16,7 +16,7 @@ import { join, resolve } from "node:path";
 import { readJson } from "./json-io.js";
 import { invariant } from "../../lib/invariant.js";
 
-const BASE = resolve(import.meta.dirname, "../work");
+const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
 
 interface Story { id: string, sourceFile: string, audience: string }
 

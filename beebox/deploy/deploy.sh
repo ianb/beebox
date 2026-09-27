@@ -441,17 +441,17 @@ step "Building frontend..."
 # that file is missing or stale on the server, every box-local schema fails to
 # load. Building here keeps dist/ in lockstep with the source we rsync.
 step "Building CLI bundle (dist/cli.mjs + dist/cards)..."
-(cd "$CHECKOUT/beebox" && node scripts/build-cli.ts >/dev/null)
+(cd "$CHECKOUT/beebox" && node src/scripts/build-cli/build.ts >/dev/null)
 # box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
 # the same way dist/ does. Any bbx engine activity on the server would rewrite it,
 # but the per-box docs refresh below skips a dirty box, so build it here
 # rather than rely on that.
 step "Building package reference docs (box-docs/)..."
-(cd "$CHECKOUT/beebox" && node --import tsx scripts/build-box-docs.ts)
+(cd "$CHECKOUT/beebox" && node --import tsx src/scripts/build-box-docs.ts)
 # The page nginx serves while the services are stopped. The server fills in the
 # start time when the window opens (deploy/server-bin/bbx-deploy-window).
 step "Building deploy page (dist/deploy-page.html)..."
-(cd "$CHECKOUT/beebox" && node scripts/build-deploy-page.ts)
+(cd "$CHECKOUT/beebox" && node src/scripts/build-deploy-page.ts)
 
 # Upload separately; activation below runs only after fleet admission drains.
 STAGE_DIR="${INSTALL_DIR}.deploy-stage"

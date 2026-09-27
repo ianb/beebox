@@ -6,7 +6,7 @@
  * silently drops a real capability is exactly the failure this whole pipeline exists to avoid,
  * so anything ambiguous is reported rather than guessed at.
  *
- * Usage: pnpm exec tsx beebox/user-stories/pipeline/apply-consolidation.ts
+ * Usage: pnpm exec tsx beebox/src/scripts/user-stories/apply-consolidation.ts
  */
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -17,7 +17,7 @@ import { invariant } from "../../lib/invariant.js";
 import { readJson } from "./json-io.js";
 
 
-const BASE = resolve(import.meta.dirname, "../work");
+const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
 
 interface Story {
   id: string

@@ -8,7 +8,7 @@ const root = path.resolve(import.meta.dirname, "../..");
 const url = process.argv[2];
 const output = path.resolve(process.argv[3] ?? path.join(root, "scratch/chat-scroll-resize"));
 if (!url?.startsWith("/chat?session=")) {
-  console.error("Usage: node --import tsx beebox/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION' [output-dir]");
+  console.error("Usage: node --import tsx beebox/src/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION' [output-dir]");
   process.exit(2);
 }
 mkdirSync(output, { recursive: true });

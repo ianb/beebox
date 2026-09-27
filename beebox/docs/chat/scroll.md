@@ -210,14 +210,14 @@ setup or cleanup error; run them against a disposable conversation and keep
 frontend source stable while they run, since HMR replaces nodes and restarts
 requests.
 
-- `node --import tsx beebox/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' scratch/scroll-repro`
+- `node --import tsx beebox/src/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' scratch/scroll-repro`
   sends an eight-line `/fakestream` message three times through the desktop
   composer and asserts the last user message is within 2 px of the scroller
   top; `SCROLL_REPRO_TRACE=0` runs the control without observation.
-- `node --import tsx beebox/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION'`
+- `node --import tsx beebox/src/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION'`
   grows the composer while reading, both at the bottom and 200 px above it,
   and asserts the reading position holds.
-- `node --import tsx beebox/scripts/chat-scroll-lazy-image-repro.ts` serves a
+- `node --import tsx beebox/src/scripts/chat-scroll-lazy-image-repro.ts` serves a
   held image above and below a reading marker and asserts zero marker drift.
 
 The 2026-09-04 runs and what they established are in

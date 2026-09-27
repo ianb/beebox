@@ -6,7 +6,7 @@
  * commits, its new files — rather than taken from the report. A run where the narrative
  * and the disk disagree is the single most interesting thing this whole exercise can find.
  *
- * Usage: pnpm exec tsx beebox/user-stories/journeys/collect.ts <run-id>
+ * Usage: pnpm exec tsx beebox/test/user-stories/journeys/collect.ts <run-id>
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";

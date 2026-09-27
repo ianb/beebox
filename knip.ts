@@ -1,5 +1,5 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
+import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
 
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
@@ -83,7 +83,7 @@ const config: KnipConfig = {
       entry: [
         "src/exports/view-widgets.tsx",
         // Bundled on its own into the deploy page by
-        // beebox/scripts/build-deploy-page.ts, which names it by path.
+        // beebox/src/scripts/build-deploy-page.ts, which names it by path.
         "src/deploy-page/poll.ts",
         // The suite is a consumer too: an export reached only from a test is
         // used. Doctests are markdown — see the root `compilers` config.
