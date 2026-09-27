@@ -76,7 +76,8 @@ lilt; pause briefly before names") rather than abstract ("be friendly").
 
 ## Evidence model
 
-Same as guides — confidence (hypothesis → confirmed), source
+Same as guides (\`card-guide.md\`, which also caps what the retrospective
+infers) — confidence (hypothesis → confirmed), source
 (user-stated > feedback > inferred > default). Applies to traits, tone
 instructions, and boxholder relationship notes.
 

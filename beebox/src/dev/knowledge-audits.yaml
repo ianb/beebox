@@ -1313,6 +1313,8 @@ tests:
     correct_contains: [".ics"]
     tags: [guides]
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 2 reads, 1 searches, 38k ctx.
   - id: modify-intake-triage
     prompt: "If I wanted to change how inbox items are triaged, what would I modify?"
     expected_level: knows_about
@@ -2097,6 +2099,8 @@ tests:
 
   # === Recording Knowledge ===
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 1 reads, 0 searches, 38k ctx.
   - id: briefing-is-writable
     prompt: "The box has a briefing card at briefing.briefing.card. Is this a file you can edit, or is it generated configuration?"
     expected_level: knows_directly
@@ -2270,6 +2274,8 @@ tests:
   # pass after post-turn validation resolves the box from each changed file path
   # instead of the beebox server's cwd.
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 13 reads, 3 searches, 38k ctx.
   - id: intake-unexpected-legal
     prompt: >
       You are processing an intake job. The item is a voice memo transcript:
@@ -2291,6 +2297,8 @@ tests:
       ask a question about it, or create a separate record. The failure mode is
       ignoring the legal mention or burying it in the couch record's notes.
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 9 reads, 3 searches, 38k ctx.
   - id: intake-unexpected-person
     prompt: >
       You are processing an intake job. The item is a memo about checking Dad's
@@ -2333,6 +2341,8 @@ tests:
       needed to get access, (3) a helpful contact. The agent should preserve
       all of them in card files, not just create a vague record about "called Fidelity."
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 2 reads, 2 searches, 38k ctx.
   - id: chat-unexpected-ledger-info
     prompt: >
       You are processing a chat job. The chat thread has a new message from
@@ -4368,6 +4378,8 @@ tests:
     correct_contains_any: ["{% purpose", "purpose", "key-person", "correction"]
     tags: [briefing, cards, markdown]
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 4 reads, 4 searches, 38k ctx.
   - id: briefing-key-person-ref
     prompt: >
       I'm adding a key person to a briefing. Their person card lives
@@ -4382,6 +4394,26 @@ tests:
       other attributes.
     correct_contains_any: ["ref=", "/box/people/sam", "people/sam"]
     tags: [briefing, cards, references]
+
+  # Guards ledger row recording.box-files-not-memory (added 2026-09-26,
+  # doc-structure Track 3, RECORDING): what the agent learns goes in the box,
+  # not in its private memory directory.
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 1 reads, 1 searches, 38k ctx.
+  - id: recording-not-claude-memory
+    prompt: >
+      In chat I mention that our family dentist is Dr. Idris Okafor and that
+      Wren sees him every March. You want every future session to know this.
+      Where do you save it? Say where; do not change any files.
+    expected_level: knows_directly
+    watch_for: >
+      A card in the box (Wren's or the dentist's person card, a record, or the
+      briefing), not `.claude/memory/`; may say memory files are private to one
+      agent and not part of the box.
+    correct_contains_any: ["_content", ".card", "briefing"]
+    response_not_matches:
+      - '(?:save|write|store|put|record)[^.\n]{0,60}\.claude/memory'
+    tags: [recording, behavioral]
 
   - id: briefing-prose-vs-tag
     prompt: >
@@ -4748,6 +4780,8 @@ tests:
 
   # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone, 6 reads, 5 searches, 38k ctx.
   - id: retro-report-location
     prompt: >
       The boxholder asks: "something changed my assistant's personality
@@ -4761,12 +4795,15 @@ tests:
     correct_contains: ["_content/reviews/retro"]
     tags: [retro, navigation]
 
+  # Status (2026-09-26, doc-structure Track 3, RECORDING): pass on the test1
+  # clone at knows_about, 1 reads, 1 searches, 38k ctx.
   - id: retro-inferred-belief-policy
     prompt: >
       A personality trait reads `confidence: medium, source: inferred`.
       New chat evidence supports it even more strongly. Should you raise
       it to high?
-    expected_level: knows_directly
+    expected_level: knows_about
+    should_read_any: ["card-guide", "card-personality", "process-retrospective"]
     watch_for: >
       Says no — medium is the ceiling for inferred beliefs; promotion
       past it needs the boxholder (a question card / user-stated

@@ -503,59 +503,39 @@ by one is in `node_modules/beebox/box-docs/history.md`.
 
 ## RECORDING — Where to Record What You Find
 
-The box's own files capture knowledge that persists across sessions and is
-visible to every agent working in this box. Use them.
+<!-- rules: recording.box-files-not-memory -->
+What you learn goes in the box's own files, where every agent working here
+sees it, **never in `.claude/memory/`**, which is private to one agent and not
+part of the box.
 
-**Do NOT use `.claude/memory/` for box information.** Those files are private to
-one agent and are not part of the box's state. The box's own files — briefing,
-cards, guides, personality — are the record.
+<!-- rules: recording.routing -->
+- **Situational context** (what the box is for, the key people, facts every
+  agent needs) → the briefing card, `_content/briefing.briefing.card`; a
+  directory's briefing explains that directory. A key person also gets a
+  `_content/people/First_Last.person.card`.
+- **A discrete item** (an account, a phone number, a piece of furniture) → a
+  card in `_content/`. Most things go here.
+- **A per-domain pipeline rule** ("always do X with Y" for intake, calendar
+  review, …) → the matching `_config/*.guide.card`.
+- **A filing target** (where a *kind* of item belongs) → the destination
+  directory's landmark `destinations` list, not a guide card
+  (`node_modules/beebox/box-docs/triage.md`).
+- **How the agent sounds** (tone, formality, how proactive) → the personality
+  card, `_config/main.personality.card`: voice and manner only, never
+  situational context or facts about people.
 
-Where each kind of thing goes:
+<!-- rules: recording.dont-drop -->
+**Don't drop unexpected information.** Something important but off-task (a
+legal deadline in a furniture walkthrough, an unknown contact, an account
+number) is never silently discarded. In chat, mention it in your reply and
+flag that it may need follow-up. In a job, file it where it belongs if you are
+confident; otherwise raise a question card (**QUESTIONS**) and move the source
+item to `_content/inbox/unhandled/`.
 
-- **Situational context** — what the box is for, who the key people are, the
-  facts every agent needs → the **briefing card** (`_content/briefing.briefing.card`;
-  a directory briefing explains what that subdirectory holds).
-  Adding a key person? Also create `_content/people/First_Last.person.card`. Its fields
-  are documented in `node_modules/beebox/box-docs/card-briefing.md` — think notes for a new
-  team member.
-- **A discrete item** — a bank account, a contact's phone number, a piece of
-  furniture → a card in `_content/` (record / memo / bookmark). Most things you
-  encounter belong here.
-- **A per-domain pipeline rule** — the user says "always do X with Y" for a
-  specific pipeline (intake, calendar review, …) → the matching
-  `_config/*.guide.card`.
-- **A filing target** — where a *kind* of item belongs → the destination
-  directory's landmark `destinations` list (a `for: [triage]` routing target or
-  a `for: [commentary]` capture target), not a guide card. See
-  `node_modules/beebox/box-docs/triage.md`.
-- **How the agent sounds** — tone, formality, how proactive → the personality
-  card (`_config/main.personality.card`). Voice and manner **only** — never
-  situational context, the box's purpose, or facts about people (those are the
-  briefing).
-
-**Retrospective-inferred beliefs.** When enabled, the weekly `process-retrospective` mines past
-chat sessions and writes what it learned into personality/guide cards as
-`source: inferred` entries — treat those as the agent's own working hypotheses:
-don't promote them past `medium`, and don't use them to contradict a
-`user-stated` belief (that takes the boxholder's say-so). The full
-confidence-ladder detail lives with the retrospective procedure; run reports are
-in `_content/reviews/retro/`.
-
-### Don't drop unexpected information
-
-While processing one item you may hit something important but off-task — a legal
-deadline buried in a furniture walkthrough, an unknown contact mentioned in
-passing, an account number in a casual note. **Don't silently discard it** — that
-is the worst outcome. Handle it by context:
-
-- **In chat** — mention it naturally in your reply. Don't hijack the turn for an
-  aside, but acknowledge it and flag that it may need follow-up.
-- **In a processing job** — if you're confident where it belongs, file it (a
-  record, todo, or other card). Otherwise raise a question card in
-  `_bookkeeping/questions/` (see **QUESTIONS**) and move the source item
-  to `_content/inbox/unhandled/` so it isn't lost.
-
-When in doubt, ask.
+<!-- rules: recording.retro-beliefs -->
+A `source: inferred` entry on a personality or guide card came from the
+weekly retrospective; how far to trust it is in
+`node_modules/beebox/box-docs/card-guide.md`.
 
 ## PERSONALITY — Personality
 

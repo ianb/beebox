@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after HISTORY.
-  guide_words: 6113
-  always_loaded_words: 10905
+  # 2026-09-26, after RECORDING.
+  guide_words: 5921
+  always_loaded_words: 10713
   uncited_words_per_section: 60
 
 lint:
@@ -33,6 +33,7 @@ lint:
     - SECRETS
     - TOOLS
     - HISTORY
+    - RECORDING
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -824,6 +825,33 @@ rows:
     reason: Needed only when filtering history by what made a commit, and the guide's own advice was to read them off the log. Moved verbatim to a new prose doc, box-docs/history.md (git is not a `bbx` command, so not bbx-commands.md), with the `-By` list completed against src/shared/commit-trailers.ts and the writers (Pushed-By, Fetched-By, Tracked-By, Expired-By were missing). The guide keeps one sentence naming three trailers and the doc.
     audits: [git-trailer-trick-run, git-trailers]
     mechanics: box-docs/history.md
+
+  # --- RECORDING ---
+  - id: recording.box-files-not-memory
+    rule: What you learn goes in the box's own files, which every agent sees, never in `.claude/memory/`, which is private to one agent.
+    handle: RECORDING
+    bin: core
+    reason: Claude Code offers its memory directory to every session, so the reflex is to save a learned fact there, where no other box agent will ever read it.
+    audits: [recording-not-claude-memory]
+  - id: recording.routing
+    rule: Situational context and key people go to the briefing (a key person also gets a person card); a discrete item to a card in `_content/`; a per-domain pipeline rule to its guide card; a filing target to the destination landmark's `destinations`; voice and manner only to the personality card.
+    handle: RECORDING
+    bin: core
+    reason: Every turn that learns something must pick a file, and the five kinds look alike (a preference, a fact about a person, a rule); one line each. The briefing-fields pointer went, since card-briefing.md already says to add a key person's card and the card rule loads with the briefing.
+    audits: [briefing-key-person-ref, briefing-is-writable, modify-intake-triage]
+  - id: recording.dont-drop
+    rule: Important off-task information is never silently discarded; in chat mention it and flag follow-up; in a job file it if you are sure where, else raise a question card and move the source item to `_content/inbox/unhandled/`.
+    handle: RECORDING
+    bin: core
+    reason: Processing one item focuses the agent on that item, and the audits show the buried deadline is the thing that gets lost; the sub-heading and the "when in doubt, ask" line folded into two sentences.
+    audits: [intake-unexpected-legal, intake-unexpected-person, chat-unexpected-ledger-info]
+  - id: recording.retro-beliefs
+    rule: "A `source: inferred` entry from the retrospective is a working hypothesis; never promote it past `medium` or use it against a `user-stated` belief."
+    handle: RECORDING
+    bin: indirect
+    reason: Applies only when editing a personality or guide card's beliefs. Moved verbatim to the guide card's instructions (card-guide.md) beside the confidence ladder and source hierarchy it qualifies; the personality card's "Same as guides" evidence model now names that doc. The guide keeps one pointer sentence.
+    audits: [retro-inferred-belief-policy, retro-report-location]
+    mechanics: box-docs/card-guide.md
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

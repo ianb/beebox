@@ -1469,6 +1469,13 @@ test1:
       peak: 41194
       added: 0
       turns: 1
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37668
+      peak: 43177
+      added: 5509
+      turns: 5
   cooking-guide-awareness:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -2338,6 +2345,13 @@ test1:
       peak: 42172
       added: 960
       turns: 3
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37683
+      peak: 41806
+      added: 4123
+      turns: 4
   incidental-person-where:
     - date: 2026-07-03T11:26:09.904Z
       boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
@@ -2801,6 +2815,13 @@ test1:
       peak: 50079
       added: 8761
       turns: 23
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37793
+      peak: 58274
+      added: 20481
+      turns: 31
   intake-unexpected-person:
     - date: 2026-07-03T11:51:45.838Z
       boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
@@ -2809,6 +2830,13 @@ test1:
       peak: 53348
       added: 12037
       turns: 25
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37786
+      peak: 55357
+      added: 17571
+      turns: 23
   intake-account-number-in-narrative:
     - date: 2026-07-03T11:51:45.838Z
       boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
@@ -2825,6 +2853,13 @@ test1:
       peak: 41280
       added: 0
       turns: 2
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37755
+      peak: 43309
+      added: 5554
+      turns: 6
   intake-emotional-context:
     - date: 2026-07-03T11:51:45.838Z
       boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
@@ -3235,6 +3270,13 @@ test1:
       peak: 41235
       added: 0
       turns: 2
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37710
+      peak: 44700
+      added: 6990
+      turns: 9
   briefing-prose-vs-tag:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3408,6 +3450,13 @@ test1:
       peak: 42808
       added: 1585
       turns: 7
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37698
+      peak: 45687
+      added: 7989
+      turns: 13
   retro-inferred-belief-policy:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3416,6 +3465,13 @@ test1:
       peak: 41216
       added: 0
       turns: 1
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37691
+      peak: 42009
+      added: 4318
+      turns: 4
   chat-last-audio-when:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -6056,6 +6112,14 @@ test1:
       initial: 38130
       peak: 42439
       added: 4309
+      turns: 4
+  recording-not-claude-memory:
+    - date: 2026-09-27T04:06:14.515Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: 8dd38e2541f296937184dd8936c483804af93c27
+      initial: 37821
+      peak: 40985
+      added: 3164
       turns: 4
 content:
   search-query-phrasing:
