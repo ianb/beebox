@@ -3,6 +3,7 @@ import { body, cardSchema } from "../cards/index.js";
 import { SYSTEM_CARD_PATHS } from "../shared/system-card-paths.js";
 
 export const InventorySchema = cardSchema("inventory", {
+  brief: "The Storage interface card",
   description: "The canonical Storage interface card",
   category: "system",
   searchable: false,

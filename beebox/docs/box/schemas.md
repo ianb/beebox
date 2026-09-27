@@ -52,6 +52,9 @@ Key patterns:
 - `type` is the discriminator; don't list it under `fields`, and the on-disk YAML needn't carry
   it — the filename `Foo.<type>.card` supplies it.
 - `title` and `contains` are available on every card type automatically.
+- `brief` (five words or fewer) is the type's entry in the agent guide's card-type list, read on
+  every turn; `description` (one line) is its row in the docs index. Without a `brief` the guide
+  lists the `description`.
 
 ## Validation beyond Zod — the `validate` hook
 

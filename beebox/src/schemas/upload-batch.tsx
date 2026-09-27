@@ -96,6 +96,7 @@ const uploadBatchFields = {
 };
 
 export const UploadBatchSchema: CardSchema = cardSchema("upload-batch", {
+  brief: "A bulk upload awaiting filing",
   description: "A bulk file-upload batch landed under a chat's tmp-upload/, awaiting the agent to file each file to its destination",
   category: "synced",
   searchable: true,

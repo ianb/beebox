@@ -18,6 +18,7 @@ import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const GfolderSchema = cardSchema("gfolder", {
+  brief: "A mirrored Google Drive folder",
   description: "A Google Drive folder mirrored by the drive connector — the directory the card sits in is the mount",
   category: "synced",
   fields: {

@@ -11,6 +11,7 @@ import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } fro
 import { z } from "zod";
 
 export const ChatJobSchema = cardSchema("chat-job", {
+  brief: "Job for new chat messages",
   description: "A system job to process new messages (or a callback timer) in a chat thread; created by messaging connectors",
   category: "system",
   searchable: false,

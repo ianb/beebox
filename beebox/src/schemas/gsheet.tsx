@@ -22,6 +22,7 @@ const SheetTab = z.object({
 });
 
 export const GsheetSchema = cardSchema("gsheet", {
+  brief: "A synced Google Sheet",
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
   fields: {

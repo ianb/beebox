@@ -153,6 +153,7 @@ const LightweightLandmarkObject = LandmarkObject.extend({ "system-theme": z.unkn
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
+  brief: "Marks a notable directory",
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
   // A landmark is a place marker, not a visitable file: it never lists in a

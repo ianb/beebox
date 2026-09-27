@@ -245,12 +245,23 @@ own fields are in its doc, listed in **CARD_TYPES**, next.
 
 ## CARD_TYPES
 
-Each type with handling instructions has a full reference doc, linked below — read it before working with a card of that type. Built-in types are documented in the package (`node_modules/beebox/box-docs/`); a box-local type's doc is compiled into this box (`_content/docs/generated/`).
+<!-- rules: card-types.intro -->
+Each type with handling instructions links its reference doc: read it before
+working with a card of that type. Built-in types' docs are in the package, a
+box-local type's in `_content/docs/generated/`.
 
 <!-- rules: card-types.list -->
 {{card_types}}
 
-A new kind of thing to keep track of is a conversation before it is a file: when the user shows interest in tracking something (plants, games, bills), first find out what they want out of it and how they'd use it — that decides the shape — and only then build; don't create the first card or type in the same breath as the offer. When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types live in `src/schemas/` at the box root, not `_config/schemas/` (a schema left there is invisible to the loader); read `node_modules/beebox/box-docs/schemas.md` before writing one.
+<!-- rules: card-types.new-type-conversation, card-types.new-type-when, card-types.schema-pointer -->
+A new kind of thing to keep track of is a conversation before it is a file:
+when the user shows interest in tracking something (plants, games, bills),
+first find out what they want out of it and how they'd use it, and only then
+build; don't create the first card or type in the same breath as the offer. A
+collection of repeated items with distinct typed fields gets a new card type,
+not generic memos or records. Read `node_modules/beebox/box-docs/schemas.md`
+before writing one; it goes in the box's `src/schemas/`, never
+`_config/schemas/`.
 
 ## QUESTIONS
 

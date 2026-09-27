@@ -152,6 +152,7 @@ function refineQuestionLifecycle(fields: Record<string, unknown>, ctx: z.core.$R
 }
 
 export const QuestionSchema = cardSchema("question", {
+  brief: "Asks the user something",
   superRefine: refineQuestionLifecycle,
   description: "Asks the user something (select/text/confirm) and routes the answer back to an agent via its directive",
   category: "authored",

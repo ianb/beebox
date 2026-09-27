@@ -11,6 +11,7 @@ import { QuestionLearning, type QuestionLearningFields } from "./question.js";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
+  brief: "A job carrying an answer",
   description: "A system job created when the user answers a question — carries the directive and answer for an agent to act on",
   category: "system",
   searchable: false,

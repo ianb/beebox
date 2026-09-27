@@ -57,6 +57,7 @@ const PropertyEntry = z.object({
 });
 
 export const BriefingSchema = cardSchema("briefing", {
+  brief: "Situational context for a directory",
   description: "Core situational context for the box or a directory — what every agent needs to know; one per directory",
   category: "authored",
   fields: {

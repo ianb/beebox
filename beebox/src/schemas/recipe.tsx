@@ -47,6 +47,7 @@ const RecipeHeroImage = z
   });
 
 export const RecipeSchema = cardSchema("recipe", {
+  brief: "A scalable recipe",
   description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
   category: "authored",
   fields: {

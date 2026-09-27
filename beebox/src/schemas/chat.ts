@@ -51,6 +51,7 @@ const chatFields = {
 };
 
 export const ChatSchema: CardSchema = cardSchema("chat", {
+  brief: "A web chat session",
   fields: chatFields,
   category: "synced",
   instructions: `# Chat Husk Cards

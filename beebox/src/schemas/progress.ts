@@ -48,6 +48,7 @@ const progressFields = {
 };
 
 export const ProgressSchema: CardSchema = cardSchema("progress", {
+  brief: "A learner's evidence of understanding",
   description: "A per-learner, evidence-backed record of understanding against a course's concept-map nodes",
   category: "authored",
   fields: progressFields,

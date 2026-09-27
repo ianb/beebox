@@ -32,6 +32,7 @@ import { z } from "zod";
 import { cardSchema, opaqueContentRef, type InferCardFields } from "../cards/index.js";
 
 export const EmailMessageSchema = cardSchema("email-message", {
+  brief: "One received email's metadata",
   description: "One received email's metadata inside a thread's attach scope; untrusted body text lives in a separate .txt file",
   category: "synced",
   fields: {

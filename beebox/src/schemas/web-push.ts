@@ -23,6 +23,7 @@ export const WebPushSeverity = z.enum(["info", "alert"]);
 export type WebPushSeverityValue = z.infer<typeof WebPushSeverity>;
 
 export const WebPushSchema = cardSchema("web-push", {
+  brief: "A queued push notification",
   fields: {
     status: WebPushStatus.default("pending"),
     title: z.string(),

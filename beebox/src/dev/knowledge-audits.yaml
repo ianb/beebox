@@ -608,6 +608,8 @@ tests:
   # questions were answered with no reads or searches; exact formats and
   # discoverable extension mechanics triggered targeted reference reads.
 
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 0 reads, 0 searches, 37k ctx; listed all 64 types from the briefs.
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
     expected_level: knows_directly
@@ -817,6 +819,8 @@ tests:
     watch_for: "Reads both card type docs for accurate comparison"
     tags: [cards]
 
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: create-new-card-type
     prompt: "How would you create a brand new card type for this box?"
     expected_level: discoverable
@@ -1467,6 +1471,8 @@ tests:
   # track-reading-list prompt now asks the representation choice it evaluates;
   # Codex selects a custom book schema over generic memo/record cards.
 
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 2 reads, 1 searches, 36k ctx.
   - id: track-reading-list
     prompt: "I want to track many books with consistent progress, status, and rating fields. Would you use generic memo/record cards, or define a custom card type? How would you set it up?"
     expected_level: discoverable
@@ -1483,6 +1489,8 @@ tests:
       same domain-specific wording for this prompt, with or without Markdown
       code formatting around book.
 
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 1 reads, 0 searches, 36k ctx.
   - id: create-task-card-type
     prompt: "Can you create a new type of card for tracking project tasks?"
     expected_level: discoverable
@@ -1513,6 +1521,8 @@ tests:
   # keyword gate (expects "_config/schemas" or "bbx init", the retired
   # answer) with a correct src/schemas/ answer, and fails the same way with
   # the pre-change guide.
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 0 reads, 0 searches, 36k ctx.
   - id: card-types-and-add-new
     prompt: "What card types do you know about? Can you add new ones?"
     expected_level: knows_directly
@@ -3711,6 +3721,8 @@ tests:
       agent's response prose instead.
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1 clone, 3 reads, 3 searches, 42k ctx.
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 3 reads, 3 searches, 36k ctx.
   - id: find-schema-fields
     prompt: "I want to know exactly what fields a `.bookmark.card` allows. How would you find out?"
     expected_level: knows_about
@@ -5604,6 +5616,8 @@ tests:
   # refreshed (a `bbx init` re-run should fix it via the template tracker).
 
   # Status (2026-09-26, doc-structure Track 3, BOX_CODE): pass on the test1 clone, 3 reads, 1 searches, 40k ctx.
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone, 2 reads, 1 searches, 36k ctx.
   - id: box-packageify-schemas-location
     prompt: "Where do this box's local card schemas live, and what do they import?"
     expected_level: knows_about
@@ -6484,6 +6498,9 @@ tests:
       created or started in this turn.
     tags: [starter, chat]
 
+  # Status (2026-09-26, doc-structure Track 3, CARD_TYPES): pass on the test1
+  # clone by reading (no automated check), 0 reads, 0 searches, 45k ctx: asked
+  # what the user wants from it before building, created nothing.
   - id: starter-track-plants
     prompt: "Can I use this to keep track of my plants? I'd take a picture of each one now and then."
     chat_mode: true

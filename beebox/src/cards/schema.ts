@@ -198,11 +198,18 @@ export interface CardSchemaConfig<
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
   /**
-   * One line saying what a card of this type is / is for — shown in the agent
-   * guide's card-type catalogue. Optional only so box-local schemas keep
-   * loading without one; every built-in schema declares it.
+   * One line saying what a card of this type is / is for — the type's row in
+   * the package-docs index and the template listing. Optional so box-local
+   * schemas keep loading without one.
    */
   description?: string;
+  /**
+   * What the type is, in five words or fewer — its entry in the agent guide's
+   * card-type list, which every box agent reads on every turn. Every built-in
+   * schema declares one; a box-local schema without one is listed with its
+   * `description`.
+   */
+  brief?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
   /**
@@ -331,6 +338,8 @@ export interface CardSchema<
   readonly fields: TFields;
   /** One-line catalogue description (see {@link CardSchemaConfig.description}). */
   readonly description?: string;
+  /** Five-word agent-guide entry (see {@link CardSchemaConfig.brief}). */
+  readonly brief?: string;
   /** Who creates cards of this type. Defaults to "authored". */
   readonly category: CardCategory;
   /**
@@ -563,6 +572,9 @@ export function cardSchema<
   let resolved: CardSchema<TTag, TFields, TAttrs> = schema;
   if (config.description !== undefined) {
     resolved = { ...resolved, description: config.description };
+  }
+  if (config.brief !== undefined) {
+    resolved = { ...resolved, brief: config.brief };
   }
   if (config.theme !== undefined) {
     resolved = { ...resolved, defaultTheme: config.theme };

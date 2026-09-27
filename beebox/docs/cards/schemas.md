@@ -38,6 +38,8 @@ const NoteEntry = z.object({
 });
 
 export const MyThingSchema: CardSchema = cardSchema("my-thing", {
+  brief: "A my-thing card",  // five words or fewer: the agent guide's card-type list
+  description: "One line on what a my-thing card holds and is for",  // the docs index row
   fields: {
     status: MyThingStatus.default("draft"),
     notes: z.array(NoteEntry).optional(),

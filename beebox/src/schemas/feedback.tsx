@@ -37,6 +37,7 @@ const TranscriptionError = z.object({
 });
 
 export const FeedbackSchema = cardSchema("feedback", {
+  brief: "The user's response to something",
   description: "The user's response to something the box surfaced — an answer to a question it asked, or a comment on a card fragment; typed or voice",
   category: "system",
   fields: {

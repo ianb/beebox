@@ -10,17 +10,15 @@ import type { CardSchema } from "../../cards/index.js";
 const CARD_CATEGORY_GROUPS = [
   {
     category: "authored",
-    heading: "**Types you create and edit** — the working vocabulary:",
+    heading: "**Types you create and edit:**",
   },
   {
     category: "synced",
-    heading:
-      "**Synced & captured** — created by connectors and the capture UI; you read and edit them, but rarely create one by hand:",
+    heading: "**Synced & captured** — made by connectors and capture; rarely created by hand:",
   },
   {
     category: "system",
-    heading:
-      "**System bookkeeping** — created and consumed by the machinery; you don't author these:",
+    heading: "**System bookkeeping** — made and consumed by the machinery; don't author these:",
   },
 ] as const;
 
@@ -62,7 +60,8 @@ export function cardTypesList({ allCardSchemas, boxCardSchemas, boxTemplates }: 
     lines.push(group.heading);
     lines.push("");
     for (const schema of schemas) {
-      const desc = schema.description === undefined ? "" : ` — ${schema.description}`;
+      const summary = schema.brief ?? schema.description;
+      const desc = summary === undefined ? "" : ` — ${summary}`;
       const doc = schema.instructions === undefined ? "" : ` → \`${cardDocPath(schema.type, boxTypes)}\``;
       lines.push(`- **${schema.type}**${desc}${doc}`);
     }

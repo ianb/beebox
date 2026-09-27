@@ -2,8 +2,8 @@
 
 `cardTypesList` fills the `{{card_types}}` placeholder of the "## CARD_TYPES"
 section (`guide.md`) from the box's frontmatter card schemas: grouped by
-`category` (authored / synced / system), each type with its one-line
-`description`.
+`category` (authored / synced / system), each type with its `brief` (five
+words or fewer), or its one-line `description` when it has no brief.
 
 It takes `CardSchema[]` and lists each by its `.type`. This regressed once: it
 took the legacy XML `ElementSchema[]` (`.tagName`), which is empty since every
@@ -13,6 +13,7 @@ empty.
 ```ts setup
 import { cardTypesList } from "../../src/core/agent-guide/cards.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
+import { cardSchemas } from "../../src/schemas/registry.js";
 import { cardSchema, type CardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 ```
@@ -48,6 +49,27 @@ lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l)
 // A type without instructions has no doc to link
 lines.find((l) => l.startsWith("- **chat-job**"))?.includes("→")
 => false
+```
+
+## The brief wins over the description, and every built-in has one
+
+The list is read on every turn, so each entry is the type's `brief`, five
+words or fewer; the longer `description` is the package-docs index row. A
+schema without a brief (a box-local one) falls back to its description.
+
+```ts
+const briefed: CardSchema = cardSchema("memo", {
+  brief: "A captured note",
+  description: "a captured text or voice note awaiting processing",
+  category: "authored",
+  fields: { status: z.string() },
+});
+cardTypesList({ allCardSchemas: [briefed] }).split("\n").includes("- **memo** — A captured note")
+=> true
+
+// Every built-in schema declares a brief of at most five words
+cardSchemas.filter((s) => s.brief === undefined || s.brief.split(/\s+/).length > 5).map((s) => s.type)
+=> []
 ```
 
 ## A box-local schema's doc is in the box, and a box-local type shadows a built-in
@@ -110,8 +132,8 @@ JSON.stringify(cardTypesList({ allCardSchemas: [] }))
 => ""
 
 const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, allCardSchemas: [] });
-const lines = guide.split("\n");
-const at = lines.indexOf("## CARD_TYPES");
-[lines[at + 1], lines[at + 2]?.startsWith("Each type with handling instructions"), lines[at + 3], lines[at + 4]?.startsWith("A new kind of thing")].join("|")
-=> |true||true
+const section = guide.split("## CARD_TYPES\n")[1]?.split("\n## ")[0] ?? "";
+const paragraphs = section.trim().split("\n\n");
+[paragraphs.length, paragraphs[0]?.startsWith("Each type with handling instructions"), paragraphs[1]?.startsWith("A new kind of thing"), section.includes("\n\n\n")].join("|")
+=> 2|true|true|false
 ```

@@ -105,6 +105,7 @@ make yourself, since nobody else took the work on.
    done).`;
 
 export const TodoReviewJobSchema = cardSchema("todo-review-job", {
+  brief: "Job surfacing todos to review",
   description: "A system job surfacing open todos needing attention (escalated, newly on-plate, or stale) from the todo-review sweep",
   category: "system",
   searchable: false,

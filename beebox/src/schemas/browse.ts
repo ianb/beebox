@@ -3,6 +3,7 @@ import { body, cardSchema } from "../cards/index.js";
 import { SYSTEM_CARD_PATHS } from "../shared/system-card-paths.js";
 
 export const BrowseSchema = cardSchema("browse", {
+  brief: "The Browse interface card",
   description: "The canonical Browse interface card",
   category: "system",
   searchable: false,

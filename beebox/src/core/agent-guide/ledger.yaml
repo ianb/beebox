@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after RECORDING.
-  guide_words: 5921
-  always_loaded_words: 10713
+  # 2026-09-26, after CARD_TYPES.
+  guide_words: 5214
+  always_loaded_words: 10006
   uncited_words_per_section: 60
 
 lint:
@@ -34,6 +34,7 @@ lint:
     - TOOLS
     - HISTORY
     - RECORDING
+    - CARD_TYPES
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -853,6 +854,39 @@ rows:
     audits: [retro-inferred-belief-policy, retro-report-location]
     mechanics: box-docs/card-guide.md
 
+  # --- CARD_TYPES ---
+  - id: card-types.intro
+    rule: A type with handling instructions links its reference doc; read it before working with a card of that type (built-in docs in the package, box-local ones in `_content/docs/generated/`).
+    handle: CARD_TYPES
+    bin: core
+    reason: The list is only an index; the fields and rules an agent needs are in each type's doc, and without the instruction it writes a card from the example alone.
+    audits: [find-schema-fields]
+  - id: card-types.descriptions
+    rule: Each type's one-line description (what it holds, who creates it, where its files live).
+    handle: CARD_TYPES
+    bin: delete
+    reason: Written for the package-docs index, not for picking a type; the type's doc and its box-docs README row carry it. Each built-in schema now declares a `brief` of five words or fewer for the list (a new optional `brief` on `cardSchema`, falling back to `description` for a box-local schema without one), and the group headings were shortened.
+    audits: [list-card-types]
+  - id: card-types.new-type-conversation
+    rule: A new kind of thing to track is a conversation first; find out what the user wants from it and how they'd use it before building, and don't create the first card or type in the same breath as the offer.
+    handle: CARD_TYPES
+    bin: core
+    reason: The user's "can I track X?" arrives in ordinary chat, and the agent's reflex is to build at once, which fixes a shape before the user has said what they want.
+    audits: [starter-track-plants]
+  - id: card-types.new-type-when
+    rule: A collection of repeated items with distinct typed fields gets a new card type, not generic memos or records.
+    handle: CARD_TYPES
+    bin: core
+    reason: Generic memos are the path of least resistance, and a collection filed as memos cannot be validated, queried by field, or given a view.
+    audits: [track-reading-list, create-task-card-type]
+  - id: card-types.schema-pointer
+    rule: Read box-docs/schemas.md before writing a card type; it goes in the box's `src/schemas/`, never `_config/schemas/`, where the loader does not see it.
+    handle: CARD_TYPES
+    bin: core
+    reason: The pointer at the moment of the decision; `_config/schemas/` was the old home and is still the guess, and a schema left there is silently ignored.
+    audits: [create-new-card-type, box-packageify-schemas-location]
+    mechanics: box-docs/schemas.md
+
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source
     rule: When the engine's source ships beside the package docs, DOCS names it as the fallback reference.
@@ -861,11 +895,11 @@ rows:
     reason: Generated from the package install; the row is the decision to mention it.
     audits: []
   - id: card-types.list
-    rule: CARD_TYPES lists every card type the box sees, grouped by category, with its reference doc and any box-local templates.
+    rule: CARD_TYPES lists every card type the box sees, grouped by category, each with a brief of five words or fewer and its reference doc, plus any box-local templates.
     handle: CARD_TYPES
     bin: core
-    reason: Generated from box data; the row is the decision to list it.
-    audits: [list-card-types]
+    reason: Generated from box data; the row is the decision to list it. An agent that does not know a type exists writes a generic doc or memo where a typed card belongs, and the name plus five words is enough to pick one and open its doc.
+    audits: [list-card-types, card-types-and-add-new]
   - id: directory-layout.list
     rule: DIRECTORY_LAYOUT tabulates the box's directories and what each holds.
     handle: DIRECTORY_LAYOUT

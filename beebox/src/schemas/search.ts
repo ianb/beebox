@@ -5,6 +5,7 @@ import { SYSTEM_CARD_PATHS } from "../shared/system-card-paths.js";
 const searchDefaultPath = z.string().min(1).refine((value) => !value.startsWith("/"), "paths must be box-relative");
 
 export const SearchSchema = cardSchema("search", {
+  brief: "A saved search with filters",
   description: "A copyable search interface with durable default filters.",
   category: "authored",
   searchable: false,

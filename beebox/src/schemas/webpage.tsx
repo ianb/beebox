@@ -18,6 +18,7 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const WebpageSchema = cardSchema("webpage", {
+  brief: "A captured web page",
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
   fields: {

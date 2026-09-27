@@ -18,6 +18,7 @@ const TelegramResponse = z.object({
 });
 
 export const TelegramMessageSchema = cardSchema("telegram-message", {
+  brief: "A queued outbound Telegram message",
   description: "An outbound Telegram message queued in _bookkeeping/output/ — the connector sends it on sync and deletes the card on success",
   category: "synced",
   fields: {
