@@ -28,6 +28,8 @@ export interface GuideLine {
 export type Filler = () => string | null;
 
 /** A citation line: `<!-- rules: a.b, c.d -->`. */
+/** A fence opener or closer: three or more backticks or tildes at the line start. */
+const FENCE_LINE = /^\s*(?:`{3,}|~{3,})/;
 const RULES_LINE = /^<!-- rules: (.+) -->$/;
 const LINE_PLACEHOLDER = /^{{([_a-z]+)}}$/;
 const INLINE_PLACEHOLDER = /{{([_a-z]+)}}/g;
@@ -79,8 +81,17 @@ export function renderGuideLines(params: { source: string; fillers: Readonly<Rec
   let section: string | null = null;
   let rules: string[] = [];
   let skipBlank = false;
+  // Inside a fenced code block a blank line does not end the cited passage,
+  // a heading-shaped line is not a heading, and a line that looks like a
+  // rules comment is example text to keep.
+  let inFence = false;
 
   for (const text of lines.slice(header)) {
+    if (FENCE_LINE.test(text)) inFence = !inFence;
+    if (inFence) {
+      out.push({ text, section, rules, comment: false, origin: "document" });
+      continue;
+    }
     const heading = SECTION_HEADING.exec(text)?.[1];
     if (heading !== undefined) section = heading;
     if (text === "" || heading !== undefined) rules = [];

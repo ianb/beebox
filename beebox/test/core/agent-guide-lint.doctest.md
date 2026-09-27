@@ -139,6 +139,21 @@ annotatedText(lines).split("\n").filter((l) => l.startsWith("<!--")).join(" | ")
 => <!-- | <!-- rules: alpha.one -->
 ```
 
+## A fenced example is one passage, and a rules line inside it is text
+
+A blank line inside a fence does not end the citation (a blank line before
+the fence still would, so the annotation sits directly above the passage
+that holds the fence), a `##` line inside a fence is not a heading, and a
+line that looks like a rules comment is kept as example text rather than
+stripped.
+
+```ts
+const fenced = "# T\n\n## ALPHA\n\n<!-- rules: alpha.ex -->\nExample:\n~~~\nfirst\n\n<!-- rules: shown -->\n## not a heading\nlast\n~~~\n";
+const fencedLines = renderGuideLines({ source: fenced, fillers: {} });
+fencedLines.filter((l) => !l.comment && l.text !== "").map((l) => `${l.section}:${l.rules.join(",")}:${l.text}`).join(" | ")
+=> null::# T | ALPHA::## ALPHA | ALPHA:alpha.ex:Example: | ALPHA:alpha.ex:~~~ | ALPHA:alpha.ex:first | ALPHA:alpha.ex:<!-- rules: shown --> | ALPHA:alpha.ex:## not a heading | ALPHA:alpha.ex:last | ALPHA:alpha.ex:~~~
+```
+
 ## A null filler omits its section; an empty one leaves no gap
 
 ```ts
