@@ -31,6 +31,23 @@ import { lawsSection } from "./laws.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
 import { whereTheDocsAreSection } from "./where-docs.js";
+import { section } from "./sections.js";
+
+/** The heading `compilePersonality` writes; the guide shows it under its handle. */
+const PERSONALITY_HEADING = "## Personality";
+
+/** The compiled personality section with its heading carrying the PERSONALITY handle. */
+function withPersonalityHandle(compiled: string): string {
+  if (!compiled.startsWith(`${PERSONALITY_HEADING}\n`)) throw new PersonalityHeadingError();
+  return `## ${section("PERSONALITY")} — Personality${compiled.slice(PERSONALITY_HEADING.length)}`;
+}
+
+class PersonalityHeadingError extends Error {
+  constructor() {
+    super(`a compiled personality section must open with "${PERSONALITY_HEADING}"`);
+    this.name = "PersonalityHeadingError";
+  }
+}
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
@@ -110,7 +127,7 @@ This guide is for every agent working in this box — chat, background jobs, and
 
   // Who you are
   if (personalitySection) {
-    sections.push(personalitySection);
+    sections.push(withPersonalityHandle(personalitySection));
   }
 
   // Each section is a self-contained markdown block; normalize any trailing

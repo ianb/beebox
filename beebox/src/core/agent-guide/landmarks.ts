@@ -8,9 +8,10 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
+import { section } from "./sections.js";
 
 export function landmarksSection(): string {
-  return `## Landmarks
+  return `## ${section("LANDMARKS")} — Landmarks
 
 The Landmarks instrument is the user's quick-jump surface to the spots in the box they actually live in. Directories organize the box for the system — inbox, jobs, archive, etc. Landmarks orient that organization toward the user: the places they keep returning to, the destinations of their recurring asks. A landmark is a \`<Name>.landmark.card\` placed **inside** the directory it marks — its presence turns that directory into a destination in the Landmarks instrument. (The box root's landmark is \`Box.landmark.card\`.)
 

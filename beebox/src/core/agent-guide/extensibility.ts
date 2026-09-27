@@ -10,11 +10,12 @@
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
+import { section } from "./sections.js";
 
 export function proceduresSection(procedures: ProcedureSummary[]): string {
   if (procedures.length === 0) return "";
   const lines: string[] = [
-    "## Procedures",
+    `## ${section("PROCEDURES")} — Procedures`,
     "",
     "Available procedures in `_config/procedures/`:",
     "",
@@ -30,7 +31,7 @@ export function proceduresSection(procedures: ProcedureSummary[]): string {
 export function guidesSection(guides: GuideSummary[]): string {
   if (guides.length === 0) return "";
   const lines: string[] = [
-    "## Guides",
+    `## ${section("GUIDES")} — Guides`,
     "",
     "Guides (`*.guide.card`) hold the boxholder's preferences for handling specific domains — how *this* user wants a domain done, beyond what general knowledge tells you. **Read the relevant guide before acting**, even in a domain you know.",
     "",

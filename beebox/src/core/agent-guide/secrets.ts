@@ -14,9 +14,10 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
+import { section } from "./sections.js";
 
 export function secretsSection(): string {
-  return `## API keys & secrets
+  return `## ${section("SECRETS")} — API keys & secrets
 
 Credentials live in a machine-level store outside this box, one copy each, granted per box by the boxholder — never written by the agent into a card, a config file, an env var, a log, or any committed file. The trick runner may inject a granted value into the child process environment for the duration of one run.
 

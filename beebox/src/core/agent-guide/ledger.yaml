@@ -1,0 +1,148 @@
+# The agent guide's ledger: the decisions behind `.beebox/agent-guide.md`.
+# One row per rule, with its bin and the reason for it; the registry of
+# section handles; the size budget. The guide's text says the rules; this
+# file says why each one is there. Spec and procedure: docs/agent-guide.md.
+# Schema: ledger-schema.ts.
+
+budget:
+  # Measured on the test1 clone, 2026-09-26, before any binning: `wc -w`
+  # of the rendered guide, and the `pnpm agent-context chat` total.
+  guide_words: 9508
+  always_loaded_words: 14300
+  uncited_words_per_section: 60
+
+lint:
+  # Sections whose coverage and uncited-words checks are on. Grows as each
+  # section is binned.
+  covered_sections: []
+
+# Every section handle, in guide order. `referrers` names who points at the
+# handle: another handle, or a path relative to the beebox package. Rename a
+# handle only with a sweep of its referrers.
+registry:
+  - handle: THE_LAWS
+    governs: the inviolable rules that outrank everything else in the guide
+    referrers: []
+  - handle: THE_LAW_OF_QUOTING
+    governs: the user's expressed words and data are recorded verbatim, never paraphrased
+    referrers:
+      - THE_LAW_OF_SAVING
+      - ABOUT_CARDS
+      - PROVENANCE
+      - docs/box/provenance.md
+      - src/dev/knowledge-audits.yaml
+  - handle: THE_LAW_OF_SAVING
+    governs: anything worth keeping is saved before the turn ends; chat is not memory
+    referrers:
+      - THE_LAW_OF_CARDS
+  - handle: THE_LAW_OF_CARDS
+    governs: saving means writing a card, not loose files or summaries
+    referrers:
+      - ABOUT_CARDS
+  - handle: DOCS
+    governs: where the package reference docs and this box's compiled docs are
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: SPEAKING
+    governs: the words to use with the user in place of system vocabulary
+    referrers:
+      - src/core/box/skills-content-what-can-you-do.ts
+      - src/dev/knowledge-audits.yaml
+  - handle: ABOUT_CARDS
+    governs: what a card is, its shared frontmatter, naming, attachments, and card commands
+    referrers:
+      - THE_LAW_OF_CARDS
+      - COMMANDS
+      - SEARCHING
+      - src/core/agent-guide/search.ts
+      - src/core/reactor/prompts.ts
+      - src/schemas/audio.tsx
+      - src/schemas/doc.tsx
+      - src/schemas/image.tsx
+      - src/schemas/memo.ts
+      - src/schemas/person.tsx
+      - docs/box/provenance.md
+      - docs/prompts/review.md
+      - src/dev/knowledge-audits.yaml
+  - handle: CARD_TYPES
+    governs: the catalogue of this box's card types and when to define a new one
+    referrers:
+      - ABOUT_CARDS
+      - src/schemas/registry.ts
+      - docs/prompts/lenses.md
+      - src/dev/knowledge-audits.yaml
+  - handle: QUESTIONS
+    governs: when and how to ask the boxholder through a question card
+    referrers:
+      - TODOS
+      - RECORDING
+  - handle: TODOS
+    governs: when a todo is the right tool and how to capture one
+    referrers:
+      - src/core/chat/session/prompts.ts
+      - docs/box/todos.md
+      - docs/box-guidance.md
+      - src/dev/knowledge-audits.yaml
+  - handle: DIRECTORY_LAYOUT
+    governs: the box's directories and the lifecycle stage each one means
+    referrers: []
+  - handle: BOX_CODE
+    governs: where box-authored code lives and which root files are not the agent's to edit
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: LANDMARKS
+    governs: what landmarks are for and when to raise or add one
+    referrers: []
+  - handle: INTAKE
+    governs: how items arrive in the box and the two sorting paths
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: COMMANDS
+    governs: the everyday bbx commands beyond card operations
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: SEARCHING
+    governs: finding cards and engine docs with bbx search
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: PROCEDURES
+    governs: this box's procedures and how to run one
+    referrers: []
+  - handle: GUIDES
+    governs: this box's guide cards and when to read one
+    referrers: []
+  - handle: SECRETS
+    governs: how credentials are declared, granted, and never written down
+    referrers:
+      - src/core/docs-gen/content.ts
+  - handle: TOOLS
+    governs: the command-line converters on the box host and installing a missing one
+    referrers:
+      - src/core/chat/session/prompts.ts
+      - src/dev/knowledge-audits.yaml
+  - handle: PROVENANCE
+    governs: when to use the quote and source tags, pointing at their mechanics
+    referrers:
+      - THE_LAW_OF_QUOTING
+      - ABOUT_CARDS
+      - src/core/chat/session/prompts.ts
+      - src/schemas/recipe.tsx
+      - docs/box/provenance.md
+      - docs/box-guidance.md
+      - docs/prompts/review.md
+      - src/dev/knowledge-audits.yaml
+  - handle: HISTORY
+    governs: reading git log and its trailers to reconstruct what happened
+    referrers:
+      - src/dev/knowledge-audits.yaml
+  - handle: RECORDING
+    governs: which box file each kind of discovered information goes to
+    referrers: []
+  - handle: PERSONALITY
+    governs: the voice compiled from this box's personality card
+    referrers: []
+
+# One row per rule. Fields: id, rule, handle, bin (law | core | indirect |
+# delete, by the ordered test in docs/agent-guide.md), reason, audits,
+# mechanics.
+rows: []

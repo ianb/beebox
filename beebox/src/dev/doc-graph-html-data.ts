@@ -124,6 +124,7 @@ export const PILLARS: Pillar[] = [
     supporting: [
       { path: "docs/server/boxes.md", note: "Procedure for spinning up a new one." },
       { path: "docs/box-guidance.md", note: "Every instruction file a box agent reads, and who writes it." },
+      { path: "docs/agent-guide.md", note: "The always-loaded guide's ledger: why each rule is in it, and the bin test." },
     ],
     code: ["~/src/boxes/"],
   },

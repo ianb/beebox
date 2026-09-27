@@ -12,7 +12,7 @@ import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
 import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
-import { SECTION, xref } from "./sections.js";
+import { section, xref } from "./sections.js";
 import { PROMINENCE_FIELD_BULLET } from "./prominence.js";
 
 /**
@@ -31,11 +31,11 @@ export function aboutCardsSection(): string {
     (t) => `- \`bbx create <path> -t ${t.name}\` — ${t.description}`,
   );
 
-  const intro = `## ${SECTION.ABOUT_CARDS}
+  const intro = `## ${section("ABOUT_CARDS")}
 
 Cards are the box's central unit — and the primary user-visible thing. What the
 user sees in the browser, what a view renders, the thing every ref points at: it
-is a card. ${SECTION.LAW_OF_CARDS} says everything worth keeping goes into one;
+is a card. ${section("THE_LAW_OF_CARDS")} says everything worth keeping goes into one;
 this is what one *is* and how to work with it.
 
 ### What a card is
@@ -53,12 +53,12 @@ The body is plain markdown.
 \`\`\`
 
 The box defines its own tags for card bodies, written in Markdoc's \`{% tag %}\`
-syntax: \`{% quote %}\` for the user's verbatim words (see ${xref(SECTION.LAW_OF_QUOTING)})
-and \`{% source %}\` for provenance and refs (see ${xref(SECTION.PROVENANCE)}).
+syntax: \`{% quote %}\` for the user's verbatim words (see ${xref("THE_LAW_OF_QUOTING")})
+and \`{% source %}\` for provenance and refs (see ${xref("PROVENANCE")}).
 
 ### Frontmatter every card shares
 
-Most frontmatter is defined by the card's own type (see ${xref(SECTION.CARD_TYPES)},
+Most frontmatter is defined by the card's own type (see ${xref("CARD_TYPES")},
 next), but a few belong to every card:
 
 - **\`title:\`** — a human-readable display title (distinct from the filename).
@@ -94,7 +94,7 @@ ${PROMINENCE_FIELD_BULLET}
   file, link it with a human title rather than writing a bare filename:
   \`the dates are in [the beta launch plan](/_content/notes/Beta_Launch.doc.card)\`.
   The full \`ref\`/\`href\` semantics (tracking, \`bbx mv\` rewriting, external \`href\`)
-  live in ${xref(SECTION.PROVENANCE)}.
+  live in ${xref("PROVENANCE")}.
 - **Link-shaped fields use one vocabulary.** Internal targets use \`ref\`; external
   targets use \`href\`. Put either in an object whose sibling fields explain the
   relationship — for example \`sources: [{href, retrieved, usage}]\` — never an
@@ -164,7 +164,7 @@ warnings you'll see:
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 
-The full catalogue of card types is in ${xref(SECTION.CARD_TYPES)}, next.`;
+The full catalogue of card types is in ${xref("CARD_TYPES")}, next.`;
 
   return [intro, ...createExamples, outro].join("\n");
 }
@@ -216,7 +216,7 @@ function effectiveSchemas(allCardSchemas: CardSchema[]): CardSchema[] {
 export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates }: CardTypesInput): string {
   const boxTypes = new Set((boxCardSchemas ?? []).map((s) => s.type));
   const lines: string[] = [
-    `## ${SECTION.CARD_TYPES}`,
+    `## ${section("CARD_TYPES")}`,
     "",
     `Each type with handling instructions has a full reference doc, linked below — read it before working with a card of that type. Built-in types are documented in the package (\`${BOX_PACKAGE_DOCS}/\`); a box-local type's doc is compiled into this box (\`${DOCS_DIR}/\`).`,
     "",
@@ -247,7 +247,7 @@ export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates 
 }
 
 export function questionsSection(): string {
-  return `## ${SECTION.QUESTIONS}
+  return `## ${section("QUESTIONS")}
 
 A question card borrows authority you don't have — to decide, or to know
 something as fact rather than guess. Where you are decides the mechanism:

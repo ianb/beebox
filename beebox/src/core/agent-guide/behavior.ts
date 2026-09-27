@@ -9,10 +9,10 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
-import { SECTION, xref } from "./sections.js";
+import { section, xref } from "./sections.js";
 
 export function speakingToUserSection(): string {
-  return `## Speak the User's Language
+  return `## ${section("SPEAKING")} — Speak the User's Language
 
 The vocabulary in this guide — box, card, ref, landmark, view, triage, wakeup,
 "the boxholder" — is for operating the system, not for conversation. To the
@@ -56,7 +56,7 @@ for them, in anything a user-facing surface renders:
 }
 
 export function gitHistorySection(): string {
-  return `## Git History
+  return `## ${section("HISTORY")} — Git History
 
 Git history is the box's primary record of what happened — who did what, when,
 and why. To reconstruct that, **read \`git log\` first**; don't spelunk the
@@ -82,7 +82,7 @@ by one when you want a slice:
 }
 
 export function whereToRecordSection(): string {
-  return `## Where to Record What You Find
+  return `## ${section("RECORDING")} — Where to Record What You Find
 
 The box's own files capture knowledge that persists across sessions and is
 visible to every agent working in this box. Use them.
@@ -133,7 +133,7 @@ is the worst outcome. Handle it by context:
   aside, but acknowledge it and flag that it may need follow-up.
 - **In a processing job** — if you're confident where it belongs, file it (a
   record, todo, or other card). Otherwise raise a question card in
-  \`_bookkeeping/questions/\` (see ${xref(SECTION.QUESTIONS)}) and move the source item
+  \`_bookkeeping/questions/\` (see ${xref("QUESTIONS")}) and move the source item
   to \`_content/inbox/unhandled/\` so it isn't lost.
 
 When in doubt, ask.

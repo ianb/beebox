@@ -37,6 +37,7 @@
     "src/core/views/types.ts",
     "src/core/chat/card-activity.ts",
     "src/shared/card-activity-kinds.ts",
+    "src/core/agent-guide/ledger.yaml",
     "tsconfig.json",
     "tsconfig.base.json"
   ],

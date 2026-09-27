@@ -7,10 +7,10 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
-import { SECTION } from "./sections.js";
+import { section } from "./sections.js";
 
 export function sourceSection(): string {
-  return `## ${SECTION.PROVENANCE} — \`{% quote %}\` and \`{% source %}\`
+  return `## ${section("PROVENANCE")} — \`{% quote %}\` and \`{% source %}\`
 
-\`{% quote %}\` holds a person's exact words: the user's with no attributes, a third party's with \`from="…"\` naming them (${SECTION.LAW_OF_QUOTING}). \`{% source %}\` wraps content derived from another card, file, or page (a summary, an inference, an extracted name): \`ref\` names the card or file it came from (\`href\` for an external URL), and \`usage\` says how you derived it. Before writing either tag beyond that basic form, read \`${BOX_PACKAGE_DOCS}/provenance.md\`: it covers \`usage\` wording, composing the two tags, anchoring a span, \`retrieved\` dates for web pages, when to skip the tag, and why you never write the \`[→ …]\` form you see in compiled context.`;
+\`{% quote %}\` holds a person's exact words: the user's with no attributes, a third party's with \`from="…"\` naming them (${section("THE_LAW_OF_QUOTING")}). \`{% source %}\` wraps content derived from another card, file, or page (a summary, an inference, an extracted name): \`ref\` names the card or file it came from (\`href\` for an external URL), and \`usage\` says how you derived it. Before writing either tag beyond that basic form, read \`${BOX_PACKAGE_DOCS}/provenance.md\`: it covers \`usage\` wording, composing the two tags, anchoring a span, \`retrieved\` dates for web pages, when to skip the tag, and why you never write the \`[→ …]\` form you see in compiled context.`;
 }

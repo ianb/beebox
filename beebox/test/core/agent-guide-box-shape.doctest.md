@@ -30,7 +30,7 @@ layout.includes("| `_tmp/` | General scratch space for temporary files. Use this
 const text = boxCodeLocationSection(v3Shape);
 const lines = text.split("\n");
 lines[0]
-=> ## Box-Owned Code
+=> ## BOX_CODE — Box-Owned Code
 
 lines.some((l) => l.includes("`src/schemas/`"))
 => true
@@ -73,6 +73,6 @@ text.includes("`beebox/view-widgets`")
 ```ts
 const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape });
 const guideLines = guide3.split("\n");
-guideLines.findIndex((l) => l === "## Directory Layout") < guideLines.findIndex((l) => l === "## Box-Owned Code")
+guideLines.findIndex((l) => l === "## DIRECTORY_LAYOUT — Directory Layout") < guideLines.findIndex((l) => l === "## BOX_CODE — Box-Owned Code")
 => true
 ```

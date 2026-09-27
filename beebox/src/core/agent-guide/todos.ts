@@ -8,13 +8,13 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
-import { SECTION, xref } from "./sections.js";
+import { section, xref } from "./sections.js";
 
 export function todosSection(): string {
-  return `## ${SECTION.TODOS}
+  return `## ${section("TODOS")}
 
 A todo is work to do; a question is a decision you're blocked on (see
-${xref(SECTION.QUESTIONS)}). If you can just go do the thing, it's a todo, not
+${xref("QUESTIONS")}). If you can just go do the thing, it's a todo, not
 a question. If you genuinely can't — because only the boxholder can decide —
 that's a question, full stop, even if it would be easy to instead jot it down
 as "figure this out later." Deferring a decision onto a list is still

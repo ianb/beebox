@@ -6,12 +6,13 @@
  */
 
 import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
+import { section } from "./sections.js";
 
 export function whereTheDocsAreSection({ engineSourcePresent }: { engineSourcePresent: boolean }): string {
   const source = engineSourcePresent ?
     " When a doc doesn't settle it, the engine's source is at `node_modules/beebox/src/`." :
     "";
-  return `## Where the docs are
+  return `## ${section("DOCS")} — Where the docs are
 
 Reference docs about beebox itself — every card type, the \`bbx\` command reference, connectors, views, procedures, triage, chat voice — are in the installed package at \`${BOX_PACKAGE_DOCS}/\`. Start with \`${BOX_PACKAGE_DOCS}/README.md\`: one line per doc saying when to read it. \`bbx search <terms>\` finds them by content too (\`--kind engine-doc\` restricts to docs). Read the doc before answering a question about how something works or before working with a type you don't know; don't reconstruct a mechanism from memory.${source} Docs compiled from this box's own content — its guides, personality, and box-local card types — are in \`${DOCS_DIR}/\`.`;
 }

@@ -5,10 +5,10 @@
  * the short appendix below.
  */
 
-import { SECTION, xref } from "./sections.js";
+import { section, xref } from "./sections.js";
 
 export function searchSection(): string {
-  return `## Searching the Box
+  return `## ${section("SEARCHING")} — Searching the Box
 
 \`bbx search "<query>"\` is full-text search over the box's cards — prefer it over
 \`grep\` for finding cards by content: it understands card structure, ranks by
@@ -49,7 +49,7 @@ excerpt — so you see both *which* card and *where* in it. A truncated run repo
 "N of total."
 
 To make a card findable in the first place, write it a good \`contains:\` — the
-rule and the \`bbx contains\` worklist commands are in ${xref(SECTION.ABOUT_CARDS)}.
+rule and the \`bbx contains\` worklist commands are in ${xref("ABOUT_CARDS")}.
 `;
 }
 

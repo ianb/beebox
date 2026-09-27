@@ -6,12 +6,12 @@
  */
 
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
-import { SECTION, xref } from "./sections.js";
+import { section, xref } from "./sections.js";
 
 export function keyCommandsSection(): string {
-  return `## Key Commands
+  return `## ${section("COMMANDS")} — Key Commands
 
-Card operations — \`bbx create\` / \`bbx mv\` / \`bbx rm\` — live in ${xref(SECTION.ABOUT_CARDS)}.
+Card operations — \`bbx create\` / \`bbx mv\` / \`bbx rm\` — live in ${xref("ABOUT_CARDS")}.
 This is the rest of the everyday \`bbx\` surface; the full reference is
 \`${BOX_PACKAGE_DOCS}/bbx-commands.md\`.
 

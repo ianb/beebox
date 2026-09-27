@@ -13,6 +13,7 @@
 import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
 import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../lib/box-shape.js";
+import { section } from "./sections.js";
 
 /** One row of the agent-facing directory table: its spec path (unless `path` overrides it) and description. */
 function row(boxDirsKey: keyof BoxDirs, options?: { path: string }): string {
@@ -47,7 +48,7 @@ export function directoryLayoutSection(): string {
     "| `_tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |",
   ].join("\n");
 
-  return `## Directory Layout
+  return `## ${section("DIRECTORY_LAYOUT")} — Directory Layout
 
 Location is state — a card's directory determines its lifecycle stage:
 
@@ -66,7 +67,7 @@ The area names are reserved words: never create a nested \`_content\`, \`_config
 export function boxCodeLocationSection(shape: BoxShape): string {
   const { schemasDir, viewsDir, tricksDir } = boxCodePathsRelativeToBoxRoot(shape);
 
-  return `## Box-Owned Code
+  return `## ${section("BOX_CODE")} — Box-Owned Code
 
 This box root also holds \`package.json\`, \`node_modules/\`, and the box's source code — box-authored code (schemas, views, tricks) lives right here, under \`src/\`:
 
@@ -86,7 +87,7 @@ This box root also holds \`package.json\`, \`node_modules/\`, and the box's sour
 }
 
 export function howItemsEnterSection(): string {
-  return `## How Items Enter the Box
+  return `## ${section("INTAKE")} — How Items Enter the Box
 
 Most items arrive on their own — you rarely need to place one by hand (though you do create and move cards with \`bbx create\` / \`bbx mv\` as part of your work). The arrival mechanisms:
 
