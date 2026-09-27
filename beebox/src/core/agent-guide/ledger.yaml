@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after GUIDES.
-  guide_words: 6452
-  always_loaded_words: 11244
+  # 2026-09-26, after SECRETS.
+  guide_words: 6300
+  always_loaded_words: 11092
   uncited_words_per_section: 60
 
 lint:
@@ -30,6 +30,7 @@ lint:
     - SEARCHING
     - PROCEDURES
     - GUIDES
+    - SECRETS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -762,6 +763,34 @@ rows:
     bin: core
     reason: The failure is acting from general knowledge in a domain the boxholder has already written preferences for; the list below says which guide covers what, and this sentence says to open it.
     audits: [guide-read-before-acting, list-guides, guide-vs-procedure]
+
+  # --- SECRETS ---
+  - id: secrets.never-in-the-box
+    rule: Credentials live in a machine-level store outside the box, one copy each, granted per box by the boxholder; never write a value into a card, config, env var, log, code, or committed file.
+    handle: SECRETS
+    bin: core
+    reason: An agent building anything that calls an API reaches for a key file or an inline value, and a copy in the tree is the leak and the rotation failure this design removes. The separate "never paste the value" bullet folded in here.
+    audits: [secrets-provisioning, secrets-adhoc-use]
+  - id: secrets.declare
+    rule: A credential you were not given is a question for the boxholder; `bbx secrets declare <name> --note … --use …` names the slot, and they supply and grant the value.
+    handle: SECRETS
+    bin: core
+    reason: The moment an agent needs a key is the moment it is tempted to engineer around the missing one; the command is short enough to state with the rule.
+    audits: [secrets-declare-missing-key, secrets-adhoc-use]
+  - id: secrets.from-code
+    rule: A trick declares its key in `secrets.json` (tricks.md); a scheduled script or procedure step resolves one by name at call time over the loopback API (connectors.md, Credentials).
+    handle: SECRETS
+    bin: core
+    reason: One pointer sentence naming the two paths, since an agent writing either kind of code has no other cue that each has its own mechanism. tricks.md already stated the trick runner's per-run injection, so that sentence went and nothing moved.
+    audits: [secrets-adhoc-use]
+    mechanics: box-docs/tricks.md, box-docs/connectors.md
+  - id: secrets.describe-status
+    rule: "`bbx secrets describe <name> --add-use` records a new use of a granted key (reasons are additive; removing one is the boxholder's), and `bbx secrets status <this box>` shows what this box has and awaits."
+    handle: SECRETS
+    bin: indirect
+    reason: Needed only when building on an existing key or checking grants. Moved verbatim to a new `bbx secrets` entry in bbx-commands.md; the guide keeps a pointer line.
+    audits: [secrets-describe-add-use]
+    mechanics: box-docs/bbx-commands.md
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

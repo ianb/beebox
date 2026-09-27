@@ -6279,6 +6279,8 @@ tests:
   # `_config/connectors/mistral.secret.json` as the retired path that "no
   # longer works". Fails the same way with the pre-change guide; the
   # negative-mention gate is the problem, not the guidance.
+  # Status (2026-09-26, doc-structure Track 3, SECRETS): pass on the test1
+  # clone, 4 reads, 4 searches, 39k ctx.
   - id: secrets-provisioning
     prompt: "How does a Mistral API key get configured for this box?"
     expected_level: knows_directly
@@ -6296,6 +6298,13 @@ tests:
     response_not_matches: ['(?:write|edit|create|put|save|add)[^.\n]{0,80}\.secret\.json']
     tags: [secrets]
 
+  # Status (2026-09-26, doc-structure Track 3, SECRETS): pass on the test1 clone
+  # after two check fixes, 2 reads, 1 searches, 39k ctx. Both earlier runs gave
+  # the right answer: the first read tricks.md after `cd
+  # node_modules/beebox/box-docs`, which the "box-docs/tricks.md" fragment did
+  # not match (now the bare filename); the second said the key is set "each time
+  # bbx trick launches", which the at-launch pattern did not match (now
+  # widened).
   - id: secrets-adhoc-use
     # Status (2026-09-16): 1/1 Claude — learned declaration, reason, grant,
     # child-only environment delivery, and value-free failure handling.
@@ -6303,7 +6312,7 @@ tests:
       I'm writing a trick that needs to call a credentialed third-party API
       (an API key). How should the trick get and use that key?
     expected_level: knows_about
-    should_read_any: ["box-docs/tricks.md"]
+    should_read_any: ["tricks.md"]
     watch_for: >
       Says: `bbx secrets declare <name>` to name the slot, the boxholder
       supplies the value and grants it (at `agent` access) via the capture
@@ -6314,8 +6323,46 @@ tests:
       into the code, write it to a file, print it, or debug with curl.
     correct_contains_any: ["bbx secrets declare", "secrets.json", "bbx trick"]
     correct_matches:
-      - "at launch|at invocation|per[- ]run|each run|every run"
+      - "at launch|launches|at invocation|per[- ]run|each run|every run|each time|when the trick runs"
     response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "_config/connectors", ".secret.json"]
+    tags: [secrets]
+
+  # Guards ledger row secrets.declare (added 2026-09-26, doc-structure Track
+  # 3, SECRETS): a missing key is declared and asked for, not worked around.
+  # Status (2026-09-26, doc-structure Track 3, SECRETS): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx.
+  - id: secrets-declare-missing-key
+    prompt: >
+      You are building a trick that needs a weather service API key, and this
+      box has no such key. What do you do? Do not change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Declares the slot with `bbx secrets declare <name>` (a note on what it
+      is and where to get it, and the use) and leaves supplying and granting
+      the value to the boxholder. FAILS on asking the user to paste the key
+      into chat or a file, or putting it in the code or an env file.
+    correct_contains: ["bbx secrets declare"]
+    response_not_matches: ['(?:paste|put|write|save|store)[^.\n]{0,60}(?:key|value)[^.\n]{0,60}(?:\.env|in the code|into the code|in a file|to a file)']
+    tags: [secrets]
+
+  # Guards ledger row secrets.describe-status (added 2026-09-26,
+  # doc-structure Track 3, SECRETS): the describe and status verbs moved to
+  # the `bbx secrets` entry in bbx-commands.md.
+  # Status (2026-09-26, doc-structure Track 3, SECRETS): pass on the test1
+  # clone, 1 reads, 1 searches, 39k ctx.
+  - id: secrets-describe-add-use
+    prompt: >
+      This box already has an `openai-images` key granted. You are building a
+      new trick that will use it too. Besides declaring it in the trick's
+      secrets.json, is there anything to record about the key, and with what
+      exact command? Do not change anything.
+    expected_level: knows_about
+    watch_for: >
+      Adds the new use as a reason with `bbx secrets describe openai-images
+      --add-use "..."`; reasons are additive, and removing one is the
+      boxholder's.
+    should_read_any: ["bbx-commands.md", "tricks.md"]
+    correct_contains: ["--add-use"]
     tags: [secrets]
 
   # === Starter: "what can you do" ===

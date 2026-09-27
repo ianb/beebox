@@ -454,13 +454,24 @@ before acting**, even in a domain you know.
 
 ## SECRETS — API keys & secrets
 
-Credentials live in a machine-level store outside this box, one copy each, granted per box by the boxholder — never written by the agent into a card, a config file, an env var, a log, or any committed file. The trick runner may inject a granted value into the child process environment for the duration of one run.
+<!-- rules: secrets.never-in-the-box -->
+Credentials live in a machine-level store outside this box, one copy each,
+granted per box by the boxholder. **Never write a value into a card, a config
+file, an env var, a log, code, or any committed file**: one copy exists so
+rotation touches one place.
 
-- **Need a key for something you are building?** `bbx secrets declare <name> --note "what it is and where to get it" --use "why you need it"` names the slot; the boxholder supplies the value and grants it. `bbx secrets status <this box>` shows what this box has and what it is still waiting on (your own box only — the machine's other boxes are the boxholder's business). Needing a credential you were not given is a question for a human, not an obstacle to work around.
-- **Building something new on a key that is already granted?** Say so: `bbx secrets describe <name> --add-use "the umbrella reminder trick"`. Reasons are additive — one key usually serves several tricks — and this is the list the boxholder reads when deciding whether a key still earns its keep. You may add a reason; removing one is theirs.
-- **Using one from a trick** — declare it in the trick's `secrets.json`; how `bbx trick` resolves and injects it is in `node_modules/beebox/box-docs/tricks.md`.
-- **Using one from a scheduled script or a procedure step** — resolve it by name at call time over the loopback API; the request is in `node_modules/beebox/box-docs/connectors.md` under Credentials.
-- **Never paste the value into the code, a file, or a card.** One copy exists so rotation touches one place; a copy in the tree is the thing this design removes.
+<!-- rules: secrets.declare -->
+Needing a credential you were not given is a question for the boxholder, not
+an obstacle to work around. `bbx secrets declare <name> --note "what it is and
+where to get it" --use "why you need it"` names the slot; they supply the
+value and grant it.
+
+<!-- rules: secrets.from-code, secrets.describe-status -->
+From code, a trick declares its key in `secrets.json`
+(`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+procedure step resolves one by name at call time (`connectors.md`,
+Credentials). Adding your use to a key already granted, and checking what
+this box has: `bbx secrets` in `bbx-commands.md`.
 
 ## TOOLS — External Tools
 

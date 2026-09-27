@@ -4813,6 +4813,13 @@ test1:
       peak: 57009
       added: 11720
       turns: 10
+    - date: 2026-09-27T03:36:02.663Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38599
+      peak: 47335
+      added: 8736
+      turns: 8
   secrets-adhoc-use:
     - date: 2026-08-18T01:31:04.241Z
       boxCommit: 9e0a78f2811de86e947189f93f96b95999386198
@@ -4849,6 +4856,27 @@ test1:
       peak: 50389
       added: 5087
       turns: 5
+    - date: 2026-09-27T03:36:02.663Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38562
+      peak: 43454
+      added: 4892
+      turns: 5
+    - date: 2026-09-27T03:36:27.455Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38621
+      peak: 43697
+      added: 5076
+      turns: 6
+    - date: 2026-09-27T03:36:56.057Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38621
+      peak: 43563
+      added: 4942
+      turns: 6
   chat-husk-rename-safe:
     - date: 2026-08-26T06:23:44.724Z
       boxCommit: 7aab290df469641b2d958c19b9a2421e91adabf6
@@ -5955,6 +5983,22 @@ test1:
       peak: 44239
       added: 5355
       turns: 5
+  secrets-declare-missing-key:
+    - date: 2026-09-27T03:36:02.663Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38560
+      peak: 42283
+      added: 3723
+      turns: 4
+  secrets-describe-add-use:
+    - date: 2026-09-27T03:36:02.663Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: b6157a66c7af763a81a18019f3b3a01b4292359f
+      initial: 38594
+      peak: 42096
+      added: 3502
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

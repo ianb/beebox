@@ -12,6 +12,7 @@ import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "./bbx-commands-connectors.js";
 import { bbxCommandsSearch } from "./bbx-commands-search.js";
+import { bbxCommandsMachine } from "./bbx-commands-machine.js";
 
 /**
  * Lead-in prose + `bbx create` section for the bbx command reference.
@@ -237,6 +238,7 @@ export function generateBbxCommands(): string {
     ...bbxCommandsSearch(),
     ...bbxCommandsScheduling(),
     ...bbxCommandsConnectors(),
+    ...bbxCommandsMachine(),
   ];
   return lines.join("\n");
 }
