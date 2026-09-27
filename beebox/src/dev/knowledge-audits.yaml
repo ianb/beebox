@@ -238,14 +238,20 @@ tests:
   # worktree's test1 clone (a macOS host); the agent also named the unsupported-
   # host path and a question card for non-chat runs.
 
+  # Status (2026-09-26, doc-structure Track 3, TOOLS): pass on the test1 clone
+  # at knows_about after one prompt fix, 2 reads, 2 searches, 39k ctx. The first
+  # run obeyed the old "do not run tools" and read nothing, so it knew only the
+  # guide's pointer (bbx host install, never sudo apt) and missed --why and the
+  # record file; the prompt now allows reading.
   - id: host-package-install
     prompt: >
       The boxholder wants label sheets rendered to PDF with gLabels, but
       `glabels-3-batch` is not installed on this host. How do you get it, what
       does the box keep as a record, and what do you do if the install is
-      refused or this host cannot install packages? Explain only; do not run
-      tools or change files.
-    expected_level: knows_directly
+      refused or this host cannot install packages? Explain only: read what
+      you need, but do not install anything or change files.
+    expected_level: knows_about
+    should_read_any: ["bbx-commands.md"]
     watch_for: >
       Uses bbx host install glabels with --why, names _config/host-packages.json
       and committing it, and on refusal or an unsupported host asks the
@@ -254,6 +260,23 @@ tests:
     correct_matches:
       - '(?:refus|unsupported|macOS|cannot)[\s\S]{0,250}(?:ask|boxholder)'
     tags: [host-packages]
+
+  # Guards ledger row tools.available (added 2026-09-26, doc-structure Track
+  # 3, TOOLS): the host's converters are used directly.
+  # Status (2026-09-26, doc-structure Track 3, TOOLS): pass on the test1 clone,
+  # 0 reads, 0 searches, 39k ctx.
+  - id: host-tools-convert-docx
+    prompt: >
+      The user attached a Word document, _content/inbox/Lease.attach/lease.docx,
+      and wants its text in a card. What command turns it into markdown? Name
+      it; do not run anything.
+    expected_level: knows_directly
+    watch_for: >
+      Names pandoc (e.g. `pandoc -f docx -t markdown`), already on the host;
+      does not propose installing a converter or writing one.
+    correct_contains: ["pandoc"]
+    response_not_contains: ["pip install", "npm install", "apt install"]
+    tags: [tooling]
 
   # === Browser tasks (docs/plans/browser-task-card.md) ===
 
@@ -3499,6 +3522,9 @@ tests:
   # src/core/python-tools-doc.ts, pointed to from the agent guide's
   # External Tools section).
 
+  # Status (2026-09-26, doc-structure Track 3, TOOLS): pass on the test1 clone,
+  # 1 reads, 0 searches, 38k ctx. should_read now names the bare filename, which
+  # the runner accepts on a symlinked package.
   - id: python-tool-invocation
     prompt: "I want to call a Python CLI tool (say, docling) from a script in this project. How should I invoke it so the version is reproducible?"
     expected_level: knows_about
@@ -3507,7 +3533,7 @@ tests:
       `uvx docling@<version>` or `uvx --from 'docling==<version>' docling`.
       Should NOT suggest `pip install`, a global venv, or adding docling to
       package.json/requirements.txt without a pin.
-    should_read: ["node_modules/beebox/box-docs/python-tools.md"]
+    should_read: ["python-tools.md"]
     correct_contains_any: ["uvx", "uv tool run"]
     tags: [tooling, python]
     notes: >

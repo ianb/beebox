@@ -475,9 +475,18 @@ this box has: `bbx secrets` in `bbx-commands.md`.
 
 ## TOOLS — External Tools
 
-Always available on the box host, reach for them directly: `pandoc` (document conversion — .doc/.docx/.rtf/.odt → text or markdown), `imagemagick` (`magick`), `poppler-utils` (`pdftotext`, `pdfimages`), and for spreadsheets `xlsx2csv` (`.xlsx` → CSV) or the `openpyxl` Python library (`.xlsx` only — legacy `.xls` is not supported). Box-specific Python CLIs: `node_modules/beebox/box-docs/python-tools.md`. Also `fclones`, to find byte-identical duplicate files: `fclones group <dir>` reports groups and deletes nothing unless told.
+<!-- rules: tools.available -->
+Always on the box host; reach for them directly: `pandoc`
+(.doc/.docx/.rtf/.odt → text or markdown), `imagemagick` (`magick`),
+`poppler-utils` (`pdftotext`, `pdfimages`), `xlsx2csv` or the `openpyxl`
+Python library for `.xlsx` (legacy `.xls` is not supported), and `fclones`
+for byte-identical duplicates (`fclones group <dir>` reports and deletes
+nothing). Box-specific Python CLIs: `node_modules/beebox/box-docs/python-tools.md`.
 
-Missing a command-line tool that Debian/Ubuntu packages (e.g. `glabels`)? `bbx host install <pkg> --why "<reason>"` records it in `_config/host-packages.json` and installs it from the distro repositories; commit the file. The host refuses packages that add a service or upgrade anything, and a host without support (macOS) only records the need. After either, ask the boxholder; don't suggest `sudo apt`. Python libraries are not host packages.
+<!-- rules: tools.host-install -->
+A missing Debian/Ubuntu command-line tool is installed with `bbx host
+install`, never `sudo apt`; how, and what to do when it is refused, is its
+entry in `bbx-commands.md`.
 
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 

@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after SECRETS.
-  guide_words: 6300
-  always_loaded_words: 11092
+  # 2026-09-26, after TOOLS.
+  guide_words: 6247
+  always_loaded_words: 11039
   uncited_words_per_section: 60
 
 lint:
@@ -31,6 +31,7 @@ lint:
     - PROCEDURES
     - GUIDES
     - SECRETS
+    - TOOLS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -790,6 +791,22 @@ rows:
     bin: indirect
     reason: Needed only when building on an existing key or checking grants. Moved verbatim to a new `bbx secrets` entry in bbx-commands.md; the guide keeps a pointer line.
     audits: [secrets-describe-add-use]
+    mechanics: box-docs/bbx-commands.md
+
+  # --- TOOLS ---
+  - id: tools.available
+    rule: pandoc, imagemagick, poppler-utils, xlsx2csv or openpyxl, and fclones are on the box host to use directly; box-specific Python CLIs are in box-docs/python-tools.md.
+    handle: TOOLS
+    bin: core
+    reason: A file conversion comes up inside tasks that are about something else, and without the list an agent writes a converter or tells the user it cannot read the file. One sentence; the fclones sentence folds in.
+    audits: [host-tools-convert-docx, python-tool-invocation]
+    mechanics: box-docs/python-tools.md
+  - id: tools.host-install
+    rule: "A missing distro command-line tool is installed with `bbx host install <pkg> --why`, recorded in `_config/host-packages.json` and committed; on a refusal or an unsupported host, ask the boxholder, never `sudo apt`; Python libraries are not host packages."
+    handle: TOOLS
+    bin: indirect
+    reason: Rare, and needed only when a tool is missing. Moved verbatim to a new `bbx host install` entry in bbx-commands.md; the guide keeps one pointer sentence carrying the command and the `sudo apt` prohibition, since the reflex fires before any doc is open.
+    audits: [host-package-install]
     mechanics: box-docs/bbx-commands.md
 
   # --- Generated lists: the row is the decision to list it ---
