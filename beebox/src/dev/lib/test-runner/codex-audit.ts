@@ -1,6 +1,6 @@
 /** Adapt Codex's live provider activity into knowledge-audit observations. */
 
-import type { CodexObservedActivity } from "../../../core/agent/codex-run.js";
+import type { CodexObservedActivity } from "../../../core/agent/codex-run/core.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../core/agent-instruction-files.js";
 import type { AgentBehavior } from "./runner.js";

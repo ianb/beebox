@@ -11,14 +11,14 @@
  */
 
 import * as fs from "node:fs/promises";
-import type { EventBus } from "../event-bus.js";
-import type { ChatSession } from "../chat/session/index.js";
-import type { ChatSessionRegistry } from "../chat/session/registry.js";
+import type { EventBus } from "../event-bus/core.js";
+import type { ChatSession } from "../chat/session/run/core.js";
+import type { ChatSessionRegistry } from "../chat/session/registry/core.js";
 import { assertNever } from "../../lib/invariant.js";
-import { stagingBaseDir, readStagingSession } from "./staging-store.js";
-import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
+import { stagingBaseDir, readStagingSession } from "./staging-store/core.js";
+import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare/core.js";
 import { capturePreparationReason } from "./failure-notice.js";
-import { runHqJob } from "../voice-recording/hq-job.js";
+import { runHqJob } from "../voice-recording/hq-job/core.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 /** Voice `hq.state`s a resume should re-fire the job for — mid-flight, not yet terminal. */

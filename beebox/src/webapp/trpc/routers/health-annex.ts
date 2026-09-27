@@ -6,7 +6,7 @@
  * health surface reports.
  */
 
-import { runAnnexDoctor } from "../../../core/annex/doctor.js";
+import { runAnnexDoctor } from "../../../core/annex/doctor/core.js";
 import { createGitAnnexService } from "../../../services/git-annex.js";
 import type { HealthCheck } from "./health.js";
 

@@ -6,7 +6,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { captureMigrationSnapshot, changedMigrationPaths } from "./migration-recovery.js";
-import { createAgent } from "./agent/index.js";
+import { createAgent } from "./agent/invoke/core.js";
 import { cardFields, parseCardText } from "./card-io.js";
 import { QuestionSchema, createTextQuestionTemplate } from "../schemas/question.js";
 import { errnoCode } from "../lib/error-guards.js";

@@ -18,7 +18,7 @@ where new material goes and how it is named.
 | How development happens: agent coding, workflow, technologies, maintenance | [development](development.md) |
 | The production server: provisioning, configuration, deploying, boxes, operations, health checks | [server](server.md) |
 | Design rationale, one small file per topic | [design](design/README.md) |
-| Docs shipped to box agents | [box](box/), with the generated reference from `src/core/docs-gen/package-docs.ts` |
+| Docs shipped to box agents | [box](box/), with the generated reference from `src/core/docs-gen/package-docs/core.ts` |
 | Onboarding narrative | [architecture](architecture/) |
 | Plans, implemented plans, unimplemented plans, reports | [plans](plans/README.md), `implemented-plans/`, `unimplemented-plans/`, `reports/` |
 

@@ -20,7 +20,7 @@ import {
   type Migration,
   type ManifestEntry,
 } from "../../core/migrations.js";
-import { installProcedures, installGuides } from "../../core/box/index.js";
+import { installProcedures, installGuides } from "../../core/box/structure/core.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {

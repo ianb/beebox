@@ -10,13 +10,13 @@ import YAML from "yaml";
 import { assertStandaloneBox } from "../box-guard.js";
 import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../test-suite-schema.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { createClaudeAgent } from "../../../core/agent/index.js";
+import { createClaudeAgent } from "../../../core/agent/invoke/core.js";
 import type { AgentInvokeOptions } from "../../../core/agent/types.js";
 import { createCodexAgent } from "../../../core/agent/codex-agent.js";
-import type { CodexObservedActivity } from "../../../core/agent/codex-run.js";
+import type { CodexObservedActivity } from "../../../core/agent/codex-run/core.js";
 import { loadAgentEngine, type AgentEngine } from "../../../core/box/config.js";
 import { type KnownToolName, isKnownTool } from "../../../shared/known-tools.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../core/chat/session/index.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../core/chat/session/run/core.js";
 import {
   MAX_SESSION_ENTRIES,
   parseSessionLog,

@@ -12,7 +12,7 @@ import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git/
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 import type { LoadCardContext } from "./card-io.js";
-import { getBoxMetadata } from "./box/index.js";
+import { getBoxMetadata } from "./box/structure/core.js";
 import { errnoCode } from "../lib/error-guards.js";
 
 class InvalidBoxError extends Error {

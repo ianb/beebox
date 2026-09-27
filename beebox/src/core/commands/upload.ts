@@ -11,10 +11,10 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import {
-  registerCommand,
   runCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -28,7 +28,7 @@ import {
   type UploadLedger,
   type UploadLedgerEntry,
   type ScanGroup,
-} from "./upload-helpers.js";
+} from "../upload-helpers.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 
@@ -241,7 +241,7 @@ async function executeUpload(
   };
 }
 
-registerCommand({
+export const uploadCommand: CommandDefinition = {
   name: "upload",
   description: "Upload a batch of files to the box (dedup by content hash)",
   args: [
@@ -253,4 +253,4 @@ registerCommand({
     { name: "limit", description: "Process at most N files (sorted; useful for smoke tests)", required: false, type: "number" },
   ],
   execute: executeUpload,
-});
+};

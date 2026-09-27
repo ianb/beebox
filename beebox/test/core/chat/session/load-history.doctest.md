@@ -15,7 +15,7 @@ import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/cor
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
-import { recordSessionStart } from "../../../../src/core/chat/session/session-start-record.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";

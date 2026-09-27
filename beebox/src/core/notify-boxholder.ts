@@ -20,14 +20,14 @@ import { getBoxTime } from "../lib/time.js";
 import { getPublicUrl } from "../lib/public-url.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { assertNever } from "../lib/invariant.js";
-import { createEventBus } from "./event-bus.js";
+import { createEventBus } from "./event-bus/core.js";
 import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
 import { formatTarget, targetUrl } from "./notification/target.js";
 import { appendDelivery, appendIntent } from "./notification/log.js";
 import { channelsToTry, type ChannelPlan } from "./notification/channels.js";
 import { livePresence, type Presence } from "./notification/presence.js";
 import { audienceDetail, audienceFlags, type AudienceDetail } from "./notification/audience.js";
-import { apnsConfigured, sendApns } from "./notification/apns-channel.js";
+import { apnsConfigured, sendApns } from "./notification/apns-channel/core.js";
 import { FAKE_DETAIL } from "./notification/fake-mode.js";
 
 /** A notification as a caller writes it: the id is assigned when absent. */

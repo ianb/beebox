@@ -12,7 +12,7 @@ import {
   loadSchedulerConfig,
   boxLogFile,
   type LogEntry,
-} from "../../core/schedule/scheduler.js";
+} from "../../core/schedule/scheduler/core.js";
 import { isRecord } from "../../lib/is-record.js";
 
 export interface LogFilters {

@@ -27,7 +27,7 @@ import {
   stagingSessionDir,
   isBulkSession,
   type StagingSession,
-} from "../capture/staging-store.js";
+} from "../capture/staging-store/core.js";
 
 /** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
 class NotABulkSessionError extends Error {

@@ -13,12 +13,12 @@ import { withChatRunAdmission } from "./run-lock.js";
 import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
-import { buildScriptEnv } from "../../script-env.js";
+import { buildScriptEnv } from "../../script-env/core.js";
 import { createChatBackend, type ChatBackend, type ChatBackendRun } from "../../../services/claude-chat/core.js";
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { resolveSessionModel } from "./model.js";
-import { providerEnvAdditions } from "../../provider-env.js";
+import { providerEnvAdditions } from "../../provider-env/core.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "./engine.js";
 

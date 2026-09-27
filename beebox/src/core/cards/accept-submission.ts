@@ -21,7 +21,7 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 import { stageAndCommitPaths, unstageFiles } from "../../lib/git/core.js";
-import type { EventBus } from "../event-bus.js";
+import type { EventBus } from "../event-bus/core.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { createCardSchemaMap } from "../../schemas.js";

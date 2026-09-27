@@ -19,7 +19,7 @@ import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
 import { automatedChecksPassed } from "./lib/audit-checks.js";
 import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
-import { generateDocs } from "../core/docs-gen/index.js";
+import { generateDocs } from "../core/docs-gen/generate/core.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { AgentEngine } from "../core/box/config.js";
 import type { AuditTest } from "./lib/test-runner/runner.js";

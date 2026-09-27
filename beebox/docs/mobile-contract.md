@@ -179,7 +179,7 @@ cookie** minted from that token.
 | `src/core/mobile/pairing.ts` — `verifyMobileBearer(boxRoot, authHeader)` | parses `Bearer ` prefix, delegates |
 | `src/core/mobile/pairing.ts` — `verifyMobileToken(boxRoot, token)` | SHA-256 + timing-safe compare vs non-revoked devices; writes `lastUsedAt` back |
 | `src/core/mobile/pairing.ts` — `isMobileDeviceActive(boxRoot, deviceId)` | read-only revocation check, used when renewing a cookie |
-| `src/core/mobile/mobile-session.ts` — `verifyMobileSession(boxRoot, cookie)` | per-box HMAC + `exp` check; no filesystem access |
+| `src/core/mobile/session.ts` — `verifyMobileSession(boxRoot, cookie)` | per-box HMAC + `exp` check; no filesystem access |
 | `src/core/mobile/request-auth.ts` — `resolveMobileRequestAuth(boxRoot, headers)` | **the one resolver every mobile gate uses** — cookie first, then bearer |
 | `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | box auth preHandler: accepts agent bearer or `resolveMobileRequestAuth`; renews the cookie |
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
@@ -1201,8 +1201,8 @@ See §1.3 (full request/response/errors).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box builder | `src/core/notification/apns-payload.ts` — `buildApnsRequest` |
-  | box sender | `src/core/notification/apns-channel.ts` — `sendApns`; `src/services/apns.ts` |
+  | box builder | `src/core/notification/apns-channel/payload.ts` — `buildApnsRequest` |
+  | box sender | `src/core/notification/apns-channel/core.ts` — `sendApns`; `src/services/apns.ts` |
   | native reader | `ios-app/BeeBox/Services/NotificationCenterDelegate.swift` — `NotificationCenterDelegate` (`willPresent`, `didReceive`, `clearOnForeground`), `NotificationTapInbox` |
   | native keys + target mirror | `ios-app/BeeBox/Models/NotificationTarget.swift` — `NotificationLoudness(userInfo:)`, `NotificationTap(userInfo:)`, `NotificationTap.pairedBox(in:selected:)`, `NotificationTarget` (mirrors `src/core/notification/target.ts`) |
   | native navigation | `ios-app/BeeBox/Views/RootView.swift` — `openNotificationTap`; `ios-app/BeeBox/Models/PairedBox.swift` — `slug`; `ios-app/BeeBox/Views/ChatWebView.swift` — `Page.path`, `NavigationRequest` |
@@ -1448,7 +1448,7 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `webapp/local-users.ts`. Cross-process matters here because `bbx hub` verifies a bearer (stamping
   `lastUsedAt`) before proxying to the per-box child, which verifies it again and can revoke it, so
   two processes genuinely race the file. Those functions are now `async`. See
-  `test/core/mobile/pairing-store-concurrency.doctest.md`.
+  `test/core/mobile/pairing.store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
 - **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
@@ -1537,7 +1537,7 @@ beebox/src/frontend/src/input/targets/receipts.ts
 
 # Box server: pairing, mobile-token verification, native HTTP endpoints
 beebox/src/core/mobile/pairing.ts
-beebox/src/core/mobile/mobile-session.ts
+beebox/src/core/mobile/session.ts
 beebox/src/core/mobile/request-auth.ts
 beebox/src/webapp/mobile-cookie.ts
 beebox/src/webapp/routes/pairing.ts
@@ -1547,7 +1547,7 @@ beebox/src/webapp/routes/chat-uploads.ts
 beebox/src/webapp/routes/bulk-upload.ts
 beebox/src/core/capture/staging-stream.ts
 beebox/src/webapp/trpc/routers/debugLog.ts
-beebox/src/core/notification/apns-payload.ts
+beebox/src/core/notification/apns-channel/payload.ts
 beebox/src/core/notification/target.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage

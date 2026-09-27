@@ -11,7 +11,7 @@ import { errnoCode } from "../../lib/error-guards.js";
 import type { CardSchema } from "../../exports/cards.js";
 import { getBuiltinTemplates, type TemplateDefinition } from "../../templates-registry.js";
 import { generateCardDoc } from "./content.js";
-import { cardDocFilename, cardDocInstructions, engineDocFilenames, ensurePackageDocs } from "./package-docs.js";
+import { cardDocFilename, cardDocInstructions, engineDocFilenames, ensurePackageDocs } from "./package-docs/core.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 
 /**

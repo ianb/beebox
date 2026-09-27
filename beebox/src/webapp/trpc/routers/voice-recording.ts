@@ -30,8 +30,8 @@ import {
   type VoiceHandoff,
   type HqFailure,
   type VoiceHqResult,
-} from "../../../core/capture/staging-store.js";
-import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging.js";
+} from "../../../core/capture/staging-store/core.js";
+import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
 import { toError } from "../../../lib/error-guards.js";
 import type { TrpcContext } from "../context.js";
 

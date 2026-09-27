@@ -115,7 +115,7 @@ A card appearing both in a hand-listed `links` entry and in an unnamed `expand` 
 
 ## Derived links
 
-A landmark's flat list is assembled in tiers (`src/core/landmark/resolve.ts`, `derived-links.ts`):
+A landmark's flat list is assembled in tiers (`src/core/landmark/resolve/core.ts`, `derived-links.ts`):
 
 1. hand-listed `links:` (first, and winning dedup, with their labels);
 2. derived `entry-point` cards, then derived `primary` cards, from the landmark's **pruned subtree**: its directory and every descendant directory that has no landmark of its own, never entering an owned `.attach/` scope unless that scope holds its own landmark;
@@ -223,7 +223,7 @@ box-name setting anywhere.
 | Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat.ts`) |
 | App-bar switch / here menus | `src/frontend/src/components/AppNav/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
-| Doctest coverage | `test/core/landmark/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
+| Doctest coverage | `test/core/landmark/resolve.schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 
 The expand evaluator runs server-side at fetch time so the wire response is a fully-resolved list of links (no client-side glob or field lookup).
 

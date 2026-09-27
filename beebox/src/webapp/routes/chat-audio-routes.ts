@@ -15,13 +15,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
-import { transcribeAudioHq } from "../../core/transcription/index.js";
+import { transcribeAudioHq } from "../../core/transcription/dispatch/core.js";
 import { isTranscriptionError } from "../../core/transcription/voxtral-errors.js";
 import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
-} from "../../core/transcription/voxtral.js";
+} from "../../core/transcription/voxtral/core.js";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import {
   VOICE_MODELS,
@@ -36,7 +36,7 @@ import { loadTtsConfig } from "../../core/tts/config.js";
 import { EmptyTtsResponseError, type TtsService } from "../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./chat-context.js";
-import { readSessionLogTail } from "../../core/chat/session/session-log-tail.js";
+import { readSessionLogTail } from "../../core/chat/session/log-tail.js";
 
 /** Voice model names as a string set, for validating an untrusted `voice` param. */
 const VOICE_MODEL_SET = new Set<string>(VOICE_MODELS);

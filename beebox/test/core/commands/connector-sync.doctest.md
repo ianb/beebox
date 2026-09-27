@@ -7,7 +7,8 @@ advances its cursor.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runConnectorSync } from "../../../src/core/commands/connector-sync.js";
-import { createCollectorContext } from "../../../src/core/commands/index.js";
+import { createCollectorContext } from "../../../src/core/command-runner.js";
+import "../../../src/core/commands.js";
 ```
 
 ```ts

@@ -12,8 +12,8 @@ import { randomUUID } from "node:crypto";
 import {
   runCommand,
   type CommandContext,
-} from "../../core/commands/index.js";
-import type { EventBus } from "../../core/event-bus.js";
+} from "../../core/command-runner.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";

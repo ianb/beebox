@@ -13,7 +13,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runHealthChecks } from "../trpc/routers/health.js";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
 import { registerProxyImageRoutes } from "./proxy-image.js";

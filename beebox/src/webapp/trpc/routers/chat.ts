@@ -23,7 +23,7 @@ import {
 } from "../../../core/chat/session/history.js";
 import { nearestLandmarkDir, boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { getChatRuntime } from "../../chat-runtime.js";
-import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../core/chat/session/list.js";
+import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../core/chat/session/list/core.js";
 import type { TranscriptState } from "../../../core/chat/session/availability.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";

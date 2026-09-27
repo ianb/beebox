@@ -8,7 +8,7 @@ exactly that id.
 
 ```ts setup
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry.js";
+import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, loadHistoryEntries, getMostActive } from "../../../../src/core/chat/session/history.js";

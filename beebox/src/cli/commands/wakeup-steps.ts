@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { type Connector } from "../../connectors.js";
-import { runPreActions } from "../../core/preactions/index.js";
+import { runPreActions } from "../../core/preactions.js";
 import { getSystemState } from "../../core/state.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../lib/git/core.js";
@@ -20,7 +20,7 @@ import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfi
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
 import { resolveBoxRelativeRef, realpathContained } from "../../lib/box-containment.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
-import { openSearchIndex } from "../../core/search/refresh.js";
+import { openSearchIndex } from "../../core/search/refresh/core.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { getBoxDir } from "../../lib/paths/core.js";

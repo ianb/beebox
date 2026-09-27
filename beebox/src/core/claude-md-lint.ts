@@ -23,7 +23,7 @@
  *  - https://www.humanlayer.dev/blog/writing-a-good-claude-md
  *
  * Concrete fixing strategies for an oversized file are documented in the package
- * docs, reducing-claude-md.md (src/core/reducing-claude-md-doc.ts),
+ * docs, reducing-claude-md.md (src/core/docs-gen/package-docs/reducing-claude-md-doc.ts),
  * which the warning below points to.
  */
 

@@ -16,7 +16,7 @@
  */
 
 import { z } from "zod";
-import { createAgent as realCreateAgent } from "../agent/index.js";
+import { createAgent as realCreateAgent } from "../agent/invoke/core.js";
 import { loadAgentEngine } from "../box/config.js";
 import { loadEffectiveBoxModel } from "../model-policy.js";
 import {

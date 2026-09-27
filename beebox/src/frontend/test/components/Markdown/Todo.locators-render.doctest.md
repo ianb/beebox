@@ -14,7 +14,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { markdocConfig } from "../../../../shared/markdoc-config/core.js";
 import { assignLocators, stampLocators } from "../../../../shared/todo-locators.js";
-import { extractBodyTodos } from "../../../../core/todo/extract-body.js";
+import { extractBodyTodos } from "../../../../core/todo/extract/body.js";
 import { makeTodoComponents } from "../../../src/components/Markdown/Todo.js";
 
 globalThis.React = React;

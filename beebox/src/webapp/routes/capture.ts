@@ -16,15 +16,15 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import {
   readStagingSession,
   sealStagingSession,
   listStagingSessions,
-} from "../../core/capture/staging-store.js";
+} from "../../core/capture/staging-store/core.js";
 import { discardStagingSessionIfCancellable, type DiscardResult } from "../../core/capture/staging-teardown.js";
 import { StagingSessionGoneError } from "../../core/capture/staging-errors.js";
-import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
+import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare/core.js";
 import { capturePreparationReason } from "../../core/capture/failure-notice.js";
 import { selectResumableCaptures } from "../../core/capture/pending.js";
 import {

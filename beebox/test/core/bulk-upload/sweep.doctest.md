@@ -17,7 +17,7 @@ import {
   setStagingState,
   readStagingSession,
   writeStagingSession,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { bulkBatchCardRelPath } from "../../../src/core/bulk-upload/prepare.js";
 import { createUploadBatchTemplate } from "../../../src/schemas/upload-batch.js";
 import { sweepBulkBatches } from "../../../src/core/bulk-upload/sweep.js";

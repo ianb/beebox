@@ -14,9 +14,9 @@ answer truthfully.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { runScanPromotePass, promotionLockPath } from "../../../src/core/scan/promote.js";
-import { collectQuarantine } from "../../../src/core/scan/promote-gc.js";
-import { wakeupMarkerPath } from "../../../src/core/scan/promote-wakeup.js";
+import { runScanPromotePass, promotionLockPath } from "../../../src/core/scan/promote/core.js";
+import { collectQuarantine } from "../../../src/core/scan/promote/gc.js";
+import { wakeupMarkerPath } from "../../../src/core/scan/promote/wakeup.js";
 import {
   ensureQuarantineDir,
   quarantineFilePath,
@@ -24,9 +24,10 @@ import {
   readQuarantineEntry,
   recordQuarantineEntry,
 } from "../../../src/core/scan/quarantine.js";
-import { findEntry, loadLedger } from "../../../src/core/commands/upload-helpers.js";
+import { findEntry, loadLedger } from "../../../src/core/upload-helpers.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
-import { runCommand, createCollectorContext } from "../../../src/core/commands/index.js";
+import { runCommand, createCollectorContext } from "../../../src/core/command-runner.js";
+import "../../../src/core/commands.js";
 import { hideAssetsAgain } from "../../helpers/legacy-ignore-block.js";
 
 const HASH_A = "a".repeat(64);

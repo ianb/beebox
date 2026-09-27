@@ -8,7 +8,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { runReactor } from "../../core/reactor/index.js";
+import { runReactor } from "../../core/reactor/engine/core.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export const reactorCommand = new Command("reactor")

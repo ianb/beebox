@@ -13,8 +13,8 @@
  */
 
 import { buildWavHeader } from "../../shared/wav.js";
-import { listStagingSessions, isVoiceSession, type StagingSession } from "../capture/staging-store.js";
-import { readConcatenatedPcm } from "./hq-job.js";
+import { listStagingSessions, isVoiceSession, type StagingSession } from "../capture/staging-store/core.js";
+import { readConcatenatedPcm } from "./hq-job/core.js";
 
 export interface StagedVoiceAudio {
   /** 16 kHz mono s16 WAV. */

@@ -12,7 +12,7 @@ import {
   isBox,
   runScheduler,
   type LogEntry,
-} from "../../core/schedule/scheduler.js";
+} from "../../core/schedule/scheduler/core.js";
 import { BBX_STATE_DIR } from "../../lib/state-dir.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import {

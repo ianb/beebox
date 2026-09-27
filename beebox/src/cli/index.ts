@@ -18,6 +18,9 @@ import { migrateUserState } from "../lib/state-migration.js";
 import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } from "../lib/state-dir.js";
 import { buildProgram } from "./program.js";
 import { rewriteLegacyHandoff, legacyHandoffNotice } from "./legacy-argv.js";
+// Registers every command with the command runner before any CLI verb can
+// call `runCommand`; see core/commands.ts.
+import "../core/commands.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
 // schema is permissive (every field optional) — this only rejects a genuinely

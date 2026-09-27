@@ -18,7 +18,7 @@ import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schem
 import type { ScheduleNotify } from "../../scheduled-script-fields.js";
 import { CommandError, CommandFailedError, execWithTimeout, SCRIPT_TIMEOUT, type ExecTiming } from "../../lib/exec-with-timeout.js";
 import { CHECK_SKIP_CODE } from "../procedure/shell.js";
-import { buildToolingScriptEnv } from "../script-env.js";
+import { buildToolingScriptEnv } from "../script-env/core.js";
 import { notificationReached, notifyBoxholder, type NotificationInput } from "../notify-boxholder.js";
 import { parseTarget } from "../notification/target.js";
 import type { Loudness } from "../notification/intent.js";

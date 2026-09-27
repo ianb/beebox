@@ -21,9 +21,9 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import { splitCardContent } from "../../exports/cards.js";
@@ -32,7 +32,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling/core.js";
-import { clearExtractionAssets, extractPdf } from "./pdf-extract.js";
+import { clearExtractionAssets, extractPdf } from "../pdf/extract.js";
 
 const PdfReanalyzeArgsSchema = z.object({
   card: z.string(),
@@ -192,7 +192,7 @@ export async function runPdfReanalyze(
   };
 }
 
-registerCommand({
+export const pdfReanalyzeCommand: CommandDefinition = {
   name: "pdf-reanalyze",
   description: "Re-run extraction over an existing pdf card's original file",
   args: [
@@ -201,4 +201,4 @@ registerCommand({
     { name: "languages", description: "Comma-separated OCR language codes (with --force-ocr)", required: false, type: "string" },
   ],
   execute: (ctx, args) => runPdfReanalyze(ctx, { args }),
-});
+};

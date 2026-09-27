@@ -15,8 +15,8 @@
 
 import { assertNever } from "../../../lib/invariant.js";
 import { getMostActive } from "./history.js";
-import type { ChatSession } from "./index.js";
-import type { ChatSessionRegistry } from "./registry.js";
+import type { ChatSession } from "./run/core.js";
+import type { ChatSessionRegistry } from "./registry/core.js";
 import type { AgentEngine } from "../../box/config.js";
 
 export type ChatTargetSpec =

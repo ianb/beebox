@@ -216,7 +216,7 @@ allowlist of env vars, never a spread. `src/hub/supervisor/child-spawn.ts` expli
 variables back into that allowlist. `BBX_SESSION_SECRET` never reaches a
 child (a box that could verify a cookie could forge one for a sibling);
 `ANTHROPIC_API_KEY` is excluded; widening requires a named entry with a
-reasoned comment. `src/core/script-env.ts` applies the same posture one
+reasoned comment. `src/core/script-env/core.ts` applies the same posture one
 level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 subprocess inherits only `script-env-allowlist.ts`'s named entries, so the
 hub trust secrets, `BBX_SESSION_SECRET`, `BBX_BROWSE_API_KEY`,

@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { commitPaths, pathsHaveChanges, stageFiles } from "../../lib/git/core.js";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { fileEtag } from "../file-etag.js";
 import { boxRelativePath } from "../../shared/box-path.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";

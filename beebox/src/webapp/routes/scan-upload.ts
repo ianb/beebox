@@ -27,7 +27,7 @@ import * as path from "node:path";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { hashStreamToFile, StreamByteLimitError } from "../../lib/hash-stream-to-file.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { findEntry, loadLedger } from "../../core/commands/upload-helpers.js";
+import { findEntry, loadLedger } from "../../core/upload-helpers.js";
 import {
   ensureQuarantineDir,
   quarantineFilePath,

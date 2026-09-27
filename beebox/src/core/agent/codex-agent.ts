@@ -8,7 +8,7 @@ import {
   runCodexAgent,
   type CodexObservedActivity,
   type CodexRunOptions,
-} from "./codex-run.js";
+} from "./codex-run/core.js";
 import type {
   Agent,
   AgentInvokeOptions,

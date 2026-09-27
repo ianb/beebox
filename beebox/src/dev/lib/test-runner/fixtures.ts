@@ -2,7 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { ensurePackageDocs } from "../../../core/docs-gen/package-docs.js";
+import { ensurePackageDocs } from "../../../core/docs-gen/package-docs/core.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import type { AuditTest } from "../test-suite-schema.js";
 

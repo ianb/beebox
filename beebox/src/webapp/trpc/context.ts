@@ -1,4 +1,4 @@
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import type { Services } from "../../services/container.js";
 
 /**

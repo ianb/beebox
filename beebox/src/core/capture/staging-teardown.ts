@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import { stagingSessionDir, type StagingSession, type StagingSessionState } from "./staging-schema.js";
 import { StagingSessionGoneError } from "./staging-errors.js";
-import { withStagingLock, releaseStagingLock, readStagingSession } from "./staging-store.js";
+import { withStagingLock, releaseStagingLock, readStagingSession } from "./staging-store/core.js";
 
 /**
  * Tear down a session: remove its directory and drop its lock-map entry in one

@@ -19,7 +19,7 @@
  * one.
  */
 
-import type { ChatMessage } from "./session/index.js";
+import type { ChatMessage } from "./session/run/core.js";
 
 export interface TurnFrame {
   seq: number;

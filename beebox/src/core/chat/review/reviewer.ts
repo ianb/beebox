@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { createAgent } from "../../agent/index.js";
+import { createAgent } from "../../agent/invoke/core.js";
 import { loadEffectiveSmallModel } from "../../model-policy.js";
 
 /** Husk titles stay bookmark-sized. Matches TITLE_MAX_LEN in core/chat/husk.ts. */

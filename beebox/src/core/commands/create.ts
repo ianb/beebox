@@ -8,9 +8,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import { parseCardName, isCardFile } from "../../lib/paths/core.js";
@@ -227,7 +227,7 @@ async function executeCreate(
 }
 
 // Register the command
-registerCommand({
+export const createCommand: CommandDefinition = {
   name: "create",
   description: "Create a new card from template",
   args: [
@@ -270,5 +270,5 @@ registerCommand({
     },
   ],
   execute: executeCreate,
-});
+};
 

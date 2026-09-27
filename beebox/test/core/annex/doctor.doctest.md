@@ -15,10 +15,10 @@ import {
   formatAnnexDoctor,
   ANNEX_PRECOMMIT_LINE,
   ANNEX_SMUDGE_LINE,
-} from "../../../src/core/annex/doctor.js";
+} from "../../../src/core/annex/doctor/core.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
-import { UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
+import { UNIGNORE_BLOCK } from "../../../src/core/attachments-gitignore.js";
 import { assetGitignorePatterns } from "../../../src/lib/asset-extensions.js";
 
 /**

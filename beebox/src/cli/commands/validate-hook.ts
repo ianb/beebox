@@ -19,8 +19,8 @@ import {
 import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile, isViewSourceFile } from "../../lib/paths/core.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
-import { lintViewMarkdown } from "../../core/views/markdown-check.js";
-import { lintCardsDispatch } from "../../core/card-lint.js";
+import { lintViewMarkdown } from "../../core/views/markdown-check/core.js";
+import { lintCardsDispatch } from "../../core/card-lint/core.js";
 import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
 import { buildLoadContext } from "../../core/load-context.js";

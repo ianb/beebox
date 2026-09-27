@@ -6,7 +6,7 @@ The index refresh maintains it; cards stay byte-clean. Stale = the content
 moved while `contains` didn't.
 
 ```ts setup
-import { openSearchIndex } from "../../../src/core/search/refresh.js";
+import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import {
   loadContainsState,
   listStale,

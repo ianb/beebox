@@ -9,15 +9,18 @@ import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyWebsocket from "@fastify/websocket";
 import fastifyCookie from "@fastify/cookie";
+// Registers every command with the command runner before any route can call
+// `runCommand`; see core/commands.ts.
+import "../core/commands.js";
 import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { createEventBus } from "../core/event-bus.js";
+import { createEventBus } from "../core/event-bus/core.js";
 import { registerAuthSurface } from "./routes/auth.js";
 import { registerGoogleServicesCallback } from "./routes/admin.js";
 import { isHubMode } from "./auth.js";
 import { maybeArmFirstRunSetup } from "./setup-token.js";
-import { registerBoxPublicUrl } from "../core/script-env.js";
+import { registerBoxPublicUrl } from "../core/script-env/core.js";
 import { removeServeEndpoint, writeServeEndpoint } from "../core/serve-endpoint.js";
 import { getPublicUrl } from "../lib/public-url.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -45,7 +48,7 @@ import {
   DEV_BUNDLE_RELOAD_NOW,
   DEV_BUNDLE_RELOAD_ABORTED,
 } from "../lib/dev-bundle-reload.js";
-import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../core/chat/schedules.js";
+import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../core/chat/schedules/core.js";
 import { quiesceChatThreads, chatThreadsAreIdle } from "../core/chat/session/thread.js";
 import { getChatRuntime } from "./chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../lib/box-maintenance.js";

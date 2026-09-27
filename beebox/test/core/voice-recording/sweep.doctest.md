@@ -7,8 +7,8 @@ after sealing if it never becomes terminal.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createStagingSession, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
-import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging.js";
+import { createStagingSession, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
+import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging/core.js";
 import { sweepVoiceSessions } from "../../../src/core/voice-recording/sweep.js";
 
 async function configureBox(box) {

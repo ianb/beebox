@@ -10,7 +10,7 @@
 
 import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
 import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
-import { installRootLandmark } from "../../core/box/index.js";
+import { installRootLandmark } from "../../core/box/structure/core.js";
 import { stageFiles, commitPaths } from "../../lib/git/core.js";
 
 export async function runHousekeeping(boxRoot: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scanBoxInventory, type BoxInventory } from "../../../core/box-inventory.js";
+import { scanBoxInventory, type BoxInventory } from "../../../core/box-inventory/core.js";
 import { authedProcedure, router } from "../trpc.js";
 
 const CACHE_MAX_AGE_MS = 15 * 60 * 1000;

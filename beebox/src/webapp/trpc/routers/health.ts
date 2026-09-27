@@ -16,7 +16,7 @@ import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
-import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
+import { loadTranscriptionConfig } from "../../../core/transcription/dispatch/core.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { getBoxDir } from "../../../lib/paths/core.js";

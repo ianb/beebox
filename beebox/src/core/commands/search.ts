@@ -7,9 +7,9 @@
 
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import {
@@ -17,7 +17,7 @@ import {
   UnknownKindError,
   HybridUnavailableError,
   type SearchBoxOptions,
-} from "../search/query.js";
+} from "../search/query/core.js";
 
 /**
  * Arguments for the search command. `query` is optional here because the
@@ -96,7 +96,7 @@ async function executeSearch(
   return { success: true, data: result };
 }
 
-registerCommand({
+export const searchCommand: CommandDefinition = {
   name: "search",
   description: "Full-text search over the box's cards",
   args: [
@@ -108,5 +108,5 @@ registerCommand({
     { name: "mode", description: "Ranking mode: hybrid or text (default auto)", required: false, type: "string" },
   ],
   execute: executeSearch,
-});
+};
 

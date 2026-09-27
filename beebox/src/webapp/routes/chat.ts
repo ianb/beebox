@@ -22,15 +22,15 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.js";
-import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
+import { type ChatSession, type TaskEvent } from "../../core/chat/session/run/core.js";
+import { ChatSessionRegistry } from "../../core/chat/session/registry/core.js";
 import type { ChatBackend } from "../../services/claude-chat-types.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
 import { reconcileChatHusks } from "../../core/chat/husk.js";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import type { TtsService } from "../../services/tts.js";
-import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../core/chat/schedules.js";
+import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./chat-schedule-fire.js";
 import { notifyTurnCallouts } from "../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";

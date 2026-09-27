@@ -14,7 +14,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
-import { formatAnnexDoctor, runAnnexDoctor } from "../../core/annex/doctor.js";
+import { formatAnnexDoctor, runAnnexDoctor } from "../../core/annex/doctor/core.js";
 
 const annexSubcommand = new Command("annex")
   .description("Check (and by default repair) this box's git-annex configuration")

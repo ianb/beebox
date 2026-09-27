@@ -9,7 +9,7 @@
 import type { BoxWork } from "../../lib/box-maintenance.js";
 import { startAwakeTimeout } from "../../lib/awake-timeout.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import type { ChatMessage, ChatSendInput, ChatSession } from "../../core/chat/session/index.js";
+import type { ChatMessage, ChatSendInput, ChatSession } from "../../core/chat/session/run/core.js";
 import { createTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 
 /** The one thing the route keeps from a captured turn: how to fail it. */

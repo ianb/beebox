@@ -10,7 +10,7 @@
 
 import * as path from "node:path";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import {
   loadTelegramConfig,
   processWebhookUpdate,

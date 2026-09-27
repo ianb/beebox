@@ -121,6 +121,15 @@ export function registerCommand(cmd: CommandDefinition): void {
 }
 
 /**
+ * Register every command in `commands.ts`'s registry list. Called once, from
+ * `core/commands.js`, instead of each command module registering itself as a
+ * side effect of being imported.
+ */
+export function installCommands(list: readonly CommandDefinition[]): void {
+  for (const cmd of list) registerCommand(cmd);
+}
+
+/**
  * Get a command by name.
  */
 export function getCommand(name: string): CommandDefinition | undefined {

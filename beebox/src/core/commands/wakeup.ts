@@ -8,14 +8,14 @@
 
 import { execSync } from "node:child_process";
 import {
-  registerCommand,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
-import { buildToolingScriptEnv } from "../script-env.js";
+import { buildToolingScriptEnv } from "../script-env/core.js";
 import { runCollectedChild } from "../../lib/run-child.js";
 import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../cli/commands/wakeup-outcome.js";
-import type { WakeupRunResult } from "./wakeup-runner.js";
+import type { WakeupRunResult } from "../wakeup-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Resolve the `bbx` binary path, matching the pattern in scheduler.ts */
@@ -89,9 +89,9 @@ async function executeWakeup(
   return { success: false, error: result.detail };
 }
 
-registerCommand({
+export const wakeupCommand: CommandDefinition = {
   name: "wakeup",
   description: "Run the full wakeup cycle (preprocess, triage, connectors, jobs, reactor)",
   args: [],
   execute: executeWakeup,
-});
+};

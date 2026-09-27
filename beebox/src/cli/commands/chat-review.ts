@@ -20,7 +20,7 @@ import {
 } from "../../core/chat/review/discovery.js";
 import { loadReviewState } from "../../core/chat/review/state.js";
 import { createSdkChatReviewer } from "../../core/chat/review/reviewer.js";
-import { LockHeldError, runChatReview, type RunSummary } from "../../core/chat/review/run.js";
+import { LockHeldError, runChatReview, type RunSummary } from "../../core/chat/review/run/core.js";
 import { getOwnerEmail } from "../../webapp/auth.js";
 
 /** Default per-run cap on sessions reviewed; overflow waits for the next run. */

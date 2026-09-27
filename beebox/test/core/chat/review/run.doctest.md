@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
-import { runChatReview } from "../../../../src/core/chat/review/run.js";
+import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
 import { MAX_SESSION_ENTRIES, getSessionMetadata } from "../../../../src/cli/lib/session.js";
 

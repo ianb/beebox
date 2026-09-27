@@ -21,7 +21,7 @@ aged out of the ten-minute acceptance window.
 ```ts setup
 import { readAcceptedMessages } from "../../../../core/chat/session/accepted-messages.js";
 import { reconcilePending } from "../../../src/machines/chatMachine/chat-shared.js";
-import { createEventBus } from "../../../../core/event-bus.js";
+import { createEventBus } from "../../../../core/event-bus/core.js";
 import { makeTmpBox } from "../../../../../test/helpers/doctest-helpers.js";
 
 const SESSION = "11111111-1111-4111-8111-111111111111";

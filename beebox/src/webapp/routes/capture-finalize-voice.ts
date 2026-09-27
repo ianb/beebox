@@ -24,13 +24,13 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { pcmChunkFilename } from "../../core/capture/audio-format.js";
-import { loadTranscriptionConfig } from "../../core/transcription/index.js";
+import { loadTranscriptionConfig } from "../../core/transcription/dispatch/core.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import type { StagingSession } from "../../core/capture/staging-store.js";
-import { sealVoiceSession, VoiceTransitionRefusedError } from "../../core/voice-recording/voice-staging.js";
-import { runHqJob } from "../../core/voice-recording/hq-job.js";
+import type { StagingSession } from "../../core/capture/staging-store/core.js";
+import { sealVoiceSession, VoiceTransitionRefusedError } from "../../core/voice-recording/voice-staging/core.js";
+import { runHqJob } from "../../core/voice-recording/hq-job/core.js";
 
 /** Exported so a contract test can parse the client's real request-body builder with it. */
 export const VoiceFinalizeBodySchema = z.object({

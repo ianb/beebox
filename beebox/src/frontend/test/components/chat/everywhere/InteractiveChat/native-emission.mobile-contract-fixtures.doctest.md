@@ -37,7 +37,7 @@ import { nativeLastAudioRequestFromDetail } from "../../../../../src/components/
 import { nativeSpeechCommandFromDetail } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-speech-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../../../../src/lib/audio/speech-keywords.js";
 import { PushTokenBody } from "../../../../../../webapp/routes/pairing.js";
-import { buildApnsRequest } from "../../../../../../core/notification/apns-payload.js";
+import { buildApnsRequest } from "../../../../../../core/notification/apns-channel/payload.js";
 import { parseTarget } from "../../../../../../core/notification/target.js";
 
 // Shared cross-platform golden fixtures (also loaded by

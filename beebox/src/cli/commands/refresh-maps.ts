@@ -41,7 +41,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { isRecord } from "../../lib/is-record.js";
 import { precheck, type MapBrief, type MapTask } from "../../core/maps/precheck.js";
-import { finalize } from "../../core/maps/finalize.js";
+import { finalize } from "../../core/maps/finalize/core.js";
 import { findOrphanMaps, pruneOrphanMaps } from "../../core/maps/orphans.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";

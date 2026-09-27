@@ -31,7 +31,7 @@ import { runOnWakeupScripts } from "./tick-utils.js";
 import { runHousekeeping } from "./wakeup-housekeeping.js";
 import { reportWakeupOutcome } from "./wakeup-outcome.js";
 import { runUnderWakeupCycleLock } from "./wakeup-cycle-lock.js";
-import { runReactor } from "../../core/reactor/index.js";
+import { runReactor } from "../../core/reactor/engine/core.js";
 import {
   runConnectors,
   wakeupExitCodeForConnectorErrors,

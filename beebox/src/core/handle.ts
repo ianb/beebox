@@ -24,7 +24,7 @@ import {
   compileTriageInstructions,
   type TriageCategory,
 } from "./triage/instructions.js";
-import { startProcedure, type ProcedureInconclusive } from "./procedure/engine.js";
+import { startProcedure, type ProcedureInconclusive } from "./procedure/engine/core.js";
 import type { CommandContext } from "./command-runner.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";

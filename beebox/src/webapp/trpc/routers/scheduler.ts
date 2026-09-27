@@ -5,7 +5,7 @@ import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { boxLogFile } from "../../../core/schedule/scheduler.js";
+import { boxLogFile } from "../../../core/schedule/scheduler/core.js";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../../../exports/cards.js";
 import {

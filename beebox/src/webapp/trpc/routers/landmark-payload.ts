@@ -13,7 +13,7 @@ import {
   resolveLandmark,
   type ResolvedLink,
   type ResolvedGroup,
-} from "../../../core/landmark/resolve.js";
+} from "../../../core/landmark/resolve/core.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { DerivedReadProblem } from "../../../core/landmark/summaries.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";

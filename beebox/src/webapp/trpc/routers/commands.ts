@@ -6,7 +6,7 @@ import {
   listCommands,
   getCommand,
   type CommandContext,
-} from "../../../core/commands/index.js";
+} from "../../../core/command-runner.js";
 
 export const commandsRouter = router({
   list: publicProcedure.query(async () => {

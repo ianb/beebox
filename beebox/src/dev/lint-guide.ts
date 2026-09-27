@@ -18,7 +18,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { scaffoldBoxRoot } from "../core/box/package.js";
-import { generateDocs } from "../core/docs-gen/index.js";
+import { generateDocs } from "../core/docs-gen/generate/core.js";
 import { lintBoxGuide, type BoxGuideLintReport } from "./lib/guide-lint-box.js";
 
 /** A bare box as `bbx init` leaves it: scaffolded, git-initialized, docs generated. */

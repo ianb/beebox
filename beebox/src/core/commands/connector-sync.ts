@@ -9,14 +9,14 @@
 
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import { connectorFactories, type Connector } from "../../connectors.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { runConnectorProcedureTriggers } from "./connector-procedure-triggers.js";
+import { runConnectorProcedureTriggers } from "../connector-procedure-triggers.js";
 import { syncConnector } from "../../connector-activity/core.js";
 
 /**
@@ -112,7 +112,7 @@ async function executeSync(
 }
 
 // Register the command
-registerCommand({
+export const connectorSyncCommand: CommandDefinition = {
   name: "connector-sync",
   description: "Sync data with connectors",
   args: [
@@ -124,5 +124,5 @@ registerCommand({
     },
   ],
   execute: executeSync,
-});
+};
 

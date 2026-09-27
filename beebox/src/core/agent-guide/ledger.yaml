@@ -80,7 +80,7 @@ registry:
   - handle: SPEAKING
     governs: the words to use with the user in place of system vocabulary
     referrers:
-      - src/core/box/skills-content-what-can-you-do.ts
+      - src/core/box/guidance-sync/skills-content-what-can-you-do.ts
       - src/dev/knowledge-audits.yaml
   - handle: ABOUT_CARDS
     governs: what a card is, its shared frontmatter, naming, attachments, and card commands

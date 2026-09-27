@@ -38,7 +38,7 @@ import { createCardSchemaMap } from "../../schemas.js";
 import { getBoxTime } from "../../lib/time.js";
 import { loadBoxTimezone } from "../box/config.js";
 import { listScopedCardPaths } from "../collection/card-scope.js";
-import { extractCardTodos, mayHaveTodo } from "./extract.js";
+import { extractCardTodos, mayHaveTodo } from "./extract/core.js";
 import { deriveTodo } from "./derive.js";
 import type { CollectedTodo } from "./collect-types.js";
 import type { LoadCardContext } from "../card-io.js";

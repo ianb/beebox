@@ -38,7 +38,7 @@ after(async () => {
 const { createRouterAuthDeps } = await import("../../../src/router/server/auth-deps.js");
 const { signSession } = await import("../../../../beebox/src/webapp/auth.js");
 const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
-  "../../../../beebox/src/core/mobile/mobile-session.js"
+  "../../../../beebox/src/core/mobile/session.js"
 );
 
 /** A fake worktree/box map: worktree name → its box entries (or null = unknown). */

@@ -21,7 +21,7 @@ import {
   ChatScheduleManager,
   parseScheduleTags,
   parseCancelScheduleTags,
-} from "../schedules.js";
+} from "../schedules/core.js";
 import { isRecord } from "../../card-io.js";
 import { boxSlug } from "../../../lib/box-slug.js";
 

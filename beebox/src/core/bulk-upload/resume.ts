@@ -14,12 +14,12 @@
  */
 
 import * as fs from "node:fs/promises";
-import type { EventBus } from "../event-bus.js";
-import type { ChatSession } from "../chat/session/index.js";
-import type { ChatSessionRegistry } from "../chat/session/registry.js";
-import { stagingBaseDir, readStagingSession, isBulkSession} from "../capture/staging-store.js";
+import type { EventBus } from "../event-bus/core.js";
+import type { ChatSession } from "../chat/session/run/core.js";
+import type { ChatSessionRegistry } from "../chat/session/registry/core.js";
+import { stagingBaseDir, readStagingSession, isBulkSession} from "../capture/staging-store/core.js";
 import { cleanupStagingSession } from "../capture/staging-teardown.js";
-import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "./worker.js";
+import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "./worker/core.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 export async function resumeBulkSessions(deps: {

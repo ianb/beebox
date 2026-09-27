@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-27T16:47:24Z
+Generated: 2026-09-27T17:53:48Z
 Total documents: 456
 
 ## Issues
@@ -220,7 +220,7 @@ Referenced by:
 - docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `CLAUDE.md` enumerates the projects that live in
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
 - docs/plans/file-layout.check.subplan.md:150 (mention) — - Rule 7 (`CLAUDE.md` states its axis): judgment, left to review.
-- docs/plans/file-layout.md:540 (mention) — **Rule 7: a directory with a `CLAUDE.md` states its axis in the first
+- docs/plans/file-layout.md:355 (mention) — candidate members; a data file such as a directory's `CLAUDE.md` is outside
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `beebox/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file upload/
 - docs/plans/ios-companion-review-2026-07-09.md:62 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
@@ -823,7 +823,7 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/file-layout.md:776 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
+- docs/plans/file-layout.md:780 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
 - docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-cleanup-evaluation.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
@@ -6512,7 +6512,7 @@ References:
 
 #### docs/plans/file-layout.md
 
-Title: "Source file layout: principles, rules, and what a check can verify" | 798 lines | proposal | draft
+Title: "Source file layout: principles, rules, and what a check can verify" | 802 lines | proposal | draft
 
 Referenced by:
 - docs/plans/file-layout.check.subplan.md:10 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
@@ -8231,7 +8231,7 @@ References:
 
 #### src/core/reactor/CLAUDE.md
 
-Title: "Reactor" | 24 lines
+Title: "Reactor" | 23 lines
 
 Referenced by:
 - docs/plans/file-layout.md:132 (mention) — `src/core/reactor/CLAUDE.md`, `src/frontend/src/components/chat/CLAUDE.md`,

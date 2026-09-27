@@ -9,7 +9,7 @@ output of `buildCaptureWrapper`.
 
 ```ts setup
 import { parseCaptureWrapper, captureChipLabel } from "../../../src/components/chat/capture-message.js";
-import { buildCaptureWrapper } from "../../../../core/capture/deliver.js";
+import { buildCaptureWrapper } from "../../../../core/capture/prepare/deliver.js";
 ```
 
 ## The exact wrapper from `buildCaptureWrapper` round-trips into the chip model

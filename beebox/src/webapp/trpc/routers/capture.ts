@@ -15,7 +15,7 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
-import { listStagingSessions } from "../../../core/capture/staging-store.js";
+import { listStagingSessions } from "../../../core/capture/staging-store/core.js";
 import {
   selectPendingCaptures,
   type PendingCapture,

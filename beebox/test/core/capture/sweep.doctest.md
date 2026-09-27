@@ -9,8 +9,8 @@ advanced past the 60-minute window before the sweep runs.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
-import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import {
@@ -19,10 +19,10 @@ import {
   addPhoto,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { sweepAbandonedCaptures } from "../../../src/core/capture/sweep.js";
-import { prepareCaptureSession } from "../../../src/core/capture/prepare.js";
-import { sessionBasenameFor } from "../../../src/core/capture/write-cards.js";
+import { prepareCaptureSession } from "../../../src/core/capture/prepare/core.js";
+import { sessionBasenameFor } from "../../../src/core/capture/prepare/write-cards.js";
 
 const EARLY = "2026-07-09T13:00:00.000Z"; // when abandoned sessions were last active
 const LATE = "2026-07-09T14:30:00.000Z";  // 90 min later — past the 60 min window

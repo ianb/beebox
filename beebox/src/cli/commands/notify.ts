@@ -32,7 +32,7 @@ import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } fr
 import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../core/notification/target.js";
 import { printDryRun } from "./notify-dry-run.js";
 import { err, ok, type Result } from "../../lib/result.js";
-import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
+import { resolveChatSessionId } from "../../core/chat/session/id-file.js";
 import { MEMORY_ENV } from "../../core/schedule/memory.js";
 
 export interface NotifyCliOptions {

@@ -28,7 +28,7 @@ import {
 } from "./lib/context-assembly/assembly.js";
 import { invariant } from "../lib/invariant.js";
 import { collectGuideInputs } from "../core/agent-guide/box-inputs.js";
-import { renderAgentGuideLines } from "../core/agent-guide/index.js";
+import { renderAgentGuideLines } from "../core/agent-guide/guide/core.js";
 import { annotatedText, strippedText } from "../core/agent-guide/render.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, withDocId } from "../core/docs-gen/shared.js";
 

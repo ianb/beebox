@@ -127,7 +127,7 @@ Every procedure receives `ctx` with:
 |-------|------|-------------|
 | `ctx.boxRoot` | `string` | Absolute path to the box directory |
 | `ctx.boxSlug` | `string` | URL slug for the box (e.g., `"test1"`) |
-| `ctx.eventBus` | `EventBus` | SQLite-backed event bus feeding `events.subscribe` subscriptions (see `src/core/event-bus.ts`) |
+| `ctx.eventBus` | `EventBus` | SQLite-backed event bus feeding `events.subscribe` subscriptions (see `src/core/event-bus/core.ts`) |
 | `ctx.services` | `Services` | Injected services (calendar, telegram, dropbox, claude CLI) |
 | `ctx.chatSession` | `ChatSession` | Per-box chat session singleton |
 

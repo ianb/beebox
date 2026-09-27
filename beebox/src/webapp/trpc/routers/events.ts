@@ -15,8 +15,8 @@
 import { z } from "zod";
 import * as path from "node:path";
 import { tracked } from "@trpc/server";
-import type { BusEvent } from "../../../core/event-bus.js";
-import type { ChatMessage } from "../../../core/chat/session/index.js";
+import type { BusEvent } from "../../../core/event-bus/core.js";
+import type { ChatMessage } from "../../../core/chat/session/run/core.js";
 import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
 import { resolveViewsDir } from "../../views/compiler.js";
 import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
@@ -29,7 +29,7 @@ import { router, publicProcedure } from "../trpc.js";
  * `eventSchemas`); the frontend can't reach `core/*` through its alias
  * contract, and these are the exact payload shapes `subscribe` yields.
  */
-export type { EventMap, BusEventName } from "../../../core/event-bus.js";
+export type { EventMap, BusEventName } from "../../../core/event-bus/core.js";
 
 /** Cap on the per-subscriber bus queue before coalescing transient events. */
 const MAX_BUS_QUEUE = 1000;

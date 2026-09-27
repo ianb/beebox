@@ -34,7 +34,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../lib/box-shape.js";
-import { gitignoreIgnoresAssets } from "../commands/attachments-gitignore.js";
+import { gitignoreIgnoresAssets } from "../attachments-gitignore.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 /** Read a `gitdir:`/`commondir` pointer file, or null when it isn't there or

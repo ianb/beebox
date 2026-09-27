@@ -22,7 +22,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { runBbxWakeup } from "../../../core/commands/wakeup.js";
-import type { WakeupRunResult } from "../../../core/commands/wakeup-runner.js";
+import type { WakeupRunResult } from "../../../core/wakeup-runner.js";
 
 /**
  * Enough of the tail to see what a failing child said, without making the

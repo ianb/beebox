@@ -44,7 +44,7 @@ import { stageAndCommitPaths } from "../../lib/git/core.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { parseRecheck, RECHECK_NEVER, TODO_AGENT } from "../../shared/todo-model.js";
-import { extractCardTodos } from "./extract.js";
+import { extractCardTodos } from "./extract/core.js";
 import { formatTodoLocation, type TodoItem } from "./collect-types.js";
 import { setTodoAttribute } from "./set-status.js";
 import { changedSince, snapshotOf } from "./review-snapshot.js";

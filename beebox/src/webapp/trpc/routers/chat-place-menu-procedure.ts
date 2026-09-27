@@ -21,7 +21,7 @@
  */
 
 import { publicProcedure } from "../trpc.js";
-import { listSessionEntries } from "../../../core/chat/session/list.js";
+import { listSessionEntries } from "../../../core/chat/session/list/core.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
 import { isListedLandmark } from "../../../core/landmark/cascade.js";

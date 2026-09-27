@@ -20,7 +20,7 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import {
   createStagingSession,
@@ -29,7 +29,7 @@ import {
   sealStagingSession,
   isBulkSession,
   type StagingBulkItem,
-} from "../../core/capture/staging-store.js";
+} from "../../core/capture/staging-store/core.js";
 import { discardStagingSessionIfCancellable } from "../../core/capture/staging-teardown.js";
 import { addFileStreamed } from "../../core/capture/staging-stream.js";
 import {
@@ -46,7 +46,7 @@ import {
   FinalizeBodySchema,
   registryAdditionError,
 } from "./bulk-upload-validation.js";
-import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
+import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker/core.js";
 import {
   authorizeCaptureSessionOwner,
   resolveCaptureRequestOwner,

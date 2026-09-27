@@ -8,7 +8,7 @@ boxes in use.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createPresenceRegistry } from "../../../src/core/notification/presence-registry.js";
+import { createPresenceRegistry } from "../../../src/core/notification/presence-registry/core.js";
 import { livePresence } from "../../../src/core/notification/presence.js";
 
 const T0 = Date.parse("2026-09-26T12:00:00Z");

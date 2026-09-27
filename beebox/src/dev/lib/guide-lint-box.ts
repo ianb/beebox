@@ -9,7 +9,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { collectGuideInputs } from "../../core/agent-guide/box-inputs.js";
-import { renderAgentGuideLines } from "../../core/agent-guide/index.js";
+import { renderAgentGuideLines } from "../../core/agent-guide/guide/core.js";
 import { lintGuide, type GuideLintReport } from "../../core/agent-guide/lint.js";
 import { loadLedger } from "../../core/agent-guide/ledger-schema.js";
 import { strippedText } from "../../core/agent-guide/render.js";

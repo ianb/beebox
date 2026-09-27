@@ -15,8 +15,8 @@ import {
 import { ConnectorFatalError } from "../../connector.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import type { WakeupConnectorOutcome } from "./wakeup-outcome.js";
-import { createCliContext } from "../../core/commands/index.js";
-import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
+import { createCliContext } from "../../core/command-runner.js";
+import { runConnectorProcedureTriggers } from "../../core/connector-procedure-triggers.js";
 import { syncConnector } from "../../connector-activity/core.js";
 
 /**

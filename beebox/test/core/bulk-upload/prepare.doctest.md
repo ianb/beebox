@@ -29,7 +29,7 @@ import {
   readStagingSession,
   writeStagingSession,
   stagingSessionDir,
-} from "../../../src/core/capture/staging-store.js";
+} from "../../../src/core/capture/staging-store/core.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
 import { prepareBulkBatch } from "../../../src/core/bulk-upload/prepare.js";
 

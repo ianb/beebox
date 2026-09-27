@@ -8,7 +8,7 @@ import { invariant } from "../../lib/invariant.js";
 
 import { Command } from "commander";
 import { findBoxRoot } from "../../lib/paths/core.js";
-import { createCliContext } from "../../core/commands/index.js";
+import { createCliContext } from "../../core/command-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**

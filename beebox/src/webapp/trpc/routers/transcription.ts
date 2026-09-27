@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
-} from "../../../core/transcription/index.js";
+} from "../../../core/transcription/dispatch/core.js";
 import { HQ_TRANSCRIPTION_SERVICES, TRANSCRIPTION_SERVICES } from "../../../shared/transcription-services.js";
 import { serviceCapabilities, unusableWarning } from "../../../core/model-capabilities.js";
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";

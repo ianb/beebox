@@ -11,9 +11,9 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { cardSchemas, loadBoxSchemas } from "../../schemas.js";
 import { getTemplatesOwnedBy } from "../../templates-registry.js";
-import { scanProcedures } from "../docs-gen/compile.js";
-import { readConfigGuides, readPersonality } from "../docs-gen/config-cards.js";
-import type { AgentGuideOptions } from "./index.js";
+import { scanProcedures } from "../docs-gen/compile/core.js";
+import { readConfigGuides, readPersonality } from "../docs-gen/config-cards/core.js";
+import type { AgentGuideOptions } from "./guide/core.js";
 
 export async function collectGuideInputs(boxRoot: string): Promise<AgentGuideOptions> {
   const boxSchemas = await loadBoxSchemas(boxRoot);

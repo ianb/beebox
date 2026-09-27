@@ -5,8 +5,8 @@
  */
 
 import { z } from "zod";
-import { registerCommand, parseCommandArgs, type CommandResult } from "../command-runner.js";
-import { startProcedure, resumeProcedure } from "../procedure/engine.js";
+import { parseCommandArgs, type CommandDefinition, type CommandResult } from "../command-runner.js";
+import { startProcedure, resumeProcedure } from "../procedure/engine/core.js";
 import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";
 import type {
@@ -14,7 +14,7 @@ import type {
   ProcedureError,
   ProcedureOutcome,
   ProcedureInconclusive,
-} from "../procedure/engine.js";
+} from "../procedure/engine/core.js";
 import type { Result } from "../../lib/result.js";
 import { isRecord } from "../../lib/is-record.js";
 import { type InconclusiveReason } from "../../shared/inconclusive.js";
@@ -67,7 +67,7 @@ export function procedureOutcome(result: CommandResult): ProcedureOutcome | null
   return { status, procedure, inconclusive };
 }
 
-registerCommand({
+export const procedureRunCommand: CommandDefinition = {
   name: "procedure-run",
   description: "Run a procedure by name or path",
   args: [
@@ -122,7 +122,7 @@ registerCommand({
 
     return toCommandResult(await startProcedure({ ctx, procedureNameOrPath: name, options }));
   },
-});
+};
 
 const procedureRunArgsSchema = z.object({
   name: z.string(),
@@ -132,7 +132,7 @@ const procedureRunArgsSchema = z.object({
   directive: z.string().optional(),
 });
 
-registerCommand({
+export const procedureResumeCommand: CommandDefinition = {
   name: "procedure-resume",
   description: "Resume a failed procedure run from its first incomplete step",
   args: [
@@ -157,32 +157,32 @@ registerCommand({
     }
     return toCommandResult(await resumeProcedure({ ctx, options, ...(runDir && { runDir }) }));
   },
-});
+};
 
 const procedureResumeArgsSchema = z.object({
   runDir: z.string().optional(),
   directive: z.string().optional(),
 });
 
-registerCommand({
+export const procedureListCommand: CommandDefinition = {
   name: "procedure-list",
   description: "List available procedure definitions",
   args: [],
   execute: async (ctx) => {
     return toCommandResult(await listProcedures(ctx));
   },
-});
+};
 
-registerCommand({
+export const procedureGcCommand: CommandDefinition = {
   name: "procedure-gc",
   description: "Delete expired procedure run directories",
   args: [],
   execute: async (ctx) => {
     return toCommandResult(await gcProcedureRuns(ctx));
   },
-});
+};
 
-registerCommand({
+export const procedureStatusCommand: CommandDefinition = {
   name: "procedure-status",
   description: "Show status of a procedure run",
   args: [
@@ -197,7 +197,7 @@ registerCommand({
     const { runDir } = parseCommandArgs(args, procedureStatusArgsSchema);
     return toCommandResult(await procedureStatus(ctx, runDir));
   },
-});
+};
 
 const procedureStatusArgsSchema = z.object({
   runDir: z.string().optional(),

@@ -12,7 +12,7 @@ import {
   runCommand,
   createCliContext,
   createCollectorContext,
-} from "../../core/commands/index.js";
+} from "../../core/command-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 interface SearchCliOptions {

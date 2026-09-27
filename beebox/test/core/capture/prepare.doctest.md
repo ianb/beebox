@@ -12,8 +12,8 @@ import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/prom
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
-import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
@@ -23,10 +23,10 @@ import {
   addPhoto,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
-import { prepareCaptureSession } from "../../../src/core/capture/prepare.js";
-import { sessionBasenameFor } from "../../../src/core/capture/write-cards.js";
-import { buildCaptureWrapper } from "../../../src/core/capture/deliver.js";
+} from "../../../src/core/capture/staging-store/core.js";
+import { prepareCaptureSession } from "../../../src/core/capture/prepare/core.js";
+import { sessionBasenameFor } from "../../../src/core/capture/prepare/write-cards.js";
+import { buildCaptureWrapper } from "../../../src/core/capture/prepare/deliver.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 
 async function pathExists(p) {

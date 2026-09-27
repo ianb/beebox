@@ -11,9 +11,9 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
 import { isCardFile } from "../../lib/paths/core.js";
@@ -148,7 +148,7 @@ async function executeLs(
 }
 
 // Register the command
-registerCommand({
+export const lsCommand: CommandDefinition = {
   name: "ls",
   description: "List cards with optional frontmatter-field template extraction",
   args: [
@@ -167,5 +167,5 @@ registerCommand({
     },
   ],
   execute: executeLs,
-});
+};
 

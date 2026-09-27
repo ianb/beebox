@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
   createStagingSession,
@@ -21,8 +21,8 @@ import {
   sealStagingSession,
   setStagingState,
   readStagingSession,
-} from "../../../src/core/capture/staging-store.js";
-import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker.js";
+} from "../../../src/core/capture/staging-store/core.js";
+import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker/core.js";
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }

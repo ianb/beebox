@@ -25,7 +25,7 @@ import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../../schemas.js";
-import { extractCardTodos } from "../../../core/todo/extract.js";
+import { extractCardTodos } from "../../../core/todo/extract/core.js";
 import { formatTodoLocation, type TodoLocator } from "../../../core/todo/collect-types.js";
 import { TodoLocatorSchema } from "../../../shared/todo-locators.js";
 import { setTodoStatus, TodoLocatorNotFoundError, type TodoWriteStatus } from "../../../core/todo/set-status.js";

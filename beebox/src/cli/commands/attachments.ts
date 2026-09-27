@@ -13,7 +13,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
-import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { runCommand, createCliContext } from "../../core/command-runner.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export const attachmentsCommand = new Command("attachments")

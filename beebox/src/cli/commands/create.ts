@@ -9,7 +9,7 @@ import { requireBoxRoot, findBoxRoot } from "../../lib/paths/core.js";
 import {
   runCommand,
   createCliContext,
-} from "../../core/commands/index.js";
+} from "../../core/command-runner.js";
 import { getAllTemplates } from "../../templates-registry.js";
 import { describeTemplateArgs } from "../../templates-describe.js";
 import { loadBoxSchemas } from "../../schemas.js";

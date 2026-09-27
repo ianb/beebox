@@ -19,7 +19,7 @@ import { alarm } from "../../../lib/audio/earcons";
 import { SchedulePill } from "../InteractiveChat-controls";
 import { ChatInputArea } from "../InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../InteractiveChat-mobile-row";
-import type { ChatSchedule } from "@core/chat/schedules.js";
+import type { ChatSchedule } from "@core/chat/schedules/core.js";
 
 export type { AttachmentItem, FileAttachmentItem };
 

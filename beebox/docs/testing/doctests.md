@@ -22,7 +22,7 @@ the suite and is selected by `pnpm test:changed` when its subject changes.
 
 ````markdown
 ```ts setup
-import { initBox, isValidBox } from "../src/core/box/index.js";
+import { initBox, isValidBox } from "../src/core/box/structure/core.js";
 ```
 
 ## Creating a box

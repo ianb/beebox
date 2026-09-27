@@ -10,7 +10,7 @@ import { getChatHistory, getChatStatus, type SessionEntry } from "../../../../ap
 import { trpcClient } from "../../../../lib/trpc/client";
 import { chatTailSlice } from "../../../../machines/chatMachine/machine.js";
 import { toastError } from "../../../ui/toast-store";
-import type { ChatSchedule } from "@core/chat/schedules.js";
+import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { ChatEvent } from "../../../../machines/chat-types";
 
 interface ChatSendFn {

@@ -15,7 +15,7 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { runScanPromotePass } from "../../core/scan/promote.js";
+import { runScanPromotePass } from "../../core/scan/promote/core.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
 import { createPromoteDebouncer, SCAN_SETTLE_MS, type PromoteDebouncer } from "../../core/scan/promote-debounce.js";
 

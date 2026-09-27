@@ -11,7 +11,7 @@ import { Command } from "commander";
 
 import { chatReviewCommand } from "./chat-review.js";
 import { isRecord } from "../../lib/is-record.js";
-import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
+import { resolveChatSessionId } from "../../core/chat/session/id-file.js";
 import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./chat-audio.js";
 import { uiCommand } from "./chat-ui.js";
 

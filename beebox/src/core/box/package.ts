@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { initBox, isValidBox } from "./index.js";
+import { initBox, isValidBox } from "./structure/core.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const EnginePackageJsonSchema = z.object({

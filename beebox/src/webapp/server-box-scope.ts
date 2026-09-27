@@ -39,7 +39,7 @@ import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
 import { loginRedirect } from "./base-prefix.js";
-import type { EventBus } from "../core/event-bus.js";
+import type { EventBus } from "../core/event-bus/core.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, InternalServerOptions } from "./server-types.js";

@@ -7,7 +7,7 @@ import {
   readStagingSession,
   resolveStagedFile,
   type StagingSession,
-} from "../../core/capture/staging-store.js";
+} from "../../core/capture/staging-store/core.js";
 import {
   StagingPathError,
   StagingSessionNotOpenError,

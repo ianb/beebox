@@ -8,18 +8,18 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git/core.js";
-import { generateDocs } from "../../core/docs-gen/index.js";
+import { generateDocs } from "../../core/docs-gen/generate/core.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
-import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { runAnnexDoctor } from "../../core/annex/doctor/core.js";
 import { requireGitAnnex } from "../../core/annex/require-git-annex.js";
-import { annexNewBox } from "../../core/annex/annex-new-box.js";
+import { annexNewBox } from "../../core/annex/new-box.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { boxSlugFromShape } from "../../lib/box-slug.js";
 import { createGitAnnexService, type GitAnnexService } from "../../services/git-annex.js";
-import { openSearchIndex } from "../../core/search/refresh.js";
+import { openSearchIndex } from "../../core/search/refresh/core.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**

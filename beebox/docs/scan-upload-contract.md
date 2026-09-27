@@ -114,7 +114,7 @@ idempotent throughout — retrying any response is safe.
 ## Server-side lifecycle (why `check` answers change on their own)
 
 Accepted files sit in the box's scan quarantine until the **promote worker**
-(`src/core/scan/promote.ts`) runs — debounced two minutes after the last PUT
+(`src/core/scan/promote/core.ts`) runs — debounced two minutes after the last PUT
 (accepted or rejected), once at box-serve startup, and on a slow GC sweep for
 boxes that stop scanning — under a per-box cross-process lock. A pass
 imports pending files through `bbx upload --as scan` (materialized under their

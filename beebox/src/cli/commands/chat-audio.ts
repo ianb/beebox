@@ -29,7 +29,7 @@ import {
   transcribeAudioHq,
   HQ_TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
-} from "../../core/transcription/index.js";
+} from "../../core/transcription/dispatch/core.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
 import {
   audioExtension,

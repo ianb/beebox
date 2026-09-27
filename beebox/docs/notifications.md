@@ -12,7 +12,7 @@ Everything that tells the person something goes through one function,
 `bbx notify`. When and how loud is policy, and the policy lives in the box: the
 root briefing's "Reaching me" section, which a new box's briefing template
 carries (`REACHING_ME_DEFAULT`, `src/schemas/briefing.tsx`). The agent guide's
-`REACHING_THE_BOXHOLDER` section (`src/core/agent-guide/reaching.ts`) teaches
+`REACHING_THE_BOXHOLDER` section (`src/core/agent-guide/guide/reaching.ts`) teaches
 the mechanics and quotes the default for boxes whose briefing has no such
 section.
 
@@ -196,7 +196,7 @@ Run on a real device after the server setup, on a box whose briefing has a
 3. Write a schedule card with `at` two minutes out, `once: true`, and
    `notify:`; it arrives on time and the card is gone.
 4. Set up the field-trip watch: the schedule and procedure cards from the
-   agent guide's example (`src/core/agent-guide/reaching.ts`), and this
+   agent guide's example (`src/core/agent-guide/guide/reaching.ts`), and this
    judgment card, from the judgment card instructions
    (`src/schemas/judgment-instructions.ts`):
 

@@ -11,9 +11,9 @@ import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../.
 import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
-import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash.js";
-import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
-import { createCollectorContext } from "../../../core/commands/index.js";
+import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash/command.js";
+import { rollbackTrashReceipt } from "../../../core/chat/session/delete/trash-recovery.js";
+import { createCollectorContext } from "../../../core/command-runner.js";
 import * as path from "node:path";
 import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-theme/core.js";
 import { withCardLock } from "../../../lib/card-lock.js";

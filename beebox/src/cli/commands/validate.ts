@@ -24,11 +24,11 @@ import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../
 import { collectViewRefWarnings } from "../../core/views/refs.js";
 import { getStatus } from "../../lib/git/core.js";
 import { lintAttachLayout, formatAttachLintErrors, type AttachLintError } from "../../lib/attach-lint.js";
-import { lintProminenceBudget, formatProminenceLintWarnings, type ProminenceLintWarning } from "../../core/lint-prominence.js";
-import { lintCardsDispatch } from "../../core/card-lint.js";
+import { lintProminenceBudget, formatProminenceLintWarnings, type ProminenceLintWarning } from "../../core/lint-prominence/core.js";
+import { lintCardsDispatch } from "../../core/card-lint/core.js";
 import { lintAllClaudeMd } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
-import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check.js";
+import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check/core.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors } from "./validate-box-checks.js";

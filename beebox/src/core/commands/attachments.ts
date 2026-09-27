@@ -12,18 +12,18 @@
  * The manifest-scheme subcommands (verify, migrate, add, overwrite,
  * init-gitignore, untrack-assets, to-annex) are gone with the scheme itself.
  *
- * The gitignore subcommand (unignore) lives in the sibling
- * attachments-gitignore.ts.
+ * The gitignore subcommand (unignore) lives in
+ * `core/attachments-gitignore.ts`.
  */
 
 import { z } from "zod";
 import {
-  registerCommand,
   parseCommandArgs,
   type CommandContext,
+  type CommandDefinition,
   type CommandResult,
 } from "../command-runner.js";
-import { runUnignore } from "./attachments-gitignore.js";
+import { runUnignore } from "../attachments-gitignore.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { describeUnlistedBinaries, findUnlistedBinaries } from "../annex/unlisted-binaries.js";
 
@@ -88,7 +88,7 @@ async function runCheckUnlisted(ctx: CommandContext): Promise<CommandResult> {
   };
 }
 
-registerCommand({
+export const attachmentsCommand: CommandDefinition = {
   name: "attachments",
   description: "git-annex operations on a box's assets",
   args: [
@@ -100,4 +100,4 @@ registerCommand({
     },
   ],
   execute: executeAttachments,
-});
+};

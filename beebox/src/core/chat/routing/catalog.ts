@@ -9,7 +9,7 @@ import { isRealUserMessage } from "../../../cli/lib/session-real-user.js";
 import { isCompactionSummary, isPlumbingMessage, stripSpeechWrappers } from "../../../cli/lib/session-text.js";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { loadLandmarkSummaries, type LandmarkSummary } from "../../landmark/summaries.js";
-import { loadAllSessions, type ChatSessionRow } from "../session/list.js";
+import { loadAllSessions, type ChatSessionRow } from "../session/list/core.js";
 import { loadSessionHistory } from "../session/load-history.js";
 import { CHAT_FRESH_WINDOW_MS } from "../session/recent-landmark.js";
 import type { RoutingCandidate, RoutingRule } from "./policy.js";

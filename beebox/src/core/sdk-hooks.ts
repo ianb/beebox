@@ -12,12 +12,12 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../exports/cards.js";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
-import { lintCardsDispatch } from "./card-lint.js";
+import { lintCardsDispatch } from "./card-lint/core.js";
 import { buildLoadContext } from "./load-context.js";
 import { dirname } from "node:path";
 import { isViewFile, isViewSourceFile, findBoxRoot } from "../lib/paths/core.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
-import { lintViewMarkdown } from "./views/markdown-check.js";
+import { lintViewMarkdown } from "./views/markdown-check/core.js";
 import { isRecord } from "./card-io.js";
 import { isBuiltinLintableMarkdown } from "./list-cards.js";
 import { connectorOwnedEditWarning, isConnectorOwnedMarkdown } from "./connector-owned-markdown.js";

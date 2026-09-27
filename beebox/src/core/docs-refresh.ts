@@ -10,7 +10,7 @@ import {
   generateDocs,
   generatedDocsAreCurrent,
   GENERATE_MARKER,
-} from "./docs-gen/index.js";
+} from "./docs-gen/generate/core.js";
 import { ensureEngineDocs } from "./docs-gen/box-docs.js";
 import {
   captureMigrationSnapshot,

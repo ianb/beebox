@@ -12,7 +12,7 @@ import { getGeminiApiKey } from "../../../core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { getOpenRouterKey, routeVia } from "../../../core/openrouter.js";
 import { getOpenAiEmbeddingsKey } from "../../../core/search/embeddings-key.js";
-import { hqRoutesThroughOpenRouter, isMaiHqService, loadTranscriptionConfig } from "../../../core/transcription/index.js";
+import { hqRoutesThroughOpenRouter, isMaiHqService, loadTranscriptionConfig } from "../../../core/transcription/dispatch/core.js";
 import { loadTtsConfig } from "../../../core/tts/config.js";
 import type { HealthCheck } from "./health.js";
 

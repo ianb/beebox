@@ -12,7 +12,7 @@ import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance.js";
-import { GENERATE_MARKER } from "../../src/core/docs-gen/index.js";
+import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 // This runs a real, executable `.git/hooks/pre-commit`. In a linked worktree,

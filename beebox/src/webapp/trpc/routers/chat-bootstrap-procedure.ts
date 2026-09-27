@@ -19,7 +19,7 @@ import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
-import { titleForSession } from "../../../core/chat/session/list.js";
+import { titleForSession } from "../../../core/chat/session/list/core.js";
 import { resolveSessionAvailability, type SessionAvailability } from "../../../core/chat/session/availability.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { TRPCError } from "@trpc/server";

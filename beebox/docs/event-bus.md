@@ -1,6 +1,6 @@
 # Event Bus
 
-**Status: Implemented.** The `broadcastEvent` system has been fully replaced by `EventBus`. See `src/core/event-bus.ts`.
+**Status: Implemented.** The `broadcastEvent` system has been fully replaced by `EventBus`. See `src/core/event-bus/core.ts`.
 
 ## Problem (solved)
 
@@ -39,7 +39,7 @@ The system also had two separate `broadcastEvent` instances per box (one for the
 A single EventBus instance per box, created at server startup and shared by all routes. Backed by SQLite for persistence, with in-memory dispatch for real-time delivery.
 
 ```
-src/core/event-bus.ts
+src/core/event-bus/core.ts
 ```
 
 **Schema:**

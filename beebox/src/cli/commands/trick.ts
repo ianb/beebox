@@ -17,7 +17,7 @@ import { createRequire } from "node:module";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { stageAll, commit, getStatus } from "../../lib/git/core.js";
-import { buildScriptEnv } from "../../core/script-env.js";
+import { buildScriptEnv } from "../../core/script-env/core.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
 import { readTrickSecrets, resolveTrickSecret } from "../lib/trick-secrets.js";

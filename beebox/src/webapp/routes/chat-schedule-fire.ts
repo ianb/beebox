@@ -21,13 +21,13 @@
 
 import { ProviderSetupError } from "../../core/provider-setup-error.js";
 import { BoxMaintenanceError } from "../../lib/box-maintenance-error.js";
-import type { ChatSession } from "../../core/chat/session/index.js";
+import type { ChatSession } from "../../core/chat/session/run/core.js";
 import type { ChatMessageResult } from "../../core/chat/session/messages.js";
-import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";
+import type { ChatSessionRegistry } from "../../core/chat/session/registry/core.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { chatHistorySlice } from "../../core/chat/session/load-history.js";
-import type { EventBus } from "../../core/event-bus.js";
-import type { ChatSchedule } from "../../core/chat/schedules.js";
+import type { EventBus } from "../../core/event-bus/core.js";
+import type { ChatSchedule } from "../../core/chat/schedules/core.js";
 import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
 import { resolveChatTarget } from "../../core/chat/session/target.js";
 

@@ -1,5 +1,5 @@
 import type { FastifyReply } from "fastify";
-import type { ChatSession } from "../../core/chat/session/index.js";
+import type { ChatSession } from "../../core/chat/session/run/core.js";
 import { seedFeaturesForNewChat } from "../../core/landmark/features.js";
 import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
 import { isResumableSession } from "../../core/chat/session/recent-landmark.js";

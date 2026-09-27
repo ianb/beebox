@@ -17,9 +17,9 @@ import {
   discoverSessions,
   QUIESCENCE_MS,
   type DiscoveryResult,
-} from "../../core/retro/discovery.js";
+} from "../../core/retro/discovery/core.js";
 import { createSdkRetroObserver } from "../../core/retro/observer.js";
-import { runRetroScan } from "../../core/retro/scan.js";
+import { runRetroScan } from "../../core/retro/scan/core.js";
 import { loadRetroState } from "../../core/retro/state.js";
 
 /** Default per-run cap on sessions observed; overflow waits for the next run. */

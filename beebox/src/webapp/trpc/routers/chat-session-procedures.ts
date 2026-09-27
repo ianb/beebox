@@ -19,7 +19,7 @@ import {
 import { resolveFeatures } from "../../../core/chat/features.js";
 import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
-import { titleForSession, loadChatLists, deadHuskLabel } from "../../../core/chat/session/list.js";
+import { titleForSession, loadChatLists, deadHuskLabel } from "../../../core/chat/session/list/core.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 

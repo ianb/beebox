@@ -11,11 +11,11 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import type { EventBus } from "../../core/event-bus.js";
+import type { EventBus } from "../../core/event-bus/core.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { resumeBulkSessions } from "../../core/bulk-upload/resume.js";
 import { sweepBulkBatches, type UnfiledBatch, type StrandedBatch } from "../../core/bulk-upload/sweep.js";
-import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
+import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker/core.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
 

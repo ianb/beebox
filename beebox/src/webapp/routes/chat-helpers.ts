@@ -18,7 +18,7 @@ import {
   isSupportedImageMediaType,
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
-import type { ChatSendInput } from "../../core/chat/session/index.js";
+import type { ChatSendInput } from "../../core/chat/session/run/core.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
 import { boxRelativePathSchema } from "../../core/landmark/nearest.js";

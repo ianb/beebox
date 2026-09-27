@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { MAX_STAGED_ITEMS } from "../../core/capture/staging-limits.js";
-import type { StagingBulkItem } from "../../core/capture/staging-store.js";
+import type { StagingBulkItem } from "../../core/capture/staging-store/core.js";
 
 /** Bound client-supplied id/name/mimetype strings (X9 — untrusted lengths). */
 const MAX_ITEM_FIELD_LENGTH = 512;

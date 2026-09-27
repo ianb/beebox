@@ -48,7 +48,7 @@ by whatever surface is easiest to edit:
 The natural mapping: *"always true here"* → root CLAUDE.md; *"true when you're
 **here**"* → nested CLAUDE.md / path rule; *"true for **this kind of card**"* →
 schema instructions; *"true for **this kind of task**"* → a procedure. Box skills
-are a fixed managed set written by `src/core/box/skills.ts` from `skills-content.ts`
+are a fixed managed set written by `src/core/box/guidance-sync/skills.ts` from `skills-content.ts`
 (refreshed on init/wakeup/chat-start) — not boxholder-authored; the task-scoped-lazy
 tier a boxholder edits is procedures + the shipped agent-guide.
 
