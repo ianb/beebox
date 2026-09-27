@@ -771,6 +771,13 @@ test1:
       peak: 41204
       added: 0
       turns: 1
+    - date: 2026-09-27T03:28:15.486Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: c5172f9a62495068197e5f41ae7b2696cf7870cc
+      initial: 38787
+      peak: 43144
+      added: 4357
+      turns: 4
   create-new-card-type:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -1440,6 +1447,13 @@ test1:
       peak: 41184
       added: 0
       turns: 1
+    - date: 2026-09-27T03:28:15.486Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: c5172f9a62495068197e5f41ae7b2696cf7870cc
+      initial: 38784
+      peak: 42897
+      added: 4113
+      turns: 4
   modify-intake-triage:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -5933,6 +5947,14 @@ test1:
       peak: 43431
       added: 4556
       turns: 4
+  guide-read-before-acting:
+    - date: 2026-09-27T03:28:15.486Z
+      boxCommit: 67e28b917afa2406b39d462b9e8c5d89bde9b16b
+      repoCommit: c5172f9a62495068197e5f41ae7b2696cf7870cc
+      initial: 38884
+      peak: 44239
+      added: 5355
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

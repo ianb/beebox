@@ -444,7 +444,10 @@ one.
 
 ## GUIDES — Guides
 
-Guides (`*.guide.card`) hold the boxholder's preferences for handling specific domains — how *this* user wants a domain done, beyond what general knowledge tells you. **Read the relevant guide before acting**, even in a domain you know.
+<!-- rules: guides.read-before-acting -->
+Guides (`*.guide.card`) hold how *this* user wants a domain handled, beyond
+what general knowledge tells you. **Read the relevant guide's compiled doc
+before acting**, even in a domain you know.
 
 <!-- rules: guides.list -->
 {{guides}}

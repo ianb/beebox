@@ -786,6 +786,8 @@ tests:
     correct_contains: ["answerable"]
     tags: [questions]
 
+  # Status (2026-09-26, doc-structure Track 3, GUIDES): pass on the test1 clone,
+  # 1 reads, 0 searches, 39k ctx.
   - id: guide-vs-procedure
     prompt: "What's the difference between a guide card and a procedure card?"
     expected_level: knows_about
@@ -1258,6 +1260,8 @@ tests:
   # cooking.guide.card configured) — restore the guide or retire these two.
   # See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
+  # Status (2026-09-26, doc-structure Track 3, GUIDES): pass on the test1 clone,
+  # 1 reads, 1 searches, 39k ctx.
   - id: list-guides
     prompt: "What guides exist in this box and what do they do?"
     expected_level: knows_directly
@@ -1266,6 +1270,25 @@ tests:
     notes: >
       Updated from discoverable: agent guide now lists all guide cards with
       their applies-to descriptions. Agent should know this directly.
+
+  # Guards ledger row guides.read-before-acting (added 2026-09-26,
+  # doc-structure Track 3, GUIDES): a domain task opens the domain's guide
+  # before acting, even when general knowledge would do.
+  # Status (2026-09-26, doc-structure Track 3, GUIDES): pass on the test1 clone,
+  # 1 reads, 0 searches, 39k ctx (read calendar-guide.md).
+  - id: guide-read-before-acting
+    prompt: >
+      Put my dentist appointment next Tuesday at 3pm on my calendar. Before
+      doing anything, tell me step by step how you would do it in this box.
+      Do not change any files.
+    expected_level: knows_about
+    watch_for: >
+      Opens the calendar guide (its compiled doc, or the guide card) before
+      answering, and describes its Create Event action: a new .ics file in
+      _content/calendar/, pushed on the next sync.
+    should_read_any: ["calendar-guide.md", "calendar.guide.card"]
+    correct_contains: [".ics"]
+    tags: [guides]
 
   - id: modify-intake-triage
     prompt: "If I wanted to change how inbox items are triaged, what would I modify?"
