@@ -9,7 +9,8 @@ accepting and whether a batch is valid.
 import { BrowserTaskSchema, createBrowserTaskTemplate } from "../../src/schemas/browser-task.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
-import { getTemplate } from "../../src/templates.js";
+import { getTemplate } from "../../src/templates-registry.js";
+import "../../src/templates.js";
 
 const schemas = await createCardSchemaMap();
 const recordSchema = JSON.stringify({

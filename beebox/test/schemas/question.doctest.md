@@ -339,7 +339,7 @@ through to the builders. Validation is strict: a bad `expires-after` or a
 
 ```ts setup
 import { getTemplate } from "../../src/templates-registry.js";
-import "../../src/templates/builtins/templates.js";
+import "../../src/templates.js";
 
 // Parse raw args through the template's own schema, then generate — exercising
 // both the argsSchema (accepts the contract fields) and the passthrough.

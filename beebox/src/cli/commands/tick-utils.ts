@@ -30,6 +30,10 @@ import { parseCardName, getBoxDir } from "../../lib/paths/core.js";
 import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import { getDefaultTemplate } from "../../templates-registry.js";
+// Side-effect import: registers every built-in template so getDefaultTemplate
+// below has something to find, regardless of whether another module already
+// triggered the registration first.
+import "../../templates.js";
 import {
   boxEngineUnavailability,
   classifyScheduleFailure,
