@@ -8,9 +8,9 @@ budget:
   # Measured on the test1 clone (`pnpm lint:guide --box <clone> --report`)
   # after each section is binned, so the ceilings ratchet down: `wc -w` of
   # the rendered guide, and the `pnpm agent-context chat` total. Last:
-  # 2026-09-26, after SPEAKING.
-  guide_words: 6911
-  always_loaded_words: 11703
+  # 2026-09-26, after DOCS.
+  guide_words: 6897
+  always_loaded_words: 11689
   uncited_words_per_section: 60
 
 lint:
@@ -24,6 +24,7 @@ lint:
     - DIRECTORY_LAYOUT
     - BOX_CODE
     - SPEAKING
+    - DOCS
 
 # Every section handle, in guide order. `referrers` names who points at the
 # handle: another handle, or a path relative to the beebox package. Rename a
@@ -625,6 +626,33 @@ rows:
     bin: core
     reason: A real user journey (2026-08-23) was sent to a sidebar that did not exist; the agent cannot see the interface and the reflex is to guess.
     audits: [points-at-ui-unseen-location, points-at-ui-where-is-the-mic]
+
+  # --- DOCS ---
+  - id: docs.where
+    rule: The engine's reference docs are in `node_modules/beebox/box-docs/`, whose `README.md` says when to read each, and `bbx search` finds them by content.
+    handle: DOCS
+    bin: core
+    reason: Every pointer in the guide names a doc there, and an agent that does not know the index exists opens docs at random or not at all.
+    audits: [search-finds-engine-doc]
+    mechanics: box-docs/README.md
+  - id: docs.read-first
+    rule: Read the doc before answering how something works or working with an unfamiliar type; don't reconstruct a mechanism from memory.
+    handle: DOCS
+    bin: core
+    reason: The failure the boxholder has seen most (an agent answering from memory what it could have checked), and it bites on any how-does-this-work question.
+    audits: [tricks-auto-commit, views-api-home]
+  - id: docs.search-kind
+    rule: "`bbx search --kind engine-doc` restricts a search to the engine docs."
+    handle: DOCS
+    bin: delete
+    reason: A flag of one command; SEARCHING says engine docs are indexed as kind `engine-doc`, and the flag is in `bbx search --help` and bbx-commands.md.
+    audits: [search-finds-engine-doc]
+  - id: docs.compiled
+    rule: Docs compiled from this box's guides, personality, and box-local card types are in `_content/docs/generated/`.
+    handle: DOCS
+    bin: core
+    reason: The only place an agent learns that a box-local type's or a guide's doc is in the box rather than the package; GUIDES and CARD_TYPES link into it.
+    audits: [docs-compiled-location]
 
   # --- Generated lists: the row is the decision to list it ---
   - id: docs.engine-source

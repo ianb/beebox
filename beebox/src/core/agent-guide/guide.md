@@ -121,7 +121,17 @@ commands that manage it — is **ABOUT_CARDS** below.
 
 ## DOCS — Where the docs are
 
-Reference docs about beebox itself — every card type, the `bbx` command reference, connectors, views, procedures, triage, chat voice — are in the installed package at `node_modules/beebox/box-docs/`. Start with `node_modules/beebox/box-docs/README.md`: one line per doc saying when to read it. `bbx search <terms>` finds them by content too (`--kind engine-doc` restricts to docs). Read the doc before answering a question about how something works or before working with a type you don't know; don't reconstruct a mechanism from memory.{{engine_source_note}} Docs compiled from this box's own content — its guides, personality, and box-local card types — are in `_content/docs/generated/`.
+<!-- rules: docs.where, docs.read-first, docs.engine-source -->
+Reference docs about beebox itself (every card type, the `bbx` commands,
+connectors, views, procedures, triage) are in the installed package at
+`node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
+when to read it, and `bbx search` finds them by content. Read the doc before
+answering a question about how something works or working with a type you
+don't know; don't reconstruct a mechanism from memory.{{engine_source_note}}
+
+<!-- rules: docs.compiled -->
+Docs compiled from this box's own content (its guides, personality, and
+box-local card types) are in `_content/docs/generated/`.
 
 ## SPEAKING — Speak the User's Language
 
