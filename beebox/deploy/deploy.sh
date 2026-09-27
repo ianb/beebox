@@ -1091,10 +1091,17 @@ if [[ -d "$install_dir/beebox" ]] && ! has_maintenance_gate; then
     fi
   done
 fi
+# The staged CLI needs its dependencies before activation installs them into
+# the live tree. Reusing the live node_modules by symlink is only correct when
+# the lockfile has not changed; a deploy that adds a runtime dependency (the
+# 2026-09-26 APNs client, for one) would fail here with ERR_MODULE_NOT_FOUND
+# before it could install anything. So: symlink when the lockfiles match,
+# otherwise install into the stage.
 if [[ ! -e "$stage_dir/node_modules" ]]; then
-  if [[ -d "$install_dir/node_modules" ]]; then
+  if [[ -d "$install_dir/node_modules" ]] && cmp -s "$stage_dir/pnpm-lock.yaml" "$install_dir/pnpm-lock.yaml"; then
     ln -s "$install_dir/node_modules" "$stage_dir/node_modules"
   else
+    echo "  Lockfile changed (or no live install): installing the staged dependencies..."
     (cd "$stage_dir" && HUSKY=0 CI=true pnpm install --frozen-lockfile)
   fi
 fi
