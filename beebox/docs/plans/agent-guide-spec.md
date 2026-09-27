@@ -651,6 +651,19 @@ were slow or failed in phase two (17 and 10 steps) are 7 and 7.
   under `_tmp/`; the runner gained a `cards_not_under` assertion and the
   audit uses it. Both rerun and pass.
 
+### Merge with the notifications landing (2026-09-27)
+
+While this branch was in flight, main landed REACHING_THE_BOXHOLDER as a
+section function in the old style. On merge it was binned into eleven rows
+(eight core, two indirect, one delete), its prose moved into `guide.md` with
+the default "Reaching me" text as a placeholder, its `bbx notify` flags and
+example moved to a new `bbx notify` entry in `bbx-commands.md`, and its
+doctest rewritten against the rendered guide. The budget header was raised
+to 5,595 / 10,213 with the reason recorded; the section's own examples were
+already in `card-scheduled-script.md`. This was the first run of the
+row-first procedure on guidance written without it, and the linter caught
+the two imports of the removed `SECTION` object that the merge brought in.
+
 ### Deviations and residuals
 
 - The chat prompt is a follow-on plan, per Codex's plan review.
