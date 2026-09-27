@@ -73,9 +73,10 @@ readers are agents and people.
   ontologies (notifications, publications, chat). Measure whether later
   plans in those areas reuse the terms or define them again.
 
-## Option: one structured source that generates the Markdown
+## Preferred direction: one structured source that generates the Markdown
 
-The developer raised this as worth considering (2026-09-27). The ontology is
+The developer raised this and then chose it as the preferred direction
+(2026-09-27). The ontology is
 more structured than the agent guide, so it fits a YAML source in the style
 of the agent guide's `ledger.yaml` even better. The source holds the extra
 fields needed to generate both the codebase `ONTOLOGY.md` files and the box
@@ -98,15 +99,25 @@ What it makes possible:
 - **Plans change data.** A plan's ontology change set is a diff to the
   source, which the finish skill can apply and a reviewer can read.
 
-What it costs:
+What it costs, and the developer's view:
 
 - The generated Markdown must be kept in sync with the source, as
-  `doc-graph.md` is now, and marked as generated so that agents edit the
-  source and not the output.
-- Definitions written as YAML strings are harder to write and review than
-  Markdown prose.
-- A single source file is one more thing every plan touches, and it grows
-  with the codebase.
+  `doc-graph.md` is now. The developer does not expect agents editing the
+  generated file to be a real problem.
+- Definitions written as YAML strings are harder to write than Markdown
+  prose. The developer judges this cost small next to the protection
+  against drift.
+- A single source file grows with the codebase and many plans touch it.
+
+The schema can grow as needed. For example, an entry can carry a different
+definition for each context that uses it.
+
+### Boxes
+
+A box probably has a single ontology. Box directories do not group
+concepts the way source directories do. The one possible exception is at
+the root: `_config/` may need its own ontology. `_content/` probably does
+not, because the core box ontology covers it.
 
 ## Open questions
 
