@@ -13,12 +13,39 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
-import { createPushConnector } from "../../connectors/push.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
+import { rotateIfNeeded } from "../../core/notification/log.js";
+import { getBoxTime } from "../../lib/time.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { syncConnector } from "../../connectors/activity.js";
+import type { TelegramService } from "../../services/telegram.js";
+import type { PushService } from "../../services/push.js";
+
+/**
+ * Age pending questions (nudge, then expire), then notify about the ones
+ * newly pending. Aging runs first so a question about to expire is never
+ * announced: an old box's first finalize would otherwise send a notice for
+ * questions it expires a moment later. Aging never depends on a notification
+ * channel; only the nudge's delivery does. `tg`/`push` are injected in tests.
+ */
+export async function finalizeQuestions(boxRoot: string, services: { tg?: TelegramService; push?: PushService }): Promise<void> {
+  try {
+    const aging = await ageQuestions(boxRoot, services);
+    if (aging.nudged.length > 0 || aging.expired.length > 0) {
+      console.log(`  Question aging: ${aging.nudged.length} nudged, ${aging.expired.length} expired`);
+    }
+  } catch (err) {
+    console.error(`  Question aging failed: ${errorMessage(err)}`);
+  }
+  try {
+    const result = await checkPendingQuestionsAndNotify(boxRoot, { now: getBoxTime(boxRoot), ...services });
+    if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
+  } catch (err) {
+    console.error(`  Question alert failed: ${errorMessage(err)}`);
+  }
+}
 
 export const finalizeCommand = new Command("finalize")
   .description("Run outbound connectors (post-processing phase)")
@@ -28,28 +55,13 @@ export const finalizeCommand = new Command("finalize")
 
     console.log("[Finalize: running outbound connectors]");
 
-    // Notify the boxholder about newly-pending questions before the connectors
-    // run, so the cards it writes get delivered in this same finalize pass.
-    if (!options.connector || options.connector === "push") {
+    if (!options.connector) {
+      await finalizeQuestions(boxRoot, {});
+      // Rotate the notification log at 30 days or 8 MB (log.ts owns the rule).
       try {
-        const result = await checkPendingQuestionsAndNotify(boxRoot, { now: new Date() });
-        if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
+        if (await rotateIfNeeded(boxRoot, { now: getBoxTime(boxRoot) })) console.log("  Notification log rotated");
       } catch (err) {
-        console.error(`  Question alert failed: ${errorMessage(err)}`);
-      }
-
-      // Ages pending questions (nudge, then expire) regardless of whether
-      // any notification channel is configured — the lifecycle transition
-      // never depends on notifyChannels, only the nudge's delivery does.
-      try {
-        const aging = await ageQuestions(boxRoot);
-        if (aging.nudged.length > 0 || aging.expired.length > 0) {
-          console.log(
-            `  Question aging: ${aging.nudged.length} nudged, ${aging.expired.length} expired`
-          );
-        }
-      } catch (err) {
-        console.error(`  Question aging failed: ${errorMessage(err)}`);
+        console.error(`  Notification log rotation failed: ${errorMessage(err)}`);
       }
     }
 
@@ -58,7 +70,6 @@ export const finalizeCommand = new Command("finalize")
     createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
     createGoogleDriveConnector(boxRoot);
-    createPushConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

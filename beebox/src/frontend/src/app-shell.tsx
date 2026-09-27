@@ -36,6 +36,8 @@ import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 import { BoxSlugProvider } from "./lib/box-slug";
 import { QuickSearchOverlay } from "./components/search/QuickSearchOverlay";
+import { NotificationBanner } from "./components/notifications/NotificationBanner";
+import { usePresenceHeartbeat } from "./hooks/usePresenceHeartbeat";
 
 
 // Re-exported for the route tree
@@ -106,6 +108,7 @@ function BoxValidationError() {
 /** Product chrome and runtime, mounted only after the box is validated. */
 export function ProductLayout() {
   const [showDebugLog, setShowDebugLog] = useState(false);
+  usePresenceHeartbeat();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
   const location = useLocation();
@@ -122,6 +125,7 @@ export function ProductLayout() {
             onToggleSourceView={handleToggleSourceView}
           />
           <PresentationNotice />
+          <NotificationBanner />
           <main className="flex-1 min-h-0">
             {standalonePage ? null : <BoxConversationShell />}<Outlet />
           </main>

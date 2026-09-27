@@ -92,6 +92,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // when the boxholder asks for a run from chat. The scheduler daemon does not
   // go through this verb — it calls `runTick` in-process.
   { name: "tick", audience: "agent", smoke: { run: ["tick", "--dry-run"] } },
+  // Read-only: the paths changed since a commit, for a schedule's `runs:`.
+  { name: "changes", audience: "agent", smoke: { run: ["changes", "--since", "HEAD"] } },
+  // Asks Jev about stdin through an authored judgment card; `judge --dry-run`
+  // sends nothing but still needs a card to read, which a smoke box lacks.
+  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge.doctest.md runs --dry-run" } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },
@@ -103,6 +108,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
 
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
+  { name: "notify", audience: "agent", smoke: { skip: "sends a notification; `--check` exits 1 on a box with no channel" } },
+  { name: "pairing", audience: "agent", smoke: MUTATES },
 
   // ---- Credentialed: these delegate to the box's server under the agent
   //      profile (`cli/lib/credentialed-verb.ts`), which is exactly what the
@@ -162,7 +169,6 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },
   { name: "wakeup", audience: "engine", reason: "tooling profile only; `force-wakeup` is the agent's counterpart" },
   { name: "tailscale", audience: "engine", reason: "machine networking, outside any box" },
-  { name: "push", audience: "engine", reason: "`push test` fires a web push at this box's subscribers to prove delivery — an operator probe" },
   { name: "google-auth", audience: "engine", reason: "an interactive browser OAuth flow" },
   { name: "auth", audience: "engine", reason: "local accounts; every verb refuses an agent session without --agent-confirmed" },
   { name: "init", audience: "engine", reason: "scaffolds the box installation rather than its content" },

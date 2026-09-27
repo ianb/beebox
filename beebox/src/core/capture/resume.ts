@@ -17,6 +17,7 @@ import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import { assertNever } from "../../lib/invariant.js";
 import { stagingBaseDir, readStagingSession } from "./staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
+import { capturePreparationReason } from "./failure-notice.js";
 import { runHqJob } from "../voice-recording/hq-job.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -52,7 +53,7 @@ export async function resumeStagingSessions(deps: {
         console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);
         void prepareCaptureSession({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
           console.error(`[capture] Resume of staged capture ${id} failed:`, err);
-          void markCapturePreparationFailed({ boxRoot, id, eventBus });
+          void markCapturePreparationFailed({ boxRoot, id, eventBus, reason: capturePreparationReason(err) });
         });
         continue;
       case "bulk":

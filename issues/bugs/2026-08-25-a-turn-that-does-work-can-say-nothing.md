@@ -18,7 +18,7 @@ but also teach bare acknowledgments; the explicit narration-silence rule at
 `core/chat/session/prompts.ts:190-192` is scoped to narration mode. Do not treat
 that rule as proof that ordinary interactive turns are instructed to say nothing.
 No new empty-turn reproduction was attempted. Related background-outcome work:
-[agent outcomes need a voice](../features/2026-08-09-agent-outcomes-need-a-voice.md).
+[agent outcomes need a voice](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md).
 
 
 > Recovered 2026-09-21 from `worktree-user-stories-refresh` at `f914fcb4e`.

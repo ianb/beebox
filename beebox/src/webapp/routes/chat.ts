@@ -32,6 +32,7 @@ import type { EventBus } from "../../core/event-bus.js";
 import type { TtsService } from "../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../core/chat/schedules.js";
 import { fireChatSchedule } from "./chat-schedule-fire.js";
+import { notifyTurnCallouts } from "../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";
@@ -135,6 +136,11 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
       for (const label of cancels) {
         scheduleManager.cancelByLabel(label);
       }
+      // A turn's callouts reach the person as one notification.
+      if (sessionId === null) return;
+      notifyTurnCallouts(boxRoot, { text, sessionId }).catch((e: unknown) => {
+        console.error(`[chat] could not send the callout notification for session ${sessionId}:`, e);
+      });
     });
 
     // Broadcast turn-end so other tabs / the schedule fallback know.

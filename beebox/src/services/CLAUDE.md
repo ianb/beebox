@@ -64,9 +64,9 @@ In production, services are `undefined` and routes/connectors create real implem
 
 ```typescript
 const tg = withCallLog(createFakeTelegram({ username: "bot" }));
-await tg.sendMessage(123, "hello");
+await tg.sendMessage(123, { text: "hello" });
 printCalls(tg.callLog);
-// => sendMessage(123, "hello")
+// => sendMessage(123, {"text":"hello"})
 ```
 
 `printCalls(log, methodName?)` formats the log for doctest assertions. Pass a method name to filter.

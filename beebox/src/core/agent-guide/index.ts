@@ -21,6 +21,7 @@ import { directoryLayoutRows, boxCodeRows } from "./box-shape.js";
 import { procedureList, guideList } from "./extensibility.js";
 import { cardTypesList } from "./cards.js";
 import { engineSourceNote } from "./where-docs.js";
+import { reachingDefaultQuote } from "./reaching.js";
 import { renderGuideLines, strippedText, type Filler, type GuideLine } from "./render.js";
 
 /** The guide's source; read at runtime, so the package ships it. */
@@ -76,6 +77,7 @@ function guideFillers(options: AgentGuideOptions): Record<string, Filler> {
   } = options;
   return {
     engine_source_note: () => engineSourceNote(engineSourcePresent),
+    reaching_default: () => reachingDefaultQuote(),
     card_types: () => cardTypesList({ allCardSchemas, boxCardSchemas, boxTemplates }),
     directory_layout: () => directoryLayoutRows(),
     box_code_dirs: () => boxCodeRows(shape),

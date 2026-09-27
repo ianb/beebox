@@ -12,8 +12,10 @@ budget:
   # words for THE_LAW_OF_CHECKING (new, by the boxholder's decision) and the
   # sharpened THE_LAW_OF_CARDS; the clone already measured 22 words over the
   # ceiling before that.
-  guide_words: 5339
-  always_loaded_words: 10131
+  # Raised 2026-09-27 for REACHING_THE_BOXHOLDER, a section the notifications
+  # workstream landed on main; it was binned into eleven rows on merge.
+  guide_words: 5595
+  always_loaded_words: 10213
   uncited_words_per_section: 60
 
 lint:
@@ -23,6 +25,7 @@ lint:
     - THE_LAWS
     - ABOUT_CARDS
     - COMMANDS
+    - REACHING_THE_BOXHOLDER
     - INTAKE
     - DIRECTORY_LAYOUT
     - BOX_CODE
@@ -131,6 +134,12 @@ registry:
     governs: the everyday bbx commands beyond card operations
     referrers:
       - src/dev/knowledge-audits.yaml
+  - handle: REACHING_THE_BOXHOLDER
+    governs: "notifying, reminding, and watching; the briefing's Reaching-me section owns the policy"
+    referrers:
+      - src/dev/knowledge-audits.yaml
+      - src/core/chat/session/prompts.ts
+      - src/schemas/scheduled-script-instructions.ts
   - handle: SEARCHING
     governs: finding cards and engine docs with bbx search
     referrers:
@@ -518,6 +527,77 @@ rows:
     bin: core
     reason: An agent asked to fix a server or sync reaches for these, and several refuse an agent session or do the wrong thing from its shell.
     audits: [bbx-surface-engine-boundary]
+
+  # --- REACHING_THE_BOXHOLDER --- (landed from the notifications workstream on
+  # 2026-09-27 as a section function; binned here on merge)
+  - id: reaching.policy-in-briefing
+    rule: "The root briefing's Reaching-me section owns when and how loud to reach the boxholder; without one, apply the default and propose adding the section at the next retro."
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: Every notification decision starts here, on any turn that would reach the person.
+    audits: [outbound-notifications]
+  - id: reaching.default-quote
+    rule: "The default Reaching-me text (generated from the briefing template, quoted)."
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: Generated from the briefing schema so the guide and a new box's briefing cannot drift; the row is the decision to quote it.
+    audits: [outbound-notifications]
+  - id: reaching.check-before-promising
+    rule: Before promising a reminder or a watch, run bbx notify --check; if nothing can reach the person, say so.
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: A promise the box cannot keep is the failure; the check is one command.
+    audits: [remind-vs-schedule]
+  - id: reaching.notify-now
+    rule: Reach the boxholder now with bbx notify, a loudness (dot, quiet, loud) and a target; in a chat turn a callout does it.
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: The one command an agent needs to know exists; its flags are mechanics.
+    audits: [notify-loudness]
+  - id: reaching.notify-flags
+    rule: The bbx notify flags (--target forms, --tag, --body -, --dry-run) and the worked example.
+    handle: REACHING_THE_BOXHOLDER
+    bin: indirect
+    reason: Needed only when composing a notification.
+    audits: [notify-loudness]
+    mechanics: box-docs/bbx-commands.md
+  - id: reaching.not-health-not-questions
+    rule: Do not notify about health or about a question card you file; the dashboard, the scheduler, and the question dot already do.
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: Over-notifying is the observed failure the notifications plan names.
+    audits: [outbound-notifications]
+  - id: reaching.question-nudge
+    rule: A question unanswered for a week gets one quiet nudge before it expires.
+    handle: REACHING_THE_BOXHOLDER
+    bin: delete
+    reason: QUESTIONS states the aging defaults (questions.aging); the same fact twice in one guide.
+    audits: [question-alert-and-aging]
+  - id: reaching.at-a-time
+    rule: "A reminder at a time is a scheduled-script card with notify:, not a chat <schedule> and not a runs: that shells out to bbx notify."
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: Three plausible mechanisms exist and two are wrong for a durable reminder.
+    audits: [remind-vs-schedule]
+  - id: reaching.on-change
+    rule: "A watch is a schedule whose runs: checks what changed (bbx changes), judges (bbx judge), then runs an agent; --or-skip makes a quiet day free."
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: The order (change, judge, agent) is the rule; the cards are mechanics.
+    audits: [outbound-notifications]
+  - id: reaching.examples
+    rule: The reminder card, the watch card, and the watch procedure examples.
+    handle: REACHING_THE_BOXHOLDER
+    bin: indirect
+    reason: Copied when building one, not needed on other turns; the card instructions already carry them.
+    audits: [remind-vs-schedule]
+    mechanics: box-docs/card-scheduled-script.md
+  - id: reaching.mechanics-pointer
+    rule: Mechanics live in bbx-commands.md (bbx notify), card-scheduled-script.md, and card-judgment.md.
+    handle: REACHING_THE_BOXHOLDER
+    bin: core
+    reason: The section's closing pointer, per the skeleton.
+    audits: [outbound-notifications]
 
   # --- INTAKE ---
   - id: intake.arrival

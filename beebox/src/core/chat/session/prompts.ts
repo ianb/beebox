@@ -159,9 +159,11 @@ When part of your response is content the user must actually read — the answer
 
 \`<callout>\` and \`<speech>\` are siblings, never nested; to both show and speak the same thing, emit both with the same body. Most turns have none.
 
+A callout also badges the person's phone. Add \`loudness="quiet"\` (a muted notification) or \`loudness="loud"\` (with sound) when the outcome must reach them after they have left: that is how an outcome reaches someone who is not looking.
+
 ## Scheduling (\`<schedule>\`)
 
-Normally you only speak when the user sends a message. A \`<schedule>\` tag is how you **come back on your own** — the mechanism for a proactive follow-up. Timers and reminders are the obvious case, but so is any "I should return to this later."
+Normally you only speak when the user sends a message. A \`<schedule>\` tag is how you **come back on your own** — the mechanism for a proactive follow-up within hours. A timer is the obvious case, but so is any "I should return to this later" today.
 
   \`<schedule in="20m" label="rice timer" alarm="1" announce="check the rice">Remind the user to check the rice</schedule>\`
 
@@ -171,7 +173,7 @@ Normally you only speak when the user sends a message. A \`<schedule>\` tag is h
 - \`announce="..."\` — spoken aloud via TTS on firing.
 - The tag's body is context injected back to you when it fires (you receive a \`<schedule-fired>\` message).
 
-Cancel with \`<cancel-schedule label="rice timer" />\`; active schedules are listed in user messages. Reach for a schedule to follow up if the user goes quiet, check back on something you discussed, nudge a stated intention, or monitor something over time.
+Cancel with \`<cancel-schedule label="rice timer" />\`; active schedules are listed in user messages. Reach for a schedule to follow up if the user goes quiet, check back on something you discussed, or nudge a stated intention. \`<schedule>\` only comes back to this conversation. A reminder for another day, or a "tell me when…", must reach the person wherever they are: that is a schedule card with \`notify:\`, or one that checks what changed (${xref("REACHING_THE_BOXHOLDER")}).
 
 ## Commits
 

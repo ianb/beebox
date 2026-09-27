@@ -2,18 +2,13 @@ import { TRPCError } from "@trpc/server";
 import type { parseScheduledScript } from "../../../schemas/scheduled-script.js";
 import {
   loadScriptState,
-  saveScriptState,
-  recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
-  DEFAULT_RUN_WINDOW_MS,
 } from "../../../core/schedule/state.js";
-import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
-import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { buildToolingScriptEnv } from "../../../core/script-env.js";
+import { runAndRecord } from "../../../core/schedule/run-action.js";
+import { handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
-import { classifyScheduleFailure } from "../../../core/schedule/engine-wait.js";
 
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
 
@@ -90,45 +85,23 @@ export async function runScheduledScript(
   });
 
   try {
-    // Tooling profile: same scheduled scripts as the `bbx tick` path.
-    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "webapp-trigger",
-    });
-    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-      cwd: boxRoot,
-      stdio: "ignore",
-      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-      env: scriptEnv,
-    });
-
-    recordOutcome(state, {
-      result: "success", error: null, durationMs, sleepAffected,
-      windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
-    });
-    await saveScriptState({ boxRoot, scriptName: name, state });
-
-    await handleCreateAfterSuccess({ boxRoot, parsed, scriptName: name });
-
-    return { success: true, durationMs };
-  } catch (err) {
-    const { durationMs, sleepAffected } = fallbackTiming(err);
     // A manual run bypasses the engine-wait skip gate (the human asked), but
     // the outcome still classifies: an engine-unavailable failure must not
     // count against the task.
-    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
-    recordOutcome(state, {
-      result: outcome.result, error: outcome.error, durationMs, sleepAffected,
-      windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
+    const run = await runAndRecord({
+      boxRoot, parsed, scriptName: name, triggeredBy: "webapp-trigger", stdio: "ignore",
+      state, now, runStartedAt: now,
     });
-    await saveScriptState({ boxRoot, scriptName: name, state });
-
-    if (outcome.result === "inconclusive") {
-      return { success: true, durationMs, inconclusive: outcome.error };
+    if (run.result === "success") {
+      await handleCreateAfterSuccess({ boxRoot, parsed, scriptName: name });
+      return { success: true, durationMs: run.durationMs };
     }
-
+    if (run.result === "inconclusive") {
+      return { success: true, durationMs: run.durationMs, inconclusive: run.error };
+    }
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: outcome.error,
+      message: run.error,
     });
   } finally {
     await releaseScriptLock({ boxRoot, scriptName: name });

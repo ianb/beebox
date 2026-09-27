@@ -143,6 +143,27 @@ JSON.stringify(buildChildEnv({ sourceEnv: {}, hubExtras: { BBX_HUB_SECRET: "x" }
 => {"BBX_HUB_SECRET":"x"}
 ```
 
+The notification settings a box server sends with pass through: its APNs and
+VAPID keys (box servers are the sending side), fake mode, and fake mode's old
+name, `BBX_PUSH_FAKE`, which `notifyFakeMode()` still honors for one release.
+A child that lost the alias would send for real while the hub was faking.
+
+```ts continue
+const notifyEnv = {
+  BBX_NOTIFY_FAKE: "1",
+  BBX_PUSH_FAKE: "1",
+  BBX_APNS_KEY_PATH: "/home/beebox/apns.p8",
+  BBX_APNS_KEY_ID: "KEYID",
+  BBX_APNS_TEAM_ID: "TEAMID",
+  BBX_APNS_BUNDLE_ID: "org.example.app",
+  BBX_VAPID_PUBLIC_KEY: "vapid-public",
+  BBX_VAPID_PRIVATE_KEY: "vapid-private",
+  BBX_VAPID_SUBJECT: "mailto:boxholder@example.org",
+};
+JSON.stringify(Object.keys(buildChildEnv({ sourceEnv: notifyEnv, hubExtras: {} })).toSorted())
+=> ["BBX_APNS_BUNDLE_ID","BBX_APNS_KEY_ID","BBX_APNS_KEY_PATH","BBX_APNS_TEAM_ID","BBX_NOTIFY_FAKE","BBX_PUSH_FAKE","BBX_VAPID_PRIVATE_KEY","BBX_VAPID_PUBLIC_KEY","BBX_VAPID_SUBJECT"]
+```
+
 ## A readiness-timeout kill's own exit event doesn't double-schedule a restart
 
 ```ts continue

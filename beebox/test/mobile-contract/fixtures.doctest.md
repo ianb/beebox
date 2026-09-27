@@ -21,7 +21,8 @@ documented compatibility policy — lenient exactly where the contract says so
 that have real web-side code (`emission`, `receipt`, `speech-keywords`) through
 that code, and structurally validates the families that are consumed only by the
 native clients (`location`, `pairing-url`, `redeem`) against their documented
-shapes. One family lives elsewhere on the web side: `debug-log-submit` is POSTed
+shapes. `push-token` and `apns-payload` run through the server's own body
+schema and payload builder. One family lives elsewhere on the web side: `debug-log-submit` is POSTed
 verbatim at the real route by `test/webapp/debug-log-submit.doctest.md`, because
 its server-side consumer is an HTTP endpoint rather than a parser.
 
@@ -35,6 +36,9 @@ import { nativeCommandResultFromDetail, nativeComposerCommandAcknowledgementFrom
 import { nativeLastAudioRequestFromDetail } from "../../src/frontend/src/components/chat/native-last-audio-request.js";
 import { nativeSpeechCommandFromDetail } from "../../src/frontend/src/components/chat/native-speech-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
+import { PushTokenBody } from "../../src/webapp/routes/pairing.js";
+import { buildApnsRequest } from "../../src/core/notification/apns-payload.js";
+import { parseTarget } from "../../src/core/notification/target.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 
@@ -258,6 +262,30 @@ function validateRedeem(fx) {
   return { ok: false, detail: `unknown redeem variant ${JSON.stringify(fx.variant)}` };
 }
 
+// ── push-token: POST /api/pairing/push-token through the route's own body schema (contract §5.9) ──
+// A 400 case is a body the schema must refuse; the 401 case is the error body shape.
+function validatePushToken(fx) {
+  if (fx.variant === "request") {
+    const parsed = PushTokenBody.safeParse(fx.input);
+    if (!parsed.success) return { ok: false, detail: `refused: ${parsed.error.issues[0]?.message}` };
+    return deepEqual(parsed.data, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(parsed.data)}` };
+  }
+  if (fx.variant === "error" && fx.status === 400) {
+    return PushTokenBody.safeParse(fx.input).success ? { ok: false, detail: "the schema accepted a body it must refuse" } : { ok: true };
+  }
+  if (fx.variant === "error" && fx.status === 401) {
+    return typeof fx.input.error === "string" && deepEqual(fx.input, fx.expected) ? { ok: true } : { ok: false, detail: "bad 401 body" };
+  }
+  return { ok: false, detail: `unknown push-token case ${JSON.stringify([fx.variant, fx.status])}` };
+}
+
+// ── apns-payload: the box's APNs body and headers, which the iOS client reads (contract §5.10) ──
+function validateApnsPayload(fx) {
+  const { intent, bundleId, box } = fx.input;
+  const got = buildApnsRequest({ ...intent, target: parseTarget(intent.target) }, { bundleId, box });
+  return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
+}
+
 // ── speech-keywords: the real web keyword functions (mirrored by iOS) ──
 function validateSpeechKeyword(fx) {
   if (fx.op === "detect") {
@@ -402,6 +430,29 @@ client ignores), and the 401 error body.
 ```ts
 runFamily("redeem", validateRedeem)
 => {"family":"redeem","cases":3,"pass":3}
+```
+
+## push-token
+
+`POST /api/pairing/push-token` bodies run through the route's own schema: a
+sandbox and a production registration (an uppercase token is stored
+lowercase), two bodies it refuses with 400, and the 401 error body.
+`test/webapp/routes/pairing-push-token.doctest.md` posts the same request
+fixtures at the real route.
+
+```ts
+runFamily("push-token", validatePushToken)
+=> {"family":"push-token","cases":5,"pass":5}
+```
+
+## apns-payload
+
+The APNs body and headers for each loudness, built by the box's own builder.
+The iOS client reads `target`, `loudness`, and `notificationId` beside `aps`.
+
+```ts
+runFamily("apns-payload", validateApnsPayload)
+=> {"family":"apns-payload","cases":3,"pass":3}
 ```
 
 ## speech-keywords

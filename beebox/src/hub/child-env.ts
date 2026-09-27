@@ -65,6 +65,22 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- scan-import photo-analysis backend selection (claude default, gemini opt-in).
+  "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- dev harness: every notification channel through its fake.
+  // The old name notifyFakeMode() still honors, with a warning, for one release after the
+  // BBX_NOTIFY_FAKE rename (2026-09). Remove this entry when fake-mode.ts drops the alias.
+  "BBX_PUSH_FAKE",
+  // src/core/notification/apns-channel.ts -- the server sends APNs pushes (callouts). The .p8 key is
+  // passed by PATH, like BBX_GOOGLE_TOKENS_FILE; the other three identify the key and the app.
+  "BBX_APNS_KEY_PATH",
+  "BBX_APNS_KEY_ID",
+  "BBX_APNS_TEAM_ID",
+  "BBX_APNS_BUNDLE_ID",
+  // src/core/send-push.ts -- the server sends web push. The private key reaches every box
+  // child, like the APNs key above: box servers are the sending side, and without it web
+  // push could never send under the hub (found 2026-09-26 while adding APNs).
+  "BBX_VAPID_PUBLIC_KEY",
+  "BBX_VAPID_PRIVATE_KEY",
+  "BBX_VAPID_SUBJECT",
 
   // --- Claude Agent SDK config knobs (not credentials) ---
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.

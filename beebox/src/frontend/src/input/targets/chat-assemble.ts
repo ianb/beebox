@@ -14,7 +14,7 @@
  */
 
 import type { ChatImageAttachment } from "../../api-chat";
-import { applySelections } from "../../lib/selection/serialize";
+import { applySelections, escapeAttr, escapeText } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
 import { markUnsureWords } from "../unsure-words";
 import { composerToken, composerTokenIn } from "@shared/composer-tokens";
@@ -30,6 +30,37 @@ export interface ChatWitness {
   localTime: string;
   zoomedView: string | null;
   timePassed: string | null;
+  /**
+   * The notification whose `chat:new` tap started this conversation, carried
+   * by its first message only. Absent otherwise.
+   */
+  notificationOpened?: WitnessNotification | undefined;
+}
+
+/** A notification as the witness carries it: plain values from the notification log. */
+export interface WitnessNotification {
+  id: string;
+  title: string;
+  body: string;
+  /** When it was sent (ISO). */
+  at: string;
+}
+
+/**
+ * The `<notification-opened>` context block, a sibling of the message like
+ * `<attachments>`, in the shape the server's `<schedule-fired>` uses. The
+ * title and body were written by an agent or script, so they are escaped.
+ */
+function notificationOpenedBlock(notification: WitnessNotification): string {
+  return [
+    "",
+    `<notification-opened id="${escapeAttr(notification.id)}" sent-at="${escapeAttr(notification.at)}">`,
+    escapeText(notification.title),
+    ...(notification.body.trim() === "" ? [] : [escapeText(notification.body)]),
+    "",
+    "The boxholder started this conversation by opening this notification.",
+    "</notification-opened>",
+  ].join("\n");
 }
 
 /** The wire payload for a SEND: the wrapped message + image attachments. */
@@ -154,7 +185,7 @@ export function assembleChatMessage(
 
   return {
     messageId: emission.id,
-    message: wrapped + attachmentsBlock,
+    message: wrapped + attachmentsBlock + (witness.notificationOpened === undefined ? "" : notificationOpenedBlock(witness.notificationOpened)),
     // The wire body carries only what the server keys the image blocks on;
     // the path reaches it through the message text above.
     images: emission.images.map(({ id, mimeType, dataBase64 }) => ({ id, mimeType, dataBase64 })),

@@ -38,7 +38,7 @@ export async function sendOutputCards(ctx: OutputCardsContext): Promise<string[]
     describeSent: (count) => `send ${count} telegram message${count === 1 ? "" : "s"}`,
     send: async (fields) => {
       try {
-        await tg.sendMessage(fields["chat-id"], fields.text);
+        await tg.sendMessage(fields["chat-id"], { text: fields.text });
         return null;
       } catch (sendErr) {
         return errorMessage(sendErr);

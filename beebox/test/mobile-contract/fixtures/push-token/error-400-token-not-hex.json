@@ -1,0 +1,6 @@
+{
+  "variant": "error",
+  "status": 400,
+  "input": { "token": "not a token", "environment": "sandbox" },
+  "expected": null
+}

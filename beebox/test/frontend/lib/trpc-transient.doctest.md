@@ -274,14 +274,14 @@ unreachableCause(error)?.detail
 
 ## The schedule is sized to a deploy restart
 
-A restart has measured about 60 s from SIGTERM to serving, and a request can
-land at its very start. The retries span about 90 s, then stop.
+A production deploy keeps the site down for about 160-190 s, and a request
+can land at its very start. The retries span about 211 s, then stop.
 
 ```ts
 const delays = Array.from({ length: MAX_RETRIES }, (_, i) => retryDelayMs(i + 1));
 JSON.stringify(delays)
-=> [1000,2000,4000,8000,16000,30000,30000]
+=> [1000,2000,4000,8000,16000,30000,30000,30000,30000,30000,30000]
 
 delays.reduce((sum, ms) => sum + ms, 0)
-=> 91000
+=> 211000
 ```

@@ -118,13 +118,13 @@ export function isBoxUnreachable(error: unknown): boolean {
 }
 
 /**
- * The wait before each retry, in order. A deploy restart has measured ~60 s
- * from SIGTERM to serving, and a request can land at its very start, so the
- * schedule spans ~91 s before giving up. Past that the person sees the message
- * and nothing retries on a timer — nothing retries forever.
+ * The wait before each retry, in order. A production deploy keeps the site
+ * down for about 160-190 s (the deploy page's measured windows), and a request
+ * can land at its very start, so the schedule spans ~211 s before giving up.
+ * Past that the person sees the message and nothing retries on a timer —
+ * nothing retries forever.
  */
-const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000];
-
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000, 30_000, 30_000, 30_000, 30_000];
 /** How many retries follow the first attempt. */
 export const MAX_RETRIES = RETRY_DELAYS_MS.length;
 

@@ -16,6 +16,7 @@ import { useViewNavigate } from "../../../hooks/useViewNavigate";
 import { href, toSearch } from "../../../lib/routing";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
+import { ChatNotificationBanner } from "../../notifications/ChatNotificationBanner";
 import { usePageTitle } from "../../DocumentTitle";
 import { invariant } from "@shared/invariant";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
@@ -95,7 +96,7 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
     nativeComposer={usesNativeComposer}
     openCaptureOnMount={search.capture === "1" && !usesNativeComposer}
     transcriptVisible={transcriptVisible}
-    selectionNotice={<>{notice}{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
+    selectionNotice={<>{notice}<ChatNotificationBanner />{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
     // Keep reply observation alive, but show its panels only away from the transcript.
     ambientRegion={<div hidden={transcriptVisible}><AmbientReplies storageScope={storageScope} boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
       transcriptVisible={canAcknowledgeAmbientReply(transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}

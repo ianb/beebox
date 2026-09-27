@@ -35,7 +35,7 @@ JSON.stringify(sent)
 => ["_bookkeeping/output/health-alert.telegram-message.card"]
 
 JSON.stringify(tg.sent)
-=> [{"chatId":"777","text":"check-email: failing ×3","messageId":1}]
+=> [{"chatId":"777","text":"check-email: failing ×3","silent":false,"messageId":1}]
 ```
 
 The sent card is gone; the previously-failed card is untouched (failed

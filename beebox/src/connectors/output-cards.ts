@@ -2,7 +2,7 @@
  * Shared outbound-delivery loop for `_bookkeeping/output/*.card` cards: scan for
  * pending cards of one type, hand each to a caller-supplied `send` step, and
  * delete (on success) or stamp `failed` and leave in place (on failure) —
- * the lifecycle documented on telegram-message.ts and web-push.ts. One
+ * the lifecycle documented on telegram-message.ts. One
  * card's failure never stops the rest.
  *
  * Extracted from telegram-output-cards.ts and push.ts (Track L item 7 of

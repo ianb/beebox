@@ -44,6 +44,8 @@ export interface PushPayload {
    * shared app icon when it is absent.
    */
   icon?: string | undefined;
+  /** Show without sound or vibration (a `quiet` notification). */
+  silent?: boolean | undefined;
 }
 
 /** A send either delivered or the endpoint is gone and should be pruned. */

@@ -56,6 +56,8 @@ import {
   captureMessageAlreadyLanded,
   CaptureDeliveryError,
 } from "./deliver.js";
+import { notifyCaptureFailed } from "./failure-notice.js";
+import type { NotifyServices } from "../notify-boxholder.js";
 
 /**
  * Record a capture preparation failure AND emit the `capture-status`
@@ -65,21 +67,25 @@ import {
  * without emitting was the bug (X5): the bubble stayed "preparing" forever.
  * The state write is best-effort (a failed capture whose disk write also fails
  * is logged, not thrown) because this runs on error paths that must not mask the
- * original failure.
+ * original failure. A person who has left gets a `quiet` notification with
+ * `reason`, one sentence (`failure-notice.ts`).
  */
 export async function markCapturePreparationFailed(opts: {
   boxRoot: string;
   id: string;
   eventBus: EventBus;
+  reason: string;
   state?: StagingSessionState | undefined;
   docPath?: string | undefined;
+  services?: NotifyServices | undefined;
 }): Promise<void> {
-  const { boxRoot, id, eventBus, docPath } = opts;
+  const { boxRoot, id, eventBus, docPath, reason } = opts;
   const state = opts.state ?? "failed:prepare";
   await setStagingState({ boxRoot, id, state }).catch((e: unknown) => {
     console.error(`[capture] Recording ${state} for ${id} failed:`, e);
   });
   eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "failed", docPath });
+  await notifyCaptureFailed(boxRoot, { id, reason, services: opts.services });
 }
 
 export interface PrepareCaptureDeps {
@@ -268,7 +274,8 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
     // rebuilds from scratch rather than re-validating stale output forever.
     // Staging media is left intact (the re-fire re-reads it).
     await discardWrittenDocument({ sessionCardAbsPath, sessionAttachAbsDir });
-    await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:assemble", docPath: sessionCardRelPath });
+    const reason = "The capture could not be saved: the cards it wrote did not validate.";
+    await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:assemble", docPath: sessionCardRelPath, reason });
     return;
   }
 
@@ -330,7 +337,8 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   } catch (e) {
     if (e instanceof CaptureDeliveryError) {
       console.error(`[capture] Delivery failed for ${basename}:`, e);
-      await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:deliver", docPath: sessionCardRelPath });
+      const reason = "The capture was saved, but it could not be delivered to the chat.";
+      await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:deliver", docPath: sessionCardRelPath, reason });
       return;
     }
     throw e;

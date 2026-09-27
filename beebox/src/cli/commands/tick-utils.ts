@@ -25,30 +25,19 @@ import {
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
-import {
-  execWithTimeout,
-  CommandError,
-  SCRIPT_TIMEOUT,
-  type ExecTiming,
-} from "../../lib/exec-with-timeout.js";
+import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../../core/schedule/promotion.js";
+import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
 import { parseCardName, getBoxDir } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
-import { buildToolingScriptEnv } from "../../core/script-env.js";
 import {
   boxEngineUnavailability,
   classifyScheduleFailure,
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
 import { getBoxTime } from "../../lib/time.js";
-
-/** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
- * no measurement exists, so record zero rather than invent one. */
-export function fallbackTiming(err: unknown): ExecTiming {
-  if (err instanceof CommandError) return err.timing;
-  return { durationMs: 0, sleepAffected: false };
-}
+import { stageAndCommitPaths } from "../../lib/git.js";
 
 /**
  * Run all on-wakeup scheduled scripts that are due.
@@ -94,9 +83,12 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     // same pass may have just detected the episode. `lastRun` stays
     // untouched, so scripts stay due and run on the first wakeup after the
     // reset.
+    // The promotion rule, as in `bbx tick`: a requested schedule that cannot run says so once.
+    const promotion = { boxRoot, scriptName, parsed, state, now };
     const engineWait = await boxEngineUnavailability(boxRoot);
     if (engineWait !== null) {
       console.log(`  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`);
+      await noteTickSkip(promotion, { reason: "engine-quota", live: engineWait });
       continue;
     }
 
@@ -105,6 +97,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       const missing = await checkMissingConnectors(boxRoot, parsed.requires);
       if (missing.length > 0) {
         console.log(`  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`);
+        await noteTickSkip(promotion, { reason: "missing-connectors", connectors: missing });
         continue;
       }
     }
@@ -129,34 +122,40 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       }
     }
 
+    await checkRequiredConnectors(promotion);
     console.log(`  Running ${scriptName}...`);
+    const preRunMtimeMs = await cardMtimeMs(cardPath);
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
-    const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
     // This script's own span, not the pass's — the deferred classification
     // must not attribute an unavailability detected by an EARLIER script in
     // this pass to this script's unrelated failure.
     const scriptStartedAt = getBoxTime(boxRoot);
     try {
-      // Tooling profile: on-wakeup `runs:` commands are box tooling (mostly
-      // `bbx` invocations that sync connectors).
-      const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "wakeup",
+      const run = await runAndRecord({
+        boxRoot, parsed, scriptName, triggeredBy: "wakeup", stdio: "inherit",
+        state, now, runStartedAt: scriptStartedAt,
       });
-      const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-        cwd: boxRoot,
-        stdio: "inherit",
-        timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-        env: scriptEnv,
-      });
-
-      recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
-      await saveScriptState({ boxRoot, scriptName, state });
-      ranCount++;
-
-      await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+      if (run.result === "success") {
+        ranCount++;
+        await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+        if (parsed.once && (await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: false }))) {
+          // Only the card's own path: the wakeup must not sweep other work into this commit.
+          await stageAndCommitPaths(boxRoot, {
+            paths: [path.relative(boxRoot, cardPath)],
+            message: `Wakeup: remove one-shot ${scriptName}`,
+            trailers: { "Triggered-By": "bbx wakeup" },
+          });
+        }
+      } else if (run.deferReason !== undefined) {
+        console.log(`  ${scheduleOutcomeLine(run)}`);
+        await promoteDeferredRun(promotion);
+      } else {
+        console.error(`  ${scheduleOutcomeLine(run)}`);
+      }
     } catch (err) {
+      // Post-success housekeeping failed: the run is recorded again as its outcome.
       const { durationMs, sleepAffected } = fallbackTiming(err);
-
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
       const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
@@ -167,6 +166,44 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
   }
 
   return ranCount;
+}
+
+/** A card's mtime before its run, so `deleteOnceCard` can tell a card the run rewrote; 0 when it is gone. */
+export async function cardMtimeMs(cardPath: string): Promise<number> {
+  try {
+    return (await fs.stat(cardPath)).mtimeMs;
+  } catch (_e) {
+    // Deleted between readdir and here: 0 makes any later mtime read as a
+    // recreation, which is the safe direction (keep the card).
+    return 0;
+  }
+}
+
+/**
+ * `once`: delete the card after a run recorded `success` (never after a
+ * deferral or failure) — unless the run recreated or rewrote it (e.g. archive
+ * re-triggering), which leaves it for the next run. Shared by `bbx tick` and
+ * `bbx wakeup`'s on-wakeup pass. Returns whether the card was deleted.
+ */
+export async function deleteOnceCard(
+  cardPath: string,
+  opts: { file: string; preRunMtimeMs: number; quiet: boolean },
+): Promise<boolean> {
+  const { file, preRunMtimeMs, quiet } = opts;
+  try {
+    const postStat = await fs.stat(cardPath);
+    if (postStat.mtimeMs > preRunMtimeMs) {
+      if (!quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
+      return false;
+    }
+  } catch (_e) {
+    // Already gone: the desired end state holds, and the stat failure carries
+    // nothing actionable.
+    return false;
+  }
+  await fs.unlink(cardPath);
+  if (!quiet) console.log(`  Deleted one-shot script: ${file}`);
+  return true;
 }
 
 /**

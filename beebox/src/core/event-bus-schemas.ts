@@ -23,6 +23,7 @@
 
 import { z } from "zod";
 import { VoiceHqStateSchema, VoiceHandoffSchema } from "./capture/staging-schema.js";
+import { notificationEventSchema } from "./notification/intent.js";
 
 /**
  * A background-task lifecycle event — mirrors `TaskEvent`
@@ -254,6 +255,13 @@ export const eventSchemas = {
     hq: VoiceHqStateSchema,
     handoff: VoiceHandoffSchema,
   }),
+  /**
+   * The box tried to reach the person (`notifyBoxholder`): the intent plus
+   * its rendered root-relative `url`. The live signal for open apps; the
+   * record is `.beebox/notifications.jsonl` (docs/implemented-plans/notifications.md,
+   * Track A).
+   */
+  notification: notificationEventSchema,
 } satisfies Record<string, z.ZodType>;
 
 /** A known event name. */

@@ -27,6 +27,7 @@ import {
 import { prepareCaptureSession } from "../../../src/core/capture/prepare.js";
 import { sessionBasenameFor } from "../../../src/core/capture/write-cards.js";
 import { buildCaptureWrapper } from "../../../src/core/capture/deliver.js";
+import { readRecent } from "../../../src/core/notification/log.js";
 
 async function pathExists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -147,6 +148,13 @@ nothing left untranscribed, the card carries no `transcription-failed` flag:
 
 (await box.read(`${attach}/audio-002.audio.card`)).includes("status: transcribed")
 => true
+```
+
+A capture that succeeds sends no notification:
+
+```ts continue
+(await readRecent(box.root, { days: 36500 })).length
+=> 0
 ```
 
 Each clip has a `.timing.json` sidecar with its words:
@@ -557,6 +565,15 @@ await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(bo
 
 (await readStagingSession({ boxRoot: box.root, id })).state
 => failed:assemble
+```
+
+With nobody present in the app, the person gets one `quiet` notice. This
+capture never resolved a target chat, so the notice opens a new one:
+
+```ts continue
+const [notice] = await readRecent(box.root, { days: 36500 });
+`${notice.intent.loudness} | ${notice.intent.target} | ${notice.intent.source} | ${notice.intent.body}`
+=> quiet | chat:new | capture | The capture could not be saved: the cards it wrote did not validate.
 ```
 
 The invalid files this run wrote are deleted — no orphaned uncommitted files,

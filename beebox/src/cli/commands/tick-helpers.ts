@@ -6,6 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
+  describeScheduleAction,
   isDue,
   isWithinBudget,
 } from "../../schemas/scheduled-script.js";
@@ -16,7 +17,6 @@ import {
   recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
-  loadRunningProcedures,
   loadActiveChats,
   DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule/state.js";
@@ -24,10 +24,10 @@ import type {
   loadScriptState,
   loadRunningScripts,
 } from "../../core/schedule/state.js";
-import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
-import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
+import { fallbackTiming, runAndRecord } from "../../core/schedule/run-action.js";
+import { loadRunningProcedures } from "../../core/schedule/running-procedures.js";
+import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
-import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
@@ -35,7 +35,9 @@ import {
   boxEngineUnavailability,
   classifyScheduleFailure,
   engineWaitReason,
+  type ScheduleOutcomeResult,
 } from "../../core/schedule/engine-wait.js";
+import type { SkipCause } from "../../core/schedule/skip.js";
 import { getBoxTime } from "../../lib/time.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
@@ -108,23 +110,27 @@ interface SkipContext {
   options: TickOptions;
 }
 
+/** A skip: the line to print (empty means "skip silently") and, when recorded, its cause. */
+export interface SkipDecision {
+  line: string;
+  cause?: SkipCause | undefined;
+}
+
 /** Evaluate the pre-run skip gates (due, requires, budget, lock-group).
- * Returns a human-readable reason to skip, or null if the script should run.
- * An empty-string reason means "skip silently".
+ * Returns the skip, or null if the script should run.
  *
  * With `options.force`, the schedule (due-ness) and budget gates are
  * bypassed — but not `enabled: false` (an explicit user statement), not
  * missing connectors (the run would just fail), and not a live lock-group
  * holder (never preempt running work). */
-export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
+export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | null> {
   const { boxRoot, parsed, scriptName, state, now, running, options } = ctx;
+  const say = (text: string, cause?: SkipCause): SkipDecision => ({ line: options.quiet ? "" : `  Skipping ${scriptName}: ${text}`, cause });
 
   if (options.force) {
-    if (!parsed.enabled) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: disabled (enabled: false)`;
-    }
+    if (!parsed.enabled) return say("disabled (enabled: false)");
   } else if (!isDue(parsed, { lastRun: state.lastRun, now })) {
-    return "";
+    return { line: "" };
   }
 
   // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
@@ -133,32 +139,24 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   // the other schedule gates.
   if (!options.force) {
     const engineWait = await boxEngineUnavailability(boxRoot);
-    if (engineWait !== null) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`;
-    }
+    if (engineWait !== null) return say(engineWaitReason(engineWait), { reason: "engine-quota", live: engineWait });
   }
 
   if (parsed.requires) {
     const missing = await checkMissingConnectors(boxRoot, parsed.requires);
-    if (missing.length > 0) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`;
-    }
+    if (missing.length > 0) return say(`missing connectors: ${missing.join(", ")}`, { reason: "missing-connectors", connectors: missing });
   }
 
   if (parsed.budget && !options.force) {
     const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
-    if (!check.allowed) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: budget exceeded (${Math.round(check.usedMs / 1000)}s used)`;
-    }
+    if (!check.allowed) return say(`budget exceeded (${Math.round(check.usedMs / 1000)}s used)`);
   }
 
   if (parsed.lockGroup) {
     const conflict = [...running.entries()].find(
       ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== scriptName
     );
-    if (conflict) {
-      return options.quiet ? "" : `  Skipping ${scriptName}: lock-group "${parsed.lockGroup}" held by ${conflict[0]}`;
-    }
+    if (conflict) return say(`lock-group "${parsed.lockGroup}" held by ${conflict[0]}`);
   }
 
   return null;
@@ -181,27 +179,7 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
 
   await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
 
-  // Handle once: delete the card after success — but only if the script
-  // didn't recreate the file during execution (e.g. archive re-triggering)
-  if (parsed.once) {
-    let shouldDelete = true;
-    try {
-      const postStat = await fs.stat(cardPath);
-      if (postStat.mtimeMs > preRunMtimeMs) {
-        // File was recreated/modified during execution — leave it for next tick
-        shouldDelete = false;
-        if (!options.quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
-      }
-    } catch (_e) {
-      // File already gone — nothing to delete; the stat failure carries
-      // no actionable info since the desired end state (no file) holds.
-      shouldDelete = false;
-    }
-    if (shouldDelete) {
-      await fs.unlink(cardPath);
-      if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
-    }
-  }
+  if (parsed.once) await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: options.quiet === true });
 
   // Commit housekeeping changes (once deletion, createAfterSuccess files).
   // stageAll sweeps the WHOLE tree, so re-check for active chats right
@@ -236,6 +214,21 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
   });
 }
 
+/** A run that did not succeed, as the tick reports it. An inconclusive run is
+ * not an error (its work completed), so it keeps its own status and the tick
+ * summary does not count it as one. */
+function outcomeResult(
+  { scriptName, command, outcome }: { scriptName: string; command: string; outcome: { result: ScheduleOutcomeResult; error: string; durationMs: number } },
+): ScriptResult {
+  return {
+    name: scriptName,
+    status: outcome.result === "inconclusive" ? "inconclusive" : "error",
+    command,
+    durationMs: outcome.durationMs,
+    error: outcome.error,
+  };
+}
+
 interface ExecuteScriptArgs {
   boxRoot: string;
   parsed: ParsedScript;
@@ -254,57 +247,39 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
 
   if (!options.quiet) console.log(`Running ${scriptName}...`);
   // Snapshot mtime before execution so we can detect if the script recreated itself
-  let preRunMtimeMs = 0;
-  try {
-    const stat = await fs.stat(cardPath);
-    preRunMtimeMs = stat.mtimeMs;
-  } catch (_e) {
-    // File may have been deleted between readdir and here; preRunMtimeMs
-    // stays 0 so the post-run recreation check simply treats any later
-    // mtime as a recreation. No actionable error info here.
-  }
+  const preRunMtimeMs = await cardMtimeMs(cardPath);
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
-  const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
   // This script's own span, not the tick's — the deferred classification must
   // not attribute an unavailability detected by an EARLIER script in this
   // tick to this script's unrelated failure.
   const scriptStartedAt = getBoxTime(boxRoot);
+  const command = describeScheduleAction(parsed.action);
   try {
-    // Tooling profile: scheduled `runs:` commands are box tooling (mostly
-    // `bbx wakeup`, which syncs the connectors).
-    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
-      BBX_TRIGGERED_BY: "schedule",
+    const run = await runAndRecord({
+      boxRoot, parsed, scriptName, triggeredBy: "schedule", stdio: options.quiet ? "ignore" : "inherit",
+      state, now, runStartedAt: scriptStartedAt,
     });
-    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
-      cwd: boxRoot,
-      stdio: options.quiet ? "ignore" : "inherit",
-      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
-      env: scriptEnv,
-    });
-
-    recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
-    await saveScriptState({ boxRoot, scriptName, state });
-
+    if (run.result !== "success" && run.deferReason !== undefined) {
+      // The pipeline deferred on purpose (a defer marker): nothing to do this
+      // time. Not an error; the tick log shows it as skipped, with the reason.
+      if (!options.quiet) console.log(`  ${scheduleOutcomeLine(run)}`);
+      return { name: scriptName, status: "skipped", command, durationMs: run.durationMs, error: run.error };
+    }
+    if (run.result !== "success") {
+      if (!options.quiet) console.error(`  ${scheduleOutcomeLine(run)}`);
+      return outcomeResult({ scriptName, command, outcome: run });
+    }
     await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
-
-    return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
+    return { name: scriptName, status: "ran", command, durationMs: run.durationMs };
   } catch (err) {
+    // Post-success housekeeping failed: the run is recorded again as its outcome.
     const { durationMs, sleepAffected } = fallbackTiming(err);
+    const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
     const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
-    if (!options.quiet) {
-      console.error(`  ${scheduleOutcomeLine(outcome)}`);
-    }
-    // An inconclusive run is not an error: its work completed. It gets its own
-    // ScriptResult status so the tick summary doesn't count it as one.
-    return {
-      name: scriptName,
-      status: outcome.result === "inconclusive" ? "inconclusive" : "error",
-      command: parsed.runs,
-      durationMs,
-      error: outcome.error,
-    };
+    if (!options.quiet) console.error(`  ${scheduleOutcomeLine(outcome)}`);
+    return outcomeResult({ scriptName, command, outcome: { ...outcome, durationMs } });
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }

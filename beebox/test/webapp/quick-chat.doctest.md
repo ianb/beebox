@@ -11,7 +11,8 @@ import { setChatRuntime, clearChatRuntime } from "../../src/webapp/chat-runtime.
 import { quickChatRouter } from "../../src/webapp/trpc/routers/quick-chat.js";
 import Fastify from "fastify";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
-import { createFakeJev, JevError } from "../../src/services/jev.js";
+import { createFakeJev } from "../../src/services/jev.js";
+import { JevError } from "../../src/services/jev-wire.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 function caller(boxRoot, jev, authed) {

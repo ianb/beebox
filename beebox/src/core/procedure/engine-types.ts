@@ -140,7 +140,8 @@ export interface ProcedureInconclusive {
  * produced no verdict. A failed run is the `Result` error arm, not this.
  */
 export interface ProcedureOutcome {
-  status: "completed" | "inconclusive";
+  /** `skipped`: every executed step's precheck skipped, so nothing ran and no run was kept. */
+  status: "completed" | "inconclusive" | "skipped";
   /** The procedure this outcome describes, for diagnostics that name it. */
   procedure: string;
   /** Non-empty exactly when `status` is "inconclusive". */

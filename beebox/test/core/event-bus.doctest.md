@@ -46,17 +46,18 @@ const samples = {
   "chat-retranscription": { sessionId: "s1", messageId: "msg-1", newText: "corrected text", service: "whisper", diarized: false, recordedAt: TS },
   "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio", question: "did I say can or cannot?" },
   "voice-recording-status": { recordingId: "rec-1", sessionId: "s1", hq: { state: "queued" }, handoff: { mode: "open" } },
+  "notification": { id: "n1", title: "Call the vet", body: "", target: "chat:new", loudness: "loud", source: "health-alert", url: "/box/chat?new=1&notification=n1" },
 };
 ```
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 21 events, and each parses cleanly against the
+The sample catalog covers all 22 events, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
 Object.keys(samples).length
-=> 21
+=> 22
 
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true

@@ -81,7 +81,7 @@ async function sendThreadOutbound(
     const text = typeof msg.text === "string" ? msg.text.trim() : undefined;
     if (!text) continue;
 
-    const result = await tg.sendMessage(chatId, text);
+    const result = await tg.sendMessage(chatId, { text });
     const sentAt = new Date().toISOString();
 
     await stampSentMessage({

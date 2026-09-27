@@ -35,6 +35,7 @@ where new material goes and how it is named.
 | Secrets: the machine-level store and grants | [secrets](secrets.md) |
 | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
+| Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications](notifications.md) |
 | Event bus | [event-bus](event-bus.md) |
 | Triage: the intake pipeline | [triage](triage.md) |
 | Questions: the question subsystem | [questions](questions.md) |

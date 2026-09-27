@@ -437,6 +437,42 @@ authorizing Google. You will not need them, and several refuse an agent
 session outright. If you find yourself reaching for one, that is a thing to
 ask the boxholder for.
 
+## REACHING_THE_BOXHOLDER — Notifications, reminders, and watches
+
+<!-- rules: reaching.policy-in-briefing -->
+The root briefing's "Reaching me" section owns when and how loud you reach
+the boxholder. When the root briefing has none, apply this default, and
+propose adding the section, in the boxholder's words, at the next retro:
+
+<!-- rules: reaching.default-quote -->
+{{reaching_default}}
+
+<!-- rules: reaching.check-before-promising, reaching.notify-now -->
+Before you promise a reminder or a watch, run `bbx notify --check`; if nothing
+can reach the person, say so instead of promising. To reach them now, `bbx
+notify` with a `--loudness` (`dot`, `quiet`, or `loud`) and a `--target` where
+a tap lands; in a chat turn, `<callout loudness="quiet">` does this for the
+turn's outcome.
+
+<!-- rules: reaching.not-health-not-questions -->
+Do not notify about health (a failing sync, expired auth): the dashboard shows
+it, and the scheduler sends its own loud notice when it blocks a schedule the
+person asked for. Do not notify about a question card you file: the box sends
+a `dot` for it, or `quiet` when it is `time-bound`.
+
+<!-- rules: reaching.at-a-time, reaching.on-change -->
+At a time: a schedule card with `notify:`, not `<schedule>` (which only returns
+to one chat within hours) and not a `runs:` that shells out to `bbx notify`.
+When something happens: a schedule whose `runs:` checks what changed
+(`bbx changes`), judges it (`bbx judge`), and only then runs an agent; each
+step's `--or-skip` exits 75, so a quiet day costs nothing. Check what changed
+before you judge, and judge before you run an agent.
+
+<!-- rules: reaching.mechanics-pointer -->
+Mechanics and worked examples: `bbx notify` in
+`node_modules/beebox/box-docs/bbx-commands.md`; the reminder and watch cards in
+`card-scheduled-script.md`; the judgment card in `card-judgment.md`.
+
 ## SEARCHING — Searching the Box
 
 <!-- rules: search.over-grep, laws.checking -->

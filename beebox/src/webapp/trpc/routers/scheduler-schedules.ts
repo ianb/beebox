@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
+  describeScheduleAction,
   parseScheduledScript,
   isWithinBudget,
   ScheduledScriptSchema,
@@ -115,7 +116,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     onWakeup: parsed.onWakeup,
     notBefore: parsed.notBefore,
     until: parsed.until,
-    runs: parsed.runs,
+    runs: describeScheduleAction(parsed.action),
     lastRun: state.lastRun,
     lastResult: state.lastResult,
     lastError: state.lastError,

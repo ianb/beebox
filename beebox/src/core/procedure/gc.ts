@@ -16,7 +16,7 @@ import { commitPaths, pathsHaveChanges } from "../../lib/git.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
 import { fmt } from "../../lib/format.js";
 import { parseDuration } from "../../schemas/scheduled-script-duration.js";
-import { loadRunningProcedures } from "../schedule/state.js";
+import { loadRunningProcedures } from "../schedule/running-procedures.js";
 import { ok, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
