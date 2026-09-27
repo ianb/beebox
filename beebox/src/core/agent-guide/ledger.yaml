@@ -235,10 +235,10 @@ rows:
     reason: Every card an agent reads or writes depends on it, and an agent that guesses the type from a `type:` key or an XML shape writes cards that do not load.
     audits: [card-type-from-filename, memo-xml-structure, memo-yaml-format]
   - id: about-cards.naming
-    rule: Name a card in `First_Last` form, capitalized words joined by underscores, not dashes or lowercase slugs.
+    rule: Name a card in `First_Last` form, capitalized words joined by underscores, not dashes or lowercase slugs; no two cards in a directory share a basename.
     handle: ABOUT_CARDS
     bin: core
-    reason: Every created card gets a name, and nothing else tells an agent the convention; the example card shows it. The no-duplicate-basename half went with the validation warnings, since the warning names it.
+    reason: Every created card gets a name, and nothing else general tells an agent the convention or the uniqueness rule (Codex review of part A found the basename half had been dropped).
     audits: [card-filename-convention]
   - id: about-cards.title
     rule: "`title:` is the human-readable display title, distinct from the filename."
@@ -380,7 +380,7 @@ rows:
     reason: The raw tools succeed silently while breaking every inbound ref or destroying content, so nothing corrects the agent afterward.
     audits: [move-store-content-uses-bbx-mv, move-card-syntax]
   - id: about-cards.validation
-    rule: Cards validate on load; a warning after an edit says what to fix, and a commit that includes an invalid card is rejected.
+    rule: Cards validate on load; a warning after an edit says what to fix, a commit that includes an invalid card is rejected, and bbx validate is only for re-checking one card while debugging.
     handle: ABOUT_CARDS
     bin: core
     reason: Every edit; it tells the agent a warning is its to fix now, not noise.

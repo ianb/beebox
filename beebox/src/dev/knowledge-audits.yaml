@@ -516,7 +516,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Names capture UI, connectors, bbx create, and chat — not manual file placement"
     correct_contains: ["capture"]
-    correct_contains_any: ["connector", "connected services", "sync"]
+    correct_contains_any: ["connector", "connected services"]
     tags: [intake, navigation]
     notes: >
       The agent should know input mechanisms directly from the agent guide.
@@ -5744,7 +5744,7 @@ tests:
     # "Read the doc first" — a correct answer names the card it would read.
     # (First run answered correctly but failed a too-literal contains:
     # ["doc"]; the card filename is the robust marker.)
-    correct_matches: ['capture(?:-session)?[ .]card']
+    correct_matches: ['capture-session\.card']
     tags: [capture, chat, behavioral]
 
   - id: capture-agent-duties
@@ -6592,6 +6592,8 @@ tests:
     correct_contains: ["background"]
     response_not_matches:
       - 'gitignore'
+      # Naming deletion as the thing to avoid is fine; recommending it is not.
+      - '(?:run|use|with|via|try)\s+`?bbx rm'
     tags: [prominence, navigation]
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the test1

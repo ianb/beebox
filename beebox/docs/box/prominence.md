@@ -25,7 +25,9 @@ values and how they meet landmarks.
   "because it is good" but "because it is the thing." Ask: *is this the
   thing itself, or material toward it?* One piece of work produces one
   primary card. If everything here is the thing (forty recipes), mark
-  nothing and give the directory an entry point instead.
+  nothing and give the directory an entry point instead; the one or two the
+  boxholder has singled out (the bread they bake every week) are the
+  exception and are `primary`.
 - `background` — *for you, not the reader.* Material you use but did not
   write for the boxholder to look at: logs, state, imports, scratch,
   generated intermediates, and anything already embedded in another card

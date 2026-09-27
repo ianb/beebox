@@ -185,7 +185,8 @@ job is in [the house budget](/_content/projects/House_Budget.doc.card).
 
 <!-- rules: about-cards.naming, about-cards.title, about-cards.body-tags -->
 Name a card in **`First_Last`** form: capitalized words joined by underscores
-(`Trip_Report`, `Odette_Marlowe`), not dashes or lowercase slugs. `title:` is
+(`Trip_Report`, `Odette_Marlowe`), not dashes or lowercase slugs; no two cards
+in one directory share a basename. `title:` is
 the human-readable display title, distinct from the filename. The body is
 markdown plus the box's Markdoc tags: `{% quote %}` for the user's verbatim
 words (**THE_LAW_OF_QUOTING**) and `{% source %}` for provenance
@@ -234,7 +235,8 @@ or a plain `.md` dossier. `bbx mv` rewrites every inbound reference and
 <!-- rules: about-cards.validation -->
 Cards validate on load. After you edit one, any problem comes back as a
 warning that says what to fix; it doesn't block the edit, but fix it
-promptly, since a commit that includes an invalid card is rejected.
+promptly, since a commit that includes an invalid card is rejected. You
+rarely run `bbx validate` yourself; only to re-check one card while debugging.
 
 <!-- rules: about-cards.contains-commands, about-cards.create-json-two-step, about-cards.prominence-values, about-cards.theme, about-cards.symbol-colours, about-cards.ref-reach, about-cards.link-fields -->
 Mechanics, in `node_modules/beebox/box-docs/`: `bbx-commands.md` for
