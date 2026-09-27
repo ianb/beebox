@@ -81,5 +81,5 @@ changed=$(
 # second, and a backgrounded build racing the box child's one-second poll would
 # offer it a half-written bundle to re-exec on.
 echo "[cli-build] beebox CLI sources changed; rebuilding dist/cli.mjs..."
-( cd "$REPO_DIR/beebox" && node src/scripts/build-cli/build.ts >/dev/null )
+( cd "$REPO_DIR/beebox" && node src/scripts/build-cli/build/bundle.ts >/dev/null )
 echo "[cli-build] Rebuilt — running box children reload themselves within ~1s (once their chats go idle)."

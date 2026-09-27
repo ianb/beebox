@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { buildGraphExtended, ROOT } from "../doc-graph-data.js";
+import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
 import { duplicateBasenames, buildBasenameLookup, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
 import { frontmatterProblems } from "./frontmatter.js";

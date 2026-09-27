@@ -5,9 +5,9 @@ with both coordinates — skipping coordless/half-set drafts, archived/inactive
 places, and unparseable cards. `bbx location get` then names the matched place.
 
 ```ts setup
-import { loadPlaces } from "../src/core/place-cards.js";
-import { matchPlace } from "../src/core/geo.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { loadPlaces } from "../../src/core/place-cards.js";
+import { matchPlace } from "../../src/core/geo.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const place = (name, extra) => `---\nstatus: active\nname: ${name}\n${extra}---\nbody\n`;
 ```

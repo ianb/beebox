@@ -20,7 +20,7 @@ import { execa } from "execa";
 
 import { kindForPath } from "../document-read.js";
 import type { DocumentKind } from "../../shared/documents.js";
-import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "../../../../beebox/src/dev/document-lifecycle.js";
+import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "../../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 
 export interface IndexedPath {
   relPath: string;

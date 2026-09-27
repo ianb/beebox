@@ -5,7 +5,7 @@ Pure presentation given a `now`: the one-line form the CLI prints, and the
 (1 hour) is flagged `[stale]` but still reported.
 
 ```ts setup
-import { formatLocationLine, locationAge } from "../src/core/location-format.js";
+import { formatLocationLine, locationAge } from "../../src/core/location-format.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 20.4, capturedAt: "2026-06-29T12:00:00.000Z", source: "web" };
 ```

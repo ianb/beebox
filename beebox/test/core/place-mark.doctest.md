@@ -7,11 +7,11 @@ frontmatter keys.
 
 ```ts setup
 import { symlink, mkdir } from "node:fs/promises";
-import { applyMark, markPlace } from "../src/core/place-mark.js";
-import { saveLocation } from "../src/core/location-store.js";
-import { loadPlaces } from "../src/core/place-cards.js";
-import { matchPlace } from "../src/core/geo.js";
-import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { applyMark, markPlace } from "../../src/core/place-mark.js";
+import { saveLocation } from "../../src/core/location-store.js";
+import { loadPlaces } from "../../src/core/place-cards.js";
+import { matchPlace } from "../../src/core/geo.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 18 };
 const stored = (fix, capturedAt) => ({ ...fix, capturedAt, source: "web" });

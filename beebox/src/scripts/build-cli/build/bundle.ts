@@ -16,7 +16,7 @@ import { buildPublicationWorker } from "./pub-worker.mjs";
 import { copyFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-const root = join(import.meta.dirname, "..", "..", "..");
+const root = join(import.meta.dirname, "..", "..", "..", "..");
 const distDir = join(root, "dist");
 const tmpDir = join(distDir, `.build-${process.pid}`);
 

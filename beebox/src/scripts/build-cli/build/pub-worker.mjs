@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const root = path.join(scriptDir, "..", "..", "..");
+const root = path.join(scriptDir, "..", "..", "..", "..");
 
 export async function buildPublicationWorker() {
   await build({

@@ -37,7 +37,7 @@ await write(
 );
 // The build entry lives in an ordinary `src/` module, not a `scripts/`
 // directory — the scanner finds a `build({...})` call in any module of the
-// package, the same way `beebox/src/scripts/build-cli/build.ts` (not
+// package, the same way `beebox/src/scripts/build-cli/build/bundle.ts` (not
 // `beebox/scripts/`) builds the `./view-widgets` surface.
 const buildScriptPath = "pkg/src/build-cli/build.ts";
 await write(
