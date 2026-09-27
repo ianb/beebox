@@ -8,8 +8,8 @@ are excluded, while loose files and orphaned attachment directories stay visible
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
-import { scanBoxInventory } from "../src/core/box-inventory.js";
-import { scanBoxRepositoryStats } from "../src/core/box-repository-stats.js";
+import { scanBoxInventory } from "../src/core/box-inventory/core.js";
+import { scanBoxRepositoryStats } from "../src/core/box-inventory/repository-stats.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const box = await makeTmpBox();

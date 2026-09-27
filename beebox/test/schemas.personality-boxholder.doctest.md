@@ -8,7 +8,7 @@ resulting "Your boxholder is …" line into the agent guide.
 
 ```ts setup
 import { compilePersonality } from "../src/schemas/personality/schema.js";
-import { loadBoxholders } from "../src/core/boxholder-cards.js";
+import { loadBoxholders } from "../src/core/docs-gen/config-cards/boxholder-cards.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const base = { type: "personality", version: "1.0.0", body: "" } as const;

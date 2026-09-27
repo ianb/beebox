@@ -15,13 +15,13 @@ retry of its message id is answered from a claim nobody will ever settle.
    never resolve.
 
 ```ts setup
-import { ChatSession } from "../../src/core/chat/session/index.js";
+import { ChatSession } from "../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { captureTurn, startAckedRun } from "../../src/webapp/routes/chat-send-run.js";
 import { getTurnBuffer } from "../../src/core/chat/turn-buffer.js";
-import type { BusEvent } from "../../src/core/event-bus.js";
+import type { BusEvent } from "../../src/core/event-bus/core.js";
 
 /** Poll until the turn buffer reports an error frame (or give up). */
 async function awaitTurnError(turnId: string): Promise<string> {

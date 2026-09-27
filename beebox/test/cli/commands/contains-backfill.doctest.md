@@ -16,9 +16,9 @@ refresh indefinitely. The last section here pins them apart.
 ```ts setup
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../src/cli/commands/wakeup-steps.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { searchBox } from "../../../src/core/search/query.js";
+import { searchBox } from "../../../src/core/search/query/core.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
-import { searchLockPath } from "../../../src/core/search/search-store.js";
+import { searchLockPath } from "../../../src/core/search/store.js";
 
 const MEMO = (text: string) =>
   "---\ncreated: 2026-05-22T10:00:00Z\n---\n" + text + "\n";

@@ -8,7 +8,7 @@ assert the message, not just that it threw.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box/index.js";
+import { initBox } from "../../../src/core/box/structure/core.js";
 import {
   createFakeGoogleDrive,
   type DriveFile,

@@ -7,7 +7,7 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { transcribeAudioVoxtral } from "../core/transcription/voxtral.js";
+import { transcribeAudioVoxtral } from "../core/transcription/voxtral/core.js";
 
 async function main(): Promise<void> {
   const file = process.argv[2] ?? path.join(

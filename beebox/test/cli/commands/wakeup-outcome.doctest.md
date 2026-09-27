@@ -15,7 +15,7 @@ import {
   WAKEUP_OUTCOME_PREFIX,
   parseWakeupOutcome,
 } from "../../../src/cli/commands/wakeup-outcome.js";
-import { wakeupSatisfiedScanPromote } from "../../../src/core/scan/promote-wakeup.js";
+import { wakeupSatisfiedScanPromote } from "../../../src/core/scan/promote/wakeup.js";
 
 const line = (report) => WAKEUP_OUTCOME_PREFIX + JSON.stringify(report);
 const healthy = { connectorErrors: 0, connectors: [], reactorOk: true, reactorSkipped: false, jobsProcessed: 1, jobsRemaining: 0 };

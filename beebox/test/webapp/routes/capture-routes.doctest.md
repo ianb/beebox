@@ -10,7 +10,7 @@ here we test the route boundary only.)
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
-import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
+import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 

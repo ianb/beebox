@@ -24,7 +24,7 @@
 
 import { z } from "zod";
 import { findJobCards } from "../core/reactor/job-discovery.js";
-import { listStagingSessions } from "../core/capture/staging-store.js";
+import { listStagingSessions } from "../core/capture/staging-store/core.js";
 import { isBulkSession } from "../core/capture/staging-schema.js";
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
 import { sleep } from "../lib/sleep.js";

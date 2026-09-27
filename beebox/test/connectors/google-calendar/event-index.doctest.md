@@ -11,7 +11,7 @@ for why the separator is a space and why the calendar id comes last.
 import { join } from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box/index.js";
+import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeGoogleCalendar } from "../../../src/services/google-calendar/core.js";
 import type {
   CalendarEvent,

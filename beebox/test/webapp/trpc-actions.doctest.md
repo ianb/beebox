@@ -6,6 +6,7 @@ delegates to the shared command, then emits a bus event so live surfaces
 refresh. A command failure surfaces as a `BAD_REQUEST` TRPCError.
 
 ```ts setup
+import "../../src/core/commands.js";
 import { actionsRouter } from "../../src/webapp/trpc/routers/actions.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

@@ -6,7 +6,7 @@ appeared. Deletion still wins over that live entry.
 
 ```ts setup
 import { once } from "node:events";
-import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
+import { ChatSessionRegistry } from "../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { assertExactSessionTarget } from "../../src/webapp/routes/chat-send-target.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";

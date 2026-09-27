@@ -23,7 +23,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { t as tap } from "tap";
 import { detectBoxTarget, scaffoldPackageRoot } from "../src/core/box/package.js";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../src/core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../src/core/box/structure/core.js";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { signSession } from "../src/webapp/auth.js";
 

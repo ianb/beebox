@@ -22,7 +22,7 @@
 
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
-import { emitBodyAsMarkdown } from "../core/markdoc/emit.js";
+import { emitBodyAsMarkdown } from "../core/markdoc/emit/core.js";
 import { displayFromRef } from "../core/markdoc/emit-tags.js";
 
 const KeyPersonEntry = z.object({

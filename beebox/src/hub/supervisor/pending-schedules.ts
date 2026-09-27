@@ -13,7 +13,7 @@
  * the hub's notion of "pending" can never drift from what serve would fire.
  */
 
-import { loadChatSchedules } from "../../core/chat/schedules.js";
+import { loadChatSchedules } from "../../core/chat/schedules/core.js";
 import { describeError } from "../child-process-utils.js";
 import { requireBoxRoot } from "../../lib/box-shape.js";
 

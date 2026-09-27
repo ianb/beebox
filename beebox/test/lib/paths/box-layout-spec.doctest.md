@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/paths/box-layout-spec.js";
 import { BOX_ROOT_VOCABULARY } from "../../../src/lib/box-root-vocabulary.js";
 import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/lib/paths/core.js";
-import { directoryLayoutRows } from "../../../src/core/agent-guide/box-shape.js";
+import { directoryLayoutRows } from "../../../src/core/agent-guide/guide/box-shape.js";
 
 const keyedEntries = BOX_LAYOUT.filter((entry) => entry.boxDirsKey !== undefined);
 const boxLayoutDoc = await fs.readFile(new URL("../../../docs/box-layout.md", import.meta.url), "utf-8");

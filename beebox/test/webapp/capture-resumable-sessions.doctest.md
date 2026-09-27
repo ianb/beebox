@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
-import { createStagingSession, addPhoto, setStagingState, listStagingSessions } from "../../src/core/capture/staging-store.js";
+import { createStagingSession, addPhoto, setStagingState, listStagingSessions } from "../../src/core/capture/staging-store/core.js";
 import { selectResumableCaptures } from "../../src/core/capture/pending.js";
 
 async function addPhotoTo(boxRoot, id) {

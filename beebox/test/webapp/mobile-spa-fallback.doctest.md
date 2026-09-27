@@ -14,7 +14,7 @@ upgrade, which the browser API cannot attach headers to).
 import Fastify from "fastify";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
-import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/session.js";
 import { TEST_FRONTEND_PATH } from "../helpers/test-server.js";
 import { registerSpaFallback } from "../../src/webapp/server-root.js";
 

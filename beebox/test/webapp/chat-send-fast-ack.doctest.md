@@ -11,8 +11,8 @@ every retry timer behind it) used to spend that whole window pending.
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { getTurnBuffer } from "../../src/core/chat/turn-buffer.js";
-import { ChatSession } from "../../src/core/chat/session/index.js";
-import type { BusEvent } from "../../src/core/event-bus.js";
+import { ChatSession } from "../../src/core/chat/session/run/core.js";
+import type { BusEvent } from "../../src/core/event-bus/core.js";
 
 /**
  * Hold every `ChatSession.send()` open at its first instruction — the stand-in

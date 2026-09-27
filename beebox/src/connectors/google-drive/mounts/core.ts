@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { invariant } from "../../../lib/invariant.js";
 import { stageAndCommitPaths } from "../../../lib/git/core.js";
 import { triggeredByTrailer } from "../../../shared/commit-trailers.js";
-import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash.js";
+import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash/command.js";
 import { createCliContext } from "../../../core/command-runner.js";
 import type { DriveFile, GoogleDriveService } from "../../../services/google-drive/core.js";
 import { extractDriveFileId } from "../types.js";

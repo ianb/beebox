@@ -27,7 +27,7 @@ comment — never widen this by reverting to a `process.env` spread.
 
 The same posture applies one level down: what a box's *own* subprocesses
 (agents, tricks, scheduled scripts) inherit from the `bbx serve` child is
-`src/core/script-env-allowlist.ts`, whose agent profile additionally withholds
+`src/core/script-env/allowlist.ts`, whose agent profile additionally withholds
 every connector credential. Keep the two lists' overlapping entries in sync by
 hand.
 

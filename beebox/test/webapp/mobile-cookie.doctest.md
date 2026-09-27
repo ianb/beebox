@@ -16,7 +16,7 @@ import * as path from "node:path";
 import fastifyCookie from "@fastify/cookie";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket, revokeMobileDevice } from "../../src/core/mobile/pairing.js";
-import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession, verifyMobileSession } from "../../src/core/mobile/mobile-session.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession, verifyMobileSession } from "../../src/core/mobile/session.js";
 import { resolveMobileRequestAuth } from "../../src/core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "../../src/webapp/mobile-cookie.js";
 import { registerPairingRoutes } from "../../src/webapp/routes/pairing.js";

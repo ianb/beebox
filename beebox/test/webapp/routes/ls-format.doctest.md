@@ -9,6 +9,7 @@ render as the empty string. Each formatted line is `<relative-path>\t<rendered>`
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import "../../../src/core/commands.js";
 import { executeCommandStreaming } from "../../../src/webapp/routes/commands.js";
 
 async function lsLines(boxRoot, args) {

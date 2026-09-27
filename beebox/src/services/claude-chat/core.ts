@@ -32,7 +32,7 @@ import {
   allocateSessionIdFilePath,
   cleanupSessionIdFile,
   writeSessionIdFile,
-} from "../../core/chat/session/session-id-file.js";
+} from "../../core/chat/session/id-file.js";
 import { toSdkUserContent } from "../claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
 import { createCodexChatBackend } from "./codex-chat.js";

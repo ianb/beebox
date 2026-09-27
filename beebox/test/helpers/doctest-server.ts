@@ -11,7 +11,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
 import type { FastifyInstance } from "fastify";
-import type { EventBus } from "../../src/core/event-bus.js";
+import type { EventBus } from "../../src/core/event-bus/core.js";
 import { createTestServer, TEST_SLUG, type TestServerOptions } from "./test-server.js";
 
 export { TEST_SLUG } from "./test-server.js";

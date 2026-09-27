@@ -26,9 +26,9 @@ import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { createInFlightSends } from "../../src/webapp/routes/chat-send-dedup.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
-import { createEventBus, type BusEvent } from "../../src/core/event-bus.js";
+import { createEventBus, type BusEvent } from "../../src/core/event-bus/core.js";
 import { createServer } from "../../src/webapp/server.js";
-import { ChatSession } from "../../src/core/chat/session/index.js";
+import { ChatSession } from "../../src/core/chat/session/run/core.js";
 
 /**
  * Hold every `ChatSession.send()` open at its first instruction — the window in

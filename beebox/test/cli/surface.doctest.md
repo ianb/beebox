@@ -10,8 +10,8 @@ agent's surface in the first place. These tests are that gate.
 import { buildProgram } from "../../src/cli/program.js";
 import { SURFACE } from "../../src/cli/surface-data.js";
 import { VERB_COMMANDS } from "../../src/cli/surface-commands.js";
-import { bbxCommandsScheduling } from "../../src/core/docs-gen/bbx-commands-scheduling.js";
-import { bbxCommandsConnectors } from "../../src/core/docs-gen/bbx-commands-connectors.js";
+import { bbxCommandsScheduling } from "../../src/core/docs-gen/package-docs/bbx-commands-scheduling.js";
+import { bbxCommandsConnectors } from "../../src/core/docs-gen/package-docs/bbx-commands-connectors.js";
 
 const program = buildProgram();
 const subNames = (command) =>

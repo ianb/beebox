@@ -10,7 +10,7 @@
  * current; one line when it wrote; fails when it cannot write.
  */
 
-import { ensurePackageDocs } from "../core/docs-gen/package-docs.js";
+import { ensurePackageDocs } from "../core/docs-gen/package-docs/core.js";
 import { assertNever } from "../lib/invariant.js";
 
 const result = await ensurePackageDocs();

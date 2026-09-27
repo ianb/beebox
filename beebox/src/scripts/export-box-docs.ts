@@ -10,7 +10,7 @@
  * index excluded — the site builds its own.
  */
 
-import { docsFingerprint, engineDocEntries, engineDocs } from "../core/docs-gen/package-docs.js";
+import { docsFingerprint, engineDocEntries, engineDocs } from "../core/docs-gen/package-docs/core.js";
 
 const entries = engineDocEntries();
 const out = {

@@ -8,7 +8,7 @@ deleting it stops tracking without changing Gmail.
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box/index.js";
+import { initBox } from "../../../src/core/box/structure/core.js";
 import { createEmailThreadTemplate } from "../../../src/schemas/email-thread.js";
 import { errorMessage } from "../../../src/lib/error-guards.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";

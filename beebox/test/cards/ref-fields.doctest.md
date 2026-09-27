@@ -104,7 +104,7 @@ opaque body's bytes never do. This is the closest feasible equivalent of the
 plan's before/after prompt diff — the exact prompt text is asserted below.
 
 ```ts setup
-import { buildJobDescription } from "../../src/core/reactor/batch-jobs.js";
+import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

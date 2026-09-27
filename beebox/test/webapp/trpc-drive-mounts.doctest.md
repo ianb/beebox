@@ -13,7 +13,7 @@ The Drive service is injected the way every service is in a tRPC test — throug
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box/index.js";
+import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../src/services/google-drive/core.js";
 // Importing the connector registers the docs/sheets handlers — that is what
 // makes a Doc or Sheet child syncable rather than pointer-only.

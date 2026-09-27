@@ -21,7 +21,7 @@ import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { createFirstUser, setPassword } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
-import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/session.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";

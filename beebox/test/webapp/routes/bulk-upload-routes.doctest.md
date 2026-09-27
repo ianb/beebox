@@ -10,7 +10,7 @@ full prepare→deliver worker (retry, at-most-once, reconciliation) is covered i
 ```ts setup
 import { createHash } from "node:crypto";
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import { readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
+import { readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
 

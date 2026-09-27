@@ -6,7 +6,7 @@ cards unless a thread is already tracked or a bounded rule selects it.
 ```ts setup
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { initBox } from "../../src/core/box/index.js";
+import { initBox } from "../../src/core/box/structure/core.js";
 import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
 import { trackGmailThread } from "../../src/connectors/gmail/track.js";
 import { findTrackedGmailThreads } from "../../src/connectors/gmail/tracking.js";

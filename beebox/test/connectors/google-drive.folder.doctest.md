@@ -7,7 +7,7 @@ the fake Drive service.
 
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box/index.js";
+import { initBox } from "../../src/core/box/structure/core.js";
 import {
   createFakeGoogleDrive,
   type DriveFile,
@@ -26,7 +26,7 @@ import {
   type ResolvedChild,
 } from "../../src/connectors/google-drive/folder-plan.js";
 import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
-import { moveCardsToTrash } from "../../src/core/commands/trash.js";
+import { moveCardsToTrash } from "../../src/core/commands/trash/command.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
 

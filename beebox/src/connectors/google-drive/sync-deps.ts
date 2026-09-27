@@ -9,7 +9,7 @@
  */
 
 import type { GoogleDriveService } from "../../services/google-drive/core.js";
-import { moveCardsToTrash } from "../../core/commands/trash.js";
+import { moveCardsToTrash } from "../../core/commands/trash/command.js";
 import type { CommandContext } from "../../core/command-runner.js";
 import { syncDriveFile } from "./file-sync.js";
 import type { FolderSyncDeps } from "./folder-types.js";

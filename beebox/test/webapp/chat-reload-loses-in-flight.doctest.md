@@ -23,7 +23,7 @@ gap are pinned before anything moves
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
-import type { BusEvent } from "../../src/core/event-bus.js";
+import type { BusEvent } from "../../src/core/event-bus/core.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 

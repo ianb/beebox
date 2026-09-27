@@ -10,9 +10,9 @@ write, and both mutations are idempotent by `(recordingId, emissionId)`.
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createEventBus } from "../../src/core/event-bus.js";
-import { createStagingSession } from "../../src/core/capture/staging-store.js";
-import { sealVoiceSession, applyVoiceEvent } from "../../src/core/voice-recording/voice-staging.js";
+import { createEventBus } from "../../src/core/event-bus/core.js";
+import { createStagingSession } from "../../src/core/capture/staging-store/core.js";
+import { sealVoiceSession, applyVoiceEvent } from "../../src/core/voice-recording/voice-staging/core.js";
 
 function caller(box, opts) {
   return appRouter.createCaller({

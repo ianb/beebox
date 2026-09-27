@@ -8,7 +8,7 @@ available to transcript administration.
 import { globSync } from "glob";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { resultFromCodexTurn } from "../../src/core/agent/codex-run-result.js";
+import { resultFromCodexTurn } from "../../src/core/agent/codex-run/result.js";
 import { prepareCodexEnvironment } from "../../src/services/codex-sdk-session/core.js";
 
 function importers(fragment: string): string[] {

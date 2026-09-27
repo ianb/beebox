@@ -9,7 +9,7 @@ the history machinery — and the gate that honors it is fail-closed.
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { initBox } from "../../src/core/box/index.js";
+import { initBox } from "../../src/core/box/structure/core.js";
 import { createGmailConnector } from "../../src/connectors/gmail/connector.js";
 import { runConnectors } from "../../src/cli/commands/wakeup-connectors.js";
 import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake/core.js";

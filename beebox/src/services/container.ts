@@ -17,7 +17,7 @@ import type { GoogleGmailService } from "./google-gmail/core.js";
 import type { TtsService } from "./tts.js";
 import type { EmbeddingsService } from "./openai-embeddings.js";
 import type { GoogleDriveService } from "./google-drive/core.js";
-import type { WakeupRunner } from "../core/commands/wakeup-runner.js";
+import type { WakeupRunner } from "../core/wakeup-runner.js";
 import type { GwsRunner } from "../connectors/gmail/gws.js";
 import type { FetchLike } from "../core/secrets/probe-registry.js";
 import type { CloudflarePublishTokenVerifier } from "./cloudflare-publish-token-verifier.js";

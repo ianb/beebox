@@ -21,7 +21,7 @@ message.
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { getTurnBuffer } from "../../src/core/chat/turn-buffer.js";
-import type { BusEvent } from "../../src/core/event-bus.js";
+import type { BusEvent } from "../../src/core/event-bus/core.js";
 
 /**
  * The response arrives before the run does, so the error frame lands a moment

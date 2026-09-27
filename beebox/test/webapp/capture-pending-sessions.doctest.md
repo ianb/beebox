@@ -9,7 +9,7 @@ staging manifests via `listStagingSessions` and filters with `selectPendingCaptu
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { createStagingSession, addPhoto, setStagingState } from "../../src/core/capture/staging-store.js";
+import { createStagingSession, addPhoto, setStagingState } from "../../src/core/capture/staging-store/core.js";
 
 // Minimal tRPC context — pendingSessions only reads ctx.boxRoot.
 function caller(boxRoot) {

@@ -10,7 +10,7 @@ can't clobber each other's progress.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box/index.js";
+import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeTelegram } from "../../../src/services/telegram.js";
 import { createTelegramConnector, processWebhookUpdate } from "../../../src/connectors/telegram/connector.js";
 import { telegramSecretName } from "../../../src/connectors/telegram/helpers.js";

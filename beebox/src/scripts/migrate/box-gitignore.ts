@@ -35,7 +35,7 @@
 import { execFile } from "node:child_process";
 import * as path from "node:path";
 import { promisify } from "node:util";
-import { writeBoxGitignore } from "../../core/box/index.js";
+import { writeBoxGitignore } from "../../core/box/structure/core.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { errorMessage } from "../../lib/error-guards.js";
 

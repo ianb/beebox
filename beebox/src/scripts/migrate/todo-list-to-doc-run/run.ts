@@ -30,7 +30,7 @@ import { join, relative, resolve } from "node:path";
 import { errorMessage, errnoCode } from "../../../lib/error-guards.js";
 import { WarningCollector } from "../_warnings.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../../core/list-cards.js";
-import { rewriteReferrerRefs, rewriteViewRefs, type Remap } from "../../../core/rewrite-card-refs.js";
+import { rewriteReferrerRefs, rewriteViewRefs, type Remap } from "../../../core/rewrite-card-refs/core.js";
 import { convertTodoListCard } from "./convert.js";
 
 const SKIP_DIRS = new Set([".git", "node_modules"]);

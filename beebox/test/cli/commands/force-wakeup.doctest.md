@@ -16,7 +16,7 @@ of this path with nothing to verify.
 import { makeTestServer, TEST_SLUG } from "../../helpers/doctest-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { forceWakeup, forceWakeupLines } from "../../../src/cli/commands/force-wakeup.js";
-import type { WakeupRunner, WakeupRunResult } from "../../../src/core/commands/wakeup-runner.js";
+import type { WakeupRunner, WakeupRunResult } from "../../../src/core/wakeup-runner.js";
 import type { WakeupOutcomeReport } from "../../../src/cli/commands/wakeup-outcome.js";
 
 /** What the connector step of a clean scoped run looks like. */

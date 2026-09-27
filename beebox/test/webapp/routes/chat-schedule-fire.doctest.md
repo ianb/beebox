@@ -14,9 +14,9 @@ the fake scripts it via `emitResult({ isError: true })`.
 
 ```ts setup
 import { fireChatSchedule } from "../../../src/webapp/routes/chat-schedule-fire.js";
-import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
+import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { setMostActive } from "../../../src/core/chat/session/history.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";

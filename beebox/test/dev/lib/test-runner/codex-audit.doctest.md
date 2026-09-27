@@ -6,8 +6,8 @@ existing path-oriented checks to work without inventing a Claude-style Read tool
 
 ```ts setup
 import { codexBehaviorFromActivity } from "../../../../src/dev/lib/test-runner/codex-audit.js";
-import { emitObservedActivity } from "../../../../src/core/agent/codex-run-activity.js";
-import type { CodexObservedActivity } from "../../../../src/core/agent/codex-run-activity.js";
+import { emitObservedActivity } from "../../../../src/core/agent/codex-run/activity.js";
+import type { CodexObservedActivity } from "../../../../src/core/agent/codex-run/activity.js";
 
 const behavior = codexBehaviorFromActivity([
   { type: "command", command: "sed -n '1,80p' node_modules/beebox/box-docs/card-image.md" },

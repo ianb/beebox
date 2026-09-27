@@ -6,12 +6,12 @@ Tests for the Google Drive connector using fake services.
 import { join } from "node:path";
 import { readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box/index.js";
+import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive } from "../../src/services/google-drive/core.js";
 import { createFakeGoogleAuth } from "../../src/services/google-auth.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";
-import { moveCardsToTrash } from "../../src/core/commands/trash.js";
-import { createCliContext } from "../../src/core/commands/index.js";
+import { moveCardsToTrash } from "../../src/core/commands/trash/command.js";
+import { createCliContext } from "../../src/core/command-runner.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
 import { createGdocTemplate } from "../../src/schemas/gdoc.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";

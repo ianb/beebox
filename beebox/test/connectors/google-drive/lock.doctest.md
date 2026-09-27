@@ -8,7 +8,7 @@ does nothing about the duplicated work, so the span itself is exclusive.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box/index.js";
+import { initBox } from "../../../src/core/box/structure/core.js";
 import { inspectLock } from "../../../src/lib/file-lock.js";
 import { withDriveMirrorLock } from "../../../src/connectors/google-drive/lock.js";
 import { mountDriveFolder } from "../../../src/connectors/google-drive/mounts/core.js";
