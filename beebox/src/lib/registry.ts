@@ -13,6 +13,12 @@
  * the layout check verifies each key is the member's file or directory
  * name. Either way a duplicate key throws here, at construction, so the
  * first import of a registry in any test or at server start catches it.
+ *
+ * `M` is always written out at the call site (`defineRegistry<Command>({...})`),
+ * never left to infer: inferring it from a mismatched member list would
+ * silently widen `M` to their union instead of catching the mismatch. The
+ * `NoInfer<M>` wrapper on the parameter blocks that inference, so an
+ * omitted `<M>` defaults to `never` and any real member fails to typecheck.
  */
 
 export class DuplicateRegistryKeyError extends Error {
@@ -59,7 +65,7 @@ function isListSpec<M>(spec: RegistrySpec<M>): spec is ListRegistrySpec<M> {
   return "key" in spec;
 }
 
-export function defineRegistry<M>(spec: RegistrySpec<M>): Registry<M> {
+export function defineRegistry<M = never>(spec: RegistrySpec<NoInfer<M>>): Registry<M> {
   const entries: Array<[string, M]> = isListSpec(spec)
     ? spec.members.map((member) => [spec.key(member), member])
     : Object.entries(spec.members);

@@ -4,6 +4,11 @@
 The call declares the set for the layout check and keys the members at
 construction, so a duplicate key fails on the first import.
 
+Every call below writes `<M>` explicitly. Omitting it is a compile error
+(`defineRegistry({...})` with no type argument fails to typecheck, since `M`
+defaults to `never`), which a doctest cannot express — verified by hand with
+`pnpm exec tsc --noEmit -p tsconfig.json` in `beebox/`.
+
 ```ts setup
 import { defineRegistry } from "../../src/lib/registry.js";
 

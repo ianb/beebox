@@ -26,8 +26,14 @@ import edges and unit computation, which a one-liner cannot do.
 | 3. Rules as a registry-fed set: `sets`, `units`, `names`, `tests` | ~420 | ~260 |
 | 4. Report, CLI, `pnpm layout-check`, pre-commit report mode | ~140 | ~40 |
 
-About 1,350 lines. Not a BIG CHANGE. The moves are step 4 and are sized
-separately from this script's first report.
+Estimated about 1,350 lines. **BIG CHANGE (actual):** the committed check
+is about 4,400 lines: about 2,400 source and 2,000 doctest. What drove it:
+the scanner (six modules, about 900 lines) handles import forms, aliases,
+doctest generation, registry extraction, and build-entry parsing the estimate
+treated as one pass; each rule's doctest covers every finding plus clean
+cases against fixture trees. Recorded for the boxholder's review
+2026-09-27. The moves are step 4 and are sized separately from this
+script's first report.
 
 ## Stated preferences this plan trades against
 
@@ -39,7 +45,7 @@ separately from this script's first report.
   and every rule take an in-memory `Layout` model, so doctests build small
   trees under a temp directory and never depend on the real tree.
 - *Bias toward strict*: the script exits nonzero on any finding. Report mode
-  is a pre-commit flag (`--changed --report`) during the move window only.
+  mode (`--report`) exists for the move window only.
 
 ## What already exists
 
@@ -56,8 +62,9 @@ separately from this script's first report.
   the check parses that for a test's imports.
 - `src/dev/doc-check.ts` is the shape of a dev script run by pre-commit
   (`.husky/pre-commit:93`): prints nothing on success, exits 1 on findings.
-- `bin/lint-changed.ts` reads the staged file list; `--changed` reuses the
-  same `git diff --cached --name-only`.
+- `bin/lint-changed.ts` reads the staged file list. Not reused: the check
+  has no changed-files mode (see *Failure modes*), so it needs no staged
+  list.
 
 ## Prior art (external)
 
@@ -96,8 +103,8 @@ small part of the same pass.
    and the name-repeats-directory check), `names.ts` (6), `tests.ts` (8),
    and the registry `check/rules.ts`.
 4. `src/dev/layout/check/cli.ts`: `--root <pkg>` (repeatable; default: every
-   package root with a `src/`), `--changed` (only directories with staged
-   files), `--report` (exit 0). `pnpm layout-check` in `beebox/package.json`.
+   package root with a `src/`), `--summary` (counts per rule and area),
+   `--report` (exit 0). `pnpm layout-check` in `beebox/package.json`.
    Pre-commit wiring comes with the move plan, when the tree passes.
 
 ## Could this be simpler?
@@ -112,6 +119,12 @@ None.
 
 ## Failure modes
 
+- **A changed-files mode would miss findings.** A staged change in one
+  directory can create a finding in another: a new importer under
+  `shared/a/` makes `shared/util.ts` a helper used only under `shared/a/`.
+  Filtering findings to staged directories drops that one (cross-model
+  review, 2026-09-27). The check has no such mode; it scans every package
+  root, about 3 seconds for the whole repo.
 - **A specifier the resolver cannot map.** Reported as its own finding
   (`unresolved-import`) rather than silently dropped, so a missing alias is
   visible instead of hiding a rule breach.
@@ -125,8 +138,8 @@ None.
 
 ## Agent-flow / user-flow edge cases
 
-- An agent stages one new helper in a set directory: `--changed` scopes to
-  that directory and reports the rule 1 breach with the two fixes (register
+- An agent stages one new helper in a set directory: pre-commit runs the
+  whole check and reports the rule 1 breach with the two fixes (register
   it, or move it to the unit that imports it).
 - An agent adds a `defineRegistry` member but forgets the file: the stale
   import is reported by name.
@@ -152,7 +165,7 @@ Not applicable (dev tooling).
 
 ## What will hold this after it ships
 
-Pre-commit runs `layout-check --changed` on every commit touching a module or
+Pre-commit runs the whole `layout-check` on every commit touching a module or
 test once the tree is clean (move plan). `test/dev/layout/` doctests cover
 each rule against fixture trees.
 

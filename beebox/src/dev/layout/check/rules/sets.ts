@@ -229,22 +229,25 @@ function memberImportsRegistryFindings({ layout, decls, owners }: MemberImportsR
 
 const REGISTER_CALL = /(^|\.)register[A-Z]/;
 
-/** True when `callee`'s root identifier (`a` for `a.b.registerX`) is bound by an external import. */
-function isExternalRegistrationCallee(module: ModuleFile, callee: string): boolean {
+/** True when `callee`'s root identifier (`a` for `a.b.registerX`) is bound by an import from
+ * another file inside this package (not an external package, and not a global or a same-file
+ * function, which are bound by no import at all). */
+function isInternalRegistrationCallee(module: ModuleFile, callee: string): boolean {
   const dot = callee.indexOf(".");
   const root = dot === -1 ? callee : callee.slice(0, dot);
-  return module.imports.some((edge) => edge.external && edge.names.includes(root));
+  return module.imports.some((edge) => !edge.external && edge.names.includes(root));
 }
 
-/** Finding 7 (side-effect-registration): a module that registers itself at import using a
- * registration function this package owns (not an external package's own API). */
+/** Finding 7 (side-effect-registration): a module that calls, at import, a registration
+ * function it imported from elsewhere in this package. A global (e.g. the AudioWorklet
+ * `registerProcessor`) or a same-file function is bound by no import, not self-registration. */
 function sideEffectRegistrationFindings(layout: PackageLayout): Finding[] {
   const findings: Finding[] = [];
   for (const module of modules(layout)) {
-    const registersOwnFunction = module.topLevelCalls.some(
-      (callee) => REGISTER_CALL.test(callee) && !isExternalRegistrationCallee(module, callee),
+    const registersImportedFunction = module.topLevelCalls.some(
+      (callee) => REGISTER_CALL.test(callee) && isInternalRegistrationCallee(module, callee),
     );
-    if (!registersOwnFunction) continue;
+    if (!registersImportedFunction) continue;
     findings.push({
       rule: "side-effect-registration",
       path: module.path,

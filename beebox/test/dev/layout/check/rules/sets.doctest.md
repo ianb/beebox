@@ -238,56 +238,38 @@ routesFindings.find((f) => f.rule === "member-imports")?.message
 => imports pkg/src/routes/chat.ts (member "chat") from member "health" of the same set; move the shared thing to infrastructure outside the set, or merge the two members
 ```
 
-## Side-effect registration at import
+## Side-effect registration only fires for an internal cross-module registration import
 
-`registerish` does not match: the callee must be `register` followed by an
-upper-case letter, so a merely `register`-prefixed lowercase name is not a
-false positive. `drive.ts` calls a locally defined `registerConnector` (no
-import binds it); `gmail.ts` calls `app.registerHandler` where nothing
-imports `app`. Both are this package's own registration, so both are flagged.
+`other.ts` calls `registerish`: the callee must be `register` followed by an
+upper-case letter, so a merely `register`-prefixed lowercase name is never a
+finding, regardless of imports. Of calls that do match, only one whose root
+identifier is bound by an import from *another file in this package* counts
+as self-registration into that file's registry — the fixture always builds
+`ImportEdge.names` as `[]`, so each case below edits the returned layout's
+module imports directly (as the tests-rule doctest does).
 
-```ts
-const registerLayout = layout({
-  files: {
-    "src/connectors/drive.ts": { topLevelCalls: ["registerConnector"] },
-    "src/connectors/gmail.ts": { topLevelCalls: ["app.registerHandler"] },
-    "src/connectors/other.ts": { topLevelCalls: ["registerish"] },
-  },
-});
-summary(setsRule.check(registerLayout))
-=>
-side-effect-registration pkg/src/connectors/drive.ts
-side-effect-registration pkg/src/connectors/gmail.ts
-```
-
-## Side-effect registration only fires for this package's own registration function
-
-The fixture always builds `ImportEdge.names` as `[]`, so these cases edit the
-returned layout's module imports directly (as the tests-rule doctest does).
-
-`serializers.ts` calls `registerSerializer` imported from the external
-package `agent-doctest/check`: no finding, since the callee's root
-(`registerSerializer`) is bound by an external import. `builtins.ts` calls
-`registerTemplate` imported from our own `./templates-registry.js`: still a
-finding, since that import is not external. `local.ts` calls a `register`
-function defined in the same file, bound by no import: a finding. `ns.ts`
-calls `ns.registerThing` where `ns` is an external namespace import: no
-finding, since the dotted callee's root is `ns`.
+`builtins.ts` calls `registerTemplate`, imported from `./templates-registry.js`
+inside this package: a finding. `serializers.ts` calls `registerSerializer`,
+imported from the external package `agent-doctest/check`: no finding. `ns.ts`
+calls `ns.registerThing` where `ns` is bound by an external namespace import:
+no finding, since the dotted callee's root `ns` is external. `worklet.ts`
+calls `registerProcessor` (the AudioWorklet global, like
+`pcm-processor.worklet.js`) with no import binding it at all: no finding,
+since a global is not cross-module registration. `local.ts` calls a
+`register` function defined in the same file, also bound by no import: no
+finding, for the same reason.
 
 ```ts
 const registrationSourcesLayout = layout({
   files: {
-    "src/serializers.ts": { topLevelCalls: ["registerSerializer"] },
     "src/schemas/builtins.ts": { topLevelCalls: ["registerTemplate"] },
-    "src/schemas/local.ts": { topLevelCalls: ["registerLocal"] },
+    "src/serializers.ts": { topLevelCalls: ["registerSerializer"] },
     "src/connectors/ns.ts": { topLevelCalls: ["ns.registerThing"] },
+    "src/audio/worklet.ts": { topLevelCalls: ["registerProcessor"] },
+    "src/schemas/local.ts": { topLevelCalls: ["registerLocal"] },
+    "src/connectors/other.ts": { topLevelCalls: ["registerish"] },
   },
 });
-const serializers = registrationSourcesLayout.files.get("pkg/src/serializers.ts");
-if (serializers === undefined || serializers.kind !== "module") throw new Error("expected module");
-serializers.imports = [
-  { specifier: "agent-doctest/check", target: null, external: true, typeOnly: false, names: ["registerSerializer"], dynamic: false },
-];
 const builtins = registrationSourcesLayout.files.get("pkg/src/schemas/builtins.ts");
 if (builtins === undefined || builtins.kind !== "module") throw new Error("expected module");
 builtins.imports = [
@@ -300,15 +282,18 @@ builtins.imports = [
     dynamic: false,
   },
 ];
+const serializers = registrationSourcesLayout.files.get("pkg/src/serializers.ts");
+if (serializers === undefined || serializers.kind !== "module") throw new Error("expected module");
+serializers.imports = [
+  { specifier: "agent-doctest/check", target: null, external: true, typeOnly: false, names: ["registerSerializer"], dynamic: false },
+];
 const ns = registrationSourcesLayout.files.get("pkg/src/connectors/ns.ts");
 if (ns === undefined || ns.kind !== "module") throw new Error("expected module");
 ns.imports = [
   { specifier: "some-external-lib", target: null, external: true, typeOnly: false, names: ["ns"], dynamic: false },
 ];
 summary(setsRule.check(registrationSourcesLayout))
-=>
-side-effect-registration pkg/src/schemas/builtins.ts
-side-effect-registration pkg/src/schemas/local.ts
+=> side-effect-registration pkg/src/schemas/builtins.ts
 ```
 
 ## A module reads a set directory by path instead of importing the registry

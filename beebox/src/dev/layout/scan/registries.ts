@@ -6,8 +6,65 @@ import ts from "typescript";
 import type { Finding, ImportEdge, RegistryDecl, RegistryMember } from "../model.js";
 import { resolveRepoRelative } from "./resolve.js";
 
-function isDefineRegistryCall(node: ts.Node): node is ts.CallExpression {
-  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "defineRegistry";
+/** Local identifiers bound to the registry module's `defineRegistry` export. */
+interface RegistryBindings {
+  /** Names a plain call recognizes: `import { defineRegistry as reg }` binds `reg`. */
+  localNames: Set<string>;
+  /** Names a `<namespace>.defineRegistry(...)` call recognizes. */
+  namespaceNames: Set<string>;
+}
+
+function isRegistryModuleTarget(target: string): boolean {
+  return /(^|\/)src\/lib\/registry\.ts$/.test(target);
+}
+
+function isRegistryModuleSpecifier(specifier: string): boolean {
+  return /(^|\/)lib\/registry(\.js)?$/.test(specifier);
+}
+
+function targetOfSpecifier(imports: ImportEdge[], specifier: string): string | null {
+  const edge = imports.find((candidate) => candidate.specifier === specifier);
+  return edge === undefined ? null : edge.target;
+}
+
+/**
+ * Finds every import of the package's `src/lib/registry.ts` (by resolved
+ * target, falling back to the specifier text when unresolved) and collects
+ * the local names a call could be written through: a named or renamed
+ * `defineRegistry` binding, and a namespace binding for `ns.defineRegistry(...)`.
+ * A same-named function imported from anywhere else does not qualify.
+ */
+function registryBindingsOf(params: { sourceFile: ts.SourceFile; imports: ImportEdge[] }): RegistryBindings {
+  const localNames = new Set<string>();
+  const namespaceNames = new Set<string>();
+  for (const statement of params.sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const specifier = statement.moduleSpecifier.text;
+    const target = targetOfSpecifier(params.imports, specifier);
+    const isRegistryModule = target !== null ? isRegistryModuleTarget(target) : isRegistryModuleSpecifier(specifier);
+    if (!isRegistryModule) continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings === undefined) continue;
+    if (ts.isNamespaceImport(bindings)) {
+      namespaceNames.add(bindings.name.text);
+      continue;
+    }
+    for (const element of bindings.elements) {
+      const importedName = element.propertyName === undefined ? element.name.text : element.propertyName.text;
+      if (importedName === "defineRegistry") localNames.add(element.name.text);
+    }
+  }
+  return { localNames, namespaceNames };
+}
+
+function isDefineRegistryCall(node: ts.Node, bindings: RegistryBindings): node is ts.CallExpression {
+  if (!ts.isCallExpression(node)) return false;
+  const callee = node.expression;
+  if (ts.isIdentifier(callee)) return bindings.localNames.has(callee.text);
+  if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) && callee.name.text === "defineRegistry") {
+    return bindings.namespaceNames.has(callee.expression.text);
+  }
+  return false;
 }
 
 function unwrapArgument(expression: ts.Expression): ts.Expression {
@@ -20,10 +77,10 @@ function unwrapArgument(expression: ts.Expression): ts.Expression {
   }
 }
 
-function findCalls(sourceFile: ts.SourceFile): ts.CallExpression[] {
+function findCalls(sourceFile: ts.SourceFile, bindings: RegistryBindings): ts.CallExpression[] {
   const calls: ts.CallExpression[] = [];
   const visit = (node: ts.Node): void => {
-    if (isDefineRegistryCall(node)) calls.push(node);
+    if (isDefineRegistryCall(node, bindings)) calls.push(node);
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
@@ -119,8 +176,9 @@ export function extractRegistries(params: {
   const registries: RegistryDecl[] = [];
   const findings: Finding[] = [];
   const importSources = importSourcesOf(params.imports);
+  const bindings = registryBindingsOf({ sourceFile: params.sourceFile, imports: params.imports });
 
-  for (const call of findCalls(params.sourceFile)) {
+  for (const call of findCalls(params.sourceFile, bindings)) {
     const line = params.sourceFile.getLineAndCharacterOfPosition(call.getStart(params.sourceFile)).line + 1;
     const firstArg = call.arguments[0];
     const object = firstArg === undefined ? null : unwrapArgument(firstArg);

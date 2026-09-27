@@ -233,9 +233,9 @@ issue, "Constraints for the check").
   `frontend/src/lib/audio/`). Engineering principle 7's own example.
 - **Mirror**: the test directory that corresponds to a source directory
   (`test/core/chat/session/` for `src/core/chat/session/`).
-- **Black-box group (tests)**: a directory directly under the test root
-  with no source counterpart, holding tests that import no source module
-  (`test/tours/`, `test/user-stories/`).
+- **Scenario group (tests)**: a directory directly under the test root
+  with no source counterpart, holding tests that name a scenario rather than
+  a module (`test/tours/`, `test/user-stories/`).
 
 ## Tracks / scope
 
@@ -524,12 +524,14 @@ directory's parent mirror and is named for the directory
 (`session.lifecycle.doctest.md` beside the `session/` mirror). Imports do not
 place a test: a test imports collaborators, fakes, and types for setup, and a
 2026-09-27 run of an import-based rule flagged 565 such imports as
-misplacements. The one place a test names no subject is a black-box test,
-which imports no source module and lives in a group directly under the test
-root with no source counterpart (`test/tours/`). Test helpers and fixtures follow rule 3: the lowest test
+misplacements. The one place a test names no subject is a scenario test: it
+lives in a scenario group, a directory directly under the test root with no
+source counterpart (`test/tours/`, `test/user-stories/`), and may import
+anything. A group named after a nested package or a second source root is not
+a scenario group; it mirrors code with its own test tree. Test helpers and fixtures follow rule 3: the lowest test
 directory containing all their users, so a helper used across areas lives in
 `test/helpers/` and shared data in `test/fixtures/`. Nothing under `test/`
-needs an allowlist: every child is a mirror, a black-box group, or support
+needs an allowlist: every child is a mirror, a scenario group, or support
 placed by rule 3.
 
 Three consequences make the rule exception-free and are decided in the
@@ -537,7 +539,7 @@ move plan. `beebox/scripts/` is a second source root today (mirrored at
 `test/scripts/`) and folds into `src/`. `beebox/user-stories/` is a third
 (`package.json:57` typechecks it, `eslint.config.ts:56` lists it as a root):
 its journeys are product-level tests and go to the `test/user-stories/`
-black-box group, its pipeline is dev tooling and goes under `src/`, its
+scenario group, its pipeline is dev tooling and goes under `src/`, its
 catalog is documentation. `src/frontend/` is a nested package with its own
 `package.json`, so its tests mirror its own `src/` under `src/frontend/test/`
 rather than `beebox/test/frontend/`; tap's include (`.taprc:28-30` lists only
@@ -555,7 +557,7 @@ Full paths under the rule:
 | `beebox/src/cli/commands/wakeup/steps.ts` | `beebox/test/cli/commands/wakeup/steps.doctest.md` |
 | the `session/` directory as a whole | `beebox/test/core/chat/session.lifecycle.doctest.md` |
 | the schemas registry `beebox/src/schemas.ts` | `beebox/test/schemas.doctest.md` |
-| whole-app tour | `beebox/test/tours/<name>.tour.ts` (black-box group) |
+| whole-app tour | `beebox/test/tours/<name>.tour.ts` (scenario group) |
 | `beebox/src/frontend/src/lib/docling.ts` | `beebox/src/frontend/test/lib/docling.doctest.md` |
 | `bin/lib/schedules/store.ts` | `bin/test/lib/schedules/store.test.ts` |
 | helper used by `core/agent` tests only | `beebox/test/core/agent/fake-agent.ts` |
@@ -564,8 +566,8 @@ Full paths under the rule:
 *Measure:* three checks. Naming: a test in an exact mirror `D` of source
 directory `S` has a stem whose first dot-segment is a module stem or
 subdirectory name in `S`. Structure: a test outside an exact mirror sits in
-a group directly under the test root with no source counterpart and imports
-no source module. Package: a test's value imports never reach a nested
+a scenario group: a directory directly under the test root with no source
+counterpart that is not named after a nested package or second source root. Package: a test's value imports never reach a nested
 package or another package (those tests belong to that package's test root).
 *Mechanical:* all three. *Judgment:* none. *Examples:*
 `test/core/chat-session-archive.doctest.md` →
