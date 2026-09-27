@@ -130,6 +130,20 @@ recorded there that supersede the observations above:
 Open questions for the boxholder are listed in the plan. Steps 3 and 4 each
 get their own plan.
 
+## Status (2026-09-27): steps 3 and 4 done on `worktree-file-layout`
+
+- `pnpm layout-check` (`beebox/src/dev/layout/`) reports zero findings in
+  every package root, and `.husky/pre-commit` runs it with no report mode and
+  no ignore list.
+- The tree was moved with `pnpm layout-move`, which rewrites imports and path
+  mentions. Registries are explicit `defineRegistry` lists in
+  `beebox/src/shared/registry.ts`, and side-effect registration is gone.
+  `shared/` is now the lowest layer (boxholder decision, 2026-09-27).
+- Plans: `beebox/docs/plans/file-layout.md` and its check and moves
+  subplans. Data-file placement rules are reviewed in another workstream.
+- Before the branch merges, other branches with unmerged work will conflict
+  with the moves. The merge moment is the boxholder's call.
+
 ## Constraints for the check
 
 - ESLint checks one file at a time and cannot see a file's siblings. A layout
