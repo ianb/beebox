@@ -47,7 +47,7 @@ const config: KnipConfig = {
       project: [
         "src/**/*.{ts,tsx}",
         "!src/frontend/**",
-        "!src/schemas/**/*.list-entry.tsx",
+        "!src/schemas/*/list-entry.tsx",
         "test/**/*.ts",
         "test/**/*.doctest.md",
         "scripts/**/*.ts",
@@ -90,7 +90,7 @@ const config: KnipConfig = {
         "test/**/*.ts",
         "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx}", "../schemas/**/*.list-entry.tsx", "test/**/*.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;

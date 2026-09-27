@@ -30,7 +30,7 @@ import { QuestionSchema } from "./schemas/question.js";
 import { FeedbackSchema } from "./schemas/feedback.js";
 import { ProcedureSchema } from "./schemas/procedure.js";
 import { ProcedureRunSchema } from "./schemas/procedure-run.js";
-import { ImageSchema } from "./schemas/image.js";
+import { ImageSchema } from "./schemas/image/schema.js";
 import { AudioSchema } from "./schemas/audio.js";
 import { FileSchema } from "./schemas/file.js";
 import { PdfSchema } from "./schemas/pdf.js";

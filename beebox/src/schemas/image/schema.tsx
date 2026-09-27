@@ -16,8 +16,8 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields, type SummaryAttrs } from "../cards/index.js";
-import { titleFromFilename, truncateTitle } from "../core/file-summary.js";
+import { cardSchema, type InferCardFields, type SummaryAttrs } from "../../cards/index.js";
+import { titleFromFilename, truncateTitle } from "../../core/file-summary.js";
 
 const ImageStatusSchema = z.enum(["new", "analyzed", "invalid"]);
 export type ImageStatus = z.infer<typeof ImageStatusSchema>;

@@ -23,7 +23,7 @@ import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
-import { ImageSchema } from "../../src/schemas/image.js";
+import { ImageSchema } from "../../src/schemas/image/schema.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {

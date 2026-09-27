@@ -5,7 +5,7 @@ hook. The registry builds the base summary and the type extends or replaces it.
 
 ```ts setup
 import { MemoSchema } from "../src/schemas/memo.js";
-import { ImageSchema } from "../src/schemas/image.js";
+import { ImageSchema } from "../src/schemas/image/schema.js";
 import { summarize } from "../src/core/loader-registry.js";
 import type { CardSchema } from "../src/cards/schema.js";
 

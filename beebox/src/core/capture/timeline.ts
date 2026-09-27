@@ -21,7 +21,7 @@ import * as path from "node:path";
 import { splitCardContent } from "../../cards/index.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas.js";
-import { type ImageFields, ImageSchema } from "../../schemas/image.js";
+import { type ImageFields, ImageSchema } from "../../schemas/image/schema.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { errnoCode } from "../../lib/error-guards.js";

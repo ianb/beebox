@@ -11,11 +11,11 @@
  * register itself.
  */
 
-import type { ListProps } from "../frontend/src/file-type-registry";
-import type { ImageSummaryAttrs } from "./image";
-import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../frontend/src/api";
-import { resolveRelativePath } from "../frontend/src/lib/view-url";
-import { isTransformablePhotoPath } from "../frontend/src/lib/image-transform-url";
+import type { ListProps } from "../../frontend/src/file-type-registry";
+import type { ImageSummaryAttrs } from "./schema";
+import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../../frontend/src/api";
+import { resolveRelativePath } from "../../frontend/src/lib/view-url";
+import { isTransformablePhotoPath } from "../../frontend/src/lib/image-transform-url";
 
 function imageSrc(cardPath: string, filenameRef: string): string {
   const resolved = resolveRelativePath(cardPath, filenameRef);

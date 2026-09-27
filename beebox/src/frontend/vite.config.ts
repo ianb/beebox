@@ -84,10 +84,14 @@ export default defineConfig({
     // see the tsconfig paths comment.)
     // Array form: the regex entry aliases ONE spelling through @schemas —
     // `@schemas/<name>.list-entry`, a card type's list component, which is
-    // frontend code living beside its schema. Everything else under @schemas
-    // stays unaliased, so a value import through it still fails this build.
+    // frontend code living beside its schema at `schemas/<name>/list-entry.tsx`.
+    // Everything else under @schemas stays unaliased, so a value import
+    // through it still fails this build.
     alias: [
-      { find: /^@schemas\/([\w.-]+\.list-entry)$/, replacement: resolvePath(__dirname, "../schemas/$1") },
+      {
+        find: /^@schemas\/([\w-]+)\.list-entry$/,
+        replacement: `${resolvePath(__dirname, "../schemas")}/$1/list-entry`,
+      },
       { find: "@shared", replacement: resolvePath(__dirname, "../shared") },
     ],
   },

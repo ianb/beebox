@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createAudioTemplate } from "../../schemas/audio.js";
-import { createImageTemplate, type ImageSource } from "../../schemas/image.js";
+import { createImageTemplate, type ImageSource } from "../../schemas/image/schema.js";
 import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { concatSegmentChunks } from "./audio-concat.js";
