@@ -3,10 +3,24 @@
 Canonical interface cards have dedicated renderers.
 
 ```ts setup
-import { installRenderers } from "../src/renderers.js";
-import { getRenderers } from "../src/file-type-registry.js";
+import { getRenderers, registerFileType } from "../src/file-type-registry.js";
+import {
+  adminRenderer,
+  dashboardRenderer,
+  historyCardRenderer,
+  inventoryRenderer,
+  landmarksRenderer,
+  questionsRenderer,
+  settingsRenderer,
+} from "../src/renderers/system-cards.js";
 
-installRenderers();
+// Only the system-card members, not the full registry (`installRenderers()`):
+// other renderers pull in `lib/markdoc-parse.ts`, whose `@markdoc/markdoc`
+// named import does not resolve under this doctest runtime (see
+// WorkspaceCanvas.pdf-frame.doctest.md).
+for (const entry of [dashboardRenderer, settingsRenderer, questionsRenderer, landmarksRenderer, historyCardRenderer, inventoryRenderer, adminRenderer]) {
+  registerFileType(entry.selector, { renderer: entry.renderer });
+}
 
 function rendererNames(type: string): string[] {
   const path = `_config/interface/example.${type}.card`;

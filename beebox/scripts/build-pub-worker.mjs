@@ -7,7 +7,7 @@ const root = path.join(scriptDir, "..");
 
 export async function buildPublicationWorker() {
   await build({
-    entryPoints: [path.join(root, "pub-worker/src/index.ts")],
+    entryPoints: [path.join(root, "pub-worker/src/worker.ts")],
     outfile: path.join(root, "dist/pub-worker.js"),
     bundle: true,
     platform: "browser",

@@ -227,6 +227,8 @@ issue, "Constraints for the check").
 - **Entry**: a module in a directory that something outside the directory
   imports (in a set, the registry's import of a member). Read from the import
   graph; the registry is excluded by declaration.
+- A module that declares a registry is always an entry: rule 4 fixes where
+  it lives, so the units rule never moves it into a helper's unit.
 - **Unit**: an entry plus the sibling modules reachable from it by imports
   inside the directory and from no other entry. Two entries whose reachable
   sets overlap share infrastructure; they are not one unit.
@@ -390,7 +392,9 @@ registry is an explicit import list (see *Prior art* for why not discovery,
 self-registration, or generation). It may hold the set's loader logic; it
 holds no member.
 
-One generic helper, `src/lib/registry.ts`, is the only way a set is built.
+One generic helper, `src/shared/registry.ts`, is the only way a set is built.
+It is dependency-free, so it sits in the isomorphic layer both the backend
+and the frontend package import.
 The contract is its type parameter and is always written out, never
 inferred: with inference a list of mismatched members widens to a union and
 nothing fails.
@@ -442,7 +446,7 @@ How each property is verified:
   `no-unused-vars`).
 - *Key uniqueness (runtime).* `defineRegistry` throws on a duplicate key.
   Every test that imports the registry, and the server at startup, exercises
-  it. `test/lib/registry.doctest.md` covers the helper; a set's own test
+  it. `test/shared/registry.doctest.md` covers the helper; a set's own test
   (`test/schemas.doctest.md`) asserts key matches file name where the set
   wants that.
 - *Nothing else constructs the list (static).* Exactly one `defineRegistry`
@@ -516,8 +520,12 @@ The registry of public surfaces is the build's entry table
 source entry to its `dist/` target), and `package.json` `exports` is the
 consumer-facing map over the same targets. The check verifies the three
 agree: every module specifier in `exports` has a build entry, every build
-entry's source is a file in a package's `src/exports/`, and every file there
-is a build entry's source. `./tsconfig.base.json` is a data export, outside
+entry's source is a direct child of the `src/exports/` of the innermost
+package containing it, and every module there is the source of a surface
+declared by that package or an enclosing one (the outer `beebox` package
+declares `beebox/view-widgets`, built from the nested frontend package's
+`src/exports/view-widgets.tsx`). Data files there, such as a `tsconfig.json`,
+are outside the rules' scope. `./tsconfig.base.json` is a data export, outside
 the rules' scope. The `types` conditions keep pointing at the checked-in
 `.d.ts` beside the source (`src/exports/view-widgets.d.ts`,
 `build-cli.ts:126-129`).
@@ -589,13 +597,16 @@ Full paths under the rule:
 | helper used by `core/agent` tests only | `beebox/test/core/agent/fake-agent.ts` |
 | helper used across areas | `beebox/test/helpers/isolate-user-home.ts` |
 
-*Measure:* three checks. Naming: a test in an exact mirror `D` of source
+*Measure:* two checks. Naming: a test in an exact mirror `D` of source
 directory `S` has a stem whose first dot-segment is a module stem or
 subdirectory name in `S`. Structure: a test outside an exact mirror sits in
 a scenario group: a directory directly under the test root with no source
-counterpart that is not named after a nested package or second source root. Package: a test's value imports never reach a nested
-package or another package (those tests belong to that package's test root).
-*Mechanical:* all three. *Judgment:* none. *Examples:*
+counterpart that is not named after a nested package or second source root.
+A test of another package fails one of the two: it names a module that is
+not in its mirrored directory, or it sits in a group named after that
+package. An import-based package check was tried and removed (2026-09-27):
+frontend tests import `shared/` and backend modules for setup, which rule 8
+allows. *Mechanical:* both. *Judgment:* none. *Examples:*
 `test/core/chat-session-archive.doctest.md` →
 `test/core/chat/session/archive.doctest.md`. `test/webapp/trpc-health-*` →
 `test/webapp/trpc/routers/health/`. `test/cli/commands/tick-force.doctest.md`

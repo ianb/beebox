@@ -21,7 +21,7 @@ import edges and unit computation, which a one-liner cannot do.
 
 | Track | Source | Tests |
 |---|---|---|
-| 1. `src/lib/registry.ts` (`defineRegistry`) | ~90 | ~60 |
+| 1. `src/shared/registry.ts` (`defineRegistry`; first built in `src/lib/`, moved to `shared/` so the frontend package can import it) | ~90 | ~60 |
 | 2. Scanner: tree walk, import parse, doctest sources | ~220 | ~120 |
 | 3. Rules as a registry-fed set: `sets`, `units`, `names`, `tests` | ~420 | ~260 |
 | 4. Report, CLI, `pnpm layout-check`, pre-commit report mode | ~140 | ~40 |
@@ -90,9 +90,9 @@ small part of the same pass.
 
 ## Tracks / scope
 
-1. `src/lib/registry.ts`: `defineRegistry<M>` per the parent plan's
+1. `src/shared/registry.ts`: `defineRegistry<M>` per the parent plan's
    signature; `DuplicateRegistryKeyError`; `Registry<M>` exposes `list`,
-   `byKey`, `get`. Doctest at `test/lib/registry.doctest.md`.
+   `byKey`, `get`. Doctest at `test/shared/registry.doctest.md`.
 2. `src/dev/layout/model.ts`, `scan/package/scan.ts`: walk `src/` and `test/` of a
    package root (skip `node_modules`, `dist`), parse each `.ts`/`.tsx`/
    `.mjs` and each `.doctest.md`/`.test.ts`, resolve relative and aliased
